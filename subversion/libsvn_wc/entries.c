@@ -1157,6 +1157,16 @@ struct entries_accumulator
 };
 
 
+/* Is the entry in a 'hidden' state in the sense of the 'show_hidden'
+ * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
+static svn_boolean_t
+entry_is_hidden(const svn_wc_entry_t *entry)
+{
+  return ((entry->deleted && entry->schedule != svn_wc_schedule_add)
+          || entry->absent);
+}
+
+
 /* Called whenever we find an <open> tag of some kind. */
 static void
 handle_start_tag(void *userData, const char *tagname, const char **atts)
@@ -1184,15 +1194,8 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
 
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
-     have made it into SVN_WC_ENTRY_THIS_DIR.  (Note that technically,
-     an entry can't be both absent and scheduled for addition, but we
-     don't need a sanity check for that here.) */
-  if ((entry->deleted || entry->absent)
-      && (entry->schedule != svn_wc_schedule_add)
-      && (entry->schedule != svn_wc_schedule_replace)
-      && (! accum->show_hidden))
-    ;
-  else
+     have made it into SVN_WC_ENTRY_THIS_DIR. */
+  if (!entry_is_hidden(entry) || accum->show_hidden)
     apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
 }
 
@@ -1412,12 +1415,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
           ++curp;
           ++entryno;
-          if ((entry->deleted || entry->absent)
-              && (entry->schedule != svn_wc_schedule_add)
-              && (entry->schedule != svn_wc_schedule_replace)
-              && (! show_hidden))
-            ;
-          else
+          if (!entry_is_hidden(entry) || show_hidden)
             apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
         }
     }
@@ -3207,7 +3205,7 @@ walker_helper(const char *dirpath,
 
       /* Recurse into this entry if appropriate. */
       if (current_entry->kind == svn_node_dir
-          && !current_entry->deleted && !current_entry->absent
+          && !entry_is_hidden(current_entry)
           && depth >= svn_depth_immediates)
         {
           svn_wc_adm_access_t *entry_access;
@@ -3315,7 +3313,7 @@ visit_tc_too_found_entry(const char *path,
 
   /* If this is a directory, also visit any unversioned children that are
    * tree conflict victims. */
-  if (entry->kind == svn_node_dir && !entry->deleted && !entry->absent)
+  if (entry->kind == svn_node_dir && !entry_is_hidden(entry))
     {
       svn_wc_adm_access_t *adm_access;
       apr_array_header_t *conflicts
