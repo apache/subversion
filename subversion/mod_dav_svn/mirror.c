@@ -69,8 +69,8 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
                                                     "/wrk/", NULL))) {
                 seg += strlen(root_dir);
                 proxy_request_fixup(r, master_uri, seg);
-                return OK;
             }
+            return OK;
         }
 
         /* If this is a MERGE request or a request using a "special
