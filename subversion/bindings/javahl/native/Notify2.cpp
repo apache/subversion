@@ -142,7 +142,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
                                "Lorg/tigris/subversion/javahl/Lock;"
                                "Ljava/lang/String;IIIJLjava/lang/String;"
                                "L" JAVA_PACKAGE "/RevisionRange;"
-                               "Ljava/lang/String;Z)V");
+                               "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         return;
     }
@@ -195,8 +195,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
                                  jKind, jMimeType, jLock, jErr,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange, jpathPrefix,
-                                 (jboolean) wcNotify->tree_conflicted);
+                                 jMergeRange, jpathPrefix);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

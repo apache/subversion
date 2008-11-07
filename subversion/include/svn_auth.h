@@ -767,8 +767,36 @@ void
 svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_provider_object_t, or return @a NULL if the provider is not
+ * available for the requested platform or the requested provider is unknown.
+ *
+ * Valid @a provider_name values are: "gnome_keyring", "keychain", "kwallet"
+ * and "windows".
+ *
+ * Valid @a provider_type values are: "simple", "ssl_client_cert_pw" and
+ * "ssl_server_trust".
+ *
+ * Allocate @a *provider in @a pool.
+ *
+ * What actually happens is we invoke the appropriate provider function to
+ * supply the @a provider, like so:
+ *
+ *    svn_auth_get_<name>_<type>_provider(@a provider, @a pool);
+ *
+ * In the case of the "gnome_keyring" and the "kwallet" @a platform_type, an
+ * error can be thrown in the event that loading the respective shared library
+ * fails.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
+                                        const char *provider_name,
+                                        const char *provider_type,
+                                        apr_pool_t *pool);
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -791,9 +819,26 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
-#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
+ *
+ * This provider automatically validates ssl server certificates with
+ * the CryptoApi, like Internet Explorer and the Windows network API do.
+ * This allows the rollout of root certificates via Windows Domain
+ * policies, instead of Subversion specific configuration.
+ *
+ * @since New in 1.5.
+ * @note This function is only available on Windows.
+ */
+void
+svn_auth_get_windows_ssl_server_trust_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN */
+
+#if defined(DARWIN) || defined(DOXYGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -826,9 +871,9 @@ void
 svn_auth_get_keychain_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* DARWIN || DOXYGEN || CTYPESGEN || SWIG */
+#endif /* DARWIN || DOXYGEN */
 
-#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
+#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
 /**
  * Get libsvn_auth_gnome_keyring version information.
  *
@@ -920,7 +965,7 @@ void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* (!DARWIN && !WIN32) || DOXYGEN || CTYPESGEN || SWIG */
+#endif /* (!DARWIN && !WIN32) || DOXYGEN */
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -952,26 +997,6 @@ void
 svn_auth_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-
-
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
-/**
- * Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
- *
- * This provider automatically validates ssl server certificates with
- * the CryptoApi, like Internet Explorer and the Windows network API do.
- * This allows the rollout of root certificates via Windows Domain
- * policies, instead of Subversion specific configuration.
- *
- * @since New in 1.5.
- * @note This function is only available on Windows.
- */
-void
-svn_auth_get_windows_ssl_server_trust_provider
-  (svn_auth_provider_object_t **provider,
-   apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
