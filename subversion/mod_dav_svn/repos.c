@@ -1547,10 +1547,17 @@ parse_querystring(const char *query, dav_resource_combined *comb,
       apr_hash_t *locations;
       apr_array_header_t *loc_revs = apr_array_make(pool, 1,
                                                     sizeof(svn_revnum_t));
+
+      dav_svn__authz_read_baton *arb = apr_pcalloc(pool, sizeof(*arb));
+      arb->r = comb->priv.r;
+      arb->repos = comb->priv.repos;
+
       APR_ARRAY_PUSH(loc_revs, svn_revnum_t) = working_rev;
       serr = svn_repos_trace_node_locations(comb->priv.repos->fs, &locations,
                                             comb->priv.repos_path, peg_rev,
-                                            loc_revs, NULL, NULL, pool);
+                                            loc_revs,
+                                            dav_svn__authz_read_func(arb),
+                                            arb, pool);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Couldn't trace history.", pool);
