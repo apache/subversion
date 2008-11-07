@@ -2281,7 +2281,7 @@ test_list = [ None,
               depth_empty_update_on_file,
               excluded_path_update_operation,
               excluded_path_misc_operation,
-              XFail(excluded_receive_remote_removal),
+              excluded_receive_remote_removal,
             ]
 
 if __name__ == "__main__":
