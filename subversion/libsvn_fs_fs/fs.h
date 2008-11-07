@@ -70,8 +70,10 @@ extern "C" {
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 
 /* Names of sections and options in fsfs.conf. */
-#define CONFIG_SECTION_CACHES     "caches"
-#define CONFIG_OPTION_FAIL_STOP       "fail-stop"
+#define CONFIG_SECTION_CACHES            "caches"
+#define CONFIG_OPTION_FAIL_STOP          "fail-stop"
+#define CONFIG_SECTION_REP_SHARING       "rep-sharing"
+#define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and

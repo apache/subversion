@@ -29,8 +29,8 @@
 %import svn_delta.i
 %import svn_wc.i
 
-/* svn_client.h: Subversion Windows-specific auth provider */
-PLATFORM_SPECIFIC_WRAPPER(svn_client_get_windows_simple_provider, SWIGWIN)
+/* Ignore platform-specific auth functions */
+%ignore svn_client_get_windows_simple_provider;
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
