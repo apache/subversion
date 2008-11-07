@@ -52,6 +52,7 @@
 #include "lock.h"
 #include "props.h"
 #include "translate.h"
+#include "tree_conflicts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -1941,16 +1942,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       *reverted = TRUE;
     }
 
-  /* If the entry is for this_dir, delete tree conflict data. */
-  if ((strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-      && entry->tree_conflict_data)
-    {
-      flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
-      tmp_entry.tree_conflict_data = NULL;
-      *reverted = TRUE;
-
-    }
-
   /* Modify the entry, loggily. */
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
                                      &tmp_entry, flags, pool));
@@ -1971,8 +1962,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
    using; this function may choose to override that value as needed.
 
    See svn_wc_revert3() for the interpretations of PARENT_ACCESS,
-   USE_COMMIT_TIMES, CANCEL_FUNC, CANCEL_BATON, NOTIFY_FUNC, and
-   NOTIFY_BATON.
+   USE_COMMIT_TIMES, CANCEL_FUNC and CANCEL_BATON.
+
+   Set *DID_REVERT to true if actually reverting anything, else do not
+   touch *DID_REVERT.
 
    Use POOL for allocations.
  */
@@ -1985,8 +1978,7 @@ revert_entry(svn_depth_t *depth,
              svn_boolean_t use_commit_times,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
-             svn_wc_notify_func2_t notify_func,
-             void *notify_baton,
+             svn_boolean_t *did_revert,
              apr_pool_t *pool)
 {
   const char *bname;
@@ -2151,10 +2143,8 @@ revert_entry(svn_depth_t *depth,
     }
 
   /* If PATH was reverted, tell our client that. */
-  if ((notify_func != NULL) && reverted)
-    (*notify_func)(notify_baton,
-                   svn_wc_create_notify(path, svn_wc_notify_revert, pool),
-                   pool);
+  if (reverted)
+    *did_revert = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -2179,6 +2169,7 @@ revert_internal(const char *path,
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
   svn_wc_adm_access_t *dir_access;
+  svn_wc_conflict_description_t *tree_conflict;
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2187,12 +2178,16 @@ revert_internal(const char *path,
   /* Fetch the access baton for this path. */
   SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
 
-  /* Safeguard 1:  is this a versioned resource? */
-  SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
-            _("Cannot revert"));
+  /* Safeguard 1: the item must be versioned for any reversion to make sense,
+     except that a tree conflict can exist on an unversioned item. */
+  SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
+  SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict, path, dir_access, pool));
+  if (entry == NULL && tree_conflict == NULL)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("Cannot revert unversioned item '%s'"), path);
 
   /* Safeguard 1.5:  is this a missing versioned directory? */
-  if (entry->kind == svn_node_dir)
+  if (entry && (entry->kind == svn_node_dir))
     {
       svn_node_kind_t disk_kind;
       SVN_ERR(svn_io_check_path(path, &disk_kind, pool));
@@ -2213,7 +2208,7 @@ revert_internal(const char *path,
     }
 
   /* Safeguard 2:  can we handle this entry's recorded kind? */
-  if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
+  if (entry && (entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot revert '%s': unsupported entry node kind"),
@@ -2233,15 +2228,34 @@ revert_internal(const char *path,
   /* If the entry passes changelist filtering, revert it!  */
   if (SVN_WC__CL_MATCH(changelist_hash, entry))
     {
+      svn_boolean_t reverted = FALSE;
+      svn_wc_conflict_description_t *conflict;
+
+      /* Clear any tree conflict on the path, even if it is not a versioned
+         resource. */
+      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, parent_access, pool));
+      if (conflict)
+        {
+          SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
+          reverted = TRUE;
+        }
+
       /* Actually revert this entry.  If this is a working copy root,
          we provide a base_name from the parent path. */
-      SVN_ERR(revert_entry(&depth, path, kind, entry,
-                           parent_access, use_commit_times, cancel_func,
-                           cancel_baton, notify_func, notify_baton, pool));
+      if (entry)
+        SVN_ERR(revert_entry(&depth, path, kind, entry,
+                             parent_access, use_commit_times, cancel_func,
+                             cancel_baton, &reverted, pool));
+
+      /* Notify */
+      if (notify_func && reverted)
+        (*notify_func)(notify_baton,
+                       svn_wc_create_notify(path, svn_wc_notify_revert, pool),
+                       pool);
     }
 
   /* Finally, recurse if requested. */
-  if (entry->kind == svn_node_dir && depth > svn_depth_empty)
+  if (entry && entry->kind == svn_node_dir && depth > svn_depth_empty)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
@@ -2285,6 +2299,34 @@ revert_internal(const char *path,
                                   changelist_hash, cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
         }
+
+      /* Visit any unversioned children that are tree conflict victims. */
+      {
+        int i;
+        apr_array_header_t *conflicts
+          = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
+
+        /* Loop through all the tree conflict victims */
+        SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry,
+                                                       path, pool));
+        for (i = 0; i < conflicts->nelts; i++)
+          {
+            svn_wc_conflict_description_t *conflict
+              = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+
+            /* If this victim is not in this dir's entries ... */
+            if (apr_hash_get(entries, svn_path_basename(conflict->path, pool),
+                             APR_HASH_KEY_STRING) == NULL)
+              {
+                /* Found an unversioned tree conflict victim */
+                /* Revert the entry. */
+                SVN_ERR(revert_internal(conflict->path, dir_access,
+                                        svn_depth_empty, use_commit_times,
+                                        changelist_hash, cancel_func, cancel_baton,
+                                        notify_func, notify_baton, subpool));
+              }
+          }
+      }
 
       svn_pool_destroy(subpool);
     }
@@ -2641,6 +2683,11 @@ attempt_deletion(const char *parent_dir,
    are to be resolved.
 
    See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
+
+   ### FIXME: This function should be loggy, otherwise an interruption can
+   ### leave, for example, one of the conflict artifact files deleted but
+   ### the entry still referring to it and trying to use it for the next
+   ### attempt at resolving.
 */
 static svn_error_t *
 resolve_conflict_on_entry(const char *path,

@@ -2034,8 +2034,9 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = base
 
-      run_and_verify_update(base, x_out, x_disk, x_status,
+      run_and_verify_update(base, x_out, x_disk, None,
                             error_re_string = test_case.error_re_string)
+      run_and_verify_unquiet_status(base, x_status)
     except:
       print("ERROR IN: Tests scheme for update: "
           + "while verifying in '%s'" % test_case.name)
@@ -2155,8 +2156,9 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = local
 
-      run_and_verify_switch(local, local, incoming, x_out, x_disk, x_status,
+      run_and_verify_switch(local, local, incoming, x_out, x_disk, None,
                             error_re_string = test_case.error_re_string)
+      run_and_verify_unquiet_status(local, x_status)
     except:
       print("ERROR IN: Tests scheme for switch: "
           + "while verifying in '%s'" % test_case.name)
@@ -2332,9 +2334,10 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
         x_skip.wc_dir = local
 
       run_and_verify_merge(local, None, None, incoming,
-                           x_out, x_disk, x_status, x_skip,
+                           x_out, x_disk, None, x_skip,
                            error_re_string = test_case.error_re_string,
                            dry_run = False)
+      run_and_verify_unquiet_status(local, x_status)
     except:
       print("ERROR IN: Tests scheme for merge: "
           + "while verifying in '%s'" % test_case.name)

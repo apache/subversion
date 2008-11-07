@@ -984,7 +984,10 @@ deliver_report(request_rec *r,
         {
           return dav_svn__get_mergeinfo_report(resource, doc, output);
         }
-
+      else if (strcmp(doc->root->name, "get-deleted-rev-report") == 0)
+        {
+          return dav_svn__get_deleted_rev_report(resource, doc, output);
+        }
       /* NOTE: if you add a report, don't forget to add it to the
        *       dav_svn__reports_list[] array.
        */

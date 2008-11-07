@@ -2278,6 +2278,30 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_svn_get_deleted_rev(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t peg_revision,
+                       svn_revnum_t end_revision,
+                       svn_revnum_t *revision_deleted,
+                       apr_pool_t *pool)
+
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+
+  /* Transmit the parameters. */
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-deleted-rev", "crr",
+                               path, peg_revision, end_revision));
+
+  /* Servers before 1.6 don't support this command.  Check for this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
+                                 _("'get-deleted-rev' not implemented")));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "r", revision_deleted));
+  return SVN_NO_ERROR;
+}
+
 
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
@@ -2314,6 +2338,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
+  ra_svn_get_deleted_rev,
 };
 
 svn_error_t *
