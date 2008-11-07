@@ -14669,7 +14669,8 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                 "|(    /A:2-12\n)"
                                 "|(  A_COPY/D\n)"
                                 "|(    /A/D:2-7,9-12\n)"
-                                "|(\n)",
+                                "|(\n)"
+                                "|(.*apr_err.*)", # In case of debug build
                                 None,
                                 True) # Match *all* lines of stdout
 
