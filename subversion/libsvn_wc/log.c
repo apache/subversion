@@ -1326,7 +1326,8 @@ log_do_committed(struct log_runner *loggy,
     finfo.size = 0;
 
   /* Files have been moved, and timestamps have been found.  It is now
-     time for The Big Entry Modification. */
+     time for The Big Entry Modification. Here we set fields in the entry
+     to values which we know must be so because it has just been committed. */
   entry->revision = SVN_STR_TO_REV(rev);
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
@@ -1341,7 +1342,9 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
   entry->working_size = finfo.size;
-  entry->tree_conflict_data = NULL;
+  /* We don't reset tree_conflict_data, because it's about conflicts on
+     children, not on this node, and it could conceivably be valid to commit
+     this node non-recursively while children are still in conflict. */
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -1358,7 +1361,6 @@ log_do_committed(struct log_runner *loggy,
                                       : 0)
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                                   | SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf

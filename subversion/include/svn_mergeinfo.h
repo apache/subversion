@@ -373,6 +373,14 @@ svn_mergeinfo_to_string(svn_string_t **output,
 svn_error_t *
 svn_mergeinfo_sort(svn_mergeinfo_t mergeinfo, apr_pool_t *pool);
 
+/** Return a deep copy of @a mergeinfo_catalog, allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_mergeinfo_catalog_t
+svn_mergeinfo_catalog_dup(svn_mergeinfo_catalog_t mergeinfo_catalog,
+                          apr_pool_t *pool);
+
 /** Return a deep copy of @a mergeinfo, allocated in @a pool.
  *
  * @since New in 1.5.

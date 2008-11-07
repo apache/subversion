@@ -350,7 +350,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
     victim_path, adm_access, node_kind, svn_wc_operation_merge, merge_b->pool);
   conflict->action = action;
   conflict->reason = reason;
-  SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access, merge_b->pool));
+  SVN_ERR(svn_wc_add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
 
@@ -782,6 +782,11 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_error_t *err;
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* ### TODO check tree-conflicts! */
+
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
 
   /* We only want to merge "regular" version properties:  by
@@ -843,10 +848,11 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
-          /* if the entry doesn't exist in the wc, just 'skip' over
-             this part of the tree-delta. */
+          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
           if (state)
             *state = svn_wc_notify_state_missing;
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
           svn_error_clear(err);
           svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
@@ -1010,8 +1016,22 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   /* Do property merge before text merge so that keyword expansion takes
      into account the new property values. */
   if (prop_changes->nelts > 0)
-    SVN_ERR(merge_props_changed(adm_access, prop_state, tree_conflicted,
-                                mine, prop_changes, original_props, baton));
+    {
+      svn_boolean_t tree_conflicted2;
+
+      SVN_ERR(merge_props_changed(adm_access, prop_state, &tree_conflicted2,
+                                  mine, prop_changes, original_props, baton));
+      
+      /* If the prop change caused a tree-conflict, just bail. */
+      if (tree_conflicted2)
+        {
+          if (tree_conflicted != NULL)
+            *tree_conflicted = TRUE;
+
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
+    }
   else
     if (prop_state)
       *prop_state = svn_wc_notify_state_unchanged;
@@ -1141,6 +1161,12 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
          right repository (in the same-repos scenario).  So we'll
          strip them.  (Is this a layering violation?)  */
       if (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind)
+        continue;
+
+      /* And in the foreign repository merge case, we only want
+         regular properties. */
+      if ((! merge_b->same_repos) 
+          && (svn_property_kind(NULL, prop->name) != svn_prop_regular_kind))
         continue;
 
       apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
@@ -1410,6 +1436,9 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
 
+  if (*tree_conflicted)
+    tree_conflicted = FALSE;
+
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
@@ -1517,6 +1546,9 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   const char *copyfrom_url = NULL, *child;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
@@ -1538,9 +1570,6 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
-
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   child = svn_path_is_child(merge_b->target, path, subpool);
   SVN_ERR_ASSERT(child != NULL);
@@ -1683,6 +1712,9 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   const char *parent_path;
   svn_error_t *err;
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
@@ -1698,9 +1730,6 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
-
-  if (tree_conflicted)
-    *tree_conflicted = TRUE;
 
   /* Find the version-control state of this path */
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
@@ -1834,20 +1863,6 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
-static svn_error_t *
-merge_dir_closed(svn_wc_adm_access_t *adm_access,
-                 svn_wc_notify_state_t *state,
-                 svn_boolean_t *tree_conflicted,
-                 const char *path,
-                 void *baton)
-{
-  /* Nothing to be done.
-   * The reason why this callback was created is no more.
-   * Maybe this callback should be removed. */
-
-  return SVN_NO_ERROR;
-}
 
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks3_t
@@ -1859,8 +1874,7 @@ merge_callbacks =
     merge_dir_added,
     merge_dir_deleted,
     merge_props_changed,
-    merge_dir_opened,
-    merge_dir_closed
+    merge_dir_opened
   };
 
 
@@ -2126,314 +2140,289 @@ init_rangelist(svn_revnum_t start,
   return rangelist;
 }
 
-/* Helper for the numerous times we need to allocate a svn_merge_range_t
-   and push it onto a rangelist.
+/* Helper for calculate_remaining_ranges() when that function is operating on
+   CHILD, a subtree of the merge target.  Like calculate_remaining_ranges()
+   this function should only be called when honoring mergeinfo.
 
-   Push onto RANGELIST an svn_merge_range_t * element allocated in
-   POOL and defined by START, END, and INHERITABLE. */
-static void
-push_range(apr_array_header_t *rangelist,
-           svn_revnum_t start,
-           svn_revnum_t end,
-           svn_boolean_t inheritable,
-           apr_pool_t *pool)
-{
-  svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
-
-  range->start = start;
-  range->end = end;
-  range->inheritable = inheritable;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-}
-
-/* Helper for filter_merged_revisions() when that function is operating on
-   a *subtree* of the merge target.  Like filter_merged_revisions(), this
-   should only be called when honoring mergeinfo.
-
-   MERGEINFO_PATH, PARENT, REVISION1, REVISION2, PRIMARY_URL, RA_SESSION,
-   and CTX are all cascaded from filter_merged_revisions() - see that function
-   for more information on each.  In particular note that PARENT must have
-   been processed already by this function.
+   CHILD, PARENT, MERGEINFO_PATH, REVISION1, REVISION2, and CTX are all
+   cascaded from filter_merged_revisions() - see that function for more
+   information on each.  In particular, note that PARENT must have been
+   processed already by this function.  More specifically, this means that
+   PARENT->REMAINING_RANGES must already be populated -- it can be an empty
+   rangelist but cannot be NULL.  PRIMARY_URL is the younger of the
+   url1@revision1 and url2@revision2 arguments to calculate_remaining_ranges().
+   RA_SESSION is the session for PRIMARY_URL.
 
    Since this function is only invoked for subtrees of the merge target, the
-   guarantees afforded by normalize_merge_sources() don't apply.  Therefore it
-   is possible that PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2 don't
-   describe the endpoints of an unbroken line of history.  The purpose of
-   this helper is to identify these cases of broken history and where possible
-   to adjust the requested range REVISION1:REVISION2 being merged to the subtree
-   so that we don't try to describe invalid path/revisions to the merge report
-   editor -- see drive_merge_report_editor().
+   guarantees afforded by normalize_merge_sources() don't apply - see the
+   'MERGEINFO MERGE SOURCE NORMALIZATION' comment at the top of this file.
+   Therefore it is possible that PRIMARY_URL@REVISION1 and
+   PRIMARY_URL@REVISION2 don't describe the endpoints of an unbroken line of
+   history.  The purpose of this helper is to identify these cases of broken
+   history and adjust CHILD->REMAINING_RANGES in such a way we don't later try
+   to describe nonexistent path/revisions to the merge report editor -- see
+   drive_merge_report_editor().
 
-   Set *CHILD_DELETED_OR_NONEXISTANT and *REQUESTED_RANGELIST as described
-   in the following eight cases.  *REQUESTED_RANGELIST is an array of
-   svn_merge_range_t *elements allocated from POOL.  Unless noted otherwise,
-   *REQUESTED_RANGELIST is set to a rangelist containing one svn_merge_range_t
-   *element with a 'start' field equal to REVISION1, an 'end' field equal to
-   REVISION2.  The inheritable fields of all svn_merge_range_t in
-   *REQUESTED_RANGELIST, in all cases, are always set to true.
+   If PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2 describe an unbroken
+   line of history then do nothing and leave CHILD->REMAINING_RANGES as-is.
 
-   Forward Merges, i.e. REVISION1 < REVISION2
+   If neither PRIMARY_URL@REVISION1 nor PRIMARY_URL@REVISION2 exist then
+   there is nothing to merge to CHILD->PATH so set CHILD->REMAINING_RANGES
+   equal to PARENT->REMAINING_RANGES.  This will cause the subtree to
+   effectively ignore CHILD -- see 'Note: If the first svn_merge_range_t...'
+   in drive_merge_report_editor()'s doc string.
 
-     A) Requested range deletes subtree.
+   If PRIMARY_URL@REVISION1 *xor* PRIMARY_URL@REVISION2 exist then we take the
+   subset of REVISION1:REVISION2 in CHILD->REMAINING_RANGES at which
+   PRIMARY_URL doesn't exist and set that subset equal to
+   PARENT->REMAINING_RANGES' intersection with that non-existent range.  Why?
+   Because this causes CHILD->REMAINING_RANGES to be identical to
+   PARENT->REMAINING_RANGES for revisions between REVISION1 and REVISION2 at
+   which PRIMARY_URL doesn't exist.  As mentioned above this means that
+   drive_merge_report_editor() won't attempt to describe these non-existent
+   subtree path/ranges to the reporter (which would break the merge).
+   
+   If the preceeding paragraph wasn't terribly clear then what follows spells
+   out this function's behavior a bit more explicitly:
 
-        PRIMARY_URL@REVISION1 exists, but PRIMARY_URL@REVISION2 doesn't
-        exist because PRIMARY_URL was deleted prior to REVISION2.
+   For forward merges (REVISION1 < REVISION2)
 
-        Set *CHILD_DELETED_OR_NONEXISTANT to TRUE.
+     If PRIMARY_URL@REVISION1 exists but PRIMARY_URL@REVISION2 doesn't, then
+     find the revision 'N' in which PRIMARY_URL@REVISION1 was deleted.  Leave
+     the subset of CHILD->REMAINING_RANGES that intersects with
+     REVISION1:(N - 1) as-is and set the subset of CHILD->REMAINING_RANGES
+     that intersects with (N - 1):REVISION2 equal to PARENT->REMAINING_RANGES'
+     intersection with (N - 1):REVISION2.
 
-     B) Part of requested range predates subtree's existance.
+     If PRIMARY_URL@REVISION1 doesn't exist but PRIMARY_URL@REVISION2 does,
+     then find the revision 'M' in which PRIMARY_URL@REVISION2 came into
+     existence.  Leave the subset of CHILD->REMAINING_RANGES that intersects with
+     (M - 1):REVISION2 as-is and set the subset of CHILD->REMAINING_RANGES
+     that intersects with REVISION1:(M - 1) equal to PARENT->REMAINING_RANGES'
+     intersection with REVISION1:(M - 1).
+   
+   For reverse merges (REVISION1 > REVISION2)
 
-        PRIMARY_URL@REVISION2 exists, but PRIMARY_URL@REVISION1 doesn't
-        exist because PRIMARY_URL didn't come into existence until some
-        revision 'N' where N > REVISION1.
+     If PRIMARY_URL@REVISION1 exists but PRIMARY_URL@REVISION2 doesn't, then
+     find the revision 'N' in which PRIMARY_URL@REVISION1 came into existence.
+     Leave the subset of CHILD->REMAINING_RANGES that intersects with
+     REVISION2:(N - 1) as-is and set the subset of CHILD->REMAINING_RANGES
+     that intersects with (N - 1):REVISION1 equal to PARENT->REMAINING_RANGES'
+     intersection with (N - 1):REVISION1.
 
-        Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.  Populate
-        *REQUESTED_RANGELIST with the ranges between N and REVISION2
-        (inclusive) at which PRIMARY_URL exists.  Then take the intersection
-        of REVISION1:N (i.e. the range which predates the existance of
-        PRIMARY_URL) and PARENT->REMAINING_RANGELIST and add it to
-        *REQUESTED_RANGELIST.  This prevents us from later trying to describe
-        any non-existant path/revs for this subtree in
-        drive_merge_report_editor().  A good thing as that would break the
-        editor.
-
-     C) Subtree doesn't exist in requested range or exists inside the
-        requested range but is ultimately deleted.
-
-        Neither PRIMARY_URL@REVISION1 or PRIMARY_URL@REVISION2 exist.
-
-        Set *CHILD_DELETED_OR_NONEXISTANT to TRUE
-
-     D) Subtree exists at start and end of requested range and was
-        not replaced within that range.
-
-        PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2 both exist.
-
-        Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.
-
-  Reverse Merges, i.e. REVISION1 > REVISION2
-
-     E) Part of requested range postdates subtree's existance.
-
-        PRIMARY_URL@REVISION2 exists, but PRIMARY_URL@REVISION1 doesn't
-        exist because PRIMARY_URL was deleted prior to REVISION1.
-
-        Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.
-
-        ### This is tricky, sort of the inverse of B; we want to reverse
-        ### merge some range M:N, let's say 14:4, into the subtree, but the
-        ### subtree was deleted at r10.  *BUT* we only allow reverse merges
-        ### of ranges that exist in implicit or explicit mergeinfo.  Can't we
-        ### simply set *REQUESTED_RANGELIST to REVISION1:REVISION2 and let the
-        ### existing code in filter_merged_revisions() do its thing?  Because
-        ### if the subtree has any explicit mergeinfo (via inheritance)
-        ### describing ranges that postdate the subtree's existance, the
-        ### subtree's nearest parent must also have that mergeinfo right?
-        ### Put another way, how can all of the  following ever be true?
-        ###
-        ###   i)   The subtree merge source doesn't exist anymore at
-        ###        revsion X.
-		###
-        ###   ii)  Mergeinfo for X is explicitly set on the subtree.
-        ###
-		###   iii) The subtree's parent has no explicit mergeinfo for X.
-
-     F) Requested range deletes (or replaces) a subtree.
-
-        PRIMARY_URL@REVISION1 exists, but PRIMARY_URL@REVISION2 doesn't
-        exist because PRIMARY_URL didn't come into existence until
-        *after* REVISION2.  Or PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2
-        both exist, but they don't describe an unbroken line of history.
-
-        Set *CHILD_DELETED_OR_NONEXISTANT to TRUE.
-
-     G) Subtree doesn't exist in requested range or exists inside the
-        requested range but is ultimately deleted.
-
-        Neither PRIMARY_URL@REVISION1 or PRIMARY_URL@REVISION2 exist.
-
-        Set *CHILD_DELETED_OR_NONEXISTANT to TRUE.
-
-     H) Subtree exists at start and end of requested range and was
-        not replaced within that range.
-
-        PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2 both exist and
-        describe the start and end of an unbroken line of history.
-
-        Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.
+     If PRIMARY_URL@REVISION1 doesn't exist but PRIMARY_URL@REVISION2 does,
+     then find the revision 'M' in which PRIMARY_URL@REVISION2 came into
+     existence.  Leave the subset of CHILD->REMAINING_RANGES that intersects with
+     REVISION2:(M - 1) as-is and set the subset of CHILD->REMAINING_RANGES
+     that intersects with (M - 1):REVISION1 equal to PARENT->REMAINING_RANGES'
+     intersection with REVISION1:(M - 1).
 
    All the allocations are made from POOL. */
 static svn_error_t *
-prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
-                       svn_boolean_t *child_deleted_or_nonexistant,
-                       const char *mergeinfo_path,
-                       svn_client__merge_path_t *parent,
-                       svn_revnum_t revision1,
-                       svn_revnum_t revision2,
-                       const char *primary_url,
-                       svn_ra_session_t *ra_session,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *pool)
+adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
+                              svn_client__merge_path_t *parent,
+                              const char *mergeinfo_path,
+                              svn_revnum_t revision1,
+                              svn_revnum_t revision2,
+                              const char *primary_url,
+                              svn_ra_session_t *ra_session,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
 {
   svn_boolean_t is_rollback = revision2 < revision1;
-  svn_revnum_t peg_rev = is_rollback ? revision1 : revision2;
-  svn_revnum_t start_rev = is_rollback ? revision1 : revision2;
-  svn_revnum_t end_rev = is_rollback ? revision2 : revision1;
+  svn_revnum_t younger_rev = is_rollback ? revision1 : revision2;
+  svn_revnum_t peg_rev = younger_rev;
+  svn_revnum_t older_rev = is_rollback ? revision2 : revision1;
+  svn_revnum_t revision_primary_url_deleted = SVN_INVALID_REVNUM;
   apr_array_header_t *segments;
   const char *rel_source_path;
   const char *session_url;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_ERR_ASSERT(parent->remaining_ranges);
+
+  /* We want to know about PRIMARY_URL@peg_rev, but we need PRIMARY_URL's
+     path relative to RA_SESSION's URL. */
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, subpool));
   SVN_ERR(svn_client__path_relative_to_root(&rel_source_path,
                                             primary_url,
                                             session_url,
                                             FALSE,
                                             ra_session,
                                             NULL,
-                                            pool));
+                                            subpool));
   err = svn_client__repos_location_segments(&segments, ra_session,
                                             rel_source_path, peg_rev,
-                                            start_rev, end_rev, ctx, pool);
+                                            younger_rev, older_rev, ctx,
+                                            subpool);
 
-  /* If REL_SOURCE_PATH@PEG_REV doesn't exist then
-     svn_client__repos_location_segments() typically returns an
-     SVN_ERR_FS_NOT_FOUND error, but if it doesn't exist for a
-     forward merge over ra_neon then we get SVN_ERR_RA_DAV_REQUEST_FAILED.
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3137 fixed some of
-     the cases where different RA layers returned different error codes to
-     signal the "path not found"...but it looks like there is more to do. */
- if (err)
+  /* If PRIMARY_URL@peg_rev doesn't exist then
+      svn_client__repos_location_segments() typically returns an
+      SVN_ERR_FS_NOT_FOUND error, but if it doesn't exist for a
+      forward merge over ra_neon then we get SVN_ERR_RA_DAV_REQUEST_FAILED.
+      http://subversion.tigris.org/issues/show_bug.cgi?id=3137 fixed some of
+      the cases where different RA layers returned different error codes to
+      signal the "path not found"...but it looks like there is more to do. */
+  if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND
           || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
         {
+          /* PRIMARY_URL@peg_rev doesn't exist.  Check if PRIMARY_URL@older_rev
+             exists, if neither exist then the editor can simply ignore this
+             subtree. */
+          svn_node_kind_t kind;
+          
           svn_error_clear(err);
-          if (is_rollback)
+          err = NULL;
+          SVN_ERR(svn_ra_check_path(ra_session, rel_source_path,
+                                    older_rev, &kind, subpool));
+          if (kind == svn_node_none)
             {
-              svn_dirent_t *dirent;
-              SVN_ERR(svn_ra_stat(ra_session, rel_source_path,
-                                  revision2,  &dirent, pool));
-              if (dirent)
-                *child_deleted_or_nonexistant = FALSE; /* Case E. */
-              else
-                *child_deleted_or_nonexistant = TRUE;  /* Case G. */
+              /* Neither PRIMARY_URL@peg_rev nor PRIMARY_URL@older_rev exist,
+                 so there is nothing to merge.  Set CHILD->REMAINING_RANGES
+                 identical to PARENT's. */
+              child->remaining_ranges =
+                svn_rangelist_dup(parent->remaining_ranges, subpool);
             }
           else
             {
-              *child_deleted_or_nonexistant = TRUE; /* Case A & C. */
-            }
+              apr_array_header_t *exists_rangelist, *deleted_rangelist;
 
-          *requested_rangelist = init_rangelist(revision1, revision2,
-                                                TRUE, pool);
+              /* PRIMARY_URL@older_rev exists, so it was deleted at some
+                 revision prior to peg_rev, find that revision. */
+              SVN_ERR(svn_ra_get_deleted_rev(ra_session, rel_source_path,
+                                             older_rev, younger_rev,
+                                             &revision_primary_url_deleted,
+                                             subpool));
+
+              /* PRIMARY_URL@older_rev exists and PRIMARY_URL@peg_rev doesn't,
+                 so svn_ra_get_deleted_rev() should always find the revision
+                 PRIMARY_URL@older_rev was deleted. */
+              SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(
+                revision_primary_url_deleted));
+
+              /* If this is a reverse merge reorder CHILD->REMAINING_RANGES and
+                 PARENT->REMAINING_RANGES so both will work with the
+                 svn_rangelist_* APIs below. */
+              if (is_rollback)
+                {
+                  /* svn_rangelist_reverse operates in place so it's safe
+                     to use our subpool. */
+                  SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
+                                                subpool));
+                  SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
+                                                subpool));
+                }
+
+              /* Create a rangelist describing the range PRIMARY_URL@older_rev
+                 exists and find the intersection of that and
+                 CHILD->REMAINING_RANGES. */
+              exists_rangelist =
+                init_rangelist(older_rev, revision_primary_url_deleted - 1,
+                               TRUE, subpool);
+              SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
+                                              exists_rangelist,
+                                              child->remaining_ranges,
+                                              FALSE, subpool));
+
+              /* Create a second rangelist describing the range beginning when
+                 PRIMARY_URL@older_rev was deleted until younger_rev.  Then
+                 find the intersection of that and PARENT->REMAINING_RANGES.
+                 Finally merge this rangelist with the rangelist above and
+                 store the result in CHILD->REMANING_RANGES. */
+              deleted_rangelist =
+                init_rangelist(revision_primary_url_deleted - 1, peg_rev,
+                               TRUE, subpool);
+              SVN_ERR(svn_rangelist_intersect(&deleted_rangelist,
+                                              deleted_rangelist,
+                                              parent->remaining_ranges,
+                                              FALSE, subpool));
+
+              SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
+                                          deleted_rangelist, subpool));
+
+              /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
+                 to reverse order if necessary. */
+              if (is_rollback)
+                {
+                  SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
+                                                subpool));
+                  SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
+                                                subpool));
+                }
+            }
         }
       else
-        return err;
-    }
-  else
-    {
-      if (segments->nelts)
         {
-          /* This algorithm needs the youngest location segment inside the
-             requested merge range.
-             svn_client__repos_location_segments gives the segments ordered
-             from oldest to youngest.
-             So consider the last segment as it is the youngest.
-           */
-          svn_location_segment_t *segment =
-            APR_ARRAY_IDX(segments, (segments->nelts - 1),
-                          svn_location_segment_t *);
-          if (is_rollback)
-            {
-              if (segment->range_start == revision2
-                  && segment->range_end == revision1)
-                {
-                  /* Case H. */
-                  *requested_rangelist = init_rangelist(revision1, revision2,
-                                                        TRUE, pool);
-                  *child_deleted_or_nonexistant = FALSE;
-                }
-              else /* Multiple location segements found. */
-                {
-                  /* Case F. */
-                  *requested_rangelist = init_rangelist(revision1, revision2,
-                                                        TRUE, pool);
-                  *child_deleted_or_nonexistant = TRUE;
-                }
-            }
-          else /* Forward merge */
-            {
-              /* Again, because REVISION2 is the peg revision for the call
-                 to svn_client__repos_location_segments, we know that the
-                 range_end of the last segment in segments is equal to
-                 REVISION2. */
-              if (segment->range_start == revision1
-                  && segment->range_end == revision2)
-                {
-                  /* Case D. */
-                  *requested_rangelist = init_rangelist(revision1, revision2,
-                                                        TRUE, pool);
-                  *child_deleted_or_nonexistant = FALSE;
-                }
-              else /* segment->range_start != revision1, since
-                      segment->range_start can't be less than REVISION1,
-                      this implies revision1 < segment->range_start. */
-                {
-                  /* Case B. */
-                  int i;
-                  apr_array_header_t *predate_intersection_rangelist;
-                  apr_array_header_t *different_name_rangelist =
-                    apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-
-                  /* Make a rangelist that describes the range which predates
-                     PRIMARY_URL's existance... */
-                  apr_array_header_t *predate_rangelist =
-                    init_rangelist(revision1,
-                                   segment->range_start,
-                                   TRUE, pool);
-                  /* ...Find the intersection of that rangelist and the
-                     subtree's parent's remaining ranges. */
-                  SVN_ERR(svn_rangelist_intersect(
-                    &predate_intersection_rangelist,
-                    predate_rangelist,
-                    parent->remaining_ranges,
-                    FALSE, pool));
-                  *requested_rangelist =
-                    init_rangelist(segment->range_start,
-                                   revision2,
-                                   TRUE, pool);
-                  /* Merge *REQUESTED_RANGELIST with its parent's remaining
-                     ranges the intersect with the subtree's prehistory. */
-                  SVN_ERR(svn_rangelist_merge(
-                    requested_rangelist, predate_intersection_rangelist,
-                    pool));
-
-                  /* Remove ranges that predate PRIMARY_URL's existance
-                     because the source exists under a different URL due to a
-                     rename between REVISION1:REVISION2 - see 'MERGE FAILS' in
-                     http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc34.
-                     */
-                  for (i = 0; i < segments->nelts; i++)
-                    {
-                      segment =
-                        APR_ARRAY_IDX(segments, i, svn_location_segment_t *);
-                      if (segment->path
-                          && strcmp(segment->path, mergeinfo_path + 1) != 0)
-                        push_range(different_name_rangelist,
-                                   segment->range_start,
-                                   segment->range_end, TRUE, pool);
-                    }
-                  if (different_name_rangelist->nelts)
-                    SVN_ERR(svn_rangelist_remove(requested_rangelist,
-                                                 different_name_rangelist,
-                                                 *requested_rangelist, FALSE,
-                                                 pool));
-                  *child_deleted_or_nonexistant = FALSE;
-                }
-            }
+          return err;
         }
-    } /* ! err */
+    }
+  else /* PRIMARY_URL@peg_rev exists. */
+    {
+      apr_array_header_t *exists_rangelist, *non_existent_rangelist;
+      svn_location_segment_t *segment =
+        APR_ARRAY_IDX(segments, (segments->nelts - 1),
+                      svn_location_segment_t *);
 
+      /* We know PRIMARY_URL@peg_rev exists as the call to
+         svn_client__repos_location_segments() succeeded.  If there is only
+         one segment that starts at oldest_rev then we know that
+         PRIMARY_URL@oldest_rev:PRIMARY_URL@peg_rev describes an unbroken
+         line of history, so there is nothing more to adjust in
+         CHILD->REMAINING_RANGES. */
+      if (segment->range_start == older_rev)
+        return SVN_NO_ERROR;
+
+      /* If this is a reverse merge reorder CHILD->REMAINING_RANGES and
+         PARENT->REMAINING_RANGES so both will work with the
+         svn_rangelist_* APIs below. */
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, subpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, subpool));
+        }
+
+      /* Since segment doesn't span older_rev:peg_rev we know
+         PRIMARY_URL@peg_rev didn't come into existence until
+         segment->range_start + 1.  Create a rangelist describing
+         range where PRIMARY_URL exists and find the intersection of that
+         range and CHILD->REMAINING_RANGELIST. */
+      exists_rangelist = init_rangelist(segment->range_start, peg_rev,
+                                        TRUE, subpool);
+      SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
+                                      exists_rangelist,
+                                      child->remaining_ranges,
+                                      FALSE, subpool));
+
+      /* Create a second rangelist describing the range before
+         PRIMARY_URL@peg_rev came into existence and find the intersection of
+         that range and PARENT->REMAINING_RANGES.  Then merge that rangelist
+         with exists_rangelist and store the result in
+         CHILD->REMANING_RANGES. */
+      non_existent_rangelist = init_rangelist(older_rev, segment->range_start,
+                                              TRUE, subpool);
+      SVN_ERR(svn_rangelist_intersect(&non_existent_rangelist,
+                                      non_existent_rangelist,
+                                      parent->remaining_ranges,
+                                      FALSE, subpool));
+
+      SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
+                                  non_existent_rangelist, subpool));
+
+      /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
+         to reverse order if necessary. */
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, subpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, subpool));
+        }
+    }
+
+  /* Make a lasting copy of CHILD->REMAINING_RANGES using POOL. */
+  child->remaining_ranges = svn_rangelist_dup(child->remaining_ranges, pool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -2443,24 +2432,27 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
 
 /* Helper for calculate_remaining_ranges().
 
-   Calculate the ranges that remain to be merged from the merge
-   source MERGEINFO_PATH (relative to the repository root) to the working
-   copy path represented by CHILD -- for use by drive_merge_report_editor()'s
-   application of the editor to the WC.  Set CHILD->remaining_ranges to the
-   set of revisions to merge.
+   Initialize CHILD->REMAINING_RANGES to a rangelist representing the
+   requested merge of REVISION1:REVISION2 from MERGEINFO_PATH to CHILD->PATH.
+   For forward merges remove any ranges from CHILD->REMAINING_RANGES that
+   have already been merged to CHILD->PATH per TARGET_MERGEINFO or
+   IMPLICIT_MERGEINFO.  For reverse merges remove any ranges from
+   CHILD->REMAINING_RANGES that have not alreay been merged to CHILD->PATH.
 
-   PARENT, PRIMARY_URL, IS_SUBTREE, RA_SESSION, CTX are cascaded from
-   calculate_remaining_ranges().  If IS_SUBTREE is FALSE then PARENT is
-   ignored.
+   CHILD represents a working copy path which is the merge target or one of
+   target's subtrees - see 'THE CHILDREN_WITH_MERGEINFO ARRAY'.
 
+   MERGEINFO_PATH is the merge source relative to the repository root.
+ 
    REVISION1 and REVISION2 describe the merge range requested from
    MERGEINFO_PATH.
 
-   TARGET_MERGEINFO is the path's explicit or inherited mergeinfo.
-   May be NULL if there is not mergeinfo or an empty hash for
-   empty mergeinfo.
+   TARGET_MERGEINFO is the CHILD->PATHS's explicit or inherited mergeinfo.
+   TARGET_MERGEINFO should be NULL if there is no explicit or inherited
+   mergeinfo on CHILD->PATH or an empty hash if CHILD->PATH has empty
+   mergeinfo.
 
-   IMPLICIT_MERGEINFO is the path's natural history described as
+   IMPLICIT_MERGEINFO is CHILD->PATH's natural history described as
    mergeinfo - see svn_client__get_history_as_mergeinfo().
 
    NOTE: This should only be called when honoring mergeinfo.
@@ -2469,111 +2461,58 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
    function must have previously been called for PARENT.
 */
 static svn_error_t *
-filter_merged_revisions(svn_client__merge_path_t *parent,
-                        svn_client__merge_path_t *child,
+filter_merged_revisions(svn_client__merge_path_t *child,
                         const char *mergeinfo_path,
                         svn_mergeinfo_t target_mergeinfo,
                         svn_mergeinfo_t implicit_mergeinfo,
                         svn_revnum_t revision1,
                         svn_revnum_t revision2,
-                        const char *primary_url,
-                        svn_ra_session_t *ra_session,
-                        svn_boolean_t is_subtree,
-                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   apr_array_header_t *target_rangelist = NULL;
   svn_mergeinfo_t mergeinfo = implicit_mergeinfo;
-  apr_array_header_t *requested_merge;
-
-  if (is_subtree)
-    {
-      /* If CHILD is the merge target we then know that PRIMARY_URL,
-         REVISION1, and REVISION2 are provided by normalize_merge_sources()
-         -- see 'MERGEINFO MERGE SOURCE NORMALIZATION'.  Due to this
-         normalization we know that PRIMARY_URL@REVISION1 and
-         PRIMARY_URL@REVISION2 describe an unbroken line of history such
-         that the entire range described by REVISION1:REVISION2 can
-         potentially be merged to CHILD.  So we simply convert REVISION1 and
-         REVISION2 to a rangelist and proceed to the filtering of merged
-         revisions.
-
-         But if CHILD is a subtree we don't have the same guarantees about
-         PRIMARY_URL, REVISION1, and REVISION2 as we do for the merge target.
-         PRIMARY_URL@REVSION1 and/or PRIMARY_URL@REVSION2 might not exist.
-
-         If one or both doesn't exist, we need to know so we don't later try
-         to describe these invalid subtrees in drive_merge_report_editor(),
-         as that will break the merge. */
-      svn_boolean_t child_deleted_or_nonexistant;
-      SVN_ERR(prepare_subtree_ranges(&requested_merge,
-                                     &child_deleted_or_nonexistant,
-                                     mergeinfo_path, parent,
-                                     revision1, revision2,
-                                     primary_url, ra_session, ctx, pool));
-      if (child_deleted_or_nonexistant && parent)
-        {
-          /* A little trick: If CHILD is a subtree which will be deleted by
-             the requested merge or simply doesn't exist along the line of
-             history described by PRIMARY_URL@REVSION1 -> PRIMARY_URL@REVSION2,
-             then don't bother dealing with CHILD in a separate editor drive.
-             Just make child's remaining ranges exactly the same as its
-             nearest parent.
-
-             For deletions this will cause the editor drive to be rooted at
-             the subtree CHILD's nearest parent in CHILDREN_WITH_MERGEINFO
-             This will simply delete the subtree.  For the case where neither
-             PRIMARY_URL@REVSION1 or PRIMARY_URL@REVSION2 exist, there is
-             nothing to merge to the subtree, so ignoring it completely is
-             safe. See
-             http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5.
-             */
-          child->remaining_ranges =
-            svn_rangelist_dup(parent->remaining_ranges, pool);
-          return SVN_NO_ERROR;
-        }
-    }
-  else
-    {
-      /* Convert REVISION1 and REVISION2 to a rangelist.
-
-         Note: Talking about a requested merge range's inheritability doesn't
-         make much sense, but as we are using svn_merge_range_t to describe
-         it we need to pick *something*.  Since all the rangelist
-         manipulations in this function either don't consider inheritance
-         by default or we are requesting that they don't (i.e.
-         svn_rangelist_remove and svn_rangelist_intersect) then we could
-         set the inheritability as FALSE, it won't matter either way. */
-      requested_merge = init_rangelist(revision1, revision2, TRUE, pool);
-    }
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Now filter out revisions that have already been merged to CHILD. */
+
   if (revision1 > revision2) /* This is a reverse merge. */
     {
       if (target_mergeinfo)
         {
-          mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
-          SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, pool));
+          mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, subpool);
+          SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, subpool));
         }
 
       target_rangelist = apr_hash_get(mergeinfo,
                                       mergeinfo_path, APR_HASH_KEY_STRING);
       if (target_rangelist)
         {
+          /* Convert REVISION1 and REVISION2 to a rangelist.
+
+             Note: Talking about a requested merge range's inheritability 
+             doesn't make much sense, but as we are using svn_merge_range_t
+             to describe it we need to pick *something*.  Since all the
+             rangelist manipulations in this function either don't consider
+             inheritance by default or we are requesting that they don't (i.e.
+             svn_rangelist_remove and svn_rangelist_intersect) then we could
+             set the inheritability as FALSE, it won't matter either way. */
+          apr_array_header_t *requested_rangelist =
+            init_rangelist(revision1, revision2, TRUE, subpool);
+
           /* Return the intersection of the revs which are both
              already represented by the WC and are requested for
              revert.  The revert range and will need to be reversed
              for our APIs to work properly, as will the output for the
              revert to work properly. */
-          SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
+          SVN_ERR(svn_rangelist_reverse(requested_rangelist, subpool));
 
-          /* We don't consider inheritance we determining intersecting
+          /* We don't consider inheritance when determining intersecting
              ranges.  If we *did* consider inheritance, then our calculation
-             would be wrong.  For example, if the REQUESTED_MERGE is 5:3 and
-             TARGET_RANGELIST is r5* (non-inheritable) then the intersection
-             would be r4.  And that would be wrong as we clearly want to
-             reverse merge both r4 and r5 in this case.  Ignoring the ranges'
-             inheritance results in an intersection of r4-5.
+             would be wrong.  For example, if the CHILD->REMAINING_RANGES is
+             5:3 and TARGET_RANGELIST is r5* (non-inheritable) then the
+             intersection would be r4.  And that would be wrong as we clearly
+             want to reverse merge both r4 and r5 in this case.  Ignoring the
+             ranges' inheritance results in an intersection of r4-5.
 
              You might be wondering about ENTRY's children, doesn't the above
              imply that we will reverse merge r4-5 from them?  Nope, this is
@@ -2584,20 +2523,22 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
              merge.c:get_mergeinfo_paths(). */
           SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
                                           target_rangelist,
-                                          requested_merge, FALSE, pool));
+                                          requested_rangelist,
+                                          FALSE, pool));
 
           SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, pool));
         }
       else
         {
+          /* No part of REVISION1:REVISION2 has been merged from
+             MERGEINFO_PATH to CHILD so just set CHILD->REMAINING_RANGES
+             to an empty array. */
           child->remaining_ranges =
             apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
         }
     }
   else /* This is a forward merge */
     {
-      child->remaining_ranges = requested_merge;
-
 /* ### TODO:  Which evil shall we choose?
    ###
    ### If we allow all forward-merges not already found in recorded
@@ -2624,8 +2565,8 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
 #else
       if (target_mergeinfo)
         {
-          mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
-          SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, pool));
+          mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, subpool);
+          SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, subpool));
         }
 
       target_rangelist = apr_hash_get(mergeinfo,
@@ -2634,10 +2575,20 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
       /* See earlier comment preceeding svn_rangelist_intersect() for
          why we don't consider inheritance here. */
       if (target_rangelist)
-        SVN_ERR(svn_rangelist_remove(&(child->remaining_ranges),
-                                     target_rangelist,
-                                     requested_merge, FALSE, pool));
+        {
+          apr_array_header_t *requested_rangelist =
+            init_rangelist(revision1, revision2, TRUE, subpool);
+          SVN_ERR(svn_rangelist_remove(&(child->remaining_ranges),
+                                       target_rangelist,
+                                       requested_rangelist, FALSE, pool));
+        }
+      else
+        {
+          child->remaining_ranges = init_rangelist(revision1, revision2,
+                                                   TRUE, pool);
+        }
     }
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -2648,9 +2599,11 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
    been merged to CHILD->PATH and populate CHILD->REMAINING_RANGES with the
    ranges that still need merging.
 
-   SOURCE_ROOT_URL, URL1, REVISION1, URL2, REVISION2, TARGET_MERGEINFO,
-   IMPLICIT_MERGEINFO, RA_SESSION, and CTX are all cascaded from the
-   caller's arguments of the same names.
+   URL1, REVISION1, URL2, REVISION2, TARGET_MERGEINFO, IMPLICIT_MERGEINFO, and
+   CTX are all cascaded from the caller's arguments of the same names.
+
+   RA_SESSION is the session for, and SOURCE_ROOT_URL is the repository root
+   for, the younger of URL1@REVISION1 and URL2@REVISION2.
 
    If IS_SUBTREE is FALSE then CHILD describes the merge target and the
    requirements around the values of URL1, REVISION1, URL2, and REVISION2
@@ -2697,10 +2650,38 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             source_root_url, TRUE,
                                             ra_session, NULL, pool));
-  SVN_ERR(filter_merged_revisions(parent, child, mergeinfo_path,
+
+  /* Initialize CHILD->REMAINING_RANGES and filter out revisions already
+     merged (or, in the case of reverse merges, ranges not yet merged). */
+  SVN_ERR(filter_merged_revisions(child, mergeinfo_path,
                                   target_mergeinfo, implicit_mergeinfo,
-                                  revision1, revision2, primary_url,
-                                  ra_session, is_subtree, ctx, pool));
+                                  revision1, revision2, pool));
+
+  if (is_subtree)
+    {
+      /* If CHILD is the merge target we then know that primary_url,
+         REVISION1, and REVISION2 are provided by normalize_merge_sources()
+         -- see 'MERGEINFO MERGE SOURCE NORMALIZATION'.  Due to this
+         normalization we know that primary_url@REVISION1 and
+         primary_url@REVISION2 describe an unbroken line of history such
+         that the entire range described by REVISION1:REVISION2 can
+         potentially be merged to CHILD.  So we simply convert REVISION1 and
+         REVISION2 to a rangelist and proceed to the filtering of merged
+         revisions.
+
+         But if CHILD is a subtree we don't have the same guarantees about
+         primary_url, REVISION1, and REVISION2 as we do for the merge target.
+         primary_url@REVSION1 and/or primary_url@REVSION2 might not exist.
+
+         If one or both doesn't exist, we need to know so we don't later try
+         to describe these invalid subtrees in drive_merge_report_editor(),
+         as that will break the merge. */
+      SVN_ERR(adjust_deleted_subtree_ranges(child, parent,
+                                            mergeinfo_path,
+                                            revision1, revision2,
+                                            primary_url, ra_session,
+                                            ctx, pool));
+    }
 
   /* Issue #2973 -- from the continuing series of "Why, since the advent of
      merge tracking, allowing merges into mixed rev and locally modified
@@ -3342,6 +3323,11 @@ remove_absent_children(const char *target_wcpath,
 
      2) Among all the ranges that meet condition 'b' the youngest start
         revision must equal REVISION1.
+
+   Note: If the first svn_merge_range_t * element of some subtree child's
+   remaining_ranges array is the same as the first range of that child's
+   nearest path-wise ancestor, then the subtree child *will not* be described
+   to the reporter.
 
    DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
    do_directory_merge(), see that function for more info.  CALLBACKS are the
@@ -6806,42 +6792,132 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 }
 
 
-/* Return a new catalog in *CATALOG_P equal to CATALOG, but containing
-   only source ranges from the segments in SEGMENTS (whose elements
-   are of type svn_location_segment_t *).  The returned values are
-   (deeply) allocated in POOL. */
+/* Helper for calculate_left_hand_side() which filters the mergeinfo catalog
+   on a reintegrate source down to only that which came from the reintegrate
+   target.
+
+   SOURCE_CATALOG is the collection of explicit mergeinfo on
+   SOURCE_REPOS_REL_PATH@SORUCE_REV and all its children, i.e. the mergeinfo
+   catalog for the reintegrate source.
+
+   TARGET_SEGMENTS_HASH is a hash of (const char *) paths mapped to
+   (apr_array_header_t *) arrays of svn_location_segment_t *.  Each of these
+   path keys represent a path in the reintegrate target, relative to the
+   repository root, which has explicit mergeinfo and/or is the reintegrate
+   target itself.  The segment arrays contain the natural history of each
+   path@TARGET_REV.  Effectively this is the mergeinfo catalog on the
+   reintegrate target.
+
+   SOURCE_REPOS_REL_PATH is the path of the reintegrate source relative to
+   the root of the repository.  TARGET_REPOS_REL_PATH is the path of the
+   reintegrate target relative to the root of the repository.
+
+   TARGET_REV is the working revision the entire WC tree rooted at
+   TARGET_REPOS_REL_PATH is at.  SOURCE_REV is the peg revision of the
+   reintegrate source.
+
+   RA_SESSION is a session opened to the repository root.
+   
+   Return a new catalog in *FILTERED_CATALOG_P equal to SOURCE_CATALOG, but
+   containing only mergeinfo which came from TARGET_REPOS_REL_PATH@TARGET_REV's
+   natural history.  *FILTERED_CATALOG_P is (deeply) allocated in POOL. */
 static svn_error_t *
-remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
-                         svn_mergeinfo_catalog_t catalog,
-                         apr_array_header_t *segments,
+remove_irrelevant_ranges(svn_mergeinfo_catalog_t *filtered_source_catalog_p,
+                         svn_mergeinfo_catalog_t source_catalog,
+                         apr_hash_t *target_segments_hash,
                          const char *source_repos_rel_path,
+                         const char *target_repos_rel_path,
+                         svn_revnum_t target_rev,
+                         svn_revnum_t source_rev,
+                         svn_ra_session_t *ra_session,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_mergeinfo_catalog_t new_catalog = apr_hash_make(pool);
   svn_mergeinfo_t history_as_mergeinfo;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(subpool);
 
-  SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
-                                              segments,
-                                              pool));
-
-  for (hi = apr_hash_first(pool, catalog);
+  /* Examine the natural history of each path in the reintegrate target
+     with explicit mergeinfo. */
+  for (hi = apr_hash_first(subpool, target_segments_hash);
        hi;
        hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
-      const char *path;
-      svn_mergeinfo_t mergeinfo, filtered_mergeinfo;
+      const char *path, *source_path;
+      apr_array_header_t *segments;
+      svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
 
+      svn_pool_clear(iterpool);      
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
-      mergeinfo = val;
+      segments = val;
 
+      source_path = path + strlen(target_repos_rel_path);      
+      if (source_path[0] == '/') /* Remove leading '/' for svn_path_join. */
+        source_path++;
+      source_path = svn_path_join(source_repos_rel_path, source_path,
+        iterpool);
+      
+      SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
+                                                  segments,
+                                                  iterpool));
+
+      /* If we find mergeinfo for source_path remove that from
+         SOURCE_CATALOG.  When this iteration over TARGET_SEGMENTS_HASH is
+         complete all that should be left in SOURCE_CATALOG are subtrees that
+         have explicit mergeinfo on the reintegrate source where there is no
+         corresponding explicit mergeinfo on the reintegrate target. */
+      source_mergeinfo = apr_hash_get(source_catalog, source_path,
+                                      APR_HASH_KEY_STRING);
+      if (source_mergeinfo)
+        {
+          apr_hash_set(source_catalog, source_path, APR_HASH_KEY_STRING,
+                       NULL);
+        }
+      else
+        {
+          /* There is no mergeinfo on source_path *or* source_path doesn't
+             exist at all.  If simply doesn't exist we can ignore it
+             altogether. */
+          svn_node_kind_t kind;
+          svn_mergeinfo_catalog_t subtree_catalog;
+          apr_array_header_t *source_repos_rel_path_as_array;
+          SVN_ERR(svn_ra_check_path(ra_session, source_path, source_rev,
+                                    &kind, iterpool));
+          if (kind == svn_node_none)
+              continue;
+          /* Else source_path does exist though it has no explicit mergeinfo.
+             Find its inherited mergeinfo.  If it doesn't have any then simply
+             set source_mergeinfo to an empty hash. */
+          source_repos_rel_path_as_array =
+            apr_array_make(iterpool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
+            = source_path;
+          SVN_ERR(svn_ra_get_mergeinfo(ra_session, &subtree_catalog,
+                                       source_repos_rel_path_as_array,
+                                       source_rev, svn_mergeinfo_inherited,
+                                       FALSE, iterpool));
+          if (subtree_catalog)
+            source_mergeinfo = apr_hash_get(subtree_catalog, source_path,
+                                            APR_HASH_KEY_STRING);
+
+          /* A path might not have any inherited mergeinfo either. */
+          if(!source_mergeinfo)
+            source_mergeinfo = apr_hash_make(iterpool);
+        }
+
+      /* Use subpool rather than iterpool because filtered_mergeinfo is
+         going into new_catalog below and needs to last to the end of
+         this function. */
       SVN_ERR(svn_mergeinfo_intersect(&filtered_mergeinfo,
-                                      mergeinfo,
+                                      source_mergeinfo,
                                       history_as_mergeinfo,
-                                      pool));
+                                      subpool));
+
       /* Don't put an empty hash in the catalog for the root of the source.
          An empty hash represents empty mergeinfo as opposed to *no*
          mergeinfo.  We need to do this for the root of the source because
@@ -6856,25 +6932,125 @@ remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136908
          */
       if (apr_hash_count(filtered_mergeinfo)
-          || strcmp(source_repos_rel_path, path) != 0)
-        apr_hash_set(new_catalog,
-                     apr_pstrdup(pool, path),
-                     APR_HASH_KEY_STRING,
-                     filtered_mergeinfo);
+          || (strcmp(source_repos_rel_path, source_path) != 0
+              && (apr_hash_count(source_mergeinfo) == 0)))
+        {
+          /* As with svn_mergeinfo_intersect above, we need to use subpool
+             rather than iterpool. */
+          apr_hash_set(new_catalog,
+                       apr_pstrdup(subpool, source_path),
+                       APR_HASH_KEY_STRING,
+                       filtered_mergeinfo);
+        }
     }
 
-  *catalog_p = new_catalog;
+  /* Are there any subtrees with explicit mergeinfo still left in the merge
+     source where there was no explicit mergeinfo for the corresponding path
+     in the merge target?  If so, add the intersection of those path's
+     mergeinfo and the corresponding target path's mergeinfo to
+     new_catalog. */
+  if (apr_hash_count(source_catalog))
+    {
+      for (hi = apr_hash_first(subpool, source_catalog);
+           hi;
+           hi = apr_hash_next(hi))
+        {   
+          const void *key;
+          void *val;
+          const char *source_path;
+          svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
+          const char *target_path;
+          apr_array_header_t *segments;
+          svn_error_t *err;
+ 
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          source_path = key;
+          source_mergeinfo = val;
+          
+          target_path = source_path + strlen(source_repos_rel_path);      
+          if (target_path[0] == '/') /* Remove leading '/' for svn_path_join */
+            target_path++;
+          target_path = svn_path_join(target_repos_rel_path, target_path,
+                                      iterpool);
+
+          err = svn_client__repos_location_segments(&segments,
+                                                    ra_session,
+                                                    target_path,
+                                                    target_rev, target_rev,
+                                                    SVN_INVALID_REVNUM,
+                                                    ctx, iterpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                  || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+                {
+                  /* This path with explicit mergeinfo in the source doesn't exist
+                     on the target. */
+                  svn_error_clear(err);
+                  err = NULL;
+                }
+              else
+                {
+                  return err;
+                }
+            }
+          else
+            {
+              SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
+                                                          segments,
+                                                          iterpool));
+              /* Use subpool rather than iterpool because filtered_mergeinfo
+                 is  going into new_catalog below and needs to last to the
+                 end of this function. */
+              SVN_ERR(svn_mergeinfo_intersect(&filtered_mergeinfo,
+                                              source_mergeinfo,
+                                              history_as_mergeinfo,
+                                              subpool));
+              if (apr_hash_count(filtered_mergeinfo))
+                apr_hash_set(new_catalog,
+                             apr_pstrdup(subpool, source_path),
+                             APR_HASH_KEY_STRING,
+                             filtered_mergeinfo);
+            }
+        }
+    }
+
+  /* Make a shiny new copy before blowing away all the temporary pools. */
+  *filtered_source_catalog_p = svn_mergeinfo_catalog_dup(new_catalog, pool);
+
+  /* iterpool was allocated out of subpool so this destroys both. */
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
-/* TODO(reint): Document.
+/* Helper for svn_client_merge_reintegrate() which calculates the
+   'left hand side' of the underlying two-URL merge that a --reintegrate
+   merge actually performs.
 
-   RA_SESSION must be opened at the repository root. */
+   TARGET_REPOS_REL_PATH is the path of the reintegrate target relative to
+   the root of the repository.  SOURCE_REPOS_REL_PATH is the path of the
+   reintegrate source relative to the root of the repository.
+
+   SUBTREES_WITH_MERGEINFO is a hash of (const char *) paths in the
+   reintegrate target, relative to the root of the repository, which have
+   explicit mergeinfo set on them.  The reintegrate target itself should
+   always be in this hash, regardless of whether it has explicit mergeinfo.
+
+   TARGET_REV is the working revision the entire WC tree rooted at
+   TARGET_REPOS_REL_PATH is at.  SOURCE_REV is the peg revision of the
+   reintegrate source.
+
+   RA_SESSION is a session opened to the repository root.
+   
+   Check that mergeinfo in SUBTREES_WITH_MERGEINFO 
+   */
 static svn_error_t *
 calculate_left_hand_side(const char **url_left,
                          svn_revnum_t *rev_left,
                          svn_mergeinfo_t *source_mergeinfo_p,
                          const char *target_repos_rel_path,
+                         apr_hash_t *subtrees_with_mergeinfo,
                          svn_revnum_t target_rev,
                          const char *source_repos_rel_path,
                          const char *source_repos_root,
@@ -6886,18 +7062,35 @@ calculate_left_hand_side(const char **url_left,
   apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
   svn_boolean_t have_mergeinfo_for_source = FALSE,
     have_mergeinfo_for_descendants = FALSE;
-  svn_mergeinfo_catalog_t mergeinfo_catalog;
+  svn_mergeinfo_catalog_t mergeinfo_catalog, filtered_mergeinfo_catalog;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+  /* hash of paths mapped to arrays of svn_location_segment_t *. */
+  apr_hash_t *segments_hash = apr_hash_make(pool); 
 
-  /* Get the history (segments) for the target */
-  SVN_ERR(svn_client__repos_location_segments(&segments,
-                                              ra_session,
-                                              target_repos_rel_path,
-                                              target_rev, target_rev,
-                                              SVN_INVALID_REVNUM,
-                                              ctx, subpool));
+  /* Get the history (segments) for the target and any of it's subtrees. */
+  for (hi = apr_hash_first(pool, subtrees_with_mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      SVN_ERR(svn_client__repos_location_segments(&segments,
+                                                  ra_session,
+                                                  path,
+                                                  target_rev, target_rev,
+                                                  SVN_INVALID_REVNUM,
+                                                  ctx, subpool));
+      apr_hash_set(segments_hash, 
+                   apr_pstrdup(subpool, path),
+                   APR_HASH_KEY_STRING, segments);
+    }
 
   /* Get the mergeinfo from the source, including its descendants. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
@@ -6905,19 +7098,28 @@ calculate_left_hand_side(const char **url_left,
   SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_catalog,
                                source_repos_rel_path_as_array, source_rev,
                                svn_mergeinfo_inherited, TRUE, subpool));
+
   if (!mergeinfo_catalog)
     mergeinfo_catalog = apr_hash_make(subpool);
 
-  /* Filter mergeinfo_catalog so that all of the ranges come from
-     the target's history */
-  SVN_ERR(remove_irrelevant_ranges(&mergeinfo_catalog,
+  /* Filter the source's mergeinfo catalog so that all mergeinfo
+     comes from the target's history.  */
+  SVN_ERR(remove_irrelevant_ranges(&filtered_mergeinfo_catalog,
                                    mergeinfo_catalog,
-                                   segments,
+                                   segments_hash,
                                    source_repos_rel_path,
+                                   target_repos_rel_path,
+                                   target_rev,
+                                   source_rev,
+                                   ra_session,
+                                   ctx,
                                    subpool));
 
-  /* Elide! */
-  SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_catalog, subpool));
+  /* We can tolerate subtrees with mergeinfo on the source if the
+     mergeinfo on each subtree that came from the target elides
+     to SOURCE_REPOS_REL_PATH. */
+  SVN_ERR(svn_client__elide_mergeinfo_catalog(filtered_mergeinfo_catalog,
+                                              subpool));
 
   /* See which case we fall into: */
   /* TODO(reint): make sure we look things up with keys that start
@@ -6927,11 +7129,12 @@ calculate_left_hand_side(const char **url_left,
      start with a slash (or at least, it will behave in a way we
      probably don't want if the component *does* start with slash).
   */
-  if (apr_hash_get(mergeinfo_catalog, source_repos_rel_path,
+  if (apr_hash_get(filtered_mergeinfo_catalog, source_repos_rel_path,
                    APR_HASH_KEY_STRING))
     have_mergeinfo_for_source = TRUE;
-  if (apr_hash_count(mergeinfo_catalog) > 1 ||
-      (! have_mergeinfo_for_source && apr_hash_count(mergeinfo_catalog) == 1))
+  if (apr_hash_count(filtered_mergeinfo_catalog) > 1 ||
+      (! have_mergeinfo_for_source
+       && apr_hash_count(filtered_mergeinfo_catalog) == 1))
     have_mergeinfo_for_descendants = TRUE;
 
   if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendants)
@@ -6967,11 +7170,15 @@ calculate_left_hand_side(const char **url_left,
   else if (! have_mergeinfo_for_descendants)
     {
       /* Easy case: return the last path/rev in the mergeinfo. */
-      svn_mergeinfo_t source_mergeinfo = apr_hash_get(mergeinfo_catalog,
+      svn_mergeinfo_t source_mergeinfo = apr_hash_get(filtered_mergeinfo_catalog,
                                                       source_repos_rel_path,
                                                       APR_HASH_KEY_STRING);
       apr_pool_t *iterpool = svn_pool_create(subpool);
       int i;
+      
+      /* Get the segments for the reintegrate target. */
+      segments = apr_hash_get(segments_hash, target_repos_rel_path,
+                             APR_HASH_KEY_STRING);
       for (i = segments->nelts - 1; i >= 0; i--)
         {
           svn_location_segment_t *segment
@@ -7009,21 +7216,90 @@ calculate_left_hand_side(const char **url_left,
   else
     {
       const char *full_url;
+      svn_string_t *filtered_mergeinfo_catalog_string;
+
       SVN_ERR(svn_ra_get_session_url(ra_session, &full_url, pool));
       full_url = svn_path_url_add_component(full_url, source_repos_rel_path,
                                             pool);
+
+      SVN_ERR(svn_mergeinfo__catalog_to_formatted_string(
+        &filtered_mergeinfo_catalog_string, filtered_mergeinfo_catalog,
+        "  ", "    ", pool));
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               "Cannot reintegrate from '%s' yet:\n"
-                               "Some revisions have been merged under it "
-                               "that have not been merged\n"
-                               "into the reintegration target; "
-                               "merge them first, then retry.", full_url);
-      /* TODO(reint): It would be even better to print out mergeinfo_catalog
-         here.  Is there a helper function for that? */
+                               _("Reintegrate can only be used if the "
+                                 "revisions previously merged from the "
+                                 "reintegrate target to '%s' are the same, "
+                                 "but there are differences:\n%s"),
+                                 full_url,
+                                 filtered_mergeinfo_catalog_string->data);
     }
   return SVN_NO_ERROR;
 }
 
+/* A baton for get_subtree_mergeinfo_walk_cb. */
+struct get_subtree_mergeinfo_walk_baton
+{
+  /* Merge target and target relative to repository root. */
+  const char *target_path;
+  const char *target_repos_root;
+
+  /* Hash of paths (const char *) that have explicit mergeinfo. */
+  apr_hash_t *subtrees_with_mergeinfo;
+
+  /* Access for the tree being walked. */
+  svn_wc_adm_access_t *base_access;
+  svn_client_ctx_t *ctx;
+};
+
+/* svn_wc_entry_callbacks2_t found_entry() callback for get_mergeinfo_paths.
+
+   Given the working copy path PATH, its corresponding ENTRY, and WALK_BATON,
+   where WALK_BATON is of type get_subtree_mergeinfo_walk_baton *:
+   
+   If PATH has explicit mergeinfo or is the same as WALK_BATON->TARGET_PATH,
+   then store a copy of PATH in WALK_BATON->SUBTREES_WITH_MERGEINFO.  The copy
+   is allocated in WALK_BATON->SUBTREES_WITH_MERGEINFO's pool.
+   
+   POOL is used only for temporary allocations. */
+static svn_error_t *
+get_subtree_mergeinfo_walk_cb(const char *path,
+                              const svn_wc_entry_t *entry,
+                              void *walk_baton,
+                              apr_pool_t *pool)
+{
+  struct get_subtree_mergeinfo_walk_baton *wb = walk_baton;
+  const svn_string_t *propval;
+  
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only use
+     the second one (where we're looking at THIS_DIR).  The exception
+     is absent dirs, these only come through once, so continue. */
+  if ((entry->kind == svn_node_dir)
+      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+      && !entry->absent)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGEINFO, path,
+                          wb->base_access, pool));
+
+  /* We always want to include the reintegrate target even if it has
+     no explicit mergeinfo.  It still has natural history we'll need
+     to consider. */
+  if (propval || strcmp(path, wb->target_path) == 0)
+    {
+      const char *stored_path;
+
+      SVN_ERR(svn_client__path_relative_to_root(&stored_path, path,
+                                                wb->target_repos_root, FALSE,
+                                                NULL, wb->base_access, pool));
+      stored_path = apr_pstrdup(apr_hash_pool_get(wb->subtrees_with_mergeinfo),
+                                stored_path);
+      apr_hash_set(wb->subtrees_with_mergeinfo, stored_path,
+                   APR_HASH_KEY_STRING, stored_path);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_merge_reintegrate(const char *source,
@@ -7047,6 +7323,9 @@ svn_client_merge_reintegrate(const char *source,
   svn_mergeinfo_t source_mergeinfo;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
+  static const svn_wc_entry_callbacks2_t walk_callbacks =
+    { get_subtree_mergeinfo_walk_cb, get_mergeinfo_error_handler };
+  struct get_subtree_mergeinfo_walk_baton wb;
 
   /* Open an admistrative session with the working copy. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
@@ -7098,12 +7377,23 @@ svn_client_merge_reintegrate(const char *source,
                                             target_wcpath, wc_repos_root,
                                             FALSE, ra_session, NULL, pool));
 
+  /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
+  wb.target_path = target_wcpath;
+  wb.target_repos_root = wc_repos_root;
+  wb.base_access = adm_access;
+  wb.subtrees_with_mergeinfo = apr_hash_make(pool);
+  wb.ctx = ctx;
+  SVN_ERR(svn_wc_walk_entries3(target_wcpath, adm_access, &walk_callbacks,
+                               &wb, svn_depth_infinity, TRUE,
+                               ctx->cancel_func, ctx->cancel_baton, pool));
+
   SVN_ERR(svn_client__get_revision_number(&rev2, NULL,
                                           ra_session, peg_revision,
                                           source_repos_rel_path, pool));
 
   SVN_ERR(calculate_left_hand_side(&url1, &rev1, &source_mergeinfo,
                                    target_repos_rel_path,
+                                   wb.subtrees_with_mergeinfo,
                                    rev1,
                                    source_repos_rel_path,
                                    source_repos_root,
