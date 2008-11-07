@@ -1435,18 +1435,12 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
           ++curp;
           ++entryno;
-<<<<<<< .working
-          if ((entry->deleted || entry->absent 
-               || (entry->depth == svn_depth_exclude))
-              && (entry->schedule != svn_wc_schedule_add)
-              && (entry->schedule != svn_wc_schedule_replace)
-              && (! show_hidden))
-            ;
-          else
-=======
-          if (!entry_is_hidden(entry) || show_hidden)
->>>>>>> .merge-right.r34097
-            apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+
+          if ((entry->depth != svn_depth_exclude)
+              || (!entry_is_hidden(entry) || show_hidden))
+            {
+              apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+            }
         }
     }
 
