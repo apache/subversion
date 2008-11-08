@@ -1003,7 +1003,8 @@ remove_deleted_entry(void *baton, const void *key,
   const svn_wc_entry_t *cur_entry = val;
   svn_wc_adm_access_t *entry_access;
 
-  /* Skip each entry that isn't scheduled for deletion. */
+  /* Skip each entry that isn't scheduled for deletion. This gracefully
+     includes excluded item. */
   if (cur_entry->schedule != svn_wc_schedule_delete)
     return SVN_NO_ERROR;
 
@@ -1163,7 +1164,7 @@ log_do_committed(struct log_runner *loggy,
           SVN_ERR(svn_wc_entry(&parentry,
                                svn_wc_adm_access_path(loggy->adm_access),
                                loggy->adm_access,
-                               TRUE, pool));
+                               FALSE, pool));
           if (new_rev > parentry->revision)
             {
               /* ...then the parent's revision is now officially a

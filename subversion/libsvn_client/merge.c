@@ -155,7 +155,7 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
   const svn_wc_entry_t *ent;
   const char *idx1, *idx2;
 
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
 
   idx1 = strchr(url, ':');
   idx2 = strchr(ent->url, ':');
@@ -3916,6 +3916,8 @@ get_mergeinfo_walk_cb(const char *path,
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(path, wb->merge_target_path);
   const char *parent_path = svn_path_dirname(path, pool);
+
+  /* TODO(#2843) How to deal with a excluded item on merge? */
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use

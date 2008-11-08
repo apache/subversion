@@ -561,6 +561,11 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           this_entry = val;
+
+          /* Skip the excluded item. */
+          if (this_entry->depth == svn_depth_exclude)
+            continue;
+
           name_uri = svn_path_uri_encode(name, loop_pool);
 
           full_path = svn_path_join(path, name, loop_pool);
@@ -1271,7 +1276,11 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
+      /* Ensured by harvest_commitables(), item->path will never be an
+         excluded path. However, will it be deleted/absent items?  I think
+         committing an modification on a deleted/absent item does not make
+         sense. So it's probably safe to turn off the show_hidden flag here.*/
+      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, FALSE, pool));
 
       /* When committing a directory that no longer exists in the
          repository, a "not found" error does not occur immediately
