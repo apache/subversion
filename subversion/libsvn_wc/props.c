@@ -480,7 +480,10 @@ svn_wc__working_props_committed(const char *path,
   svn_wc_adm_access_t *mod_access;
 
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  /* The path is ensured not an excluded path. */
+  /* TODO(#2843) It seems that there is no need to 
+     reveal hidden entry here? */
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&working, path, entry->kind,
                             svn_wc__props_working, FALSE, pool));
@@ -831,7 +834,9 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   const char *tmp_rprop;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  /* TODO(#2843) The current caller ensures that PATH will not be an excluded
+     item. But do we really need show_hidden = TRUE here? */
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&dst_rprop, path,
                             entry->kind, svn_wc__props_revert, FALSE, pool));
@@ -941,7 +946,9 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   const svn_wc_entry_t *entry;
   const char *revert_file, *base_file;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  /* TODO(#2843) The current caller ensures that PATH will not be an excluded
+     item. But do we really need show_hidden = TRUE here? */
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&base_file, path, entry->kind, svn_wc__props_base,
                             FALSE, pool));
@@ -2212,10 +2219,10 @@ svn_wc_prop_list(apr_hash_t **props,
 {
   const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
   /* if there is no entry, 'path' is not under version control and
-     therefore has no props */
+     therefore has no props. */
   if (! entry)
     {
       *props = apr_hash_make(pool);
@@ -2263,7 +2270,7 @@ svn_wc_prop_get(const svn_string_t **value,
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
   if (entry == NULL)
     {
@@ -2817,7 +2824,7 @@ modified_props(svn_boolean_t *modified_p,
   if (want_props)
     *which_props = apr_hash_make(pool);
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
 
   /* If we have no entry, we can't have any prop mods. */
   if (! entry)

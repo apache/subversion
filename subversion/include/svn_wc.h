@@ -2070,11 +2070,12 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
-/** Set @a *entry to an entry for @a path, allocated in the access baton
- * pool.  If @a show_hidden is TRUE, return the entry even if it's in
- * 'deleted' or 'absent' state.  If @a path is not under revision
- * control, or if entry is hidden, not scheduled for re-addition,
- * and @a show_hidden is @c FALSE, then set @a *entry to @c NULL.
+/** Set @a *entry to an entry for @a path, allocated in the access baton pool.
+ * If @a show_hidden is TRUE, return the entry even if it's in 'excluded',
+ * 'deleted' or 'absent' state. Excluded entries are those with their depth
+ * set to @c svn_depth_exclude. If @a path is not under revision control, or
+ * if entry is hidden, not scheduled for re-addition, and @a show_hidden is @c
+ * FALSE, then set @a *entry to @c NULL.
  *
  * @a *entry should not be modified, since doing so modifies the entries
  * cache in @a adm_access without changing the entries file on disk.
@@ -2109,9 +2110,10 @@ svn_wc_entry(const svn_wc_entry_t **entry,
  * baton (that's how the entries caching works).  @a pool is used for
  * transient allocations.
  *
- * Entries that are in a 'deleted' or 'absent' state (and not
+ * Entries that are in a 'excluded', 'deleted' or 'absent' state (and not
  * scheduled for re-addition) are not returned in the hash, unless
- * @a show_hidden is TRUE.
+ * @a show_hidden is TRUE. Excluded entries are those with their depth set to
+ * @c svn_depth_exclude.
  *
  * @par Important:
  * The @a entries hash is the entries cache in @a adm_access
@@ -2258,9 +2260,10 @@ typedef struct svn_wc_entry_callbacks_t
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
  *
- * Like our other entries interfaces, entries that are in a 'deleted'
- * or 'absent' state (and not scheduled for re-addition) are not
- * discovered, unless @a show_hidden is TRUE.
+ * Like our other entries interfaces, entries that are in a 'excluded',
+ * 'deleted' or 'absent' state (and not scheduled for re-addition) are not
+ * discovered, unless @a show_hidden is TRUE. Excluded entries are those with
+ * their depth set to @c svn_depth_exclude.
  *
  * When a new directory is entered, @c SVN_WC_ENTRY_THIS_DIR will always
  * be returned first.
@@ -3618,6 +3621,23 @@ svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
+ * Iff @a honor_depth_exclude is TRUE, the crawler will report paths
+ * whose ambient depth is @c svn_depth_exclude as being excluded, and
+ * thus prevent the server from pushing update data for those paths;
+ * therefore, don't set this flag if you wish to pull in excluded paths.
+ * Note that @c svn_depth_exclude on the target @a path is never
+ * honored, even if @a honor_depth_exclude is TRUE, because we need to
+ * be able to explicitly pull in a target.  For example, if this is
+ * the working copy...
+ *
+ *    svn co greek_tree_repos wc_dir
+ *    svn up --set-depth exclude wc_dir/A/B/E  # now A/B/E is excluded
+ *
+ * ...then 'svn up wc_dir/A/B' would report E as excluded (assuming
+ * @a honor_depth_exclude is TRUE), but 'svn up wc_dir/A/B/E' would
+ * not, because the latter is trying to explicitly pull in E.  In
+ * general, we never report the update target as excluded.
+ *
  * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
  * flag on @a reporter->set_path() and @a reporter->link_path() calls
  * as necessary to trick a pre-1.5 (i.e., depth-unaware) server into
@@ -3636,7 +3656,28 @@ svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_crawl_revisions4(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions4, but with @a honor_depth_exclude always
+ * set to false.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,
@@ -5261,6 +5302,46 @@ svn_wc_set_changelist(const char *path,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *pool);
+
+/** Crop @a target according to @a depth. 
+ *
+ * Remove any item that exceeds the boundary of @a depth (relative to
+ * @a target) from revision control.  Leave modified items behind
+ * (unversioned), while removing unmodified ones completely.
+ *
+ * If @a target starts out with a shallower depth than @a depth, do not
+ * upgrade it to @a depth (that would not be cropping); however, do
+ * check children and crop them appropriately according to @a depth.
+ *
+ * Returns immediately with no error if @a target is not a directory,
+ * or if @a depth is not restrictive (e.g., @c svn_depth_infinity).
+ *
+ * @a anchor is an access baton, with a tree lock, for the local path to the
+ * working copy which will be used as the root of this operation.  If
+ * @a target is not empty, it represents an entry in the @a anchor path;
+ * otherwise, the @a anchor path is the target.  @a target may not be
+ * @c NULL.
+ *
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
+ * various points to determine if the client has cancelled the operation.
+ *
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to
+ * report changes as they are made.
+ *
+ * @note: svn_depth_exclude currently does nothing; passing it results
+ * in immediate success with no side effects.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
+                 const char *target,
+                 svn_depth_t depth,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
 
 /** @} */
 

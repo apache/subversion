@@ -416,6 +416,9 @@ svn_client_uuid_from_path(const char **uuid,
     }
   else
     {
+      /* Excluded path will fall into this code branch, since the missed
+         fields in the entry for excluded path is not filled. But it is just
+         ok. */
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("'%s' has no URL"),
                                svn_path_local_style(path, pool));

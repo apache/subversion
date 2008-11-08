@@ -549,6 +549,13 @@ make_dir_baton(struct dir_baton **d_p,
 }
 
 
+/* Forward declaration. */
+static svn_error_t *
+do_entry_deletion(struct edit_baton *eb,
+                  const char *parent_path,
+                  const char *path,
+                  int *log_number,
+                  apr_pool_t *pool);
 
 /* Helper for maybe_bump_dir_info():
 
@@ -574,7 +581,41 @@ complete_directory(struct edit_baton *eb,
   /* If this is the root directory and there is a target, we can't
      mark this directory complete. */
   if (is_root_dir && *eb->target)
-    return SVN_NO_ERROR;
+    {
+      /* Before we can finish, we may need to clear the exclude flag for
+         target. Also give a chance to the target that is explicitly pulled
+         in. */
+      if (eb->depth_is_sticky || *eb->target)
+        {
+          svn_wc_adm_access_t *target_access;
+          SVN_ERR(svn_wc_adm_retrieve(&adm_access, 
+                                      eb->adm_access, path, pool));
+          SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+          entry = apr_hash_get(entries, eb->target, APR_HASH_KEY_STRING);
+          if (entry && entry->depth == svn_depth_exclude)
+            {
+              char * full_target;
+              /* There is a small chance that the target is gone in the
+                 repository.  If so, we should get rid of the entry
+                 (and thus get rid of the exclude flag) now. */
+              full_target = svn_path_join(eb->anchor, eb->target, pool);
+              SVN_ERR(svn_wc__adm_retrieve_internal
+                      (&target_access, eb->adm_access, full_target, pool));
+              if (!target_access && entry->kind == svn_node_dir)
+                {
+                  int log_number = 0;
+                  SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target,
+                                            &log_number, pool));
+                }
+              else
+                {
+                  entry->depth = svn_depth_infinity;
+                  SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+                }
+            }
+        }
+      return SVN_NO_ERROR;
+    }
 
   /* All operations are on the in-memory entries hash. */
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, path, pool));
@@ -642,21 +683,27 @@ complete_directory(struct edit_baton *eb,
         {
           const char *child_path = svn_path_join(path, name, subpool);
 
-          if ((svn_wc__adm_missing(adm_access, child_path))
-              && (! current_entry->absent)
-              && (current_entry->schedule != svn_wc_schedule_add))
+          if (current_entry->depth == svn_depth_exclude)
             {
-              svn_wc__entry_remove(entries, name);
-              if (eb->notify_func)
-                {
-                  svn_wc_notify_t *notify
-                    = svn_wc_create_notify(child_path,
-                                           svn_wc_notify_update_delete,
-                                           subpool);
-                  notify->kind = current_entry->kind;
-                  (* eb->notify_func)(eb->notify_baton, notify, subpool);
-                }
-            }
+              /* Clear the exclude flag if it is pulled in again. */
+              if (eb->depth_is_sticky 
+                  && eb->requested_depth >= svn_depth_immediates)
+                current_entry->depth = svn_depth_infinity;
+            } else if ((svn_wc__adm_missing(adm_access, child_path))
+                       && (! current_entry->absent)
+                       && (current_entry->schedule != svn_wc_schedule_add))
+              {
+                svn_wc__entry_remove(entries, name);
+                if (eb->notify_func)
+                  {
+                    svn_wc_notify_t *notify
+                      = svn_wc_create_notify(child_path,
+                                             svn_wc_notify_update_delete,
+                                             subpool);
+                    notify->kind = current_entry->kind;
+                    (* eb->notify_func)(eb->notify_baton, notify, subpool);
+                  }
+              }
         }
     }
 
@@ -1469,7 +1516,20 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, TRUE, pool));
+
+  /* Receive the remote removal of excluded entry. Do not notify. */
+  if (entry->depth == svn_depth_exclude)
+    {
+      apr_hash_t *entries;
+      const char *base_name = svn_path_basename(full_path, pool);
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+      svn_wc__entry_remove(entries, base_name);
+      SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+      if (strcmp(path, eb->target) == 0)
+        eb->target_deleted = TRUE;
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
                               adm_access, svn_wc_conflict_action_delete, pool));
@@ -3890,41 +3950,25 @@ make_editor(svn_revnum_t *target_revision,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  /* If our requested depth is sticky, we'll raise an error if asked
-     to make our target more shallow, which is currently unsupported.
-
-     Otherwise, if our requested depth is *not* sticky, then we need
-     to limit the scope of our operation to the ambient depths present
-     in the working copy already.  If a depth was explicitly
-     requested, libsvn_delta/depth_filter_editor.c will ensure that we
-     never see editor calls that extend beyond the scope of the
-     requested depth.  But even what we do so might extend beyond the
-     scope of our ambient depth.  So we use another filtering editor
-     to avoid modifying the ambient working copy depth when not asked
-     to do so.  (This can also be skipped if the server understands
-     consider letting the depth RA capability percolate down to this
-     level.) */
-  if (depth_is_sticky)
-    {
-      const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool),
-                           adm_access, FALSE, pool));
-      if (target_entry && (target_entry->depth > depth))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Shallowing of working copy depths is not "
-                                   "yet supported"));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
-                                                  &inner_baton,
-                                                  inner_editor,
-                                                  inner_baton,
-                                                  anchor,
-                                                  target,
-                                                  adm_access,
-                                                  pool));
-    }
+  /* We need to limit the scope of our operation to the ambient depths
+     present in the working copy already, but only if the requested
+     depth is not sticky. If a depth was explicitly requested, 
+     libsvn_delta/depth_filter_editor.c will ensure that we never see 
+     editor calls that extend beyond the scope of the requested depth.
+     But even what we do so might extend beyond the scope of our 
+     ambient depth.  So we use another filtering editor to avoid 
+     modifying the ambient working copy depth when not asked to do so.
+     (This can also be skipped if the server understands depth; consider
+     letting the depth RA capability percolate down to this level.) */
+  if (!depth_is_sticky)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                inner_editor,
+                                                inner_baton,
+                                                anchor,
+                                                target,
+                                                adm_access,
+                                                pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
                                            cancel_baton,

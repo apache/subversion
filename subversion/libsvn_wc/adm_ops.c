@@ -125,10 +125,11 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
           excluded = (apr_hash_get(exclude_paths, child_path,
                                    APR_HASH_KEY_STRING) != NULL);
 
-          /* If a file, or deleted or absent dir, then tweak the entry
-             but don't recurse. */
+          /* If a file, or deleted, excluded or absent dir, then tweak the
+             entry but don't recurse. */
           if ((current_entry->kind == svn_node_file)
-              || (current_entry->deleted || current_entry->absent))
+              || (current_entry->deleted || current_entry->absent
+                  || current_entry->depth == svn_depth_exclude))
             {
               if (! excluded)
                 SVN_ERR(svn_wc__tweak_entry(entries, name,
@@ -235,7 +236,9 @@ svn_wc__do_update_cleanup(const char *path,
     return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_file
-      || (entry->kind == svn_node_dir && (entry->deleted || entry->absent)))
+      || (entry->kind == svn_node_dir 
+          && (entry->deleted || entry->absent 
+              || entry->depth == svn_depth_exclude)))
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
@@ -515,6 +518,12 @@ process_committed_internal(int *log_number,
 
           /* Ignore the "this dir" entry. */
           if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
+            continue;
+
+          /* We come to this branch since we have committed a copied tree.
+             svn_depth_exclude is possible in this situation. So check and
+             skip */
+          if (current_entry->depth == svn_depth_exclude)
             continue;
 
           /* Create child path by telescoping the main path. */
@@ -1172,6 +1181,8 @@ svn_wc_delete3(const char *path,
       /* The deleted state is only available in the entry in parent's
          entries file */
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent, pool));
+      /* We don't need to check for excluded item, since we won't fall into
+         this code path in that case. */
       SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
       entry_in_parent = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
       was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
@@ -1359,12 +1370,15 @@ svn_wc_add3(const char *path,
      that is slated for deletion from revision control, or has been
      previously 'deleted', unless, of course, you're specifying an
      addition with -history-; then it's okay for the object to be
-     under version control already; it's not really new.  */
+     under version control already; it's not really new.
+     Also, if the target is recorded as excluded from wc, it really 
+     exists in repos. Report error on this situation too. */
   if (orig_entry)
     {
-      if ((! copyfrom_url)
+      if (((! copyfrom_url)
           && (orig_entry->schedule != svn_wc_schedule_delete)
           && (! orig_entry->deleted))
+          || (orig_entry->depth == svn_depth_exclude))
         {
           return svn_error_createf
             (SVN_ERR_ENTRY_EXISTS, NULL,
@@ -2019,6 +2033,8 @@ revert_entry(svn_depth_t *depth,
                                       "directory; please try again from the "
                                       "parent directory"));
 
+          /* We don't need to check for excluded item, since we won't fall
+             into this code path in that case. */
           SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
           parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
@@ -2104,6 +2120,8 @@ revert_entry(svn_depth_t *depth,
               svn_wc_entry_t *entry_in_parent;
               apr_hash_t *entries;
 
+              /* The entry to revert will not be an excluded item. Don't
+                 bother check for it. */
               SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
                                           pool));
               entry_in_parent = apr_hash_get(entries, bname,
@@ -2517,11 +2535,12 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                 current_entry_name,
                                 subpool);
 
-              if (svn_wc__adm_missing(adm_access, entrypath))
+              if (svn_wc__adm_missing(adm_access, entrypath)
+                  || current_entry->depth == svn_depth_exclude)
                 {
-                  /* The directory is already missing, so don't try to
-                     recurse, just delete the entry in the parent
-                     directory. */
+                  /* The directory is either missing or excluded, 
+                     so don't try to recurse, just delete the 
+                     entry in the parent directory. */
                   svn_wc__entry_remove(entries, current_entry_name);
                 }
               else
@@ -2567,6 +2586,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
+            svn_wc_entry_t *dir_entry;
             apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
@@ -2576,8 +2596,19 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                         parent_dir, pool));
             SVN_ERR(svn_wc_entries_read(&parent_entries, parent_access, TRUE,
                                         pool));
-            svn_wc__entry_remove(parent_entries, base_name);
-            SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
+
+            /* An exception: When the path is at svn_depth_exclude,
+               the entry in the parent directory should be preserved
+               for bookkeeping purpose. This only happens when the 
+               function is called by svn_wc_crop_tree(). */
+            dir_entry = apr_hash_get(parent_entries, base_name, 
+                                     APR_HASH_KEY_STRING);
+            if (dir_entry->depth != svn_depth_exclude)
+              {
+                svn_wc__entry_remove(parent_entries, base_name);
+                SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
+
+              }
           }
       }
 

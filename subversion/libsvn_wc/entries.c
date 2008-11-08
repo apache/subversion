@@ -667,9 +667,29 @@ read_entry(svn_wc_entry_t **new_entry,
     const char *result;
     SVN_ERR(read_val(&result, buf, end));
     if (result)
-      entry->depth = svn_depth_from_word(result);
+      {
+        svn_boolean_t invalid;
+        svn_boolean_t is_this_dir;
+
+        entry->depth = svn_depth_from_word(result);
+
+        /* Verify the depth value: 
+           THIS_DIR should not have an excluded value and SUB_DIR should only
+           have excluded value. Remember that infinity value is not stored and
+           should not show up here. Otherwise, something bad may have
+           happened. However, infinity value itself will always be okay. */
+        is_this_dir = !name;
+        /* '!=': XOR */
+        invalid = is_this_dir != (entry->depth != svn_depth_exclude);
+        if (entry->depth != svn_depth_infinity && invalid)
+          return svn_error_createf
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid depth"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR));
+      }
     else
       entry->depth = svn_depth_infinity;
+
   }
   MAYBE_DONE;
 
@@ -1415,8 +1435,12 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
           ++curp;
           ++entryno;
-          if (!entry_is_hidden(entry) || show_hidden)
-            apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+
+          if ((entry->depth != svn_depth_exclude)
+              || (!entry_is_hidden(entry) || show_hidden))
+            {
+              apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+            }
         }
     }
 
@@ -1877,7 +1901,9 @@ write_entry(svn_stringbuf_t *buf,
   }
 
   /* Depth. */
-  if (is_subdir || entry->depth == svn_depth_infinity)
+  /* Accept `exclude' for subdir entry. */
+  if ((is_subdir && entry->depth != svn_depth_exclude)
+      || entry->depth == svn_depth_infinity)
     {
       write_val(buf, NULL, 0);
     }
@@ -3266,7 +3292,7 @@ svn_wc_walk_entries3(const char *path,
                                svn_path_local_style(path, pool)),
        walk_baton, pool);
 
-  if (entry->kind == svn_node_file)
+  if (entry->kind == svn_node_file || entry->depth == svn_depth_exclude)
     return walk_callbacks->handle_error
       (path, walk_callbacks->found_entry(path, entry, walk_baton, pool),
        walk_baton, pool);
