@@ -108,7 +108,7 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
    apr_pool_t *pool)
 {
   svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG,
+                                   SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                    APR_HASH_KEY_STRING);
   const char *server_group = apr_hash_get(parameters,
                                           SVN_AUTH_PARAM_SERVER_GROUP,

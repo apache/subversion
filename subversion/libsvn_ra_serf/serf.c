@@ -351,9 +351,9 @@ load_config(svn_ra_serf__session_t *session,
                               SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
 
   svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG, config);
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, config_client);
   svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CLIENT, config_client);
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, config);
 
 #if SERF_VERSION_AT_LEAST(0, 1, 3)
   /* Load the global proxy server settings, if set. */

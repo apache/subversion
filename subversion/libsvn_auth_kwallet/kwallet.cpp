@@ -53,7 +53,7 @@ get_wallet_name(apr_hash_t *parameters)
 {
   svn_config_t *config =
     static_cast<svn_config_t *> (apr_hash_get(parameters,
-                                              SVN_AUTH_PARAM_CONFIG_CLIENT,
+                                              SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
                                               APR_HASH_KEY_STRING));
   const char *wallet_name;
   svn_config_get(config,
