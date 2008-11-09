@@ -193,8 +193,8 @@ log_entry_receiver(void *baton,
       lines = svn_cstring_count_newlines(message) + 1;
       SVN_ERR(svn_cmdline_printf(pool,
                                  (lines != 1)
-                                 ? " | %d lines"
-                                 : " | %d line", lines));
+                                 ? _(" | %d lines")
+                                 : _(" | %d line"), lines));
     }
 
   SVN_ERR(svn_cmdline_printf(pool, "\n"));
