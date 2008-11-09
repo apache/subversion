@@ -64,7 +64,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_wc_version(void);
+const svn_version_t *
+svn_wc_version(void);
 
 /**
  * @defgroup svn_wc  Working copy management
@@ -409,24 +410,29 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  *
  * @since New in 1.6
  */
-svn_error_t *svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *scratch_pool);
+svn_error_t *
+svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
+                  apr_pool_t *scratch_pool);
 
 /* @deprecated Provided for backward compabibility with the 1.5 API. */
 SVN_DEPRECATED
-svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
+svn_error_t *
+svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
-const char *svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
+const char *
+svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
-apr_pool_t *svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
+apr_pool_t *
+svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
  */
-svn_boolean_t svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
+svn_boolean_t
+svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *
@@ -446,7 +452,8 @@ svn_wc_locked(svn_boolean_t *locked,
  *
  * @since New in 1.3.
  */
-svn_boolean_t svn_wc_is_adm_dir(const char *name, apr_pool_t *pool);
+svn_boolean_t
+svn_wc_is_adm_dir(const char *name, apr_pool_t *pool);
 
 
 /**
@@ -458,7 +465,8 @@ svn_boolean_t svn_wc_is_adm_dir(const char *name, apr_pool_t *pool);
  *
  * @since New in 1.3.
  */
-const char *svn_wc_get_adm_dir(apr_pool_t *pool);
+const char *
+svn_wc_get_adm_dir(apr_pool_t *pool);
 
 
 /**
@@ -474,7 +482,9 @@ const char *svn_wc_get_adm_dir(apr_pool_t *pool);
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_wc_set_adm_dir(const char *name, apr_pool_t *pool);
+svn_error_t *
+svn_wc_set_adm_dir(const char *name,
+                   apr_pool_t *pool);
 
 
 
@@ -490,7 +500,8 @@ typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
 
 
 /** Return a new, empty traversal info object, allocated in @a pool. */
-svn_wc_traversal_info_t *svn_wc_init_traversal_info(apr_pool_t *pool);
+svn_wc_traversal_info_t *
+svn_wc_init_traversal_info(apr_pool_t *pool);
 
 
 /** Set @a *externals_old and @a *externals_new to hash tables representing
@@ -4152,15 +4163,18 @@ svn_wc_prop_set(const char *name,
  * If these patterns aren't found, then the property is assumed to be
  * Normal.
  */
-svn_boolean_t svn_wc_is_normal_prop(const char *name);
+svn_boolean_t
+svn_wc_is_normal_prop(const char *name);
 
 
 
 /** Return TRUE iff @a name is a 'wc' property name. */
-svn_boolean_t svn_wc_is_wc_prop(const char *name);
+svn_boolean_t
+svn_wc_is_wc_prop(const char *name);
 
 /** Return TRUE iff @a name is a 'entry' property name. */
-svn_boolean_t svn_wc_is_entry_prop(const char *name);
+svn_boolean_t
+svn_wc_is_entry_prop(const char *name);
 
 /** Callback type used by @c svn_wc_canonicalize_svn_prop.
  *
