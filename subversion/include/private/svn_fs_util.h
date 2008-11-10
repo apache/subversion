@@ -68,12 +68,12 @@ svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
-       svn_path_local_style(root->fs->path), root->txn, path_str)              \
+       svn_path_local_style(root->fs->path, pool), root->txn, path_str)        \
   :                                                                            \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
-       svn_path_local_style(root->fs->path), root->fs->path, root->rev,        \
+       svn_path_local_style(root->fs->path, pool), root->fs->path, root->rev,  \
        path_str)                                                               \
   )
 
