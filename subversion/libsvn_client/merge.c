@@ -1866,14 +1866,20 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_dir_closed(svn_wc_adm_access_t *adm_access,
-                 svn_wc_notify_state_t *state,
+                 svn_wc_notify_state_t *contentstate,
+                 svn_wc_notify_state_t *propstate,
                  svn_boolean_t *tree_conflicted,
                  const char *path,
                  void *baton)
 {
-  /* Nothing to be done.
-   * The reason why this callback was created is no more.
-   * Maybe this callback should be removed. */
+  if (contentstate)
+    *contentstate = svn_wc_notify_state_unknown;
+  if (propstate)
+    *propstate = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Nothing to be done. */
 
   return SVN_NO_ERROR;
 }

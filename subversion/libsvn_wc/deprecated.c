@@ -660,13 +660,16 @@ dir_opened(svn_wc_adm_access_t *adm_access,
    and svn_wc_diff_callbacks2_t. */
 static svn_error_t *
 dir_closed(svn_wc_adm_access_t *adm_access,
-           svn_wc_notify_state_t *state,
+           svn_wc_notify_state_t *propstate,
+           svn_wc_notify_state_t *contentstate,
            svn_boolean_t *tree_conflicted,
            const char *path,
            void *diff_baton)
 {
-  if (state)
-    *state = svn_wc_notify_state_unknown;
+  if (contentstate)
+    *contentstate = svn_wc_notify_state_unknown;
+  if (propstate)
+    *propstate = svn_wc_notify_state_unknown;
   if (tree_conflicted)
     *tree_conflicted = FALSE;
   /* Do nothing. */
