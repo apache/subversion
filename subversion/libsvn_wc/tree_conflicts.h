@@ -141,7 +141,7 @@
 #define SVN_WC__CONFLICT_REASON_OBSTRUCTED "obstructed"
 
 
-/* Like svn_wc_add_tree_conflict_data(), but append to the log accumulator
+/* Like svn_wc_add_tree_conflict(), but append to the log accumulator
  * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
  * This function is meant to be used in the working copy library where
  * log accumulators are usually readily available.
@@ -171,7 +171,12 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
 /* Remove any tree conflict on victim VICTIM_PATH from the directory entry
  * belonging to ADM_ACCESS. (If there is no such conflict recorded. do
- * nothing.)
+ * nothing and return success.) ADM_ACCESS must be an access baton for the
+ * parent directory of VICTIM_PATH.
+ *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in ADM_ACCESS.
+ *
  * Do all allocations in POOL. */
 svn_error_t *
 svn_wc__del_tree_conflict(const char *victim_path,
