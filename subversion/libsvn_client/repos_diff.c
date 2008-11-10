@@ -987,7 +987,7 @@ close_directory(void *dir_baton,
     }
 
   SVN_ERR(eb->diff_callbacks->dir_closed
-          (adm_access, &content_state, &b->tree_conflicted,
+          (adm_access, NULL, NULL, NULL,
            b->wcpath, b->edit_baton->diff_cmd_baton));
 
   /* ### Don't notify added directories as they triggered notification
