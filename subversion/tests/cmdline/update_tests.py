@@ -1134,11 +1134,10 @@ def another_hudson_problem(sbox):
 
   # This update created a tree conflict ("update tried to
   # delete a directory that was locally deleted"), marking
-  #    C A/D. Just ignore it, i.e. resolve it.
-  D_path = os.path.join(wc_dir, 'A', 'D')
+  # "   C A/D/G". Just ignore it, i.e. resolve it.
   svntest.actions.run_and_verify_svn(None,
-    ["Resolved conflicted state of '" + D_path + "'\n"], [],
-    'resolved',  D_path)
+    ["Resolved conflicted state of '" + G_path + "'\n"], [],
+    'resolved', G_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
