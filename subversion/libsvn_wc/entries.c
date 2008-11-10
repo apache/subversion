@@ -3391,10 +3391,9 @@ visit_tc_too_error_handler(const char *path,
 {
   struct visit_tc_too_baton_t *baton = walk_baton;
 
-  /* First, if this is an unversioned tree conflict victim, call the
-   * "found entry" callback for a null entry.
-   * The "unversioned resource" error occurs when the root of the walk is
-   * an unversioned resource; it can't occur for nodes recursed into. */
+  /* If this is an unversioned tree conflict victim, call the "found entry"
+   * callback. This can occur on the root node of the walk; we do not expect
+   * to reach such a node by recursion. */
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
       svn_wc_adm_access_t *adm_access;
