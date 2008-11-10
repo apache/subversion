@@ -2175,7 +2175,7 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
  * answers are uninteresting, simply pass @c NULL pointers.
  *
- * If @path is unversioned or does not exist, @a *text_conflicted_p and
+ * If @a path is unversioned or does not exist, @a *text_conflicted_p and
  * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
  * @a adm_access is the admin access baton of the parent directory.
