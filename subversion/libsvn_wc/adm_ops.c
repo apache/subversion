@@ -2881,13 +2881,12 @@ resolve_found_entry_callback(const char *path,
     }
   if (entry->deleted || entry->absent)
     {
-      /* printf("### resolve_f_e_cb('%s'): Deleted or Absent\n", path); */
+      printf("### resolve_f_e_cb('%s'): Deleted or Absent\n", path);
       return SVN_NO_ERROR;
     }
   if (entry->schedule == svn_wc_schedule_delete)
     {
-      /* printf("### Sched-delete: resolve_f_e_cb('%s')\n", path); */
-      return SVN_NO_ERROR;  /* ### ? From now on, I think we want to resolve it anyway. */
+      printf("### Sched-delete: resolve_f_e_cb('%s')\n", path);
     }
 
   /* We're going to receive dirents twice;  we want to ignore the
@@ -2935,7 +2934,7 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
                                    &tree_conflict, path, adm_access,
                                    pool));
-  printf("### resolve_found_entry cb ('%s'):%d,%d,%d\n", path, text_conflict, prop_conflict, tree_conflict);
+  /*printf("### resolve_found_entry cb ('%s'):%d,%d,%d\n", path, text_conflict, prop_conflict, tree_conflict);*/
       if ((! (baton->resolve_text && text_conflict))
           && (! (baton->resolve_props && prop_conflict))
           && (! (baton->resolve_tree && tree_conflict)))

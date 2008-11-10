@@ -3341,17 +3341,19 @@ visit_tc_too_found_entry(const char *path,
    * tree conflict victims. */
   if (entry->kind == svn_node_dir && !entry_is_hidden(entry))
     {
-      svn_wc_adm_access_t *adm_access;
+      svn_wc_adm_access_t *adm_access = NULL;
       apr_array_header_t *conflicts
         = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
       int i;
 
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, path,
-                                  pool));
-
       /* Loop through all the tree conflict victims */
       SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry,
                                                      path, pool));
+
+      if (conflicts->nelts > 0)
+        SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, path,
+                                    pool));
+
       for (i = 0; i < conflicts->nelts; i++)
         {
           svn_wc_conflict_description_t *conflict
@@ -3399,9 +3401,10 @@ visit_tc_too_error_handler(const char *path,
     {
       svn_wc_adm_access_t *adm_access;
       svn_wc_conflict_description_t *conflict;
+      char *parent_path = svn_path_dirname(path, pool);
 
       /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, path,
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, parent_path,
                                   pool));
       SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
 
