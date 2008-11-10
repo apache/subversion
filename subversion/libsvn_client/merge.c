@@ -1863,6 +1863,26 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_diff_callbacks3_t function. */
+static svn_error_t *
+merge_dir_closed(svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *contentstate,
+                 svn_wc_notify_state_t *propstate,
+                 svn_boolean_t *tree_conflicted,
+                 const char *path,
+                 void *baton)
+{
+  if (contentstate)
+    *contentstate = svn_wc_notify_state_unknown;
+  if (propstate)
+    *propstate = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Nothing to be done. */
+
+  return SVN_NO_ERROR;
+}
 
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks3_t
@@ -1874,7 +1894,8 @@ merge_callbacks =
     merge_dir_added,
     merge_dir_deleted,
     merge_props_changed,
-    merge_dir_opened
+    merge_dir_opened,
+    merge_dir_closed
   };
 
 

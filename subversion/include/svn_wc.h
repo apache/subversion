@@ -1593,6 +1593,16 @@ typedef struct svn_wc_diff_callbacks3_t
                              svn_revnum_t rev,
                              void *diff_baton);
 
+  /**
+   * A directory @a path has been closed.
+   */
+  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *contentstate,
+                             svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
+                             const char *path,
+                             void *diff_baton);
+
 } svn_wc_diff_callbacks3_t;
 
 /**
@@ -5376,6 +5386,9 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 /** Record the tree conflict described by @a conflict in the WC.
  * @a adm_access must be a write-access baton for the parent directory of
  * @a victim->path. Use @a pool for all allocations.
+ *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in ADM_ACCESS.
  *
  * @since New in 1.6.
  */
