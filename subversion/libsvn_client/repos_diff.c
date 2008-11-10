@@ -986,6 +986,10 @@ close_directory(void *dir_baton,
         b->tree_conflicted = TRUE;
     }
 
+  SVN_ERR(eb->diff_callbacks->dir_closed
+          (adm_access, &content_state, &b->tree_conflicted,
+           b->wcpath, b->edit_baton->diff_cmd_baton));
+
   /* ### Don't notify added directories as they triggered notification
      in add_directory.  Does this mean that directory notification
      isn't getting all the information? */

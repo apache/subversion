@@ -1863,6 +1863,20 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_diff_callbacks3_t function. */
+static svn_error_t *
+merge_dir_closed(svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *state,
+                 svn_boolean_t *tree_conflicted,
+                 const char *path,
+                 void *baton)
+{
+  /* Nothing to be done.
+   * The reason why this callback was created is no more.
+   * Maybe this callback should be removed. */
+
+  return SVN_NO_ERROR;
+}
 
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks3_t
@@ -1874,7 +1888,8 @@ merge_callbacks =
     merge_dir_added,
     merge_dir_deleted,
     merge_props_changed,
-    merge_dir_opened
+    merge_dir_opened,
+    merge_dir_closed
   };
 
 
