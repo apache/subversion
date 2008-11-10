@@ -478,8 +478,11 @@ svn_wc__del_tree_conflict(const char *victim_path,
   SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
                                           pool));
 
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+  if (log_accum != NULL)
+    {
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+    }
 
   return SVN_NO_ERROR;
 }
