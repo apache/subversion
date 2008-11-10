@@ -5387,6 +5387,9 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
  * @a adm_access must be a write-access baton for the parent directory of
  * @a victim->path. Use @a pool for all allocations.
  *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in ADM_ACCESS.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
