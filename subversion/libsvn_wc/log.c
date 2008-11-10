@@ -2014,7 +2014,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
-                           const char *name,
+                           const char *path,
                            svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool)
@@ -2180,7 +2180,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
     return SVN_NO_ERROR;
 
   apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
-               APR_HASH_KEY_STRING, loggy_path(name, adm_access));
+               APR_HASH_KEY_STRING, loggy_path(path, adm_access));
 
   svn_xml_make_open_tag_hash(log_accum, pool,
                              svn_xml_self_closing,
