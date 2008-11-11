@@ -26,6 +26,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
 
@@ -56,8 +57,8 @@ svn_client_resolve(const char *path,
   /* In order to resolve tree-conflicts on the target PATH, we need an
    * adm_access on its parent directory. The lock level then needs to extend
    * at least onto the immediate children. */
-  if (adm_lock_level == 0)
-    adm_lock_level = 1;
+  if (adm_lock_level >= 0)
+    adm_lock_level++;
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
                                  svn_path_dirname(path, pool),
                                  TRUE,
