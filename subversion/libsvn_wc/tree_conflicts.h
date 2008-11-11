@@ -148,6 +148,8 @@
  *
  * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
  * POOL, else append to the existing stringbuf there.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
@@ -162,6 +164,8 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
  *
  * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
  * POOL, else append to the existing stringbuf there.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
@@ -170,14 +174,17 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
                                 apr_pool_t *pool);
 
 /* Remove any tree conflict on victim VICTIM_PATH from the directory entry
- * belonging to ADM_ACCESS. (If there is no such conflict recorded. do
+ * belonging to ADM_ACCESS. (If there is no such conflict recorded, do
  * nothing and return success.) ADM_ACCESS must be an access baton for the
  * parent directory of VICTIM_PATH.
  *
  * Warning: This function updates the entry on disk but not the cached entry
  * in ADM_ACCESS.
  *
- * Do all allocations in POOL. */
+ * Do all allocations in POOL.
+ *
+ * @since New in 1.6.
+ */
 svn_error_t *
 svn_wc__del_tree_conflict(const char *victim_path,
                           svn_wc_adm_access_t *adm_access,
@@ -203,6 +210,8 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
  * in CONFLICTS to DIR_ENTRY.
  *
  * This function is used in a unit test in tests/libsvn_wc.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
@@ -214,6 +223,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  * conflicts) for a conflict with the given VICTIM_BASENAME.
  *
  * This function is used in a unit test in tests/libsvn_wc.
+ *
+ * @since New in 1.6.
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,

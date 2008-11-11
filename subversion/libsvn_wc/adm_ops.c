@@ -2870,78 +2870,96 @@ resolve_found_entry_callback(const char *path,
                              apr_pool_t *pool)
 {
   struct resolve_callback_baton *baton = walk_baton;
-  const char *conflict_dir, *base_name = NULL;
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t resolved = FALSE;
-
-  if (!entry)
-    {
-      printf("### Unversioned... woo-hoo! resolve_f_e_cb('%s')\n", path);
-      return SVN_NO_ERROR;
-    }
-  if (entry->deleted || entry->absent)
-    {
-      printf("### resolve_f_e_cb('%s'): Deleted or Absent\n", path);
-      return SVN_NO_ERROR;
-    }
-  if (entry->schedule == svn_wc_schedule_delete)
-    {
-      printf("### Sched-delete: resolve_f_e_cb('%s')\n", path);
-    }
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only process
      the second one (where we're looking at THIS_DIR). */
   if (entry && (entry->kind == svn_node_dir)
-      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)) != 0)
+      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
     return SVN_NO_ERROR;
 
-  /* Figger out the directory in which the conflict resides. */
-  if (entry && entry->kind == svn_node_dir)
-    conflict_dir = path;
-  else
-    svn_path_split(path, &conflict_dir, &base_name, pool);
-  SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access,
-                                    conflict_dir, pool));
 
-  /* Clear any tree conflict on the path. */
+  /* If asked to, clear any tree conflict on the path. */
   if (baton->resolve_tree)
     {
+      const char *conflict_dir, *base_name = NULL;
+      svn_wc_adm_access_t *parent_adm_access;
       svn_wc_conflict_description_t *conflict;
+      svn_boolean_t tree_conflict;
 
-      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
+      /* For tree-conflicts, we want the *parent* directory's adm_access,
+       * even for directories. */
+      svn_path_split(path, &conflict_dir, &base_name, pool);
+      SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
+                                        conflict_dir, pool));
+      
+      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, parent_adm_access,
+                                       pool));
       if (conflict)
         {
-          SVN_ERR(svn_wc__del_tree_conflict(path, adm_access, pool));
-          resolved = TRUE;
+          SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
+
+          /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
+             state of conflict that we have asked to resolve. If so,
+             don't flag RESOLVED_TREE after all. */
+
+          SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflict, path,
+                                       parent_adm_access, pool));
+          if (!tree_conflict)
+            resolved = TRUE;
         }
     }
 
+
   /* If this is a versioned entry, resolve its other conflicts, if any. */
-  if (entry)
-    SVN_ERR(resolve_conflict_on_entry(path, entry, adm_access, base_name,
-                                      baton->resolve_text, baton->resolve_props,
-                                      baton->conflict_choice, &resolved,
-                                      pool));
+  if (entry && (baton->resolve_text || baton->resolve_props))
+    {
+      const char *conflict_dir, *base_name = NULL;
+      svn_wc_adm_access_t *adm_access;
+      svn_boolean_t did_resolve = FALSE;
+
+      SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access,
+                                        path, pool));
+
+      SVN_ERR(resolve_conflict_on_entry(path, entry, adm_access, base_name,
+                                        baton->resolve_text,
+                                        baton->resolve_props,
+                                        baton->conflict_choice,
+                                        &did_resolve,
+                                        pool));
+
+      /* Sanity check: see if libsvn_wc *still* thinks this item is in a
+         state of conflict that we have asked to resolve. If so,
+         don't flag RESOLVED after all. */
+      if (did_resolve)
+        {
+          svn_boolean_t text_conflict, prop_conflict;
+
+          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
+                                       NULL, path, adm_access,
+                                       pool));
+
+          if ((baton->resolve_text && text_conflict)
+              || (baton->resolve_props && prop_conflict))
+            /* Explicitly overwrite a possible TRUE from tree-conflict
+             * resolution. If this part failed, it shouldn't be notified
+             * as resolved. (Keeping in an "if...else" for clarity.)
+             * (Actually, we defined that a node can't have other conflicts
+             * when it is tree-conflicted. This here can't hurt though.)*/
+            resolved = FALSE;
+          else
+            resolved = TRUE;
+        }
+    }
 
   /* Notify */
   if (baton->notify_func && resolved)
-    {
-      /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
-         state of conflict that we have asked to resolve.  If not, report
-         the successful resolution.  */
-      svn_boolean_t text_conflict, prop_conflict, tree_conflict;
-      SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
-                                   &tree_conflict, path, adm_access,
-                                   pool));
-  /*printf("### resolve_found_entry cb ('%s'):%d,%d,%d\n", path, text_conflict, prop_conflict, tree_conflict);*/
-      if ((! (baton->resolve_text && text_conflict))
-          && (! (baton->resolve_props && prop_conflict))
-          && (! (baton->resolve_tree && tree_conflict)))
-        (*baton->notify_func)(baton->notify_baton,
-                       svn_wc_create_notify(path, svn_wc_notify_resolved,
-                                            pool), pool);
-    }
+    (*baton->notify_func)(baton->notify_baton,
+                          svn_wc_create_notify(path, svn_wc_notify_resolved,
+                                               pool),
+                          pool);
+
   return SVN_NO_ERROR;
 }
 
