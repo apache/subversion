@@ -3442,16 +3442,64 @@ svn_wc__walk_entries_and_tc(const char *path,
                             void *cancel_baton,
                             apr_pool_t *pool)
 {
-  visit_tc_too_baton_t visit_tc_too_baton;
+  svn_error_t *err;
+  svn_wc_adm_access_t *path_adm_access;
+  const svn_wc_entry_t *entry;
 
-  visit_tc_too_baton.adm_access = adm_access;
-  visit_tc_too_baton.callbacks = walk_callbacks;
-  visit_tc_too_baton.baton = walk_baton;
+  /* If there is no adm_access, there are no nodes to visit, not even 'path'
+   * because it can't be in conflict. */
+  if (adm_access == NULL)
+    return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                               &visit_tc_too_callbacks, &visit_tc_too_baton,
-                               depth, TRUE /*show_hidden*/,
-                               cancel_func, cancel_baton, pool));
+  /* Is 'path' versioned? Set path_adm_access accordingly. */
+  /* First: Get item's adm access (meaning parent's if it's a file). */
+  err = svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path, pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+    {
+      /* Item is unversioned and doesn't have a versioned parent so there is
+       * nothing to walk. */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+  /* If we can get the item's entry then it is versioned. */
+  err = svn_wc_entry(&entry, path, path_adm_access, TRUE, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      /* Indicate that it is unversioned. */
+      entry = NULL;
+    }
+
+  /* If this path is versioned, do a tree walk, else perhaps call the
+   * "unversioned tree conflict victim" callback directly. */
+  if (entry)
+    {
+      /* Versioned, so use the regular entries walker with callbacks that
+       * make it also visit unversioned tree conflict victims. */
+      visit_tc_too_baton_t visit_tc_too_baton;
+
+      visit_tc_too_baton.adm_access = adm_access;
+      visit_tc_too_baton.callbacks = walk_callbacks;
+      visit_tc_too_baton.baton = walk_baton;
+
+      SVN_ERR(svn_wc_walk_entries3(path, path_adm_access,
+                                   &visit_tc_too_callbacks, &visit_tc_too_baton,
+                                   depth, TRUE /*show_hidden*/,
+                                   cancel_func, cancel_baton, pool));
+    }
+  else
+    {
+      /* Not locked, so assume unversioned. If it is a tree conflict victim,
+       * call the "found entry" callback with a null "entry" parameter. */
+      svn_wc_conflict_description_t *conflict;
+
+      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
+      if (conflict)
+        SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
