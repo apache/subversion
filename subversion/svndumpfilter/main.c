@@ -1082,7 +1082,9 @@ do_filter(apr_getopt_t *os,
 
   if (pb->rev_drop_count)
     SVN_ERR(svn_cmdline_fprintf(stderr, pool,
-                                _("Dropped %d revision(s).\n\n"),
+                                Q_("Dropped %d revision.\n\n",
+                                   "Dropped %d revisions.\n\n",
+                                   pb->rev_drop_count),
                                 pb->rev_drop_count));
 
   if (pb->do_renumber_revs)
@@ -1126,16 +1128,17 @@ do_filter(apr_getopt_t *os,
       svn_pool_destroy(subpool);
     }
 
-  if (apr_hash_count(pb->dropped_nodes))
+  if ((num_keys = apr_hash_count(pb->dropped_nodes)))
     {
       apr_pool_t *subpool = svn_pool_create(pool);
       SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                  _("Dropped %d node(s):\n"),
-                                  apr_hash_count(pb->dropped_nodes)));
+                                  Q_("Dropped %d node:\n",
+                                     "Dropped %d nodes:\n",
+                                     num_keys),
+                                  num_keys));
 
       /* Get the keys of the hash, sort them, then print the hash keys
          and values, sorted by keys. */
-      num_keys = apr_hash_count(pb->dropped_nodes);
       keys = apr_array_make(pool, num_keys + 1, sizeof(const char *));
       for (hi = apr_hash_first(pool, pb->dropped_nodes);
            hi;
