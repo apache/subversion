@@ -1900,11 +1900,17 @@ typedef struct svn_wc_entry_t
   svn_wc_schedule_t schedule;
 
   /** in a copied state (possibly because the entry is a child of a
-      path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
-      when the entry itself is @c svn_wc_schedule_normal) */
+   *  path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
+   *  when the entry itself is @c svn_wc_schedule_normal) */
   svn_boolean_t copied;
 
-  /** deleted, but parent rev lags behind */
+  /** The directory containing this entry had a versioned child of this
+   * name, but this entry represents a different revision or a switched
+   * path at which no item exists in the repository. This typically
+   * arises from committing or updating to a deletion of this entry
+   * without committing or updating the parent directory.
+   *
+   * The schedule can be 'normal' or 'add'. */
   svn_boolean_t deleted;
 
   /** absent -- we know an entry of this name exists, but that's all
@@ -2175,7 +2181,7 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
  * answers are uninteresting, simply pass @c NULL pointers.
  *
- * If @path is unversioned or does not exist, @a *text_conflicted_p and
+ * If @a path is unversioned or does not exist, @a *text_conflicted_p and
  * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
  * @a adm_access is the admin access baton of the parent directory.

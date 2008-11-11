@@ -91,7 +91,7 @@ print_conflict_stats(struct notify_baton *nb, apr_pool_t *pool)
 
   if (text_conflicts > 0 || prop_conflicts > 0
     || tree_conflicts > 0 || skipped_paths > 0)
-      SVN_ERR(svn_cmdline_printf(pool, header));
+      SVN_ERR(svn_cmdline_printf(pool, "%s", header));
 
   if (text_conflicts > 0)
     SVN_ERR(svn_cmdline_printf

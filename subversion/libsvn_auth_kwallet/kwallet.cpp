@@ -48,6 +48,9 @@
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
 
+
+static KWallet::Wallet *wallet;
+
 static QString
 get_wallet_name(apr_hash_t *parameters)
 {
@@ -108,10 +111,10 @@ kwallet_password_get(const char **password,
     QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
-      KWallet::Wallet *wallet =
-        KWallet::Wallet::openWallet(wallet_name,
-                                    -1,
-                                    KWallet::Wallet::Synchronous);
+      if (! wallet)
+        wallet = KWallet::Wallet::openWallet(wallet_name,
+                                             -1,
+                                             KWallet::Wallet::Synchronous);
       if (wallet && wallet->setFolder(folder))
         {
           QString q_password;
@@ -123,7 +126,6 @@ kwallet_password_get(const char **password,
               ret = TRUE;
             }
         }
-      delete wallet;
     }
 
 // This function currently closes the wallet if no other application
@@ -168,10 +170,10 @@ kwallet_password_set(apr_hash_t *creds,
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = get_wallet_name(parameters);
   QString folder = QString::fromUtf8("Subversion");
-  KWallet::Wallet *wallet =
-    KWallet::Wallet::openWallet(wallet_name,
-                                -1,
-                                KWallet::Wallet::Synchronous);
+  if (! wallet)
+    wallet = KWallet::Wallet::openWallet(wallet_name,
+                                         -1,
+                                         KWallet::Wallet::Synchronous);
   if (wallet)
     {
       if (! wallet->hasFolder(folder))
@@ -188,7 +190,6 @@ kwallet_password_set(apr_hash_t *creds,
             }
         }
     }
-  delete wallet;
 
 // This function currently closes the wallet if no other application
 // is connected to the wallet. We're waiting for this to be fixed
@@ -196,6 +197,12 @@ kwallet_password_set(apr_hash_t *creds,
 //  KWallet::Wallet::disconnectApplication(wallet_name,
 //                                         QString::fromUtf8("Subversion"));
   return ret;
+}
+
+__attribute__((destructor))
+void kwallet_disconnect()
+{
+  delete wallet;
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */
