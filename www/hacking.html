@@ -3036,15 +3036,15 @@ libraries.</p>
 
 <p>The gettext package provides services for translating messages.  It
 uses the xgettext tool to extract strings from the sources for
-translation.  This works by extracting the arguments of the _() and
-N_() macros.  The former is used in context where function calls are
-allowed (typically anything except static initializers).  The latter
-is used whenever _() isn't.  Strings marked with N_() need to be
-passed to gettext translation routines whenever referenced in the
-code.  For an example, look at how the header and footer are handled
-in subversion/svn/help-cmd.c.</p>
+translation.  This works by extracting the arguments of the _(), N_() and
+Q_() macros.  _() is used in context where function calls are allowed
+(typically anything except static initializers).  N_() is used whenever
+_() isn't.  Strings marked with N_() need to be passed to gettext
+translation routines whenever referenced in the code.  For an example,
+look at how the header and footer are handled in subversion/svn/help-cmd.c.
+Q_() is used for messages which have singular and plural version.</p>
 
-<p>Beside _() and N_() macros also U_() is used to mark strings which
+<p>Beside _(), N_() and Q_() macros also U_() is used to mark strings which
 will not be translated because it's in general not useful to translate
 internal error messages. This should affect only obscure error messages
 most users should never ever see (caused by bugs in Subversion or
@@ -3068,7 +3068,7 @@ svn_private_config.hw (for Windows).  Be sure to put</p>
 
 <p>as the last include in any file which requires localization.</p>
 
-<p>Also note that return values of _() and *gettext() calls are UTF-8
+<p>Also note that return values of _(), Q_() and *gettext() calls are UTF-8
 encoded; this means that they should be translated to the current
 locale being written as any form of program output.</p>
 
