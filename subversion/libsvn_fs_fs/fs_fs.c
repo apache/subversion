@@ -5282,6 +5282,10 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_hash_t *txnprops;
   svn_string_t date;
 
+  /* Start the sqlite transaction. */
+  if (ffd->rep_cache.db)
+    SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
 
@@ -5420,6 +5424,10 @@ commit_body(void *baton, apr_pool_t *pool)
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
+
+  /* Commit the sqlite transaction. */
+  if (ffd->rep_cache.db)
+    SVN_ERR(svn_sqlite__transaction_commit(ffd->rep_cache.db));
 
   *cb->new_rev_p = new_rev;
 
