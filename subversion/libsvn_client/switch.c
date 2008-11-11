@@ -95,7 +95,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Do not support the situation of both exclude and switch a target. */
   if (depth_is_sticky && depth == svn_depth_exclude)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             _("Can not both exclude and switch a path"));
+                             _("Cannot both exclude and switch a path"));
 
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
