@@ -2,7 +2,7 @@
  * crop.c: Cropping the WC 
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -213,7 +213,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot crop '%s': it is going to be removed from repository."
-         " Try commit instead."),
+         " Try commit instead"),
        svn_path_local_style(full_path, pool));
 
   /* Crop the target itself if we are requested to. */
@@ -227,12 +227,12 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
       if (*full_path == 0)
         return svn_error_createf
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Cannot exclude current directory."));
+           _("Cannot exclude current directory"));
 
       if (svn_dirent_is_root(full_path, strlen(full_path)))
         return svn_error_createf
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Cannot exclude root directory."));
+           _("Cannot exclude root directory"));
 
       /* This simulates the logic of svn_wc_is_wc_root(). */
         {
@@ -262,7 +262,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
           if (switched)
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot crop '%s': it is a switched path."),
+               _("Cannot crop '%s': it is a switched path"),
                svn_path_local_style(full_path, pool));
         }
 

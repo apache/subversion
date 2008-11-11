@@ -1852,7 +1852,7 @@ fs_make_dir(svn_fs_root_t *root,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, pool);
 
   /* Create the subdirectory.  */
   SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
@@ -2194,7 +2194,7 @@ fs_make_file(svn_fs_root_t *root,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, pool);
 
   /* Check (non-recursively) to see if path is locked;  if so, check
      that we can use it. */

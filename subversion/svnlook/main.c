@@ -964,7 +964,7 @@ print_diff_tree(svn_fs_root_t *root,
       if (binary)
         {
           svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
-          SVN_ERR(svn_cmdline_printf(pool, header->data));
+          SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
         }
       else
         {
@@ -983,7 +983,7 @@ print_diff_tree(svn_fs_root_t *root,
               const char *orig_label, *new_label;
 
               /* Print diff header. */
-              SVN_ERR(svn_cmdline_printf(pool, header->data));
+              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
 
               /* This fflush() might seem odd, but it was added to deal
                  with this bug report:

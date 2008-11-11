@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -126,7 +126,7 @@ entry_name_to_utf8(const char **name_p,
     {
       return svn_error_createf(err->apr_err, err,
                                _("Error converting entry "
-                                 "in directory '%s' to UTF8"),
+                                 "in directory '%s' to UTF-8"),
                                svn_path_local_style(parent, pool));
     }
   return err;
