@@ -19,16 +19,6 @@ Blocker:
      decision. I'd recommend just storing both though (or removing
      rep-sharing from FSFS).  [BDB is now storing both.]
 
-   - If a commit gets aborted (or the server crashes, or whatever)
-     after having written new references to the database, the database
-     will still contain the references; future commits of files with
-     the same contents will then use the garbage at those offsets.
-     You can probably fix this by opening a SQLite transaction at the
-     top of commit_body and commit it after updating "current".  (If
-     there's a crash between updating "current" and committing the
-     transaction, then the only downside is that you fail to do a bit
-     of sharing, which is OK.)
-
    - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
      used outside of the control of the FSFS lock.  Thus its
      read-modify-write can have race conditions, leading to two
