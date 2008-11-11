@@ -2915,7 +2915,7 @@ resolve_found_entry_callback(const char *path,
   /* If this is a versioned entry, resolve its other conflicts, if any. */
   if (entry && (baton->resolve_text || baton->resolve_props))
     {
-      const char *conflict_dir, *base_name = NULL;
+      const char *base_name = NULL;
       svn_wc_adm_access_t *adm_access;
       svn_boolean_t did_resolve = FALSE;
 
