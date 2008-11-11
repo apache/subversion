@@ -457,8 +457,10 @@ AH_BOTTOM(
 #include <locale.h>
 #include <libintl.h>
 #define _(x) dgettext(PACKAGE_NAME, x)
+#define Q_(x1, x2, n) dngettext(PACKAGE_NAME, x1, x2, n)
 #else
 #define _(x) (x)
+#define Q_(x1, x2, n) (n == 1) ? x1 : x2
 #define gettext(x) (x)
 #define dgettext(domain,x) (x)
 #endif
