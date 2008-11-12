@@ -46,8 +46,8 @@ Blocker:
 
    - 'structure' has not been updated.
 
- * Tree conflicts:
-   - "svn resolved" target must be a victim, not a parent.
+ * Tree conflicts - essential issues:
+   - #3306: "svn resolved" target must be a victim, not a parent.
 
    - Tree conflicts can break working copy as noted by markphip:
      http://svn.haxx.se/dev/archive-2008-10/1090.shtml
@@ -65,3 +65,9 @@ Optional:
 
  * Secure certificate passphrase caching on Windows, to bring it upto the
    same level as the other password stores. (Issue 2489)
+
+ * Tree conflicts - essential issues:
+   - #3320; Commit not blocked by tree conflict
+   - #3139, #3209: Tests XFAIL due to changed tree-conflicts behaviour
+
+
