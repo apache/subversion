@@ -627,7 +627,10 @@ apply_textdelta(void *file_baton,
   struct file_baton *fb = file_baton;
   struct handler_baton *hb = apr_palloc(pool, sizeof(*hb));
 
-  SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath, NULL,
+  /* Create a temporary file in the same directory as the file. We're going
+     to rename the thing into place when we're done. */
+  SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
+                                 svn_path_dirname(fb->path, pool),
                                  svn_io_file_del_none, fb->pool, fb->pool));
 
   hb->pool = pool;
@@ -857,7 +860,8 @@ svn_client_export4(svn_revnum_t *result_rev,
 
           /* Copied from apply_textdelta(). */
           SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                         NULL, svn_io_file_del_none,
+                                         svn_path_dirname(fb->path, pool),
+                                         svn_io_file_del_none,
                                          fb->pool, fb->pool));
 
           /* Step outside the editor-likeness for a moment, to actually talk
