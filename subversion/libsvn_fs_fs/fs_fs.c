@@ -931,7 +931,9 @@ write_format(const char *path, int format, int max_files_per_dir,
     {
       const char *path_tmp;
 
-      SVN_ERR(svn_io_write_unique(&path_tmp, path, contents, strlen(contents),
+      SVN_ERR(svn_io_write_unique(&path_tmp,
+                                  svn_path_dirname(path, pool),
+                                  contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
 #ifdef WIN32
@@ -3804,7 +3806,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_write_unique(&tmp_filename, txn_current_filename,
+  SVN_ERR(svn_io_write_unique(&tmp_filename,
+                              svn_path_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
   SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
                                      txn_current_filename, pool));
@@ -5141,7 +5144,9 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name, name, buf, strlen(buf),
+  SVN_ERR(svn_io_write_unique(&tmp_name,
+                              svn_path_dirname(name, pool),
+                              buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
   return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
