@@ -699,7 +699,7 @@ def build_generic_tree(nodelist):
 # Parse co/up output into a tree.
 #
 #   Tree nodes will contain no contents, a 'status' att, and a
-#   'writelocked' att.
+#   'treeconflict' att.
 
 def build_tree_from_checkout(lines, include_skipped=1):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
