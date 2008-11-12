@@ -5287,10 +5287,6 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_hash_t *txnprops;
   svn_string_t date;
 
-  /* Start the sqlite transaction. */
-  if (ffd->rep_cache.db)
-    SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
-
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
 
@@ -5430,13 +5426,40 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
 
-  /* Commit the sqlite transaction. */
-  if (ffd->rep_cache.db)
-    SVN_ERR(svn_sqlite__transaction_commit(ffd->rep_cache.db));
-
   *cb->new_rev_p = new_rev;
 
   return SVN_NO_ERROR;
+}
+
+/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
+   the same as commit_body().
+
+   XXX: If we decide to wrap other stuff with sqlite transactions, this should
+   probably be generalized and moved into libsvn_subr/sqlite.c.
+ */
+static svn_error_t *
+commit_body_wrapper(void *baton, apr_pool_t *pool)
+{
+  struct commit_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
+  svn_error_t *err;
+
+  /* Start the sqlite transaction. */
+  if (ffd->rep_cache.db)
+    SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+
+  err = commit_body(baton, pool);
+
+  /* Commit or rollback the sqlite transaction. */
+  if (ffd->rep_cache.db)
+    {
+      if (err)
+        SVN_ERR(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+      else
+        SVN_ERR(svn_sqlite__transaction_commit(ffd->rep_cache.db));
+    }
+
+  return err;
 }
 
 svn_error_t *
@@ -5450,7 +5473,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
+  return svn_fs_fs__with_write_lock(fs, commit_body_wrapper, &cb, pool);
 }
 
 svn_error_t *
