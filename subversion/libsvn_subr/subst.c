@@ -1446,7 +1446,8 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
   /* If nothing else worked, write out the internal representation to
      a file that can be edited by the user. */
   if (create_using_internal_representation)
-    SVN_ERR(svn_io_write_unique(&dst_tmp, dst, src->data, src->len,
+    SVN_ERR(svn_io_write_unique(&dst_tmp, svn_path_dirname(dst, pool),
+                                src->data, src->len,
                                 svn_io_file_del_none, pool));
 
   /* Do the atomic rename from our temporary location. */

@@ -278,13 +278,17 @@ temp_file_child_cleanup_handler(void *baton)
 
 
 svn_error_t *
-svn_io_open_unique_file2(apr_file_t **f,
-                         const char **unique_name_p,
-                         const char *path,
-                         const char *suffix,
-                         svn_io_file_del_t delete_when,
-                         apr_pool_t *pool)
+svn_io_open_uniquely_named(apr_file_t **f,
+                           const char **unique_name_p,
+                           const char *dirpath,
+                           const char *filename,
+                           const char *suffix,
+                           svn_io_file_del_t delete_when,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
+  apr_pool_t *pool = result_pool;
+  const char *path = svn_path_join(dirpath, filename, pool);
   unsigned int i;
   apr_file_t *file;
   const char *unique_name;
@@ -394,18 +398,54 @@ svn_io_open_unique_file2(apr_file_t **f,
 }
 
 svn_error_t *
-svn_io_open_unique_file(apr_file_t **f,
-                        const char **unique_name_p,
+svn_io_open_unique_file3(apr_file_t **file,
+                         const char **temp_path,
+                         const char *dirpath,
+                         svn_io_file_del_t delete_when,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  /* ### this test will go away after uniquely_named truly handles
+     ### a dirpath of NULL. */
+  if (dirpath == NULL)
+    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+
+  return svn_io_open_uniquely_named(file, temp_path,
+                                    dirpath, "tempfile", ".tmp",
+                                    delete_when, result_pool, scratch_pool);
+}
+
+svn_error_t *
+svn_io_open_unique_file2(apr_file_t **file,
+                         const char **temp_path,
+                         const char *path,
+                         const char *suffix,
+                         svn_io_file_del_t delete_when,
+                         apr_pool_t *pool)
+{
+  const char *dirpath;
+  const char *filename;
+
+  svn_path_split(path, &dirpath, &filename, pool);
+  return svn_io_open_uniquely_named(file, temp_path,
+                                    dirpath, filename, suffix,
+                                    delete_when,
+                                    pool, pool);
+}
+
+svn_error_t *
+svn_io_open_unique_file(apr_file_t **file,
+                        const char **temp_path,
                         const char *path,
                         const char *suffix,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
-  return svn_io_open_unique_file2(f, unique_name_p,
+  return svn_io_open_unique_file2(file, temp_path,
                                   path, suffix,
                                   delete_on_close
-                                  ? svn_io_file_del_on_close
-                                  : svn_io_file_del_none,
+                                    ? svn_io_file_del_on_close
+                                    : svn_io_file_del_none,
                                   pool);
 }
 
@@ -2766,11 +2806,8 @@ svn_io_write_unique(const char **tmp_path,
 {
   apr_file_t *new_file;
 
-  if (!dirpath)
-    SVN_ERR(svn_io_temp_dir(&dirpath, pool));
-
-  SVN_ERR(svn_io_open_unique_file2(&new_file, tmp_path, dirpath, ".tmp",
-                                   delete_when, pool));
+  SVN_ERR(svn_io_open_unique_file3(&new_file, tmp_path, dirpath,
+                                   delete_when, pool, pool));
   SVN_ERR(svn_io_file_write_full(new_file, buf, nbytes, NULL, pool));
   SVN_ERR(svn_io_file_flush_to_disk(new_file, pool));
   return svn_io_file_close(new_file, pool);
@@ -2896,7 +2933,7 @@ svn_io_file_move(const char *from_path, const char *to_path,
       svn_error_clear(err);
 
       SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_to_path, to_path,
-                                       "tmp", svn_io_file_del_none, pool));
+                                       ".tmp", svn_io_file_del_none, pool));
 
       err = svn_io_copy_file(from_path, tmp_to_path, TRUE, pool);
       if (err)
@@ -3279,9 +3316,10 @@ svn_io_write_version_file(const char *path,
 
   SVN_ERR_ASSERT(version >= 0);
 
-  SVN_ERR(svn_io_write_unique(&path_tmp, path, format_contents,
-                              strlen(format_contents), svn_io_file_del_none,
-                              pool));
+  SVN_ERR(svn_io_write_unique(&path_tmp,
+                              svn_path_dirname(path, pool),
+                              format_contents, strlen(format_contents),
+                              svn_io_file_del_none, pool));
 
 #ifdef WIN32
   /* make the destination writable, but only on Windows, because
