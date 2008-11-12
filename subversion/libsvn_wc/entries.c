@@ -3316,6 +3316,8 @@ typedef struct visit_tc_too_baton_t
     svn_wc_adm_access_t *adm_access;
     const svn_wc_entry_callbacks2_t *callbacks;
     void *baton;
+    const char *target;
+    svn_depth_t depth;
   } visit_tc_too_baton_t;
 
 /* An svn_wc_entry_callbacks2_t callback function.
@@ -3333,14 +3335,44 @@ visit_tc_too_found_entry(const char *path,
                          apr_pool_t *pool)
 {
   struct visit_tc_too_baton_t *baton = walk_baton;
+  svn_boolean_t check_children;
 
   /* Call the entry callback for this entry. */
   SVN_ERR(baton->callbacks->found_entry(path, entry, baton->baton, pool));
 
-  /* If this is a directory, also visit any unversioned children that are
-   * tree conflict victims. */
-  if (entry->kind == svn_node_dir && !entry_is_hidden(entry))
+  if (entry->kind != svn_node_dir || entry_is_hidden(entry))
+    return SVN_NO_ERROR;
+
+  /* If this is a directory, we may need to also visit any unversioned
+   * children that are tree conflict victims. However, that should not
+   * happen when we've already reached the requested depth. */
+
+  switch (baton->depth){
+    case svn_depth_empty:
+      check_children = FALSE;
+      break;
+
+    /* Since svn_depth_files only visits files and this is a directory,
+     * we have to be at the target. Just verify that anyway: */
+    case svn_depth_files:
+    case svn_depth_immediates:
+      /* Check if this already *is* an immediate child, in which
+       * case we shouldn't descend further. */
+      check_children = (strcmp(baton->target, path) == 0);
+      break;
+
+    case svn_depth_infinity:
+    case svn_depth_exclude:
+    case svn_depth_unknown:
+      check_children = TRUE;
+      break;
+  };
+
+  if (check_children)
     {
+      /* We're supposed to check the children of this directory. However,
+       * in case of svn_depth_files, don't visit directories. */
+
       svn_wc_adm_access_t *adm_access = NULL;
       apr_array_header_t *conflicts
         = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
@@ -3359,6 +3391,10 @@ visit_tc_too_found_entry(const char *path,
           svn_wc_conflict_description_t *conflict
             = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
           const svn_wc_entry_t *child_entry;
+
+          if ((conflict->node_kind == svn_node_dir)
+              && (baton->depth == svn_depth_files))
+            continue;
 
           /* If this victim is not in this dir's entries ... */
           SVN_ERR(svn_wc_entry(&child_entry, conflict->path, adm_access,
@@ -3482,6 +3518,8 @@ svn_wc__walk_entries_and_tc(const char *path,
       visit_tc_too_baton.adm_access = adm_access;
       visit_tc_too_baton.callbacks = walk_callbacks;
       visit_tc_too_baton.baton = walk_baton;
+      visit_tc_too_baton.target = path;
+      visit_tc_too_baton.depth = depth;
 
       SVN_ERR(svn_wc_walk_entries3(path, path_adm_access,
                                    &visit_tc_too_callbacks, &visit_tc_too_baton,
