@@ -460,7 +460,7 @@ struct file_baton
 
   /* We need to keep this around so we can explicitly close it in close_file,
      thus flushing its output to disk so we can copy and translate it. */
-  apr_file_t *tmp_file;
+  svn_stream_t *tmp_stream;
 
   /* The MD5 digest of the file's fulltext.  This is all zeros until
      the last textdelta window handler call returns. */
@@ -608,7 +608,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      apr_file_remove(hb->tmppath, hb->pool);
+      svn_error_clear(svn_io_remove_file(hb->tmppath, hb->pool));
     }
 
   return err;
@@ -627,15 +627,18 @@ apply_textdelta(void *file_baton,
   struct file_baton *fb = file_baton;
   struct handler_baton *hb = apr_palloc(pool, sizeof(*hb));
 
-  SVN_ERR(svn_io_open_unique_file2(&fb->tmp_file, &(fb->tmppath),
-                                   fb->path, ".tmp",
-                                   svn_io_file_del_none, fb->pool));
+  SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath, NULL,
+                                 svn_io_file_del_none, fb->pool, fb->pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
 
+  /* svn_txdelta_apply() closes the stream, but we want to close it in the
+     close_file() function, so disown it here. */
+  /* ### contrast to when we call svn_ra_get_file() which does NOT close the
+     ### tmp_stream. we *should* be much more consistent! */
   svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_stream_from_aprfile2(fb->tmp_file, TRUE, pool),
+                    svn_stream_disown(fb->tmp_stream, pool),
                     fb->text_digest, NULL, pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -712,7 +715,7 @@ close_file(void *file_baton,
   if (! fb->tmppath)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_io_file_close(fb->tmp_file, fb->pool));
+  SVN_ERR(svn_stream_close(fb->tmp_stream));
 
   if (text_checksum)
     {
@@ -853,15 +856,15 @@ svn_client_export4(svn_revnum_t *result_rev,
           fb->pool = pool;
 
           /* Copied from apply_textdelta(). */
-          SVN_ERR(svn_io_open_unique_file2(&fb->tmp_file, &(fb->tmppath),
-                                           fb->path, ".tmp",
-                                           svn_io_file_del_none, fb->pool));
+          SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
+                                         NULL, svn_io_file_del_none,
+                                         fb->pool, fb->pool));
 
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
+          /* ### note: the stream will not be closed */
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
-                                  svn_stream_from_aprfile2(fb->tmp_file, TRUE,
-                                                           pool),
+                                  fb->tmp_stream,
                                   NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton
