@@ -333,15 +333,9 @@ create_empty_file(apr_file_t **file,
     return svn_wc_create_tmp_file2(file, empty_file_path,
                                    svn_wc_adm_access_path(adm_access),
                                    delete_when, pool);
-  else
-    {
-      const char *temp_dir;
 
-      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      return svn_io_open_unique_file2(file, empty_file_path,
-                                      svn_path_join(temp_dir, "tmp", pool),
-                                      "", delete_when, pool);
-    }
+  return svn_io_open_unique_file3(file, empty_file_path, NULL,
+                                  delete_when, pool, pool);
 }
 
 /* Return in *PATH_ACCESS the access baton for the directory PATH by

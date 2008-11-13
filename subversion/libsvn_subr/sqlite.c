@@ -95,6 +95,24 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
 }
 
 svn_error_t *
+svn_sqlite__transaction_begin(svn_sqlite__db_t *db)
+{
+  return svn_sqlite__exec(db, "BEGIN TRANSACTION;");
+}
+
+svn_error_t *
+svn_sqlite__transaction_commit(svn_sqlite__db_t *db)
+{
+  return svn_sqlite__exec(db, "COMMIT TRANSACTION;");
+}
+
+svn_error_t *
+svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
+{
+  return svn_sqlite__exec(db, "ROLLBACK TRANSACTION;");
+}
+
+svn_error_t *
 svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                     const char *text, apr_pool_t *result_pool)
 {

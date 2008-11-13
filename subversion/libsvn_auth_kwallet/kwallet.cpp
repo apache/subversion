@@ -199,12 +199,6 @@ kwallet_password_set(apr_hash_t *creds,
   return ret;
 }
 
-__attribute__((destructor))
-void kwallet_disconnect()
-{
-  delete wallet;
-}
-
 /* Get cached encrypted credentials from the simple provider's cache. */
 static svn_error_t *
 kwallet_simple_first_creds(void **credentials,

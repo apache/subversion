@@ -451,6 +451,8 @@ typedef struct svn_ra_callbacks2_t
 {
   /** Open a unique temporary file for writing in the working copy.
    * This file will be automatically deleted when @a fp is closed.
+   *
+   * @deprecated This callback should no longer be used by RA layers.
    */
   svn_error_t *(*open_tmp_file)(apr_file_t **fp,
                                 void *callback_baton,

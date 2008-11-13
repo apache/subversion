@@ -1367,7 +1367,6 @@ svn_repos_begin_report2(void **report_baton,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
-  const char *tempdir;
 
   if (depth == svn_depth_exclude)
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
@@ -1392,10 +1391,8 @@ svn_repos_begin_report2(void **report_baton,
   b->authz_read_func = authz_read_func;
   b->authz_read_baton = authz_read_baton;
 
-  SVN_ERR(svn_io_temp_dir(&tempdir, pool));
-  SVN_ERR(svn_io_open_unique_file2(&b->tempfile, NULL,
-                                   apr_psprintf(pool, "%s/report", tempdir),
-                                   ".tmp", svn_io_file_del_on_close, pool));
+  SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
+                                   svn_io_file_del_on_close, pool, pool));
 
   /* Hand reporter back to client. */
   *report_baton = b;
