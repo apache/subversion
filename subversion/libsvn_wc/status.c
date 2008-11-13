@@ -939,7 +939,7 @@ get_dir_status(struct edit_baton *eb,
       else
         {
           svn_wc_conflict_description_t *tree_conflict;
-          SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict,
+          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict,
                                            svn_path_join(path, entry, subpool),
                                            adm_access, subpool));
           if (tree_conflict)

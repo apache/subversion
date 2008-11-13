@@ -2181,7 +2181,7 @@ revert_internal(const char *path,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict, path, dir_access, pool));
+  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, dir_access, pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2233,7 +2233,7 @@ revert_internal(const char *path,
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, parent_access, pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_access, pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
@@ -2893,8 +2893,8 @@ resolve_found_entry_callback(const char *path,
       svn_path_split(path, &conflict_dir, &base_name, pool);
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
-      
-      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, parent_adm_access,
+
+      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_adm_access,
                                        pool));
       if (conflict)
         {
