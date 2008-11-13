@@ -1392,7 +1392,8 @@ svn_repos_begin_report2(void **report_baton,
   b->authz_read_baton = authz_read_baton;
 
   SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
-                                   svn_io_file_del_on_close, pool, pool));
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool));
 
   /* Hand reporter back to client. */
   *report_baton = b;
