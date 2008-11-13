@@ -5438,26 +5438,22 @@ commit_body(void *baton, apr_pool_t *pool)
    probably be generalized and moved into libsvn_subr/sqlite.c.
  */
 static svn_error_t *
-commit_body_wrapper(void *baton, apr_pool_t *pool)
+commit_body_rep_cache(void *baton, apr_pool_t *pool)
 {
   struct commit_baton *cb = baton;
   fs_fs_data_t *ffd = cb->fs->fsap_data;
   svn_error_t *err;
 
   /* Start the sqlite transaction. */
-  if (ffd->rep_cache.db)
-    SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
 
   err = commit_body(baton, pool);
 
   /* Commit or rollback the sqlite transaction. */
-  if (ffd->rep_cache.db)
-    {
-      if (err)
-        SVN_ERR(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
-      else
-        SVN_ERR(svn_sqlite__transaction_commit(ffd->rep_cache.db));
-    }
+  if (err)
+    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+  else
+    return svn_sqlite__transaction_commit(ffd->rep_cache.db);
 
   return err;
 }
@@ -5469,11 +5465,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body_wrapper, &cb, pool);
+  return svn_fs_fs__with_write_lock(fs,
+                                    ffd->rep_cache.db ? commit_body_rep_cache :
+                                                        commit_body, 
+                                    &cb, pool);
 }
 
 svn_error_t *
