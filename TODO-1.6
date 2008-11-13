@@ -68,4 +68,7 @@ Optional:
    - #3320; Commit not blocked by tree conflict
    - #3139, #3209: Tests XFAIL due to changed tree-conflicts behaviour
 
-
+ * WC-to-WC copy/moves - stop creation of explicit mergeinfo on the destination.
+   This is the primary source of explicit subtree mergeinfo which is in turn
+   the cause of a legion of problems and complaints about merge tracking, see
+   http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145213.
