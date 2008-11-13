@@ -104,8 +104,7 @@ def revert_replacement_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   if wc_copy:
-    props = { 'phony-prop' : '*',
-              'svn:mergeinfo' : '' }
+    props = { 'phony-prop' : '*' }
   else:
     props = { 'phony-prop' : '*' }
 

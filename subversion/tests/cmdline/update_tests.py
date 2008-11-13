@@ -3150,7 +3150,7 @@ def update_handles_copyfrom(sbox):
                       props={'Kubla' : 'Khan'})
   expected_disk.add({
     'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n",
-                        props={'Kubla' : 'Khan', 'svn:mergeinfo' : ''})
+                        props={'Kubla' : 'Khan'})
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -3308,7 +3308,7 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                       contents="New first line.\nThis is the file 'rho'.\n")
   expected_disk.add({
     'A/D/G/glub' : Item("New first line.\nThis is the file 'rho'.\nSome new text.\n",
-                        props={'Kubla' : 'Khan', 'svn:mergeinfo' : ''})
+                        props={'Kubla' : 'Khan'})
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
@@ -3473,8 +3473,7 @@ def update_copied_and_deleted_prop(sbox):
   expected_output = svntest.wc.State(wc_dir, { })
   expected_disk_r3 = svntest.main.greek_state.copy()
   expected_disk_r3.add({
-    'iota2' : Item("This is the file 'iota'.\n",
-                   props={SVN_PROP_MERGEINFO: ''}),
+    'iota2' : Item("This is the file 'iota'.\n"),
     })
   expected_disk_r3.tweak('iota', props={'foo':'bar'})
   expected_status_r3 = expected_status_mixed.copy()
