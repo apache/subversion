@@ -440,7 +440,7 @@ load_config(svn_ra_serf__session_t *session,
       apr_status_t status;
 
       status = apr_sockaddr_info_get(&proxy_addr, proxy_host,
-                                     APR_INET, proxy_port, 0,
+                                     APR_UNSPEC, proxy_port, 0,
                                      session->pool);
       session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
