@@ -1195,15 +1195,12 @@ commit_apply_txdelta(void *file_baton,
      ### or a FILE*. since we are getting binary data, we must use a FILE*
      ### for now. isn't that special? */
 
-  /* Use the client callback to create a tmpfile. */
-  SVN_ERR(file->cc->ras->callbacks->open_tmp_file
-          (&baton->tmpfile,
-           file->cc->ras->callback_baton,
-           file->pool));
-
-  /* ### register a cleanup on file_pool which closes the file; this
-     ### will ensure that the file always gets tossed, even if we exit
-     ### with an error. */
+  /* Create a temp file in the system area to hold the contents. Note that
+     we need a file since we will be rewinding it. The file will be closed
+     and deleted when the pool is cleaned up. */
+  SVN_ERR(svn_io_open_unique_file3(&baton->tmpfile, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   file->pool, pool));
 
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
@@ -1311,7 +1308,9 @@ static svn_error_t * commit_close_file(void *file_baton,
 
       if (pb->tmpfile)
         {
-          /* we're done with the file.  this should delete it. */
+          /* We're done with the file.  this should delete it. Note: it
+             isn't a big deal if this line is never executed -- the pool
+             will eventually get it. We're just being proactive here. */
           (void) apr_file_close(pb->tmpfile);
         }
     }
