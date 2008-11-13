@@ -1466,6 +1466,14 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       conflict->action = action;
       conflict->reason = reason;
 
+      /* This function recevies only an svn_stringbuf_t*, but passes an
+       * svn_stringbuf_t** into below function. Changes by that function
+       * to the svn_stringbuf_t* don't propagate back to the caller of
+       * check_tree_conflict(). However, svn_wc__loggy_add_tree_conflict()
+       * will only change the svn_stringbuf_t* if it is NULL, so let's
+       * make sure a log_accum is already in place. */
+      SVN_ERR_ASSERT(log_accum != NULL);
+
       SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict,
                                               parent_adm_access, pool));
 
