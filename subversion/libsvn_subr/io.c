@@ -1213,9 +1213,17 @@ get_default_file_perms(const char *path, apr_fileperms_t *perms,
   const char *apr_path;
 
   /* Get the perms for a newly created file to find out what write
-   * bits should be set. */
-  SVN_ERR(svn_io_open_unique_file2(&fd, &tmp_path, path,
-                                   ".tmp", svn_io_file_del_on_close, pool));
+     bits should be set.
+
+     NOTE: normally del_on_close can be problematic because APR might
+       delete the file if we spawned any child processes. In this case,
+       the lifetime of this file handle is about 3 lines of code, so
+       we can safely use del_on_close here.
+  */
+  SVN_ERR(svn_io_open_unique_file3(&fd, &tmp_path,
+                                   svn_path_dirname(path, pool),
+                                   svn_io_file_del_on_close,
+                                   pool, pool));
   status = apr_stat(&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't get default file perms "
