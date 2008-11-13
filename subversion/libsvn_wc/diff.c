@@ -365,14 +365,9 @@ get_empty_file(struct edit_baton *b,
      that won't work on Windows: it's impossible to stat NUL */
   if (!b->empty_file)
     {
-      const char *temp_dir;
-
-      SVN_ERR(svn_io_temp_dir(&temp_dir, b->pool));
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &(b->empty_file),
-               svn_path_join(temp_dir, "tmp", b->pool),
-               "", svn_io_file_del_on_pool_cleanup,
-               b->pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &b->empty_file, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       b->pool, b->pool));
     }
 
   *empty_file = b->empty_file;
@@ -1095,8 +1090,8 @@ delete_entry(const char *path,
         {
           /* Whenever showing a deletion, we show the text-base vanishing. */
           /* ### This is wrong if we're diffing WORKING->repos. */
-          const char *textbase = svn_wc__text_base_path(full_path,
-                                                        FALSE, pool);
+          const char *textbase = svn_wc__text_base_path(full_path, FALSE,
+                                                        pool);
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 

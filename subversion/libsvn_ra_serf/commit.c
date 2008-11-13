@@ -1609,9 +1609,10 @@ apply_textdelta(void *file_baton,
    */
   wc_callbacks = ctx->commit->session->wc_callbacks;
   wc_callback_baton = ctx->commit->session->wc_callback_baton;
-  SVN_ERR(wc_callbacks->open_tmp_file(&ctx->svndiff,
-                                      wc_callback_baton,
-                                      ctx->pool));
+
+  SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   ctx->pool, ctx->pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);

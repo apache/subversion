@@ -131,18 +131,16 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
             svn_fs_root_t *oldroot, const char *oldpath,
             svn_fs_root_t *newroot, const char *newpath, apr_pool_t *pool)
 {
-  const char *tempdir;
   svn_stream_t *temp_stream;
   apr_off_t offset = 0;
   svn_txdelta_stream_t *delta_stream;
   svn_txdelta_window_handler_t wh;
   void *whb;
 
-  /* Create a temporary file and open a stream to it. */
-  SVN_ERR(svn_io_temp_dir(&tempdir, pool));
-  SVN_ERR(svn_io_open_unique_file2(tempfile, NULL,
-                                   apr_psprintf(pool, "%s/dump", tempdir),
-                                   ".tmp", svn_io_file_del_on_close, pool));
+  /* Create a temporary file and open a stream to it. Note that we need
+     the file handle in order to rewind it. */
+  SVN_ERR(svn_io_open_unique_file3(tempfile, NULL, NULL,
+                                   svn_io_file_del_on_close, pool, pool));
   temp_stream = svn_stream_from_aprfile2(*tempfile, TRUE, pool);
 
   /* Compute the delta and send it to the temporary file. */

@@ -1198,16 +1198,12 @@ parsed_request(svn_ra_neon__request_t *req,
      the response to disk first, we use our custom spool reader.  */
   if (spool_response)
     {
-      const char *tmpfile_path;
-      SVN_ERR(svn_io_temp_dir(&tmpfile_path, pool));
-
-      tmpfile_path = svn_path_join(tmpfile_path, "dav-spool", pool);
       /* Blow the temp-file away as soon as we eliminate the entire request */
-      SVN_ERR(svn_io_open_unique_file2(&spool_reader_baton.spool_file,
+      SVN_ERR(svn_io_open_unique_file3(&spool_reader_baton.spool_file,
                                        &spool_reader_baton.spool_file_name,
-                                       tmpfile_path, "",
+                                       NULL,
                                        svn_io_file_del_on_pool_cleanup,
-                                       req->pool));
+                                       req->pool, pool));
       spool_reader_baton.req = req;
 
       svn_ra_neon__add_response_body_reader(req, ne_accept_2xx, spool_reader,

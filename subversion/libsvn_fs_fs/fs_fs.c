@@ -931,7 +931,9 @@ write_format(const char *path, int format, int max_files_per_dir,
     {
       const char *path_tmp;
 
-      SVN_ERR(svn_io_write_unique(&path_tmp, path, contents, strlen(contents),
+      SVN_ERR(svn_io_write_unique(&path_tmp,
+                                  svn_path_dirname(path, pool),
+                                  contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
 #ifdef WIN32
@@ -1009,10 +1011,10 @@ write_config(svn_fs_t *fs,
 "### duplication between them, usually a function of the branching and"      NL
 "### merging process."                                                       NL
 "###"                                                                        NL
-"### The following parameter enable rep-sharing in the repository.  It can"  NL
+"### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
+CONFIG_OPTION_ENABLE_REP_SHARING " = true"                                   NL
 
 ;
 #undef NL
@@ -3804,7 +3806,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_write_unique(&tmp_filename, txn_current_filename,
+  SVN_ERR(svn_io_write_unique(&tmp_filename,
+                              svn_path_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
   SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
                                      txn_current_filename, pool));
@@ -5141,7 +5144,9 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name, name, buf, strlen(buf),
+  SVN_ERR(svn_io_write_unique(&tmp_name,
+                              svn_path_dirname(name, pool),
+                              buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
   return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
@@ -5426,6 +5431,37 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
+   the same as commit_body().
+
+   XXX: If we decide to wrap other stuff with sqlite transactions, this should
+   probably be generalized and moved into libsvn_subr/sqlite.c.
+ */
+static svn_error_t *
+commit_body_wrapper(void *baton, apr_pool_t *pool)
+{
+  struct commit_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
+  svn_error_t *err;
+
+  /* Start the sqlite transaction. */
+  if (ffd->rep_cache.db)
+    SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+
+  err = commit_body(baton, pool);
+
+  /* Commit or rollback the sqlite transaction. */
+  if (ffd->rep_cache.db)
+    {
+      if (err)
+        SVN_ERR(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+      else
+        SVN_ERR(svn_sqlite__transaction_commit(ffd->rep_cache.db));
+    }
+
+  return err;
+}
+
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -5437,7 +5473,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
+  return svn_fs_fs__with_write_lock(fs, commit_body_wrapper, &cb, pool);
 }
 
 svn_error_t *

@@ -1223,6 +1223,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   svn_string_t *mime_propval = NULL;
   apr_pool_t *filepool = svn_pool_create(pool);
   svn_wc_conflict_description_t *cdesc;
+  const char *dirpath = svn_path_dirname(path, filepool);
 
   if (! conflict_func)
     {
@@ -1236,12 +1237,12 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
-    SVN_ERR(svn_io_write_unique(&cdesc->my_file, path, working_val->data,
+    SVN_ERR(svn_io_write_unique(&cdesc->my_file, dirpath, working_val->data,
                                 working_val->len,
                                 svn_io_file_del_on_pool_cleanup, filepool));
 
   if (new_val)
-    SVN_ERR(svn_io_write_unique(&cdesc->their_file, path, new_val->data,
+    SVN_ERR(svn_io_write_unique(&cdesc->their_file, dirpath, new_val->data,
                                 new_val->len, svn_io_file_del_on_pool_cleanup,
                                 filepool));
 
@@ -1264,7 +1265,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
       const svn_string_t *the_val = base_val ? base_val : old_val;
 
-      SVN_ERR(svn_io_write_unique(&cdesc->base_file, path, the_val->data,
+      SVN_ERR(svn_io_write_unique(&cdesc->base_file, dirpath, the_val->data,
                                   the_val->len, svn_io_file_del_on_pool_cleanup,
                                   filepool));
     }
@@ -1299,7 +1300,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           the_val = base_val;
         }
 
-      SVN_ERR(svn_io_write_unique(&cdesc->base_file, path, the_val->data,
+      SVN_ERR(svn_io_write_unique(&cdesc->base_file, dirpath, the_val->data,
                                   the_val->len, svn_io_file_del_on_pool_cleanup,
                                   filepool));
 
