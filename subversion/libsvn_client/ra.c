@@ -38,36 +38,13 @@
 
 
 static svn_error_t *
-open_admin_tmp_file(apr_file_t **fp,
-                    void *callback_baton,
-                    apr_pool_t *pool)
-{
-  svn_client__callback_baton_t *cb = callback_baton;
-
-  return svn_wc_create_tmp_file2(fp, NULL, cb->base_dir,
-                                 svn_io_file_del_on_close, pool);
-}
-
-
-static svn_error_t *
 open_tmp_file(apr_file_t **fp,
               void *callback_baton,
               apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = callback_baton;
-  const char *truepath;
-
-  if (cb->base_dir && ! cb->read_only_wc)
-    truepath = apr_pstrdup(pool, cb->base_dir);
-  else
-    SVN_ERR(svn_io_temp_dir(&truepath, pool));
-
-  /* Tack on a made-up filename. */
-  truepath = svn_path_join(truepath, "tempfile", pool);
-
-  /* Open a unique file;  use APR_DELONCLOSE. */
-  return svn_io_open_unique_file2(fp, NULL, truepath, ".tmp",
-                                  svn_io_file_del_on_close, pool);
+  return svn_io_open_unique_file3(fp, NULL, NULL,
+                                  svn_io_file_del_on_pool_cleanup,
+                                  pool, pool);
 }
 
 
@@ -286,7 +263,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   svn_client__callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
-  cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
+  cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
