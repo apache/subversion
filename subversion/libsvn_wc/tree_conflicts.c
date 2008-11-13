@@ -478,8 +478,11 @@ svn_wc__del_tree_conflict(const char *victim_path,
   SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
                                           pool));
 
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+  if (log_accum != NULL)
+    {
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -537,7 +540,11 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
    * Otherwise we should not have been called. */
   dir_path = svn_wc_adm_access_path(adm_access);
   SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
-  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
+  SVN_ERR_ASSERT((entry != NULL) && (entry->kind == svn_node_dir));
+
+  /* Make sure that VICTIM_PATH is a child node of DIR_PATH.
+   * Anything else is a bug. */
+  SVN_ERR_ASSERT(strcmp(dir_path, svn_path_dirname(victim_path, pool)) == 0);
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));

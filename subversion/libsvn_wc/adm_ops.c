@@ -2676,11 +2676,16 @@ attempt_deletion(const char *parent_dir,
    and clearing the conflict filenames from the entry.  The latter needs to
    be done whether or not the conflict files exist.
 
+   Tree conflicts are not resolved here, because the data stored in one
+   entry does not refer to that entry but to children of it.
+
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
-   the entry prior to resolution. RESOLVE_TEXT, RESOLVE_PROPS and
-   RESOLVE_TREE are TRUE if text, property and tree conflicts respectively
-   are to be resolved.
+   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
+   if text and property conflicts respectively are to be resolved.
+
+   If this call marks any conflict as resolved, set *DID_RESOLVE to true,
+   else do not change *DID_RESOLVE.
 
    See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
 
@@ -2696,10 +2701,8 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_boolean_t resolve_tree,
                           svn_wc_conflict_choice_t conflict_choice,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
+                          svn_boolean_t *did_resolve,
                           apr_pool_t *pool)
 {
   svn_boolean_t was_present, need_feedback = FALSE;
@@ -2812,14 +2815,6 @@ resolve_conflict_on_entry(const char *path,
       need_feedback |= was_present;
     }
 
-  if (resolve_tree && (entry->kind == svn_node_dir)
-      && entry->tree_conflict_data)
-    {
-      modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
-      entry->tree_conflict_data = NULL;
-      need_feedback = TRUE;
-    }
-
   if (modify_flags)
     {
       /* Although removing the files is sufficient to indicate that the
@@ -2832,22 +2827,8 @@ resolve_conflict_on_entry(const char *path,
 
       /* No feedback if no files were deleted and all we did was change the
          entry, such a file did not appear as a conflict */
-      if (need_feedback && notify_func)
-        {
-          /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
-             state of conflict that we have asked to resolve.  If not, report
-             the successful resolution.  */
-          svn_boolean_t text_conflict, prop_conflict, tree_conflict;
-          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
-                                       &tree_conflict, path, conflict_dir,
-                                       pool));
-          if ((! (resolve_text && text_conflict))
-              && (! (resolve_props && prop_conflict))
-              && (! (resolve_tree && tree_conflict)))
-            (*notify_func)(notify_baton,
-                           svn_wc_create_notify(path, svn_wc_notify_resolved,
-                                                pool), pool);
-        }
+      if (need_feedback)
+        *did_resolve = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -2872,6 +2853,16 @@ struct resolve_callback_baton
   void *notify_baton;
 };
 
+/* An svn_wc_entry_callbacks2_t callback function.
+ *
+ * Mark as resolved any tree conflict on PATH, even if ENTRY is null, and
+ * any other conflicts on (PATH, ENTRY). Send a notification if any such
+ * change is made. Ignore the entry if it is deleted or absent, or if it is
+ * a duplicate report of a directory.
+ *
+ * Do this all according to the contents of (struct resolve_callback_baton
+ * *)WALK_BATON.
+ */
 static svn_error_t *
 resolve_found_entry_callback(const char *path,
                              const svn_wc_entry_t *entry,
@@ -2879,29 +2870,97 @@ resolve_found_entry_callback(const char *path,
                              apr_pool_t *pool)
 {
   struct resolve_callback_baton *baton = walk_baton;
-  const char *conflict_dir, *base_name = NULL;
-  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t resolved = FALSE;
 
   /* We're going to receive dirents twice;  we want to ignore the
-     first one (where it's a child of a parent dir), and only print
+     first one (where it's a child of a parent dir), and only process
      the second one (where we're looking at THIS_DIR). */
-  if ((entry->kind == svn_node_dir)
-      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
+  if (entry && (entry->kind == svn_node_dir)
+      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
     return SVN_NO_ERROR;
 
-  /* Figger out the directory in which the conflict resides. */
-  if (entry->kind == svn_node_dir)
-    conflict_dir = path;
-  else
-    svn_path_split(path, &conflict_dir, &base_name, pool);
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, conflict_dir,
-                              pool));
 
-  return resolve_conflict_on_entry(path, entry, adm_access, base_name,
-                                   baton->resolve_text, baton->resolve_props,
-                                   baton->resolve_tree,
-                                   baton->conflict_choice, baton->notify_func,
-                                   baton->notify_baton, pool);
+  /* If asked to, clear any tree conflict on the path. */
+  if (baton->resolve_tree)
+    {
+      const char *conflict_dir, *base_name = NULL;
+      svn_wc_adm_access_t *parent_adm_access;
+      svn_wc_conflict_description_t *conflict;
+      svn_boolean_t tree_conflict;
+
+      /* For tree-conflicts, we want the *parent* directory's adm_access,
+       * even for directories. */
+      svn_path_split(path, &conflict_dir, &base_name, pool);
+      SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
+                                        conflict_dir, pool));
+      
+      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, parent_adm_access,
+                                       pool));
+      if (conflict)
+        {
+          SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
+
+          /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
+             state of conflict that we have asked to resolve. If so,
+             don't flag RESOLVED_TREE after all. */
+
+          SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflict, path,
+                                       parent_adm_access, pool));
+          if (!tree_conflict)
+            resolved = TRUE;
+        }
+    }
+
+
+  /* If this is a versioned entry, resolve its other conflicts, if any. */
+  if (entry && (baton->resolve_text || baton->resolve_props))
+    {
+      const char *base_name = NULL;
+      svn_wc_adm_access_t *adm_access;
+      svn_boolean_t did_resolve = FALSE;
+
+      SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access,
+                                        path, pool));
+
+      SVN_ERR(resolve_conflict_on_entry(path, entry, adm_access, base_name,
+                                        baton->resolve_text,
+                                        baton->resolve_props,
+                                        baton->conflict_choice,
+                                        &did_resolve,
+                                        pool));
+
+      /* Sanity check: see if libsvn_wc *still* thinks this item is in a
+         state of conflict that we have asked to resolve. If so,
+         don't flag RESOLVED after all. */
+      if (did_resolve)
+        {
+          svn_boolean_t text_conflict, prop_conflict;
+
+          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
+                                       NULL, path, adm_access,
+                                       pool));
+
+          if ((baton->resolve_text && text_conflict)
+              || (baton->resolve_props && prop_conflict))
+            /* Explicitly overwrite a possible TRUE from tree-conflict
+             * resolution. If this part failed, it shouldn't be notified
+             * as resolved. (Keeping in an "if...else" for clarity.)
+             * (Actually, we defined that a node can't have other conflicts
+             * when it is tree-conflicted. This here can't hurt though.)*/
+            resolved = FALSE;
+          else
+            resolved = TRUE;
+        }
+    }
+
+  /* Notify */
+  if (baton->notify_func && resolved)
+    (*baton->notify_func)(baton->notify_baton,
+                          svn_wc_create_notify(path, svn_wc_notify_resolved,
+                                               pool),
+                          pool);
+
+  return SVN_NO_ERROR;
 }
 
 static const svn_wc_entry_callbacks2_t
@@ -2937,9 +2996,9 @@ svn_wc_resolved_conflict4(const char *path,
   baton->notify_baton = notify_baton;
   baton->conflict_choice = conflict_choice;
 
-  return svn_wc_walk_entries3(path, adm_access,
+  return svn_wc__walk_entries_and_tc(path, adm_access,
                               &resolve_walk_callbacks, baton, depth,
-                              FALSE, cancel_func, cancel_baton, pool);
+                              cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
