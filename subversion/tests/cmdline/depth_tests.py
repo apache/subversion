@@ -2246,6 +2246,172 @@ def excluded_receive_remote_removal(sbox):
 
 
 #----------------------------------------------------------------------
+# Check that "svn resolved" visits tree-conflicts *on unversioned items*
+# according to the --depth parameter.
+
+def make_depth_tree_conflicts(sbox):
+  "Helper for tree_conflicts_resolved_depth_*"
+
+  sbox.build()
+  wc = sbox.wc_dir
+
+  j = os.path.join
+  A = j(wc, 'A')
+  m =    j(A, 'mu')
+  B =    j(A, 'B')
+  D =    j(A, 'D')
+  g =      j(D, 'gamma')
+
+  # Store node modifications as rev 2
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo-val', B)
+  svntest.main.file_append(m, "Modified mu.\n")
+  svntest.main.file_append(g, "Modified gamma.\n")
+
+  expected_output = svntest.wc.State(wc, {
+      'A/mu'              : Item(verb='Sending'),
+      'A/B'               : Item(verb='Sending'),
+      'A/D/gamma'         : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.tweak('A/mu', 'A/B', 'A/D/gamma',
+                        wc_rev = 2)
+
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        A)
+
+  # Go back to rev 1
+  expected_output = svntest.wc.State(wc, {
+    'A/mu'              : Item(status='U '),
+    'A/B'               : Item(status=' U'),
+    'A/D/gamma'         : Item(status='U '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_disk = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_update(wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '-r1', A)
+
+  # Perform node deletions so that items become unversioned and
+  # will have tree-conflicts upon update.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', m, B, g)
+
+  # Update so that conflicts appear
+  expected_output = svntest.wc.State(wc, {
+    'A/mu'              : Item(status='  ', treeconflict='C'),
+    'A/B'               : Item(status='  ', treeconflict='C'),
+    'A/D/gamma'         : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/mu',
+                       'A/B', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/D/gamma');
+
+  # This test is set XFail because this (correct) status cannot be
+  # verified due to an "svn update" bug. The tree-conflict on A/B
+  # which is notified about during the update does not show in the
+  # status. When removing file 'mu' from above 'rm' command, 'B' is
+  # reported as tree-conflicted correctly. Also use these to verify:
+  #  expected_output = None
+  #  expected_disk = None
+  expected_status = svntest.actions.get_virginal_state(wc, 2)
+  expected_status.tweak('A/mu',
+                        'A/B', 'A/B/lambda',
+                        'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        'A/D/gamma',
+                        status='D ')
+  expected_status.tweak('A/mu', 'A/B', 'A/D/gamma',
+                        treeconflict='C', wc_rev='1')
+
+  svntest.actions.run_and_verify_update(wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        wc)
+
+
+
+def tree_conflicts_resolved_depth_empty(sbox):
+  "tree conflicts resolved depth-empty"
+
+  make_depth_tree_conflicts(sbox)
+  
+  wc = sbox.wc_dir
+  A = os.path.join(wc, 'A')
+
+  svntest.actions.run_and_verify_svn(None, 
+    [],
+    [],
+    'resolved', '--depth=empty', A)
+
+
+def tree_conflicts_resolved_depth_files(sbox):
+  "tree conflicts resolved depth-files"
+
+  make_depth_tree_conflicts(sbox)
+  
+  wc = sbox.wc_dir
+  j = os.path.join
+  A = j(wc, 'A')
+  m =    j(A, 'mu')
+
+
+  svntest.actions.run_and_verify_svn(None, 
+    ["Resolved conflicted state of '%s'\n" % m],
+    [],
+    'resolved', '--depth=files', A)
+
+
+def tree_conflicts_resolved_depth_immediates(sbox):
+  "tree conflicts resolved depth-immediates"
+
+  make_depth_tree_conflicts(sbox)
+  
+  wc = sbox.wc_dir
+  j = os.path.join
+  A = j(wc, 'A')
+  m =    j(A, 'mu')
+  B =    j(A, 'B')
+
+  svntest.actions.run_and_verify_svn(None, 
+    ["Resolved conflicted state of '%s'\n" % m,
+     "Resolved conflicted state of '%s'\n" % B],
+    [],
+    'resolved', '--depth=immediates', A)
+
+
+def tree_conflicts_resolved_depth_infinity(sbox):
+  "tree conflicts resolved depth-infinity"
+
+  make_depth_tree_conflicts(sbox)
+  
+  wc = sbox.wc_dir
+  j = os.path.join
+  A = j(wc, 'A')
+  m =    j(A, 'mu')
+  B =    j(A, 'B')
+  g =    j(A, 'D', 'gamma')
+
+
+  svntest.actions.run_and_verify_svn(None, 
+    ["Resolved conflicted state of '%s'\n" % m,
+     "Resolved conflicted state of '%s'\n" % B,
+     "Resolved conflicted state of '%s'\n" % g],
+    [],
+    'resolved', '--depth=infinity', A)
+
+
+#----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
               depth_empty_checkout,
@@ -2282,6 +2448,10 @@ test_list = [ None,
               excluded_path_update_operation,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
+              XFail(tree_conflicts_resolved_depth_empty),
+              XFail(tree_conflicts_resolved_depth_files),
+              XFail(tree_conflicts_resolved_depth_immediates),
+              XFail(tree_conflicts_resolved_depth_infinity),
             ]
 
 if __name__ == "__main__":
