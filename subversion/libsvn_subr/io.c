@@ -1219,10 +1219,13 @@ get_default_file_perms(const char *path, apr_fileperms_t *perms,
        delete the file if we spawned any child processes. In this case,
        the lifetime of this file handle is about 3 lines of code, so
        we can safely use del_on_close here.
+
+     NOTE: not so fast, shorty. if some other thread forks off a child,
+       then the APR cleanups run, and the file will disappear. sigh.
   */
   SVN_ERR(svn_io_open_unique_file3(&fd, &tmp_path,
                                    svn_path_dirname(path, pool),
-                                   svn_io_file_del_on_close,
+                                   svn_io_file_del_on_pool_cleanup,
                                    pool, pool));
   status = apr_stat(&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
