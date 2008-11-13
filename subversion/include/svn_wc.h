@@ -5374,34 +5374,6 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  apr_pool_t *pool);
 
 /** @} */
-
-/** Set @a *tree_conflict to a newly allocated @c
- * svn_wc_conflict_description_t structure describing the tree
- * conflict state of @a victim_path, or to @c NULL if @a victim_path
- * is not in a state of tree conflict. @a adm_access is the admin
- * access baton for @a victim_path. Use @a pool for all allocations.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                         const char *victim_path,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool);
-
-/** Record the tree conflict described by @a conflict in the WC.
- * @a adm_access must be a write-access baton for the parent directory of
- * @a victim->path. Use @a pool for all allocations.
- *
- * Warning: This function updates the entry on disk but not the cached entry
- * in ADM_ACCESS.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -21,6 +21,9 @@
 #include "entries.h"
 #include "svn_path.h"
 #include "svn_types.h"
+
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 static const char field_separator = SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR;
@@ -488,9 +491,9 @@ svn_wc__del_tree_conflict(const char *victim_path,
 }
 
 svn_error_t *
-svn_wc_add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool)
+svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool)
 {
   svn_stringbuf_t *log_accum = NULL;
 
@@ -626,10 +629,10 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
-svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                         const char *victim_path,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool)
+svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                          const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool)
 {
   const char *parent_path = svn_path_dirname(victim_path, pool);
   svn_wc_adm_access_t *parent_adm_access;
