@@ -2225,14 +2225,15 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 {
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
-  apr_file_t *f;
   svn_stream_t *stream;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_io_open_unique_file2
-          (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  /* ### do we have a directory sitting around already? we really shouldn't
+     ### have to get the dirname here. */
+  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
+                                 svn_path_dirname(final_path, pool  ),
+                                 svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 
@@ -6016,29 +6017,32 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
                     const char *uuid,
                     apr_pool_t *pool)
 {
-  apr_file_t *uuid_file;
+  char *my_uuid;
+  apr_size_t my_uuid_len;
   const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_io_open_unique_file2(&uuid_file, &tmp_path, uuid_path,
-                                    ".tmp", svn_io_file_del_none, pool));
-
   if (! uuid)
     uuid = svn_uuid_generate(pool);
 
-  SVN_ERR(svn_io_file_write_full(uuid_file, uuid, strlen(uuid), NULL,
-                                 pool));
-  SVN_ERR(svn_io_file_write_full(uuid_file, "\n", 1, NULL, pool));
+  /* Make sure we have a copy in FS->POOL, and append a newline. */
+  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", NULL);
+  my_uuid_len = strlen(my_uuid);
 
-  SVN_ERR(svn_io_file_close(uuid_file, pool));
+  SVN_ERR(svn_io_write_unique(&tmp_path,
+                              svn_path_dirname(uuid_path, pool),
+                              my_uuid, my_uuid_len,
+                              svn_io_file_del_none, pool));
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, uuid_path,
                                      svn_fs_fs__path_current(fs, pool), pool));
 
-  ffd->uuid = apr_pstrdup(fs->pool, uuid);
+  /* Remove the newline we added, and stash the UUID. */
+  my_uuid[my_uuid_len - 1] = '\0';
+  ffd->uuid = my_uuid;
 
   return SVN_NO_ERROR;
 }

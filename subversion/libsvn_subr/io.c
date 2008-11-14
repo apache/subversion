@@ -712,8 +712,9 @@ svn_io_copy_file(const char *src,
   /* For atomicity, we copy to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR(svn_io_open_unique_file2(&to_file, &dst_tmp, dst, ".tmp",
-                                   svn_io_file_del_none, pool));
+  SVN_ERR(svn_io_open_unique_file3(&to_file, &dst_tmp,
+                                   svn_path_dirname(dst, pool),
+                                   svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_path_cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
   apr_err = copy_contents(from_file, to_file, pool);
@@ -1178,21 +1179,22 @@ svn_io_file_checksum(unsigned char digest[],
 /*** Permissions and modes. ***/
 
 #ifndef WIN32
-/* Given the file specified by PATH_APR, attempt to create an
+/* Given the file specified by PATH, attempt to create an
    identical version of it owned by the current user.  This is done by
    moving it to a temporary location, copying the file back to its old
    path, then deleting the temporarily moved version.  All temporary
    allocations are done in POOL. */
 static svn_error_t *
-reown_file(const char *path_apr,
+reown_file(const char *path,
            apr_pool_t *pool)
 {
   const char *unique_name;
 
-  SVN_ERR(svn_io_open_unique_file2(NULL, &unique_name, path_apr,
-                                   ".tmp", svn_io_file_del_none, pool));
-  SVN_ERR(svn_io_file_rename(path_apr, unique_name, pool));
-  SVN_ERR(svn_io_copy_file(unique_name, path_apr, TRUE, pool));
+  SVN_ERR(svn_io_open_unique_file3(NULL, &unique_name,
+                                   svn_path_dirname(path, pool),
+                                   svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_io_file_rename(path, unique_name, pool));
+  SVN_ERR(svn_io_copy_file(unique_name, path, TRUE, pool));
   return svn_io_remove_file(unique_name, pool);
 }
 
@@ -1350,7 +1352,7 @@ io_set_file_perms(const char *path,
          stat-available path.  This assumes that the
          move-copy workaround will only be helpful on
          platforms that implement apr_stat. */
-      SVN_ERR(reown_file(path_apr, pool));
+      SVN_ERR(reown_file(path, pool));
       status = apr_file_perms_set(path_apr, perms_to_set);
     }
 
@@ -1384,7 +1386,8 @@ io_set_file_perms(const char *path,
                             _("Can't change perms of file '%s'"),
                             svn_path_local_style(path, pool));
 }
-#endif
+#endif /* !WIN32 */
+
 
 svn_error_t *
 svn_io_set_file_read_write_carefully(const char *path,
@@ -2949,8 +2952,10 @@ svn_io_file_move(const char *from_path, const char *to_path,
 
       svn_error_clear(err);
 
-      SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_to_path, to_path,
-                                       ".tmp", svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_to_path,
+                                       svn_path_dirname(to_path, pool),
+                                       svn_io_file_del_none,
+                                       pool, pool));
 
       err = svn_io_copy_file(from_path, tmp_to_path, TRUE, pool);
       if (err)

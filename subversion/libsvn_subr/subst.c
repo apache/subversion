@@ -1503,7 +1503,6 @@ svn_subst_copy_and_translate3(const char *src,
 {
   const char *dst_tmp = NULL;
   svn_stream_t *src_stream, *dst_stream;
-  apr_file_t *d;
   svn_error_t *err;
   svn_node_kind_t kind;
   svn_boolean_t path_special;
@@ -1527,12 +1526,11 @@ svn_subst_copy_and_translate3(const char *src,
   /* Open source file. */
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
 
-  /* For atomicity, we translate to a tmp file and
-     then rename the tmp file over the real destination. */
-  SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
-                                   ".tmp", svn_io_file_del_on_pool_cleanup,
-                                   pool));
-  dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
+  /* For atomicity, we translate to a tmp file and then rename the tmp file
+     over the real destination. */
+  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
+                                 svn_path_dirname(dst, pool),
+                                 svn_io_file_del_none, pool, pool));
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream3(src_stream, dst_stream, eol_str,
@@ -1569,7 +1567,6 @@ svn_subst_create_translated(svn_stream_t *src_stream,
 {
   const char *dst_tmp;
   svn_stream_t *dst_stream;
-  apr_file_t *d;
 
   /* If this is a 'special' file, then we need to create the thing... */
   if (special)
@@ -1583,12 +1580,11 @@ svn_subst_create_translated(svn_stream_t *src_stream,
       return create_special_file_from_stringbuf(contents, dst, pool);
     }
 
-  /* For atomicity, we translate to a tmp file and
-     then rename the tmp file over the real destination. */
-  SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
-                                   ".tmp", svn_io_file_del_on_pool_cleanup,
-                                   pool));
-  dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
+  /* For atomicity, we translate to a tmp file and then rename the tmp file
+     over the real destination. */
+  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
+                                 svn_path_dirname(dst, pool),
+                                 svn_io_file_del_none, pool, pool));
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))

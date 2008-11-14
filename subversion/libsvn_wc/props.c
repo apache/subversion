@@ -167,16 +167,22 @@ open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
                      svn_boolean_t is_dir, apr_pool_t *pool)
 {
   const char *tmp_path;
+  const char *tmp_dirpath;
+  const char *tmp_filename;
 
   /* Get path to /temporary/ local prop file */
   SVN_ERR(svn_wc__prop_path(&tmp_path, full_path,
                             is_dir ? svn_node_dir : svn_node_file,
                             svn_wc__props_working, TRUE, pool));
 
+  svn_path_split(tmp_path, &tmp_dirpath, &tmp_filename, pool);
+
   /* Reserve a .prej file based on it.  */
-  return svn_io_open_unique_file2(fp, reject_tmp_path, tmp_path,
-                                  SVN_WC__PROP_REJ_EXT,
-                                  svn_io_file_del_none, pool);
+  return svn_io_open_uniquely_named(fp, reject_tmp_path,
+                                    tmp_dirpath,
+                                    tmp_filename,
+                                    SVN_WC__PROP_REJ_EXT,
+                                    svn_io_file_del_none, pool, pool);
 }
 
 
@@ -2011,15 +2017,23 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         {
           /* Reserve a new .prej file *above* the .svn/ directory by
              opening and closing it. */
-          const char *full_reject_path;
+          const char *reject_dirpath;
+          const char *reject_filename;
 
-          full_reject_path = (!is_dir) ? path :
-            svn_path_join(path, SVN_WC__THIS_DIR_PREJ, pool);
+          if (is_dir)
+            {
+              reject_dirpath = path;
+              reject_filename = SVN_WC__THIS_DIR_PREJ;
+            }
+          else
+            svn_path_split(path, &reject_dirpath, &reject_filename, pool);
 
-          SVN_ERR(svn_io_open_unique_file2(NULL, &reject_path,
-                                           full_reject_path,
-                                           SVN_WC__PROP_REJ_EXT,
-                                           svn_io_file_del_none, pool));
+          SVN_ERR(svn_io_open_uniquely_named(NULL, &reject_path,
+                                             reject_dirpath,
+                                             reject_filename,
+                                             SVN_WC__PROP_REJ_EXT,
+                                             svn_io_file_del_none,
+                                             pool, pool));
 
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
