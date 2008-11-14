@@ -3399,7 +3399,7 @@ visit_tc_too_found_entry(const char *path,
           /* If this victim is not in this dir's entries ... */
           SVN_ERR(svn_wc_entry(&child_entry, conflict->path, adm_access,
                                TRUE, pool));
-          if (!child_entry)
+          if (!child_entry || child_entry->deleted)
             {
               /* Found an unversioned tree conflict victim. Call the "found
                * entry" callback with a null "entry" parameter. */

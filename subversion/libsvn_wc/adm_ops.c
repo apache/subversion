@@ -2871,6 +2871,7 @@ resolve_found_entry_callback(const char *path,
 {
   struct resolve_callback_baton *baton = walk_baton;
   svn_boolean_t resolved = FALSE;
+  svn_boolean_t wc_root = FALSE;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only process
@@ -2880,8 +2881,35 @@ resolve_found_entry_callback(const char *path,
     return SVN_NO_ERROR;
 
 
-  /* If asked to, clear any tree conflict on the path. */
-  if (baton->resolve_tree)
+  /* Make sure we do not end up looking for tree conflict
+   * info above the working copy root. */
+
+  if (entry && (entry->kind == svn_node_dir))
+    {
+      SVN_ERR(svn_wc_is_wc_root(&wc_root, path, baton->adm_access, pool));
+
+      if (wc_root)
+        {
+          /* Switched subtrees are considered working copy roots by
+           * svn_wc_is_wc_root(). But it's OK to check for tree conflict
+           * info in the parent of a switched subtree, because the
+           * subtree itself might be a tree conflict victim. */
+          svn_boolean_t switched;
+          svn_error_t *err;
+          err = svn_wc__path_switched(path, &switched, entry, pool);
+          if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
+            svn_error_clear(err);
+          else
+            {
+              SVN_ERR(err);
+              wc_root = switched ? FALSE : TRUE;
+            }
+        }
+    }
+
+  /* If asked to, clear any tree conflict on the path.
+   * If the target is a working copy root, don't check on the target itself.*/
+  if (baton->resolve_tree && ! wc_root) /* but possibly a switched subdir */
     {
       const char *conflict_dir, *base_name = NULL;
       svn_wc_adm_access_t *parent_adm_access;
@@ -2895,7 +2923,7 @@ resolve_found_entry_callback(const char *path,
                                         conflict_dir, pool));
 
       SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_adm_access,
-                                       pool));
+                                        pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
