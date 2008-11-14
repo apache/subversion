@@ -1553,9 +1553,9 @@ svn_subst_copy_and_translate3(const char *src,
 
   /* Clean up nicely. */
   err = svn_stream_close(src_stream);
-  err = svn_error_compose_create(svn_stream_close(dst_stream), err);
+  err = svn_error_compose_create(err, svn_stream_close(dst_stream));
   if (err)
-    return svn_error_compose_create(svn_io_remove_file(dst_tmp, pool), err);
+    return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   return svn_io_file_rename(dst_tmp, dst, pool);
