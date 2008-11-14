@@ -2132,6 +2132,8 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
   run_and_verify_update(base, x_out, x_disk, None,
                         error_re_string = test_case.error_re_string)
 
+  run_and_verify_unquiet_status(base, x_status)
+
   # Update subtrees, expecting a single 'Skipped' output for each one.
   for path in skip_paths:
     run_and_verify_update(j(base, path),
@@ -2142,7 +2144,7 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
   # This time, cd to the subdir before .
   was_cwd = os.getcwd()
   for path, skipped in chdir_skip_paths:
-    print("CHDIR TO: %s" % j(base, path))
+    #print("CHDIR TO: %s" % j(base, path))
     os.chdir(j(base, path))
     run_and_verify_update('',
                           wc.State('', {skipped : Item(verb='Skipped')}),

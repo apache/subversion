@@ -2284,32 +2284,7 @@ def tree_conflicts_on_switch_2_1(sbox):
 
   expected_disk = disk_after_leaf_edit
 
-  ### Descendants of t.c. victims should be at r2!
-#  expected_status = deep_trees_status_local_leaf_edit
-  expected_status = svntest.wc.State('', {
-    ''                  : Item(status='  ', wc_rev=3),
-    'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'D/D1/delta'        : Item(status='A ', wc_rev=0),
-    'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DD/D1/D2'          : Item(status='  ', wc_rev=3),
-    'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev=0),
-    'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='  ', wc_rev=3),
-    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev=3),
-    'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev=0),
-    'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='  ', wc_rev=3),
-    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev=3),
-    'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DF/D1/beta'        : Item(status='M ', wc_rev=3),
-    'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='M ', wc_rev=2, treeconflict='C'),
-    })
+  expected_status = deep_trees_status_local_leaf_edit
   expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
  
@@ -2386,29 +2361,7 @@ def tree_conflicts_on_switch_3(sbox):
 
   expected_disk = state_empty_dirs
 
-  ### Descendants of t.c. victims should be at r2!
-#  expected_status = deep_trees_status_local_tree_del
-  expected_status = svntest.wc.State('', {
-    ''                  : Item(status='  ', wc_rev=3),
-    'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='D ', wc_rev=2, treeconflict='C'),
-    'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='D ', wc_rev=2, treeconflict='C'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev=3),
-    'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='D ', wc_rev=2, treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev=3),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev=3),
-    'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='D ', wc_rev=2, treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev=3),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev=3),
-    'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='D ', wc_rev=2, treeconflict='C'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev=3),
-    'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='D ', wc_rev=2, treeconflict='C'),
-    })
+  expected_status = deep_trees_status_local_tree_del
   expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
 
@@ -2459,9 +2412,9 @@ test_list = [ None,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
-              XFail(tree_conflicts_on_switch_2_1),
+              tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
-              XFail(tree_conflicts_on_switch_3),
+              tree_conflicts_on_switch_3,
              ]
 
 if __name__ == '__main__':
