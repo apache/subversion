@@ -670,6 +670,7 @@ def update_delete_modified_files(sbox):
   expected_status.tweak('A/B/E/alpha', status ='M ', wc_rev=1,
                         treeconflict='C')
   expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', wc_rev=1)
   expected_status.tweak('A/D/G', wc_rev=1, treeconflict='C')
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -2752,13 +2753,20 @@ def update_conflicted(sbox):
     'A/B/lambda' : Item(verb='Skipped'),
     'A/mu' : Item(verb='Skipped'),
     'A/D' : Item(verb='Skipped'),
-    'A/D/G/pi' : Item(status='U '),
     })
   expected_status.tweak(wc_rev=3)
   expected_status.tweak('iota', 'A/B/lambda', 'A/mu', 'A/D', wc_rev=2)
-  expected_disk.tweak('A/D/G/pi', contents="""This is the file 'pi'.
-Another line for pi
-""")
+  # We no longer update descendants of a prop-conflicted dir.
+  expected_status.tweak('A/D/G', 
+                        'A/D/G/pi',
+                        'A/D/G/rho',
+                        'A/D/G/tau',
+                        'A/D/H',
+                        'A/D/H/chi',
+                        'A/D/H/omega',
+                        'A/D/H/psi',
+                        'A/D/gamma', wc_rev=2)
+
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -3993,32 +4001,7 @@ def tree_conflicts_on_update_2_1(sbox):
 
   expected_disk = disk_after_leaf_edit
 
-  ### Descendants of t.c. victims should be at r2!
-#  expected_status = deep_trees_status_local_leaf_edit
-  expected_status = svntest.wc.State('', {
-    ''                  : Item(status='  ', wc_rev=3),
-    'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'D/D1/delta'        : Item(status='A ', wc_rev=0),
-    'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DD/D1/D2'          : Item(status='  ', wc_rev=3),
-    'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev=0),
-    'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='  ', wc_rev=3),
-    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev=3),
-    'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev=0),
-    'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='  ', wc_rev=3),
-    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev=3),
-    'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DF/D1/beta'        : Item(status='M ', wc_rev=3),
-    'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='M ', wc_rev=2, treeconflict='C'),
-    })
+  expected_status = deep_trees_status_local_leaf_edit
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
@@ -4092,32 +4075,7 @@ def tree_conflicts_on_update_2_3(sbox):
 
   expected_disk = disk_after_leaf_edit
 
-  ### Descendants of t.c. victims should be at r2!
-#  expected_status = deep_trees_status_local_leaf_edit
-  expected_status = svntest.wc.State('', {
-    ''                  : Item(status='  ', wc_rev=3),
-    'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'D/D1/delta'        : Item(status='A ', wc_rev=0),
-    'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DD/D1/D2'          : Item(status='  ', wc_rev=3),
-    'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev=0),
-    'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='  ', wc_rev=3),
-    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev=3),
-    'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev=0),
-    'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='  ', wc_rev=3),
-    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev=3),
-    'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
-    'DF/D1/beta'        : Item(status='M ', wc_rev=3),
-    'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='M ', wc_rev=2, treeconflict='C'),
-    })
+  expected_status = deep_trees_status_local_leaf_edit
 
   # Paths where output should be a single 'Skipped' message.
   skip_paths = [
@@ -4156,29 +4114,7 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_disk = state_empty_dirs
 
-  ### Descendants of t.c. victims should be at r2!
-#  expected_status = deep_trees_status_local_tree_del
-  expected_status = svntest.wc.State('', {
-  ''                  : Item(status='  ', wc_rev=3),
-  'D'                 : Item(status='  ', wc_rev=3),
-  'D/D1'              : Item(status='D ', wc_rev=2, treeconflict='C'),
-  'DD'                : Item(status='  ', wc_rev=3),
-  'DD/D1'             : Item(status='D ', wc_rev=2, treeconflict='C'),
-  'DD/D1/D2'          : Item(status='D ', wc_rev=3),
-  'DDD'               : Item(status='  ', wc_rev=3),
-  'DDD/D1'            : Item(status='D ', wc_rev=2, treeconflict='C'),
-  'DDD/D1/D2'         : Item(status='D ', wc_rev=3),
-  'DDD/D1/D2/D3'      : Item(status='D ', wc_rev=3),
-  'DDF'               : Item(status='  ', wc_rev=3),
-  'DDF/D1'            : Item(status='D ', wc_rev=2, treeconflict='C'),
-  'DDF/D1/D2'         : Item(status='D ', wc_rev=3),
-  'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev=3),
-  'DF'                : Item(status='  ', wc_rev=3),
-  'DF/D1'             : Item(status='D ', wc_rev=2, treeconflict='C'),
-  'DF/D1/beta'        : Item(status='D ', wc_rev=3),
-  'F'                 : Item(status='  ', wc_rev=3),
-  'F/alpha'           : Item(status='D ', wc_rev=2, treeconflict='C'),
-  })
+  expected_status = deep_trees_status_local_tree_del
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",

@@ -80,16 +80,19 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
   svn_boolean_t write_required = FALSE;
   svn_wc_notify_t *notify;
 
+  /* Skip an excluded path and its descendants. */
+  if (apr_hash_get(exclude_paths, svn_wc_adm_access_path(dirpath),
+                     APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
+
   /* Read DIRPATH's entries. */
   SVN_ERR(svn_wc_entries_read(&entries, dirpath, TRUE, pool));
 
   /* Tweak "this_dir" */
-  if (! apr_hash_get(exclude_paths, svn_wc_adm_access_path(dirpath),
-                     APR_HASH_KEY_STRING))
-    SVN_ERR(svn_wc__tweak_entry(entries, SVN_WC_ENTRY_THIS_DIR,
-                                base_url, repos, new_rev, FALSE,
-                                &write_required,
-                                svn_wc_adm_access_pool(dirpath)));
+  SVN_ERR(svn_wc__tweak_entry(entries, SVN_WC_ENTRY_THIS_DIR,
+                              base_url, repos, new_rev, FALSE,
+                              &write_required,
+                              svn_wc_adm_access_pool(dirpath)));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;

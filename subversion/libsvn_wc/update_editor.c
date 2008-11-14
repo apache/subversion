@@ -219,14 +219,16 @@ struct edit_baton
   svn_wc_get_file_t fetch_func;
   void *fetch_baton;
 
-  /* Paths that were skipped during the edit, and therefore shouldn't have
-     their revision/url info updated at the end.
-     The keys are pathnames and the values unspecified. */
+  /* Paths that were skipped during the edit, and therefore shouldn't
+     have their revision/url info updated at the end.  If a path is a
+     directory, its descendants will also be skipped.  The keys are
+     pathnames and the values unspecified. */
   apr_hash_t *skipped_paths;
 
-  /* The path of the tree conflict victim, if the edit is currently inside
-     a conflicted tree.  NULL if the edit is not inside a conflicted tree. */
-  const char *current_tree_conflict;
+  /* Path of the tree- or prop-conflicted directory, if the edit is
+     currently inside a conflicted tree.  NULL if the edit is not
+     inside a conflicted tree. */
+  const char *current_conflict;
 
   apr_pool_t *pool;
 };
@@ -579,7 +581,7 @@ complete_directory(struct edit_baton *eb,
   const char *name;
 
   /* If inside a tree conflict, do nothing. */
-  if (eb->current_tree_conflict)
+  if (eb->current_conflict)
     return SVN_NO_ERROR;
 
   /* If this is the root directory and there is a target, we can't
@@ -1533,7 +1535,8 @@ already_in_a_tree_conflict(char **victim_path,
   while (! svn_path_is_empty(ancestor))
     {
       SVN_ERR(svn_wc_adm_probe_open3(&ancestor_access, NULL, ancestor,
-                                     FALSE, 0, NULL, NULL, pool));
+                                     FALSE, 0, cancel_func, cancel_baton,
+                                     pool));
 
       if (ancestor_access == NULL)
         break;
@@ -1605,9 +1608,9 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (eb->current_tree_conflict)
+  if (eb->current_conflict)
     {
-      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_tree_conflict,
+      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_conflict,
                                           full_path));
 
       remember_skipped_path(eb, full_path);
@@ -1840,9 +1843,9 @@ add_directory(const char *path,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (eb->current_tree_conflict)
+  if (eb->current_conflict)
     {
-      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_tree_conflict,
+      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_conflict,
                                           full_path));
 
       remember_skipped_path(eb, full_path);
@@ -1858,8 +1861,7 @@ add_directory(const char *path,
   if (victim_path != NULL)
     {
       /* Record this conflict so that its descendants are skipped silently. */
-      eb->current_tree_conflict = victim_path;
-
+      eb->current_conflict = victim_path;
       remember_skipped_path(eb, full_path);
       
       /* ### TODO: Also print victim_path in the skip msg. */
@@ -1956,7 +1958,7 @@ add_directory(const char *path,
               if (tree_conflict != NULL)
                 {
                   /* Record this conflict so that its descendants are skipped silently. */
-                  eb->current_tree_conflict = apr_pstrdup(pool,
+                  eb->current_conflict = apr_pstrdup(pool,
                                                           tree_conflict->path);
 
                   remember_skipped_path(eb, full_path);
@@ -2147,9 +2149,9 @@ open_directory(const char *path,
  
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip the tree without notification. */
-  if (eb->current_tree_conflict)
+  if (eb->current_conflict)
     {
-      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_tree_conflict,
+      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_conflict,
                                           full_path));
 
       db->bump_info->skipped = TRUE;
@@ -2165,7 +2167,7 @@ open_directory(const char *path,
 
   if (victim_path != NULL)
     {
-      eb->current_tree_conflict = victim_path;
+      eb->current_conflict = victim_path;
       tree_conflict = NULL;
     }
   else
@@ -2175,13 +2177,12 @@ open_directory(const char *path,
                                 full_path, entry, parent_adm_access,
                                 svn_wc_conflict_action_edit, pool));
 
-  if (tree_conflict != NULL)
-    eb->current_tree_conflict = apr_pstrdup(pool, tree_conflict->path);
-
-  /* If property-conflicted, skip the dir itself, with notification, but
-     allow its descendants to be updated. */
+  /* If property-conflicted, skip the tree with notification. */
   SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
                                adm_access, pool));
+
+  if (tree_conflict != NULL || prop_conflicted)
+    eb->current_conflict = full_path;
 
   if (victim_path != NULL || tree_conflict != NULL || prop_conflicted)
     {  
@@ -2306,13 +2307,13 @@ close_directory(void *dir_baton,
 
   /* Skip if we're in a conflicted tree.  Remove the tree-conflict flag if
      we're closing the victim directory. */
-  if (db->edit_baton->current_tree_conflict)
+  if (db->edit_baton->current_conflict)
     {
       /* Allow the parent to complete its update. */
       SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
-      if (strcmp(db->edit_baton->current_tree_conflict, db->path) == 0)
-        db->edit_baton->current_tree_conflict = NULL;
+      if (strcmp(db->edit_baton->current_conflict, db->path) == 0)
+        db->edit_baton->current_conflict = NULL;
 
       return SVN_NO_ERROR;
     }
@@ -2942,9 +2943,9 @@ add_file(const char *path,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (eb->current_tree_conflict)
+  if (eb->current_conflict)
     {
-      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_tree_conflict,
+      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_conflict,
                                           full_path));
 
       fb->skipped = TRUE;
@@ -3116,9 +3117,9 @@ open_file(const char *path,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (eb->current_tree_conflict)
+  if (eb->current_conflict)
     {
-      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_tree_conflict,
+      SVN_ERR_ASSERT(svn_path_is_ancestor(eb->current_conflict,
                                           full_path));
 
       fb->skipped = TRUE;
@@ -4133,7 +4134,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->allow_unver_obstructions = allow_unver_obstructions;
   eb->skipped_paths            = apr_hash_make(subpool);
   eb->ext_patterns             = preserved_exts;
-  eb->current_tree_conflict    = NULL;
+  eb->current_conflict         = NULL;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
