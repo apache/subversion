@@ -1801,6 +1801,11 @@ node_location_segments(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "bdb") == 0) 
+      && (opts->server_minor_version == 4))
+    return SVN_NO_ERROR;
+
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
                                  opts, pool));
