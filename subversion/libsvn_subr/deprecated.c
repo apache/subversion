@@ -28,6 +28,7 @@
 #define SVN_DEPRECATED
 
 #include "svn_subst.h"
+#include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_cmdline.h"
 
