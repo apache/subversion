@@ -4403,7 +4403,9 @@ svn_wc_traversed_depths(apr_hash_t **depths,
 }
 
 
-/* THE GOAL
+/* ABOUT ANCHOR AND TARGET, AND svn_wc_get_actual_target()
+
+   THE GOAL
 
    Note the following actions, where X is the thing we wish to update,
    P is a directory whose repository URL is the parent of
@@ -4501,7 +4503,14 @@ svn_wc_traversed_depths(apr_hash_t **depths,
    As it turns out, commits need to have a similar check in place,
    too, specifically for the case where a single directory is being
    committed (we have to anchor at that directory's parent in case the
-   directory itself needs to be modified) */
+   directory itself needs to be modified).
+*/
+
+
+/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
+ * the versioned node kind of PATH, or to svn_node_file if PATH is
+ * unversioned.
+ */
 static svn_error_t *
 check_wc_root(svn_boolean_t *wc_root,
               svn_node_kind_t *kind,
