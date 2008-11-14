@@ -1217,7 +1217,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     if (provider)
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-    svn_auth_get_simple_provider2(&provider, NULL, NULL, pool);
+    svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_username_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -1233,8 +1233,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_ssl_client_cert_pw_file_provider2(&provider, NULL, NULL,
-                                                   pool);
+    svn_auth_get_ssl_client_cert_pw_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     if (m_prompter != NULL)
