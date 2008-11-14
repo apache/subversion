@@ -194,23 +194,12 @@ svn_error_t *
 svn_error_compose_create(svn_error_t *err1,
                          svn_error_t *err2)
 {
-  if ((! err1) && (! err2))
-    {
-      return SVN_NO_ERROR;
-    }
-  else if (err1 && err2)
+  if (err1 && err2)
     {
       svn_error_compose(err1, err2);
       return err1;
     }
-  else if (err1)
-    {
-      return err1;
-    }
-  else
-    {
-      return err2;
-    }
+  return err1 ? err1 : err2;
 }
 
 
