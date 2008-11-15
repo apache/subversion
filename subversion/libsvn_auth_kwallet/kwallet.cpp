@@ -49,8 +49,6 @@
 /*-----------------------------------------------------------------------*/
 
 
-static KWallet::Wallet *wallet;
-
 static QString
 get_wallet_name(apr_hash_t *parameters)
 {
@@ -72,6 +70,27 @@ get_wallet_name(apr_hash_t *parameters)
     {
       return QString::fromUtf8(wallet_name);
     }
+}
+
+static KWallet::Wallet *
+get_wallet(QString wallet_name,
+           apr_hash_t *parameters)
+{
+  KWallet::Wallet *wallet =
+    static_cast<KWallet::Wallet *> (apr_hash_get(parameters,
+                                                 "kwallet-wallet",
+                                                 APR_HASH_KEY_STRING));
+  if (! wallet)
+    {
+      wallet = KWallet::Wallet::openWallet(wallet_name,
+                                           -1,
+                                           KWallet::Wallet::Synchronous);
+    }
+  if (wallet)
+    {
+      apr_hash_set(parameters, "kwallet-wallet", APR_HASH_KEY_STRING, wallet);
+    }
+  return wallet;
 }
 
 /* Implementation of svn_auth__password_get_t that retrieves
@@ -111,10 +130,7 @@ kwallet_password_get(const char **password,
     QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
-      if (! wallet)
-        wallet = KWallet::Wallet::openWallet(wallet_name,
-                                             -1,
-                                             KWallet::Wallet::Synchronous);
+      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
       if (wallet && wallet->setFolder(folder))
         {
           QString q_password;
@@ -170,10 +186,7 @@ kwallet_password_set(apr_hash_t *creds,
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = get_wallet_name(parameters);
   QString folder = QString::fromUtf8("Subversion");
-  if (! wallet)
-    wallet = KWallet::Wallet::openWallet(wallet_name,
-                                         -1,
-                                         KWallet::Wallet::Synchronous);
+  KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
   if (wallet)
     {
       if (! wallet->hasFolder(folder))
