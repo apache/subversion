@@ -2,7 +2,7 @@
  * auth.c: authentication support functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -409,12 +409,12 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
             {
               svn_version_func_t version_function;
               version_function = (svn_version_func_t) version_function_symbol;
-              const svn_version_checklist_t checklist[] =
+              const svn_version_checklist_t check_list[] =
                 {
                   { library_label, version_function },
                   { NULL, NULL }
                 };
-              SVN_ERR(svn_ver_check_list(svn_subr_version(), checklist));
+              SVN_ERR(svn_ver_check_list(svn_subr_version(), check_list));
             }
           if (apr_dso_sym(&provider_function_symbol,
                           dso,
