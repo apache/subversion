@@ -831,6 +831,29 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 
 /**
  * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
+ * user's ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_auth_get_ssl_client_cert_pw_file_provider(), except that
+ * when running on Window 2000 or newer, the provider encrypts the password
+ * before storing it to disk. On earlier versions of Windows, the provider
+ * does nothing.
+ *
+ * @since New in 1.6
+ * @note This function is only available on Windows.
+ *
+ * @note An administrative password reset may invalidate the account's
+ * secret key. This function will detect that situation and behave as
+ * if the password were not cached at all.
+ */
+void
+svn_auth_get_windows_ssl_client_cert_pw_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * This provider automatically validates ssl server certificates with
@@ -845,6 +868,7 @@ void
 svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
+
 #endif /* WIN32 && !__MINGW32__ || DOXYGEN */
 
 #if defined(DARWIN) || defined(DOXYGEN)

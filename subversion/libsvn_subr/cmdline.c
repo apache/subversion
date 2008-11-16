@@ -470,6 +470,13 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
           if (provider)
             APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
+          SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "windows",
+                                                          "ssl_client_cert_pw",
+                                                          pool));
+
+          if (provider)
+            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
           continue;
         }
 
