@@ -131,24 +131,26 @@ kwallet_password_get(const char **password,
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
       KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
-      if (wallet && wallet->setFolder(folder))
+      if (wallet)
         {
-          QString q_password;
-          if (wallet->readPassword(key, q_password) == 0);
+          apr_hash_set(parameters,
+                       "kwallet-initialized",
+                       APR_HASH_KEY_STRING,
+                       "");
+          if (wallet->setFolder(folder))
             {
-              *password = apr_pstrmemdup(pool,
-                                         q_password.toUtf8().data(),
-                                         q_password.size());
-              ret = TRUE;
+              QString q_password;
+              if (wallet->readPassword(key, q_password) == 0);
+                {
+                  *password = apr_pstrmemdup(pool,
+                                             q_password.toUtf8().data(),
+                                             q_password.size());
+                  ret = TRUE;
+                }
             }
         }
     }
 
-// This function currently closes the wallet if no other application
-// is connected to the wallet. We're waiting for this to be fixed
-// upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
-//  KWallet::Wallet::disconnectApplication(wallet_name,
-//                                         QString::fromUtf8("Subversion"));
   return ret;
 }
 
@@ -189,6 +191,10 @@ kwallet_password_set(apr_hash_t *creds,
   KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
   if (wallet)
     {
+      apr_hash_set(parameters,
+                   "kwallet-initialized",
+                   APR_HASH_KEY_STRING,
+                   "");
       if (! wallet->hasFolder(folder))
         {
           wallet->createFolder(folder);
@@ -204,12 +210,26 @@ kwallet_password_set(apr_hash_t *creds,
         }
     }
 
-// This function currently closes the wallet if no other application
-// is connected to the wallet. We're waiting for this to be fixed
-// upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
-//  KWallet::Wallet::disconnectApplication(wallet_name,
-//                                         QString::fromUtf8("Subversion"));
   return ret;
+}
+
+static svn_error_t *
+kwallet_terminate(apr_hash_t *parameters,
+                  apr_pool_t *pool)
+{
+  if (apr_hash_get(parameters, "kwallet-initialized", APR_HASH_KEY_STRING))
+    {
+      QString wallet_name = get_wallet_name(parameters);
+      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
+      KWallet::Wallet::disconnectApplication(wallet_name,
+                                             QString::fromUtf8("Subversion"));
+      delete wallet;
+      apr_hash_set(parameters,
+                   "kwallet-initialized",
+                   APR_HASH_KEY_STRING,
+                   NULL);
+    }
+  return SVN_NO_ERROR;
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */
@@ -253,7 +273,8 @@ static const svn_auth_provider_t kwallet_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   kwallet_simple_first_creds,
   NULL,
-  kwallet_simple_save_creds
+  kwallet_simple_save_creds,
+  kwallet_terminate
 };
 
 /* Public API */
@@ -318,7 +339,8 @@ static const svn_auth_provider_t kwallet_ssl_client_cert_pw_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
   kwallet_ssl_client_cert_pw_first_creds,
   NULL,
-  kwallet_ssl_client_cert_pw_save_creds
+  kwallet_ssl_client_cert_pw_save_creds,
+  kwallet_terminate
 };
 
 /* Public API */
