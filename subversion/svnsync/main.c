@@ -2140,10 +2140,16 @@ main(int argc, const char *argv[])
         }
 
       svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-
       svn_error_clear(err);
 
       err = svn_cmdline_terminate_auth_baton(opt_baton.source_auth_baton);
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svnsync: ");
+          svn_error_clear(err);
+        }
+
+      err = svn_cmdline_terminate_auth_baton(opt_baton.sync_auth_baton);
       if (err)
         {
           svn_handle_error2(err, stderr, FALSE, "svnsync: ");
@@ -2156,6 +2162,13 @@ main(int argc, const char *argv[])
     }
   else
     {
+      err = svn_cmdline_terminate_auth_baton(opt_baton.source_auth_baton);
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svnsync: ");
+          svn_error_clear(err);
+        }
+
       err = svn_cmdline_terminate_auth_baton(opt_baton.sync_auth_baton);
       if (err)
         {
