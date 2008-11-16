@@ -26,7 +26,6 @@
 #include "svn_auth.h"
 #include "svn_private_config.h"
 #include "svn_dso.h"
-#include "private/svn_auth_private.h"
 
 /* The good way to think of this machinery is as a set of tables.
 
@@ -62,6 +61,22 @@ typedef struct
 } provider_set_t;
 
 
+/* The main auth baton. */
+struct svn_auth_baton_t
+{
+  /* a collection of tables.  maps cred_kind -> provider_set */
+  apr_hash_t *tables;
+
+  /* the pool I'm allocated in. */
+  apr_pool_t *pool;
+
+  /* run-time parameters needed by providers. */
+  apr_hash_t *parameters;
+
+  /* run-time credentials cache. */
+  apr_hash_t *creds_cache;
+
+};
 
 /* Abstracted iteration baton */
 struct svn_auth_iterstate_t

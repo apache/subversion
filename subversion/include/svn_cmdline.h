@@ -358,13 +358,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
-/** Terminate authentication baton @a ab.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_cmdline_terminate_auth_baton(svn_auth_baton_t *ab);
-
 /** Wrapper for apr_getopt_init(), which see.
  *
  * @since New in 1.4.

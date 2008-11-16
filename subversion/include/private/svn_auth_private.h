@@ -36,24 +36,6 @@ extern "C" {
 #define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
 #define SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE      "gnome-keyring"
 
-
-/* The main auth baton. */
-struct svn_auth_baton_t
-{
-  /* a collection of tables.  maps cred_kind -> provider_set */
-  apr_hash_t *tables;
-
-  /* the pool I'm allocated in. */
-  apr_pool_t *pool;
-
-  /* run-time parameters needed by providers. */
-  apr_hash_t *parameters;
-
-  /* run-time credentials cache. */
-  apr_hash_t *creds_cache;
-};
-
-
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.

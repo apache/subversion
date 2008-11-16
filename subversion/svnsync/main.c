@@ -2139,45 +2139,10 @@ main(int argc, const char *argv[])
                                      _("Try 'svnsync help' for more info"));
         }
 
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      svn_error_clear(err);
-
-      err = svn_cmdline_terminate_auth_baton(opt_baton.source_auth_baton);
-      if (err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-          svn_error_clear(err);
-        }
-
-      err = svn_cmdline_terminate_auth_baton(opt_baton.sync_auth_baton);
-      if (err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-          svn_error_clear(err);
-        }
-
-      svn_pool_destroy(pool);
-
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
-  else
-    {
-      err = svn_cmdline_terminate_auth_baton(opt_baton.source_auth_baton);
-      if (err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-          svn_error_clear(err);
-        }
 
-      err = svn_cmdline_terminate_auth_baton(opt_baton.sync_auth_baton);
-      if (err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-          svn_error_clear(err);
-        }
+  svn_pool_destroy(pool);
 
-      svn_pool_destroy(pool);
-
-      return EXIT_SUCCESS;
-    }
+  return EXIT_SUCCESS;
 }
