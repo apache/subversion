@@ -142,16 +142,6 @@ typedef struct svn_auth_provider_t
                                     const char *realmstring,
                                     apr_pool_t *pool);
 
-  /** Terminate authentication provider.
-   *
-   * Terminate authentication provider.  @a parameters contains any
-   * run-time data the provider may need.  If the provider doesn't require
-   * any termination, then this function pointer should simply be NULL.
-   *
-   * @since New in 1.6.
-   */
-  svn_error_t * (*terminate_provider)(apr_hash_t *parameters,
-                                      apr_pool_t *pool);
 } svn_auth_provider_t;
 
 
