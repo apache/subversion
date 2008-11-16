@@ -47,6 +47,7 @@
 #include "svn_base64.h"
 #include "svn_config.h"
 
+#include "private/svn_auth_private.h"
 #include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
@@ -673,6 +674,41 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                                        auth_username, auth_password,
                                        config_dir, no_auth_cache, FALSE,
                                        cfg, cancel_func, cancel_baton, pool);
+}
+
+
+typedef struct
+{
+  /* ordered array of svn_auth_provider_object_t */
+  apr_array_header_t *providers;
+
+} provider_set_t;
+
+
+svn_error_t *
+svn_cmdline_terminate_auth_baton(svn_auth_baton_t *ab)
+{
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(ab->pool, ab->tables); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      provider_set_t *table;
+      int i;
+      apr_hash_this(hi, NULL, NULL, &val);
+      table = (provider_set_t *) val;
+      for (i = 0; i < table->providers->nelts; i++)
+        {
+          svn_auth_provider_object_t *provider_object =
+            APR_ARRAY_IDX(table->providers, i, svn_auth_provider_object_t*);
+          if (provider_object->vtable->terminate_provider)
+            {
+              SVN_ERR(provider_object->vtable->terminate_provider
+                       (ab->parameters, ab->pool));
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

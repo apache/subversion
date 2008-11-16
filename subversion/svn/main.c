@@ -2037,11 +2037,26 @@ main(int argc, const char *argv[])
           }
 
       svn_error_clear(err);
+
+      err = svn_cmdline_terminate_auth_baton(ab);
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svn: ");
+          svn_error_clear(err);
+	}
+
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
   else
     {
+      err = svn_cmdline_terminate_auth_baton(ab);
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svn: ");
+          svn_error_clear(err);
+	}
+
       /* Ensure that stdout is flushed, so the user will see any write errors.
          This makes sure that output is not silently lost. */
       err = svn_cmdline_fflush(stdout);
