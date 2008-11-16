@@ -1026,7 +1026,7 @@ svn_uri_is_canonical(const char *uri)
 
           /* Found a hostname, check that it's all lowercase. */
           ptr = seg;
-          while (*ptr != '/')
+          while (*ptr && *ptr != '/')
             {
               if (*ptr >= 'A' && *ptr <= 'Z')
                 return FALSE;
@@ -1036,13 +1036,16 @@ svn_uri_is_canonical(const char *uri)
     }
 
 #if defined(WIN32) || defined(__CYGWIN__)
-    /* If this is a file url, ptr now points to the third '/' in
-       file:///C:/path. Check that if we have such a URL the drive
-       letter is in uppercase. */
-      if (strncmp(uri, "file:", 5) == 0 &&
-          ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
-          *(ptr+2) == ':')
-        return FALSE;
+  if (*ptr == '/')
+    {
+      /* If this is a file url, ptr now points to the third '/' in
+         file:///C:/path. Check that if we have such a URL the drive
+         letter is in uppercase. */
+        if (strncmp(uri, "file:", 5) == 0 &&
+            ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
+            *(ptr+2) == ':')
+          return FALSE;
+    }
 #endif /* WIN32 or Cygwin */
 
   /* Now validate the rest of the URI. */
