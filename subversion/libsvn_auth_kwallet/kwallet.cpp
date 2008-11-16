@@ -80,7 +80,9 @@ get_wallet(QString wallet_name,
     static_cast<KWallet::Wallet *> (apr_hash_get(parameters,
                                                  "kwallet-wallet",
                                                  APR_HASH_KEY_STRING));
-  if (! wallet)
+  if (! wallet && ! apr_hash_get(parameters,
+                                 "kwallet-opening-failed",
+                                 APR_HASH_KEY_STRING))
     {
       wallet = KWallet::Wallet::openWallet(wallet_name,
                                            -1,
@@ -88,7 +90,17 @@ get_wallet(QString wallet_name,
     }
   if (wallet)
     {
-      apr_hash_set(parameters, "kwallet-wallet", APR_HASH_KEY_STRING, wallet);
+      apr_hash_set(parameters,
+                   "kwallet-wallet",
+                   APR_HASH_KEY_STRING,
+                   wallet);
+    }
+  else
+    {
+      apr_hash_set(parameters,
+                   "kwallet-opening-failed",
+                   APR_HASH_KEY_STRING,
+                   "");
     }
   return wallet;
 }
