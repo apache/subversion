@@ -536,7 +536,7 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
       (len == 2 || (dirent[2] == '/' && len == 3)))
     return TRUE;
 
-  /* On Windows and Cygwin, both //drive and //drive//share are root
+  /* On Windows and Cygwin, both //drive and //server/share are root
      directories */
   if (len >= 2 && dirent[0] == '/' && dirent[1] == '/'
       && dirent[len - 1] != '/')
