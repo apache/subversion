@@ -187,8 +187,8 @@ svn_dirent_split(const char *dirent,
                  apr_pool_t *pool);
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
- * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
- * '\\\\server\\share\\foo' on Windows.
+ * hand, amongst which '/foo' on all platforms or 'X:/foo', 
+ * '//server/share/foo' on Windows.
  *
  * @since New in 1.6.
  */
@@ -203,8 +203,8 @@ svn_boolean_t
 svn_uri_is_absolute(const char *dirent);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
- * '\\\\.\\..', '\\\\server\\share' on Windows.
+ * at hand, amongst which '/' on all platforms or 'X:/', '//server/share'
+ * on Windows.
  *
  * @since New in 1.5.
  */
