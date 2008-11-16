@@ -271,7 +271,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
     }
 
   /* Remove the trailing slash if necessary. */
-  if (*(dst - 1) == '/' && canon_segments > 0)
+  if (canon_segments > 0 && *(dst - 1) == '/')
     {
       dst --;
     }
