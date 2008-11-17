@@ -390,6 +390,11 @@ txn_names_are_not_reused(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") == 0) 
+      && (opts->server_minor_version == 4))
+    return SVN_NO_ERROR;
+
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-txn-names-are-not-reused",
                               opts, pool));
 
@@ -4793,7 +4798,7 @@ node_origin_rev(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* Bail on known-incompatible scenarios */
+  /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "bdb") == 0) 
       && (opts->server_minor_version == 4))
     return SVN_NO_ERROR;
