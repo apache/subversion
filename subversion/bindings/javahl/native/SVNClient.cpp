@@ -1174,16 +1174,16 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                         "windows",
                                                         "ssl_client_cert_pw",
-                                                         pool),
+                                                        pool),
                 NULL);
 
     if (provider)
-       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* Keychain auth providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
@@ -1193,7 +1193,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                         "keychain",
@@ -1202,7 +1202,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* GNOME Keyring auth providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
@@ -1212,7 +1212,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                         "gnome_keyring",
@@ -1221,7 +1221,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* KWallet auth providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
@@ -1231,7 +1231,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                         "kwallet",
@@ -1240,7 +1240,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -1255,7 +1255,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                 NULL);
 
     if (provider)
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
