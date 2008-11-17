@@ -133,7 +133,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
                                         SVN_AUTH_PARAM_CONFIG_DIR,
                                         APR_HASH_KEY_STRING);
   svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG,
+                                   SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                    APR_HASH_KEY_STRING);
   const char *server_group = apr_hash_get(parameters,
                                           SVN_AUTH_PARAM_SERVER_GROUP,
@@ -611,7 +611,7 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
       if (! default_username)
         {
           svn_config_t *cfg = apr_hash_get(parameters,
-                                           SVN_AUTH_PARAM_CONFIG,
+                                           SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                            APR_HASH_KEY_STRING);
           const char *server_group = apr_hash_get(parameters,
                                                   SVN_AUTH_PARAM_SERVER_GROUP,

@@ -480,11 +480,33 @@ build(action_code_t action,
                                 "than base revision");
       operation->operation =
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
+      if (operation->operation == OP_ADD)
+        {
+          /* There is a bug in the current version of mod_dav_svn
+             which incorrectly replaces existing directories.
+             Therefore we need to check if the target exists
+             and raise an error here. */
+          SVN_ERR(svn_ra_check_path(session,
+                                    copy_src ? copy_src : path,
+                                    copy_src ? copy_rev : head,
+                                    &operation->kind, pool));
+          if (operation->kind != svn_node_none)
+            {
+              if (copy_src && strcmp(path, copy_src))
+                return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                         "'%s' (from '%s:%ld') already exists",
+                                         path, copy_src, copy_rev);
+              else
+                return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                         "'%s' already exists", path);
+            }
+        }
       SVN_ERR(svn_ra_check_path(session, subtract_anchor(anchor, url, pool),
                                 rev, &operation->kind, pool));
       if (operation->kind == svn_node_none)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                 "'%s' not found", url);
+                                 "'%s' not found",
+                                  subtract_anchor(anchor, url, pool));
       operation->url = url;
       operation->rev = rev;
     }

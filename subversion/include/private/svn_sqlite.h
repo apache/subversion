@@ -119,6 +119,17 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err);
 
+/* Wrapper around sqlite transaction handling. */
+svn_error_t *
+svn_sqlite__transaction_begin(svn_sqlite__db_t *db);
+
+/* Wrapper around sqlite transaction handling. */
+svn_error_t *
+svn_sqlite__transaction_commit(svn_sqlite__db_t *db);
+
+/* Wrapper around sqlite transaction handling. */
+svn_error_t *
+svn_sqlite__transaction_rollback(svn_sqlite__db_t *db);
 
 #ifdef __cplusplus
 }

@@ -157,6 +157,51 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
                                    const char *repos_root_url,
                                    apr_pool_t *pool);
 
+/** Set @a *tree_conflict to a newly allocated @c
+ * svn_wc_conflict_description_t structure describing the tree
+ * conflict state of @a victim_path, or to @c NULL if @a victim_path
+ * is not in a state of tree conflict. @a adm_access is the admin
+ * access baton for @a victim_path. Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                          const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
+
+/** Record the tree conflict described by @a conflict in the WC.
+ * @a adm_access must be a write-access baton for the parent directory of
+ * @a victim->path. Use @a pool for all allocations.
+ *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in @a adm_access.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
+
+/* Remove any tree conflict on victim @a victim_path from the directory entry
+ * belonging to @a adm_access. (If there is no such conflict recorded, do
+ * nothing and return success.) @a adm_access must be an access baton for the
+ * parent directory of @a victim_path.
+ *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in @a adm_access.
+ *
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__del_tree_conflict(const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

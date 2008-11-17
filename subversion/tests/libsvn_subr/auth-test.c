@@ -2,7 +2,7 @@
  * auth-test.c -- test the auth functions
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -83,13 +83,24 @@ test_platform_specific_auth_providers(const char **msg,
        "svn_auth_get_platform_specific_provider('windows', 'simple') "
        "should not return NULL");
 
+
+  svn_auth_get_platform_specific_provider(&provider, "windows", 
+                                          "ssl_client_cert_pw",
+                                          pool);
+
+  if (!provider)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "svn_auth_get_platform_specific_provider('windows', "
+       "'ssl_client_cert_pw') should not return NULL");
+
   svn_auth_get_platform_specific_provider(&provider, "windows",
                                           "ssl_server_trust", pool);
 
   if (!provider)
     return svn_error_createf
       (SVN_ERR_TEST_FAILED, NULL,
-       "svn_auth_get_platform_specific_provider('windows', " \
+       "svn_auth_get_platform_specific_provider('windows', "
        "'ssl_server_trust') should not return NULL");
 
   /* Make sure you do not get a Keychain auth provider */

@@ -21,6 +21,9 @@
 #include "entries.h"
 #include "svn_path.h"
 #include "svn_types.h"
+
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 static const char field_separator = SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR;
@@ -478,16 +481,19 @@ svn_wc__del_tree_conflict(const char *victim_path,
   SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
                                           pool));
 
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+  if (log_accum != NULL)
+    {
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc_add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool)
+svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool)
 {
   svn_stringbuf_t *log_accum = NULL;
 
@@ -537,7 +543,11 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
    * Otherwise we should not have been called. */
   dir_path = svn_wc_adm_access_path(adm_access);
   SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
-  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
+  SVN_ERR_ASSERT((entry != NULL) && (entry->kind == svn_node_dir));
+
+  /* Make sure that VICTIM_PATH is a child node of DIR_PATH.
+   * Anything else is a bug. */
+  SVN_ERR_ASSERT(strcmp(dir_path, svn_path_dirname(victim_path, pool)) == 0);
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
@@ -619,10 +629,10 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
-svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                         const char *victim_path,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool)
+svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                          const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool)
 {
   const char *parent_path = svn_path_dirname(victim_path, pool);
   svn_wc_adm_access_t *parent_adm_access;

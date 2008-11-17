@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -412,10 +412,11 @@ typedef struct svn_opt_revision_range_t
  *
  * Use @a pool for temporary allocations.
  */
-int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
-                           svn_opt_revision_t *end_revision,
-                           const char *arg,
-                           apr_pool_t *pool);
+int
+svn_opt_parse_revision(svn_opt_revision_t *start_revision,
+                       svn_opt_revision_t *end_revision,
+                       const char *arg,
+                       apr_pool_t *pool);
 
 /**
  * Parse @a arg, where @a arg is "N" or "N:M", into a
@@ -569,8 +570,9 @@ svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
  * with no arguments. Those commands make use of this function to
  * add "." to the target array if the user passes no args.)
  */
-void svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
-                                      apr_pool_t *pool);
+void
+svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
+                                 apr_pool_t *pool);
 
 
 /**

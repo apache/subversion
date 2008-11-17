@@ -54,8 +54,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
     apr_pcalloc(pool, sizeof(struct tree_conflict_phrases));
 
   phrases->update_deleted = _(
-    "  The update attempted to delete '%s'\n"
-    "  (possibly as part of a rename operation).\n");
+    "  The update attempted to delete '%s',\n"
+    "  or attempted to rename it.\n");
 
   phrases->update_edited = _(
     "  The update attempted to edit '%s'.\n");
@@ -64,8 +64,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
     "  The update attempted to add '%s'.\n");
 
   phrases->switch_deleted = _(
-    "  The switch attempted to delete '%s'\n"
-    "  (possibly as part of a rename operation).\n");
+    "  The switch attempted to delete '%s',\n"
+    "  or attempted to rename it.\n");
 
   phrases->switch_edited = _(
     "  The switch attempted to edit '%s'.\n");
@@ -74,8 +74,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
     "  The switch attempted to add '%s'.\n");
 
   phrases->merge_deleted = _(
-    "  The merge attempted to delete '%s'\n"
-    "  (possibly as part of a rename operation).\n");
+    "  The merge attempted to delete '%s',\n"
+    "  or attempted to rename it.\n");
 
   phrases->merge_edited = _(
     "  The merge attempted to edit '%s'.\n");

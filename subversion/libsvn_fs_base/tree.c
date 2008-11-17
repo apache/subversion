@@ -2895,7 +2895,7 @@ txn_body_make_dir(void *baton,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, trail->pool);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -3341,7 +3341,7 @@ txn_body_make_file(void *baton,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, trail->pool);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we

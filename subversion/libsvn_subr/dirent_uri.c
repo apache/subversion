@@ -271,7 +271,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
     }
 
   /* Remove the trailing slash if necessary. */
-  if (*(dst - 1) == '/' && canon_segments > 0)
+  if (canon_segments > 0 && *(dst - 1) == '/')
     {
       dst --;
     }
@@ -536,7 +536,7 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
       (len == 2 || (dirent[2] == '/' && len == 3)))
     return TRUE;
 
-  /* On Windows and Cygwin, both //drive and //drive//share are root
+  /* On Windows and Cygwin, both //drive and //server/share are root
      directories */
   if (len >= 2 && dirent[0] == '/' && dirent[1] == '/'
       && dirent[len - 1] != '/')
@@ -1026,7 +1026,7 @@ svn_uri_is_canonical(const char *uri)
 
           /* Found a hostname, check that it's all lowercase. */
           ptr = seg;
-          while (*ptr != '/')
+          while (*ptr && *ptr != '/')
             {
               if (*ptr >= 'A' && *ptr <= 'Z')
                 return FALSE;
@@ -1036,13 +1036,16 @@ svn_uri_is_canonical(const char *uri)
     }
 
 #if defined(WIN32) || defined(__CYGWIN__)
-    /* If this is a file url, ptr now points to the third '/' in
-       file:///C:/path. Check that if we have such a URL the drive
-       letter is in uppercase. */
-      if (strncmp(uri, "file:", 5) == 0 &&
-          ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
-          *(ptr+2) == ':')
-        return FALSE;
+  if (*ptr == '/')
+    {
+      /* If this is a file url, ptr now points to the third '/' in
+         file:///C:/path. Check that if we have such a URL the drive
+         letter is in uppercase. */
+        if (strncmp(uri, "file:", 5) == 0 &&
+            ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
+            *(ptr+2) == ':')
+          return FALSE;
+    }
 #endif /* WIN32 or Cygwin */
 
   /* Now validate the rest of the URI. */

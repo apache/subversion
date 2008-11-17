@@ -16,7 +16,7 @@ class SubversionClientTestCase(unittest.TestCase):
     return "Test log message"
 
   def log_receiver(self, changed_paths, revision, author, date, message, pool):
-    """ Function to recieve log messages retrieved by client.log3(). """
+    """ Function to receive log messages retrieved by client.log3(). """
     self.log_message = message
     self.change_author = author
     self.changed_paths = changed_paths

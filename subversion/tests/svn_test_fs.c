@@ -63,6 +63,7 @@ svn_test__fs_new(svn_fs_t **fs_p, apr_pool_t *pool)
 
 static apr_hash_t *
 make_fs_config(const char *fs_type,
+               int server_minor_version,
                apr_pool_t *pool)
 {
   apr_hash_t *fs_config = apr_hash_make(pool);
@@ -71,6 +72,15 @@ make_fs_config(const char *fs_type,
   apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
                APR_HASH_KEY_STRING,
                fs_type);
+  if (server_minor_version)
+    {
+      if (server_minor_version == 5)
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+      else if (server_minor_version == 4)
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+    }
   return fs_config;
 }
 
@@ -79,10 +89,11 @@ static svn_error_t *
 create_fs(svn_fs_t **fs_p,
           const char *name,
           const char *fs_type,
+          int server_minor_version,
           apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_hash_t *fs_config = make_fs_config(fs_type, pool);
+  apr_hash_t *fs_config = make_fs_config(fs_type, server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -124,7 +135,8 @@ maybe_install_fsfs_conf(svn_fs_t *fs,
 
   *must_reopen = TRUE;
   return svn_io_copy_file(opts->config_file,
-                          svn_path_join(svn_fs_path(fs, pool), "fsfs.conf", pool),
+                          svn_path_join(svn_fs_path(fs, pool), 
+                                        "fsfs.conf", pool),
                           FALSE,
                           pool);
 }
@@ -133,10 +145,12 @@ maybe_install_fsfs_conf(svn_fs_t *fs,
 svn_error_t *
 svn_test__create_bdb_fs(svn_fs_t **fs_p,
                         const char *name,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
-  return create_fs(fs_p, name, "bdb", pool);
+  return create_fs(fs_p, name, "bdb", opts->server_minor_version, pool);
 }
+
 
 svn_error_t *
 svn_test__create_fs(svn_fs_t **fs_p,
@@ -146,7 +160,8 @@ svn_test__create_fs(svn_fs_t **fs_p,
 {
   svn_boolean_t must_reopen;
 
-  SVN_ERR(create_fs(fs_p, name, opts->fs_type, pool));
+  SVN_ERR(create_fs(fs_p, name, opts->fs_type, 
+                    opts->server_minor_version, pool));
 
   SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
@@ -168,7 +183,8 @@ svn_test__create_repos(svn_repos_t **repos_p,
   apr_finfo_t finfo;
   svn_repos_t *repos;
   svn_boolean_t must_reopen;
-  apr_hash_t *fs_config = make_fs_config(opts->fs_type, pool);
+  apr_hash_t *fs_config = make_fs_config(opts->fs_type, 
+                                         opts->server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a

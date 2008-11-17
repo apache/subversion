@@ -834,7 +834,8 @@ svn_fs_txn_name(const char **name_p,
                 apr_pool_t *pool);
 
 /** Return @a txn's base revision. */
-svn_revnum_t svn_fs_txn_base_revision(svn_fs_txn_t *txn);
+svn_revnum_t
+svn_fs_txn_base_revision(svn_fs_txn_t *txn);
 
 
 

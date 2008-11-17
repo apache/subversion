@@ -1171,9 +1171,9 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->uuid = NULL;
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG, cfg);
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CLIENT, cfg_client);
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, cfg);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 

@@ -472,11 +472,14 @@ def ensure_tree_conflict(sbox, operation,
 
       if 'resolve' in test_what:
         verbose_print("--- Resolving the conflict")
-        # Resolve recursively on the parent, because per-victim resolve is
-        # not yet implemented.
+        # Make sure resolving the parent does nothing.
         run_and_verify_svn(None,
-                           "Resolved .* '" + re.escape(target_path) + "'", [],
-                           'resolved', '-R', target_path)
+                           [], [],
+                           'resolved', os.path.dirname(victim))
+        # The real resolved call.
+        run_and_verify_svn(None,
+                           "Resolved .* '" + re.escape(victim) + "'", [],
+                           'resolved', victim)
 
       if 'status-nc' in test_what:
         verbose_print("--- Checking that 'status' does not report a conflict")
@@ -646,7 +649,7 @@ test_list = [ None,
               up_sw_file_mod_onto_del,
               up_sw_file_del_onto_mod,
               up_sw_file_del_onto_del,
-              XFail(up_sw_file_add_onto_add),
+              up_sw_file_add_onto_add,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
