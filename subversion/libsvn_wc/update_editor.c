@@ -1365,7 +1365,7 @@ tree_has_local_mods(svn_boolean_t *modified,
 
 /* Check whether the incoming change ACTION on FULL_PATH would conflict with
  * FULL_PATH's scheduled change. If so, then raise a tree conflict with
- * FULL_PATH as the victim, by appending log actions to LOG_ACCUM.
+ * FULL_PATH as the victim, by recording it in the working copy.
  *
  * The edit baton EB gives information including whether the operation is
  * an update or a switch.
@@ -1382,16 +1382,18 @@ tree_has_local_mods(svn_boolean_t *modified,
  * notest/tree-conflicts/detection.txt.
  */
 static svn_error_t *
-check_tree_conflict(svn_wc_conflict_description_t **pconflict,
-                    struct edit_baton *eb,
-                    svn_stringbuf_t *log_accum,
-                    const char *full_path,
-                    const svn_wc_entry_t *entry,
-                    svn_wc_adm_access_t *parent_adm_access,
-                    svn_wc_conflict_action_t action,
-                    apr_pool_t *pool)
+check_and_store_tree_conflict(svn_wc_conflict_description_t **pconflict,
+                              struct edit_baton *eb,
+                              const char *full_path,
+                              const svn_wc_entry_t *entry,
+                              svn_wc_adm_access_t *parent_adm_access,
+                              svn_wc_conflict_action_t action,
+                              apr_pool_t *pool)
 {
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
+
+  if (pconflict)
+    *pconflict = NULL;
 
   switch (action)
     {
@@ -1452,9 +1454,6 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       break;
     }
 
-  if (pconflict)
-    *pconflict = NULL;
-
   /* If a conflict was detected, append log commands to the log accumulator
    * to record it. */
   if (reason != (svn_wc_conflict_reason_t)(-1))
@@ -1468,13 +1467,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       conflict->action = action;
       conflict->reason = reason;
 
-      /* Ensure 'log_accum' is non-null. svn_wc__loggy_add_tree_conflict()
-       * would otherwise quietly set it to point to a newly allocated buffer
-       * but we have no way to propagate that back to our caller. */
-      SVN_ERR_ASSERT(log_accum != NULL);
-
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict,
-                                              parent_adm_access, pool));
+      SVN_ERR(svn_wc__add_tree_conflict(conflict, parent_adm_access, pool));
 
       if (pconflict)
         *pconflict = conflict;
@@ -1626,17 +1619,10 @@ do_entry_deletion(struct edit_baton *eb,
   /* Is this path the victim of a newly-discovered tree conflict? */
   tree_conflict = NULL;
   if (victim_path == NULL)
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path,
-                                entry, adm_access, 
-                                svn_wc_conflict_action_delete, pool));
-
-  if (tree_conflict != NULL)
-    {
-      /* Run the log immediately, so that the tree conflict is recorded. */
-      SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-      *log_number = 0;
-    }
+    SVN_ERR(check_and_store_tree_conflict(&tree_conflict, eb, full_path,
+                                          entry, adm_access, 
+                                          svn_wc_conflict_action_delete,
+                                          pool));
 
   if (victim_path != NULL || tree_conflict != NULL)
     {
@@ -1655,7 +1641,6 @@ do_entry_deletion(struct edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we may need to recreate an entry, so that the parent can give
@@ -1950,10 +1935,9 @@ add_directory(const char *path,
                                           pb->path, pool));
 
               /* Raise a tree conflict if this directory is already present. */
-              SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                          pb->log_accum, db->path, entry,
-                                          parent_adm_access,
-                                          svn_wc_conflict_action_add, pool));
+              SVN_ERR(check_and_store_tree_conflict(
+                        &tree_conflict, eb, db->path, entry, parent_adm_access,
+                        svn_wc_conflict_action_add, pool));
 
               if (tree_conflict != NULL)
                 {
@@ -2173,9 +2157,9 @@ open_directory(const char *path,
   else
     /* Is this path a fresh tree conflict victim?  If so, skip the tree
        with one notification. */
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum,
-                                full_path, entry, parent_adm_access,
-                                svn_wc_conflict_action_edit, pool));
+    SVN_ERR(check_and_store_tree_conflict(&tree_conflict, eb,
+                                          full_path, entry, parent_adm_access,
+                                          svn_wc_conflict_action_edit, pool));
 
   /* If property-conflicted, skip the tree with notification. */
   SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
@@ -2973,9 +2957,10 @@ add_file(const char *path,
   /* Is this path the victim of a newly-discovered tree conflict? */
   tree_conflict = NULL;
   if (victim_path == NULL)
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, full_path,
-                                entry, adm_access, 
-                                svn_wc_conflict_action_add, subpool));
+    SVN_ERR(check_and_store_tree_conflict(&tree_conflict, eb, full_path,
+                                          entry, adm_access, 
+                                          svn_wc_conflict_action_add,
+                                          subpool));
 
   if (victim_path != NULL || tree_conflict != NULL)
     {
@@ -3137,9 +3122,9 @@ open_file(const char *path,
   /* Is this path the victim of a newly-discovered tree conflict? */
   tree_conflict = NULL;
   if (victim_path == NULL)
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, full_path,
-                                entry, adm_access, 
-                                svn_wc_conflict_action_edit, pool));
+    SVN_ERR(check_and_store_tree_conflict(&tree_conflict, eb, full_path,
+                                          entry, adm_access, 
+                                          svn_wc_conflict_action_edit, pool));
 
   /* Does the file already have text or property conflicts? */
   SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, NULL,
