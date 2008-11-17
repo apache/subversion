@@ -2327,14 +2327,10 @@ def make_depth_tree_conflicts(sbox):
   expected_status.tweak('A/mu',
                         'A/B', 'A/B/lambda',
                         'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
-                        'A/B/F',
                         'A/D/gamma',
                         status='D ')
   expected_status.tweak('A/mu', 'A/B', 'A/D/gamma',
                         treeconflict='C', wc_rev='1')
-  expected_status.tweak('A/B/lambda', 'A/B/E', 'A/B/F',
-                        'A/B/E/alpha', 'A/B/E/beta',
-                        wc_rev='1')
 
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,
@@ -2388,9 +2384,8 @@ def tree_conflicts_resolved_depth_immediates(sbox):
   B =    j(A, 'B')
 
   svntest.actions.run_and_verify_svn(None, 
-    svntest.verify.UnorderedOutput(
-      ["Resolved conflicted state of '%s'\n" % m,
-       "Resolved conflicted state of '%s'\n" % B]),
+    ["Resolved conflicted state of '%s'\n" % m,
+     "Resolved conflicted state of '%s'\n" % B],
     [],
     'resolved', '--depth=immediates', A)
 
@@ -2409,10 +2404,9 @@ def tree_conflicts_resolved_depth_infinity(sbox):
 
 
   svntest.actions.run_and_verify_svn(None, 
-    svntest.verify.UnorderedOutput(
-      ["Resolved conflicted state of '%s'\n" % m,
-       "Resolved conflicted state of '%s'\n" % B,
-       "Resolved conflicted state of '%s'\n" % g]),
+    ["Resolved conflicted state of '%s'\n" % m,
+     "Resolved conflicted state of '%s'\n" % B,
+     "Resolved conflicted state of '%s'\n" % g],
     [],
     'resolved', '--depth=infinity', A)
 
@@ -2454,10 +2448,10 @@ test_list = [ None,
               excluded_path_update_operation,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
-              tree_conflicts_resolved_depth_empty,
-              tree_conflicts_resolved_depth_files,
-              tree_conflicts_resolved_depth_immediates,
-              tree_conflicts_resolved_depth_infinity,
+              XFail(tree_conflicts_resolved_depth_empty),
+              XFail(tree_conflicts_resolved_depth_files),
+              XFail(tree_conflicts_resolved_depth_immediates),
+              XFail(tree_conflicts_resolved_depth_infinity),
             ]
 
 if __name__ == "__main__":
