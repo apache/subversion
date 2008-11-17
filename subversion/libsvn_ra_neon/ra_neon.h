@@ -854,7 +854,7 @@ svn_ra_neon__maybe_store_auth_info_after_result(svn_error_t *err,
 
 
 /* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
-   we recieve an element we didn't expect to see. */
+   we receive an element we didn't expect to see. */
 #define UNEXPECTED_ELEMENT(ns, elem)                               \
         (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
                                 NULL,                              \

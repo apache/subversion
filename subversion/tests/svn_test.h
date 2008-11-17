@@ -44,6 +44,9 @@ typedef struct svn_test_opts_t
   const char *fs_type;
   /* Config file. */
   const char *config_file;
+  /* Minor version to use for servers and FS backends, or zero to use
+     the current latest version. */
+  int server_minor_version;
   /* Add future "arguments" here. */
 } svn_test_opts_t;
 

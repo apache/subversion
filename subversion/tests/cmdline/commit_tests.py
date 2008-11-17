@@ -2648,20 +2648,23 @@ def tree_conflicts_resolved(sbox):
   wc_dir_2 = sbox.add_wc_path('2')
   svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
 
-  # Resolved in directory containing tree conflicts
+  # Mark the tree conflict victims as resolved
   G = os.path.join(wc_dir, 'A', 'D', 'G')
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G)
+  pi = os.path.join(G, 'pi')
+  rho = os.path.join(G, 'rho')
+  tau = os.path.join(G, 'tau')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', pi, rho, tau)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
-  expected_status.remove('A/D/G/rho', 'A/D/G/tau')
+  expected_status.tweak('A/D/G/rho', status='M ', wc_rev='1')
+  expected_status.tweak('A/D/G/tau', status='D ', wc_rev='1')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Recursively resolved in parent directory -- expect same result
-  D2 = os.path.join(wc_dir_2, 'A', 'D')
   G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', D2, '-R')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G2, '-R')
 
   expected_status.wc_dir = wc_dir_2
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
@@ -2699,7 +2702,7 @@ test_list = [ None,
               commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_dav),
+              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_svn),
               commit_with_bad_log_message,
               commit_with_mixed_line_endings,
               commit_with_mixed_line_endings_in_ignored_part,

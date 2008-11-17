@@ -119,7 +119,8 @@ Commit access for specific areas:
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
        rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
         larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
-         nmiyo   MIYOKAWA, Nobuyoshi <n-miyo@tempus.org>     (faq: ja)
+         nmiyo   MIYOKAWA, Nobuyoshi <n-miyo@tempus.org>     (www: ja)
+       rocksun   Rock Sun <daijun@gmail.com>                 (www: zh)
        kmradke   Kevin Radke <kmradke@gmail.com>             (add-needs-lock.py)
 
   Translation of message files:

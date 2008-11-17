@@ -3,7 +3,7 @@
  * SVN_AUTH_CRED_SSL_CLIENT_CERT
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,7 +44,7 @@ ssl_client_cert_file_first_credentials(void **credentials_p,
                                        apr_pool_t *pool)
 {
   svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG,
+                                   SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                    APR_HASH_KEY_STRING);
   const char *server_group = apr_hash_get(parameters,
                                           SVN_AUTH_PARAM_SERVER_GROUP,

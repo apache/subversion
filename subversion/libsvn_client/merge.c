@@ -155,7 +155,7 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
   const svn_wc_entry_t *ent;
   const char *idx1, *idx2;
 
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
 
   idx1 = strchr(url, ':');
   idx2 = strchr(ent->url, ':');
@@ -350,7 +350,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
     victim_path, adm_access, node_kind, svn_wc_operation_merge, merge_b->pool);
   conflict->action = action;
   conflict->reason = reason;
-  SVN_ERR(svn_wc_add_tree_conflict(conflict, adm_access, merge_b->pool));
+  SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
 
@@ -1863,6 +1863,26 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_diff_callbacks3_t function. */
+static svn_error_t *
+merge_dir_closed(svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *contentstate,
+                 svn_wc_notify_state_t *propstate,
+                 svn_boolean_t *tree_conflicted,
+                 const char *path,
+                 void *baton)
+{
+  if (contentstate)
+    *contentstate = svn_wc_notify_state_unknown;
+  if (propstate)
+    *propstate = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Nothing to be done. */
+
+  return SVN_NO_ERROR;
+}
 
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks3_t
@@ -1874,7 +1894,8 @@ merge_callbacks =
     merge_dir_added,
     merge_dir_deleted,
     merge_props_changed,
-    merge_dir_opened
+    merge_dir_opened,
+    merge_dir_closed
   };
 
 
@@ -3916,6 +3937,8 @@ get_mergeinfo_walk_cb(const char *path,
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(path, wb->merge_target_path);
   const char *parent_path = svn_path_dirname(path, pool);
+
+  /* TODO(#2843) How to deal with a excluded item on merge? */
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use

@@ -19,16 +19,6 @@ Blocker:
      decision. I'd recommend just storing both though (or removing
      rep-sharing from FSFS).  [BDB is now storing both.]
 
-   - If a commit gets aborted (or the server crashes, or whatever)
-     after having written new references to the database, the database
-     will still contain the references; future commits of files with
-     the same contents will then use the garbage at those offsets.
-     You can probably fix this by opening a SQLite transaction at the
-     top of commit_body and commit it after updating "current".  (If
-     there's a crash between updating "current" and committing the
-     transaction, then the only downside is that you fail to do a bit
-     of sharing, which is OK.)
-
    - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
      used outside of the control of the FSFS lock.  Thus its
      read-modify-write can have race conditions, leading to two
@@ -56,19 +46,34 @@ Blocker:
 
    - 'structure' has not been updated.
 
- * Tree conflicts:
-   - "svn resolved" target must be a victim, not a parent.
-
+ * Tree conflicts - essential issues:
    - Tree conflicts can break working copy as noted by markphip:
      http://svn.haxx.se/dev/archive-2008-10/1090.shtml
 
- * Bug: External diff can't find its temp file - regression in trunk since
-   1.5.4, <http://svn.haxx.se/dev/archive-2008-11/0047.shtml>.
+   - "Most horrendous failure" during update: some logs are not executed
+     when closing a dir.
+     <http://svn.haxx.se/dev/archive-2008-11/0421.shtml>
+
+   - Update and switch need to skip the final "cleanup" (setting the new
+     revision, URL, etc) of items inside a tree-conflicted dir.
+
+   - Running 'svn status -u' fails (instead of showing '*' for pending
+     update) when a switched item does not exist in the repo.  Apparently
+     due to the shoulda-skipped-cleanup bug above.
+
+   - Update/switch fails if the target itself is a tree conflict victim.
+     Should print a 'Skipped' message instead.
+
 
 Optional:
 
  * Merge the sparse-directories deselection branch, as noted by kfogel:
    http://svn.haxx.se/dev/archive-2008-10/1001.shtml
 
- * Secure certificate passphrase caching on Windows, to bring it upto the
-   same level as the other password stores. (Issue 2489)
+ * Tree conflicts - essential issues:
+   - #3320; Commit not blocked by tree conflict
+   - #3139, #3209: Tests XFAIL due to changed tree-conflicts behaviour
+
+   - Update of an item that is inside a tree conflict, and that no longer
+     exists in the repo, does nothing.  Should print a 'Skipped' message
+     instead.

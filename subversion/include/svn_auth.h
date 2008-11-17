@@ -164,6 +164,11 @@ typedef void (*svn_auth_simple_provider_func_t)
 
 /** Simple username/password pair credential kind.
  *
+ * The following auth parameters are available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
+ *
  * The following auth parameters may be available to the providers:
  *
  * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
@@ -213,7 +218,7 @@ typedef struct svn_auth_cred_username_t
  *
  * The following auth parameters are available to the providers:
  *
- * - @c SVN_AUTH_PARAM_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
  * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
  *
  * The following optional auth parameters are relevant to the providers:
@@ -247,7 +252,8 @@ typedef void (*svn_auth_ssl_client_cert_pw_provider_func_t)
  *
  * The following auth parameters are available to the providers:
  *
- * - @c SVN_AUTH_PARAM_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
  * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
  *
  * The following optional auth parameters are relevant to the providers:
@@ -273,7 +279,7 @@ typedef struct svn_auth_cred_ssl_client_cert_pw_t
  *
  * The following auth parameters are available to the providers:
  *
- * - @c SVN_AUTH_PARAM_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
  * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
  * - @c SVN_AUTH_PARAM_SSL_SERVER_FAILURES (@c apr_uint32_t*)
  * - @c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO
@@ -626,8 +632,11 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
   "ssl:cert-info"
 
 /** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config-server"
-#define SVN_AUTH_PARAM_CONFIG_CLIENT SVN_AUTH_PARAM_PREFIX "config-client"
+#define SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG SVN_AUTH_PARAM_PREFIX "config-category-config"
+#define SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS SVN_AUTH_PARAM_PREFIX "config-category-servers"
+
+/** @deprecated Provided for backward compatibility with the 1.5 API. */
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS
 
 /** The current server group. */
 #define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
@@ -822,6 +831,29 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 
 /**
  * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
+ * user's ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_auth_get_ssl_client_cert_pw_file_provider(), except that
+ * when running on Window 2000 or newer, the provider encrypts the password
+ * before storing it to disk. On earlier versions of Windows, the provider
+ * does nothing.
+ *
+ * @since New in 1.6
+ * @note This function is only available on Windows.
+ *
+ * @note An administrative password reset may invalidate the account's
+ * secret key. This function will detect that situation and behave as
+ * if the password were not cached at all.
+ */
+void
+svn_auth_get_windows_ssl_client_cert_pw_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * This provider automatically validates ssl server certificates with
@@ -836,6 +868,7 @@ void
 svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
+
 #endif /* WIN32 && !__MINGW32__ || DOXYGEN */
 
 #if defined(DARWIN) || defined(DOXYGEN)

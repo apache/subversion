@@ -155,6 +155,17 @@ svn_error_quick_wrap(svn_error_t *child,
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
 
+/** Compose two errors, returning the composition as a brand new error
+ * and consuming the original errors.  Either or both of @a err1 and
+ * @a err2 may be @c SVN_NO_ERROR.  If both are not @c SVN_NO_ERROR,
+ * @a err2 will follow @a err1 in the chain of the returned error.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_error_compose_create(svn_error_t *err1,
+                         svn_error_t *err2);
+
 /** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err
  * chain will be copied into @a chain's pool and destroyed, so @a new_err
  * itself becomes invalid after this function.

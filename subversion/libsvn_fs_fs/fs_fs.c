@@ -946,7 +946,9 @@ write_format(const char *path, int format, int max_files_per_dir,
     {
       const char *path_tmp;
 
-      SVN_ERR(svn_io_write_unique(&path_tmp, path, contents, strlen(contents),
+      SVN_ERR(svn_io_write_unique(&path_tmp,
+                                  svn_path_dirname(path, pool),
+                                  contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
 #ifdef WIN32
@@ -1024,10 +1026,10 @@ write_config(svn_fs_t *fs,
 "### duplication between them, usually a function of the branching and"      NL
 "### merging process."                                                       NL
 "###"                                                                        NL
-"### The following parameter enable rep-sharing in the repository.  It can"  NL
+"### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
+CONFIG_OPTION_ENABLE_REP_SHARING " = true"                                   NL
 
 ;
 #undef NL
@@ -2269,14 +2271,15 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 {
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
-  apr_file_t *f;
   svn_stream_t *stream;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_io_open_unique_file2
-          (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  /* ### do we have a directory sitting around already? we really shouldn't
+     ### have to get the dirname here. */
+  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
+                                 svn_path_dirname(final_path, pool  ),
+                                 svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 
@@ -3850,7 +3853,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_write_unique(&tmp_filename, txn_current_filename,
+  SVN_ERR(svn_io_write_unique(&tmp_filename,
+                              svn_path_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
   SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
                                      txn_current_filename, pool));
@@ -5187,7 +5191,9 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name, name, buf, strlen(buf),
+  SVN_ERR(svn_io_write_unique(&tmp_name,
+                              svn_path_dirname(name, pool),
+                              buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
   return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
@@ -5472,6 +5478,33 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
+   the same as commit_body().
+
+   XXX: If we decide to wrap other stuff with sqlite transactions, this should
+   probably be generalized and moved into libsvn_subr/sqlite.c.
+ */
+static svn_error_t *
+commit_body_rep_cache(void *baton, apr_pool_t *pool)
+{
+  struct commit_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
+  svn_error_t *err;
+
+  /* Start the sqlite transaction. */
+  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+
+  err = commit_body(baton, pool);
+
+  /* Commit or rollback the sqlite transaction. */
+  if (err)
+    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+  else
+    return svn_sqlite__transaction_commit(ffd->rep_cache.db);
+
+  return err;
+}
+
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -5479,11 +5512,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
+  return svn_fs_fs__with_write_lock(fs,
+                                    ffd->rep_cache.db ? commit_body_rep_cache :
+                                                        commit_body, 
+                                    &cb, pool);
 }
 
 svn_error_t *
@@ -6024,29 +6061,32 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
                     const char *uuid,
                     apr_pool_t *pool)
 {
-  apr_file_t *uuid_file;
+  char *my_uuid;
+  apr_size_t my_uuid_len;
   const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_io_open_unique_file2(&uuid_file, &tmp_path, uuid_path,
-                                    ".tmp", svn_io_file_del_none, pool));
-
   if (! uuid)
     uuid = svn_uuid_generate(pool);
 
-  SVN_ERR(svn_io_file_write_full(uuid_file, uuid, strlen(uuid), NULL,
-                                 pool));
-  SVN_ERR(svn_io_file_write_full(uuid_file, "\n", 1, NULL, pool));
+  /* Make sure we have a copy in FS->POOL, and append a newline. */
+  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", NULL);
+  my_uuid_len = strlen(my_uuid);
 
-  SVN_ERR(svn_io_file_close(uuid_file, pool));
+  SVN_ERR(svn_io_write_unique(&tmp_path,
+                              svn_path_dirname(uuid_path, pool),
+                              my_uuid, my_uuid_len,
+                              svn_io_file_del_none, pool));
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, uuid_path,
                                      svn_fs_fs__path_current(fs, pool), pool));
 
-  ffd->uuid = apr_pstrdup(fs->pool, uuid);
+  /* Remove the newline we added, and stash the UUID. */
+  my_uuid[my_uuid_len - 1] = '\0';
+  ffd->uuid = my_uuid;
 
   return SVN_NO_ERROR;
 }

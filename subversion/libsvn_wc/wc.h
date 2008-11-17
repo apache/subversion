@@ -316,7 +316,12 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
  * are tree conflict victims. For such a path, call the "found_entry"
  * callback but with a null "entry" parameter. Walk all entries including
  * hidden and schedule-delete entries, like with "show_hidden = TRUE" in
- * svn_wc_walk_entries3(). */
+ * svn_wc_walk_entries3().
+ *
+ * @a adm_access should be an access baton in a set that includes @a path
+ * (unless @a path is an unversioned victim of a tree conflict) and @a
+ * path's parent directory (if available).  If neither is available, @a
+ * adm_access may be null. */
 svn_error_t *
 svn_wc__walk_entries_and_tc(const char *path,
                             svn_wc_adm_access_t *adm_access,

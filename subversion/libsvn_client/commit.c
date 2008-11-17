@@ -131,15 +131,11 @@ send_file_contents(const char *path,
   /* If we have EOL styles or keywords to de-translate, do it.  */
   if (svn_subst_translation_required(eol_style, eol, keywords, special, TRUE))
     {
-      const char *temp_dir;
-
       /* Now create a new tempfile, and open a stream to it. The temp file
          is removed by the pool cleanup run by the caller */
-      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &tmpfile_path,
-               svn_path_join(temp_dir, "svn-import", pool),
-               ".tmp", svn_io_file_del_on_pool_cleanup, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmpfile_path, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
 
       SVN_ERR(svn_subst_translate_to_normal_form
               (path, tmpfile_path, eol_style, eol, FALSE,

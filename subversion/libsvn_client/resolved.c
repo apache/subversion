@@ -26,22 +26,12 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
-
-svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
-  return svn_client_resolve(path, depth,
-                            svn_wc_conflict_choose_merged, ctx, pool);
-}
 
 svn_error_t *
 svn_client_resolve(const char *path,
@@ -52,11 +42,58 @@ svn_client_resolve(const char *path,
 {
   svn_wc_adm_access_t *adm_access;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+  svn_boolean_t wc_root;
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, TRUE,
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
+                                 path,
+                                 TRUE,
                                  adm_lock_level,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
+
+  /* Make sure we do not end up looking for tree conflict info
+   * above the working copy root. */
+  SVN_ERR(svn_wc_is_wc_root(&wc_root, path, adm_access, pool));
+  if (wc_root)
+    {
+      /* Switched subtrees are considered working copy roots by
+       * svn_wc_is_wc_root(). But it's OK to check for tree conflict
+       * info in the parent of a switched subtree, because the
+       * subtree itself might be a tree conflict victim. */
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+
+      if (entry->kind == svn_node_dir)
+        {
+          svn_error_t *err;
+          svn_boolean_t switched;
+
+          err = svn_wc__path_switched(path, &switched, entry, pool);
+
+          if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
+            svn_error_clear(err);
+          else
+            {
+              SVN_ERR(err);
+              wc_root = switched ? FALSE : TRUE;
+            }
+        }
+    }
+
+  if (! wc_root) /* but possibly a switched subdir */
+    {
+      /* In order to resolve tree-conflicts on the target PATH, we need an
+       * adm_access on its parent directory. The lock level then needs to
+       * extend at least onto the immediate children. */
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+      if (adm_lock_level >= 0)
+        adm_lock_level++;
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
+                                     svn_path_dirname(path, pool),
+                                     TRUE, adm_lock_level,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
+    }
 
   SVN_ERR(svn_wc_resolved_conflict4(path, adm_access, TRUE, TRUE, TRUE,
                                     depth, conflict_choice,
@@ -65,4 +102,15 @@ svn_client_resolve(const char *path,
                                     pool));
 
   return svn_wc_adm_close2(adm_access, pool);
+}
+
+svn_error_t *
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
+  return svn_client_resolve(path, depth,
+                            svn_wc_conflict_choose_merged, ctx, pool);
 }

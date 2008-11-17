@@ -1522,8 +1522,8 @@ def status_with_tree_conflicts(sbox):
   # check status of G
   expected = svntest.verify.UnorderedOutput(
          ["D     C %s\n" % pi,
-          "?     C %s\n" % rho,
-          "!     C %s\n" % tau,
+          "M     C %s\n" % rho,
+          "D     C %s\n" % tau,
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1535,8 +1535,8 @@ def status_with_tree_conflicts(sbox):
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
           "D     C          1        1 jrandom      %s\n" % pi,
-          "?     C                                  %s\n" % rho,
-          "!     C                                  %s\n" % tau,
+          "M     C          1        1 jrandom      %s\n" % rho,
+          "D     C          1        1 jrandom      %s\n" % tau,
           ])
 
   svntest.actions.run_and_verify_svn(None,
