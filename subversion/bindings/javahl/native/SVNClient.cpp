@@ -1176,6 +1176,15 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     if (provider)
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
+    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                        "windows",
+                                                        "ssl_client_cert_pw",
+                                                         pool),
+                NULL);
+
+    if (provider)
+       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
     /* Keychain auth providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                         "keychain",
