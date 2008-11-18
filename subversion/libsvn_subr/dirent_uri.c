@@ -290,7 +290,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         src++;
     }
 
-  /* Remove the trailing slash if there was more than one
+  /* Remove the trailing slash if there was at least one
    * canonical segment and the last segment ends with a slash.
    *
    * But keep in mind that, for URLs, the scheme counts as a
