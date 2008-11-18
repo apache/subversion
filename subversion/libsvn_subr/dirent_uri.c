@@ -197,8 +197,6 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
           if (*src == '@')
             {
               /* Copy the username & password. */
-              /* XXX: This assumes that username and password
-               *      do not contain multibyte characters. */
               seglen = src - seg + 1;
               memcpy(dst, seg, seglen);
               dst += seglen;
@@ -380,7 +378,6 @@ get_longest_ancestor_length(path_type_t types,
 #if defined(WIN32) || defined(__CYGWIN__)
   if (types == type_dirent)
     {
-
       /* don't count the '//' from UNC paths */
       if (last_dirsep == 1 && path1[0] == '/' && path1[1] == '/')
         {
