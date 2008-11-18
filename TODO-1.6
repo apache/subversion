@@ -48,19 +48,18 @@ Blocker:
 
  * Tree conflicts - essential issues:
 
-   - "Most horrendous failure" during update: some logs are not executed
+   - #3328: "Most horrendous failure" during update: some logs are not executed
      when closing a dir.
      <http://svn.haxx.se/dev/archive-2008-11/0421.shtml>
 
    - Update and switch need to skip the final "cleanup" (setting the new
      revision, URL, etc) of items inside a tree-conflicted dir.
+     [~Fixed?]
 
    - Running 'svn status -u' fails (instead of showing '*' for pending
      update) when a switched item does not exist in the repo.  Apparently
      due to the shoulda-skipped-cleanup bug above.
-
-   - Update/switch fails if the target itself is a tree conflict victim.
-     Should print a 'Skipped' message instead.
+     [~Fixed?]
 
 
 Optional:
@@ -69,9 +68,15 @@ Optional:
    http://svn.haxx.se/dev/archive-2008-10/1001.shtml
 
  * Tree conflicts - essential issues:
+
    - #3320; Commit not blocked by tree conflict
+     [~Fixed?]
+
    - #3139, #3209: Tests XFAIL due to changed tree-conflicts behaviour
 
-   - Update of an item that is inside a tree conflict, and that no longer
-     exists in the repo, does nothing.  Should print a 'Skipped' message
-     instead.
+ * Tree conflicts - non-essential issues:
+
+   - #3329: Update/switch fails if the target itself is a tree conflict victim.
+     Should print a 'Skipped' message instead.  Update of an item that is
+     inside a tree conflict, and that no longer exists in the repo, does
+     nothing.  Should print a 'Skipped' message instead.
