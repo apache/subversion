@@ -713,8 +713,14 @@ AS_HELP_STRING([--enable-maintainer-mode],
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wextra-tokens -Wnewline-eof -Wall -Wformat=2 -Wunused -Wshorten-64-to-32 -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
         CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+
+        dnl some additional flags that can be handy for an occasional review,
+        dnl but throw too many warnings in svn code, of too little importance,
+        dnl to keep these enabled. Remove the "dnl" to do a run with these
+        dnl switches enabled.
+        dnl CFLAGS="$CFLAGS -Wswitch-enum -Wswitch-default"
       fi
     fi
 ])
