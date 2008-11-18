@@ -343,6 +343,48 @@ harvest_committables(apr_hash_t *committables,
                                  svn_path_local_style(path, pool));
     }
 
+  /* If this is a dir, walk all tree-conflicts recorded on immediate
+   * children. Adhering to the requested depth, abort the commit on a
+   * tree-conflicted child node.
+   * Tree-conflicts information is stored in the victim's immediate parent.
+   * In some cases of an absent tree-conflicted victim, the tree-conflict
+   * information in its parent dir is the only indication that the node
+   * is under version control. This check is necessary for this case.
+   * In all other cases, this simply bails out a little bit earlier.
+   * Note: Tree-conflicts can only be found in "THIS_DIR" entries. */
+  if ((entry->kind == svn_node_dir) && (depth != svn_depth_empty)
+      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0))
+    {
+      apr_array_header_t *conflicts;
+      const svn_wc_conflict_description_t *conflict;
+      int i;
+
+      conflicts = apr_array_make(pool, 0,
+                                 sizeof(svn_wc_conflict_description_t *));
+      SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry,
+                                                     path, pool));
+
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          conflict = APR_ARRAY_IDX(conflicts, i,
+                                   svn_wc_conflict_description_t *);
+
+          if ((conflict->node_kind == svn_node_dir) &&
+              (depth == svn_depth_files))
+            continue;
+
+          /* So we've encountered a conflict that is included in DEPTH.
+           * Bail out. */
+
+          if (SVN_WC__CL_MATCH(changelists, entry))
+            return svn_error_createf(
+                     SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                     _("Aborting commit: '%s' remains in conflict"),
+                     svn_path_local_style(conflict->path, pool));
+        }
+
+    }
+
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
      URL-to-be of the copied item.  */
@@ -1276,7 +1318,7 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      /* Ensured by harvest_commitables(), item->path will never be an
+      /* Ensured by harvest_committables(), item->path will never be an
          excluded path. However, will it be deleted/absent items?  I think
          committing an modification on a deleted/absent item does not make
          sense. So it's probably safe to turn off the show_hidden flag here.*/
