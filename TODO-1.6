@@ -48,6 +48,9 @@ Blocker:
 
  * Tree conflicts - essential issues:
 
+   NOTE: If these tasks aren't fixed when 1.6 is branched,
+   we should consider delaying tree conflicts entirely until 1.7.
+
    - #3328: "Most horrendous failure" during update: some logs are not executed
      when closing a dir.
      <http://svn.haxx.se/dev/archive-2008-11/0421.shtml>
@@ -60,6 +63,41 @@ Blocker:
      update) when a switched item does not exist in the repo.  Apparently
      due to the shoulda-skipped-cleanup bug above.
      [~Fixed?]
+
+   - #3322: "In tree conflict info, report left/right URL@REV of the
+             incoming change"
+
+     Seriously needed improvement for resolving tree conflicts.
+
+     See also this thread:
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=145450
+
+     IRC conversation excerpts (julianfoad<->stsp):
+     <stsp> but I don't want to release tc in 1.6 without issue
+            #3322 fixed
+     <stsp> I suppose following the example of git in this case is
+            a good idea
+     <stsp> when testing TCs with git, it was always relatively clear
+            what I was supposed to do to resolve, and things just worked
+     <stsp> mainly, having all relevant information, i.e. which files are
+            involved at what revs, and easy access to those files was the key
+     <stsp> I don't know whether this applies as cleanly to directories,
+            we'll have to think about that (but maybe post-1.6 if we decide
+            to limit 1.6 to files, which is an idea that has been around a
+            long time)
+     <julianfoad> Yes. That implies we make #3322 a priority, and do some
+                  work on the messages (such as "Summary: 3 tree conflicts;
+                  use svn info for details"), and do lots of walk-throughs
+                  and documentation.
+     <stsp> by having issue #3322 fixed, I mean
+     <stsp> 1) having all required info stored in tc-info data
+     <stsp> 2) having svn diff file@BASE etc. syntax  (an optional, but really
+            nice UI optimisation because then users won't have to copy-paste
+            URLs all the time)
+     <stsp> oh, and 1) implies not only storing the information, but also easy
+            access to it for users, obviously :)
+     <stsp> and I think we could also think about an alternative to 'svn info'
+            as part of #3322
 
 
 Optional:
