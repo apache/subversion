@@ -10,6 +10,7 @@
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "private/svn_wc_private.h"
 #include "../svn_test.h"
 #include "../../libsvn_wc/tree_conflicts.h"
 
