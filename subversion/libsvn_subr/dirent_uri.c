@@ -42,18 +42,18 @@
    the OS! */
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
-/* Labels for some commonly used constants */
+/* Path type definition. Used only by internal functions. */
 typedef enum {
   type_uri,
   type_dirent,
-  type_url
 } path_type_t;
 
 
 /**** Internal implementation functions *****/
 
 /* Return an internal-style new path based on PATH, allocated in POOL.
- * Pass true for URI if PATH is a uri instead of a regular path.
+ * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
+ * is a regular path.
  *
  * "Internal-style" means that separators are all '/', and the new
  * path is canonicalized.
@@ -78,7 +78,8 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
 }
 
 /* Return a local-style new path based on PATH, allocated in POOL.
- * Pass true for URI if PATH is a uri instead of a regular path.
+ * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
+ * is a regular path.
  *
  * "Local-style" means a path that looks like what users are
  * accustomed to seeing, including native separators.  The new path
@@ -144,6 +145,10 @@ dirent_previous_segment(const char *dirent,
 }
 
 
+/* Return the canonicalized version of PATH, allocated in POOL.
+ * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
+ * is a regular path.
+ */
 static const char *
 canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 {
@@ -192,6 +197,8 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
           if (*src == '@')
             {
               /* Copy the username & password. */
+              /* XXX: This assumes that username and password
+               *      do not contain multibyte characters. */
               seglen = src - seg + 1;
               memcpy(dst, seg, seglen);
               dst += seglen;
@@ -201,9 +208,23 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             src = seg;
 
           /* Found a hostname, convert to lowercase and copy to dst. */
-           while (*src && (*src != '/'))
+          while (*src && (*src != '/'))
             *(dst++) = tolower((*src++));
-          *(dst++) = *(src++);
+
+          /* Copy trailing slash, or null-terminator. */
+          *(dst) = *(src);
+
+          /* Do not move src past null-terminator. */
+          if (*src)
+            src++;
+
+          /* FIXME: if *src is '\0', the check at the end of
+           * this function which removes the terminating slash
+           * relies on dst to point to the byte *after* the
+           * null-terminator, else paths which are only schemes
+           * (such as "https://") will get one of their slashes
+           * truncated. */
+          dst++;
 
           canon_segments = 1;
         }
@@ -271,6 +292,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
     }
 
   /* Remove the trailing slash if necessary. */
+  /* FIXME: This check relies on dst to point to the byte
+   * *after* the null-terminator in case path is only a
+   * URL scheme, such as "https://" */
   if (canon_segments > 0 && *(dst - 1) == '/')
     {
       dst --;
@@ -304,9 +328,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 }
 
 /* Return the string length of the longest common ancestor of PATH1 and PATH2.
+ * Pass type_uri for TYPE if PATH1 and PATH2 are URIs, and type_dirent if
+ * PATH1 and PATH2 are regular paths.
  *
- * This function handles dirents (URIS is FALSE) and uris (URIS is TRUE),
- * but not URLs.
  * If the two paths do not share a common ancestor, return 0.
  *
  * New strings are allocated in POOL.
@@ -320,7 +344,9 @@ get_longest_ancestor_length(path_type_t types,
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
+#if defined(WIN32) || defined(__CYGWIN__)
   svn_boolean_t unc = FALSE;
+#endif
 
   path1_len = strlen(path1);
   path2_len = strlen(path2);
@@ -344,15 +370,17 @@ get_longest_ancestor_length(path_type_t types,
   /* two special cases:
      1. '/' is the longest common ancestor of '/' and '/foo' */
   if (i == 1 && path1[0] == '/' && path2[0] == '/')
-      return 1;
-  /* 2. '' is the longest common ancestor of 'foo' and 'bar' */
-  if (types != type_uri && i == 0)
-      return 0;
+    return 1;
+  /* 2. '' is the longest common ancestor of any non-matching
+   * strings 'foo' and 'bar' */
+  if (types == type_dirent && i == 0)
+    return 0;
 
   /* Handle some windows specific cases */
 #if defined(WIN32) || defined(__CYGWIN__)
-  if (types != type_uri)
+  if (types == type_dirent)
     {
+
       /* don't count the '//' from UNC paths */
       if (last_dirsep == 1 && path1[0] == '/' && path1[1] == '/')
         {
@@ -363,6 +391,13 @@ get_longest_ancestor_length(path_type_t types,
       /* X:/ and X:/foo */
       if (i == 3 && path1[2] == '/' && path1[1] == ':')
         return i;
+
+      /* Cannot use SVN_ERR_ASSERT here, so we'll have to crash, sorry.
+       * Note that this assertion triggers only if the code above has
+       * been broken. The code below relies on this assertion, because
+       * it uses [i - 1] as index. */
+      assert(i > 0);
+
       /* X: and X:/ */
       if ((path1[i - 1] == ':' && path2[i] == '/') ||
           (path2[i - 1] == ':' && path1[i] == '/'))
@@ -375,31 +410,37 @@ get_longest_ancestor_length(path_type_t types,
 
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
-     that non-matching byte.
+     that non-matching byte, and is guaranteed to be <= the length of
+     whichever path is shorter.
      If one of the paths is the common part return that. */
   if (((i == path1_len) && (path2[i] == '/'))
            || ((i == path2_len) && (path1[i] == '/'))
            || ((i == path1_len) && (i == path2_len)))
     return i;
   else
+    {
       /* Nothing in common but the root folder '/' or 'X:/' for Windows
          dirents. */
+#if defined(WIN32) || defined(__CYGWIN__)
       if (! unc)
         {
-          if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
-            return 1;
-#if defined(WIN32) || defined(__CYGWIN__)
           /* X:/foo and X:/bar returns X:/ */
           if ((types == type_dirent) &&
               last_dirsep == 2 && path1[1] == ':' && path1[2] == '/'
                                && path2[1] == ':' && path2[2] == '/')
             return 3;
-#endif /* WIN32 or Cygwin */
+#endif
+          if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
+            return 1;
+#if defined(WIN32) || defined(__CYGWIN__)
         }
+#endif
+    }
 
   return last_dirsep;
 }
 
+/* FIXME: no doc string */
 static const char *
 is_child(path_type_t type, const char *path1, const char *path2,
          apr_pool_t *pool)
@@ -461,6 +502,7 @@ is_child(path_type_t type, const char *path1, const char *path2,
   return NULL;
 }
 
+/* FIXME: no doc string */
 static svn_boolean_t
 is_ancestor(path_type_t type, const char *path1, const char *path2)
 {
