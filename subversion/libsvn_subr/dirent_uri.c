@@ -441,7 +441,27 @@ get_longest_ancestor_length(path_type_t types,
   return last_dirsep;
 }
 
-/* FIXME: no doc string */
+/* Determine whether PATH2 is a child of PATH1.
+ *
+ * PATH2 is a child of PATH1 if
+ * 1) PATH1 is empty, and PATH2 is not empty and not an absolute path.
+ * or
+ * 2) PATH2 is has n components, PATH1 has x < n components,
+ *    and PATH1 matches PATH2 in all its x components.
+ *    Components are separated by a slash, '/'.
+ *
+ * Pass type_uri for TYPE if PATH1 and PATH2 are URIs, and type_dirent if
+ * PATH1 and PATH2 are regular paths.
+ *
+ * If PATH2 is not a child of PATH1, return NULL.
+ *
+ * If PATH2 is a child of PATH1, and POOL is not NULL, allocate a copy
+ * of the child part of PATH2 in POOL and return a pointer to the
+ * newly allocated child part.
+ *
+ * If PATH2 is a child of PATH1, and POOL is NULL, return a pointer
+ * pointing to the child part of PATH2.
+ * */
 static const char *
 is_child(path_type_t type, const char *path1, const char *path2,
          apr_pool_t *pool)
