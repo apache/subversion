@@ -155,6 +155,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   char *canon, *dst;
   const char *src;
   apr_size_t seglen;
+  apr_size_t schemelen = 0;
   apr_size_t canon_segments = 0;
   svn_boolean_t url = FALSE;
 
@@ -183,11 +184,15 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
           /* Found a scheme, convert to lowercase and copy to dst. */
           src = path;
           while (*src != ':')
-            *(dst++) = tolower((*src++));
+            {
+              *(dst++) = tolower((*src++));
+              schemelen++;
+            }
           *(dst++) = ':';
           *(dst++) = '/';
           *(dst++) = '/';
           src += 3;
+          schemelen += 3;
 
           /* This might be the hostname */
           seg = src;
@@ -212,17 +217,13 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
           /* Copy trailing slash, or null-terminator. */
           *(dst) = *(src);
 
-          /* Do not move src past null-terminator. */
+          /* Move src and dst forward only if we are not
+           * at null-terminator yet. */
           if (*src)
-            src++;
-
-          /* FIXME: if *src is '\0', the check at the end of
-           * this function which removes the terminating slash
-           * relies on dst to point to the byte *after* the
-           * null-terminator, else paths which are only schemes
-           * (such as "https://") will get one of their slashes
-           * truncated. */
-          dst++;
+            {
+              src++;
+              dst++;
+            }
 
           canon_segments = 1;
         }
@@ -289,11 +290,14 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         src++;
     }
 
-  /* Remove the trailing slash if necessary. */
-  /* FIXME: This check relies on dst to point to the byte
-   * *after* the null-terminator in case path is only a
-   * URL scheme, such as "https://" */
-  if (canon_segments > 0 && *(dst - 1) == '/')
+  /* Remove the trailing slash if there was more than one
+   * canonical segment and the last segment ends with a slash.
+   *
+   * But keep in mind that, for URLs, the scheme counts as a
+   * canonical segment -- so if path is ONLY a scheme (such
+   * as "https://") we should NOT remove the trailing slash. */
+  if ((canon_segments > 0 && *(dst - 1) == '/')
+      && ! (url && path[schemelen] == '\0'))
     {
       dst --;
     }
