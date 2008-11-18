@@ -487,10 +487,14 @@ is_child(path_type_t type, const char *path1, const char *path2,
      things like path1:"foo///bar" and path2:"foo/bar/baz"?  It doesn't
      appear to arise in the current Subversion code, it's not clear to me
      if they should be parent/child or not. */
+  /* Hmmm... aren't paths assumed to be canonical in this function?
+   * How can "foo///bar" even happen in the paths are canonical? */
   for (i = 0; path1[i] && path2[i]; i++)
     if (path1[i] != path2[i])
       return NULL;
 
+  /* FIXME: This comment does not really match
+   * the checks made in the code it refers to: */
   /* There are two cases that are parent/child
           ...      path1[i] == '\0'
           .../foo  path2[i] == '/'
@@ -511,12 +515,31 @@ is_child(path_type_t type, const char *path1, const char *path2,
           || ((type == type_dirent) && path1[i - 1] == ':')
 #endif /* WIN32 or Cygwin */
            )
-        if (path2[i] == '/')
-          return NULL;
-        else
-          return pool ? apr_pstrdup(pool, path2 + i) : path2 + i;
+        {
+          if (path2[i] == '/')
+            /* .../
+             * ..../
+             *     i   */
+            return NULL;
+          else
+            /* .../
+             * .../foo
+             *     i    */
+            return pool ? apr_pstrdup(pool, path2 + i) : path2 + i;
+        }
       else if (path2[i] == '/')
-        return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
+        {
+          if (path2[i + 1])
+            /* ...
+             * .../foo
+             *    i    */
+            return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
+          else
+            /* ...
+             * .../
+             *    i    */
+            return NULL;
+        }
     }
 
   /* Otherwise, path2 isn't a child. */
