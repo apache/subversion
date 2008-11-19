@@ -7254,7 +7254,6 @@ calculate_left_hand_side(const char **url_left,
                                  full_url,
                                  filtered_mergeinfo_catalog_string->data);
     }
-  return SVN_NO_ERROR;
 }
 
 /* A baton for get_subtree_mergeinfo_walk_cb. */
