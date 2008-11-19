@@ -488,7 +488,7 @@ is_child(path_type_t type, const char *path1, const char *path2,
      appear to arise in the current Subversion code, it's not clear to me
      if they should be parent/child or not. */
   /* Hmmm... aren't paths assumed to be canonical in this function?
-   * How can "foo///bar" even happen in the paths are canonical? */
+   * How can "foo///bar" even happen if the paths are canonical? */
   for (i = 0; path1[i] && path2[i]; i++)
     if (path1[i] != path2[i])
       return NULL;
