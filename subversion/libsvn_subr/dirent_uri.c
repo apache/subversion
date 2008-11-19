@@ -61,7 +61,7 @@ typedef enum {
 static const char *
 internal_style(path_type_t type, const char *path, apr_pool_t *pool)
 {
-  if ('/' != SVN_PATH_LOCAL_SEPARATOR)
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
     {
       char *p = apr_pstrdup(pool, path);
       path = p;
@@ -71,6 +71,7 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
         if (*p == SVN_PATH_LOCAL_SEPARATOR)
           *p = '/';
     }
+#endif
 
   return type == type_uri ? svn_uri_canonicalize(path, pool)
                           : svn_dirent_canonicalize(path, pool);
@@ -101,7 +102,7 @@ local_style(path_type_t type, const char *path, apr_pool_t *pool)
   if (type == type_uri && svn_path_is_url(path))
     return apr_pstrdup(pool, path);
 
-  if ('/' != SVN_PATH_LOCAL_SEPARATOR)
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
     {
       char *p = apr_pstrdup(pool, path);
       path = p;
@@ -111,6 +112,7 @@ local_style(path_type_t type, const char *path, apr_pool_t *pool)
         if (*p == '/')
           *p = SVN_PATH_LOCAL_SEPARATOR;
     }
+#endif
 
   return path;
 }
