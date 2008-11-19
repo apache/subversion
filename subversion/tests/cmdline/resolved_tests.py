@@ -109,7 +109,7 @@ def resolved_on_wc_root(sbox):
   expected_status.tweak('iota', 'A/B', 'A/D/gamma',
                         status='D ', treeconflict='C', wc_rev='1')
   expected_status.tweak('A/B/lambda', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
-                        'A/B/F', status='D ')
+                        'A/B/F', status='D ', wc_rev=1)
 
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,
