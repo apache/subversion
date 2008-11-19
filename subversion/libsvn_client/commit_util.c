@@ -869,6 +869,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *target;
+      svn_error_t *err;
 
       svn_pool_clear(subpool);
       /* Add the relative portion of our full path (if there are no
@@ -884,8 +885,27 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
                                         target, subpool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                     subpool));
+
+      err = svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
+                                    subpool);
+      /* If a target of the commit is a tree-conflicted node that
+       * has no entry (e.g. locally deleted), issue a proper tree-
+       * conflicts error instead of a "not under version control". */
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+        {
+          svn_wc_conflict_description_t *conflict = NULL;
+          svn_wc__get_tree_conflict(&conflict, target, adm_access, pool);
+          if (conflict != NULL)
+            {
+              svn_error_clear(err);
+              return svn_error_createf(
+                       SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                       _("Aborting commit: '%s' remains in conflict"),
+                       svn_path_local_style(conflict->path, pool));
+            }
+        }
+      SVN_ERR(err);
+
       if (! entry->url)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Entry for '%s' has no URL"),
@@ -899,7 +919,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
           const char *parent, *base_name;
           svn_wc_adm_access_t *parent_access;
           const svn_wc_entry_t *p_entry = NULL;
-          svn_error_t *err;
 
           svn_path_split(target, &parent, &base_name, subpool);
           err = svn_wc_adm_retrieve(&parent_access, parent_dir,
