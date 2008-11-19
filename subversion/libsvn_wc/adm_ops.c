@@ -2310,8 +2310,10 @@ revert_internal(const char *path,
           = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
 
         /* Loop through all the tree conflict victims */
-        SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry,
-                                                       path, pool));
+        SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
+                                            entry->tree_conflict_data,
+                                            path, pool));
+
         for (i = 0; i < conflicts->nelts; i++)
           {
             svn_wc_conflict_description_t *conflict

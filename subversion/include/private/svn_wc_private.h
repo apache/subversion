@@ -203,23 +203,21 @@ svn_wc__del_tree_conflict(const char *victim_path,
                           apr_pool_t *pool);
 
 /*
- * Read tree conflict descriptions from DIR_ENTRY.
- * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by CONFLICTS.
- * DIR_ENTRY must be a "THIS_DIR" entry.
- * DIR_PATH is the WC path to the entry. The conflicts read are the
- * tree-conflicts on the immediate child nodes of DIR_PATH, and thus
- * also of DIR_ENTRY.
- * Do all allocations in @a pool.
+ * Read tree conflict descriptions from @a conflict_data.  Append
+ * pointers to newly allocated svn_wc_conflict_description_t objects to
+ * the array pointed to by @a conflicts.  @a dir_path is the path to the
+ * working copy directory whose conflicts are being read.  The conflicts
+ * read are the tree conflicts on the immediate child nodes of @a
+ * dir_path.  Do all allocations in @a pool.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                       const svn_wc_entry_t *dir_entry,
-                                       const char *dir_path,
-                                       apr_pool_t *pool);
-
+svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
+                            const char *conflict_data,
+                            const char *dir_path,
+                            apr_pool_t *pool);
+ 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

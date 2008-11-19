@@ -297,22 +297,22 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 }
 
 svn_error_t *
-svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                       const svn_wc_entry_t *dir_entry,
-                                       const char *dir_path,
-                                       apr_pool_t *pool)
+svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
+                            const char *conflict_data,
+                            const char *dir_path,
+                            apr_pool_t *pool)
 {
   const char *start, *end;
   svn_wc_conflict_description_t *conflict = NULL;
 
-  if (dir_entry->tree_conflict_data == NULL)
+  if (conflict_data == NULL)
     {
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR_ASSERT(conflicts);
+  SVN_ERR_ASSERT(*conflicts);
 
-  start = dir_entry->tree_conflict_data;
+  start = conflict_data;
   end = start + strlen(start);
 
   while (start != NULL && start <= end) /* Yes, '<=', because 'start == end'
@@ -321,7 +321,7 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
     {
       SVN_ERR(read_one_tree_conflict(&conflict, &start, end, dir_path, pool));
       if (conflict != NULL)
-        APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+        APR_ARRAY_PUSH(*conflicts, svn_wc_conflict_description_t *) = conflict;
     }
 
   if (start != NULL)
@@ -339,9 +339,9 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
  * in a unit test in tests/libsvn_wc/, so it isn't.
  */
 svn_error_t *
-svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
-                                      svn_wc_entry_t *dir_entry,
-                                      apr_pool_t *pool)
+svn_wc__write_tree_conflicts(char **conflict_data,
+                             apr_array_header_t *conflicts,
+                             apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
   const char *path;
@@ -443,7 +443,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);
     }
 
-  dir_entry->tree_conflict_data = apr_pstrdup(pool, buf->data);
+  *conflict_data = apr_pstrdup(pool, buf->data);
 
   return SVN_NO_ERROR;
 }
@@ -536,6 +536,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
   const char *dir_path;
   const svn_wc_entry_t *entry;
   apr_array_header_t *conflicts;
+  char *conflict_data;
   svn_wc_entry_t tmp_entry;
   const char *victim_basename = svn_path_basename(victim_path, pool);
 
@@ -551,8 +552,8 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
-                                                 pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      dir_path, pool));
 
   /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then remove it. */
@@ -576,8 +577,9 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
         }
 
       /* Rewrite the entry. */
-      SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry,
-                                                    pool));
+      SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
+      tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
+
       SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
                                          &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
@@ -596,6 +598,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
   const char *dir_path;
   const svn_wc_entry_t *entry;
   apr_array_header_t *conflicts;
+  char *conflict_data;
   svn_wc_entry_t tmp_entry;
 
   /* Make sure the node is a directory.
@@ -606,8 +609,8 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
-                                                 pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      dir_path, pool));
 
   /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then the working copy has been corrupted. */
@@ -619,7 +622,9 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 
   APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description_t *) = conflict;
 
-  SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry, pool));
+  SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
+  tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
+
   SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
@@ -672,8 +677,8 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc_entry(&entry, parent_path, parent_adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, parent_path,
-                                                 pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      parent_path, pool));
 
   *tree_conflict = NULL;
   for (i = 0; i < conflicts->nelts; i++)
