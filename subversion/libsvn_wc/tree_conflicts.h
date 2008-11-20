@@ -109,6 +109,7 @@
  *  node_kind:
  */
 
+#define SVN_WC__NODE_NONE "none"
 #define SVN_WC__NODE_FILE "file"
 #define SVN_WC__NODE_DIR "dir"
 
