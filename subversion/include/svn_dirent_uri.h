@@ -91,7 +91,7 @@ svn_uri_local_style(const char *uri,
  * empty string is returned.
  *
  * If the @a component is an absolute dirent, then it is copied and returned.
- * Exactly one slash character ('/') is used to joined the components,
+ * Exactly one slash character ('/') is used to join the components,
  * accounting for any trailing slash in @a base, except on Windows when
  * @a base is "X:".
  *
