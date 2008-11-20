@@ -703,6 +703,7 @@ AS_HELP_STRING([--enable-debug],
     #       the CFLAGS/CXXFLAGS munging.
 ])
 
+
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
                [Turn on debugging and very strict compile-time warnings]),
@@ -713,8 +714,33 @@ AS_HELP_STRING([--enable-maintainer-mode],
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
         CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+
+        dnl some additional flags that can be handy for an occasional review,
+        dnl but throw too many warnings in svn code, of too little importance,
+        dnl to keep these enabled. Remove the "dnl" to do a run with these
+        dnl switches enabled.
+        dnl CFLAGS="$CFLAGS -Wswitch-enum -Wswitch-default"
+
+        CFLAGS_KEEP="$CFLAGS"
+        AC_LANG_PUSH([C])
+
+        CFLAGS="$CFLAGS_KEEP -Wextra-tokens"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="$CFLAGS_KEEP -Wnewline-eof"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="$CFLAGS_KEEP -Wshorten-64-to-32"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="$CFLAGS_KEEP -Wold-style-definition"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        AC_LANG_POP([C])
+        CFLAGS="$CFLAGS_KEEP"
       fi
     fi
 ])
