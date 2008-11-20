@@ -88,6 +88,66 @@ write_format(const char *path,
   return svn_io_set_file_read_only(path, FALSE, pool);
 }
 
+/* Return the expected contents of "iota" in revision REV. */
+static const char *
+get_rev_contents(svn_revnum_t rev, apr_pool_t *pool)
+{
+  /* Toss in a bunch of magic numbers for spice. */
+  apr_int64_t num = ((rev * 1234353 + 4358) * 4583 + ((rev % 4) << 1)) / 42;
+  return apr_psprintf(pool, "%" APR_INT64_T_FMT "\n", num);
+}
+
+/* Create a packed filesystem in DIR.  Set the shard size to SHARD_SIZE
+   and create MAX_REV number of revisions.  Use POOL for allocations. */
+static svn_error_t *
+create_packed_filesystem(const char *dir,
+                         svn_test_opts_t *opts,
+                         int max_rev,
+                         int shard_size,
+                         apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t after_rev;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* Create a filesystem, then close it */
+  SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
+  svn_pool_destroy(subpool);
+
+  subpool = svn_pool_create(pool);
+
+  /* Rewrite the format file */
+  SVN_ERR(write_format(dir, SVN_FS_FS__MIN_PACKED_FORMAT,
+                       shard_size, subpool));
+
+  /* Reopen the filesystem */
+  SVN_ERR(svn_fs_open(&fs, dir, NULL, subpool));
+
+  /* Revision 1: the Greek tree */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+
+  /* Revisions 2-11: A bunch of random changes. */
+  while (after_rev < max_rev + 1)
+    {
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, subpool));
+      SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+      SVN_ERR(svn_test__set_file_contents(txn_root, "iota",
+                                          get_rev_contents(after_rev, subpool),
+                                          subpool));
+      SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+    }
+  svn_pool_destroy(subpool);
+
+  /* Now pack the FS */
+  return svn_fs_pack(dir, NULL, NULL, pool);
+}
+
 /* Pack a filesystem.  */
 #define REPO_NAME "test-repo-fsfs-pack"
 #define SHARD_SIZE 7
@@ -98,57 +158,17 @@ pack_filesystem(const char **msg,
                 svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t after_rev;
   int i;
   svn_node_kind_t kind;
   const char *pack_path;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   *msg = "pack a FSFS filesystem";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* Create a filesystem, then close it */
-  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, subpool));
-  svn_pool_destroy(subpool);
-
-  subpool = svn_pool_create(pool);
-
-  /* Rewrite the format file */
-  SVN_ERR(write_format(REPO_NAME, SVN_FS_FS__MIN_PACKED_FORMAT,
-                       SHARD_SIZE, subpool));
-
-  /* Reopen the filesystem */
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
-
-  /* Revision 1: the Greek tree */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
-
-  /* Revisions 2-11: A bunch of random changes. */
-  while (after_rev < MAX_REV + 1)
-    {
-      /* Toss in a bunch of magic numbers for spice. */
-      apr_int64_t num = ((after_rev * 1234353 + 4358) 
-                                * 4583 + ((after_rev % 4) << 1)) / 42;
-      const char *str = apr_psprintf(pool, "%" APR_INT64_T_FMT "\n", num);
-
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, subpool));
-      SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-      SVN_ERR(svn_test__set_file_contents(txn_root, "iota", str, subpool));
-      SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
-    }
-  svn_pool_destroy(subpool);
-
-  /* Now pack the FS */
-  SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, pool));
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
+                                   pool));
 
   /* Check to see that the pack files exist, and that the rev directories
      don't. */
@@ -190,7 +210,49 @@ pack_filesystem(const char **msg,
   return SVN_NO_ERROR;
 }
 #undef REPO_NAME
+#undef SHARD_SIZE
+#undef MAX_REV
 
+
+/* Check reading from a packed filesystem. */
+#define REPO_NAME "test-repo-read-packed-fs"
+static svn_error_t *
+read_packed_fs(const char **msg,
+               svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_stream_t *rstream;
+  svn_stringbuf_t *rstring;
+  svn_revnum_t i;
+
+  *msg = "read from a packed FSFS filesystem";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+
+  for (i = 0; i < 12; i++)
+    {
+      svn_fs_root_t *rev_root;
+      svn_stringbuf_t *sb;
+
+      SVN_ERR(svn_fs_revision_root(&rev_root, fs, i, pool));
+      SVN_ERR(svn_fs_file_contents(&rstream, rev_root, "iota", pool));
+      SVN_ERR(svn_test__stream_to_string(&rstring, rstream, pool));
+
+      sb = svn_stringbuf_create(get_rev_contents(i, pool), pool);
+      if (! svn_stringbuf_compare(rstring, sb))
+        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                 "Bad data in revision %ld.", i);
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
 
 /* ------------------------------------------------------------------------ */
 
@@ -200,5 +262,6 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(pack_filesystem),
+    SVN_TEST_XFAIL(read_packed_fs),
     SVN_TEST_NULL
   };
