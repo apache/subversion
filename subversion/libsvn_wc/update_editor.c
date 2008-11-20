@@ -1391,18 +1391,21 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
                     svn_wc_conflict_action_t action,
                     apr_pool_t *pool)
 {
+  svn_node_kind_t their_node_kind = svn_node_unknown;
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
 
   switch (action)
     {
     case svn_wc_conflict_action_edit:
       /* Use case 1: Modifying a locally-deleted item. */
+      /* ### their_node_kind = ?; */
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
         reason = svn_wc_conflict_reason_deleted;
       break;
 
     case svn_wc_conflict_action_add:
+      /* ### their_node_kind = ?; */
       /* Use case "3.5": Adding a locally-added item.
        *
        * When checking out a file-external, add_file() is called twice:
@@ -1415,6 +1418,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
 
     case svn_wc_conflict_action_delete:
       /* Use case 3: Deleting a locally-deleted item. */
+      their_node_kind = svn_node_none;
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
         reason = svn_wc_conflict_reason_deleted;
@@ -1467,6 +1471,22 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
         pool);
       conflict->action = action;
       conflict->reason = reason;
+
+      /* ### TODO: For Switch, "older" URL != "their" URL. */
+      /* ### TODO: Extract repos_url and path_in_repos from the whole URL. */
+      conflict->older_version.repos_url = NULL /* ### */;
+      conflict->older_version.peg_rev = entry->revision;
+      conflict->older_version.path_in_repos = entry->url /* ### */;
+      conflict->older_version.node_kind =
+        (entry->schedule == svn_wc_schedule_delete) ? svn_node_none
+        : entry->kind;
+      /* entry->kind is both base kind and working kind, because schedule
+       * replace-by-different-kind is not supported. */
+
+      conflict->their_version.repos_url = NULL /* ### */;
+      conflict->their_version.peg_rev = *eb->target_revision;
+      conflict->their_version.path_in_repos = entry->url /* ### */;
+      conflict->their_version.node_kind = their_node_kind;
 
       /* Ensure 'log_accum' is non-null. svn_wc__loggy_add_tree_conflict()
        * would otherwise quietly set it to point to a newly allocated buffer

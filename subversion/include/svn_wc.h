@@ -1168,6 +1168,27 @@ typedef enum svn_wc_operation_t
 } svn_wc_operation_t;
 
 
+/** Info about one of the conflicting versions of a node. Each field may
+ * have its respective null/invalid/unknown value if the corresponding
+ * information is not relevant or not available. */
+typedef struct svn_wc_conflict_node_version_t
+{
+  /* Where to find this node version in a repository */
+  const char *repos_url;
+  /* ### Also? repos_uuid; */
+  svn_revnum_t peg_rev;
+  const char *path_in_repos;
+
+  /* Info about this node */
+  svn_node_kind_t node_kind;  /* 'file' or 'dir' or 'none' */
+
+  /* ### Also? ... */
+  /* Where to find a local copy of the node */
+  /* const char *content_cache_path; */
+  /* const char *props_cache_path; */
+} svn_wc_conflict_version_t;
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
@@ -1189,7 +1210,8 @@ typedef struct svn_wc_conflict_description_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
-  /** The node type of the path being operated on */
+  /** The node type of the path being operated on (for a tree conflict,
+   *  ### which version?) */
   svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
@@ -1210,7 +1232,8 @@ typedef struct svn_wc_conflict_description_t
 
   /** If not NULL, an open working copy access baton to either the
    *  path itself (if @c path is a directory), or to the parent
-   *  directory (if @c path is a file.) */
+   *  directory (if @c path is a file.) For a tree conflict,
+   *  ### to what? */
   svn_wc_adm_access_t *access;
 
   /** The action being attempted on the conflicted node or property.
@@ -1254,6 +1277,14 @@ typedef struct svn_wc_conflict_description_t
    * @since New in 1.6.
    */
   svn_wc_operation_t operation;
+
+  /** Info on the "merge-left source" or "older" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t older_version;
+
+  /** Info on the "merge-right source" or "their" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t their_version;
 
 } svn_wc_conflict_description_t;
 
