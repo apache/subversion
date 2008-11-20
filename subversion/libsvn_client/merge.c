@@ -330,7 +330,7 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  * ADM_ACCESS corresponds to the tree-conflicted directory
  * This directory must be the victim's parent directory.
  *
- * NODE_KIND must the the node kind of "old" and "theirs" and "mine";
+ * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
  * this function cannot cope with node kind clashes.
  * ACTION and REASON correspond to the fields
  * of the same names in svn_wc_tree_conflict_description_t.
