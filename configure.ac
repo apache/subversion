@@ -715,7 +715,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
       enable_debugging=yes
       if test "$GCC" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
         CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
 
         dnl some additional flags that can be handy for an occasional review,
@@ -734,6 +734,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         CFLAGS="$CFLAGS_KEEP -Wshorten-64-to-32"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="$CFLAGS_KEEP -Wold-style-definition"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         AC_LANG_POP([C])
