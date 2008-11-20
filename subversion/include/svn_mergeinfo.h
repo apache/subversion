@@ -212,7 +212,7 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the diff,
- * @see svn_mergeinfo_diff().
+ * as described for svn_mergeinfo_diff().
  *
  * @since New in 1.5.
  */
@@ -228,7 +228,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  *
  * When intersecting rangelists are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
- * operands, @see svn_mergeinfo_merge().
+ * operands: see svn_mergeinfo_merge().
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain

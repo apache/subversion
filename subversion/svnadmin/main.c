@@ -1762,6 +1762,4 @@ subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   abort();
-
-  return SVN_NO_ERROR;
 }

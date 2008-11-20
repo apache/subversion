@@ -10,6 +10,7 @@
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "private/svn_wc_private.h"
 #include "../svn_test.h"
 #include "../../libsvn_wc/tree_conflicts.h"
 
@@ -33,18 +34,17 @@ test_read_tree_conflict(const char **msg,
                         svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
-  svn_wc_entry_t entry;
   svn_wc_conflict_description_t *conflict;
   apr_array_header_t *conflicts;
   svn_wc_conflict_description_t *exp_conflict;
-
+  const char *tree_conflict_data;
 
   *msg = "read 1 tree conflict";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  entry.tree_conflict_data = "Foo.c:file:update:deleted:edited";
+  tree_conflict_data = "Foo.c:file:update:deleted:edited";
 
   exp_conflict = apr_pcalloc(pool,
                                   sizeof(svn_wc_conflict_description_t));
@@ -55,7 +55,8 @@ test_read_tree_conflict(const char **msg,
   exp_conflict->reason       = svn_wc_conflict_reason_edited;
 
   conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, &entry, "", pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "", 
+                                      pool));
 
   conflict = APR_ARRAY_IDX(conflicts, 0,
       svn_wc_conflict_description_t *);
@@ -76,7 +77,7 @@ test_read_2_tree_conflicts(const char **msg,
                            svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
-  svn_wc_entry_t entry;
+  const char *tree_conflict_data;
   svn_wc_conflict_description_t *conflict1, *conflict2;
   apr_array_header_t *conflicts;
   svn_wc_conflict_description_t *exp_conflict1, *exp_conflict2;
@@ -86,7 +87,7 @@ test_read_2_tree_conflicts(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  entry.tree_conflict_data =
+  tree_conflict_data =
     "Foo.c:file:update:deleted:edited|Bar.h:file:update:edited:deleted";
 
   exp_conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
@@ -104,7 +105,8 @@ test_read_2_tree_conflicts(const char **msg,
   exp_conflict2->reason       = svn_wc_conflict_reason_deleted;
 
   conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, &entry, "", pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "", 
+                                      pool));
 
   conflict1 = APR_ARRAY_IDX(conflicts, 0, svn_wc_conflict_description_t *);
   if ((conflict1->node_kind != exp_conflict1->node_kind) ||
@@ -163,7 +165,7 @@ test_read_invalid_tree_conflicts(const char **msg,
                                          apr_pool_t *pool)
 {
   int i;
-  svn_wc_entry_t entry;
+  const char *tree_conflict_data;
   apr_array_header_t *conflicts;
   svn_error_t *err;
 
@@ -175,8 +177,9 @@ test_read_invalid_tree_conflicts(const char **msg,
   conflicts = apr_array_make(pool, 16, sizeof(svn_wc_conflict_description_t *));
   for (i = 0; broken_tree_conflict_test_data[i] != NULL; i++)
     {
-      entry.tree_conflict_data = broken_tree_conflict_test_data[i];
-      err = svn_wc__read_tree_conflicts_from_entry(conflicts, &entry, "", pool);
+      tree_conflict_data = broken_tree_conflict_test_data[i];
+      err = svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "", 
+                                        pool);
       if (err == SVN_NO_ERROR)
         return fail(pool,
                     "Error in broken tree conflict data was not detected");
@@ -192,11 +195,11 @@ test_write_tree_conflict(const char **msg,
                          apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
+  char *tree_conflict_data;
   apr_array_header_t *conflicts;
-  svn_wc_entry_t *entry;
   const char *expected;
 
-  *msg = "update an entry with 1 tree conflict";
+  *msg = "write 1 tree conflict";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -214,11 +217,9 @@ test_write_tree_conflict(const char **msg,
 
   expected = "Foo.c:file:update:deleted:edited";
 
-  entry = apr_pcalloc(pool, sizeof(svn_wc_entry_t));
+  SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
-  SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool));
-
-  if (strcmp(expected, entry->tree_conflict_data) != 0)
+  if (strcmp(expected, tree_conflict_data) != 0)
     return fail(pool, "Unexpected text from tree conflict");
 
   return SVN_NO_ERROR;
@@ -232,10 +233,10 @@ test_write_2_tree_conflicts(const char **msg,
 {
   svn_wc_conflict_description_t *conflict1, *conflict2;
   apr_array_header_t *conflicts;
-  svn_wc_entry_t *entry;
+  char *tree_conflict_data;
   const char *expected;
 
-  *msg = "update an entry with 2 tree conflicts";
+  *msg = "write 2 tree conflicts";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -262,11 +263,9 @@ test_write_2_tree_conflicts(const char **msg,
   expected =
     "Foo.c:file:update:deleted:edited|Bar.h:file:update:edited:deleted";
 
-  entry = apr_pcalloc(pool, sizeof(svn_wc_entry_t));
+  SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
-  SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool));
-
-  if (strcmp(expected, entry->tree_conflict_data) != 0)
+  if (strcmp(expected, tree_conflict_data) != 0)
     return fail(pool, "Unexpected text from tree conflict");
 
   return SVN_NO_ERROR;
@@ -280,7 +279,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 {
   svn_wc_conflict_description_t *conflict;
   apr_array_header_t *conflicts;
-  svn_wc_entry_t *entry;
+  char *tree_conflict_data;
   svn_error_t *err;
 
   *msg = "detect broken tree conflict data while writing";
@@ -290,8 +289,6 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   /* Configure so that we can test for errors caught by SVN_ERR_ASSERT. */
   svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
-
-  entry = apr_pcalloc(pool, sizeof(svn_wc_entry_t));
 
   /* victim path */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
@@ -305,7 +302,7 @@ test_write_invalid_tree_conflicts(const char **msg,
       sizeof(svn_wc_conflict_description_t *));
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  err = svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool);
+  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect blank conflict victim path");
@@ -322,7 +319,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  err = svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool);
+  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict node_kind");
@@ -339,7 +336,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  err = svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool);
+  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict operation");
@@ -356,7 +353,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  err = svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool);
+  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict action");
@@ -373,7 +370,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  err = svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool);
+  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict reason");

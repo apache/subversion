@@ -47,7 +47,6 @@ abort_on_pool_failure(int retcode)
      And we don't have any of it... */
   printf("Out of memory - terminating application.\n");
   abort();
-  return -1; /* prevent compiler warnings */
 }
 
 

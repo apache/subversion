@@ -45,11 +45,71 @@ advance_on_match(const char **input, const char *token)
     return FALSE;
 }
 
+/* Ensure the next character at position *START is a field separator, and
+ * advance *START past it. */
+static svn_error_t *
+read_field_separator(const char **start,
+                     const char *end)
+{
+  if (*start >= end || **start != field_separator)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+             _("Missing field delimiter in tree conflict description"));
+
+  (*start)++;
+  return SVN_NO_ERROR;
+}
+
+/* Parse a string field out of the data pointed to by *START. Set *STR to a
+ * copy of the unescaped string, allocated in POOL. The string may be empty.
+ * Stop reading at an unescaped field- or description delimiter, and never
+ * read past END.
+ * After reading, make *START point to the character after the field.
+ */
+static svn_error_t *
+read_string_field(const char **str,
+                  const char **start,
+                  const char *end,
+                  apr_pool_t *pool)
+{
+  svn_stringbuf_t *new_str = svn_stringbuf_create("", pool);
+
+  while (*start < end)
+    {
+      /* The field or description separators may occur inside the
+       * string if they are escaped. */
+      if (**start == escape_char)
+        {
+          (*start)++;
+
+          if (! (*start < end))
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+              _("Unfinished escape sequence in tree conflict description"));
+
+          if (**start != desc_separator
+              && **start != field_separator
+              && **start != escape_char)
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+              _("Illegal escaped character in tree conflict description"));
+        }
+      else
+        {
+          if (**start == field_separator
+              || **start == desc_separator)
+            break;
+        }
+
+      svn_stringbuf_appendbytes(new_str, *start, 1);
+      (*start)++;
+    }
+
+  *str = new_str->data;
+  return SVN_NO_ERROR;
+}
+
 /* Parse the 'victim path' field pointed to by *START. Modify the 'path'
  * field of *CONFLICT by appending the victim name to its existing value.
  * Stop reading at a field delimiter and never read past END.
- * After reading, make *START point to the character after
- * the field delimiter.
+ * After reading, make *START point to the character after the field.
  * Do all allocations in POOL.
  */
 static svn_error_t *
@@ -58,63 +118,16 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
                  const char *end,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *victim_path;
-  svn_boolean_t escape = FALSE;
+  const char *victim_basename;
 
-  if (*start >= end)
-      return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("Expected tree conflict data but got none"));
+  SVN_ERR(read_string_field(&victim_basename, start, end, pool));
 
-  victim_path = svn_stringbuf_create("", pool);
-
-  while (*start < end)
-  {
-    /* The field or description separators may occur inside the
-     * victim_path if they are escaped. */
-    if (! escape && **start == escape_char)
-      {
-        escape = TRUE;
-        (*start)++;
-
-        if (! (*start < end))
-          return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-            _("Unexpected end of tree conflict description, within escape "
-              "sequence in 'victim_path'"));
-
-        if (**start != desc_separator
-            && **start != field_separator
-            && **start != escape_char)
-          return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-            _("Illegal escaped character in 'victim_path' of tree "
-              "conflict description"));
-      }
-
-    if (! escape)
-      {
-        if (**start == field_separator)
-          break;
-        else if (**start == desc_separator)
-          return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Unescaped description delimiter inside 'victim_path' "
-               "in tree conflict description"));
-      }
-
-    svn_stringbuf_appendbytes(victim_path, *start, 1);
-    escape = FALSE;
-    (*start)++;
-  }
-
-  if (victim_path->len == 0)
+  if (victim_basename[0] == '\0')
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Empty 'victim_path' in tree conflict description"));
+                            _("Empty 'victim' field in tree conflict "
+                              "description"));
 
-  if (**start == field_separator)
-    (*start)++;
-  else
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-        _("No delimiter after 'victim_path' in tree conflict description"));
-
-  conflict->path = svn_path_join(conflict->path, victim_path->data, pool);
+  conflict->path = svn_path_join(conflict->path, victim_basename, pool);
 
   return SVN_NO_ERROR;
 }
@@ -122,8 +135,7 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
 /* Parse the 'node_kind' field pointed to by *START into the
  * the tree conflict descriptor pointed to by DESC.
  * Don't read further than END.
- * After reading, make *START point to the character after
- * the field delimiter.
+ * After reading, make *START point to the character after the field.
  */
 static svn_error_t *
 read_node_kind(svn_wc_conflict_description_t *conflict,
@@ -142,19 +154,13 @@ read_node_kind(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'node_kind' field in tree conflict description"));
 
-  if (*start >= end || **start != field_separator)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-            _("No delimiter after 'node_kind' in tree conflict description"));
-
-  (*start)++;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'operation' field pointed to by *START into the
  * the tree conflict descriptor pointed to by DESC.
  * Don't read further than END.
- * After reading, make *START point to the character after
- * the field delimiter.
+ * After reading, make *START point to the character after the field.
  */
 static svn_error_t *
 read_operation(svn_wc_conflict_description_t *conflict,
@@ -175,19 +181,13 @@ read_operation(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'operation' field in tree conflict description"));
 
-  if (*start >= end || **start != field_separator)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-            _("No delimiter after 'operation' in tree conflict description"));
-
-  (*start)++;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'action' field pointed to by *START into the
  * the tree conflict descriptor pointed to by DESC.
  * Don't read further than END.
- * After reading, make *START point to the character after
- * the field delimiter.
+ * After reading, make *START point to the character after the field.
  */
 static svn_error_t *
 read_action(svn_wc_conflict_description_t *conflict,
@@ -208,17 +208,13 @@ read_action(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'action' field in tree conflict description"));
 
-  if (*start >= end || **start != field_separator)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("No delimiter after 'action' in tree conflict description"));
-
-  (*start)++;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'reason' field pointed to by *START into the
  * the tree conflict descriptor pointed to by DESC.
  * Don't read further than END.
+ * After reading, make *START point to the character after the field.
  */
 static svn_error_t *
 read_reason(svn_wc_conflict_description_t *conflict,
@@ -243,9 +239,6 @@ read_reason(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'reason' field in tree conflict description"));
 
-  /* This was the last field to parse, leave *START alone.
-   * It should already point to a description separator.
-   */
   return SVN_NO_ERROR;
 }
 
@@ -274,9 +267,13 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 
   /* Each of these modifies *START ! */
   SVN_ERR(read_victim_path(*conflict, start, end, pool));
+  SVN_ERR(read_field_separator(start, end));
   SVN_ERR(read_node_kind(*conflict, start, end));
+  SVN_ERR(read_field_separator(start, end));
   SVN_ERR(read_operation(*conflict, start, end));
+  SVN_ERR(read_field_separator(start, end));
   SVN_ERR(read_action(*conflict, start, end));
+  SVN_ERR(read_field_separator(start, end));
   SVN_ERR(read_reason(*conflict, start, end));
 
   /* *START should now point to a description separator
@@ -297,22 +294,22 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 }
 
 svn_error_t *
-svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                       const svn_wc_entry_t *dir_entry,
-                                       const char *dir_path,
-                                       apr_pool_t *pool)
+svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
+                            const char *conflict_data,
+                            const char *dir_path,
+                            apr_pool_t *pool)
 {
   const char *start, *end;
   svn_wc_conflict_description_t *conflict = NULL;
 
-  if (dir_entry->tree_conflict_data == NULL)
+  if (conflict_data == NULL)
     {
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR_ASSERT(conflicts);
+  SVN_ERR_ASSERT(*conflicts);
 
-  start = dir_entry->tree_conflict_data;
+  start = conflict_data;
   end = start + strlen(start);
 
   while (start != NULL && start <= end) /* Yes, '<=', because 'start == end'
@@ -321,7 +318,7 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
     {
       SVN_ERR(read_one_tree_conflict(&conflict, &start, end, dir_path, pool));
       if (conflict != NULL)
-        APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+        APR_ARRAY_PUSH(*conflicts, svn_wc_conflict_description_t *) = conflict;
     }
 
   if (start != NULL)
@@ -334,39 +331,49 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
   return SVN_NO_ERROR;
 }
 
+/* Append to BUF the string STR, escaping it as necessary. */
+static void
+write_string_field(svn_stringbuf_t *buf,
+                   const char *str)
+{
+  int len = strlen(str);
+  int i;
+
+  /* Escape separator chars. */
+  for (i = 0; i < len; i++)
+    {
+      if ((str[i] == field_separator)
+          || (str[i] == desc_separator)
+          || (str[i] == escape_char))
+        {
+          svn_stringbuf_appendbytes(buf, &escape_char, 1);
+        }
+      svn_stringbuf_appendbytes(buf, &str[i], 1);
+    }
+}
+
 /*
  * This function could be static, but we need to link to it
  * in a unit test in tests/libsvn_wc/, so it isn't.
  */
 svn_error_t *
-svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
-                                      svn_wc_entry_t *dir_entry,
-                                      apr_pool_t *pool)
+svn_wc__write_tree_conflicts(char **conflict_data,
+                             apr_array_header_t *conflicts,
+                             apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-  const char *path;
-  int i, j, len;
+  int i;
 
   for (i = 0; i < conflicts->nelts; i++)
     {
+      const char *path;
       const svn_wc_conflict_description_t *conflict =
           APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
-      path = svn_path_basename(conflict->path, pool);
-      len = strlen(path);
-      SVN_ERR_ASSERT(len > 0);
-
       /* Escape separator chars while writing victim path. */
-      for (j = 0; j < len; j++)
-        {
-          if ((path[j] == field_separator) ||
-              (path[j] == desc_separator) ||
-              (path[j] == escape_char))
-            {
-              svn_stringbuf_appendbytes(buf, &escape_char, 1);
-            }
-          svn_stringbuf_appendbytes(buf, &(path[j]), 1);
-        }
+      path = svn_path_basename(conflict->path, pool);
+      SVN_ERR_ASSERT(strlen(path) > 0);
+      write_string_field(buf, path);
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
@@ -443,7 +450,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);
     }
 
-  dir_entry->tree_conflict_data = apr_pstrdup(pool, buf->data);
+  *conflict_data = apr_pstrdup(pool, buf->data);
 
   return SVN_NO_ERROR;
 }
@@ -536,6 +543,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
   const char *dir_path;
   const svn_wc_entry_t *entry;
   apr_array_header_t *conflicts;
+  char *conflict_data;
   svn_wc_entry_t tmp_entry;
   const char *victim_basename = svn_path_basename(victim_path, pool);
 
@@ -551,8 +559,8 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
-                                                 pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      dir_path, pool));
 
   /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then remove it. */
@@ -576,8 +584,9 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
         }
 
       /* Rewrite the entry. */
-      SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry,
-                                                    pool));
+      SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
+      tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
+
       SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
                                          &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
@@ -596,6 +605,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
   const char *dir_path;
   const svn_wc_entry_t *entry;
   apr_array_header_t *conflicts;
+  char *conflict_data;
   svn_wc_entry_t tmp_entry;
 
   /* Make sure the node is a directory.
@@ -606,8 +616,8 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
-                                                 pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      dir_path, pool));
 
   /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then the working copy has been corrupted. */
@@ -619,7 +629,9 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 
   APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description_t *) = conflict;
 
-  SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry, pool));
+  SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
+  tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
+
   SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
@@ -672,8 +684,8 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc_entry(&entry, parent_path, parent_adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, parent_path,
-                                                 pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      parent_path, pool));
 
   *tree_conflict = NULL;
   for (i = 0; i < conflicts->nelts; i++)
