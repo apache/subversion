@@ -1232,8 +1232,10 @@ typedef struct svn_wc_conflict_description_t
 
   /** If not NULL, an open working copy access baton to either the
    *  path itself (if @c path is a directory), or to the parent
-   *  directory (if @c path is a file.) For a tree conflict,
-   *  ### to what? */
+   *  directory (if @c path is a file.)
+   *  For a tree conflict, this will always be an access baton
+   *  to the parent directory of the path, even if the path is
+   *  a directory. */
   svn_wc_adm_access_t *access;
 
   /** The action being attempted on the conflicted node or property.
