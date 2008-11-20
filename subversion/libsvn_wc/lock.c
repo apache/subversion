@@ -1704,7 +1704,7 @@ svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
 }
 
 
-/* Extend the scope of the svn_adm_access_t * passed in as WALK_BATON
+/* Extend the scope of the svn_wc_adm_access_t * passed in as WALK_BATON
    for its entire WC tree.  An implementation of
    svn_wc_entry_callbacks2_t's found_entry() API. */
 static svn_error_t *

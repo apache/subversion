@@ -2269,10 +2269,7 @@ fs_file_checksum(svn_checksum_t **checksum,
 
   SVN_ERR(get_dag(&file, root, path, pool));
   SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, pool));
-  if (file_checksum && file_checksum->kind == kind)
-    *checksum = file_checksum;
-  else
-    *checksum = NULL;
+  *checksum = (file_checksum->kind == kind) ? file_checksum : NULL;
   return SVN_NO_ERROR;
 }
 
@@ -2442,9 +2439,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
       SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node, pool));
-      if (checksum
-          && tb->base_checksum->kind == checksum->kind
-          && !svn_checksum_match(tb->base_checksum, checksum))
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,

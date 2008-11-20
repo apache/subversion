@@ -1614,7 +1614,6 @@ read_rep_offsets(representation_t **rep_p,
 {
   representation_t *rep;
   char *str, *last_str;
-  int len;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -1654,22 +1653,13 @@ read_rep_offsets(representation_t **rep_p,
 
   rep->expanded_size = apr_atoi64(str);
 
-  /* Read in the hash. */
+  /* Read in the MD5 hash. */
   str = apr_strtok(NULL, " ", &last_str);
-  if (str == NULL)
+  if ((str == NULL) || (strlen(str) != (APR_MD5_DIGESTSIZE * 2)))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  len = strlen(str);
-  if (len == (APR_MD5_DIGESTSIZE * 2) )
-    SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str,
-                                   pool));
-  else if (len == (APR_SHA1_DIGESTSIZE * 2) )
-    SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_sha1, str,
-                                   pool));
-  else
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+  SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool));
 
   /* Read the reuse count. */
   str = apr_strtok(NULL, " ", &last_str);
@@ -2542,7 +2532,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->fs = fs;
   b->chunk_index = 0;
   b->buf = NULL;
-  b->checksum_ctx = svn_checksum_ctx_create(rep->checksum->kind, pool);
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
   b->checksum = svn_checksum_dup(rep->checksum, pool);
   b->len = rep->expanded_size;
@@ -2818,7 +2808,8 @@ rep_read_contents(void *baton,
 
   /* Perform checksumming.  We want to check the checksum as soon as
      the last byte of data is read, in case the caller never performs
-     a short read, but we don't want to finalize the context twice. */
+     a short read, but we don't want to finalize the MD5 context
+     twice. */
   if (!rb->checksum_finalized)
     {
       SVN_ERR(svn_checksum_update(rb->checksum_ctx, buf, *len));
@@ -4548,7 +4539,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   b = apr_pcalloc(pool, sizeof(*b));
 
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   b->fs = fs;
   b->parent_pool = pool;
@@ -4631,8 +4622,7 @@ rep_write_contents_close(void *baton)
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
-  SVN_ERR(svn_checksum_final(&rep->checksum, b->checksum_ctx,
-                              b->parent_pool));
+  svn_checksum_final(&rep->checksum, b->checksum_ctx, b->parent_pool);
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */

@@ -45,14 +45,12 @@ static svn_error_t *
 read_handler_unsupported(void *baton, char *buffer, apr_size_t *len)
 {
   SVN_ERR_MALFUNCTION();
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 write_handler_unsupported(void *baton, const char *buffer, apr_size_t *len)
 {
   SVN_ERR_MALFUNCTION();
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *

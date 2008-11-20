@@ -4582,7 +4582,7 @@ typedef enum svn_wc_merge_outcome_t
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.  If @a
  * merge_options is non-NULL, either pass its elements to @a diff3_cmd or
- * parse it and use as options to the internal merge code (@see
+ * parse it and use as options to the internal merge code (see
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *

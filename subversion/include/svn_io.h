@@ -146,7 +146,7 @@ svn_io_check_resolved_path(const char *path,
  * Assuming @a suffix is non-empty, @a *unique_name will never be exactly
  * the same as @a filename, even if @a filename does not exist.
  *
- * If @a dirpath is NULL, then the directory returned by @see svn_io_temp_dir
+ * If @a dirpath is NULL, then the directory returned by svn_io_temp_dir()
  * will be used.
  *
  * If @a filename is NULL, then "tempfile" will be used.
@@ -193,7 +193,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.6
- * @seealso svn_stream_open_unique
+ * @see svn_stream_open_unique()
  */
 svn_error_t *
 svn_io_open_unique_file3(apr_file_t **file,
@@ -204,7 +204,7 @@ svn_io_open_unique_file3(apr_file_t **file,
                          apr_pool_t *scratch_pool);
 
 
-/** Like @see svn_io_open_uniquely_named(), but takes a joined dirpath and
+/** Like svn_io_open_uniquely_named(), but takes a joined dirpath and
  * filename, and a single pool.
  *
  * @since New in 1.4
@@ -773,7 +773,7 @@ svn_stream_open_writable(svn_stream_t **stream,
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.6
- * @seealso svn_io_open_unique_file3
+ * @see svn_io_open_unique_file3()
  */
 svn_error_t *
 svn_stream_open_unique(svn_stream_t **stream,
@@ -964,7 +964,7 @@ svn_stream_readline(svn_stream_t *stream,
  * @note both @a from and @a to will be closed upon successul completion of
  * the copy (but an error may still be returned, based on trying to close
  * the two streams). If the closure is not desired, then you can use
- * @see svn_stream_disown() to protect either or both of the streams from
+ * svn_stream_disown() to protect either or both of the streams from
  * being closed.
  *
  * @since New in 1.6.
