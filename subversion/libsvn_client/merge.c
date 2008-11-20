@@ -330,8 +330,10 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  * ADM_ACCESS corresponds to the tree-conflicted directory
  * This directory must be the victim's parent directory.
  *
- * NODE_KIND, ACTION, and REASON correspond to the fields
- * of the same names in svn_wc_conflict_description_t.
+ * NODE_KIND must the the node kind of "old" and "theirs" and "mine";
+ * this function cannot cope with node kind clashes.
+ * ACTION and REASON correspond to the fields
+ * of the same names in svn_wc_tree_conflict_description_t.
  */
 static svn_error_t*
 tree_conflict(merge_cmd_baton_t *merge_b,
@@ -350,6 +352,18 @@ tree_conflict(merge_cmd_baton_t *merge_b,
     victim_path, adm_access, node_kind, svn_wc_operation_merge, merge_b->pool);
   conflict->action = action;
   conflict->reason = reason;
+
+  /* ### TODO: Extract repos_url and path_in_repos from the whole URL. */
+  conflict->older_version.repos_url = NULL /* ### */;
+  conflict->older_version.peg_rev = merge_b->merge_source.rev1;
+  conflict->older_version.path_in_repos = merge_b->merge_source.url1 /* ### */;
+  conflict->older_version.node_kind = node_kind;
+
+  conflict->their_version.repos_url = NULL /* ### */;
+  conflict->their_version.peg_rev = merge_b->merge_source.rev2;
+  conflict->their_version.path_in_repos = merge_b->merge_source.url2 /* ### */;
+  conflict->their_version.node_kind = node_kind;
+
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
