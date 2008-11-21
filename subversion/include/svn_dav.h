@@ -182,6 +182,42 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY\
             SVN_DAV_PROP_NS_DAV "svn/partial-replay"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the server speaks HTTP protocol v2.  This header provides an
+ * opaque URI that the client should send all custom REPORT requests
+ * against.  Note: The URI actually follows *after* this header value
+ * using an equals sign, e.g.
+ *
+ *   DAV: http://subversion.tigris.org/xmlns/dav/svn/root-stub=!svn/me
+ *
+ */
+#define SVN_DAV_NS_DAV_SVN_ROOT_STUB SVN_DAV_PROP_NS_DAV "svn/root-stub"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the server speaks HTTP protocol v2.  This header provides an
+ * opaque URI that the client can append PEGREV/PATH to, in order to
+ * construct URIs that represent pegged objects in the repository.
+ * Note: The URI actually follows *after* this header value using an
+ * equals sign, e.g.
+ *
+ *   DAV: http://subversion.tigris.org/xmlns/dav/svn/pegrev-stub=!svn/bc
+ *
+ */
+#define SVN_DAV_NS_DAV_SVN_PEGREV_STUB SVN_DAV_PROP_NS_DAV "svn/pegrev-stub"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the server speaks HTTP protocol v2.  This header provides an
+ * opaque URI that the client can append a revision number to, in
+ * order to access revprops via PROPFIND or PROPPATCH.  Note: The URI
+ * actually follows *after* this header value using an equals sign,
+ * e.g.
+ *
+ *   DAV: http://subversion.tigris.org/xmlns/dav/svn/rev-stub=!svn/rev
+ *
+ */
+#define SVN_DAV_NS_DAV_SVN_REV_STUB SVN_DAV_PROP_NS_DAV "svn/rev-stub"
+
+
 /** @} */
 
 /** @} */
