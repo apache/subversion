@@ -160,7 +160,7 @@ pack_filesystem(const char **msg,
 {
   int i;
   svn_node_kind_t kind;
-  const char *pack_path;
+  const char *path;
 
   *msg = "pack a FSFS filesystem";
 
@@ -174,37 +174,40 @@ pack_filesystem(const char **msg,
      don't. */
   for (i = 0; i < (MAX_REV + 1) / SHARD_SIZE; i++)
     {
-      pack_path = svn_path_join_many(
-            pool, REPO_NAME, "revs",
+      path = svn_path_join_many(pool, REPO_NAME, "revs",
             apr_psprintf(pool, "%d.pack", i / SHARD_SIZE), NULL);
 
-      /* This file should exist. */
-      SVN_ERR(svn_io_check_path(pack_path, &kind, pool));
+      /* These files should exist. */
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_file)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "Expected pack file '%s' not found",
-                                 pack_path);
+                                 "Expected pack file '%s' not found", path);
+
+      path = svn_path_join_many(pool, REPO_NAME, "revs",
+            apr_psprintf(pool, "%d.manifest", i / SHARD_SIZE), NULL);
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      if (kind != svn_node_file)
+        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                 "Expected manifest file '%s' not found",
+                                 path);
 
       /* This directory should not exist. */
-      pack_path = svn_path_join_many(
-            pool, REPO_NAME, "revs",
+      path = svn_path_join_many(pool, REPO_NAME, "revs",
             apr_psprintf(pool, "%d", i / SHARD_SIZE), NULL);
-      SVN_ERR(svn_io_check_path(pack_path, &kind, pool));
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "Unexpected directory '%s' found",
-                                 pack_path);
+                                 "Unexpected directory '%s' found", path);
     }
 
   /* Finally, make sure the final revision directory does exist. */
-  pack_path = svn_path_join_many(
-        pool, REPO_NAME, "revs",
+  path = svn_path_join_many(pool, REPO_NAME, "revs",
         apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1), NULL);
-  SVN_ERR(svn_io_check_path(pack_path, &kind, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                              "Expected directory '%s' not found",
-                             pack_path);
+                             path);
 
 
   return SVN_NO_ERROR;

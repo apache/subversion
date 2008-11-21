@@ -6550,35 +6550,38 @@ pack_shard(const char *revs_dir,
            apr_pool_t *pool)
 {
   svn_node_kind_t pack_kind;
-  svn_node_kind_t shard_kind;
-  const char *tmp_file_path;
-  const char *pack_file_path = svn_path_join(revs_dir,
-                                             apr_psprintf(pool, "%ld.pack",
-                                                          shard), pool);
-  const char *shard_path = svn_path_join(revs_dir,
-                                         apr_psprintf(pool, "%ld", shard),
-                                         pool);
+  const char *pack_file_path = svn_path_join(
+                  revs_dir, apr_psprintf(pool, "%ld.pack", shard), pool);
+  const char *manifest_file_path = svn_path_join(
+                  revs_dir, apr_psprintf(pool, "%ld.manifest", shard), pool);
+  const char *shard_path = svn_path_join(
+                  revs_dir, apr_psprintf(pool, "%ld", shard), pool);
   struct packer_baton pb;
 
   /* Do some consistency checking. */
   SVN_ERR(svn_io_check_path(pack_file_path, &pack_kind, pool));
-  SVN_ERR(svn_io_check_path(shard_path, &shard_kind, pool));
   if (pack_kind == svn_node_file)
     {
+      svn_node_kind_t shard_kind;
+      SVN_ERR(svn_io_check_path(shard_path, &shard_kind, pool));
+
       if (shard_kind == svn_node_dir)
         /* If the packed shard and the "normal" shard exist, assume the pack
            wasn't cleanly completed, and just delete the packed shard. */
-        SVN_ERR(svn_io_remove_file(pack_file_path, pool));
+        {
+          SVN_ERR(svn_io_remove_file(pack_file_path, pool));
+          SVN_ERR(svn_io_remove_file(manifest_file_path, pool));
+        }
       else
         /* We have already packed this shard, so just leave. */
         return SVN_NO_ERROR;
     }
 
-  /* Create the new pack file. */
+  /* Create the new pack and manifest files. */
   SVN_ERR(svn_stream_open_writable(&pb.pack_stream, pack_file_path, pool,
                                     pool));
-  SVN_ERR(svn_stream_open_unique(&pb.manifest_stream, &tmp_file_path, revs_dir,
-                                 svn_io_file_del_on_pool_cleanup, pool, pool));
+  SVN_ERR(svn_stream_open_writable(&pb.manifest_stream, manifest_file_path,
+                                   pool, pool));
   pb.next_offset = 0;
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
@@ -6586,12 +6589,7 @@ pack_shard(const char *revs_dir,
                           APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_SIZE,
                           packer_func, &pb, pool));
   SVN_ERR(svn_stream_close(pb.manifest_stream));
-
-  /* Copy the manifest to the end of the pack file. */
-  SVN_ERR(svn_stream_open_readonly(&pb.manifest_stream, tmp_file_path, pool,
-                                   pool));
-  SVN_ERR(svn_stream_copy3(pb.manifest_stream, pb.pack_stream, cancel_func,
-                           cancel_baton, pool));
+  SVN_ERR(svn_stream_close(pb.pack_stream));
 
   /* Finally, remove the existing shard directory. */
   return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
