@@ -20,6 +20,8 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 
+#include "cl.h"
+
 #include "svn_private_config.h"
 
 
@@ -233,6 +235,7 @@ svn_cl__append_human_readable_tree_conflict_description(
   const char *victim_name, *their_phrase, *our_phrase;
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
+  const char *str;
 
   victim_name = svn_path_basename(conflict->path, pool);
   their_phrase = select_their_phrase(conflict, phrases);
@@ -247,6 +250,34 @@ svn_cl__append_human_readable_tree_conflict_description(
 
   svn_stringbuf_appendstr(descriptions, their_phrase_with_victim);
   svn_stringbuf_appendstr(descriptions, our_phrase_with_victim);
+
+  if (conflict->older_version.repos_url)
+    {
+      str = apr_psprintf(pool, "  Source repository: %s\n",
+                         conflict->older_version.repos_url);
+      svn_stringbuf_appendcstr(descriptions, str);
+    }
+
+  str = apr_psprintf(pool, "  Older version: (%s) %s@%ld\n",
+                     svn_cl__node_kind_str(conflict->older_version.node_kind),
+                     conflict->older_version.path_in_repos,
+                     conflict->older_version.peg_rev);
+  svn_stringbuf_appendcstr(descriptions, str);
+
+  if (conflict->older_version.repos_url && conflict->their_version.repos_url
+      && strcmp(conflict->older_version.repos_url,
+                conflict->their_version.repos_url) != 0)
+    {
+      str = apr_psprintf(pool, "  Source repository: %s\n",
+                         conflict->their_version.repos_url);
+      svn_stringbuf_appendcstr(descriptions, str);
+    }
+
+  str = apr_psprintf(pool, "  Their version: (%s) %s@%ld\n",
+                     svn_cl__node_kind_str(conflict->their_version.node_kind),
+                     conflict->their_version.path_in_repos,
+                     conflict->their_version.peg_rev);
+  svn_stringbuf_appendcstr(descriptions, str);
 
   return SVN_NO_ERROR;
 }

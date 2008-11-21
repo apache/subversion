@@ -344,6 +344,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               svn_wc_conflict_reason_t reason)
 {
   svn_wc_conflict_description_t *conflict;
+  const char *src_repos_url;  /* root URL of source repository */
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
@@ -353,15 +354,21 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   conflict->action = action;
   conflict->reason = reason;
 
-  /* ### TODO: Extract repos_url and path_in_repos from the whole URL. */
-  conflict->older_version.repos_url = NULL /* ### */;
+  SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
+                                 merge_b->pool));
+
+  conflict->older_version.repos_url = src_repos_url;
   conflict->older_version.peg_rev = merge_b->merge_source.rev1;
-  conflict->older_version.path_in_repos = merge_b->merge_source.url1 /* ### */;
+  conflict->older_version.path_in_repos
+    = svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
+                        merge_b->pool);
   conflict->older_version.node_kind = node_kind;
 
-  conflict->their_version.repos_url = NULL /* ### */;
+  conflict->their_version.repos_url = src_repos_url;
   conflict->their_version.peg_rev = merge_b->merge_source.rev2;
-  conflict->their_version.path_in_repos = merge_b->merge_source.url2 /* ### */;
+  conflict->their_version.path_in_repos
+    = svn_path_is_child(src_repos_url, merge_b->merge_source.url2,
+                        merge_b->pool);
   conflict->their_version.node_kind = node_kind;
 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
