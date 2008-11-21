@@ -44,7 +44,7 @@ extern "C" {
  */
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
-  svn_string_t **desc,
+  const char **desc,
   const svn_wc_conflict_description_t *conflict,
   apr_pool_t *pool);
 

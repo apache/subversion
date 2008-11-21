@@ -62,7 +62,7 @@ select_reason(const svn_wc_conflict_description_t *conflict)
 
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
-  svn_string_t **desc,
+  const char **desc,
   const svn_wc_conflict_description_t *conflict,
   apr_pool_t *pool)
 {
@@ -71,8 +71,7 @@ svn_cl__get_human_readable_tree_conflict_description(
   action = select_action(conflict);
   reason = select_reason(conflict);
   SVN_ERR_ASSERT(action && reason);
-  *desc = svn_string_createf(pool, _("incoming %s, local %s"),
-                             action, reason);
+  *desc = apr_psprintf(pool, _("incoming %s, local %s"), action, reason);
   return SVN_NO_ERROR;
 }
 

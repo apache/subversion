@@ -431,10 +431,10 @@ print_info(void *baton,
 
   if (info->tree_conflict)
     {
-      svn_string_t *desc;
+      const char *desc;
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
-      svn_cmdline_printf(pool, _("Tree conflict: %s"), desc->data);
+      svn_cmdline_printf(pool, _("Tree conflict: %s"), desc);
     }
 
   /* Print extra newline separator. */
