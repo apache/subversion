@@ -235,7 +235,10 @@ svn_cl__append_human_readable_tree_conflict_description(
   const char *victim_name, *their_phrase, *our_phrase;
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
+  const char *older_repos = conflict->older_version.repos_url;
+  const char *their_repos = conflict->their_version.repos_url;
   const char *str;
+  svn_boolean_t same_repos;
 
   victim_name = svn_path_basename(conflict->path, pool);
   their_phrase = select_their_phrase(conflict, phrases);
@@ -244,16 +247,22 @@ svn_cl__append_human_readable_tree_conflict_description(
 
   /* Substitute the '%s' format in the phrases with the victim path. */
   their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
-                                                   victim_name);
+                                                  victim_name);
   our_phrase_with_victim = svn_stringbuf_createf(pool, our_phrase,
-                                                 victim_name);
+                                                victim_name);
 
   svn_stringbuf_appendstr(descriptions, their_phrase_with_victim);
   svn_stringbuf_appendstr(descriptions, our_phrase_with_victim);
 
+  same_repos = (older_repos == their_repos)
+               || ((older_repos != NULL) && (their_repos != NULL)
+                   && (strcmp(older_repos, their_repos) == 0));
+
   if (conflict->older_version.repos_url)
     {
-      str = apr_psprintf(pool, "  Source repository: %s\n",
+      str = apr_psprintf(pool, (same_repos
+                                  ? "  Common repository: %s\n"
+                                  : "  Older repository: %s\n"),
                          conflict->older_version.repos_url);
       svn_stringbuf_appendcstr(descriptions, str);
     }
@@ -264,11 +273,9 @@ svn_cl__append_human_readable_tree_conflict_description(
                      conflict->older_version.peg_rev);
   svn_stringbuf_appendcstr(descriptions, str);
 
-  if (conflict->older_version.repos_url && conflict->their_version.repos_url
-      && strcmp(conflict->older_version.repos_url,
-                conflict->their_version.repos_url) != 0)
+  if (conflict->their_version.repos_url && !same_repos)
     {
-      str = apr_psprintf(pool, "  Source repository: %s\n",
+      str = apr_psprintf(pool, "  Their repository: %s\n",
                          conflict->their_version.repos_url);
       svn_stringbuf_appendcstr(descriptions, str);
     }
