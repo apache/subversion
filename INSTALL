@@ -372,7 +372,7 @@ I.    INTRODUCTION
            then there should be a file
            "/usr/local/myneon/bin/neon-config".
 
-        b. Serf library 0.1.2 (http://code.google.com/p/serf/)
+        b. Serf library 0.1.2 or newer (http://code.google.com/p/serf/)
 
            serf is a library for HTTP and WebDAV which is an
            alternative to Neon for accessing Subversion repositories
