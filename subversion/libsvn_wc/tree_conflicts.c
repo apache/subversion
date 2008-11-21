@@ -185,6 +185,42 @@ read_enum_field(int *result,
   return SVN_NO_ERROR;
 }
 
+/* Parse the conflict info fields pointed to by *START into *VERSION_INFO.
+ * Don't read further than END.
+ * After reading, make *START point to the character after the field.
+ */
+static svn_error_t *
+read_node_version_info(svn_wc_conflict_version_t *version_info,
+                       const char **start,
+                       const char *end,
+                       apr_pool_t *pool)
+{
+  const char *str;
+  int n;
+
+  /* repos_url */
+  SVN_ERR(read_string_field(&str, start, end, pool));
+  version_info->repos_url = (str[0] == '\0') ? NULL : str;
+  SVN_ERR(read_field_separator(start, end));
+
+  /* peg_rev */
+  SVN_ERR(read_string_field(&str, start, end, pool));
+  version_info->peg_rev = (str[0] == '\0') ? SVN_INVALID_REVNUM
+    : SVN_STR_TO_REV(str);
+  SVN_ERR(read_field_separator(start, end));
+
+  /* path_in_repos */
+  SVN_ERR(read_string_field(&str, start, end, pool));
+  version_info->path_in_repos = (str[0] == '\0') ? NULL : str;
+  SVN_ERR(read_field_separator(start, end));
+
+  /* node_kind */
+  SVN_ERR(read_enum_field(&n, node_kind_map, start, end, pool));
+  version_info->node_kind = (svn_node_kind_t)n;
+
+  return SVN_NO_ERROR;
+}
+
 /* Parse a newly allocated svn_wc_conflict_description_t object from the
  * character string pointed to by *START. Return the result in *CONFLICT.
  * Don't read further than END. Set *START to point to the next character
@@ -242,6 +278,16 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   /* reason */
   SVN_ERR(read_enum_field(&n, reason_map, start, end, pool));
   (*conflict)->reason = (svn_wc_conflict_reason_t)n;
+  SVN_ERR(read_field_separator(start, end));
+
+  /* older_version */
+  SVN_ERR(read_node_version_info(&(*conflict)->older_version, start, end,
+                                 pool));
+  SVN_ERR(read_field_separator(start, end));
+
+  /* their_version */
+  SVN_ERR(read_node_version_info(&(*conflict)->their_version, start, end,
+                                 pool));
 
   return SVN_NO_ERROR;
 }
@@ -319,6 +365,38 @@ write_enum_field(svn_stringbuf_t *buf,
   return SVN_NO_ERROR;
 }
 
+/* Append to BUF the denary form of the number N. */
+static void
+write_integer_field(svn_stringbuf_t *buf,
+                    int n,
+                    apr_pool_t *pool)
+{
+  const char *str = apr_psprintf(pool, "%d", n);
+
+  svn_stringbuf_appendcstr(buf, str);
+}
+
+/* Append to BUF the several fields that represent VERSION_INFO, */
+static void
+write_node_version_info(svn_stringbuf_t *buf,
+                         const svn_wc_conflict_version_t *version_info,
+                         apr_pool_t *pool)
+{
+  if (version_info->repos_url)
+    write_string_field(buf, version_info->repos_url);
+  svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+  if (SVN_IS_VALID_REVNUM(version_info->peg_rev))
+    write_integer_field(buf, version_info->peg_rev, pool);
+  svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+  if (version_info->path_in_repos)
+    write_string_field(buf, version_info->path_in_repos);
+  svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+  SVN_ERR(write_enum_field(buf, node_kind_map, version_info->node_kind));
+}
+
 /*
  * This function could be static, but we need to link to it
  * in a unit test in tests/libsvn_wc/, so it isn't.
@@ -363,6 +441,16 @@ svn_wc__write_tree_conflicts(char **conflict_data,
 
       /* reason */
       SVN_ERR(write_enum_field(buf, reason_map, conflict->reason));
+
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+      /* older_version */
+      write_node_version_info(buf, &conflict->older_version, pool);
+
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+      /* their_version */
+      write_node_version_info(buf, &conflict->their_version, pool);
 
       if (i < (conflicts->nelts - 1))
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);
