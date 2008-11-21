@@ -9577,7 +9577,7 @@ def reintegrate_branch_never_merged_to(sbox):
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox)
 
-  # Make a change on the branch, to A/mu.  Commit in r7.
+  # Make a change on the branch, to A_COPY/mu.  Commit in r7.
   svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
@@ -14675,14 +14675,12 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.verify.verify_outputs("Reintegrate failed but not "
                                 "in the way expected",
                                 err, None,
-                                "(svn: Reintegrate can only be used if the "
-                                "revisions previously merged from the "
-                                "reintegrate target to '.*A_COPY' are the "
-                                "same, but there are differences:\n)"
-                                "|(  A_COPY\n)"
-                                "|(    /A:2-12\n)"
+                                "(svn: Reintegrate can only be used if "
+                                "revisions 2 through 15 were previously "
+                                "merged from .*/A to the reintegrate source, "
+                                "but this is not the case:\n)"
                                 "|(  A_COPY/D\n)"
-                                "|(    /A/D:2-7,9-12\n)"
+                                "|(    Missing ranges: /A/D:8\n)"
                                 "|(\n)"
                                 "|(.*apr_err.*)", # In case of debug build
                                 None,
@@ -14695,14 +14693,15 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      subtree has explicit mergeinfo.  Commit this rename as rev N.
   #
   #   B) Synch merge the rename in A) to our 'branch' in rev N+1.  The
-  #      renamed subtree now has explicit mergeinfo.
+  #      renamed subtree now has the same explicit mergeinfo on both
+  #      the branch and trunk.
   #
   #   C) Make some more changes on the renamed subtree in 'trunk' and
   #      commit in rev N+2.
   #
   #   D) Synch merge the changes in C) from 'trunk' to 'branch' and commit in
-  #      rev N+3.  The renamed subtree on 'branch' now has explicit mergeinfo
-  #      from 'trunk' for rev.
+  #      rev N+3.  The renamed subtree on 'branch' now has additional explicit
+  #      mergeinfo decribing the synch merge from trunk@N+1 to trunk@N+2.
   #
   #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
   #      of 'trunk' was previously merged to 'branch'
@@ -14788,26 +14787,14 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Reintegrate A_COPY to A, this should work, but is currently failing
-  # with an error like this:
-  #
-  #   svn: Reintegrate can only be used if the revisions previously merged
-  #   from the reintegrate target to 'URL/merge_tests-126/A_COPY' are the
-  #   same, but there are differences:
-  #     A_COPY
-  #       /A:2-18
-  #     A_COPY/D/gamma_moved
-  #       /A/D/gamma_moved:17-18
-  #
-  # Reintegrate currently acts as if A_COPY/D/gamma_moved@2-16 hasn't been
-  # merged, but A_COPY/D/gamma_moved's natural history,
+  # Reintegrate A_COPY to A, this should work A_COPY/D/gamma_moved's natural
+  # history,
   #
   #   /A/D/gamma:1-15
   #   /A/D/gamma_moved:16
   #   /A_COPY/D/gamma_moved:17-19
   #
-  # already shows that it is fully synched up with trunk.  This test is marked
-  # as XFail until this is fixed. 
+  # shows that it is fully synched up with trunk.
   svntest.actions.run_and_verify_svn(None, ["At revision 19.\n"], [], 'up',
                                      wc_dir)
   expected_output = wc.State(A_path, {
@@ -15083,8 +15070,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(merge_range_prior_to_rename_source_existence,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(reintegrate_with_subtree_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(reintegrate_with_subtree_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
