@@ -595,8 +595,8 @@ svn_cl__xml_print_header(const char *tagname, apr_pool_t *pool);
 svn_error_t *
 svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 
-/* Return a (non-localised) string representation of KIND, being "dir" or
-   "file" or, in any other case, the empty string. */
+/* Return a (non-localised) string representation of KIND, being "none" or
+   "dir" or "file" or, in any other case, the empty string. */
 const char *
 svn_cl__node_kind_str(svn_node_kind_t kind);
 
