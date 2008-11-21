@@ -1014,6 +1014,21 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
     }
 }
 
+const char *
+svn_cl__node_kind_str_human_readable(svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_none:
+      return _("none");
+    case svn_node_dir:
+      return _("dir");
+    case svn_node_file:
+      return _("file");
+    default:
+      return "";
+    }
+}
 
 svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
@@ -1192,7 +1207,7 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
     url_str = "...";
 
   return apr_psprintf(pool, "(%s) %s@%ld",
-                      svn_cl__node_kind_str(node->node_kind),
+                      svn_cl__node_kind_str_human_readable(node->node_kind),
                       url_str, node->peg_rev);
 }
 
