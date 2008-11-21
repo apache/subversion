@@ -57,6 +57,27 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+
+
+struct svn_wc_committed_queue_t
+{
+  apr_pool_t *pool;
+  apr_array_header_t *queue;
+  svn_boolean_t have_recursive;
+};
+
+typedef struct
+{
+  const char *path;
+  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t recurse;
+  svn_boolean_t remove_lock;
+  svn_boolean_t remove_changelist;
+  apr_array_header_t *wcprop_changes;
+  svn_checksum_t *checksum;
+} committed_queue_item_t;
+
+
 
 /*** Finishing updates and commits. ***/
 
@@ -339,6 +360,7 @@ process_committed_leaf(int log_number,
                        svn_boolean_t remove_lock,
                        svn_boolean_t remove_changelist,
                        svn_checksum_t *checksum,
+                       svn_wc_committed_queue_t *queue,
                        apr_pool_t *pool)
 {
   svn_wc_entry_t tmp_entry;
@@ -361,42 +383,52 @@ process_committed_leaf(int log_number,
 
       if (checksum == NULL)
         {
-          /* There may be a new text base sitting in the adm tmp area
-             by now, because the commit succeeded.  A file that is
-             copied, but not otherwise modified, doesn't have a new
-             text base, so we use the unmodified text base.
+          /* checksum will be NULL for recursive commits, which means that
+             a directory was copied. When we recurse on that directory, the
+             checksum will be NULL for all files. */
 
-             ### Does this mean that a file committed with only prop mods
-             ### will still get its text base checksum recomputed?  Yes it
-             ### does, sadly.  But it's not enough to just check for that
-             ### condition, because in the case of an added file, there
-             ### may not be a pre-existing checksum in the entry.
-             ### Probably the best solution is to compute (or copy) the
-             ### checksum at 'svn add' (or 'svn cp') time, instead of
-             ### waiting until commit time.
-          */
-          const char *latest_base;
-          svn_error_t *err;
-          svn_checksum_t *local_checksum;
+          /* If we sent a delta (meaning: post-copy modification),
+             then this file will appear in the queue.  See if we can
+             find it. */
+          int i;
 
-          latest_base = svn_wc__text_base_path(path, TRUE, pool);
-          err = svn_io_file_checksum2(&local_checksum, latest_base,
-                                      svn_checksum_md5, pool);
+          /* ### this is inefficient. switch to hash. that's round #2 */
 
-          if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+          if (queue != NULL)
+            for (i = 0; i < queue->queue->nelts; i++)
+              {
+                committed_queue_item_t *cqi
+                  = APR_ARRAY_IDX(queue->queue, i, committed_queue_item_t *);
+                if (strcmp(path, cqi->path) == 0)
+                  {
+                    checksum = cqi->checksum;
+                    break;
+                  }
+              }
+          if (checksum == NULL)
             {
-              svn_error_clear(err);
-              latest_base = svn_wc__text_base_path(path, FALSE, pool);
-              err = svn_io_file_checksum2(&local_checksum, latest_base,
-                                          svn_checksum_md5, pool);
-            }
+              /* It was copied and not modified. We should have a text
+                 base for it. And the entry should have a checksum. */
+              if (entry->checksum != NULL)
+                {
+                  SVN_ERR(svn_checksum_parse_hex(&checksum,
+                                                 svn_checksum_md5,
+                                                 entry->checksum,
+                                                 pool));
+                }
+#ifdef SVN_DEBUG
+              else
+                {
+                  /* If we copy a deleted file, then it will become scheduled
+                     for deletion, but there is no base text for it. So we
+                     cannot get/compute a checksum for this file. */
+                  SVN_ERR_ASSERT(!entry->copied
+                                 || entry->schedule != svn_wc_schedule_delete);
 
-          if (! err)
-            checksum = local_checksum;
-          else if (APR_STATUS_IS_ENOENT(err->apr_err))
-            svn_error_clear(err);
-          else
-            return err;
+                  /* checksum will remain NULL in this one case. */
+                }
+#endif
+            }
         }
     }
 
@@ -481,6 +513,7 @@ process_committed_internal(int *log_number,
                            svn_boolean_t remove_lock,
                            svn_boolean_t remove_changelist,
                            svn_checksum_t *checksum,
+                           svn_wc_committed_queue_t *queue,
                            apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
@@ -493,7 +526,7 @@ process_committed_internal(int *log_number,
                                  new_revnum, rev_date, rev_author,
                                  wcprop_changes,
                                  remove_lock, remove_changelist,
-                                 checksum, pool));
+                                 checksum, queue, pool));
 
   if (recurse && entry->kind == svn_node_dir)
     {
@@ -551,7 +584,7 @@ process_committed_internal(int *log_number,
                                                  rev_author,
                                                  NULL, FALSE /* remove_lock */,
                                                  remove_changelist, NULL,
-                                                 subpool));
+                                                 queue, subpool));
               SVN_ERR(svn_wc__run_log(child_access, NULL, pool));
             }
           else
@@ -573,7 +606,7 @@ process_committed_internal(int *log_number,
               SVN_ERR(process_committed_leaf
                       ((*log_number)++, this_path, adm_access, current_entry,
                        new_revnum, rev_date, rev_author, NULL, FALSE,
-                       remove_changelist, NULL, subpool));
+                       remove_changelist, NULL, queue, subpool));
             }
         }
 
@@ -582,25 +615,6 @@ process_committed_internal(int *log_number,
 
   return SVN_NO_ERROR;
 }
-
-
-struct svn_wc_committed_queue_t
-{
-  apr_pool_t *pool;
-  apr_array_header_t *queue;
-  svn_boolean_t have_recursive;
-};
-
-typedef struct
-{
-  const char *path;
-  svn_wc_adm_access_t *adm_access;
-  svn_boolean_t recurse;
-  svn_boolean_t remove_lock;
-  svn_boolean_t remove_changelist;
-  apr_array_header_t *wcprop_changes;
-  svn_checksum_t *checksum;
-} committed_queue_item_t;
 
 
 svn_wc_committed_queue_t *
@@ -756,7 +770,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                          cqi->wcprop_changes,
                                          cqi->remove_lock,
                                          cqi->remove_changelist,
-                                         cqi->checksum, iterpool));
+                                         cqi->checksum, queue, iterpool));
     }
 
   /* ... and then we run them; all at once.
@@ -811,7 +825,7 @@ svn_wc_process_committed4(const char *path,
                                      path, adm_access, recurse,
                                      new_revnum, rev_date, rev_author,
                                      wcprop_changes, remove_lock,
-                                     remove_changelist, checksum, pool));
+                                     remove_changelist, checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
   return svn_wc__run_log(adm_access, NULL, pool);
