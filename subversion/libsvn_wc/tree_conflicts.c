@@ -1,5 +1,5 @@
 /*
- * tree_conflicts.c: Handling of known problematic tree conflict use cases.
+ * tree_conflicts.c: Storage of tree conflict descriptions in the WC.
  *
  * ====================================================================
  * Copyright (c) 2007 CollabNet.  All rights reserved.
@@ -25,6 +25,38 @@
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
+
+
+/* OVERVIEW
+ *
+ * This file handles the storage and retrieval of tree conflict descriptions
+ * (svn_wc_conflict_description_t) in the WC.
+ *
+ * Data Format
+ *
+ * All tree conflicts descriptions for the current tree conflict victims in
+ * one parent directory are stored in a single "tree_conflict_data" text
+ * field in that parent's THIS_DIR entry.
+ *
+ *   tree_conflict_data: zero or more conflicts (one per victim path),
+ *     separated by the SVN_WC__TREE_CONFLICT_DESC_SEPARATOR character.
+ *
+ *   a description entry: a fixed sequence of text fields, some of which
+ *     may be empty, corresponding to the pertinent fields of
+ *     svn_wc_conflict_description_t, separated by
+ *     SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR.
+ *
+ *   a field: a string within which any separator or escape characters are
+ *     escaped with the escape character SVN_WC__TREE_CONFLICT_ESCAPE_CHAR.
+ *
+ * Error Handling
+ *
+ * On reading from the WC entry, errors of malformed data are handled by
+ * raising an svn_error_t, as these can occur from WC corruption. On
+ * writing, errors in the internal data consistency before it is written are
+ * handled more severely because any such errors must be due to a bug.
+ */
+
 
 static const char field_separator = SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR;
 static const char desc_separator = SVN_WC__TREE_CONFLICT_DESC_SEPARATOR;

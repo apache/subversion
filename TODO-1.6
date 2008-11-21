@@ -55,15 +55,6 @@ Blocker:
      when closing a dir.
      <http://svn.haxx.se/dev/archive-2008-11/0421.shtml>
 
-   - Update and switch need to skip the final "cleanup" (setting the new
-     revision, URL, etc) of items inside a tree-conflicted dir.
-     [~Fixed?]
-
-   - Running 'svn status -u' fails (instead of showing '*' for pending
-     update) when a switched item does not exist in the repo.  Apparently
-     due to the shoulda-skipped-cleanup bug above.
-     [~Fixed?]
-
    - #3322: "In tree conflict info, report left/right URL@REV of the
              incoming change"
 
