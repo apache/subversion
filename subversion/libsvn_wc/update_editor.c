@@ -1389,23 +1389,22 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
                     const svn_wc_entry_t *entry,
                     svn_wc_adm_access_t *parent_adm_access,
                     svn_wc_conflict_action_t action,
+                    svn_node_kind_t their_node_kind,
+                    const char *their_url,
                     apr_pool_t *pool)
 {
-  svn_node_kind_t their_node_kind = svn_node_unknown;
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
 
   switch (action)
     {
     case svn_wc_conflict_action_edit:
       /* Use case 1: Modifying a locally-deleted item. */
-      /* ### their_node_kind = ?; */
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
         reason = svn_wc_conflict_reason_deleted;
       break;
 
     case svn_wc_conflict_action_add:
-      /* ### their_node_kind = ?; */
       /* Use case "3.5": Adding a locally-added item.
        *
        * When checking out a file-external, add_file() is called twice:
@@ -1464,6 +1463,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
   if (reason != (svn_wc_conflict_reason_t)(-1))
     {
       svn_wc_conflict_description_t *conflict;
+      const char *repos_url = NULL;
+      const char *path_in_repos = NULL;
 
       conflict = svn_wc_conflict_description_create_tree(
         full_path, parent_adm_access, entry->kind,
@@ -1472,20 +1473,44 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       conflict->action = action;
       conflict->reason = reason;
 
-      /* ### TODO: For Switch, "older" URL != "their" URL. */
-      /* ### TODO: Extract repos_url and path_in_repos from the whole URL. */
-      conflict->older_version.repos_url = NULL /* ### */;
+      repos_url = entry->repos;
+      path_in_repos = svn_path_is_child(repos_url, entry->url, pool);
+      if (path_in_repos == NULL)
+        path_in_repos = ".";
+
+      conflict->older_version.repos_url = repos_url;
       conflict->older_version.peg_rev = entry->revision;
-      conflict->older_version.path_in_repos = entry->url /* ### */;
+      conflict->older_version.path_in_repos = path_in_repos;
       conflict->older_version.node_kind =
         (entry->schedule == svn_wc_schedule_delete) ? svn_node_none
         : entry->kind;
       /* entry->kind is both base kind and working kind, because schedule
        * replace-by-different-kind is not supported. */
+      /* ### TODO: but in case the entry is locally removed, entry->kind
+       * is svn_node_none and doesn't reflect the older kind. */
 
-      conflict->their_version.repos_url = NULL /* ### */;
+      /* "Their" repos_url (repository root URL) will be the same. */
+
+      if (eb->switch_url != NULL)
+        {
+          if (their_url != NULL)
+            path_in_repos = svn_path_is_child(repos_url, their_url, pool);
+          else
+            {
+              /* ### TODO do_entry_deletion() still passes NULL for their_url
+               * */
+              path_in_repos = svn_path_is_child(repos_url, eb->switch_url,
+                                                pool);
+              path_in_repos = apr_pstrcat(
+                                pool, path_in_repos,
+                                "<### TODO incomplete for incoming delete>",
+                                NULL);
+            }
+        }
+
+      conflict->their_version.repos_url = repos_url;
       conflict->their_version.peg_rev = *eb->target_revision;
-      conflict->their_version.path_in_repos = entry->url /* ### */;
+      conflict->their_version.path_in_repos = path_in_repos;
       conflict->their_version.node_kind = their_node_kind;
 
       /* Ensure 'log_accum' is non-null. svn_wc__loggy_add_tree_conflict()
@@ -1648,7 +1673,8 @@ do_entry_deletion(struct edit_baton *eb,
   if (victim_path == NULL)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path,
                                 entry, adm_access, 
-                                svn_wc_conflict_action_delete, pool));
+                                svn_wc_conflict_action_delete,
+                                svn_node_none, NULL, pool));
 
   if (tree_conflict != NULL)
     {
@@ -1973,7 +1999,8 @@ add_directory(const char *path,
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                           pb->log_accum, db->path, entry,
                                           parent_adm_access,
-                                          svn_wc_conflict_action_add, pool));
+                                          svn_wc_conflict_action_add,
+                                          svn_node_dir, db->new_URL, pool));
 
               if (tree_conflict != NULL)
                 {
@@ -2195,7 +2222,8 @@ open_directory(const char *path,
        with one notification. */
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum,
                                 full_path, entry, parent_adm_access,
-                                svn_wc_conflict_action_edit, pool));
+                                svn_wc_conflict_action_edit,
+                                svn_node_dir, db->new_URL, pool));
 
   /* If property-conflicted, skip the tree with notification. */
   SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
@@ -2995,7 +3023,8 @@ add_file(const char *path,
   if (victim_path == NULL)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, full_path,
                                 entry, adm_access, 
-                                svn_wc_conflict_action_add, subpool));
+                                svn_wc_conflict_action_add,
+                                svn_node_file, fb->new_URL, subpool));
 
   if (victim_path != NULL || tree_conflict != NULL)
     {
@@ -3159,7 +3188,8 @@ open_file(const char *path,
   if (victim_path == NULL)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, full_path,
                                 entry, adm_access, 
-                                svn_wc_conflict_action_edit, pool));
+                                svn_wc_conflict_action_edit, 
+                                svn_node_file, fb->new_URL, pool));
 
   /* Does the file already have text or property conflicts? */
   SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, NULL,
