@@ -436,7 +436,7 @@ print_info(void *baton,
       SVN_ERR(svn_cl__append_human_readable_tree_conflict_description(
                 desc, info->tree_conflict, pool));
 
-      svn_cmdline_printf(pool, _("Tree conflict:\n%s"), desc->data);
+      svn_cmdline_printf(pool, _("Tree conflict: %s"), desc->data);
     }
 
   /* Print extra newline separator. */
