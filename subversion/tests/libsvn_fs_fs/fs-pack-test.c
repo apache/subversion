@@ -257,6 +257,41 @@ read_packed_fs(const char **msg,
 }
 #undef REPO_NAME
 
+/* Check reading from a packed filesystem. */
+#define REPO_NAME "test-repo-commit-packed-fs"
+static svn_error_t *
+commit_packed_fs(const char **msg,
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t after_rev;
+
+  *msg = "commit to a packed FSFS filesystem";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create the packed FS and open it. */
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+
+  /* Now do a commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 11, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "iota",
+          "How much better is it to get wisdom than gold! and to get "
+          "understanding rather to be chosen than silver!", pool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -266,5 +301,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(pack_filesystem),
     SVN_TEST_XFAIL(read_packed_fs),
+    SVN_TEST_XFAIL(commit_packed_fs),
     SVN_TEST_NULL
   };
