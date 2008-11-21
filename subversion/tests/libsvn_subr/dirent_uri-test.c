@@ -744,6 +744,10 @@ test_dirent_is_canonical(const char **msg,
     { "//SERVER/SHare",        FALSE },
 #else /* WIN32 or Cygwin */
     { "X:/",                   FALSE },
+    /* Some people use colons in their filenames. */
+    { ":", TRUE },
+    { ".:", TRUE },
+    { "foo/.:", TRUE },
 #endif /* non-WIN32 */
     { NULL, FALSE },
   };
@@ -831,6 +835,10 @@ test_uri_is_canonical(const char **msg,
     { "X:",                    TRUE },
     { "X:foo",                 TRUE },
     { "X:foo/",                FALSE },
+    /* Some people use colons in their filenames. */
+    { ":", TRUE },
+    { ".:", TRUE },
+    { "foo/.:", TRUE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
