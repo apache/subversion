@@ -62,74 +62,18 @@ select_reason(const svn_wc_conflict_description_t *conflict)
   return NULL;
 }
 
-/* Return a string showing NODE's kind, URL and revision, to the extent that
- * that information is available in NODE. */
-static const char *
-node_description(const svn_wc_conflict_version_t *node,
-                 apr_pool_t *pool)
-{
-  const char *url_str;
-
-  /* Construct the whole URL if we can, else use whatever we have. */
-  if (node->repos_url && node->path_in_repos)
-    url_str = svn_path_url_add_component(node->repos_url,
-                                         node->path_in_repos, pool);
-  else if (node->repos_url)
-    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
-  else if (node->path_in_repos)
-    url_str = node->path_in_repos;
-  else
-    url_str = "...";
-
-  return apr_psprintf(pool, "(%s) %s@%ld",
-                      svn_cl__node_kind_str(node->node_kind),
-                      url_str, node->peg_rev);
-}
-
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
   const char **desc,
   const svn_wc_conflict_description_t *conflict,
   apr_pool_t *pool)
 {
-<<<<<<< .working
-  const char *victim_name, *their_phrase, *our_phrase;
-  svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
-  struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
-  const char *str;
-
-=======
   const char *victim_name, *action, *reason;
->>>>>>> .merge-right.r34324
   victim_name = svn_path_basename(conflict->path, pool);
-<<<<<<< .working
-  their_phrase = select_their_phrase(conflict, phrases);
-  our_phrase = select_our_phrase(conflict, phrases);
-  SVN_ERR_ASSERT(our_phrase && their_phrase);
-
-  /* Substitute the '%s' format in the phrases with the victim path. */
-  their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
-                                                  victim_name);
-  our_phrase_with_victim = svn_stringbuf_createf(pool, our_phrase,
-                                                victim_name);
-
-  svn_stringbuf_appendstr(descriptions, their_phrase_with_victim);
-  svn_stringbuf_appendstr(descriptions, our_phrase_with_victim);
-
-=======
   action = select_action(conflict);
   reason = select_reason(conflict);
   SVN_ERR_ASSERT(action && reason);
   *desc = apr_psprintf(pool, _("incoming %s, local %s"), action, reason);
->>>>>>> .merge-right.r34324
-  str = apr_psprintf(pool, _("  Older version: %s\n"),
-                     node_description(&conflict->older_version, pool));
-  svn_stringbuf_appendcstr(descriptions, str);
-
-  str = apr_psprintf(pool, _("  Their version: %s\n"),
-                     node_description(&conflict->their_version, pool));
-  svn_stringbuf_appendcstr(descriptions, str);
-
   return SVN_NO_ERROR;
 }
 
