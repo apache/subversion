@@ -1255,6 +1255,8 @@ typedef struct svn_wc_conflict_description_t
    */
   svn_wc_operation_t operation;
 
+  /* Remember to adjust svn_wc__conflict_description_dup()
+   * if you add new fields to this struct. */
 } svn_wc_conflict_description_t;
 
 /**
