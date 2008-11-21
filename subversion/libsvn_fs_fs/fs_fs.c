@@ -2227,7 +2227,6 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
-  svn_error_t *err;
   svn_boolean_t is_cached;
   svn_boolean_t packed;
 
@@ -6508,18 +6507,14 @@ struct packer_baton
 
 /* Walker function used by pack_shard().
    This implements svn_io_walk_func_t */
-svn_error_t *
+static svn_error_t *
 packer_func(void *baton,
             const char *path,
             const apr_finfo_t *finfo,
             apr_pool_t *pool)
 {
   struct packer_baton *pb = baton;
-  int shard = atoi(finfo->name);
-  const char *offset_str;
   svn_stream_t *rev_stream;
-  apr_off_t offset;
-  apr_size_t nbytes;
 
   /* Ignore any directories we find. */
   if (finfo->filetype == APR_DIR)
@@ -6527,8 +6522,8 @@ packer_func(void *baton,
 
   /* Update the manifest. */
   svn_stream_printf(pb->manifest_stream, pool, 
-                    "%-" APR_STRINGIFY(PACK_MANIFEST_ENTRY_LEN) "ld\n",
-                     pb->next_offset);
+               "%-" APR_STRINGIFY(PACK_MANIFEST_ENTRY_LEN) APR_OFF_T_FMT"\n",
+               pb->next_offset);
   pb->next_offset += finfo->size;
   
   /* Copy all the bits from the rev file to the end of the pack file. */
@@ -6542,7 +6537,7 @@ packer_func(void *baton,
 
    If for some reason we detect a partial packing already performed, we
    remove the pack file and start again. */
-svn_error_t *
+static svn_error_t *
 pack_shard(const char *revs_dir,
            apr_int64_t shard,
            svn_cancel_func_t cancel_func,
@@ -6551,11 +6546,14 @@ pack_shard(const char *revs_dir,
 {
   svn_node_kind_t pack_kind;
   const char *pack_file_path = svn_path_join(
-                  revs_dir, apr_psprintf(pool, "%ld.pack", shard), pool);
+                  revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack",
+                                         shard), pool);
   const char *manifest_file_path = svn_path_join(
-                  revs_dir, apr_psprintf(pool, "%ld.manifest", shard), pool);
+                  revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT ".manifest",
+                                         shard), pool);
   const char *shard_path = svn_path_join(
-                  revs_dir, apr_psprintf(pool, "%ld", shard), pool);
+                  revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
+                  pool);
   struct packer_baton pb;
 
   /* Do some consistency checking. */
