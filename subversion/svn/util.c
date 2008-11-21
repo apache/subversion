@@ -1004,11 +1004,11 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
   switch (kind)
     {
     case svn_node_none:
-      return _("none");
+      return "none";
     case svn_node_dir:
-      return _("dir");
+      return "dir";
     case svn_node_file:
-      return _("file");
+      return "file";
     default:
       return "";
     }
