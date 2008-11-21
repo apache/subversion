@@ -13342,7 +13342,7 @@ def verify_tree_conflict_info(path, actions_and_victims):
   exit_code, output, error = svntest.main.run_svn(None, 'info', path)
   if not verify_lines(output,
                       list(map(lambda (action, victim):
-                          "incoming " + action + ", local " + victim,
+                          "incoming " + action,
                           actions_and_victims))):
     raise svntest.Failure("Wrong tree-conflict result")
 
