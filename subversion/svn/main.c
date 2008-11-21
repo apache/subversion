@@ -851,6 +851,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Seventh column: Whether the item is the victim of a tree conflict\n"
      "      ' ' normal\n"
      "      'C' tree-Conflicted\n"
+     "    If the item is a tree conflict victim, an additional line is printed\n"
+     "    after the item's status line, explaining the nature of the conflict.\n"
      "\n"
      "  The out-of-date information appears in the ninth column (with -u):\n"
      "      '*' a newer revision exists on the server\n"
@@ -878,7 +880,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "           *     965       922 sussman      wc/foo.c\n"
      "    A  +         965       687 joe          wc/qax.c\n"
      "                 965       687 joe          wc/zig.c\n"
-     "    Status against revision:   981\n"),
+     "    Status against revision:   981\n"
+     "\n"
+     "    svn status\n"
+     "     M      wc/bar.c\n"
+     "    !     C wc/qaz.c\n"
+     "          >   incoming edit, local missing\n"
+     "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
       opt_ignore_externals, opt_changelist} },
 
