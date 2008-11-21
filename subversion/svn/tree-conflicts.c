@@ -122,13 +122,13 @@ svn_cl__append_tree_conflict_info_xml(
     {
       /* Order of cases follows definition of svn_wc_conflict_action_t. */
       case svn_wc_conflict_action_edit:
-        tmp = "edited";
+        tmp = "edit";
         break;
       case svn_wc_conflict_action_add:
-        tmp = "added";
+        tmp = "add";
         break;
       case svn_wc_conflict_action_delete:
-        tmp = "deleted";
+        tmp = "delete";
         break;
       default:
         SVN_ERR_MALFUNCTION();
@@ -139,16 +139,16 @@ svn_cl__append_tree_conflict_info_xml(
     {
       /* Order of cases follows definition of svn_wc_conflict_reason_t. */
       case svn_wc_conflict_reason_edited:
-        tmp = "edited";
+        tmp = "edit";
         break;
       case svn_wc_conflict_reason_obstructed:
-        tmp = "obstructed";
+        tmp = "obstruction";
         break;
       case svn_wc_conflict_reason_deleted:
-        tmp = "deleted";
+        tmp = "delete";
         break;
       case svn_wc_conflict_reason_added:
-        tmp = "added";
+        tmp = "add";
         break;
       case svn_wc_conflict_reason_missing:
         tmp = "missing";
