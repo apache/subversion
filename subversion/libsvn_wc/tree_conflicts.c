@@ -270,6 +270,8 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   const char *victim_basename;
   svn_node_kind_t node_kind;
   svn_wc_operation_t operation;
+  svn_wc_conflict_version_t *older_version;
+  svn_wc_conflict_version_t *their_version;
   int n;
 
   SVN_ERR_ASSERT(*start < end);
@@ -298,9 +300,11 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   SVN_ERR(read_field_separator(start, end));
 
   /* Construct the description object */
+  older_version = apr_pcalloc(pool, sizeof(*older_version));
+  their_version = apr_pcalloc(pool, sizeof(*their_version));
   *conflict = svn_wc_conflict_description_create_tree(
     svn_path_join(dir_path, victim_basename, pool),
-    NULL, node_kind, operation, pool);
+    NULL, node_kind, operation, older_version, their_version, pool);
 
   /* action */
   SVN_ERR(read_enum_field(&n, action_map, start, end, pool));
@@ -313,12 +317,12 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   SVN_ERR(read_field_separator(start, end));
 
   /* older_version */
-  SVN_ERR(read_node_version_info(&(*conflict)->older_version, start, end,
+  SVN_ERR(read_node_version_info((*conflict)->older_version, start, end,
                                  pool));
   SVN_ERR(read_field_separator(start, end));
 
   /* their_version */
-  SVN_ERR(read_node_version_info(&(*conflict)->their_version, start, end,
+  SVN_ERR(read_node_version_info((*conflict)->their_version, start, end,
                                  pool));
 
   return SVN_NO_ERROR;
@@ -478,12 +482,12 @@ svn_wc__write_tree_conflicts(char **conflict_data,
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* older_version */
-      SVN_ERR(write_node_version_info(buf, &conflict->older_version, pool));
+      SVN_ERR(write_node_version_info(buf, conflict->older_version, pool));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* their_version */
-      SVN_ERR(write_node_version_info(buf, &conflict->their_version, pool));
+      SVN_ERR(write_node_version_info(buf, conflict->their_version, pool));
 
       if (i < (conflicts->nelts - 1))
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);

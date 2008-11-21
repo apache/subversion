@@ -1173,3 +1173,26 @@ svn_cl__indent_string(const char *str,
     }
   return out->data;
 }
+
+const char *
+svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         apr_pool_t *pool)
+{
+  const char *url_str;
+
+  /* Construct the whole URL if we can, else use whatever we have. */
+  if (node->repos_url && node->path_in_repos)
+    url_str = svn_path_url_add_component(node->repos_url,
+                                         node->path_in_repos, pool);
+  else if (node->repos_url)
+    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
+  else if (node->path_in_repos)
+    url_str = node->path_in_repos;
+  else
+    url_str = "...";
+
+  return apr_psprintf(pool, "(%s) %s@%ld",
+                      svn_cl__node_kind_str(node->node_kind),
+                      url_str, node->peg_rev);
+}
+

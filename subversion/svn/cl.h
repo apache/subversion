@@ -638,6 +638,13 @@ svn_cl__indent_string(const char *str,
                       const char *indent,
                       apr_pool_t *pool);
 
+
+/* Return a string showing NODE's kind, URL and revision, to the extent that
+ * that information is available in NODE. */
+const char *
+svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

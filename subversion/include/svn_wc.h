@@ -1171,7 +1171,7 @@ typedef enum svn_wc_operation_t
 /** Info about one of the conflicting versions of a node. Each field may
  * have its respective null/invalid/unknown value if the corresponding
  * information is not relevant or not available. */
-typedef struct svn_wc_conflict_node_version_t
+typedef struct svn_wc_conflict_version_t
 {
   /* Where to find this node version in a repository */
   const char *repos_url;  /* URL of repository root */
@@ -1186,6 +1186,9 @@ typedef struct svn_wc_conflict_node_version_t
   /* Where to find a local copy of the node */
   /* const char *content_cache_path; */
   /* const char *props_cache_path; */
+
+  /* Remember to update svn_wc__conflict_version_dup()
+   * in case you add fields to this struct. */
 } svn_wc_conflict_version_t;
 
 
@@ -1280,19 +1283,16 @@ typedef struct svn_wc_conflict_description_t
    */
   svn_wc_operation_t operation;
 
-<<<<<<< .working
   /** Info on the "merge-left source" or "older" version of incoming change.
    * @since New in 1.6. */
-  svn_wc_conflict_version_t older_version;
+  svn_wc_conflict_version_t *older_version;
 
   /** Info on the "merge-right source" or "their" version of incoming change.
    * @since New in 1.6. */
-  svn_wc_conflict_version_t their_version;
+  svn_wc_conflict_version_t *their_version;
 
-=======
   /* Remember to adjust svn_wc__conflict_description_dup()
    * if you add new fields to this struct. */
->>>>>>> .merge-right.r34324
 } svn_wc_conflict_description_t;
 
 /**
@@ -1344,9 +1344,10 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c path field of the created struct to @a path, the @c access
  * field to @a adm_access, the @c kind field to @c
- * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, and the @c
- * operation to @a operation. Make only shallow copies of the pointer
- * arguments.
+ * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
+ * operation to @a operation, the @c older_version field to @a older_version,
+ * and the @c their_version field to @a their_version.
+ * Make only shallow copies of the pointer arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
@@ -1358,6 +1359,8 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_node_kind_t node_kind,
                                         svn_wc_operation_t operation,
+                                        svn_wc_conflict_version_t *older_version,
+                                        svn_wc_conflict_version_t *their_version,
                                         apr_pool_t *pool);
 
 

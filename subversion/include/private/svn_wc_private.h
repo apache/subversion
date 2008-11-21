@@ -227,6 +227,15 @@ svn_wc_conflict_description_t *
 svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
                                  apr_pool_t *pool);
 
+/** Return a duplicate of @a version, allocated in @a pool.
+ * No part of the new version will be shared with @a version.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc__conflict_version_dup(const svn_wc_conflict_version_t *version,
+                             apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

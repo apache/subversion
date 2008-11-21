@@ -1463,32 +1463,15 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
   if (reason != (svn_wc_conflict_reason_t)(-1))
     {
       svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_version_t *older_version;
+      svn_wc_conflict_version_t *their_version;
       const char *repos_url = NULL;
       const char *path_in_repos = NULL;
-
-      conflict = svn_wc_conflict_description_create_tree(
-        full_path, parent_adm_access, entry->kind,
-        eb->switch_url ? svn_wc_operation_switch : svn_wc_operation_update,
-        pool);
-      conflict->action = action;
-      conflict->reason = reason;
 
       repos_url = entry->repos;
       path_in_repos = svn_path_is_child(repos_url, entry->url, pool);
       if (path_in_repos == NULL)
         path_in_repos = ".";
-
-      conflict->older_version.repos_url = repos_url;
-      conflict->older_version.peg_rev = entry->revision;
-      conflict->older_version.path_in_repos = path_in_repos;
-      conflict->older_version.node_kind =
-        (entry->schedule == svn_wc_schedule_delete) ? svn_node_none
-        : entry->kind;
-      /* entry->kind is both base kind and working kind, because schedule
-       * replace-by-different-kind is not supported. */
-      /* ### TODO: but in case the entry is locally removed, entry->kind
-       * is svn_node_none and doesn't reflect the older kind. */
-
       /* "Their" repos_url (repository root URL) will be the same. */
 
       if (eb->switch_url != NULL)
@@ -1508,10 +1491,30 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
             }
         }
 
-      conflict->their_version.repos_url = repos_url;
-      conflict->their_version.peg_rev = *eb->target_revision;
-      conflict->their_version.path_in_repos = path_in_repos;
-      conflict->their_version.node_kind = their_node_kind;
+      older_version = apr_pcalloc(pool, sizeof(*older_version));
+      older_version->repos_url = repos_url;
+      older_version->peg_rev = entry->revision;
+      older_version->path_in_repos = path_in_repos;
+      older_version->node_kind =
+        (entry->schedule == svn_wc_schedule_delete) ? svn_node_none
+        : entry->kind;
+      /* entry->kind is both base kind and working kind, because schedule
+       * replace-by-different-kind is not supported. */
+      /* ### TODO: but in case the entry is locally removed, entry->kind
+       * is svn_node_none and doesn't reflect the older kind. */
+
+      their_version = apr_pcalloc(pool, sizeof(*older_version));
+      their_version->repos_url = repos_url;
+      their_version->peg_rev = *eb->target_revision;
+      their_version->path_in_repos = path_in_repos;
+      their_version->node_kind = their_node_kind;
+
+      conflict = svn_wc_conflict_description_create_tree(
+        full_path, parent_adm_access, entry->kind,
+        eb->switch_url ? svn_wc_operation_switch : svn_wc_operation_update,
+        older_version, their_version, pool);
+      conflict->action = action;
+      conflict->reason = reason;
 
       /* Ensure 'log_accum' is non-null. svn_wc__loggy_add_tree_conflict()
        * would otherwise quietly set it to point to a newly allocated buffer
