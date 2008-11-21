@@ -2612,10 +2612,10 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
-  /** True if the entry is the victim of a tree conflict.
+  /** Non-NULL if the entry is the victim of a tree conflict.
    * @since New in 1.6
    */
-  svn_boolean_t tree_conflicted;
+  svn_wc_conflict_description_t *tree_conflict;
 
   /** If the item is a file that was added to the working copy with an
       svn:externals; if file_external is TRUE, then switched is always
