@@ -1174,13 +1174,13 @@ typedef enum svn_wc_operation_t
 typedef struct svn_wc_conflict_node_version_t
 {
   /* Where to find this node version in a repository */
-  const char *repos_url;
+  const char *repos_url;  /* URL of repository root */
   /* ### Also? repos_uuid; */
-  svn_revnum_t peg_rev;
-  const char *path_in_repos;
+  svn_revnum_t peg_rev;  /* revision at which to look up path_in_repos */
+  const char *path_in_repos;  /* path within repos; must not start with '/' */
 
   /* Info about this node */
-  svn_node_kind_t node_kind;  /* 'file' or 'dir' or 'none' */
+  svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
 
   /* ### Also? ... */
   /* Where to find a local copy of the node */
