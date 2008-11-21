@@ -226,6 +226,30 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
   return NULL; /* Should never happen! */
 }
 
+/* Return a string showing NODE's kind, URL and revision, to the extent that
+ * that information is available in NODE. */
+static const char *
+node_description(const svn_wc_conflict_version_t *node,
+                 apr_pool_t *pool)
+{
+  const char *url_str;
+
+  /* Construct the whole URL if we can, else use whatever we have. */
+  if (node->repos_url && node->path_in_repos)
+    url_str = svn_path_url_add_component(node->repos_url,
+                                         node->path_in_repos, pool);
+  else if (node->repos_url)
+    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
+  else if (node->path_in_repos)
+    url_str = node->path_in_repos;
+  else
+    url_str = "...";
+
+  return apr_psprintf(pool, "(%s) %s@%ld",
+                      svn_cl__node_kind_str(node->node_kind),
+                      url_str, node->peg_rev);
+}
+
 svn_error_t *
 svn_cl__append_human_readable_tree_conflict_description(
   svn_stringbuf_t *descriptions,
@@ -235,10 +259,7 @@ svn_cl__append_human_readable_tree_conflict_description(
   const char *victim_name, *their_phrase, *our_phrase;
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
-  const char *older_repos = conflict->older_version.repos_url;
-  const char *their_repos = conflict->their_version.repos_url;
   const char *str;
-  svn_boolean_t same_repos;
 
   victim_name = svn_path_basename(conflict->path, pool);
   their_phrase = select_their_phrase(conflict, phrases);
@@ -254,36 +275,12 @@ svn_cl__append_human_readable_tree_conflict_description(
   svn_stringbuf_appendstr(descriptions, their_phrase_with_victim);
   svn_stringbuf_appendstr(descriptions, our_phrase_with_victim);
 
-  same_repos = (older_repos == their_repos)
-               || ((older_repos != NULL) && (their_repos != NULL)
-                   && (strcmp(older_repos, their_repos) == 0));
-
-  if (conflict->older_version.repos_url)
-    {
-      str = apr_psprintf(pool, (same_repos
-                                  ? "  Common repository: %s\n"
-                                  : "  Older repository: %s\n"),
-                         conflict->older_version.repos_url);
-      svn_stringbuf_appendcstr(descriptions, str);
-    }
-
-  str = apr_psprintf(pool, "  Older version: (%s) %s@%ld\n",
-                     svn_cl__node_kind_str(conflict->older_version.node_kind),
-                     conflict->older_version.path_in_repos,
-                     conflict->older_version.peg_rev);
+  str = apr_psprintf(pool, _("  Older version: %s\n"),
+                     node_description(&conflict->older_version, pool));
   svn_stringbuf_appendcstr(descriptions, str);
 
-  if (conflict->their_version.repos_url && !same_repos)
-    {
-      str = apr_psprintf(pool, "  Their repository: %s\n",
-                         conflict->their_version.repos_url);
-      svn_stringbuf_appendcstr(descriptions, str);
-    }
-
-  str = apr_psprintf(pool, "  Their version: (%s) %s@%ld\n",
-                     svn_cl__node_kind_str(conflict->their_version.node_kind),
-                     conflict->their_version.path_in_repos,
-                     conflict->their_version.peg_rev);
+  str = apr_psprintf(pool, _("  Their version: %s\n"),
+                     node_description(&conflict->their_version, pool));
   svn_stringbuf_appendcstr(descriptions, str);
 
   return SVN_NO_ERROR;
