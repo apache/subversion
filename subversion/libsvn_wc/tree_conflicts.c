@@ -377,7 +377,7 @@ write_integer_field(svn_stringbuf_t *buf,
 }
 
 /* Append to BUF the several fields that represent VERSION_INFO, */
-static void
+static svn_error_t *
 write_node_version_info(svn_stringbuf_t *buf,
                          const svn_wc_conflict_version_t *version_info,
                          apr_pool_t *pool)
@@ -395,6 +395,7 @@ write_node_version_info(svn_stringbuf_t *buf,
   svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
   SVN_ERR(write_enum_field(buf, node_kind_map, version_info->node_kind));
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -445,12 +446,12 @@ svn_wc__write_tree_conflicts(char **conflict_data,
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* older_version */
-      write_node_version_info(buf, &conflict->older_version, pool);
+      SVN_ERR(write_node_version_info(buf, &conflict->older_version, pool));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* their_version */
-      write_node_version_info(buf, &conflict->their_version, pool);
+      SVN_ERR(write_node_version_info(buf, &conflict->their_version, pool));
 
       if (i < (conflicts->nelts - 1))
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);
