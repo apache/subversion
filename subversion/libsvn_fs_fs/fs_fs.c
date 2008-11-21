@@ -169,14 +169,16 @@ path_lock(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 static const char *
-path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
+                apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   assert(ffd->max_files_per_dir);
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
-                            apr_psprintf(pool, "%ld.pack",
-                                         rev / ffd->max_files_per_dir), NULL);
+                            apr_psprintf(pool, "%ld.%s",
+                                         rev / ffd->max_files_per_dir, kind),
+                            NULL);
 }
 
 static const char *
@@ -2121,7 +2123,7 @@ open_pack_or_rev_file(apr_file_t **file,
       svn_error_clear(err);
 
       /* Try and open the packed revision. */
-      err = svn_io_file_open(file, path_rev_shard(fs, rev, pool),
+      err = svn_io_file_open(file, path_rev_packed(fs, rev, "pack", pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
