@@ -422,8 +422,8 @@ process_committed_leaf(int log_number,
                   /* If we copy a deleted file, then it will become scheduled
                      for deletion, but there is no base text for it. So we
                      cannot get/compute a checksum for this file. */
-                  SVN_ERR_ASSERT(!entry->copied
-                                 || entry->schedule != svn_wc_schedule_delete);
+                  SVN_ERR_ASSERT(entry->copied
+                                 && entry->schedule == svn_wc_schedule_delete);
 
                   /* checksum will remain NULL in this one case. */
                 }
