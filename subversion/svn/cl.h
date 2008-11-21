@@ -600,6 +600,10 @@ svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 const char *
 svn_cl__node_kind_str(svn_node_kind_t kind);
 
+/* Return a (possibly localised) string representation of KIND, being "none" or
+   "dir" or "file" or, in any other case, the empty string. */
+const char *
+svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
  * PROPVAL looks like an attempt to turn the property off (i.e., it's
