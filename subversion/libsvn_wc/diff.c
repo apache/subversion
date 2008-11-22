@@ -545,7 +545,7 @@ file_diff(struct dir_baton *dir_baton,
     svn_node_kind_t kind;
     SVN_ERR(svn_io_check_path(textbase, &kind, pool));
     if (kind == svn_node_none)
-      textbase = svn_wc__text_revert_path(path, FALSE, pool);
+      textbase = svn_wc__text_revert_path(path, pool);
   }
 
   SVN_ERR(get_empty_file(eb, &empty_file));
