@@ -253,8 +253,7 @@ make_dir_baton(const char *path,
   const char *full_path;
 
   /* A path relative to nothing?  I don't think so. */
-  if (path && (! pb))
-    abort();
+  SVN_ERR_ASSERT_NO_RETURN(!path || pb);
 
   /* Construct the full path of this node. */
   if (pb)

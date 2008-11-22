@@ -320,7 +320,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
       xlate_handle_node_t **node_p;
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock(xlate_handle_mutex) != APR_SUCCESS)
-        abort();
+        SVN_ERR_MALFUNCTION_NO_RETURN();
 #endif
       node_p = apr_hash_get(xlate_handle_hash, userdata_key,
                             APR_HASH_KEY_STRING);
@@ -338,7 +338,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
       *node_p = node;
 #if APR_HAS_THREADS
       if (apr_thread_mutex_unlock(xlate_handle_mutex) != APR_SUCCESS)
-        abort();
+        SVN_ERR_MALFUNCTION_NO_RETURN();
 #endif
     }
   else
