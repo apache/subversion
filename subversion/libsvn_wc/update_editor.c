@@ -3813,8 +3813,8 @@ merge_file(svn_wc_notify_state_t *content_state,
                  Remember that this function wants full paths! */
               SVN_ERR(svn_wc__merge_internal
                       (&log_accum, &merge_outcome,
-                       merge_left,
-                       new_text_base_path,
+                       merge_left, NULL,
+                       new_text_base_path, NULL,
                        fb->path,
                        fb->copied_working_text,
                        adm_access,

@@ -1176,7 +1176,14 @@ svn_wc_operation_str(svn_wc_operation_t operation, apr_pool_t *pool);
 
 /** Info about one of the conflicting versions of a node. Each field may
  * have its respective null/invalid/unknown value if the corresponding
- * information is not relevant or not available. */
+ * information is not relevant or not available.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @since New in 1.6.
+*/
 typedef struct svn_wc_conflict_version_t
 {
   /* Where to find this node version in a repository */
