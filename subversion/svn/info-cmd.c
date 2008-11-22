@@ -431,20 +431,20 @@ print_info(void *baton,
 
   if (info->tree_conflict)
     {
-      const char *desc, *incoming_version, *local_version;
+      const char *desc, *older_version, *their_version;
 
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
-      incoming_version =
-        svn_cl__node_description(info->tree_conflict->their_version, pool);
-      local_version =
+      older_version =
         svn_cl__node_description(info->tree_conflict->older_version, pool);
+      their_version =
+        svn_cl__node_description(info->tree_conflict->their_version, pool);
 
       svn_cmdline_printf(pool,
                          _("Tree conflict: %s\n"
-                           "  incoming version: %s\n"
-                           "  local version: %s"),
-                         desc, incoming_version, local_version);
+                           "  Older version: %s\n"
+                           "  Their version: %s"),
+                         desc, older_version, their_version);
     }
 
   /* Print extra newline separator. */

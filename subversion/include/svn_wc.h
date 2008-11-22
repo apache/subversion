@@ -1167,6 +1167,12 @@ typedef enum svn_wc_operation_t
 
 } svn_wc_operation_t;
 
+/** Provides a human redable string for a given @a operation.
+ * @since New in 1.6.
+ */
+const char *
+svn_wc_operation_str(svn_wc_operation_t operation, apr_pool_t *pool);
+
 
 /** Info about one of the conflicting versions of a node. Each field may
  * have its respective null/invalid/unknown value if the corresponding

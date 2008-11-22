@@ -556,6 +556,7 @@ static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
                   const char *path,
+                  const char *their_path,
                   int *log_number,
                   apr_pool_t *pool);
 
@@ -610,7 +611,7 @@ complete_directory(struct edit_baton *eb,
               if (!target_access && entry->kind == svn_node_dir)
                 {
                   int log_number = 0;
-                  SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target,
+                  SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
                                             &log_number, pool));
                 }
               else
@@ -1625,6 +1626,7 @@ static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
                   const char *path,
+                  const char *their_path,
                   int *log_number,
                   apr_pool_t *pool)
 {
@@ -1677,7 +1679,7 @@ do_entry_deletion(struct edit_baton *eb,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path,
                                 entry, adm_access, 
                                 svn_wc_conflict_action_delete,
-                                svn_node_none, NULL, pool));
+                                svn_node_none, their_path, pool));
 
   if (tree_conflict != NULL)
     {
@@ -1821,11 +1823,13 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
+  const char *path_basename = svn_path_basename(path, pool);
+  const char *their_path = svn_path_url_add_component(pb->new_URL,
+                                                      path_basename, pool);
 
-  SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
-                                pool));
-  return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
-                           pool);
+  SVN_ERR(check_path_under_root(pb->path, path_basename, pool));
+  return do_entry_deletion(pb->edit_baton, pb->path, path, their_path,
+                           &pb->log_number, pool);
 }
 
 
@@ -4057,7 +4061,8 @@ close_edit(void *edit_baton,
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
   if ((*eb->target) && (svn_wc__adm_missing(eb->adm_access, target_path)))
-    SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, &log_number, pool));
+    SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
+                              &log_number, pool));
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
