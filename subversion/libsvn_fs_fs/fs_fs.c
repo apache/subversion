@@ -1884,10 +1884,8 @@ representation_string(representation_t *rep,
                         " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
-                        rep->md5_checksum ?
-                            svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                            pool) :
-                            "00000000000000000000000000000000",
+                        svn_checksum_to_cstring_display(rep->md5_checksum,
+                                                        pool),
                         rep->sha1_checksum ?
                             svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                             pool) :
@@ -4636,6 +4634,8 @@ rep_write_contents_close(void *baton)
       SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
       /* Use the old rep for this content. */
+      old_rep->md5_checksum = svn_checksum_dup(
+                      b->noderev->data_rep->md5_checksum, b->pool);
       b->noderev->data_rep = old_rep;
 
       /* Get the reuse count and put it in the node-rev. */
