@@ -255,16 +255,24 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    conflict is encountered, giving the callback a chance to resolve
    the conflict (before marking the file 'conflicted').
 
+   When LEFT_VERSION and RIGHT_VERSION are non-NULL, pass them to the 
+   conflict resolver as older_version and their_version.
+
+   ## TODO: We should store the information in LEFT_VERSION and RIGHT_VERSION
+            in the workingcopy for future retrieval via svn info.
+
    Property changes sent by the update are provided in PROP_DIFF.
 
-   For a complete description, see svn_wc_merge2() for which this is
+   For a complete description, see svn_wc_merge3() for which this is
    the (loggy) implementation.
 */
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *left,
+                       svn_wc_conflict_version_t *left_version,
                        const char *right,
+                       svn_wc_conflict_version_t *right_version,
                        const char *merge_target,
                        const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
