@@ -2265,12 +2265,9 @@ fs_file_checksum(svn_checksum_t **checksum,
                  apr_pool_t *pool)
 {
   dag_node_t *file;
-  svn_checksum_t *file_checksum;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, kind, pool));
-  *checksum = (file_checksum->kind == kind) ? file_checksum : NULL;
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_file_checksum(checksum, file, kind, pool);
 }
 
 
