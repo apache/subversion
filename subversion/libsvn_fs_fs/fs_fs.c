@@ -3255,12 +3255,25 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
 svn_error_t *
 svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                          node_revision_t *noderev,
+                         svn_checksum_kind_t kind,
                          apr_pool_t *pool)
 {
-  /* TODO: pass a kind argument to this function, to enable it to choose
-     between rep->md5_checksum and rep->sha1_checksum. */
   if (noderev->data_rep)
-    *checksum = svn_checksum_dup(noderev->data_rep->md5_checksum, pool);
+    {
+      switch(kind)
+        {
+          case svn_checksum_md5:
+            *checksum = svn_checksum_dup(noderev->data_rep->md5_checksum,
+                                         pool);
+            break;
+          case svn_checksum_sha1:
+            *checksum = svn_checksum_dup(noderev->data_rep->sha1_checksum,
+                                         pool);
+            break;
+          default:
+            *checksum = NULL;
+        }
+    }
   else
     *checksum = NULL;
 
