@@ -12,13 +12,6 @@ Blocker:
 
  * Fix a bunch of rep-sharing issues in FSFS (or remove the feature):
 
-   - Storing only SHA1 checksums and not MD5 for new files almost
-     certainly leads to less robust updates/commits or performance
-     penalties; at the very least, we should figure out which one of
-     those it is doing and make sure we're making the right
-     decision. I'd recommend just storing both though (or removing
-     rep-sharing from FSFS).  [BDB is now storing both.]
-
    - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
      used outside of the control of the FSFS lock.  Thus its
      read-modify-write can have race conditions, leading to two
