@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include "svn_string.h"
+#include "svn_error.h"
 #include "skel.h"
 #include "../key-gen.h"
 
@@ -361,8 +362,8 @@ unparse(skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
           int length_len;
 
           length_len = svn_fs_base__putsize(buf, sizeof(buf), skel->len);
-          if (! length_len)
-            abort();
+
+          SVN_ERR_ASSERT_NO_RETURN(length_len > 0);
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
@@ -443,8 +444,7 @@ svn_fs_base__prepend(skel_t *skel, skel_t *list_skel)
 {
   /* If list_skel isn't even a list, somebody's not using this
      function properly. */
-  if (list_skel->is_atom)
-    abort();
+  SVN_ERR_ASSERT_NO_RETURN(! list_skel->is_atom);
 
   skel->next = list_skel->children;
   list_skel->children = skel;
@@ -456,8 +456,7 @@ svn_fs_base__append(skel_t *skel, skel_t *list_skel)
 {
   /* If list_skel isn't even a list, somebody's not using this
      function properly. */
-  if (list_skel->is_atom)
-    abort();
+  SVN_ERR_ASSERT_NO_RETURN(! list_skel->is_atom);
 
   /* No kids?  Let's make one. */
   if (! list_skel->children)
