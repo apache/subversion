@@ -25,7 +25,7 @@
 #include "svn_private_config.h"
 
 static const char *
-select_action(const svn_wc_conflict_description_t *conflict)
+action_str(const svn_wc_conflict_description_t *conflict)
 {
   switch (conflict->action)
     {
@@ -35,13 +35,13 @@ select_action(const svn_wc_conflict_description_t *conflict)
       case svn_wc_conflict_action_add:
         return _("add");
       case svn_wc_conflict_action_delete:
-        return _("delete");
+        return _("delete or move");
     }
   return NULL;
 }
 
 static const char *
-select_reason(const svn_wc_conflict_description_t *conflict)
+reason_str(const svn_wc_conflict_description_t *conflict)
 {
   switch (conflict->reason)
     {
@@ -51,7 +51,7 @@ select_reason(const svn_wc_conflict_description_t *conflict)
       case svn_wc_conflict_reason_obstructed:
         return _("obstruction");
       case svn_wc_conflict_reason_deleted:
-        return _("delete");
+        return _("delete or move");
       case svn_wc_conflict_reason_added:
         return _("add");
       case svn_wc_conflict_reason_missing:
@@ -68,12 +68,14 @@ svn_cl__get_human_readable_tree_conflict_description(
   const svn_wc_conflict_description_t *conflict,
   apr_pool_t *pool)
 {
-  const char *victim_name, *action, *reason;
+  const char *victim_name, *action, *reason, *operation;
   victim_name = svn_path_basename(conflict->path, pool);
-  action = select_action(conflict);
-  reason = select_reason(conflict);
+  reason = reason_str(conflict);
+  action = action_str(conflict);
+  operation = svn_wc_operation_str(conflict->operation, pool);
   SVN_ERR_ASSERT(action && reason);
-  *desc = apr_psprintf(pool, _("incoming %s, local %s"), action, reason);
+  *desc = apr_psprintf(pool, _("local %s, incoming %s (upon %s)."),
+                       reason, action, operation);
   return SVN_NO_ERROR;
 }
 
