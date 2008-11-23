@@ -34,6 +34,7 @@
 #include <glib.h>
 #include <dbus/dbus.h>
 #include <gnome-keyring.h>
+#include <gnome-keyring-result.h>
 
 
 /*-----------------------------------------------------------------------*/
@@ -70,24 +71,43 @@ gnome_keyring_password_get(const char **password,
   GList *items;
   svn_boolean_t ret = FALSE;
 
-  result = gnome_keyring_find_network_password_sync(username, realmstring,
-                                                    NULL, NULL, NULL, NULL, 0,
-                                                    &items);
-
-  if (result == GNOME_KEYRING_RESULT_OK && items && items->data)
+  if (! apr_hash_get(parameters,
+                     "gnome-keyring-opening-failed",
+                     APR_HASH_KEY_STRING))
     {
-      GnomeKeyringNetworkPasswordData *item;
-      item = (GnomeKeyringNetworkPasswordData *)items->data;
-      if (item->password)
+      result = gnome_keyring_find_network_password_sync(username, realmstring,
+                                                        NULL, NULL, NULL, NULL,
+                                                        0, &items);
+    }
+  else
+    {
+      result = GNOME_KEYRING_RESULT_DENIED;
+    }
+
+  if (result == GNOME_KEYRING_RESULT_OK)
+    {
+      if (items && items->data)
         {
-          size_t len = strlen(item->password);
-          if (len > 0)
+          GnomeKeyringNetworkPasswordData *item;
+          item = (GnomeKeyringNetworkPasswordData *)items->data;
+          if (item->password)
             {
-              *password = apr_pstrmemdup(pool, item->password, len);
-              ret = TRUE;
+              size_t len = strlen(item->password);
+              if (len > 0)
+                {
+                  *password = apr_pstrmemdup(pool, item->password, len);
+                  ret = TRUE;
+                }
             }
+          gnome_keyring_network_password_list_free(items);
         }
-      gnome_keyring_network_password_list_free(items);
+    }
+  else
+    {
+      apr_hash_set(parameters,
+                   "gnome-keyring-opening-failed",
+                   APR_HASH_KEY_STRING,
+                   "");
     }
 
   return ret;
@@ -122,11 +142,27 @@ gnome_keyring_password_set(apr_hash_t *creds,
   GnomeKeyringResult result;
   guint32 item_id;
 
-  result = gnome_keyring_set_network_password_sync(NULL, /* default keyring */
-                                                   username, realmstring,
-                                                   NULL, NULL, NULL, NULL, 0,
-                                                   password,
-                                                   &item_id);
+  if (! apr_hash_get(parameters,
+                     "gnome-keyring-opening-failed",
+                     APR_HASH_KEY_STRING))
+    {
+      result = gnome_keyring_set_network_password_sync(NULL, /* default keyring */
+                                                       username, realmstring,
+                                                       NULL, NULL, NULL, NULL,
+                                                       0, password,
+                                                       &item_id);
+    }
+  else
+    {
+      result = GNOME_KEYRING_RESULT_DENIED;
+    }
+  if (result != GNOME_KEYRING_RESULT_OK)
+    {
+      apr_hash_set(parameters,
+                   "gnome-keyring-opening-failed",
+                   APR_HASH_KEY_STRING,
+                   "");
+    }
 
   return result == GNOME_KEYRING_RESULT_OK;
 }

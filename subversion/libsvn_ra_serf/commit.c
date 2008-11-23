@@ -1453,7 +1453,7 @@ absent_directory(const char *path,
   dir_context_t *ctx = parent_baton;
 #endif
 
-  abort();
+  SVN_ERR_MALFUNCTION();
 }
 
 static svn_error_t *
@@ -1817,7 +1817,7 @@ absent_file(const char *path,
   dir_context_t *ctx = parent_baton;
 #endif
 
-  abort();
+  SVN_ERR_MALFUNCTION();
 }
 
 static svn_error_t *
@@ -1846,7 +1846,7 @@ close_edit(void *edit_baton,
 
   if (svn_ra_serf__merge_get_status(merge_ctx) != 200)
     {
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   /* Inform the WC that we did a commit.  */
@@ -1870,10 +1870,7 @@ close_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  if (delete_ctx->status != 204)
-    {
-      abort();
-    }
+  SVN_ERR_ASSERT(delete_ctx->status == 204);
 
   return SVN_NO_ERROR;
 }
@@ -1915,7 +1912,7 @@ abort_edit(void *edit_baton,
       delete_ctx->status != 404
       )
     {
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;

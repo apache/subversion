@@ -19,7 +19,7 @@
 ######################################################################
 
 # General modules
-import os
+import os, re
 
 # Our testing module
 import svntest
@@ -2327,10 +2327,11 @@ def make_depth_tree_conflicts(sbox):
   expected_status.tweak('A/mu',
                         'A/B', 'A/B/lambda',
                         'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        'A/B/F',
                         'A/D/gamma',
-                        status='D ')
+                        status='D ', wc_rev=1)
   expected_status.tweak('A/mu', 'A/B', 'A/D/gamma',
-                        treeconflict='C', wc_rev='1')
+                        treeconflict='C', wc_rev=1)
 
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,
@@ -2339,6 +2340,27 @@ def make_depth_tree_conflicts(sbox):
                                         None, None, None, None, None, False,
                                         wc)
 
+# Helper for text output.
+def verify_lines(lines, regexes):
+  """Return True if each of the given regular expressions matches
+     exactly one line in the list of lines."""
+  for regex in regexes:
+    num_patterns_found = 0
+    for line in lines:
+      if re.search(regex, line):
+        num_patterns_found += 1
+    if num_patterns_found != 1:
+      print(("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
+        " occurrences of '" + regex + "'"))
+      if svntest.main.verbose_mode:
+        print(" Actual output:")
+        for line in lines:
+          sys.stdout.write("  %s" % line)
+        print(" Expected regexes:")
+        for regex in regexes:
+          sys.stdout.write("  %s\n" % regex)
+      return False
+  return True
 
 
 def tree_conflicts_resolved_depth_empty(sbox):
@@ -2383,11 +2405,13 @@ def tree_conflicts_resolved_depth_immediates(sbox):
   m =    j(A, 'mu')
   B =    j(A, 'B')
 
-  svntest.actions.run_and_verify_svn(None, 
-    ["Resolved conflicted state of '%s'\n" % m,
-     "Resolved conflicted state of '%s'\n" % B],
-    [],
-    'resolved', '--depth=immediates', A)
+  exit_code, output, error = svntest.main.run_svn(None, 'resolved',
+                                                  '--depth=immediates', A) 
+  if not verify_lines(output, [
+      "Resolved conflicted state of '%s'\n" % m,
+      "Resolved conflicted state of '%s'\n" % B,
+      ]):
+    raise svntest.Failure("Unexpected tree-conflict resolution output")
 
 
 def tree_conflicts_resolved_depth_infinity(sbox):
@@ -2403,12 +2427,14 @@ def tree_conflicts_resolved_depth_infinity(sbox):
   g =    j(A, 'D', 'gamma')
 
 
-  svntest.actions.run_and_verify_svn(None, 
-    ["Resolved conflicted state of '%s'\n" % m,
-     "Resolved conflicted state of '%s'\n" % B,
-     "Resolved conflicted state of '%s'\n" % g],
-    [],
-    'resolved', '--depth=infinity', A)
+  exit_code, output, error = svntest.main.run_svn(None, 'resolved',
+                                                  '--depth=infinity', A) 
+  if not verify_lines(output, [
+      "Resolved conflicted state of '%s'\n" % m,
+      "Resolved conflicted state of '%s'\n" % B,
+      "Resolved conflicted state of '%s'\n" % g,
+      ]):
+    raise svntest.Failure("Unexpected tree-conflict resolution output")
 
 
 #----------------------------------------------------------------------
@@ -2448,10 +2474,10 @@ test_list = [ None,
               excluded_path_update_operation,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
-              XFail(tree_conflicts_resolved_depth_empty),
-              XFail(tree_conflicts_resolved_depth_files),
-              XFail(tree_conflicts_resolved_depth_immediates),
-              XFail(tree_conflicts_resolved_depth_infinity),
+              tree_conflicts_resolved_depth_empty,
+              tree_conflicts_resolved_depth_files,
+              tree_conflicts_resolved_depth_immediates,
+              tree_conflicts_resolved_depth_infinity,
             ]
 
 if __name__ == "__main__":
