@@ -441,10 +441,24 @@ print_info(void *baton,
         svn_cl__node_description(info->tree_conflict->their_version, pool);
 
       svn_cmdline_printf(pool,
-                         _("Tree conflict: %s\n"
-                           "  Older version: %s\n"
-                           "  Their version: %s"),
-                         desc, older_version, their_version);
+                         "%s: %s\n"
+                         "  %s: %s\n"
+                         "  %s: %s",
+                         _("Tree conflict"),
+                         desc,
+                         (info->tree_conflict->operation
+                            == svn_wc_operation_merge)
+                           ? _("Merge  left") /* (1) */
+                           : _("Older version"),
+                         older_version,
+                         (info->tree_conflict->operation
+                            == svn_wc_operation_merge)
+                           ? _("Merge right")
+                           : _("Their version"),
+                         their_version);
+      /* (1): Sneaking in a space in "Merge  left" so that it is the
+       * same length as "Merge right" while it still starts in the same
+       * column. That's just a tiny tweak in the English `svn'. */
     }
 
   /* Print extra newline separator. */
