@@ -90,7 +90,7 @@ print_info_xml(void *baton,
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_path_local_style(target, pool),
-                        "kind", svn_cl__node_kind_str(info->kind),
+                        "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
 
