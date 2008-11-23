@@ -23,8 +23,10 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <unistd.h>
 
 #include <apr_pools.h>
+#include <apr_strings.h>
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -48,6 +50,33 @@
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
 
+
+static const char *
+get_application_name(apr_hash_t *parameters,
+                     apr_pool_t *pool)
+{
+  svn_config_t *config =
+    static_cast<svn_config_t *> (apr_hash_get(parameters,
+                                              SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
+                                              APR_HASH_KEY_STRING));
+  svn_boolean_t svn_application_name_with_pid;
+  svn_config_get_bool(config,
+                      &svn_application_name_with_pid,
+                      SVN_CONFIG_SECTION_AUTH,
+                      SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID,
+                      FALSE);
+  const char *svn_application_name;
+  if (svn_application_name_with_pid)
+    {
+      long pid = getpid();
+      svn_application_name = apr_psprintf(pool, "Subversion [%ld]", pid);
+    }
+  else
+    {
+      svn_application_name = "Subversion";
+    }
+  return svn_application_name;
+}
 
 static QString
 get_wallet_name(apr_hash_t *parameters)
@@ -111,17 +140,14 @@ kwallet_terminate(void *data)
   apr_hash_t *parameters = static_cast<apr_hash_t *> (data);
   if (apr_hash_get(parameters, "kwallet-initialized", APR_HASH_KEY_STRING))
     {
-      QString wallet_name = get_wallet_name(parameters);
-      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
-      KWallet::Wallet::disconnectApplication(wallet_name,
-                                             QString::fromUtf8("Subversion"));
+      KWallet::Wallet *wallet = get_wallet(NULL, parameters);
       delete wallet;
       apr_hash_set(parameters,
                    "kwallet-initialized",
                    APR_HASH_KEY_STRING,
                    NULL);
     }
-  return SVN_NO_ERROR;
+  return APR_SUCCESS;
 }
 
 /* Implementation of svn_auth__password_get_t that retrieves
@@ -147,9 +173,9 @@ kwallet_password_get(const char **password,
 
   KCmdLineArgs::init(1,
                      (char *[1]) { (char *) "svn" },
-                     "Subversion",
+                     get_application_name(parameters, pool),
                      "subversion",
-                     ki18n("Subversion"),
+                     ki18n(get_application_name(parameters, pool)),
                      SVN_VER_NUMBER,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
@@ -210,9 +236,9 @@ kwallet_password_set(apr_hash_t *creds,
 
   KCmdLineArgs::init(1,
                      (char *[1]) { (char *) "svn" },
-                     "Subversion",
+                     get_application_name(parameters, pool),
                      "subversion",
-                     ki18n("Subversion"),
+                     ki18n(get_application_name(parameters, pool)),
                      SVN_VER_NUMBER,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);

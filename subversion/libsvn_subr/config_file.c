@@ -947,6 +947,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set KWallet wallet used by Subversion. If empty or unset,"      NL
         "### then the default network wallet will be used."                  NL
         "# kwallet-wallet ="                                                 NL
+        "###"                                                                NL
+        "### Include PID (Process ID) in Subversion application name when"   NL
+        "### using KWallet. It defaults to 'no'."                            NL
+        "# kwallet-svn-application-name-with-pid = yes"                      NL
 #endif
         "###"                                                                NL
         "### The rest of this section in this file has been deprecated."     NL
