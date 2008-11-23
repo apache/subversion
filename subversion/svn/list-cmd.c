@@ -156,7 +156,7 @@ print_dirent_xml(void *baton,
   sb = svn_stringbuf_create("", pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "kind", svn_cl__node_kind_str(dirent->kind),
+                        "kind", svn_cl__node_kind_str_xml(dirent->kind),
                         NULL);
 
   svn_cl__xml_tagged_cdata(&sb, pool, "name", entryname);

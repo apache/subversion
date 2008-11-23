@@ -999,7 +999,7 @@ svn_cl__xml_print_footer(const char *tagname,
 
 
 const char *
-svn_cl__node_kind_str(svn_node_kind_t kind)
+svn_cl__node_kind_str_xml(svn_node_kind_t kind)
 {
   switch (kind)
     {
