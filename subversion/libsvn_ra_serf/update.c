@@ -534,10 +534,7 @@ close_dir(report_dir_t *dir)
 {
   report_dir_t *prev, *sibling;
 
-  if (dir->ref_count)
-    {
-      abort();
-    }
+  SVN_ERR_ASSERT(! dir->ref_count);
 
   svn_ra_serf__walk_all_props(dir->props, dir->base_name, dir->base_rev,
                               set_dir_props, dir, dir->dir_baton_pool);
@@ -566,7 +563,7 @@ close_dir(report_dir_t *dir)
           prev = sibling;
           sibling = sibling->sibling;
           if (!sibling)
-            abort();
+            SVN_ERR_MALFUNCTION();
         }
 
       if (!prev)
@@ -593,10 +590,7 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
       dir->ref_count--;
     }
 
-  if (dir->ref_count)
-    {
-      abort();
-    }
+  SVN_ERR_ASSERT(! dir->ref_count);
 
   SVN_ERR(open_dir(dir));
 
@@ -700,7 +694,7 @@ cancel_fetch(serf_request_t *request,
     }
 
   /* We have no idea what went wrong. */
-  abort();
+  SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
 static apr_status_t
@@ -847,7 +841,7 @@ handle_fetch(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  abort();
+                  SVN_ERR_MALFUNCTION_NO_RETURN();
                 }
 
               /* Skip on to the next iteration of this loop. */
@@ -1001,7 +995,7 @@ handle_stream(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  abort();
+                  SVN_ERR_MALFUNCTION_NO_RETURN();
                 }
 
               /* Skip on to the next iteration of this loop. */
@@ -1143,10 +1137,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
                                  ctx->sess, conn,
                                  info->url, info->target_rev, "0", all_props,
                                  FALSE, &ctx->done_propfinds, info->dir->pool);
-      if (!info->propfind)
-        {
-          abort();
-        }
+
+      SVN_ERR_ASSERT(info->propfind);
 
       ctx->active_propfinds++;
     }
@@ -1552,7 +1544,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
 
     }
@@ -1617,7 +1609,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
     }
   else if (state == IGNORE_PROP_NAME)
@@ -1697,10 +1689,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                      "0", all_props, FALSE,
                                      &ctx->done_propfinds, info->dir->pool);
 
-          if (!info->dir->propfind)
-            {
-              abort();
-            }
+          SVN_ERR_ASSERT(info->dir->propfind);
 
           ctx->active_propfinds++;
         }
@@ -2358,7 +2347,7 @@ abort_report(void *report_baton,
 #if 0
   report_context_t *report = report_baton;
 #endif
-  abort();
+  SVN_ERR_MALFUNCTION();
 }
 
 static const svn_ra_reporter3_t ra_serf_reporter = {

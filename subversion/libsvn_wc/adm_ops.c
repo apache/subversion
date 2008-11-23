@@ -230,7 +230,7 @@ remove_revert_files(svn_stringbuf_t **logtags,
   const char *revert_file;
   svn_node_kind_t kind;
 
-  revert_file = svn_wc__text_revert_path(path, FALSE, pool);
+  revert_file = svn_wc__text_revert_path(path, pool);
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__loggy_remove(logtags, adm_access, revert_file, pool));
@@ -1272,7 +1272,7 @@ svn_wc_delete3(const char *path,
           const char *text_base =
             svn_wc__text_base_path(path, FALSE, pool);
           const char *text_revert =
-            svn_wc__text_revert_path(path, FALSE, pool);
+            svn_wc__text_revert_path(path, pool);
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
@@ -1506,7 +1506,7 @@ svn_wc_add3(const char *path,
       if (orig_entry->kind == svn_node_file)
         {
           const char *textb = svn_wc__text_base_path(path, FALSE, pool);
-          const char *rtextb = svn_wc__text_revert_path(path, FALSE, pool);
+          const char *rtextb = svn_wc__text_revert_path(path, pool);
           SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
                                      textb, rtextb, pool));
         }
@@ -1771,7 +1771,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
       /* This becomes NULL if there is no revert-base. */
       const char *revert_base_path
-        = svn_wc__text_revert_path(fullpath, FALSE, pool);
+        = svn_wc__text_revert_path(fullpath, pool);
 
       if (! reinstall_working)
         {
@@ -1938,7 +1938,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           const char *base_path;
           svn_checksum_t *checksum;
 
-          base_path = svn_wc__text_revert_path(fullpath, FALSE, pool);
+          base_path = svn_wc__text_revert_path(fullpath, pool);
           SVN_ERR(svn_io_file_checksum2(&checksum, base_path,
                                         svn_checksum_md5, pool));
           tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);

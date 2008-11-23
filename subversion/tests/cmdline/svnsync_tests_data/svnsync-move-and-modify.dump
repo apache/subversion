@@ -135,6 +135,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 22
 Text-content-md5: fe0e7568a5195cc8a2d60ebf93d93c5b
+Text-content-sha1: 07788068d2ea1f14b0e77ffcd1fac64a6049ab2e
 Content-length: 32
 
 PROPS-END
@@ -166,6 +167,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 23
 Text-content-md5: f3659a1913324affa5d9ddc7451ce7a8
+Text-content-sha1: f27493e177fceaf3b7d25a5f28dcc194aebca0a9
 Content-length: 33
 
 PROPS-END
@@ -253,6 +255,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 42
 Text-content-md5: c69eb9f5054332e29a5e46a80bd3980d
+Text-content-sha1: 910ccaa860667c5216776f8aa479c1177d02df6d
 Content-length: 42
 
 content for file.txt

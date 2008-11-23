@@ -122,7 +122,8 @@ okay_to_edit(struct edit_baton *eb,
     case svn_depth_infinity:
       /* Shouldn't reach; see svn_delta_depth_filter_editor() */
     default:
-      abort();
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+      return FALSE; /* Never reached; kill warning */
     }
 }
 
