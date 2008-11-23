@@ -597,7 +597,7 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
     return
 
   entries = LogParser().parse(stdout)
-  for index in xrange(len(entries)):
+  for index in range(len(entries)):
     entry = entries[index]
     if expected_revprops != None:
       entry.assert_revprops(expected_revprops[index])

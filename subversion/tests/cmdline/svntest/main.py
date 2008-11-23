@@ -1477,7 +1477,7 @@ def run_tests(test_list, serial_only = False):
 
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
-    testnums = range(1, len(test_list))
+    testnums = list(range(1, len(test_list)))
 
   if list_tests:
     print("Test #  Mode   Test Description")

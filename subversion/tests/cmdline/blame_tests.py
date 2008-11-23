@@ -69,7 +69,7 @@ def parse_and_verify_blame(output, expected_blame, with_merged=0):
     raise svntest.Failure("expected and actual results not the same length")
 
   pairs = list(zip(results, expected_blame))
-  for num in xrange(len(pairs)):
+  for num in range(len(pairs)):
     (item, expected_item) = pairs[num]
     for key in keys:
       if item[key] != expected_item[key]:
