@@ -226,7 +226,6 @@ dav_svn__build_uri(const dav_svn_repos *repos,
     default:
       /* programmer error somewhere */
       SVN_ERR_MALFUNCTION_NO_RETURN();
-      return NULL;
     }
 
   /* NOTREACHED */
