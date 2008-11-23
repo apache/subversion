@@ -4634,8 +4634,7 @@ rep_write_contents_close(void *baton)
       SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
       /* Use the old rep for this content. */
-      old_rep->md5_checksum = svn_checksum_dup(
-                      b->noderev->data_rep->md5_checksum, b->pool);
+      old_rep->md5_checksum = svn_checksum_dup(rep->md5_checksum, b->pool);
       b->noderev->data_rep = old_rep;
 
       /* Get the reuse count and put it in the node-rev. */
