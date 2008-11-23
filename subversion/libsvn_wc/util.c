@@ -414,11 +414,11 @@ svn_wc_operation_str_human_readable(svn_wc_operation_t operation,
 {
   switch(operation){
     case svn_wc_operation_update:
-      return _(SVN_WC__OPERATION_UPDATE);
+      return _("update");
     case svn_wc_operation_switch:
-      return _(SVN_WC__OPERATION_SWITCH);
+      return _("switch");
     case svn_wc_operation_merge:
-      return _(SVN_WC__OPERATION_MERGE);
+      return _("merge");
   }
   return _("unknown operation");
 }
@@ -428,11 +428,11 @@ svn_wc_operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
 {
   switch(operation){
     case svn_wc_operation_update:
-      return SVN_WC__OPERATION_UPDATE;
+      return "update";
     case svn_wc_operation_switch:
-      return SVN_WC__OPERATION_SWITCH;
+      return "switch";
     case svn_wc_operation_merge:
-      return SVN_WC__OPERATION_MERGE;
+      return "merge";
   }
   return "unknown_operation";
 }
