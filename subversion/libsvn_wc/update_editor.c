@@ -611,6 +611,10 @@ complete_directory(struct edit_baton *eb,
               if (!target_access && entry->kind == svn_node_dir)
                 {
                   int log_number = 0;
+                  /* I can't find a tree-conflict activated from this call,
+                   * so we don't *need* THEIR_PATH at all and can skip
+                   * composing it. Just pass NULL. */
+                  /* ### TODO make really really sure. */
                   SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
                                             &log_number, pool));
                 }
@@ -1477,17 +1481,21 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
 
       if (eb->switch_url != NULL)
         {
+          /* do_entry_deletion() still passes NULL for their_url
+           * sometimes. However, I could not find any case where
+           * it was needed during those calls. This is just paranoia: */
           if (their_url != NULL)
             path_in_repos = svn_path_is_child(repos_url, their_url, pool);
           else
             {
-              /* ### TODO do_entry_deletion() still passes NULL for their_url
-               * */
+              /* Oh no! We have no complete URL!
+               * At the time of writing this, there is no known case that
+               * would cause this to happen. Shout if you've found one. */
               path_in_repos = svn_path_is_child(repos_url, eb->switch_url,
                                                 pool);
               path_in_repos = apr_pstrcat(
                                 pool, path_in_repos,
-                                "<### TODO incomplete for incoming delete>",
+                                "_THIS_IS_INCOMPLETE",
                                 NULL);
             }
         }
@@ -1502,7 +1510,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       /* entry->kind is both base kind and working kind, because schedule
        * replace-by-different-kind is not supported. */
       /* ### TODO: but in case the entry is locally removed, entry->kind
-       * is svn_node_none and doesn't reflect the older kind. */
+       * is svn_node_none and doesn't reflect the older kind. Then we
+       * need to find out the older kind in a different way! */
 
       their_version = apr_pcalloc(pool, sizeof(*older_version));
       their_version->repos_url = repos_url;
@@ -4061,6 +4070,11 @@ close_edit(void *edit_baton,
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
   if ((*eb->target) && (svn_wc__adm_missing(eb->adm_access, target_path)))
+    /* I can't find a tree-conflict activated from this call
+     * (tried e.g. in update_tests.py 14 update_deleted_missing_dir),
+     * so we don't *need* THEIR_PATH at all and can skip composing it.
+     * Just pass NULL. */
+    /* ### TODO make really really sure. */
     SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
                               &log_number, pool));
 
