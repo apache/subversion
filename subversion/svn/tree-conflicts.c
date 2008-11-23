@@ -35,7 +35,7 @@ action_str(const svn_wc_conflict_description_t *conflict)
       case svn_wc_conflict_action_add:
         return _("add");
       case svn_wc_conflict_action_delete:
-        return _("delete or move");
+        return _("delete");
     }
   return NULL;
 }
@@ -51,7 +51,7 @@ reason_str(const svn_wc_conflict_description_t *conflict)
       case svn_wc_conflict_reason_obstructed:
         return _("obstruction");
       case svn_wc_conflict_reason_deleted:
-        return _("delete or move");
+        return _("delete");
       case svn_wc_conflict_reason_added:
         return _("add");
       case svn_wc_conflict_reason_missing:
@@ -72,9 +72,9 @@ svn_cl__get_human_readable_tree_conflict_description(
   victim_name = svn_path_basename(conflict->path, pool);
   reason = reason_str(conflict);
   action = action_str(conflict);
-  operation = svn_wc_operation_str(conflict->operation, pool);
+  operation = svn_wc_operation_str_human_readable(conflict->operation, pool);
   SVN_ERR_ASSERT(action && reason);
-  *desc = apr_psprintf(pool, _("local %s, incoming %s (upon %s)."),
+  *desc = apr_psprintf(pool, _("local %s, incoming %s upon %s"),
                        reason, action, operation);
   return SVN_NO_ERROR;
 }
