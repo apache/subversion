@@ -482,12 +482,14 @@ svn_wc__write_tree_conflicts(char **conflict_data,
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* older_version */
-      SVN_ERR(write_node_version_info(buf, conflict->older_version, pool));
+      if (conflict->older_version)
+        SVN_ERR(write_node_version_info(buf, conflict->older_version, pool));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* their_version */
-      SVN_ERR(write_node_version_info(buf, conflict->their_version, pool));
+      if (conflict->their_version)
+        SVN_ERR(write_node_version_info(buf, conflict->their_version, pool));
 
       if (i < (conflicts->nelts - 1))
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);

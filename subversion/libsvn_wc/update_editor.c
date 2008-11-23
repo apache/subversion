@@ -1513,7 +1513,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
        * is svn_node_none and doesn't reflect the older kind. Then we
        * need to find out the older kind in a different way! */
 
-      their_version = apr_pcalloc(pool, sizeof(*older_version));
+      their_version = apr_pcalloc(pool, sizeof(*their_version));
       their_version->repos_url = repos_url;
       their_version->peg_rev = *eb->target_revision;
       their_version->path_in_repos = path_in_repos;
