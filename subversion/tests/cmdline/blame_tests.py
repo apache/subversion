@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -68,7 +68,7 @@ def parse_and_verify_blame(output, expected_blame, with_merged=0):
   if len(results) != len(expected_blame):
     raise svntest.Failure("expected and actual results not the same length")
 
-  pairs = zip(results, expected_blame)
+  pairs = list(zip(results, expected_blame))
   for num in xrange(len(pairs)):
     (item, expected_item) = pairs[num]
     for key in keys:
