@@ -351,7 +351,9 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 
   conflict = svn_wc_conflict_description_create_tree(
     victim_path, adm_access, node_kind, svn_wc_operation_merge,
-    NULL, NULL, merge_b->pool);
+    apr_palloc(merge_b->pool, sizeof(svn_wc_conflict_version_t)),
+    apr_palloc(merge_b->pool, sizeof(svn_wc_conflict_version_t)),
+    merge_b->pool);
   conflict->action = action;
   conflict->reason = reason;
 
