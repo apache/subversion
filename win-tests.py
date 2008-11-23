@@ -75,8 +75,7 @@ gen_obj = gen_win.GeneratorBase('build.conf', version_header,
                                 cp.items('options'))
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
-                      all_tests)
+client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
 
 svn_dlls = []
 for section in gen_obj.sections.values():

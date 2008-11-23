@@ -1073,8 +1073,7 @@ class TestSpawningThread(threading.Thread):
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # "result" will be None on platforms without Popen3 (e.g. Windows)
-    if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '),
-              stdout_lines):
+    if [x for x in stdout_lines if x.startswith('FAIL: ') or x.startswith('XPASS: ')]:
       result = 1
     self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
