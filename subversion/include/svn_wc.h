@@ -1167,7 +1167,8 @@ typedef enum svn_wc_operation_t
 
 } svn_wc_operation_t;
 
-/** Provides a human redable string for a given @a operation.
+/** Provides a possibly localized human readable string for
+ * a given @a operation.
  * @note @a pool is currently not used.
  * @since New in 1.6.
  */
