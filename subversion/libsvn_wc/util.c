@@ -409,7 +409,8 @@ svn_wc__conflict_version_dup(const svn_wc_conflict_version_t *version,
 }
 
 const char *
-svn_wc_operation_str(svn_wc_operation_t operation, apr_pool_t *pool)
+svn_wc_operation_str_human_readable(svn_wc_operation_t operation,
+                                    apr_pool_t *pool)
 {
   switch(operation){
     case svn_wc_operation_update:
@@ -420,5 +421,19 @@ svn_wc_operation_str(svn_wc_operation_t operation, apr_pool_t *pool)
       return SVN_WC__OPERATION_MERGE;
   }
   return _("unknown operation");
+}
+
+const char *
+svn_wc_operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return SVN_WC__OPERATION_UPDATE;
+    case svn_wc_operation_switch:
+      return SVN_WC__OPERATION_SWITCH;
+    case svn_wc_operation_merge:
+      return SVN_WC__OPERATION_MERGE;
+  }
+  return "unknown_operation";
 }
 
