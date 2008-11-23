@@ -440,6 +440,8 @@ print_info(void *baton,
       their_version =
         svn_cl__node_description(info->tree_conflict->their_version, pool);
 
+      SVN_ERR_ASSERT(older_version && their_version);
+
       svn_cmdline_printf(pool,
                          "%s: %s\n"
                          "  %s: %s\n"
