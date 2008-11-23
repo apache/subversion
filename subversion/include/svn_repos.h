@@ -2030,8 +2030,14 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH        "Node-copyfrom-path"
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV         "Node-copyfrom-rev"
-#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM "Text-copy-source-md5"
-#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM     "Text-content-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5      "Text-copy-source-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_SHA1     "Text-copy-source-sha1"
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM \
+                                        SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5          "Text-content-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_SHA1         "Text-content-sha1"
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM     \
+                                        SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
 
 #define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
@@ -2041,7 +2047,10 @@ svn_repos_node_from_baton(void *edit_baton);
 /* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
 /* @since New in 1.5. */
-#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  "Text-delta-base-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5       "Text-delta-base-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_SHA1      "Text-delta-base-sha1"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
+                                        SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action
