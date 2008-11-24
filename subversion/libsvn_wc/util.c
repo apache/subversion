@@ -387,6 +387,26 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
 }
 
 svn_wc_conflict_version_t *
+svn_wc__conflict_version_create(const char *repos_url,
+                                const char* path_in_repos,
+                                svn_revnum_t peg_rev,
+                                svn_node_kind_t node_kind,
+                                apr_pool_t *pool)
+{
+  svn_wc_conflict_version_t *version;
+
+  version = apr_pcalloc(pool, sizeof(*version));
+
+  version->repos_url = repos_url;
+  version->peg_rev = peg_rev;
+  version->path_in_repos = path_in_repos;
+  version->node_kind = node_kind;
+
+  return version;
+}
+
+
+svn_wc_conflict_version_t *
 svn_wc__conflict_version_dup(const svn_wc_conflict_version_t *version,
                                apr_pool_t *pool)
 {
