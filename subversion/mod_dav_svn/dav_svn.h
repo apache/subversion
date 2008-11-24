@@ -45,8 +45,8 @@ extern "C" {
 
 #define DAV_SVN__ROOT_STUB      "!svn/me"   /* where REPORTS are sent */
 #define DAV_SVN__PEGREV_STUB    "!svn/bc"   /* for accessing REV/PATH pairs */
-#define DAV_SVN__REV_STUB       "!svn/rev"  /* for acccesing rev props */
-#define DAV_SVN__TXN_STUB       "!svn/txn"  /* for accessing transactions */
+#define DAV_SVN__REV_STUB       "!svn/rev"  /* revision resources */
+#define DAV_SVN__TXN_STUB       "!svn/txn"  /* transaction resouces */
 #define DAV_SVN__TXNPROP_STUB   "!svn/txp"  /* for accessing txn props */
 
 
