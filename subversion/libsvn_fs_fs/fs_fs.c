@@ -1647,8 +1647,7 @@ read_rep_offsets(representation_t **rep_p,
   SVN_ERR(svn_checksum_parse_hex(&rep->md5_checksum, svn_checksum_md5, str,
                                  pool));
 
-  /* The remaining fields are only used for formats >= 4, so check that.
-     ###: This sould be conditional on the format number. */
+  /* The remaining fields are only used for formats >= 4, so check that. */
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return SVN_NO_ERROR;
