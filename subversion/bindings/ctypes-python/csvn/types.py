@@ -137,7 +137,7 @@ class Array(ListMixin):
             l = len(self)
 
             # Make space for the new items
-            for i in xrange(diff):
+            for i in range(diff):
                 apr_array_push(self)
 
             # Move the old items out of the way, if necessary
@@ -157,7 +157,7 @@ class Array(ListMixin):
                         (len(self)-end)*self.header[0].elt_size)
 
             # Shrink the array
-            for i in xrange(-diff):
+            for i in range(-diff):
                 apr_array_pop(self)
 
 try:
