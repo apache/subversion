@@ -80,6 +80,39 @@ svn_cl__get_human_readable_tree_conflict_description(
 }
 
 
+/* Helper for svn_cl__append_tree_conflict_info_xml().
+ * Appends the attributes of the given VERSION to ATT_HASH. */
+static svn_error_t *
+add_conflict_version_xml(svn_stringbuf_t **pstr,
+                         const char *side,
+                         svn_wc_conflict_version_t *version,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *att_hash = apr_hash_make(pool);
+
+
+  apr_hash_set(att_hash, "side", APR_HASH_KEY_STRING, side);
+
+  if (version->repos_url)
+    apr_hash_set(att_hash, "repos-url", APR_HASH_KEY_STRING,
+                 version->repos_url);
+
+  if (version->path_in_repos)
+    apr_hash_set(att_hash, "path-in-repos", APR_HASH_KEY_STRING,
+                 version->path_in_repos);
+
+  apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
+               apr_itoa(pool, version->peg_rev));
+
+  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
+               svn_cl__node_kind_str_xml(version->node_kind));
+
+  svn_xml_make_open_tag_hash(pstr, pool, svn_xml_self_closing,
+                             "version", att_hash);
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_cl__append_tree_conflict_info_xml(
   svn_stringbuf_t *str,
@@ -92,34 +125,11 @@ svn_cl__append_tree_conflict_info_xml(
   apr_hash_set(att_hash, "victim", APR_HASH_KEY_STRING,
                svn_path_basename(conflict->path, pool));
 
-  switch (conflict->node_kind)
-    {
-      case svn_node_dir:
-        tmp = "dir";
-        break;
-      case svn_node_file:
-        tmp = "file";
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
-  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING, tmp);
+  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
+               svn_cl__node_kind_str_xml(conflict->node_kind));
 
-  switch (conflict->operation)
-    {
-      case svn_wc_operation_update:
-        tmp = "update";
-        break;
-      case svn_wc_operation_switch:
-        tmp = "switch";
-        break;
-      case svn_wc_operation_merge:
-        tmp = "merge";
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
-  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING, tmp);
+  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
+               svn_wc_operation_str_xml(conflict->operation, pool));
 
   switch (conflict->action)
     {
@@ -164,8 +174,32 @@ svn_cl__append_tree_conflict_info_xml(
     }
   apr_hash_set(att_hash, "reason", APR_HASH_KEY_STRING, tmp);
 
-  svn_xml_make_open_tag_hash(&str, pool, svn_xml_self_closing,
+  /* Open the tree-conflict tag. */
+  svn_xml_make_open_tag_hash(&str, pool, svn_xml_normal,
                              "tree-conflict", att_hash);
+
+  /* Add child tags for OLDER_VERSION and THEIR_VERSION. */
+
+  if (conflict->older_version)
+    SVN_ERR(add_conflict_version_xml(&str,
+                                     (conflict->operation
+                                      == svn_wc_operation_merge)
+                                       ? "left"
+                                       : "older",
+                                     conflict->older_version,
+                                     pool));
+
+  if (conflict->their_version)
+    SVN_ERR(add_conflict_version_xml(&str,
+                                     (conflict->operation
+                                      == svn_wc_operation_merge)
+                                       ? "right"
+                                       : "their",
+                                     conflict->their_version,
+                                     pool));
+
+  svn_xml_make_close_tag(&str, pool, "tree-conflict");
 
   return SVN_NO_ERROR;
 }
+
