@@ -1650,6 +1650,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
 
   svn_error_t *err = SVN_NO_ERROR;
   svn_revnum_t new_rev;
+  svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
   svn_fs_t *fs = txn->fs;
 
   /* Limit memory usage when the repository has a high commit rate and
@@ -1668,11 +1669,8 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       svn_revnum_t youngish_rev;
       svn_fs_root_t *youngish_root;
       dag_node_t *youngish_root_node;
-      svn_stringbuf_t *conflict;
 
       svn_pool_clear(iterpool);
-
-      conflict = svn_stringbuf_create("", iterpool);
 
       /* Get the *current* youngest revision, in one short-lived
          Berkeley transaction.  (We don't want the revisions table
