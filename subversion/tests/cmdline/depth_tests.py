@@ -2408,8 +2408,8 @@ def tree_conflicts_resolved_depth_immediates(sbox):
   exit_code, output, error = svntest.main.run_svn(None, 'resolved',
                                                   '--depth=immediates', A) 
   if not verify_lines(output, [
-      "Resolved conflicted state of '%s'\n" % m,
-      "Resolved conflicted state of '%s'\n" % B,
+      "Resolved conflicted state of '%s'\n" % re.escape(m),
+      "Resolved conflicted state of '%s'\n" % re.escape(B),
       ]):
     raise svntest.Failure("Unexpected tree-conflict resolution output")
 
@@ -2430,9 +2430,9 @@ def tree_conflicts_resolved_depth_infinity(sbox):
   exit_code, output, error = svntest.main.run_svn(None, 'resolved',
                                                   '--depth=infinity', A) 
   if not verify_lines(output, [
-      "Resolved conflicted state of '%s'\n" % m,
-      "Resolved conflicted state of '%s'\n" % B,
-      "Resolved conflicted state of '%s'\n" % g,
+      "Resolved conflicted state of '%s'\n" % re.escape(m),
+      "Resolved conflicted state of '%s'\n" % re.escape(B),
+      "Resolved conflicted state of '%s'\n" % re.escape(g),
       ]):
     raise svntest.Failure("Unexpected tree-conflict resolution output")
 
