@@ -44,15 +44,14 @@ test_read_tree_conflict(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  tree_conflict_data = "Foo.c:file:update:deleted:edited";
+  tree_conflict_data = "Foo.c:file:update:deleted:edited::::::::";
 
-  exp_conflict = apr_pcalloc(pool,
-                                  sizeof(svn_wc_conflict_description_t));
-  exp_conflict->path         = "Foo.c";
-  exp_conflict->node_kind    = svn_node_file;
-  exp_conflict->operation    = svn_wc_operation_update;
-  exp_conflict->action       = svn_wc_conflict_action_delete;
-  exp_conflict->reason       = svn_wc_conflict_reason_edited;
+  exp_conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                         svn_node_file,
+                                                         svn_wc_operation_update,
+                                                         NULL, NULL, pool);
+  exp_conflict->action = svn_wc_conflict_action_delete;
+  exp_conflict->reason = svn_wc_conflict_reason_edited;
 
   conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "", 
@@ -88,21 +87,22 @@ test_read_2_tree_conflicts(const char **msg,
     return SVN_NO_ERROR;
 
   tree_conflict_data =
-    "Foo.c:file:update:deleted:edited|Bar.h:file:update:edited:deleted";
+    "Foo.c:file:update:deleted:edited::::::::|"
+    "Bar.h:file:update:edited:deleted::::::::";
 
-  exp_conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  exp_conflict1->path         = "Foo.c";
-  exp_conflict1->node_kind    = svn_node_file;
-  exp_conflict1->operation    = svn_wc_operation_update;
-  exp_conflict1->action       = svn_wc_conflict_action_delete;
-  exp_conflict1->reason       = svn_wc_conflict_reason_edited;
+  exp_conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                          svn_node_file,
+                                                          svn_wc_operation_update,
+                                                          NULL, NULL, pool);
+  exp_conflict1->action = svn_wc_conflict_action_delete;
+  exp_conflict1->reason = svn_wc_conflict_reason_edited;
 
-  exp_conflict2 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  exp_conflict2->path         = "Bar.h";
-  exp_conflict2->node_kind    = svn_node_file;
-  exp_conflict2->operation    = svn_wc_operation_update;
-  exp_conflict2->action       = svn_wc_conflict_action_edit;
-  exp_conflict2->reason       = svn_wc_conflict_reason_deleted;
+  exp_conflict2 = svn_wc_conflict_description_create_tree("Bar.h", NULL,
+                                                          svn_node_file,
+                                                          svn_wc_operation_update,
+                                                          NULL, NULL, pool);
+  exp_conflict2->action = svn_wc_conflict_action_edit;
+  exp_conflict2->reason = svn_wc_conflict_reason_deleted;
 
   conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "", 
@@ -131,30 +131,30 @@ test_read_2_tree_conflicts(const char **msg,
  * delimiters change... */
 static const char* broken_tree_conflict_test_data[] = {
   /* Missing descriptions */
-  "|Bar.h:file:update:edited:deleted",
-  "Foo.c:file:update:deleted:edited|",
+  "|Bar.h:file:update:edited:deleted::::::::",
+  "Foo.c:file:update:deleted:edited::::::::|",
   "|||||||",
   "",
   /* Missing fields */
-  "Foo.c:fileupdate:deleted:",
+  "Foo.c:fileupdate:deleted:edited::::::::",
   "Foo.c",
   "::::",
   ":::",
   "Foo.c:::::::::::::;",
   /* Bad separators */
-  "Foo.c:file:update:deleted:edited$Bar.h:file:update:edited:deleted",
-  "Foo.c|file|update|deleted|edited:Bar.h|file|update|edited|deleted",
+  "Foo.c:file:update:deleted:edited::::::::$Bar.h:file:update:edited:deleted::::::::",
+  "Foo.c|file|update|deleted|edited:::::::::Bar.h|file|update|edited|deleted::::::::",
   /* Missing separators */
-  "Foo.c:file:update:deleted:editedBar.h:file:update:edited:deleted",
-  "Foo.c:fileupdate:deleted:edited",
+  "Foo.c:file:update:deleted:edited::::::::Bar.h:file:update:edited:deleted::::::::",
+  "Foo.c:fileupdate:deleted:edited::::::::",
   /* Unescaped separators */
-  "F|oo.c:file:update:deleted:edited",
-  "F:oo.c:file:update:deleted:edited",
+  "F|oo.c:file:update:deleted:edited::::::::",
+  "F:oo.c:file:update:deleted:edited::::::::",
   /* Unescaped escape */
-  "Foo.c\\:file:update:deleted:edited",
+  "Foo.c\\:file:update:deleted:edited::::::::",
   "Foo.c\\",
   /* Illegally escaped char */
-  "\\Foo.c:file:update:deleted:edited",
+  "\\Foo.c:file:update:deleted:edited::::::::",
   NULL
 };
 
@@ -182,7 +182,8 @@ test_read_invalid_tree_conflicts(const char **msg,
                                         pool);
       if (err == SVN_NO_ERROR)
         return fail(pool,
-                    "Error in broken tree conflict data was not detected");
+                    "Error in broken tree conflict data was not detected:\n"
+                    "  %s", tree_conflict_data);
       svn_error_clear(err);
     }
   return SVN_NO_ERROR;
@@ -204,23 +205,25 @@ test_write_tree_conflict(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "Foo.c";
-  conflict->node_kind    = svn_node_file;
-  conflict->operation    = svn_wc_operation_update;
-  conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = svn_wc_conflict_reason_edited;
+  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                     svn_node_file,
+                                                     svn_wc_operation_update,
+                                                     NULL, NULL, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = svn_wc_conflict_reason_edited;
 
   conflicts = apr_array_make(pool, 1,
       sizeof(svn_wc_conflict_description_t *));
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  expected = "Foo.c:file:update:deleted:edited";
+  expected = "Foo.c:file:update:deleted:edited::::::::";
 
   SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
   if (strcmp(expected, tree_conflict_data) != 0)
-    return fail(pool, "Unexpected text from tree conflict");
+    return fail(pool, "Unexpected text from tree conflict\n"
+                      "  Expected: %s\n"
+                      "  Actual:   %s\n", expected, tree_conflict_data);
 
   return SVN_NO_ERROR;
 }
@@ -241,19 +244,19 @@ test_write_2_tree_conflicts(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict1->path         = "Foo.c";
-  conflict1->node_kind    = svn_node_file;
-  conflict1->operation    = svn_wc_operation_update;
-  conflict1->action       = svn_wc_conflict_action_delete;
-  conflict1->reason       = svn_wc_conflict_reason_edited;
+  conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                      svn_node_file,
+                                                      svn_wc_operation_update,
+                                                      NULL, NULL, pool);
+  conflict1->action = svn_wc_conflict_action_delete;
+  conflict1->reason = svn_wc_conflict_reason_edited;
 
-  conflict2 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict2->path         = "Bar.h";
-  conflict2->node_kind    = svn_node_file;
-  conflict2->operation    = svn_wc_operation_update;
-  conflict2->action       = svn_wc_conflict_action_edit;
-  conflict2->reason       = svn_wc_conflict_reason_deleted;
+  conflict2 = svn_wc_conflict_description_create_tree("Bar.h", NULL,
+                                                      svn_node_file,
+                                                      svn_wc_operation_update,
+                                                      NULL, NULL, pool);
+  conflict2->action = svn_wc_conflict_action_edit;
+  conflict2->reason = svn_wc_conflict_reason_deleted;
 
   conflicts = apr_array_make(pool, 2,
                              sizeof(svn_wc_conflict_description_t *));
@@ -261,12 +264,15 @@ test_write_2_tree_conflicts(const char **msg,
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict2;
 
   expected =
-    "Foo.c:file:update:deleted:edited|Bar.h:file:update:edited:deleted";
+    "Foo.c:file:update:deleted:edited::::::::|"
+    "Bar.h:file:update:edited:deleted::::::::";
 
   SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
   if (strcmp(expected, tree_conflict_data) != 0)
-    return fail(pool, "Unexpected text from tree conflict");
+    return fail(pool, "Unexpected text from tree conflict\n"
+                      "  Expected: %s\n"
+                      "  Actual:   %s\n", expected, tree_conflict_data);
 
   return SVN_NO_ERROR;
 }
@@ -291,12 +297,12 @@ test_write_invalid_tree_conflicts(const char **msg,
   svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
 
   /* victim path */
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "";
-  conflict->node_kind    = svn_node_file;
-  conflict->operation    = svn_wc_operation_update;
-  conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = svn_wc_conflict_reason_edited;
+  conflict = svn_wc_conflict_description_create_tree("", NULL,
+                                                     svn_node_file,
+                                                     svn_wc_operation_update,
+                                                     NULL, NULL, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = svn_wc_conflict_reason_edited;
 
   conflicts = apr_array_make(pool, 1,
       sizeof(svn_wc_conflict_description_t *));
@@ -310,12 +316,12 @@ test_write_invalid_tree_conflicts(const char **msg,
   apr_array_pop(conflicts);
 
   /* node_kind */
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "Foo";
-  conflict->node_kind    = svn_node_none;
-  conflict->operation    = svn_wc_operation_update;
-  conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = svn_wc_conflict_reason_edited;
+  conflict = svn_wc_conflict_description_create_tree("Foo", NULL,
+                                                     svn_node_none,
+                                                     svn_wc_operation_update,
+                                                     NULL, NULL, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = svn_wc_conflict_reason_edited;
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
@@ -327,12 +333,12 @@ test_write_invalid_tree_conflicts(const char **msg,
   apr_array_pop(conflicts);
 
   /* operation */
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "Foo.c";
-  conflict->node_kind    = svn_node_file;
-  conflict->operation    = 99;
-  conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = svn_wc_conflict_reason_edited;
+  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                     svn_node_file,
+                                                     99,
+                                                     NULL, NULL, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = svn_wc_conflict_reason_edited;
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
@@ -344,12 +350,12 @@ test_write_invalid_tree_conflicts(const char **msg,
   apr_array_pop(conflicts);
 
   /* action */
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "Foo.c";
-  conflict->node_kind    = svn_node_file;
-  conflict->operation    = svn_wc_operation_update;
-  conflict->action       = 99;
-  conflict->reason       = svn_wc_conflict_reason_edited;
+  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                     svn_node_file,
+                                                     svn_wc_operation_update,
+                                                     NULL, NULL, pool);
+  conflict->action = 99;
+  conflict->reason = svn_wc_conflict_reason_edited;
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
@@ -361,12 +367,12 @@ test_write_invalid_tree_conflicts(const char **msg,
   apr_array_pop(conflicts);
 
   /* reason */
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "Foo.c";
-  conflict->node_kind    = svn_node_file;
-  conflict->operation    = svn_wc_operation_update;
-  conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = 99;
+  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                     svn_node_file,
+                                                     svn_wc_operation_update,
+                                                     NULL, NULL, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = 99;
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
@@ -416,12 +422,12 @@ test_exists_1(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->path         = "Foo.c";
-  conflict->node_kind    = svn_node_file;
-  conflict->operation    = svn_wc_operation_update;
-  conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = svn_wc_conflict_reason_edited;
+  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                     svn_node_file,
+                                                     svn_wc_operation_update,
+                                                     NULL, NULL, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = svn_wc_conflict_reason_edited;
 
   conflicts = apr_array_make(pool, 0,
       sizeof(svn_wc_conflict_description_t *));
@@ -450,19 +456,19 @@ test_exists_2(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict1->path         = "Foo.c";
-  conflict1->node_kind    = svn_node_file;
-  conflict1->operation    = svn_wc_operation_update;
-  conflict1->action       = svn_wc_conflict_action_delete;
-  conflict1->reason       = svn_wc_conflict_reason_edited;
+  conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
+                                                      svn_node_file,
+                                                      svn_wc_operation_update,
+                                                      NULL, NULL, pool);
+  conflict1->action = svn_wc_conflict_action_delete;
+  conflict1->reason = svn_wc_conflict_reason_edited;
 
-  conflict2 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict2->path         = "Bar.h";
-  conflict2->node_kind    = svn_node_file;
-  conflict2->operation    = svn_wc_operation_update;
-  conflict2->action       = svn_wc_conflict_action_edit;
-  conflict2->reason       = svn_wc_conflict_reason_deleted;
+  conflict2 = svn_wc_conflict_description_create_tree("Bar.h", NULL,
+                                                      svn_node_file,
+                                                      svn_wc_operation_update,
+                                                      NULL, NULL, pool);
+  conflict2->action = svn_wc_conflict_action_edit;
+  conflict2->reason = svn_wc_conflict_reason_deleted;
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
