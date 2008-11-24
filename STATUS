@@ -80,5 +80,16 @@ Candidate changes for 1.5.5:
    Votes:
      +1: julianfoad
 
+ * r31311, r31314
+   Fix bug whereby 'svn cp --parents URL/TO/EXISTING/FILE URL/TO/EXISTING/DIR'
+   would seg fault.
+   Notes:
+     r31311 is the testcase and r31314 the fix. (Not a clean merge)
+   Justification:
+     I just lost a night tracking this issue for an AnkhSVN user and I saw a
+     few similar error reports earlier of users that couldn't reproduce.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
