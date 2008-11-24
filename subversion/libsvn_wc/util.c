@@ -29,7 +29,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */
-#include "tree_conflicts.h"   /* just for the SVN_WC__OPERATION* defines */
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
