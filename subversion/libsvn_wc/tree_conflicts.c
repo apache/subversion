@@ -300,8 +300,12 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   SVN_ERR(read_field_separator(start, end));
 
   /* Construct the description object */
-  older_version = apr_pcalloc(pool, sizeof(*older_version));
-  their_version = apr_pcalloc(pool, sizeof(*their_version));
+  older_version = svn_wc__conflict_version_create(NULL, NULL, 
+                                                  SVN_INVALID_REVNUM,
+                                                  svn_node_none, pool);
+  their_version = svn_wc__conflict_version_create(NULL, NULL, 
+                                                  SVN_INVALID_REVNUM,
+                                                  svn_node_none, pool);
   *conflict = svn_wc_conflict_description_create_tree(
     svn_path_join(dir_path, victim_basename, pool),
     NULL, node_kind, operation, older_version, their_version, pool);

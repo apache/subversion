@@ -1210,8 +1210,8 @@ typedef struct svn_wc_conflict_version_t
   /* const char *content_cache_path; */
   /* const char *props_cache_path; */
 
-  /* Remember to update svn_wc__conflict_version_dup()
-   * in case you add fields to this struct. */
+  /* Remember to update svn_wc__conflict_version_create() and 
+   * svn_wc__conflict_version_dup() in case you add fields to this struct. */
 } svn_wc_conflict_version_t;
 
 
