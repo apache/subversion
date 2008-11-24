@@ -127,8 +127,6 @@ open_txn(svn_fs_txn_t **ptxn,
 static void
 get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
 {
-  const char *root_stub_hdr, *pegrev_stub_hdr, *rev_stub_hdr;
-
   /* Note: we append pieces with care for Web Folders's 63-char limit
      on the DAV: header */
 
@@ -155,22 +153,6 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
 
   /* ### fork-control? */
-
-  /* Welcome to the 2nd generation of the svn HTTP protocol, now
-     DeltaV-free!   It's safe to advertise our root stub, pegrev
-     stub, and revision stub on any OPTIONS request, since they're
-     not specific to particular resources. */
-  root_stub_hdr = apr_pstrcat(p, SVN_DAV_NS_DAV_SVN_ROOT_STUB,
-                              "=", DAV_SVN__ROOT_STUB, NULL);
-  apr_text_append(p, phdr, root_stub_hdr);
-
-  pegrev_stub_hdr = apr_pstrcat(p, SVN_DAV_NS_DAV_SVN_PEGREV_STUB,
-                                "=", DAV_SVN__PEGREV_STUB, NULL);
-  apr_text_append(p, phdr, pegrev_stub_hdr);
-
-  rev_stub_hdr = apr_pstrcat(p, SVN_DAV_NS_DAV_SVN_REV_STUB,
-                             "=", DAV_SVN__REV_STUB, NULL);
-  apr_text_append(p, phdr, rev_stub_hdr);
 }
 
 
@@ -198,12 +180,16 @@ get_option(const dav_resource *resource,
         }
     }
 
+  /* Welcome to the 2nd generation of the svn HTTP protocol, now
+     DeltaV-free! */
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_STUB_HEADER,
+                DAV_SVN__ROOT_STUB);
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
+                DAV_SVN__PEGREV_STUB);
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,
+                DAV_SVN__REV_STUB);
 
-  /* HTTP protocol v2:  client may request some info specific
-     to the resource.  */
-  if ((strcmp(elem->name, "youngest-rev") == 0)
-      && resource->info->repos
-      && resource->info->repos->fs)
+  if (resource->info->repos && resource->info->repos->fs)
     {
       svn_revnum_t youngest;
       svn_error_t *serr = svn_fs_youngest_rev(&youngest,
@@ -212,10 +198,10 @@ get_option(const dav_resource *resource,
       if ((serr == NULL)
           && SVN_IS_VALID_REVNUM(youngest))
         {
-          const char *text = 
-            apr_psprintf(resource->pool, "<youngest-rev>%"
-                         SVN_REVNUM_T_FMT "</youngest-rev>", youngest);
-          apr_text_append(resource->pool, option, text);
+          const char *yrtext = 
+            apr_psprintf(resource->pool, "%"SVN_REVNUM_T_FMT, youngest);
+          apr_table_set(resource->info->r->headers_out,
+                        SVN_DAV_YOUNGEST_REV_HEADER, yrtext);
         }
       else
         {
