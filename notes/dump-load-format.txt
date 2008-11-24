@@ -15,11 +15,14 @@ following:
 1.) The format starts with the new version number of the dump format
     ("SVN-fs-dump-format-version: 3\n").
 
-2.) There are three new optional headers for node changes:
+2.) There are several new optional headers for node changes:
 
 [Text-delta: true|false]
 [Prop-delta: true|false]
 [Text-delta-base-md5: blob]
+[Text-delta-base-sha1: blob]
+[Text-copy-source-sha1: blob]
+[Text-content-sha1: blob]
 
     The default value for the boolean headers is "false".  If the value is
     set to "true", then the text and property contents will be treated
@@ -42,6 +45,11 @@ Text deltas are written out as a series of svndiff0 windows.  If
 Text-delta-base-md5 is provided, it is the checksum of the base to
 which the text delta is applied; note that older versions (pre-1.5) of
 'svnadmin load' may ignore the checksum.
+
+Text-delta-base-sha1, Text-copy-source-sha1, and Text-content-sha1 are not
+currently used by the loader.  They are written by 1.6-and-later versions of
+Subversion so that future loaders can optionally choose which checksum to
+use for checking for corruption.
 
 ===== SVN DUMPFILE VERSION 2 FORMAT =====
 
