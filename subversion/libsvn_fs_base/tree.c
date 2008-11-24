@@ -209,7 +209,7 @@ dag_node_cache_set(svn_fs_root_t *root,
          ### is.  And I don't want to spend any more time on it.  So,
          ### callers, use only revision root and don't try to update
          ### an already-cached thing.  -- cmpilato */
-      abort();
+      SVN_ERR_MALFUNCTION_NO_RETURN();
 
 #if 0
       int cache_index = cache_item->idx;

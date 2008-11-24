@@ -7204,8 +7204,6 @@ calculate_left_hand_side(const char **url_left,
                          apr_pool_t *pool)
 {
   apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
-  svn_boolean_t have_mergeinfo_for_source = FALSE,
-    have_mergeinfo_for_descendants = FALSE;
   svn_mergeinfo_catalog_t mergeinfo_catalog, unmerged_catalog;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
@@ -7521,13 +7519,13 @@ svn_client_merge_reintegrate(const char *source,
               return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
                                        NULL,
                                        _("Reintegrate can only be used if "
-                                         "revisions %i through %i were "
+                                         "revisions %ld through %ld were "
                                          "previously merged from %s to the "
                                          "reintegrate source, but this is "
                                          "not the case:\n%s"),
-                                         yc_ancestor_rev + 1, rev2,
-                                         entry->url,
-                                         source_mergeinfo_cat_string->data);
+                                       yc_ancestor_rev + 1, rev2,
+                                       entry->url,
+                                       source_mergeinfo_cat_string->data);
             }
           else
             {

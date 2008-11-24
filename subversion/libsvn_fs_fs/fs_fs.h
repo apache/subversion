@@ -172,11 +172,12 @@ representation_t *svn_fs_fs__rep_copy(representation_t *rep,
                                       apr_pool_t *pool);
 
 
-/* Return the recorded checksum of the text representation of NODREV
-   into CHECKSUM, allocating from POOL.  If no stored checksum is
+/* Return the recorded checksum of type KIND for the text representation
+   of NODREV into CHECKSUM, allocating from POOL.  If no stored checksum is
    available, put all NULL into CHECKSUM. */
 svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                                       node_revision_t *noderev,
+                                      svn_checksum_kind_t kind,
                                       apr_pool_t *pool);
 
 /* Find the paths which were changed in revision REV of filesystem FS

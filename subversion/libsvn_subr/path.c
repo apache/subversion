@@ -1079,8 +1079,9 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
   apr_size_t i, copied = 0;
   int c;
 
-  /* Create stringbuf with estimated buffer size. */
-  retstr = svn_stringbuf_create_ensure(strlen(path), pool);
+  /* At least one control character:
+      strlen - 1 (control) + \ + N + N + N + null . */
+  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
   for (i = 0; path[i]; i++)
     {
       c = (unsigned char)path[i];
@@ -1097,16 +1098,11 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
         svn_stringbuf_appendbytes(retstr, path + copied,
                                   i - copied);
 
-      /* Now, sprintf() in our escaped character, making sure our
-         buffer is big enough to hold the '%' and two digits.  We cast
-         the C to unsigned char here because the 'X' format character
-         will be tempted to treat it as an unsigned int...which causes
-         problem when messing with 0x80-0xFF chars.  We also need space
-         for a null as sprintf will write one. */
+      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' null */
+      svn_stringbuf_ensure(retstr, retstr->len + 5);
       /*### The backslash separator doesn't work too great with Windows,
          but it's what we'll use for consistency with invalid utf8
          formatting (until someone has a better idea) */
-      svn_stringbuf_ensure(retstr, retstr->len + 4);
       sprintf(retstr->data + retstr->len, "\\%03o", (unsigned char)c);
       retstr->len += 4;
 
@@ -1140,7 +1136,7 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
           return svn_error_createf
             (SVN_ERR_FS_PATH_SYNTAX, NULL,
              _("Invalid control character '0x%02x' in path '%s'"),
-             *c,
+             (unsigned char)*c,
              illegal_path_escape(svn_path_local_style(path, pool), pool));
         }
     }

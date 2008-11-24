@@ -36,6 +36,12 @@ import os
 import os.path
 import pydoc
 import re
+try:
+  # Python >=2.6
+  from functools import reduce
+except ImportError:
+  # Python <2.6
+  pass
 import sys
 import time
 

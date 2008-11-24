@@ -12,13 +12,6 @@ Blocker:
 
  * Fix a bunch of rep-sharing issues in FSFS (or remove the feature):
 
-   - Storing only SHA1 checksums and not MD5 for new files almost
-     certainly leads to less robust updates/commits or performance
-     penalties; at the very least, we should figure out which one of
-     those it is doing and make sure we're making the right
-     decision. I'd recommend just storing both though (or removing
-     rep-sharing from FSFS).  [BDB is now storing both.]
-
    - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
      used outside of the control of the FSFS lock.  Thus its
      read-modify-write can have race conditions, leading to two
@@ -51,19 +44,43 @@ Blocker:
    NOTE: If these tasks aren't fixed when 1.6 is branched,
    we should consider delaying tree conflicts entirely until 1.7.
 
-   - #3328: "Most horrendous failure" during update: some logs are not executed
-     when closing a dir.
-     <http://svn.haxx.se/dev/archive-2008-11/0421.shtml>
+   - #3328 "Update can't record >1 add/edit tree conflict per dir"
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3328
+
+     A branch for this issue has been created:
+     http://svn.collab.net/viewvc/svn/branches/update-tc-loggy/
+
+     IRC conversation excerpts:
+     <stsp> and do you know how important sbutler's branches/update-tc-loggy
+            is for 1.6, and how long the branch may take?
+     <stsp> the branch is about "loggy writing of tree conflicts during update",
+            nothing has been committed to it yet
+     <gstein> the conflicts must be written loggy
+     <gstein> that came up last week
+     <gstein> so the branch is required
+     <neels> yea, sbutler is on that
+     <gstein> yups
 
    - #3322: "In tree conflict info, report left/right URL@REV of the
              incoming change"
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3322
 
      Seriously needed improvement for resolving tree conflicts.
+
+     [[[
+     Note: This task is virtually done -- the required functionality
+           has been implemented in branches/tc_url_rev/
+
+            Missing bits on that branch:
+            1) a few failing regression tests (should be trivial to fix)
+            2) including URL@rev info in XML output (can also be done
+               after the branch has been merged back to trunk)
+     ]]]
 
      See also this thread:
      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=145450
 
-     IRC conversation excerpts (julianfoad<->stsp):
+     IRC conversation excerpts:
      <stsp> but I don't want to release tc in 1.6 without issue
             #3322 fixed
      <stsp> I suppose following the example of git in this case is
@@ -115,3 +132,46 @@ Optional:
      Should print a 'Skipped' message instead.  Update of an item that is
      inside a tree conflict, and that no longer exists in the repo, does
      nothing.  Should print a 'Skipped' message instead.
+
+   - Making use of skels to store tree conflict data in entries file
+     
+     Mailing list thread:
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145582
+
+     IRC conversation excerpts:
+     <stsp> gstein, made up your mind about skels yet?
+     <gstein> yeah. skels are all-ascii, so they'll work just fine in entries
+     <gstein> two files to move to libsvn_subr
+     <stsp> that was the only other tc-blocking issue I can remember
+     <stsp> but the code as-is is working fine and has been tested for more
+            than half a year
+     <gstein> stsp: and the skel code works and has been tested for 8 years
+     [...]
+     <gstein> anyways, I do agree/believe that the code is solid,
+     <stsp> well, I'm still not entirely convince the extra effort of changing
+            the code to use skels is really worth it, but we'll see --
+            I'd still say solve the other issues first, and convert to skels
+            then if time is left
+     <gstein> but it is more code to support over the long haul
+     <gstein> the "read" code has to exist forever
+     <stsp> yes
+     <stsp> till 2.0
+     <gstein> right
+     <stsp> I don't mind maintaining the read code :)
+     <gstein> I'd prefer that we don't have to carry it around
+     <gstein> haha
+     <gstein> well, the community has to maintain it
+     <gstein> oh. what I was about to say, is that I'm leaving in 2 hrs,
+     <gstein> but will work on skel'ing the code when I get home
+     <stsp> right
+     <gstein> I'll make the skels svn-private in trunk,
+     <gstein> and then do the skel work on a branch for eval
+     <stsp> that's fine -- I'm just objected to taking tc-focused resources
+            away for skels from other things
+     <stsp> if you do it, +1
+     <gstein> well, I can more or less buy the "will only have to leave
+              read code" argument,
+     <gstein> so it is hard to strenuously object and maintain my -1,
+     <gstein> so I'm good with doing the work myself
+     <gstein> my wc work isn't going to be done for 1.6, so distraction
+              is fine :-P
