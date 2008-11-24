@@ -443,6 +443,9 @@ svn_wc__write_tree_conflicts(char **conflict_data,
                              apr_array_header_t *conflicts,
                              apr_pool_t *pool)
 {
+  /* A conflict version struct with all fields null/invalid. */
+  static const svn_wc_conflict_version_t null_version = {
+    NULL, SVN_INVALID_REVNUM, NULL, svn_node_unknown };
   svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
   int i;
 
@@ -484,12 +487,16 @@ svn_wc__write_tree_conflicts(char **conflict_data,
       /* older_version */
       if (conflict->older_version)
         SVN_ERR(write_node_version_info(buf, conflict->older_version, pool));
+      else
+        SVN_ERR(write_node_version_info(buf, &null_version, pool));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       /* their_version */
       if (conflict->their_version)
         SVN_ERR(write_node_version_info(buf, conflict->their_version, pool));
+      else
+        SVN_ERR(write_node_version_info(buf, &null_version, pool));
 
       if (i < (conflicts->nelts - 1))
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);
