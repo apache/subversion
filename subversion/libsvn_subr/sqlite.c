@@ -164,7 +164,7 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
       /* Extract the real error value with finalize. */
       SVN_ERR(svn_sqlite__finalize(stmt));
       /* This really should have thrown an error! */
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   *got_row = (sqlite_result == SQLITE_ROW);

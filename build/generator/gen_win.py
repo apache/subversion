@@ -303,26 +303,21 @@ class WinGeneratorBase(GeneratorBase):
                       + self.projects
 
     # Don't create projects for scripts
-    install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
-                             install_targets)
+    install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if not self.bdb_lib:
-      install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
-                               install_targets)
-      install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
-                                              and x.install == 'bdb-test'),
-                               install_targets)
+      install_targets = [x for x in install_targets if x.name != 'libsvn_fs_base']
+      install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
+                                                            and x.install == 'bdb-test')]
 
     # Drop the serf target if we don't have both serf and openssl
     if not self.serf_lib:
-      install_targets = filter(lambda x: x.name != 'serf', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_serf',
-                               install_targets)
+      install_targets = [x for x in install_targets if x.name != 'serf']
+      install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
     if self.without_neon:
-      install_targets = filter(lambda x: x.name != 'neon', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_neon',
-                               install_targets)
+      install_targets = [x for x in install_targets if x.name != 'neon']
+      install_targets = [x for x in install_targets if x.name != 'libsvn_ra_neon']
 
     dll_targets = []
     for target in install_targets:

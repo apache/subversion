@@ -597,7 +597,7 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
     return
 
   entries = LogParser().parse(stdout)
-  for index in xrange(len(entries)):
+  for index in range(len(entries)):
     entry = entries[index]
     if expected_revprops != None:
       entry.assert_revprops(expected_revprops[index])
@@ -980,7 +980,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = filter(None, [int(x.rstrip()[1:]) for x in out])
+  out = [_f for _f in [int(x.rstrip()[1:]) for x in out] if _f]
   out.sort()
   expected_output.sort()
 
