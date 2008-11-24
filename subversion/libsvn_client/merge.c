@@ -327,8 +327,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  * The tree conflict, with its victim specified by VICTIM_PATH, is
  * assumed to have happened during a merge using merge baton MERGE_B.
  *
- * ADM_ACCESS corresponds to the tree-conflicted directory
- * This directory must be the victim's parent directory.
+ * ADM_ACCESS must correspond to the victim's parent directory (even if
+ * the victim is a directory).
  *
  * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
  * this function cannot cope with node kind clashes.

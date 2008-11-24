@@ -556,7 +556,7 @@ static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
                   const char *path,
-                  const char *their_path,
+                  const char *their_url,
                   int *log_number,
                   apr_pool_t *pool);
 
@@ -1635,7 +1635,7 @@ static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
                   const char *path,
-                  const char *their_path,
+                  const char *their_url,
                   int *log_number,
                   apr_pool_t *pool)
 {
@@ -1688,7 +1688,7 @@ do_entry_deletion(struct edit_baton *eb,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path,
                                 entry, adm_access, 
                                 svn_wc_conflict_action_delete,
-                                svn_node_none, their_path, pool));
+                                svn_node_none, their_url, pool));
 
   if (tree_conflict != NULL)
     {
@@ -1833,11 +1833,11 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   const char *path_basename = svn_path_basename(path, pool);
-  const char *their_path = svn_path_url_add_component(pb->new_URL,
-                                                      path_basename, pool);
+  const char *their_url = svn_path_url_add_component(pb->new_URL,
+                                                     path_basename, pool);
 
   SVN_ERR(check_path_under_root(pb->path, path_basename, pool));
-  return do_entry_deletion(pb->edit_baton, pb->path, path, their_path,
+  return do_entry_deletion(pb->edit_baton, pb->path, path, their_url,
                            &pb->log_number, pool);
 }
 
