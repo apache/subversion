@@ -19,7 +19,7 @@
 ######################################################################
 
 # General modules
-import os, re
+import sys, os, re
 
 # Our testing module
 import svntest
