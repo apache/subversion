@@ -71,12 +71,12 @@ class TestHarness:
     self._open_log('r')
     log_lines = self.log.readlines()
     # Print summaries from least interesting to most interesting.
-    skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
+    skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
-    xfailed = filter(lambda x: x[:6] == 'XFAIL:', log_lines)
+    xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:

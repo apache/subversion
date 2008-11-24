@@ -95,7 +95,7 @@ class State:
   def tweak_some(self, filter, **kw):
     "Tweak the items for which the filter returns true."
     for path, item in self.desc.items():
-      if filter(path, item):
+      if list(filter(path, item)):
         item.tweak(**kw)
 
   def subtree(self, subtree_path):
