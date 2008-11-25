@@ -5019,7 +5019,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Save the data representation's hash in the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
-        && noderev->data_rep && noderev->kind == svn_node_file)
+        && noderev->data_rep && noderev->kind == svn_node_file
+        && noderev->data_rep->sha1_checksum != NULL)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
