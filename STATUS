@@ -91,5 +91,17 @@ Candidate changes for 1.5.5:
    Votes:
      +1: rhuijben
 
+ * r34385, r34393
+   Fix broken merge when the merge target's natural history includes
+   resurrections.
+   Notes:
+     r34385 is a new test.  r34393 is the fix.
+   Justification:
+     This problem was encountered 'in the wild' - see
+     http://svn.haxx.se/dev/archive-2008-11/0618.shtml.  When encountered
+     cherry harvest merges are completely broken.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
