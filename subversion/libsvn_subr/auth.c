@@ -475,3 +475,82 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
+                                                apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *provider;
+
+  *providers = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
+
+  /* Gnome Keyring */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "gnome_keyring",
+                                                  "simple",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "gnome_keyring",
+                                                  "ssl_client_cert_pw",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  /* Kwallet */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "kwallet",
+                                                  "simple",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "kwallet",
+                                                  "ssl_client_cert_pw",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  /* Keychain */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "keychain",
+                                                  "simple",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "keychain",
+                                                  "ssl_client_cert_pw",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  /* Windows */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "windows",
+                                                  "simple",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "windows",
+                                                  "ssl_client_cert_pw",
+                                                  pool));
+
+  if (provider)
+    APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+  return SVN_NO_ERROR;
+}
