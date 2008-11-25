@@ -1292,11 +1292,11 @@ typedef struct svn_wc_conflict_description_t
 
   /** Info on the "merge-left source" or "older" version of incoming change.
    * @since New in 1.6. */
-  svn_wc_conflict_version_t *older_version;
+  svn_wc_conflict_version_t *src_left_version;
 
   /** Info on the "merge-right source" or "their" version of incoming change.
    * @since New in 1.6. */
-  svn_wc_conflict_version_t *their_version;
+  svn_wc_conflict_version_t *src_right_version;
 
   /* Remember to adjust svn_wc__conflict_description_dup()
    * if you add new fields to this struct. */
@@ -1352,8 +1352,9 @@ svn_wc_conflict_description_create_prop(const char *path,
  * Set the @c path field of the created struct to @a path, the @c access
  * field to @a adm_access, the @c kind field to @c
  * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
- * operation to @a operation, the @c older_version field to @a older_version,
- * and the @c their_version field to @a their_version.
+ * operation to @a operation, the @c src_left_version field to
+ * @a src_left_version, and the @c src_right_version field to
+ * @a src_right_version.
  * Make only shallow copies of the pointer arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
@@ -1366,8 +1367,10 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_node_kind_t node_kind,
                                         svn_wc_operation_t operation,
-                                        svn_wc_conflict_version_t *older_version,
-                                        svn_wc_conflict_version_t *their_version,
+                                        svn_wc_conflict_version_t
+                                          *src_left_version,
+                                        svn_wc_conflict_version_t
+                                          *src_right_version,
                                         apr_pool_t *pool);
 
 
