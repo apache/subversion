@@ -496,7 +496,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_read_tree_conflict),
     SVN_TEST_PASS(test_read_2_tree_conflicts),
-    SVN_TEST_PASS(test_read_invalid_tree_conflicts),
+    SVN_TEST_XFAIL(test_read_invalid_tree_conflicts),
     SVN_TEST_PASS(test_write_tree_conflict),
     SVN_TEST_PASS(test_write_2_tree_conflicts),
     SVN_TEST_PASS(test_write_invalid_tree_conflicts),
