@@ -1179,6 +1179,9 @@ typedef enum svn_wc_operation_t
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
  *
+ * @see svn_wc_conflict_version_create()
+ * @see svn_wc_conflict_version_dup()
+ *
  * @since New in 1.6.
 */
 typedef struct svn_wc_conflict_version_t
@@ -1197,9 +1200,36 @@ typedef struct svn_wc_conflict_version_t
   /* const char *content_cache_path; */
   /* const char *props_cache_path; */
 
-  /* Remember to update svn_wc__conflict_version_create() and 
-   * svn_wc__conflict_version_dup() in case you add fields to this struct. */
+  /* Remember to update svn_wc_conflict_version_create() and 
+   * svn_wc_conflict_version_dup() in case you add fields to this struct. */
 } svn_wc_conflict_version_t;
+
+/**
+ * Allocate an @c svn_wc_conflict_version_t structure in @a pool,
+ * initialize to contain a conflict origin, and return it.
+ *
+ * Set the @c repos_url field of the created struct to @a repos_url, the
+ * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
+ * @a peg_rev and the the @c node_kind to @c node_kind. Make only shallow
+ * copies of the pointer arguments.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char* path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool);
+
+/** Return a duplicate of @a version, allocated in @a pool.
+ * No part of the new version will be shared with @a version.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
+                            apr_pool_t *pool);
 
 
 /** A struct that describes a conflict that has occurred in the
