@@ -329,13 +329,14 @@ svn_wc_conflict_description_create_prop(const char *path,
 }
 
 svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_tree(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_node_kind_t node_kind,
-                                        svn_wc_operation_t operation,
-                                        svn_wc_conflict_version_t *src_left_version,
-                                        svn_wc_conflict_version_t *src_right_version,
-                                        apr_pool_t *pool)
+svn_wc_conflict_description_create_tree(
+                            const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_node_kind_t node_kind,
+                            svn_wc_operation_t operation,
+                            svn_wc_conflict_version_t *src_left_version,
+                            svn_wc_conflict_version_t *src_right_version,
+                            apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
 
