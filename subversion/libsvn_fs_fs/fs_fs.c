@@ -1014,7 +1014,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-CONFIG_OPTION_ENABLE_REP_SHARING " = true"                                   NL
+"### " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                            NL
 
 ;
 #undef NL
@@ -1062,7 +1062,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
                           FALSE, fs->pool));
   SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
                               CONFIG_SECTION_REP_SHARING,
-                              CONFIG_OPTION_ENABLE_REP_SHARING, FALSE));
+                              CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
 
   /* Open the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
@@ -5648,7 +5648,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                           FALSE, fs->pool));
   SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
                               CONFIG_SECTION_REP_SHARING,
-                              CONFIG_OPTION_ENABLE_REP_SHARING, FALSE));
+                              CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
 
   /* Create the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
