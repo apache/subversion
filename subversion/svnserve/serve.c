@@ -905,6 +905,9 @@ static const char *kind_word(svn_node_kind_t kind)
     default:
       abort();
     }
+
+  /* Make the compiler happy */
+  return NULL;
 }
 
 /* ### This really belongs in libsvn_repos. */
