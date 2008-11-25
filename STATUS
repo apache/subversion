@@ -78,5 +78,16 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
+ * r34385, r34393
+   Fix issue #3312 "Mergeinfo for '...' maps to an empty revision range"
+   due to sparse merging.
+   Justification:
+     Some people do merge into sparse directories or targets with switched
+     subtrees; this produces non-inheritable mergeinfo.  This non-inheritable
+     mergeinfo can cause an error during merging or log -g.  See issue #3312
+     and http://svn.haxx.se/dev/archive-2008-10/1170.shtml.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
