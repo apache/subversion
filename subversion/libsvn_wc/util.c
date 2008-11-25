@@ -329,11 +329,14 @@ svn_wc_conflict_description_create_prop(const char *path,
 }
 
 svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_tree(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_node_kind_t node_kind,
-                                        svn_wc_operation_t operation,
-                                        apr_pool_t *pool)
+svn_wc_conflict_description_create_tree(
+                            const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_node_kind_t node_kind,
+                            svn_wc_operation_t operation,
+                            svn_wc_conflict_version_t *src_left_version,
+                            svn_wc_conflict_version_t *src_right_version,
+                            apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
 
@@ -343,6 +346,8 @@ svn_wc_conflict_description_create_tree(const char *path,
   conflict->kind = svn_wc_conflict_kind_tree;
   conflict->access = adm_access;
   conflict->operation = operation;
+  conflict->src_left_version = src_left_version;
+  conflict->src_right_version = src_right_version;
   return conflict;
 }
 
@@ -372,6 +377,54 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
     new_conflict->my_file = apr_pstrdup(pool, conflict->my_file);
   if (conflict->merged_file)
     new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+      svn_wc_conflict_version_dup(conflict->src_left_version, pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+      svn_wc_conflict_version_dup(conflict->src_right_version, pool);
 
   return new_conflict;
 }
+
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char* path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool)
+{
+  svn_wc_conflict_version_t *version;
+
+  version = apr_pcalloc(pool, sizeof(*version));
+
+  version->repos_url = repos_url;
+  version->peg_rev = peg_rev;
+  version->path_in_repos = path_in_repos;
+  version->node_kind = node_kind;
+
+  return version;
+}
+
+
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
+                            apr_pool_t *pool)
+{
+
+  svn_wc_conflict_version_t *new_version;
+
+  new_version = apr_pcalloc(pool, sizeof(*new_version));
+
+  /* Shallow copy all members. */
+  *new_version = *version;
+
+  if (version->repos_url)
+    new_version->repos_url = apr_pstrdup(pool, version->repos_url);
+
+  if (version->path_in_repos)
+    new_version->path_in_repos = apr_pstrdup(pool, version->path_in_repos);
+
+  return new_version;
+}
+
