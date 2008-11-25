@@ -14941,9 +14941,7 @@ def dont_merge_gaps_in_history(sbox):
   #
   #  >svn merge %url127%/A merge_tests-127\A_COPY
   #  ..\..\..\subversion\libsvn_repos\reporter.c:1162: (apr_err=160005)
-  #  svn: Target path '/A' does not exist
-  #
-  # Marking this test as XFail until this is resolved.
+  #  svn: Target path '/A' does not exist.
   expected_output = wc.State(A_COPY_path, {
     'D/gamma' : Item(status='U '),
     })
@@ -15209,8 +15207,8 @@ test_list = [ None,
                                server_has_mergeinfo)),
               SkipUnless(reintegrate_with_subtree_mergeinfo,
                          server_has_mergeinfo),
-              XFail(SkipUnless(dont_merge_gaps_in_history,
-                               server_has_mergeinfo)),
+              SkipUnless(dont_merge_gaps_in_history,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
