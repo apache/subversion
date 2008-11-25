@@ -405,8 +405,8 @@ svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
                                         dag_node_t *file,
                                         apr_pool_t *pool);
 
-/* Put the recorded checksum of FILE into CHECKSUM, allocating from
- * POOL.
+/* Put the recorded checksum of type KIND for FILE into CHECKSUM, allocating
+ * from POOL.
  *
  * If no stored checksum is available, do not calculate the checksum,
  * just put NULL into CHECKSUM.
@@ -414,6 +414,7 @@ svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
 svn_error_t *
 svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
                              dag_node_t *file,
+                             svn_checksum_kind_t kind,
                              apr_pool_t *pool);
 
 /* Create a new mutable file named NAME in PARENT.  Set *CHILD_P to a

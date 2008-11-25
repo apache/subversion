@@ -1522,8 +1522,11 @@ def status_with_tree_conflicts(sbox):
   # check status of G
   expected = svntest.verify.UnorderedOutput(
          ["D     C %s\n" % pi,
+          "      >   local delete, incoming edit upon update\n",
           "M     C %s\n" % rho,
+          "      >   local edit, incoming delete upon update\n",
           "D     C %s\n" % tau,
+          "      >   local delete, incoming delete upon update\n",
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1535,9 +1538,13 @@ def status_with_tree_conflicts(sbox):
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
           "D     C          1        1 jrandom      %s\n" % pi,
+          "      >   local delete, incoming edit upon update\n",
           "M     C          1        1 jrandom      %s\n" % rho,
+          "      >   local edit, incoming delete upon update\n",
           "D     C          1        1 jrandom      %s\n" % tau,
+          "      >   local delete, incoming delete upon update\n",
           ])
+
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,

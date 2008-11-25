@@ -90,7 +90,6 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
    If TMP is set, return a path to the tmp revert file. */
 const char *
 svn_wc__text_revert_path(const char *path,
-                         svn_boolean_t tmp,
                          apr_pool_t *pool);
 
 

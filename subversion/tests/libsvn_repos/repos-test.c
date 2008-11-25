@@ -2114,11 +2114,11 @@ reporter_depth_exclude(const char **msg,
                                     entries,
                                     sizeof(entries)/sizeof(entries[0]),
                                     subpool));
-    svn_pool_clear(subpool);
   }
 
   /* Clean up after ourselves. */
   svn_error_clear(svn_fs_abort_txn(txn, subpool));
+  svn_pool_clear(subpool);
 
   /* Expect an error on an illegal report for r1 to r2.  The illegal
      sequence is that we exclude A/D, then set_path() below A/D. */

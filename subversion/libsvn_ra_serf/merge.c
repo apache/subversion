@@ -229,7 +229,7 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
     }
   else
     {
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;

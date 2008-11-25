@@ -323,7 +323,7 @@ default_warning_func(void *baton, svn_error_t *err)
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
      processes, since those may both be equivalent to /dev/null.  */
-  abort();
+  SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
 /* Check whether PATH is valid for a filesystem, following (most of) the

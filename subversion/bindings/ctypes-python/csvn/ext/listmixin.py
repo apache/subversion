@@ -78,7 +78,7 @@ class ListMixin(object):
     raise TypeError('list objects are unhashable')
 
   def __iter__(self):
-    for i in xrange(len(self)):
+    for i in range(len(self)):
       yield self._get_element(i)
 
   def _tuple_from_slice(self, i):
@@ -106,9 +106,9 @@ class ListMixin(object):
     if isinstance(i, slice):
       (start, end, step) = self._tuple_from_slice(i)
       if step == None:
-        indices = xrange(start, end)
+        indices = range(start, end)
       else:
-        indices = xrange(start, end, step)
+        indices = range(start, end, step)
       return self._constructor([self._get_element(i) for i in indices])
     else:
       return self._get_element(self._fix_index(i))
@@ -118,7 +118,7 @@ class ListMixin(object):
       (start, end, step) = self._tuple_from_slice(i)
       if step != None:
         # Extended slice
-        indices = range(start, end, step)
+        indices = list(range(start, end, step))
         if len(value) != len(indices):
           raise ValueError(('attempt to assign sequence of size %d' +
                             ' to extended slice of size %d') %
@@ -140,7 +140,7 @@ class ListMixin(object):
       (start, end, step) = self._tuple_from_slice(i)
       if step != None:
         # Extended slice
-        indices = range(start, end, step)
+        indices = list(range(start, end, step))
         # Sort indices descending
         if len(indices) > 0 and indices[0] < indices[-1]:
           indices.reverse()
@@ -185,7 +185,7 @@ class ListMixin(object):
       self[:] = []
     elif other > 1:
       aux = list(self)
-      for i in xrange(other-1):
+      for i in range(other-1):
         self.extend(aux)
     return self
 
@@ -203,7 +203,7 @@ class ListMixin(object):
     return ans
 
   def reverse(self):
-    for i in xrange(len(self)//2):
+    for i in range(len(self)//2):
       j = len(self) - 1 - i
       (self[i], self[j]) = (self[j], self[i])
 
@@ -212,7 +212,7 @@ class ListMixin(object):
       (i, j, ignore) = self._tuple_from_slice(slice(i, j))
     if j is None:
       j = len(self)
-    for k in xrange(i, j):
+    for k in range(i, j):
       if self._get_element(k) == x:
         return k
     raise ValueError('index(x): x not in list')
@@ -228,7 +228,7 @@ class ListMixin(object):
     return ans
 
   def remove(self, x):
-    for i in xrange(len(self)):
+    for i in range(len(self)):
       if self._get_element(i) == x:
         del self[i]
         return
@@ -495,7 +495,7 @@ def test_list_mixin(list_class=TestList, rand_elem=None):
           step = 1
         if step == 1:
           step = 2
-        indices = range(*slice(start, end, step).indices(len(x)))
+        indices = list(range(*slice(start, end, step).indices(len(x))))
         assignval = [rand_elem() for assignidx in
                      indices]
         if random.randrange(2) == 0:

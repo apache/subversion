@@ -3,6 +3,12 @@
 ## See the usage() function for operating instructions. ##
 
 import re
+try:
+  # Python >=2.6
+  from functools import reduce
+except ImportError:
+  # Python <2.6
+  pass
 import sys
 import operator
 
