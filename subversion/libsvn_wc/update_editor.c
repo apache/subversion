@@ -1500,12 +1500,12 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
             }
         }
 
-      older_version = svn_wc__conflict_version_create(repos_url,
-                                                      path_in_repos,
-                                                      entry->revision,
+      older_version = svn_wc_conflict_version_create(repos_url,
+                                                     path_in_repos,
+                                                     entry->revision,
                           (entry->schedule == svn_wc_schedule_delete) 
                                   ? svn_node_none : entry->kind,
-                                                      pool);
+                                                     pool);
 
       /* entry->kind is both base kind and working kind, because schedule
        * replace-by-different-kind is not supported. */
@@ -1513,11 +1513,11 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
        * is svn_node_none and doesn't reflect the older kind. Then we
        * need to find out the older kind in a different way! */
 
-      their_version = svn_wc__conflict_version_create(repos_url,
-                                                      path_in_repos,
-                                                      *eb->target_revision,
-                                                      their_node_kind,
-                                                      pool);
+      their_version = svn_wc_conflict_version_create(repos_url,
+                                                     path_in_repos,
+                                                     *eb->target_revision,
+                                                     their_node_kind,
+                                                     pool);
 
       conflict = svn_wc_conflict_description_create_tree(
         full_path, parent_adm_access, entry->kind,
