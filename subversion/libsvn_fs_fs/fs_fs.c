@@ -2138,7 +2138,43 @@ open_pack_or_rev_file(apr_file_t **file,
   return err;
 }
 
-/* Given an open revision file REV_FILE, locate the trailer that
+/* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
+   Use POOL for temporary allocations. */
+static svn_error_t *
+get_packed_offset(apr_off_t *rev_offset,
+                  svn_fs_t *fs,
+                  svn_revnum_t rev,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_file_t *manifest_file;
+  char buf[PACK_MANIFEST_ENTRY_LEN + 1];
+  apr_off_t rev_index_offset;
+  apr_size_t len;
+
+  /* Open the manifest file. */
+  SVN_ERR(svn_io_file_open(&manifest_file, path_rev_packed(fs, rev, "manifest",
+                                                           pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  /* Seek to the correct offset. */
+  rev_index_offset = (rev % ffd->max_files_per_dir) *
+                                                 (PACK_MANIFEST_ENTRY_LEN + 1);
+  SVN_ERR(svn_io_file_seek(manifest_file, APR_SET, &rev_index_offset, pool));
+
+  /* Read the revision offset and close the file. */
+  len = PACK_MANIFEST_ENTRY_LEN;
+  SVN_ERR(svn_io_file_read(manifest_file, buf, &len, pool));
+  buf[PACK_MANIFEST_ENTRY_LEN] = 0;
+  SVN_ERR(svn_io_file_close(manifest_file, pool));
+
+  *rev_offset = apr_atoi64(buf);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Given an open revision file REV_FILE in FS for REV, locate the trailer that
    specifies the offset to the root node-id and to the changed path
    information.  Store the root node offset in *ROOT_OFFSET and the
    changed path offset in *CHANGES_OFFSET.  If either of these
@@ -2148,22 +2184,35 @@ static svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,
                         apr_off_t *changes_offset,
                         apr_file_t *rev_file,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
                         svn_boolean_t packed,
                         apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t offset;
   char buf[64];
   int i, num_bytes;
   apr_size_t len;
+  apr_seek_where_t seek_relative;
 
-  /* XXX: Just so I don't forget... */
   if (packed)
-    abort();
+    {
+      if ((rev + 1) % ffd->max_files_per_dir != 0)
+        {
+          SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
+          seek_relative = APR_SET;
+        }
+    }
+  else
+    {
+      seek_relative = APR_END;
+      offset = 0;
+    }
 
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(rev_file, APR_END, &offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &offset, pool));
 
   offset -= sizeof(buf);
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
@@ -2240,8 +2289,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
     return SVN_NO_ERROR;
 
   SVN_ERR(open_pack_or_rev_file(&revision_file, &packed, fs, rev, pool));
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, packed,
-                                  pool));
+  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
+                                  packed, pool));
 
   SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, root_offset, pool));
 
@@ -3737,8 +3786,8 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 
   SVN_ERR(open_pack_or_rev_file(&revision_file, &packed, fs, rev, pool));
 
-  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, packed,
-                                  pool));
+  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
+                                  rev, packed, pool));
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
 
@@ -5981,8 +6030,8 @@ recover_body(void *baton, apr_pool_t *pool)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
           SVN_ERR(open_pack_or_rev_file(&rev_file, &packed, fs, rev, iterpool));
-          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, packed,
-                                          iterpool));
+          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, fs, rev,
+                                          packed, iterpool));
           SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
         }
