@@ -62,21 +62,6 @@ static const char field_separator = SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR;
 static const char desc_separator = SVN_WC__TREE_CONFLICT_DESC_SEPARATOR;
 static const char escape_char = SVN_WC__TREE_CONFLICT_ESCAPE_CHAR;
 
-/* If **INPUT starts with *TOKEN, advance *INPUT by the length of *TOKEN
- * and return TRUE. Else, return FALSE and leave *INPUT alone. */
-static svn_boolean_t
-advance_on_match(const char **input, const char *token)
-{
-  int len = strlen(token);
-  if ((strncmp(*input, token, len)) == 0)
-    {
-      *input += len;
-      return TRUE;
-    }
-  else
-    return FALSE;
-}
-
 /* Ensure the next character at position *START is a field separator, and
  * advance *START past it. */
 static svn_error_t *
@@ -85,7 +70,22 @@ read_field_separator(const char **start,
 {
   if (*start >= end || **start != field_separator)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Missing field delimiter in tree conflict description"));
+             _("Missing field separator in tree conflict description"));
+
+  (*start)++;
+  return SVN_NO_ERROR;
+}
+
+/* Ensure the next character at position *START is a description separator,
+ * and advance *START past it. */
+static svn_error_t *
+read_desc_separator(const char **start,
+                    const char *end)
+{
+  if (*start >= end || **start != desc_separator)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+             _("No separator at end of tree conflict description, "
+               "even though there is still data left to read"));
 
   (*start)++;
   return SVN_NO_ERROR;
@@ -93,7 +93,7 @@ read_field_separator(const char **start,
 
 /* Parse a string field out of the data pointed to by *START. Set *STR to a
  * copy of the unescaped string, allocated in POOL. The string may be empty.
- * Stop reading at an unescaped field- or description delimiter, and never
+ * Stop reading at an unescaped field- or description separator, and never
  * read past END.
  * After reading, make *START point to the character after the field.
  */
@@ -138,148 +138,125 @@ read_string_field(const char **str,
   return SVN_NO_ERROR;
 }
 
-/* Parse the 'victim path' field pointed to by *START. Modify the 'path'
- * field of *CONFLICT by appending the victim name to its existing value.
- * Stop reading at a field delimiter and never read past END.
- * After reading, make *START point to the character after the field.
- * Do all allocations in POOL.
- */
-static svn_error_t *
-read_victim_path(svn_wc_conflict_description_t *conflict,
-                 const char **start,
-                 const char *end,
-                 apr_pool_t *pool)
+/* A mapping between a string STR and an enumeration value VAL. */
+typedef struct enum_mapping_t
 {
-  const char *victim_basename;
+  const char *str;
+  int val;
+} enum_mapping_t;
 
-  SVN_ERR(read_string_field(&victim_basename, start, end, pool));
+/* A map for svn_node_kind_t values. */
+static const enum_mapping_t node_kind_map[] =
+{
+  { SVN_WC__NODE_NONE, svn_node_none },
+  { SVN_WC__NODE_FILE, svn_node_file },
+  { SVN_WC__NODE_DIR,  svn_node_dir },
+  { "",                svn_node_unknown },
+  { NULL,              0 }
+};
 
-  if (victim_basename[0] == '\0')
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Empty 'victim' field in tree conflict "
-                              "description"));
+/* A map for svn_wc_operation_t values. */
+static const enum_mapping_t operation_map[] =
+{
+  { SVN_WC__OPERATION_UPDATE, svn_wc_operation_update },
+  { SVN_WC__OPERATION_SWITCH, svn_wc_operation_switch },
+  { SVN_WC__OPERATION_MERGE,  svn_wc_operation_merge },
+  { NULL,                     0 }
+};
 
-  conflict->path = svn_path_join(conflict->path, victim_basename, pool);
+/* A map for svn_wc_conflict_action_t values. */
+static const enum_mapping_t action_map[] =
+{
+  { SVN_WC__CONFLICT_ACTION_EDITED,  svn_wc_conflict_action_edit },
+  { SVN_WC__CONFLICT_ACTION_DELETED, svn_wc_conflict_action_delete },
+  { SVN_WC__CONFLICT_ACTION_ADDED,   svn_wc_conflict_action_add },
+  { NULL,                            0 }
+};
 
-  return SVN_NO_ERROR;
-}
+/* A map for svn_wc_conflict_reason_t values. */
+static const enum_mapping_t reason_map[] =
+{
+  { SVN_WC__CONFLICT_REASON_EDITED,     svn_wc_conflict_reason_edited },
+  { SVN_WC__CONFLICT_REASON_DELETED,    svn_wc_conflict_reason_deleted },
+  { SVN_WC__CONFLICT_REASON_MISSING,    svn_wc_conflict_reason_missing },
+  { SVN_WC__CONFLICT_REASON_OBSTRUCTED, svn_wc_conflict_reason_obstructed },
+  { SVN_WC__CONFLICT_REASON_ADDED,      svn_wc_conflict_reason_added },
+  { NULL,                               0 }
+};
 
-/* Parse the 'node_kind' field pointed to by *START into the
- * the tree conflict descriptor pointed to by DESC.
+/* Parse the enumeration field pointed to by *START into *RESULT as a plain
+ * 'int', using MAP to convert from strings to enumeration values.
+ * In MAP, a null STR field marks the end of the map.
  * Don't read further than END.
  * After reading, make *START point to the character after the field.
  */
 static svn_error_t *
-read_node_kind(svn_wc_conflict_description_t *conflict,
-               const char **start,
-               const char *end)
+read_enum_field(int *result,
+                const enum_mapping_t *map,
+                const char **start,
+                const char *end,
+                apr_pool_t *pool)
 {
-  if (*start >= end)
-      return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("Expected tree conflict data but got none"));
+  const char *str;
+  int i;
 
-  if (advance_on_match(start, SVN_WC__NODE_FILE))
-     conflict->node_kind = svn_node_file;
-  else if (advance_on_match(start, SVN_WC__NODE_DIR))
-     conflict->node_kind = svn_node_dir;
-  else
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Invalid 'node_kind' field in tree conflict description"));
+  SVN_ERR(read_string_field(&str, start, end, pool));
 
+  /* Find STR in MAP; error if not found. */
+  for (i = 0; ; i++)
+    {
+      if (map[i].str == NULL)
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                _("Unknown enumeration value in tree conflict "
+                                  "description"));
+      if (strcmp(str, map[i].str) == 0)
+        break;
+    }
+
+  *result = map[i].val;
   return SVN_NO_ERROR;
 }
 
-/* Parse the 'operation' field pointed to by *START into the
- * the tree conflict descriptor pointed to by DESC.
+/* Parse the conflict info fields pointed to by *START into *VERSION_INFO.
  * Don't read further than END.
  * After reading, make *START point to the character after the field.
  */
 static svn_error_t *
-read_operation(svn_wc_conflict_description_t *conflict,
-               const char **start,
-               const char *end)
+read_node_version_info(svn_wc_conflict_version_t *version_info,
+                       const char **start,
+                       const char *end,
+                       apr_pool_t *pool)
 {
-  if (*start >= end)
-      return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("Expected tree conflict data but got none"));
+  const char *str;
+  int n;
 
-  if (advance_on_match(start, SVN_WC__OPERATION_UPDATE))
-      conflict->operation = svn_wc_operation_update;
-  else if (advance_on_match(start, SVN_WC__OPERATION_SWITCH))
-      conflict->operation = svn_wc_operation_switch;
-  else if (advance_on_match(start, SVN_WC__OPERATION_MERGE))
-      conflict->operation = svn_wc_operation_merge;
-  else
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Invalid 'operation' field in tree conflict description"));
+  /* repos_url */
+  SVN_ERR(read_string_field(&str, start, end, pool));
+  version_info->repos_url = (str[0] == '\0') ? NULL : str;
+  SVN_ERR(read_field_separator(start, end));
 
-  return SVN_NO_ERROR;
-}
+  /* peg_rev */
+  SVN_ERR(read_string_field(&str, start, end, pool));
+  version_info->peg_rev = (str[0] == '\0') ? SVN_INVALID_REVNUM
+    : SVN_STR_TO_REV(str);
+  SVN_ERR(read_field_separator(start, end));
 
-/* Parse the 'action' field pointed to by *START into the
- * the tree conflict descriptor pointed to by DESC.
- * Don't read further than END.
- * After reading, make *START point to the character after the field.
- */
-static svn_error_t *
-read_action(svn_wc_conflict_description_t *conflict,
-            const char **start,
-            const char *end)
-{
-  if (*start >= end)
-      return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("Expected tree conflict data but got none"));
+  /* path_in_repos */
+  SVN_ERR(read_string_field(&str, start, end, pool));
+  version_info->path_in_repos = (str[0] == '\0') ? NULL : str;
+  SVN_ERR(read_field_separator(start, end));
 
-  if (advance_on_match(start, SVN_WC__CONFLICT_ACTION_EDITED))
-    conflict->action = svn_wc_conflict_action_edit;
-  else if (advance_on_match(start, SVN_WC__CONFLICT_ACTION_DELETED))
-    conflict->action = svn_wc_conflict_action_delete;
-  else if (advance_on_match(start, SVN_WC__CONFLICT_ACTION_ADDED))
-    conflict->action = svn_wc_conflict_action_add;
-  else
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Invalid 'action' field in tree conflict description"));
-
-  return SVN_NO_ERROR;
-}
-
-/* Parse the 'reason' field pointed to by *START into the
- * the tree conflict descriptor pointed to by DESC.
- * Don't read further than END.
- * After reading, make *START point to the character after the field.
- */
-static svn_error_t *
-read_reason(svn_wc_conflict_description_t *conflict,
-            const char **start,
-            const char *end)
-{
-  if (*start >= end)
-      return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("Expected tree conflict data but got none"));
-
-  if (advance_on_match(start, SVN_WC__CONFLICT_REASON_EDITED))
-    conflict->reason = svn_wc_conflict_reason_edited;
-  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_DELETED))
-    conflict->reason = svn_wc_conflict_reason_deleted;
-  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_MISSING))
-    conflict->reason = svn_wc_conflict_reason_missing;
-  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_OBSTRUCTED))
-    conflict->reason = svn_wc_conflict_reason_obstructed;
-  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_ADDED))
-    conflict->reason = svn_wc_conflict_reason_added;
-  else
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-             _("Invalid 'reason' field in tree conflict description"));
+  /* node_kind */
+  SVN_ERR(read_enum_field(&n, node_kind_map, start, end, pool));
+  version_info->node_kind = (svn_node_kind_t)n;
 
   return SVN_NO_ERROR;
 }
 
 /* Parse a newly allocated svn_wc_conflict_description_t object from the
  * character string pointed to by *START. Return the result in *CONFLICT.
- * Don't read further than END. If a description separator is found in
- * the string after the conflict description that was read, set *START
- * to the first character of the next conflict description.
- * Otherwise, set *START to NULL.
+ * Don't read further than END. Set *START to point to the next character
+ * after the description that was read.
  * DIR_PATH is the path to the WC directory whose conflicts are being read.
  * Do all allocations in pool.
  */
@@ -290,37 +267,67 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                        const char *dir_path,
                        apr_pool_t *pool)
 {
-  if (*start >= end)
-      return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("Expected tree conflict data but got none"));
+  const char *victim_basename;
+  svn_node_kind_t node_kind;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_version_t *src_left_version;
+  svn_wc_conflict_version_t *src_right_version;
+  int n;
 
+  SVN_ERR_ASSERT(*start < end);
+
+  /* Each read_...() call modifies *START ! */
+
+  /* victim basename */
+  SVN_ERR(read_string_field(&victim_basename, start, end, pool));
+  if (victim_basename[0] == '\0')
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Empty 'victim' field in tree conflict "
+                              "description"));
+  SVN_ERR(read_field_separator(start, end));
+
+  /* node_kind */
+  SVN_ERR(read_enum_field(&n, node_kind_map, start, end, pool));
+  node_kind = (svn_node_kind_t)n;
+  if (node_kind != svn_node_file && node_kind != svn_node_dir)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+             _("Invalid 'node_kind' field in tree conflict description"));
+  SVN_ERR(read_field_separator(start, end));
+
+  /* operation */
+  SVN_ERR(read_enum_field(&n, operation_map, start, end, pool));
+  operation = (svn_wc_operation_t)n;
+  SVN_ERR(read_field_separator(start, end));
+
+  /* Construct the description object */
+  src_left_version = svn_wc_conflict_version_create(NULL, NULL, 
+                                                    SVN_INVALID_REVNUM,
+                                                    svn_node_none, pool);
+  src_right_version = svn_wc_conflict_version_create(NULL, NULL, 
+                                                     SVN_INVALID_REVNUM,
+                                                     svn_node_none, pool);
   *conflict = svn_wc_conflict_description_create_tree(
-    dir_path, NULL, svn_node_none, 0, pool);
+    svn_path_join(dir_path, victim_basename, pool),
+    NULL, node_kind, operation, src_left_version, src_right_version, pool);
 
-  /* Each of these modifies *START ! */
-  SVN_ERR(read_victim_path(*conflict, start, end, pool));
+  /* action */
+  SVN_ERR(read_enum_field(&n, action_map, start, end, pool));
+  (*conflict)->action = (svn_wc_conflict_action_t)n;
   SVN_ERR(read_field_separator(start, end));
-  SVN_ERR(read_node_kind(*conflict, start, end));
-  SVN_ERR(read_field_separator(start, end));
-  SVN_ERR(read_operation(*conflict, start, end));
-  SVN_ERR(read_field_separator(start, end));
-  SVN_ERR(read_action(*conflict, start, end));
-  SVN_ERR(read_field_separator(start, end));
-  SVN_ERR(read_reason(*conflict, start, end));
 
-  /* *START should now point to a description separator
-   * if there are any descriptions left. */
-  if (**start == desc_separator)
-    (*start)++;
-  else
-    {
-      if (*start >= end)
-        *start = NULL;
-      else
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-          _("No delimiter at end of tree conflict description, "
-            "even though there is still data left to read"));
-    }
+  /* reason */
+  SVN_ERR(read_enum_field(&n, reason_map, start, end, pool));
+  (*conflict)->reason = (svn_wc_conflict_reason_t)n;
+  SVN_ERR(read_field_separator(start, end));
+
+  /* src_left_version */
+  SVN_ERR(read_node_version_info((*conflict)->src_left_version, start, end,
+                                 pool));
+  SVN_ERR(read_field_separator(start, end));
+
+  /* src_right_version */
+  SVN_ERR(read_node_version_info((*conflict)->src_right_version, start, end,
+                                 pool));
 
   return SVN_NO_ERROR;
 }
@@ -332,33 +339,28 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
                             apr_pool_t *pool)
 {
   const char *start, *end;
-  svn_wc_conflict_description_t *conflict = NULL;
 
   if (conflict_data == NULL)
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(*conflicts);
 
   start = conflict_data;
   end = start + strlen(start);
 
-  while (start != NULL && start <= end) /* Yes, '<=', because 'start == end'
-                                           is a special case that is dealt
-                                           with further down the call chain. */
+  while (start < end)
     {
+      svn_wc_conflict_description_t *conflict;
+
       SVN_ERR(read_one_tree_conflict(&conflict, &start, end, dir_path, pool));
       if (conflict != NULL)
         APR_ARRAY_PUSH(*conflicts, svn_wc_conflict_description_t *) = conflict;
-    }
 
-  if (start != NULL)
-    /* Not all conflicts have been read from the entry, but no error
-     * has been thrown yet. We should not even be here! */
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-        _("Invalid tree conflict data in 'entries' file, "
-          "but no idea what went wrong"));
+      /* *START should now point to a description separator
+       * if there are any descriptions left. */
+      if (start < end)
+        SVN_ERR(read_desc_separator(&start, end));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -384,6 +386,58 @@ write_string_field(svn_stringbuf_t *buf,
     }
 }
 
+/* Append to BUF the string corresponding to enumeration value N, as found
+ * in MAP. */
+static svn_error_t *
+write_enum_field(svn_stringbuf_t *buf,
+                 const enum_mapping_t *map,
+                 int n)
+{
+  int i;
+
+  for (i = 0; ; i++)
+    {
+      SVN_ERR_ASSERT(map[i].str != NULL);
+      if (map[i].val == n)
+        break;
+    }
+  svn_stringbuf_appendcstr(buf, map[i].str);
+  return SVN_NO_ERROR;
+}
+
+/* Append to BUF the denary form of the number N. */
+static void
+write_integer_field(svn_stringbuf_t *buf,
+                    int n,
+                    apr_pool_t *pool)
+{
+  const char *str = apr_psprintf(pool, "%d", n);
+
+  svn_stringbuf_appendcstr(buf, str);
+}
+
+/* Append to BUF the several fields that represent VERSION_INFO, */
+static svn_error_t *
+write_node_version_info(svn_stringbuf_t *buf,
+                         const svn_wc_conflict_version_t *version_info,
+                         apr_pool_t *pool)
+{
+  if (version_info->repos_url)
+    write_string_field(buf, version_info->repos_url);
+  svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+  if (SVN_IS_VALID_REVNUM(version_info->peg_rev))
+    write_integer_field(buf, version_info->peg_rev, pool);
+  svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+  if (version_info->path_in_repos)
+    write_string_field(buf, version_info->path_in_repos);
+  svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+  SVN_ERR(write_enum_field(buf, node_kind_map, version_info->node_kind));
+  return SVN_NO_ERROR;
+}
+
 /*
  * This function could be static, but we need to link to it
  * in a unit test in tests/libsvn_wc/, so it isn't.
@@ -393,6 +447,9 @@ svn_wc__write_tree_conflicts(char **conflict_data,
                              apr_array_header_t *conflicts,
                              apr_pool_t *pool)
 {
+  /* A conflict version struct with all fields null/invalid. */
+  static const svn_wc_conflict_version_t null_version = {
+    NULL, SVN_INVALID_REVNUM, NULL, svn_node_unknown };
   svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
   int i;
 
@@ -402,81 +459,50 @@ svn_wc__write_tree_conflicts(char **conflict_data,
       const svn_wc_conflict_description_t *conflict =
           APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
-      /* Escape separator chars while writing victim path. */
+      /* Victim path (escaping separator chars). */
       path = svn_path_basename(conflict->path, pool);
       SVN_ERR_ASSERT(strlen(path) > 0);
       write_string_field(buf, path);
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
-      switch (conflict->node_kind)
-        {
-          case svn_node_dir:
-            svn_stringbuf_appendcstr(buf, SVN_WC__NODE_DIR);
-            break;
-          case svn_node_file:
-            svn_stringbuf_appendcstr(buf, SVN_WC__NODE_FILE);
-            break;
-          default:
-            SVN_ERR_MALFUNCTION();
-        }
+      /* node_kind */
+      SVN_ERR_ASSERT(conflict->node_kind == svn_node_dir
+                     || conflict->node_kind == svn_node_file);
+      SVN_ERR(write_enum_field(buf, node_kind_map, conflict->node_kind));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
-      switch (conflict->operation)
-        {
-          case svn_wc_operation_update:
-            svn_stringbuf_appendcstr(buf, SVN_WC__OPERATION_UPDATE);
-            break;
-          case svn_wc_operation_switch:
-            svn_stringbuf_appendcstr(buf, SVN_WC__OPERATION_SWITCH);
-            break;
-          case svn_wc_operation_merge:
-            svn_stringbuf_appendcstr(buf, SVN_WC__OPERATION_MERGE);
-            break;
-          default:
-            SVN_ERR_MALFUNCTION();
-        }
+      /* operation */
+      SVN_ERR(write_enum_field(buf, operation_map, conflict->operation));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
-      switch (conflict->action)
-        {
-          case svn_wc_conflict_action_edit:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_EDITED);
-            break;
-         case svn_wc_conflict_action_delete:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_DELETED);
-            break;
-         case svn_wc_conflict_action_add:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_ADDED);
-            break;
-          default:
-            SVN_ERR_MALFUNCTION();
-        }
+      /* action */
+      SVN_ERR(write_enum_field(buf, action_map, conflict->action));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
-      switch (conflict->reason)
-        {
-          case svn_wc_conflict_reason_edited:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_EDITED);
-            break;
-          case svn_wc_conflict_reason_deleted:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_DELETED);
-            break;
-          case svn_wc_conflict_reason_added:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_ADDED);
-            break;
-          case svn_wc_conflict_reason_missing:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_MISSING);
-            break;
-          case svn_wc_conflict_reason_obstructed:
-            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_OBSTRUCTED);
-            break;
-          default:
-            SVN_ERR_MALFUNCTION();
-        }
+      /* reason */
+      SVN_ERR(write_enum_field(buf, reason_map, conflict->reason));
+
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+      /* src_left_version */
+      if (conflict->src_left_version)
+        SVN_ERR(write_node_version_info(buf, conflict->src_left_version,
+                                        pool));
+      else
+        SVN_ERR(write_node_version_info(buf, &null_version, pool));
+
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
+
+      /* src_right_version */
+      if (conflict->src_right_version)
+        SVN_ERR(write_node_version_info(buf, conflict->src_right_version,
+                                        pool));
+      else
+        SVN_ERR(write_node_version_info(buf, &null_version, pool));
 
       if (i < (conflicts->nelts - 1))
         svn_stringbuf_appendbytes(buf, &desc_separator, 1);

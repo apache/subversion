@@ -327,11 +327,13 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  * The tree conflict, with its victim specified by VICTIM_PATH, is
  * assumed to have happened during a merge using merge baton MERGE_B.
  *
- * ADM_ACCESS corresponds to the tree-conflicted directory
- * This directory must be the victim's parent directory.
+ * ADM_ACCESS must correspond to the victim's parent directory (even if
+ * the victim is a directory).
  *
- * NODE_KIND, ACTION, and REASON correspond to the fields
- * of the same names in svn_wc_conflict_description_t.
+ * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
+ * this function cannot cope with node kind clashes.
+ * ACTION and REASON correspond to the fields
+ * of the same names in svn_wc_tree_conflict_description_t.
  */
 static svn_error_t*
 tree_conflict(merge_cmd_baton_t *merge_b,
@@ -342,14 +344,39 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               svn_wc_conflict_reason_t reason)
 {
   svn_wc_conflict_description_t *conflict;
+  const char *src_repos_url;  /* root URL of source repository */
+  svn_wc_conflict_version_t *left;
+  svn_wc_conflict_version_t *right;
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
+                                 merge_b->pool));
+
+  left = svn_wc_conflict_version_create(
+           src_repos_url,
+           svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
+                             merge_b->pool),
+           merge_b->merge_source.rev1,
+           node_kind,
+           merge_b->pool);
+
+  right = svn_wc_conflict_version_create(
+            src_repos_url,
+            svn_path_is_child(src_repos_url, merge_b->merge_source.url2,
+                              merge_b->pool),
+            merge_b->merge_source.rev2,
+            node_kind,
+            merge_b->pool);
+
   conflict = svn_wc_conflict_description_create_tree(
-    victim_path, adm_access, node_kind, svn_wc_operation_merge, merge_b->pool);
+    victim_path, adm_access, node_kind, svn_wc_operation_merge,
+    left, right, merge_b->pool);
+
   conflict->action = action;
   conflict->reason = reason;
+
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
