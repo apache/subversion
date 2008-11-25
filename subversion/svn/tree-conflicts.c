@@ -103,7 +103,7 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
     apr_hash_set(att_hash, "path-in-repos", APR_HASH_KEY_STRING,
                  version->path_in_repos);
 
-  if (! SVN_IS_VALID_REVNUM(version->peg_rev))
+  if (SVN_IS_VALID_REVNUM(version->peg_rev))
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_itoa(pool, version->peg_rev));
 
