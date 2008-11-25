@@ -351,6 +351,9 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
+                                 merge_b->pool));
+
   left = svn_wc_conflict_version_create(
            src_repos_url,
            svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
@@ -373,9 +376,6 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 
   conflict->action = action;
   conflict->reason = reason;
-
-  SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
-                                 merge_b->pool));
 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
