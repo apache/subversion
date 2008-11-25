@@ -81,12 +81,6 @@ Candidate changes for 1.5.5:
 Approved changes:
 =================
 
-* r33873, r33874
-   Old API-accessible bug where a certain combination of revision
-   arguments to svn_repos_get_logs returns garbage.  Has tests.
-   Votes:
-     +1: glasser, cmpilato, rhuijben
-
  * r34050, r34051, r34053
    Fix a bug in which files added via merge from a foreign repository
    kept the UUID of the foreign repository.
