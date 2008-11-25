@@ -78,7 +78,7 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
- * r34385, r34393
+ * r34423
    Fix issue #3312 "Mergeinfo for '...' maps to an empty revision range"
    due to sparse merging.
    Justification:
