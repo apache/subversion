@@ -173,7 +173,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*incoming %s, local %s*" % (action, reason)
+    expected_str1 = ".*local %s, incoming %s*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 

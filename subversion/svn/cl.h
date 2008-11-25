@@ -595,6 +595,7 @@ svn_cl__xml_print_header(const char *tagname, apr_pool_t *pool);
 svn_error_t *
 svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 
+
 /* For use in XML output, return a non-localised string representation
  * of KIND, being "none" or "dir" or "file" or, in any other case,
  * the empty string. */
@@ -605,6 +606,22 @@ svn_cl__node_kind_str_xml(svn_node_kind_t kind);
    "dir" or "file" or, in any other case, the empty string. */
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
+
+
+/** Provides an XML name for a given OPERATION.
+ * Note: POOL is currently not used.
+ */
+const char *
+svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool);
+
+/** Return a possibly localized human readable string for
+ * a given OPERATION.
+ * Note: POOL is currently not used.
+ */
+const char *
+svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
+                                     apr_pool_t *pool);
+
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
  * PROPVAL looks like an attempt to turn the property off (i.e., it's

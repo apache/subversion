@@ -72,7 +72,7 @@ svn_cl__get_human_readable_tree_conflict_description(
   victim_name = svn_path_basename(conflict->path, pool);
   reason = reason_str(conflict);
   action = action_str(conflict);
-  operation = svn_wc_operation_str_human_readable(conflict->operation, pool);
+  operation = svn_cl__operation_str_human_readable(conflict->operation, pool);
   SVN_ERR_ASSERT(action && reason);
   *desc = apr_psprintf(pool, _("local %s, incoming %s upon %s"),
                        reason, action, operation);
@@ -81,7 +81,9 @@ svn_cl__get_human_readable_tree_conflict_description(
 
 
 /* Helper for svn_cl__append_tree_conflict_info_xml().
- * Appends the attributes of the given VERSION to ATT_HASH. */
+ * Appends the attributes of the given VERSION to ATT_HASH.
+ * SIDE is the content of the version tag's side="..." attribute,
+ * currently one of "source-left" or "source-right".*/
 static svn_error_t *
 add_conflict_version_xml(svn_stringbuf_t **pstr,
                          const char *side,
@@ -101,11 +103,13 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
     apr_hash_set(att_hash, "path-in-repos", APR_HASH_KEY_STRING,
                  version->path_in_repos);
 
-  apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
-               apr_itoa(pool, version->peg_rev));
+  if (! SVN_IS_VALID_REVNUM(version->peg_rev))
+    apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
+                 apr_itoa(pool, version->peg_rev));
 
-  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
-               svn_cl__node_kind_str_xml(version->node_kind));
+  if (version->node_kind != svn_node_unknown)
+    apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
+                 svn_cl__node_kind_str_xml(version->node_kind));
 
   svn_xml_make_open_tag_hash(pstr, pool, svn_xml_self_closing,
                              "version", att_hash);
@@ -129,7 +133,7 @@ svn_cl__append_tree_conflict_info_xml(
                svn_cl__node_kind_str_xml(conflict->node_kind));
 
   apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
-               svn_wc_operation_str_xml(conflict->operation, pool));
+               svn_cl__operation_str_xml(conflict->operation, pool));
 
   switch (conflict->action)
     {
@@ -182,19 +186,13 @@ svn_cl__append_tree_conflict_info_xml(
 
   if (conflict->older_version)
     SVN_ERR(add_conflict_version_xml(&str,
-                                     (conflict->operation
-                                      == svn_wc_operation_merge)
-                                       ? "left"
-                                       : "older",
+                                     "source-left",
                                      conflict->older_version,
                                      pool));
 
   if (conflict->their_version)
     SVN_ERR(add_conflict_version_xml(&str,
-                                     (conflict->operation
-                                      == svn_wc_operation_merge)
-                                       ? "right"
-                                       : "their",
+                                     "source-right",
                                      conflict->their_version,
                                      pool));
 
