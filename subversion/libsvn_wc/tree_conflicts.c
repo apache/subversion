@@ -270,8 +270,8 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   const char *victim_basename;
   svn_node_kind_t node_kind;
   svn_wc_operation_t operation;
-  svn_wc_conflict_version_t *older_version;
-  svn_wc_conflict_version_t *their_version;
+  svn_wc_conflict_version_t *src_left_version;
+  svn_wc_conflict_version_t *src_right_version;
   int n;
 
   SVN_ERR_ASSERT(*start < end);
@@ -300,15 +300,15 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   SVN_ERR(read_field_separator(start, end));
 
   /* Construct the description object */
-  older_version = svn_wc__conflict_version_create(NULL, NULL, 
-                                                  SVN_INVALID_REVNUM,
-                                                  svn_node_none, pool);
-  their_version = svn_wc__conflict_version_create(NULL, NULL, 
-                                                  SVN_INVALID_REVNUM,
-                                                  svn_node_none, pool);
+  src_left_version = svn_wc__conflict_version_create(NULL, NULL, 
+                                                     SVN_INVALID_REVNUM,
+                                                     svn_node_none, pool);
+  src_right_version = svn_wc__conflict_version_create(NULL, NULL, 
+                                                      SVN_INVALID_REVNUM,
+                                                      svn_node_none, pool);
   *conflict = svn_wc_conflict_description_create_tree(
     svn_path_join(dir_path, victim_basename, pool),
-    NULL, node_kind, operation, older_version, their_version, pool);
+    NULL, node_kind, operation, src_left_version, src_right_version, pool);
 
   /* action */
   SVN_ERR(read_enum_field(&n, action_map, start, end, pool));
@@ -320,13 +320,13 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   (*conflict)->reason = (svn_wc_conflict_reason_t)n;
   SVN_ERR(read_field_separator(start, end));
 
-  /* older_version */
-  SVN_ERR(read_node_version_info((*conflict)->older_version, start, end,
+  /* src_left_version */
+  SVN_ERR(read_node_version_info((*conflict)->src_left_version, start, end,
                                  pool));
   SVN_ERR(read_field_separator(start, end));
 
-  /* their_version */
-  SVN_ERR(read_node_version_info((*conflict)->their_version, start, end,
+  /* src_right_version */
+  SVN_ERR(read_node_version_info((*conflict)->src_right_version, start, end,
                                  pool));
 
   return SVN_NO_ERROR;
@@ -488,17 +488,19 @@ svn_wc__write_tree_conflicts(char **conflict_data,
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
-      /* older_version */
-      if (conflict->older_version)
-        SVN_ERR(write_node_version_info(buf, conflict->older_version, pool));
+      /* src_left_version */
+      if (conflict->src_left_version)
+        SVN_ERR(write_node_version_info(buf, conflict->src_left_version,
+                                        pool));
       else
         SVN_ERR(write_node_version_info(buf, &null_version, pool));
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
-      /* their_version */
-      if (conflict->their_version)
-        SVN_ERR(write_node_version_info(buf, conflict->their_version, pool));
+      /* src_right_version */
+      if (conflict->src_right_version)
+        SVN_ERR(write_node_version_info(buf, conflict->src_right_version,
+                                        pool));
       else
         SVN_ERR(write_node_version_info(buf, &null_version, pool));
 

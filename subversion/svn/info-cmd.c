@@ -431,34 +431,34 @@ print_info(void *baton,
 
   if (info->tree_conflict)
     {
-      const char *desc, *older_version, *their_version;
+      const char *desc, *src_left_version, *src_right_version;
 
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
-      older_version =
-        svn_cl__node_description(info->tree_conflict->older_version, pool);
-      their_version =
-        svn_cl__node_description(info->tree_conflict->their_version, pool);
+      src_left_version =
+        svn_cl__node_description(info->tree_conflict->src_left_version, pool);
+      src_right_version =
+        svn_cl__node_description(info->tree_conflict->src_right_version, pool);
 
       svn_cmdline_printf(pool,
                          "%s: %s\n",
                          _("Tree conflict"),
                          desc);
  
-      if (older_version)
+      if (src_left_version)
         svn_cmdline_printf(pool,
                            "  %s: %s\n",
                            _("Source  left"), /* (1) */
-                           older_version);
+                           src_left_version);
         /* (1): Sneaking in a space in "Source  left" so that it is the
          * same length as "Source right" while it still starts in the same
          * column. That's just a tiny tweak in the English `svn'. */
  
-      if (their_version)
+      if (src_right_version)
         svn_cmdline_printf(pool,
                            "  %s: %s\n",
                            _("Source right"),
-                           their_version);
+                           src_right_version);
     }
 
   /* Print extra newline separator. */

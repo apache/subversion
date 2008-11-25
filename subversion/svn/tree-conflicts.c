@@ -184,16 +184,16 @@ svn_cl__append_tree_conflict_info_xml(
 
   /* Add child tags for OLDER_VERSION and THEIR_VERSION. */
 
-  if (conflict->older_version)
+  if (conflict->src_left_version)
     SVN_ERR(add_conflict_version_xml(&str,
                                      "source-left",
-                                     conflict->older_version,
+                                     conflict->src_left_version,
                                      pool));
 
-  if (conflict->their_version)
+  if (conflict->src_right_version)
     SVN_ERR(add_conflict_version_xml(&str,
                                      "source-right",
-                                     conflict->their_version,
+                                     conflict->src_right_version,
                                      pool));
 
   svn_xml_make_close_tag(&str, pool, "tree-conflict");

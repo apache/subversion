@@ -426,8 +426,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc->my_file = tmp_target;
               cdesc->merged_file = result_target;
 
-              cdesc->older_version = left_version;
-              cdesc->their_version = right_version;
+              cdesc->src_left_version = left_version;
+              cdesc->src_right_version = right_version;
 
               SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
               if (result == NULL)
@@ -737,8 +737,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc->my_file = tmp_target;
           cdesc->merged_file = NULL;     /* notice there is NO merged file! */
 
-          cdesc->older_version = left_version;
-          cdesc->their_version = right_version;
+          cdesc->src_left_version = left_version;
+          cdesc->src_right_version = right_version;
 
           SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
           if (result == NULL)

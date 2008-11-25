@@ -333,8 +333,8 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_node_kind_t node_kind,
                                         svn_wc_operation_t operation,
-                                        svn_wc_conflict_version_t *older_version,
-                                        svn_wc_conflict_version_t *their_version,
+                                        svn_wc_conflict_version_t *src_left_version,
+                                        svn_wc_conflict_version_t *src_right_version,
                                         apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
@@ -345,8 +345,8 @@ svn_wc_conflict_description_create_tree(const char *path,
   conflict->kind = svn_wc_conflict_kind_tree;
   conflict->access = adm_access;
   conflict->operation = operation;
-  conflict->older_version = older_version;
-  conflict->their_version = their_version;
+  conflict->src_left_version = src_left_version;
+  conflict->src_right_version = src_right_version;
   return conflict;
 }
 
@@ -376,12 +376,12 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
     new_conflict->my_file = apr_pstrdup(pool, conflict->my_file);
   if (conflict->merged_file)
     new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
-  if (conflict->older_version)
-    new_conflict->older_version =
-      svn_wc__conflict_version_dup(conflict->older_version, pool);
-  if (conflict->their_version)
-    new_conflict->their_version =
-      svn_wc__conflict_version_dup(conflict->their_version, pool);
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+      svn_wc__conflict_version_dup(conflict->src_left_version, pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+      svn_wc__conflict_version_dup(conflict->src_right_version, pool);
 
   return new_conflict;
 }
