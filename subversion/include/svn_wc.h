@@ -1172,6 +1172,9 @@ typedef enum svn_wc_operation_t
  * have its respective null/invalid/unknown value if the corresponding
  * information is not relevant or not available.
  *
+ * ### Consider making some or all of the info mandatory, to reduce
+ * complexity.
+ *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
