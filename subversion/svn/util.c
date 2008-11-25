@@ -1030,6 +1030,37 @@ svn_cl__node_kind_str_human_readable(svn_node_kind_t kind)
     }
 }
 
+
+const char *
+svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return "update";
+    case svn_wc_operation_switch:
+      return "switch";
+    case svn_wc_operation_merge:
+      return "merge";
+  }
+  return "unknown_operation";
+}
+
+const char *
+svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
+                                     apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return _("update");
+    case svn_wc_operation_switch:
+      return _("switch");
+    case svn_wc_operation_merge:
+      return _("merge");
+  }
+  return _("unknown operation");
+}
+
+
 svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             apr_getopt_t *os,
