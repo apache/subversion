@@ -44,22 +44,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: glasser
 
- * r33873, r33874
-   Old API-accessible bug where a certain combination of revision
-   arguments to svn_repos_get_logs returns garbage.  Has tests.
-   Votes:
-     +1: glasser, cmpilato
-
- * r34050, r34051, r34053
-   Fix a bug in which files added via merge from a foreign repository
-   kept the UUID of the foreign repository.
-   Notes:
-     r34050 adds an XFail regression test.
-     r34051 fixes the bug and expects the regression test to pass.
-     r34053 expands the test to cover directory adds, too.
-   Votes:
-     +1: cmpilato, danielsh
-
  * r34082, r34096
    Fix issue #3275 by making WebDAV proxy slave servers pass through
    any GET or PROPFIND requests aimed at working resource URLs, even
@@ -78,7 +62,7 @@ Candidate changes for 1.5.5:
      Very unfriendly to error out during a merge.
      Simple fix (UTF-8-encode the date string from APR).
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r31311, r31314
    Fix bug whereby 'svn cp --parents URL/TO/EXISTING/FILE URL/TO/EXISTING/DIR'
@@ -106,3 +90,19 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
+
+* r33873, r33874
+   Old API-accessible bug where a certain combination of revision
+   arguments to svn_repos_get_logs returns garbage.  Has tests.
+   Votes:
+     +1: glasser, cmpilato, rhuijben
+
+ * r34050, r34051, r34053
+   Fix a bug in which files added via merge from a foreign repository
+   kept the UUID of the foreign repository.
+   Notes:
+     r34050 adds an XFail regression test.
+     r34051 fixes the bug and expects the regression test to pass.
+     r34053 expands the test to cover directory adds, too.
+   Votes:
+     +1: cmpilato, danielsh, rhuijben
