@@ -163,17 +163,17 @@ def info_with_tree_conflicts(sbox):
   G = os.path.join(wc_dir, 'A', 'D', 'G')
 
   scenarios = [
-    # (filename, action_verb, action, reason)
-    ('pi',  'edit',   'edited',  'deleted'),
-    ('rho', 'delete', 'deleted', 'edited'),
-    ('tau', 'delete', 'deleted', 'deleted'),
+    # (filename, action, reason)
+    ('pi',  'edit',   'delete'),
+    ('rho', 'delete', 'edit'),
+    ('tau', 'delete', 'delete'),
     ]
 
-  for fname, action_verb, action, reason in scenarios:
+  for fname, action, reason in scenarios:
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*The update attempted to %s '%s'.*" % (action_verb, fname)
+    expected_str1 = ".*local %s, incoming %s*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -197,9 +197,9 @@ def info_with_tree_conflicts(sbox):
   exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
                                                                 [], 'info',
                                                                 G, '-R')
-  for fname, action_verb, action, reason in scenarios:
+  for fname, action, reason in scenarios:
     found = False
-    expected = ".*The update attempted to %s '%s'.*" % (action_verb, fname)
+    expected = ".*incoming %s.*" % (action)
     for item in output:
       if re.search(expected, item):
         found = True

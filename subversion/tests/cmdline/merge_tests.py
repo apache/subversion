@@ -9577,7 +9577,7 @@ def reintegrate_branch_never_merged_to(sbox):
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox)
 
-  # Make a change on the branch, to A/mu.  Commit in r7.
+  # Make a change on the branch, to A_COPY/mu.  Commit in r7.
   svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
@@ -13342,7 +13342,7 @@ def verify_tree_conflict_info(path, actions_and_victims):
   exit_code, output, error = svntest.main.run_svn(None, 'info', path)
   if not verify_lines(output,
                       list(map(lambda (action, victim):
-                          "attempted to " + action + ".*" + victim,
+                          "incoming " + action,
                           actions_and_victims))):
     raise svntest.Failure("Wrong tree-conflict result")
 
@@ -14675,14 +14675,12 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.verify.verify_outputs("Reintegrate failed but not "
                                 "in the way expected",
                                 err, None,
-                                "(svn: Reintegrate can only be used if the "
-                                "revisions previously merged from the "
-                                "reintegrate target to '.*A_COPY' are the "
-                                "same, but there are differences:\n)"
-                                "|(  A_COPY\n)"
-                                "|(    /A:2-12\n)"
+                                "(svn: Reintegrate can only be used if "
+                                "revisions 2 through 15 were previously "
+                                "merged from .*/A to the reintegrate source, "
+                                "but this is not the case:\n)"
                                 "|(  A_COPY/D\n)"
-                                "|(    /A/D:2-7,9-12\n)"
+                                "|(    Missing ranges: /A/D:8\n)"
                                 "|(\n)"
                                 "|(.*apr_err.*)", # In case of debug build
                                 None,
@@ -14695,14 +14693,15 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      subtree has explicit mergeinfo.  Commit this rename as rev N.
   #
   #   B) Synch merge the rename in A) to our 'branch' in rev N+1.  The
-  #      renamed subtree now has explicit mergeinfo.
+  #      renamed subtree now has the same explicit mergeinfo on both
+  #      the branch and trunk.
   #
   #   C) Make some more changes on the renamed subtree in 'trunk' and
   #      commit in rev N+2.
   #
   #   D) Synch merge the changes in C) from 'trunk' to 'branch' and commit in
-  #      rev N+3.  The renamed subtree on 'branch' now has explicit mergeinfo
-  #      from 'trunk' for rev.
+  #      rev N+3.  The renamed subtree on 'branch' now has additional explicit
+  #      mergeinfo decribing the synch merge from trunk@N+1 to trunk@N+2.
   #
   #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
   #      of 'trunk' was previously merged to 'branch'
@@ -14788,26 +14787,14 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Reintegrate A_COPY to A, this should work, but is currently failing
-  # with an error like this:
-  #
-  #   svn: Reintegrate can only be used if the revisions previously merged
-  #   from the reintegrate target to 'URL/merge_tests-126/A_COPY' are the
-  #   same, but there are differences:
-  #     A_COPY
-  #       /A:2-18
-  #     A_COPY/D/gamma_moved
-  #       /A/D/gamma_moved:17-18
-  #
-  # Reintegrate currently acts as if A_COPY/D/gamma_moved@2-16 hasn't been
-  # merged, but A_COPY/D/gamma_moved's natural history,
+  # Reintegrate A_COPY to A, this should work A_COPY/D/gamma_moved's natural
+  # history,
   #
   #   /A/D/gamma:1-15
   #   /A/D/gamma_moved:16
   #   /A_COPY/D/gamma_moved:17-19
   #
-  # already shows that it is fully synched up with trunk.  This test is marked
-  # as XFail until this is fixed. 
+  # shows that it is fully synched up with trunk.
   svntest.actions.run_and_verify_svn(None, ["At revision 19.\n"], [], 'up',
                                      wc_dir)
   expected_output = wc.State(A_path, {
@@ -14876,6 +14863,141 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_skip,
                                        None, None, None, None,
                                        None, 1, 1, "--reintegrate")
+
+def dont_merge_gaps_in_history(sbox):
+  "mergeinfo aware merges ignore natural history gaps"
+
+  ## See http://svn.haxx.se/dev/archive-2008-11/0618.shtml ##
+  
+  # r1: Create a standard greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2-5: Make some changes under 'A' (no branches yet).
+  wc_disk, wc_status = set_up_branch(sbox, False, 0)
+
+  # Some paths we'll care about.
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+  gamma_path  = os.path.join(wc_dir, "A", "D", "gamma")
+
+  # r6: Delete 'A'
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, "(Committed revision 6.)|(\n)", [],
+    'delete', sbox.repo_url + '/A', '-m', 'Delete A')
+
+  # r7: Resurrect 'A' by copying 'A@2' to 'A'.
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, "(Committed revision 7.)|(\n)", [],
+    'copy', sbox.repo_url + '/A@2', sbox.repo_url + '/A',
+    '-m', 'Resurrect A from A@2')
+  
+  # r8: Branch the resurrected 'A' to 'A_COPY'.
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, "(Committed revision 8.)|(\n)", [],
+    'copy', sbox.repo_url + '/A', sbox.repo_url + '/A_COPY',
+    '-m', 'Copy A to A_COPY')
+ 
+  # Update to bring all the repos side changes down.
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'up', wc_dir)
+  wc_status.add({
+      "A_COPY/B"         : Item(status='  '),
+      "A_COPY/B/lambda"  : Item(status='  '),
+      "A_COPY/B/E"       : Item(status='  '),
+      "A_COPY/B/E/alpha" : Item(status='  '),
+      "A_COPY/B/E/beta"  : Item(status='  '),
+      "A_COPY/B/F"       : Item(status='  '),
+      "A_COPY/mu"        : Item(status='  '),
+      "A_COPY/C"         : Item(status='  '),
+      "A_COPY/D"         : Item(status='  '),
+      "A_COPY/D/gamma"   : Item(status='  '),
+      "A_COPY/D/G"       : Item(status='  '),
+      "A_COPY/D/G/pi"    : Item(status='  '),
+      "A_COPY/D/G/rho"   : Item(status='  '),
+      "A_COPY/D/G/tau"   : Item(status='  '),
+      "A_COPY/D/H"       : Item(status='  '),
+      "A_COPY/D/H/chi"   : Item(status='  '),
+      "A_COPY/D/H/omega" : Item(status='  '),
+      "A_COPY/D/H/psi"   : Item(status='  '),
+      "A_COPY"           : Item(status='  ')})
+  wc_status.tweak(wc_rev=8)
+    
+  # r9: Make a text change to 'A/D/gamma'.
+  svntest.main.file_write(gamma_path, "New content")
+  expected_output = wc.State(wc_dir, {'A/D/gamma' : Item(verb='Sending')})
+  wc_status.tweak('A/D/gamma', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+  
+  # Now merge all available changes from 'A' to 'A_COPY'.  The only
+  # available revisions are r8 and r9.  Only r9 effects the source/target
+  # so this merge should change 'A/D/gamma' from r9.  The fact that 'A_COPY'
+  # has 'broken' natural history, i.e.
+  #
+  #  /A:2,7      <-- Recall 'A@7' was copied from 'A@2'.
+  #  /A_COPY:8-9
+  #
+  # should have no impact, but currently this fact is causing a failure:
+  #
+  #  >svn merge %url127%/A merge_tests-127\A_COPY
+  #  ..\..\..\subversion\libsvn_repos\reporter.c:1162: (apr_err=160005)
+  #  svn: Target path '/A' does not exist.
+  expected_output = wc.State(A_COPY_path, {
+    'D/gamma' : Item(status='U '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='M '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=8)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:8-9'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("New content"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
 
 ########################################################################
 # Run the tests
@@ -15083,8 +15205,10 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(merge_range_prior_to_rename_source_existence,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(reintegrate_with_subtree_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(reintegrate_with_subtree_mergeinfo,
+                         server_has_mergeinfo),
+              SkipUnless(dont_merge_gaps_in_history,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

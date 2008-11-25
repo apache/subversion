@@ -255,14 +255,20 @@ typedef struct
  * svn_fs_fs__rep_copy. */
 typedef struct
 {
-  /* Checksum for the contents produced by this representation.
+  /* Checksums for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
      If checksum is NULL, then for compatibility behave as though this
-     checksum matches the expected checksum. */
-  svn_checksum_t *checksum;
+     checksum matches the expected checksum.
+  
+     The md5 checksum is always filled, unless this is rep which was
+     retrieved from the rep-cache.  The sha1 checksum is only computed on
+     a write, for use with rep-sharing; it may be read from an existing
+     representation, but otherwise it is NULL. */
+  svn_checksum_t *md5_checksum;
+  svn_checksum_t *sha1_checksum;
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;

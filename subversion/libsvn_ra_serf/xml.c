@@ -104,10 +104,7 @@ svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
             }
         }
 
-      if (!prop_name.namespace)
-        {
-          abort();
-        }
+      SVN_ERR_ASSERT_NO_RETURN(prop_name.namespace);
 
       prop_name.name = colon + 1;
     }

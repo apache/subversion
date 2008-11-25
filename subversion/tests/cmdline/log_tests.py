@@ -652,7 +652,7 @@ def plain_log(sbox):
                                                               'log')
 
   log_chain = parse_log_output(output)
-  check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
+  check_log_chain(log_chain, list(range(max_revision, 1 - 1, -1)))
 
 
 #----------------------------------------------------------------------
@@ -1024,7 +1024,7 @@ def log_verbose(sbox):
 
   log_chain = parse_log_output(output)
   path_counts = [2, 2, 1, 2, 2, 2, 4, 1, 20]
-  check_log_chain(log_chain, range(max_revision, 1 - 1, -1), path_counts)
+  check_log_chain(log_chain, list(range(max_revision, 1 - 1, -1)), path_counts)
 
 
 def log_parser(sbox):

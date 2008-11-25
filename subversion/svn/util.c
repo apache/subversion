@@ -999,10 +999,12 @@ svn_cl__xml_print_footer(const char *tagname,
 
 
 const char *
-svn_cl__node_kind_str(svn_node_kind_t kind)
+svn_cl__node_kind_str_xml(svn_node_kind_t kind)
 {
   switch (kind)
     {
+    case svn_node_none:
+      return "none";
     case svn_node_dir:
       return "dir";
     case svn_node_file:
@@ -1010,6 +1012,52 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
     default:
       return "";
     }
+}
+
+const char *
+svn_cl__node_kind_str_human_readable(svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_none:
+      return _("none");
+    case svn_node_dir:
+      return _("dir");
+    case svn_node_file:
+      return _("file");
+    default:
+      return "";
+    }
+}
+
+
+const char *
+svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return "update";
+    case svn_wc_operation_switch:
+      return "switch";
+    case svn_wc_operation_merge:
+      return "merge";
+  }
+  return "unknown_operation";
+}
+
+const char *
+svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
+                                     apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return _("update");
+    case svn_wc_operation_switch:
+      return _("switch");
+    case svn_wc_operation_merge:
+      return _("merge");
+  }
+  return _("unknown operation");
 }
 
 
@@ -1171,3 +1219,26 @@ svn_cl__indent_string(const char *str,
     }
   return out->data;
 }
+
+const char *
+svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         apr_pool_t *pool)
+{
+  const char *url_str;
+
+  /* Construct the whole URL if we can, else use whatever we have. */
+  if (node->repos_url && node->path_in_repos)
+    url_str = svn_path_url_add_component(node->repos_url,
+                                         node->path_in_repos, pool);
+  else if (node->repos_url)
+    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
+  else if (node->path_in_repos)
+    url_str = node->path_in_repos;
+  else
+    url_str = "...";
+
+  return apr_psprintf(pool, "(%s) %s@%ld",
+                      svn_cl__node_kind_str_human_readable(node->node_kind),
+                      url_str, node->peg_rev);
+}
+

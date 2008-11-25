@@ -113,7 +113,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
 
   if revs:
     # verify revs as wc states
-    for rev in xrange(len(revs)):
+    for rev in range(len(revs)):
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
                                          svntest.verify.AnyOutput, [],
                                          "update", "-r%s" % (rev+1),

@@ -28,7 +28,7 @@
 # intended to solve.
 #
 # ====================================================================
-# Copyright (c) 2007 CollabNet.  All rights reserved.
+# Copyright (c) 2007-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -267,7 +267,7 @@ def shard(path, max_files_per_shard, start, end):
       raise
 
   # Move all entries into shards named N.shard.
-  for rev in xrange(start, end + 1):
+  for rev in range(start, end + 1):
     name = str(rev)
     shard = rev // max_files_per_shard
     shard_name = str(shard) + '.shard'
