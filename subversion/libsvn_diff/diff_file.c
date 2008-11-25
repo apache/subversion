@@ -1121,6 +1121,7 @@ output_unified_default_hdr(const char **header, const char *path,
   apr_time_exp_t exploded_time;
   char time_buffer[64];
   apr_size_t time_len;
+  const char *utf8_timestr;
 
   SVN_ERR(svn_io_stat(&file_info, path, APR_FINFO_MTIME, pool));
   apr_time_exp_lt(&exploded_time, file_info.mtime);
@@ -1128,7 +1129,9 @@ output_unified_default_hdr(const char **header, const char *path,
   apr_strftime(time_buffer, &time_len, sizeof(time_buffer) - 1,
                "%a %b %e %H:%M:%S %Y", &exploded_time);
 
-  *header = apr_psprintf(pool, "%s\t%s", path, time_buffer);
+  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, time_buffer, pool));
+
+  *header = apr_psprintf(pool, "%s\t%s", path, utf8_timestr);
 
   return SVN_NO_ERROR;
 }

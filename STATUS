@@ -80,14 +80,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34171
-   Fix: interactive resolve's 'diff-full (df)' errors out in locales
-   such as zh_CN.GBK, due to a failure in character encoding when
-   outputting the diff header.
-   Justification:
-     Very unfriendly to error out during a merge.
-     Simple fix (UTF-8-encode the date string from APR).
-   Votes:
-     +1: julianfoad, rhuijben, danielsh
-
