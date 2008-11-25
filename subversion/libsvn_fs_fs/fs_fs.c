@@ -992,7 +992,7 @@ write_config(svn_fs_t *fs,
 "### however, if you do this, you *must* ensure that repositories have"      NL
 "### distinct UUIDs and paths, or else cached data from one repository"      NL
 "### might be used by another accidentally.  Note also that memcached has"   NL
-"### no authentication for reads or writes, so you must sure that your"      NL
+"### no authentication for reads or writes, so you must ensure that your"    NL
 "### memcached servers are only accessible by trusted users."                NL
 ""                                                                           NL
 "[" CONFIG_SECTION_CACHES "]"                                                NL
