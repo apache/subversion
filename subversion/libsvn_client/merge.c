@@ -3000,6 +3000,52 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                  MIN(revision1, revision2),
                                  adm_access, merge_b->ctx, pool));
 
+      /* If, in the merge target's history, there was a copy from a older
+         source which didn't exist at the time of the copy, then URL2 won't
+         exist at some range M:N, where REVISION1 < M < N < REVISION2.  If
+         there were multiple instances of such copies then there will be
+         multiple 'gaps' like this.  The rules of 'MERGEINFO MERGE SOURCE
+         NORMALIZATION' allow this, but we must ignore these gaps when
+         calculating what ranges remain to be merged from
+         URL1@REVISION1:URL2@REVISION2.  In other words, we can't try to
+         merge any part of URL2@M:URL2@N since no part of that actually
+         exists and would break the editor.  We can "ignore" these gaps by
+         adjusting the target's implicit mergeinfo to make it look like they
+         are already part of the target's natural history. */
+      if (i == 0) /* CHILDREN_WITH_MERGEINFO[0] is always the target. */
+        {
+          apr_hash_index_t *hi;
+          svn_revnum_t youngest_rev, oldest_rev;
+
+          SVN_ERR(svn_mergeinfo__get_range_endpoints(
+            &youngest_rev, &oldest_rev, child->implicit_mergeinfo,
+            iterpool));
+
+          /* Adjust the target's implicit mergeinfo so there are no gaps */
+          for (hi = apr_hash_first(iterpool, child->implicit_mergeinfo);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              void *value;
+              const char *source_path;
+              apr_array_header_t *source_rangelist, *rev1_rev2_rangelist;
+
+              apr_hash_this(hi, &key, NULL, &value);
+              source_path = key;
+              source_rangelist = value;
+              youngest_rev = (APR_ARRAY_IDX(source_rangelist,
+                                            source_rangelist->nelts - 1,
+                                            svn_merge_range_t *))->end;
+              rev1_rev2_rangelist = init_rangelist(oldest_rev, youngest_rev,
+                                                   TRUE, iterpool);
+              svn_rangelist_merge(&source_rangelist, rev1_rev2_rangelist,
+                                  pool);
+              apr_hash_set(child->implicit_mergeinfo, source_path,
+                           APR_HASH_KEY_STRING, source_rangelist);
+             }
+        }
+
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
         {

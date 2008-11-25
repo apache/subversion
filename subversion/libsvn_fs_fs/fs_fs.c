@@ -992,7 +992,7 @@ write_config(svn_fs_t *fs,
 "### however, if you do this, you *must* ensure that repositories have"      NL
 "### distinct UUIDs and paths, or else cached data from one repository"      NL
 "### might be used by another accidentally.  Note also that memcached has"   NL
-"### no authentication for reads or writes, so you must sure that your"      NL
+"### no authentication for reads or writes, so you must ensure that your"    NL
 "### memcached servers are only accessible by trusted users."                NL
 ""                                                                           NL
 "[" CONFIG_SECTION_CACHES "]"                                                NL
@@ -1647,8 +1647,7 @@ read_rep_offsets(representation_t **rep_p,
   SVN_ERR(svn_checksum_parse_hex(&rep->md5_checksum, svn_checksum_md5, str,
                                  pool));
 
-  /* The remaining fields are only used for formats >= 4, so check that.
-     ###: This sould be conditional on the format number. */
+  /* The remaining fields are only used for formats >= 4, so check that. */
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return SVN_NO_ERROR;
@@ -1867,19 +1866,21 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
 }
 
 
-/* Return a formatted string that represents the location of
-   representation REP.  If MUTABLE_REP_TRUNCATED is given, the rep is
-   for props or dir contents, and only a "-1" revision number will be
-   given for a mutable rep.  Perform the allocation from POOL.  */
+/* Return a formatted string, compatible with filesystem format FORMAT,
+   that represents the location of representation REP.  If
+   MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
+   and only a "-1" revision number will be given for a mutable rep.
+   Perform the allocation from POOL.  */
 static const char *
 representation_string(representation_t *rep,
-                      svn_boolean_t mutable_rep_truncated, apr_pool_t *pool)
+                      int format,
+                      svn_boolean_t mutable_rep_truncated,
+                      apr_pool_t *pool)
 {
-  /* ###: Make the writing of the sha1 and reuse count dependent on the
-     format number. */
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
-  else
+
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                         " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
                         rep->revision, rep->offset, rep->size,
@@ -1891,12 +1892,20 @@ representation_string(representation_t *rep,
                                                             pool) :
                             "0000000000000000000000000000000000000000",
                         rep->reuse_count);
+
+  return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+                      " %" SVN_FILESIZE_T_FMT " %s",
+                      rep->revision, rep->offset, rep->size,
+                      rep->expanded_size,
+                      svn_checksum_to_cstring_display(rep->md5_checksum,
+                                                      pool));
 }
 
 
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
+                         int format,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool)
 {
@@ -1919,14 +1928,15 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
   if (noderev->data_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TEXT ": %s\n",
                               representation_string(noderev->data_rep,
+                                                    format,
                                                     (noderev->kind
                                                      == svn_node_dir),
                                                     pool)));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
-                              representation_string(noderev->prop_rep, TRUE,
-                                                    pool)));
+                              representation_string(noderev->prop_rep, format,
+                                                    TRUE, pool)));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));
@@ -1968,6 +1978,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                              svn_boolean_t fresh_txn_root,
                              apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
 
@@ -1983,7 +1994,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(noderev_file, TRUE,
                                                             pool),
-                                   noderev,
+                                   noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
@@ -2378,6 +2389,8 @@ create_rep_state(struct rep_state **rep_state,
   svn_error_t *err = create_rep_state_body(rep_state, rep_args, rep, fs, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
+      fs_fs_data_t *ffd = fs->fsap_data;
+
       /* ### This always returns "-1" for transaction reps, because
          ### this particular bit of code doesn't know if the rep is
          ### stored in the protorev or in the mutable area (for props
@@ -2387,7 +2400,8 @@ create_rep_state(struct rep_state **rep_state,
          ### going to jump straight to this comment anyway! */
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt representation '%s'",
-                               representation_string(rep, TRUE, pool));
+                               representation_string(rep, ffd->format, TRUE,
+                                                     pool));
     }
   return err;
 }
@@ -4634,7 +4648,7 @@ rep_write_contents_close(void *baton)
       SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
       /* Use the old rep for this content. */
-      old_rep->md5_checksum = svn_checksum_dup(rep->md5_checksum, b->pool);
+      old_rep->md5_checksum = rep->md5_checksum;
       b->noderev->data_rep = old_rep;
 
       /* Get the reuse count and put it in the node-rev. */
@@ -4999,13 +5013,14 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Write out our new node-revision. */
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   noderev,
+                                   noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
   /* Save the data representation's hash in the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
-        && noderev->data_rep && noderev->kind == svn_node_file)
+        && noderev->data_rep && noderev->kind == svn_node_file
+        && noderev->data_rep->sha1_checksum != NULL)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
