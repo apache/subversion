@@ -611,10 +611,10 @@ complete_directory(struct edit_baton *eb,
               if (!target_access && entry->kind == svn_node_dir)
                 {
                   int log_number = 0;
-                  /* I can't find a tree-conflict activated from this call,
-                   * so we don't *need* THEIR_PATH at all and can skip
-                   * composing it. Just pass NULL. */
-                  /* ### TODO make really really sure. */
+                  /* Still passing NULL for THEIR_URL. A case where THEIR_URL
+                   * is needed in this call is rare or even non-existant.
+                   * ### TODO: Construct a proper THEIR_URL anyway. See also
+                   * NULL handling code in do_entry_deletion(). */
                   SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
                                             &log_number, pool));
                 }
@@ -1382,6 +1382,15 @@ tree_has_local_mods(svn_boolean_t *modified,
  *
  * If PCONFLICT is not null, set *PCONFLICT to the conflict description if
  * there is one or else to null.
+ *
+ * THEIR_NODE_KIND is the node kind reflected by the incoming edit
+ * function. E.g. dir_opened() should pass svn_node_dir, etc.
+ * In some cases of delete, svn_node_none may be used here.
+ *
+ * THEIR_URL is the involved node's URL on the source-right side, the
+ * side that the target should become after the update. Simply put,
+ * that's the URL obtained from the node's dir_baton->new_URL or
+ * file_baton->new_URL (but it's more complex for a delete).
  * 
  * Tree conflict use cases are described in issue #2282 and in
  * notest/tree-conflicts/detection.txt.
@@ -1422,7 +1431,6 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
 
     case svn_wc_conflict_action_delete:
       /* Use case 3: Deleting a locally-deleted item. */
-      their_node_kind = svn_node_none;
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
         reason = svn_wc_conflict_reason_deleted;
@@ -1468,29 +1476,50 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
   if (reason != (svn_wc_conflict_reason_t)(-1))
     {
       svn_wc_conflict_description_t *conflict;
-      svn_wc_conflict_version_t *older_version;
-      svn_wc_conflict_version_t *their_version;
+      svn_wc_conflict_version_t *src_left_version;
+      svn_wc_conflict_version_t *src_right_version;
       const char *repos_url = NULL;
       const char *path_in_repos = NULL;
+      svn_node_kind_t left_kind = (entry->schedule == svn_wc_schedule_add)
+                                  ? svn_node_none
+                                  : (entry->schedule == svn_wc_schedule_delete)
+                                    ? svn_node_unknown
+                                    : entry->kind;
 
+      /* Source-left repository root URL and path in repository.
+       * The Source-right ones will be the same for update.
+       * For switch, only the path in repository will differ, because
+       * a cross-repository switch is not possible. */
       repos_url = entry->repos;
       path_in_repos = svn_path_is_child(repos_url, entry->url, pool);
       if (path_in_repos == NULL)
-        path_in_repos = ".";
-      /* "Their" repos_url (repository root URL) will be the same. */
+        path_in_repos = "/";
 
+      src_left_version = svn_wc_conflict_version_create(repos_url,
+                                                        path_in_repos,
+                                                        entry->revision,
+                                                        left_kind,
+                                                        pool);
+
+      /* entry->kind is both base kind and working kind, because schedule
+       * replace-by-different-kind is not supported. */
+      /* ### TODO: but in case the entry is locally removed, entry->kind
+       * is svn_node_none and doesn't reflect the older kind. Then we
+       * need to find out the older kind in a different way! */
+
+      /* For switch, find out the proper PATH_IN_REPOS for source-right. */
       if (eb->switch_url != NULL)
         {
-          /* do_entry_deletion() still passes NULL for their_url
-           * sometimes. However, I could not find any case where
-           * it was needed during those calls. This is just paranoia: */
           if (their_url != NULL)
             path_in_repos = svn_path_is_child(repos_url, their_url, pool);
           else
             {
-              /* Oh no! We have no complete URL!
-               * At the time of writing this, there is no known case that
-               * would cause this to happen. Shout if you've found one. */
+              /* The complete source-right URL is not available, but it
+               * is somewhere below the SWITCH_URL. For now, just go
+               * without it.
+               * ### TODO: Construct a proper THEIR_URL in some of the
+               * delete cases that still pass NULL for THEIR_URL when
+               * calling this function. Do that on the caller's side. */
               path_in_repos = svn_path_is_child(repos_url, eb->switch_url,
                                                 pool);
               path_in_repos = apr_pstrcat(
@@ -1500,29 +1529,16 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
             }
         }
 
-      older_version = svn_wc_conflict_version_create(repos_url,
-                                                     path_in_repos,
-                                                     entry->revision,
-                          (entry->schedule == svn_wc_schedule_delete) 
-                                  ? svn_node_none : entry->kind,
-                                                     pool);
-
-      /* entry->kind is both base kind and working kind, because schedule
-       * replace-by-different-kind is not supported. */
-      /* ### TODO: but in case the entry is locally removed, entry->kind
-       * is svn_node_none and doesn't reflect the older kind. Then we
-       * need to find out the older kind in a different way! */
-
-      their_version = svn_wc_conflict_version_create(repos_url,
-                                                     path_in_repos,
-                                                     *eb->target_revision,
-                                                     their_node_kind,
-                                                     pool);
+      src_right_version = svn_wc_conflict_version_create(repos_url,
+                                                         path_in_repos,
+                                                         *eb->target_revision,
+                                                         their_node_kind,
+                                                         pool);
 
       conflict = svn_wc_conflict_description_create_tree(
         full_path, parent_adm_access, entry->kind,
         eb->switch_url ? svn_wc_operation_switch : svn_wc_operation_update,
-        older_version, their_version, pool);
+        src_left_version, src_right_version, pool);
       conflict->action = action;
       conflict->reason = reason;
 
@@ -1630,6 +1646,9 @@ already_in_a_tree_conflict(char **victim_path,
  * represented by EB.  Name temporary transactional logs based on
  * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
  * Perform all allocations in POOL.
+ * THEIR_URL is the deleted node's URL on the source-right side, the
+ * side that the target should become after the update. Simply put,
+ * that's the URL obtained from the batons.
  */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
@@ -1964,8 +1983,6 @@ add_directory(const char *path,
             }
           else
             {
-              /* ### TODO: raise a tree conflict */
-
               return svn_error_createf
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': an unversioned "
@@ -3820,6 +3837,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
                  Remember that this function wants full paths! */
+              /* ### TODO: Pass version info here. */
               SVN_ERR(svn_wc__merge_internal
                       (&log_accum, &merge_outcome,
                        merge_left, NULL,
@@ -4070,11 +4088,10 @@ close_edit(void *edit_baton,
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
   if ((*eb->target) && (svn_wc__adm_missing(eb->adm_access, target_path)))
-    /* I can't find a tree-conflict activated from this call
-     * (tried e.g. in update_tests.py 14 update_deleted_missing_dir),
-     * so we don't *need* THEIR_PATH at all and can skip composing it.
-     * Just pass NULL. */
-    /* ### TODO make really really sure. */
+    /* Still passing NULL for THEIR_URL. A case where THEIR_URL
+     * is needed in this call is rare or even non-existant.
+     * ### TODO: Construct a proper THEIR_URL anyway. See also
+     * NULL handling code in do_entry_deletion(). */
     SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
                               &log_number, pool));
 

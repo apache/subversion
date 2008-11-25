@@ -345,40 +345,37 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 {
   svn_wc_conflict_description_t *conflict;
   const char *src_repos_url;  /* root URL of source repository */
+  svn_wc_conflict_version_t *left;
+  svn_wc_conflict_version_t *right;
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
 
+  left = svn_wc_conflict_version_create(
+           src_repos_url,
+           svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
+                             merge_b->pool),
+           merge_b->merge_source.rev1,
+           node_kind,
+           merge_b->pool);
+
+  right = svn_wc_conflict_version_create(
+            src_repos_url,
+            svn_path_is_child(src_repos_url, merge_b->merge_source.url2,
+                              merge_b->pool),
+            merge_b->merge_source.rev2,
+            node_kind,
+            merge_b->pool);
+
   conflict = svn_wc_conflict_description_create_tree(
     victim_path, adm_access, node_kind, svn_wc_operation_merge,
-    apr_palloc(merge_b->pool, sizeof(svn_wc_conflict_version_t)),
-    apr_palloc(merge_b->pool, sizeof(svn_wc_conflict_version_t)),
-    merge_b->pool);
+    left, right, merge_b->pool);
+
   conflict->action = action;
   conflict->reason = reason;
 
   SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
                                  merge_b->pool));
-
-  if (conflict->src_left_version)
-    {
-      conflict->src_left_version->repos_url = src_repos_url;
-      conflict->src_left_version->peg_rev = merge_b->merge_source.rev1;
-      conflict->src_left_version->path_in_repos
-        = svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
-                            merge_b->pool);
-      conflict->src_left_version->node_kind = node_kind;
-    }
-
-  if (conflict->src_right_version)
-    {
-      conflict->src_right_version->repos_url = src_repos_url;
-      conflict->src_right_version->peg_rev = merge_b->merge_source.rev2;
-      conflict->src_right_version->path_in_repos
-        = svn_path_is_child(src_repos_url, merge_b->merge_source.url2,
-                            merge_b->pool);
-      conflict->src_right_version->node_kind = node_kind;
-    }
 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;

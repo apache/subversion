@@ -917,6 +917,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
 {
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
+  /* ### TODO: Pass version info here. */
   SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
                                  left, NULL,
                                  right, NULL,

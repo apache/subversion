@@ -1188,17 +1188,16 @@ typedef struct svn_wc_conflict_version_t
 {
   /* Where to find this node version in a repository */
   const char *repos_url;  /* URL of repository root */
-  /* ### Also? repos_uuid; */
   svn_revnum_t peg_rev;  /* revision at which to look up path_in_repos */
   const char *path_in_repos;  /* path within repos; must not start with '/' */
+  /* TODO: We may decide to add the repository UUID, to handle conflicts
+   * properly during a repository move. */
 
   /* Info about this node */
   svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
 
-  /* ### Also? ... */
-  /* Where to find a local copy of the node */
-  /* const char *content_cache_path; */
-  /* const char *props_cache_path; */
+  /* TODO: Add metadata about a local copy of the node, if and when
+   * we store one. */
 
   /* Remember to update svn_wc_conflict_version_create() and 
    * svn_wc_conflict_version_dup() in case you add fields to this struct. */
