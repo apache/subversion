@@ -1534,6 +1534,77 @@ ensure_revision_exists(svn_fs_t *fs,
                            _("No such revision %ld"), rev);
 }
 
+/* Open the correct revision file for REV.  If the filesystem FS has
+   been packed, *FILE will be set to the packed file and *PACKED will
+   be set to TRUE.  Otherwise, set *FILE to the revision file for REV
+   and *PACKED to FALSE.  Use POOL for allocations. */
+static svn_error_t *
+open_pack_or_rev_file(apr_file_t **file,
+                      svn_boolean_t *packed,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  *packed = FALSE;
+  err = svn_io_file_open(file, svn_fs_fs__path_rev(fs, rev, pool),
+                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+
+      /* Try and open the packed revision. */
+      err = svn_io_file_open(file, path_rev_packed(fs, rev, "pack", pool),
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                   _("No such revision %ld"), rev);
+        }
+      *packed = TRUE;
+      err = SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
+/* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
+   Use POOL for temporary allocations. */
+static svn_error_t *
+get_packed_offset(apr_off_t *rev_offset,
+                  svn_fs_t *fs,
+                  svn_revnum_t rev,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_file_t *manifest_file;
+  char buf[PACK_MANIFEST_ENTRY_LEN + 1];
+  apr_off_t rev_index_offset;
+  apr_size_t len;
+
+  /* Open the manifest file. */
+  SVN_ERR(svn_io_file_open(&manifest_file, path_rev_packed(fs, rev, "manifest",
+                                                           pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  /* Seek to the correct offset. */
+  rev_index_offset = (rev % ffd->max_files_per_dir) *
+                                                 (PACK_MANIFEST_ENTRY_LEN + 1);
+  SVN_ERR(svn_io_file_seek(manifest_file, APR_SET, &rev_index_offset, pool));
+
+  /* Read the revision offset and close the file. */
+  len = PACK_MANIFEST_ENTRY_LEN;
+  SVN_ERR(svn_io_file_read(manifest_file, buf, &len, pool));
+  buf[PACK_MANIFEST_ENTRY_LEN] = 0;
+  SVN_ERR(svn_io_file_close(manifest_file, pool));
+
+  *rev_offset = apr_atoi64(buf);
+
+  return SVN_NO_ERROR;
+}
+
 /* Open the revision file for revision REV in filesystem FS and store
    the newly opened file in FILE.  Seek to location OFFSET before
    returning.  Perform temporary allocations in POOL. */
@@ -1545,11 +1616,19 @@ open_and_seek_revision(apr_file_t **file,
                        apr_pool_t *pool)
 {
   apr_file_t *rev_file;
+  svn_boolean_t packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_io_file_open(&rev_file, svn_fs_fs__path_rev(fs, rev, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(open_pack_or_rev_file(&rev_file, &packed, fs, rev, pool));
+
+  if (packed)
+    {
+      apr_off_t rev_offset;
+
+      SVN_ERR(get_packed_offset(&rev_offset, fs, rev, pool));
+      offset += rev_offset;
+    }
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
@@ -2124,77 +2203,6 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
                             _("Corrupt node-id in node-rev"));
 
   *id_p = id;
-
-  return SVN_NO_ERROR;
-}
-
-/* Open the correct revision file for REV.  If the filesystem FS has
-   been packed, *FILE will be set to the packed file and *PACKED will
-   be set to TRUE.  Otherwise, set *FILE to the revision file for REV
-   and *PACKED to FALSE.  Use POOL for allocations. */
-static svn_error_t *
-open_pack_or_rev_file(apr_file_t **file,
-                      svn_boolean_t *packed,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  *packed = FALSE;
-  err = svn_io_file_open(file, svn_fs_fs__path_rev(fs, rev, pool),
-                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-
-      /* Try and open the packed revision. */
-      err = svn_io_file_open(file, path_rev_packed(fs, rev, "pack", pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                   _("No such revision %ld"), rev);
-        }
-      *packed = TRUE;
-      err = SVN_NO_ERROR;
-    }
-
-  return err;
-}
-
-/* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
-   Use POOL for temporary allocations. */
-static svn_error_t *
-get_packed_offset(apr_off_t *rev_offset,
-                  svn_fs_t *fs,
-                  svn_revnum_t rev,
-                  apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *manifest_file;
-  char buf[PACK_MANIFEST_ENTRY_LEN + 1];
-  apr_off_t rev_index_offset;
-  apr_size_t len;
-
-  /* Open the manifest file. */
-  SVN_ERR(svn_io_file_open(&manifest_file, path_rev_packed(fs, rev, "manifest",
-                                                           pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  /* Seek to the correct offset. */
-  rev_index_offset = (rev % ffd->max_files_per_dir) *
-                                                 (PACK_MANIFEST_ENTRY_LEN + 1);
-  SVN_ERR(svn_io_file_seek(manifest_file, APR_SET, &rev_index_offset, pool));
-
-  /* Read the revision offset and close the file. */
-  len = PACK_MANIFEST_ENTRY_LEN;
-  SVN_ERR(svn_io_file_read(manifest_file, buf, &len, pool));
-  buf[PACK_MANIFEST_ENTRY_LEN] = 0;
-  SVN_ERR(svn_io_file_close(manifest_file, pool));
-
-  *rev_offset = apr_atoi64(buf);
 
   return SVN_NO_ERROR;
 }

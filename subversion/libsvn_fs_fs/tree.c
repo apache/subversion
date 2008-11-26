@@ -645,20 +645,20 @@ open_path(parent_path_t **parent_path_p,
                  said it was optional, then don't return an error;
                  just put a NULL node pointer in the path.  */
 
-              svn_error_clear(err);
 
               if ((flags & open_path_last_optional)
                   && (! next || *next == '\0'))
                 {
                   parent_path = make_parent_path(NULL, entry, parent_path,
                                                  pool);
+              svn_error_clear(err);
                   break;
                 }
               else
                 {
                   /* Build a better error message than svn_fs_fs__dag_open
                      can provide, giving the root and full path name.  */
-                  return SVN_FS__NOT_FOUND(root, path);
+                  return err;
                 }
             }
 
