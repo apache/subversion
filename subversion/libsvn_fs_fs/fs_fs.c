@@ -2171,18 +2171,29 @@ read_rep_line(struct rep_args **rep_args_p,
                           _("Malformed representation header"));
 }
 
-/* Given a revision file REV_FILE, find the Node-ID of the header
-   located at OFFSET and store it in *ID_P.  Allocate temporary
-   variables from POOL. */
+/* Given a revision file REV_FILE, opened to REV in FS, find the Node-ID
+   of the header located at OFFSET and store it in *ID_P.  Allocate
+   temporary variables from POOL. */
 static svn_error_t *
 get_fs_id_at_offset(svn_fs_id_t **id_p,
                     apr_file_t *rev_file,
+                    svn_fs_t *fs,
+                    svn_revnum_t rev,
+                    svn_boolean_t packed,
                     apr_off_t offset,
                     apr_pool_t *pool)
 {
   svn_fs_id_t *id;
   apr_hash_t *headers;
   const char *node_id_str;
+
+  if (packed)
+    {
+      apr_off_t rev_offset;
+
+      SVN_ERR(get_packed_offset(&rev_offset, fs, rev, pool));
+      offset += rev_offset;
+    }
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
@@ -2326,7 +2337,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
                                   packed, pool));
 
-  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, root_offset, pool));
+  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev, packed,
+                              root_offset, pool));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
