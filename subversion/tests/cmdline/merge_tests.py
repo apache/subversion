@@ -14256,6 +14256,10 @@ def no_self_referential_filtering_on_added_path(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+#----------------------------------------------------------------------
+# Test for issue #3324
+# http://subversion.tigris.org/issues/show_bug.cgi?id=3324
+#
 def merge_range_prior_to_rename_source_existence(sbox):
   "merge prior to rename src existence still dels src"
 
