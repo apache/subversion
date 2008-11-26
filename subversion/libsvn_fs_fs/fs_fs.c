@@ -2241,13 +2241,10 @@ get_root_changes_offset(apr_off_t *root_offset,
   apr_size_t len;
   apr_seek_where_t seek_relative;
 
-  if (packed)
+  if (packed && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
-      if ((rev + 1) % ffd->max_files_per_dir != 0)
-        {
-          SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
-          seek_relative = APR_SET;
-        }
+      SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
+      seek_relative = APR_SET;
     }
   else
     {
