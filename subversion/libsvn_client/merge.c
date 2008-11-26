@@ -1353,17 +1353,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         if (!entry || entry->schedule == svn_wc_schedule_delete)
           {
             /* The file add the merge wants to carry out is obstructed by
-             * an unversioned file, so the file the merge wants to add
-             * is a tree conflict victim. See notes about obstructions in
-             * notes/tree-conflicts/detection.txt.
-             */
-            SVN_ERR(tree_conflict(merge_b, adm_access, mine,
-                                  svn_node_file,
-                                  svn_wc_conflict_action_add,
-                                  svn_wc_conflict_reason_obstructed));
-            if (tree_conflicted)
-              *tree_conflicted = TRUE;
-
+             * an unversioned file, so this path should be skipped. */
             /* this will make the repos_editor send a 'skipped' message */
             if (content_state)
               *content_state = svn_wc_notify_state_obstructed;
