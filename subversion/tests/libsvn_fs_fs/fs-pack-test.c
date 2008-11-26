@@ -138,7 +138,8 @@ create_packed_filesystem(const char *dir,
       SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, subpool));
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
       SVN_ERR(svn_test__set_file_contents(txn_root, "iota",
-                                          get_rev_contents(after_rev, subpool),
+                                          get_rev_contents(after_rev + 1,
+                                                           subpool),
                                           subpool));
       SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
     }
@@ -247,7 +248,11 @@ read_packed_fs(const char **msg,
       SVN_ERR(svn_fs_file_contents(&rstream, rev_root, "iota", pool));
       SVN_ERR(svn_test__stream_to_string(&rstring, rstream, pool));
 
-      sb = svn_stringbuf_create(get_rev_contents(i, pool), pool);
+      if (i == 1)
+        sb = svn_stringbuf_create("This is the file 'iota'.\n", pool);
+      else
+        sb = svn_stringbuf_create(get_rev_contents(i, pool), pool);
+
       if (! svn_stringbuf_compare(rstring, sb))
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Bad data in revision %ld.", i);
