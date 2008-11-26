@@ -1882,23 +1882,23 @@ representation_string(representation_t *rep,
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                        " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
+                        " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
                         svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                        pool),
-                        rep->sha1_checksum ?
-                            svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                            pool) :
-                            "0000000000000000000000000000000000000000",
-                        rep->reuse_count);
+                                                        pool));
 
   return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                      " %" SVN_FILESIZE_T_FMT " %s",
+                      " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
                       rep->revision, rep->offset, rep->size,
                       rep->expanded_size,
                       svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                      pool));
+                                                      pool),
+                      rep->sha1_checksum ?
+                          svn_checksum_to_cstring_display(rep->sha1_checksum,
+                                                          pool) :
+                          "0000000000000000000000000000000000000000",
+                      rep->reuse_count);
 }
 
 
@@ -5019,8 +5019,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Save the data representation's hash in the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
-        && noderev->data_rep && noderev->kind == svn_node_file
-        && noderev->data_rep->sha1_checksum != NULL)
+        && noderev->data_rep && noderev->kind == svn_node_file)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
