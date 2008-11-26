@@ -305,7 +305,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(pack_filesystem),
-    SVN_TEST_XFAIL(read_packed_fs),
+    SVN_TEST_PASS(read_packed_fs),
     SVN_TEST_XFAIL(commit_packed_fs),
     SVN_TEST_NULL
   };
