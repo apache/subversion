@@ -238,7 +238,7 @@ read_packed_fs(const char **msg,
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
 
-  for (i = 0; i < 12; i++)
+  for (i = 1; i < 12; i++)
     {
       svn_fs_root_t *rev_root;
       svn_stringbuf_t *sb;
