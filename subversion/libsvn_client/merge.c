@@ -320,9 +320,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
           apr_hash_count(merge_b->conflicted_paths) > 0);
 }
 
-/* Cause a tree conflict notification, and if the merge is not
- * a dry run, also make the tree conflict persistent. Do nothing
- * if the merge is record-only.
+/* Record a tree conflict in the WC, unless this is a dry run or a record-
+ * only merge.
  *
  * The tree conflict, with its victim specified by VICTIM_PATH, is
  * assumed to have happened during a merge using merge baton MERGE_B.
