@@ -286,7 +286,7 @@ commit_packed_fs(const char **msg,
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
 
   /* Now do a commit. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 11, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 12, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "iota",
           "How much better is it to get wisdom than gold! and to get "
@@ -306,6 +306,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(pack_filesystem),
     SVN_TEST_PASS(read_packed_fs),
-    SVN_TEST_XFAIL(commit_packed_fs),
+    SVN_TEST_PASS(commit_packed_fs),
     SVN_TEST_NULL
   };
