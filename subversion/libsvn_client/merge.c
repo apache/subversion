@@ -344,6 +344,8 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 {
   svn_wc_conflict_description_t *conflict;
   const char *src_repos_url;  /* root URL of source repository */
+  const char *left_url;
+  const char *right_url;
   svn_wc_conflict_version_t *left;
   svn_wc_conflict_version_t *right;
 
@@ -353,21 +355,33 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
                                  merge_b->pool));
 
+  /* Construct the source URLs of the victim. */
+  {
+    const char *child = svn_path_is_child(merge_b->target,
+                                          victim_path, merge_b->pool);
+    if (child != NULL)
+      {
+        left_url = svn_path_url_add_component(merge_b->merge_source.url1,
+                                              child, merge_b->pool);
+        right_url = svn_path_url_add_component(merge_b->merge_source.url2,
+                                               child, merge_b->pool);
+      }
+    else
+      {
+        left_url = merge_b->merge_source.url1;
+        right_url = merge_b->merge_source.url2;
+      }
+  }
+
   left = svn_wc_conflict_version_create(
            src_repos_url,
-           svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
-                             merge_b->pool),
-           merge_b->merge_source.rev1,
-           node_kind,
-           merge_b->pool);
+           svn_path_is_child(src_repos_url, left_url, merge_b->pool),
+           merge_b->merge_source.rev1, node_kind, merge_b->pool);
 
   right = svn_wc_conflict_version_create(
             src_repos_url,
-            svn_path_is_child(src_repos_url, merge_b->merge_source.url2,
-                              merge_b->pool),
-            merge_b->merge_source.rev2,
-            node_kind,
-            merge_b->pool);
+            svn_path_is_child(src_repos_url, right_url, merge_b->pool),
+            merge_b->merge_source.rev2, node_kind, merge_b->pool);
 
   conflict = svn_wc_conflict_description_create_tree(
     victim_path, adm_access, node_kind, svn_wc_operation_merge,
