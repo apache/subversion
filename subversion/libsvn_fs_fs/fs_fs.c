@@ -1552,19 +1552,27 @@ open_pack_or_rev_file(apr_file_t **file,
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
+      fs_fs_data_t *ffd = fs->fsap_data;
+
       svn_error_clear(err);
 
-      /* Try and open the packed revision. */
-      err = svn_io_file_open(file, path_rev_packed(fs, rev, "pack", pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         {
-          svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                   _("No such revision %ld"), rev);
+          /* Try and open the packed revision. */
+          err = svn_io_file_open(file, path_rev_packed(fs, rev, "pack", pool),
+                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+          if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       _("No such revision %ld"), rev);
+            }
+          *packed = TRUE;
+          err = SVN_NO_ERROR;
         }
-      *packed = TRUE;
-      err = SVN_NO_ERROR;
+      else
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 _("No such revision %ld"), rev);
     }
 
   return err;
