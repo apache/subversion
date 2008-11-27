@@ -915,26 +915,23 @@ static svn_error_t *
 write_format(const char *path, int format, int max_files_per_dir,
              svn_boolean_t overwrite, apr_pool_t *pool)
 {
-  const char *contents;
+  svn_stringbuf_t *sb;
+  svn_string_t *contents;
 
   SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+
+  sb = svn_stringbuf_create(apr_psprintf(pool, "%d\n", format), pool);
+
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
       if (max_files_per_dir)
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout sharded %d\n",
-                                format, max_files_per_dir);
+        svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
+                                                  max_files_per_dir));
       else
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout linear",
-                                format);
+        svn_stringbuf_appendcstr(sb, "layout linear");
     }
-  else
-    {
-      contents = apr_psprintf(pool, "%d\n", format);
-    }
+
+  contents = svn_string_create_from_buf(sb, pool);
 
   /* svn_io_write_version_file() does a load of magic to allow it to
      replace version files that already exist.  We only need to do
@@ -942,7 +939,7 @@ write_format(const char *path, int format, int max_files_per_dir,
   if (! overwrite)
     {
       /* Create the file */
-      SVN_ERR(svn_io_file_create(path, contents, pool));
+      SVN_ERR(svn_io_file_create(path, contents->data, pool));
     }
   else
     {
@@ -950,7 +947,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 
       SVN_ERR(svn_io_write_unique(&path_tmp,
                                   svn_path_dirname(path, pool),
-                                  contents, strlen(contents),
+                                  contents->data, contents->len,
                                   svn_io_file_del_none, pool));
 
 #ifdef WIN32
@@ -1986,23 +1983,23 @@ representation_string(representation_t *rep,
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                        " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
+                        " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
                         svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                        pool),
-                        rep->sha1_checksum ?
-                            svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                            pool) :
-                            "0000000000000000000000000000000000000000",
-                        rep->reuse_count);
+                                                        pool));
 
   return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                      " %" SVN_FILESIZE_T_FMT " %s",
+                      " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
                       rep->revision, rep->offset, rep->size,
                       rep->expanded_size,
                       svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                      pool));
+                                                      pool),
+                      rep->sha1_checksum ?
+                          svn_checksum_to_cstring_display(rep->sha1_checksum,
+                                                          pool) :
+                          "0000000000000000000000000000000000000000",
+                      rep->reuse_count);
 }
 
 
@@ -5149,8 +5146,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Save the data representation's hash in the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
-        && noderev->data_rep && noderev->kind == svn_node_file
-        && noderev->data_rep->sha1_checksum != NULL)
+        && noderev->data_rep && noderev->kind == svn_node_file)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */

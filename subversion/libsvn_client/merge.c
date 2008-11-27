@@ -260,7 +260,7 @@ typedef struct merge_cmd_baton_t {
      got explicit mergeinfo added by the merge.  This is populated by
      merge_change_props() and is allocated in POOL so it is subject to the
      lifetime limitations of POOL.  Is NULL if no paths are found which
-     meet the criteria. */
+     meet the criteria or DRY_RUN is true. */
   apr_hash_t *paths_with_new_mergeinfo;
 
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
@@ -320,9 +320,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
           apr_hash_count(merge_b->conflicted_paths) > 0);
 }
 
-/* Cause a tree conflict notification, and if the merge is not
- * a dry run, also make the tree conflict persistent. Do nothing
- * if the merge is record-only.
+/* Record a tree conflict in the WC, unless this is a dry run or a record-
+ * only merge.
  *
  * The tree conflict, with its victim specified by VICTIM_PATH, is
  * assumed to have happened during a merge using merge baton MERGE_B.
@@ -345,6 +344,8 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 {
   svn_wc_conflict_description_t *conflict;
   const char *src_repos_url;  /* root URL of source repository */
+  const char *left_url;
+  const char *right_url;
   svn_wc_conflict_version_t *left;
   svn_wc_conflict_version_t *right;
 
@@ -354,21 +355,33 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
                                  merge_b->pool));
 
+  /* Construct the source URLs of the victim. */
+  {
+    const char *child = svn_path_is_child(merge_b->target,
+                                          victim_path, merge_b->pool);
+    if (child != NULL)
+      {
+        left_url = svn_path_url_add_component(merge_b->merge_source.url1,
+                                              child, merge_b->pool);
+        right_url = svn_path_url_add_component(merge_b->merge_source.url2,
+                                               child, merge_b->pool);
+      }
+    else
+      {
+        left_url = merge_b->merge_source.url1;
+        right_url = merge_b->merge_source.url2;
+      }
+  }
+
   left = svn_wc_conflict_version_create(
            src_repos_url,
-           svn_path_is_child(src_repos_url, merge_b->merge_source.url1,
-                             merge_b->pool),
-           merge_b->merge_source.rev1,
-           node_kind,
-           merge_b->pool);
+           svn_path_is_child(src_repos_url, left_url, merge_b->pool),
+           merge_b->merge_source.rev1, node_kind, merge_b->pool);
 
   right = svn_wc_conflict_version_create(
             src_repos_url,
-            svn_path_is_child(src_repos_url, merge_b->merge_source.url2,
-                              merge_b->pool),
-            merge_b->merge_source.rev2,
-            node_kind,
-            merge_b->pool);
+            svn_path_is_child(src_repos_url, right_url, merge_b->pool),
+            merge_b->merge_source.rev2, node_kind, merge_b->pool);
 
   conflict = svn_wc_conflict_description_create_tree(
     victim_path, adm_access, node_kind, svn_wc_operation_merge,
@@ -843,31 +856,36 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                 FALSE, merge_b->dry_run, ctx->conflict_func,
                                 ctx->conflict_baton, subpool);
 
-      /* Make a record in BATON if we find a PATH where mergeinfo is
-         added where none existed previously. */
-      for (i = 0; i < props->nelts; ++i)
+      /* If this is not a dry run then make a record in BATON if we find a
+         PATH where mergeinfo is added where none existed previously. */
+      if (!merge_b->dry_run)
         {
-          svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
-
-          /* Is this prop change the addition of mergeinfo to PATH? */
-          if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
-              && prop->value) /* No value if a prop delete. */
+          for (i = 0; i < props->nelts; ++i)
             {
-              /* Does PATH have any working mergeinfo? */
-              svn_prop_t *mergeinfo_prop = apr_hash_get(original_props,
-                                                        SVN_PROP_MERGEINFO,
-                                                        APR_HASH_KEY_STRING);
-              if (!mergeinfo_prop)
-                {
-                  /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be allocated
-                     do so in BATON->POOL so it has a sufficient lifetime. */
-                  if (!merge_b->paths_with_new_mergeinfo)
-                    merge_b->paths_with_new_mergeinfo =
-                      apr_hash_make(merge_b->pool);
+              svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-                  apr_hash_set(merge_b->paths_with_new_mergeinfo,
-                               apr_pstrdup(merge_b->pool, path),
-                               APR_HASH_KEY_STRING, path);
+              /* Is this prop change the addition of mergeinfo to PATH? */
+              if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
+                  && prop->value) /* No value if a prop delete. */
+                {
+                  /* Does PATH have any working mergeinfo? */
+                  svn_prop_t *mergeinfo_prop =
+                    apr_hash_get(original_props,
+                                 SVN_PROP_MERGEINFO,
+                                 APR_HASH_KEY_STRING);
+                  if (!mergeinfo_prop)
+                    {
+                      /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
+                         allocated do so in BATON->POOL so it has a
+                         sufficient lifetime. */
+                      if (!merge_b->paths_with_new_mergeinfo)
+                        merge_b->paths_with_new_mergeinfo =
+                          apr_hash_make(merge_b->pool);
+
+                      apr_hash_set(merge_b->paths_with_new_mergeinfo,
+                                   apr_pstrdup(merge_b->pool, path),
+                                   APR_HASH_KEY_STRING, path);
+                    }
                 }
             }
         }
@@ -1335,17 +1353,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         if (!entry || entry->schedule == svn_wc_schedule_delete)
           {
             /* The file add the merge wants to carry out is obstructed by
-             * an unversioned file, so the file the merge wants to add
-             * is a tree conflict victim. See notes about obstructions in
-             * notes/tree-conflicts/detection.txt.
-             */
-            SVN_ERR(tree_conflict(merge_b, adm_access, mine,
-                                  svn_node_file,
-                                  svn_wc_conflict_action_add,
-                                  svn_wc_conflict_reason_obstructed));
-            if (tree_conflicted)
-              *tree_conflicted = TRUE;
-
+             * an unversioned file, so this path should be skipped. */
             /* this will make the repos_editor send a 'skipped' message */
             if (content_state)
               *content_state = svn_wc_notify_state_obstructed;
@@ -5471,7 +5479,8 @@ do_file_merge(const char *url1,
    NOTIFY_B->CHILDREN_WITH_MERGEINFO (i.e. the remaining_ranges fields can be
    empty but never NULL).
 
-   For each path (if any) in MERGE_B->PATHS_WITH_NEW_MERGEINFO merge that
+   If MERGE_B->DRY_RUN is true do nothing, if it is false then
+   for each path (if any) in MERGE_B->PATHS_WITH_NEW_MERGEINFO merge that
    path's inherited mergeinfo (if any) with its working explicit mergeinfo
    and set that as the path's new explicit mergeinfo.  Then add an
    svn_client__merge_path_t * element representing the path to
@@ -5491,7 +5500,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                     svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
 {
-  if (merge_b->paths_with_new_mergeinfo)
+  if (merge_b->paths_with_new_mergeinfo && !merge_b->dry_run)
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
       apr_hash_index_t *hi;

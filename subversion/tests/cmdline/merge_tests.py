@@ -1702,7 +1702,6 @@ def merge_skips_obstructions(sbox):
   # error when the addition of foo is obstructed.
 
   expected_output = wc.State(C_path, {
-    ''       : Item(status='C '),
     'Q'      : Item(status='A '),
     'Q/bar'  : Item(status='A '),
     })
@@ -1713,7 +1712,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''       : Item(status='CM', wc_rev=1),
+    ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -13311,44 +13310,7 @@ def natural_history_filtering(sbox):
                                        None, 1)
 
 
-# Helper for text output.
-def verify_lines(lines, regexes):
-  """Return True if each of the given regular expressions matches
-     exactly one line in the list of lines."""
-  for regex in regexes:
-    num_patterns_found = 0
-    for line in lines:
-      if re.search(regex, line):
-        num_patterns_found += 1
-    if num_patterns_found != 1:
-      print(("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
-        " occurrences of '" + regex + "'"))
-      if svntest.main.verbose_mode:
-        print(" Actual output:")
-        for line in lines:
-          sys.stdout.write("  %s" % line)
-        print(" Expected regexes:")
-        for regex in regexes:
-          sys.stdout.write("  %s\n" % regex)
-      return False
-  return True
-
-def verify_tree_conflict_info(path, actions_and_victims):
-  """Raise an exception if the output of "svn info PATH"
-     does not report tree conflicts for exactly the victims
-     listed in ACTIONS_AND_VICTIMS, each element of which is
-     (action, victim) where ACTION is "add" or "edit" or "delete"
-     and VICTIM is a regex that matches the victim path."""
-  exit_code, output, error = svntest.main.run_svn(None, 'info', path)
-  if not verify_lines(output,
-                      list(map(lambda (action, victim):
-                          "incoming " + action,
-                          actions_and_victims))):
-    raise svntest.Failure("Wrong tree-conflict result")
-
-
-
-# This test involves tree conflicts.
+# This test used to involve tree conflicts, hence its name.
 def tree_conflicts_and_obstructions(sbox):
   "tree conflicts and obstructions"
 
@@ -13383,7 +13345,6 @@ def tree_conflicts_and_obstructions(sbox):
   # Merge the obstructions into the branch.
   expected_output = svntest.wc.State(branch_path, {
     'alpha'       : Item(status='D '),
-    'alpha-moved' : Item(status='  ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     'beta'        : Item("This is the file 'beta'.\n"),
@@ -13395,6 +13356,7 @@ def tree_conflicts_and_obstructions(sbox):
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_skip = wc.State(branch_path, {
+    'alpha-moved' : Item(),
     })
 
   svntest.actions.run_and_verify_merge(branch_path,
@@ -13403,10 +13365,6 @@ def tree_conflicts_and_obstructions(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip)
-
-  # Make sure all victims have been found.
-  verify_tree_conflict_info(br_alpha_moved,
-                            [('add', 'alpha-moved')])
 
 
 #----------------------------------------------------------------------
@@ -14256,6 +14214,10 @@ def no_self_referential_filtering_on_added_path(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+#----------------------------------------------------------------------
+# Test for issue #3324
+# http://subversion.tigris.org/issues/show_bug.cgi?id=3324
+#
 def merge_range_prior_to_rename_source_existence(sbox):
   "merge prior to rename src existence still dels src"
 
