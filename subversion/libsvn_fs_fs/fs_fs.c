@@ -898,26 +898,23 @@ static svn_error_t *
 write_format(const char *path, int format, int max_files_per_dir,
              svn_boolean_t overwrite, apr_pool_t *pool)
 {
-  const char *contents;
+  svn_stringbuf_t *sb;
+  svn_string_t *contents;
 
   SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+
+  sb = svn_stringbuf_create(apr_psprintf(pool, "%d\n", format), pool);
+
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
       if (max_files_per_dir)
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout sharded %d\n",
-                                format, max_files_per_dir);
+        svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
+                                                  max_files_per_dir));
       else
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout linear",
-                                format);
+        svn_stringbuf_appendcstr(sb, "layout linear");
     }
-  else
-    {
-      contents = apr_psprintf(pool, "%d\n", format);
-    }
+
+  contents = svn_string_create_from_buf(sb, pool);
 
   /* svn_io_write_version_file() does a load of magic to allow it to
      replace version files that already exist.  We only need to do
@@ -925,7 +922,7 @@ write_format(const char *path, int format, int max_files_per_dir,
   if (! overwrite)
     {
       /* Create the file */
-      SVN_ERR(svn_io_file_create(path, contents, pool));
+      SVN_ERR(svn_io_file_create(path, contents->data, pool));
     }
   else
     {
@@ -933,7 +930,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 
       SVN_ERR(svn_io_write_unique(&path_tmp,
                                   svn_path_dirname(path, pool),
-                                  contents, strlen(contents),
+                                  contents->data, contents->len,
                                   svn_io_file_del_none, pool));
 
 #ifdef WIN32
