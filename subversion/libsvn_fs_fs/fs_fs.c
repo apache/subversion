@@ -2241,6 +2241,15 @@ get_root_changes_offset(apr_off_t *root_offset,
   apr_size_t len;
   apr_seek_where_t seek_relative;
 
+  /* Determine where to seek to in the file.
+
+     If we've got a pack file, we want to seek to the end of the desired
+     revision.  But we don't track that, so we seek to the beginning of the
+     next revision.
+
+     Unless the next revision is in a different file, in which case, we can
+     just seek to the end of the pack file -- just like we do in the
+     non-packed case. */
   if (packed && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
