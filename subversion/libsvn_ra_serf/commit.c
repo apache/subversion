@@ -216,6 +216,9 @@ return_response_err(svn_ra_serf__handler_t *handler,
 {
   SVN_ERR(ctx->server_error.error);
 
+  /* Try to return one of the standard errors for 301, 404 etc. */
+  SVN_ERR(svn_ra_serf__error_on_status(ctx->status, handler->path));
+
   return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                            "%s of '%s': %d %s",
                            handler->method, handler->path,
