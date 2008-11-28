@@ -911,7 +911,7 @@ write_format(const char *path, int format, int max_files_per_dir,
         svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
                                                   max_files_per_dir));
       else
-        svn_stringbuf_appendcstr(sb, "layout linear");
+        svn_stringbuf_appendcstr(sb, "layout linear\n");
     }
 
   contents = svn_string_create_from_buf(sb, pool);
