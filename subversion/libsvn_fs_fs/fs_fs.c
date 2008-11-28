@@ -1569,12 +1569,10 @@ ensure_revision_exists(svn_fs_t *fs,
 }
 
 /* Open the correct revision file for REV.  If the filesystem FS has
-   been packed, *FILE will be set to the packed file and *PACKED will
-   be set to TRUE.  Otherwise, set *FILE to the revision file for REV
-   and *PACKED to FALSE.  Use POOL for allocations. */
+   been packed, *FILE will be set to the packed file; otherwise, set *FILE
+   to the revision file for REV.  Use POOL for allocations. */
 static svn_error_t *
 open_pack_or_rev_file(apr_file_t **file,
-                      svn_boolean_t *packed,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
@@ -1582,11 +1580,10 @@ open_pack_or_rev_file(apr_file_t **file,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
 
-  *packed = rev < ffd->max_packed_rev;
-
    err = svn_io_file_open(file,
-                          *packed ? path_rev_packed(fs, rev, "pack", pool)
-                                  : svn_fs_fs__path_rev(fs, rev, pool),
+                          rev < ffd->max_packed_rev
+                              ? path_rev_packed(fs, rev, "pack", pool)
+                              : svn_fs_fs__path_rev(fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -1644,14 +1641,14 @@ open_and_seek_revision(apr_file_t **file,
                        apr_off_t offset,
                        apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *rev_file;
-  svn_boolean_t packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(open_pack_or_rev_file(&rev_file, &packed, fs, rev, pool));
+  SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, pool));
 
-  if (packed)
+  if (rev < ffd->max_packed_rev)
     {
       apr_off_t rev_offset;
 
@@ -2208,15 +2205,15 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
                     apr_file_t *rev_file,
                     svn_fs_t *fs,
                     svn_revnum_t rev,
-                    svn_boolean_t packed,
                     apr_off_t offset,
                     apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_id_t *id;
   apr_hash_t *headers;
   const char *node_id_str;
 
-  if (packed)
+  if (rev < ffd->max_packed_rev)
     {
       apr_off_t rev_offset;
 
@@ -2260,7 +2257,6 @@ get_root_changes_offset(apr_off_t *root_offset,
                         apr_file_t *rev_file,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
-                        svn_boolean_t packed,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2279,7 +2275,7 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if (packed && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if ((rev < ffd->max_packed_rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -2359,7 +2355,6 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_boolean_t is_cached;
-  svn_boolean_t packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
@@ -2368,11 +2363,11 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   if (is_cached)
     return SVN_NO_ERROR;
 
-  SVN_ERR(open_pack_or_rev_file(&revision_file, &packed, fs, rev, pool));
+  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
   SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
-                                  packed, pool));
+                                  pool));
 
-  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev, packed,
+  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
                               root_offset, pool));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
@@ -3885,14 +3880,13 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
   apr_off_t changes_offset;
   apr_hash_t *changed_paths;
   apr_file_t *revision_file;
-  svn_boolean_t packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(open_pack_or_rev_file(&revision_file, &packed, fs, rev, pool));
+  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
   SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
-                                  rev, packed, pool));
+                                  rev, pool));
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
 
@@ -6138,16 +6132,15 @@ recover_body(void *baton, apr_pool_t *pool)
         {
           apr_file_t *rev_file;
           apr_off_t root_offset;
-          svn_boolean_t packed;
 
           svn_pool_clear(iterpool);
 
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(open_pack_or_rev_file(&rev_file, &packed, fs, rev, iterpool));
+          SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, iterpool));
           SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, fs, rev,
-                                          packed, iterpool));
+                                          iterpool));
           SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
         }
