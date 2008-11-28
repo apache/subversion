@@ -3930,7 +3930,7 @@ disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
 disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
 disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
-state_empty_dirs = svntest.actions.deep_trees_empty_dirs
+disk_empty_dirs = svntest.actions.deep_trees_empty_dirs
 
 deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
 deep_trees_conflict_output_skipped = \
@@ -3951,7 +3951,7 @@ def tree_conflicts_on_update_1_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_empty_dirs
+  expected_disk = disk_empty_dirs
 
   # Files delta, epsilon, and zeta are not in the working copy, but
   # "unquiet" status includes them.
@@ -3978,7 +3978,7 @@ def tree_conflicts_on_update_1_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_empty_dirs
+  expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del
 
@@ -4021,41 +4021,40 @@ def tree_conflicts_on_update_2_2(sbox):
   ### Current behaviour fails to show conflicts when deleting
   ### a directory tree that has modifications. (Will be solved
   ### when dirs_same_p() is implemented)
-  expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='D '),
-    'DF/D1'             : Item(status='D '),
-    'DDD/D1'            : Item(status='D '),
-    'DDF/D1'            : Item(status='D '),
-    })
+  expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.actions.deep_trees_virginal_state.copy()
-  expected_disk.remove(
+  expected_disk = disk_empty_dirs
+
+  expected_status = svntest.actions.deep_trees_virginal_state.copy()
+  expected_status.add({'' : Item()})
+  expected_status.tweak(contents=None, status='  ', wc_rev=3)
+  # Tree conflicts.
+  expected_status.tweak(
+    'D/D1',
     'F/alpha',
-    'DF/D1',
-    'DF/D1/beta',
     'DD/D1',
-    'DD/D1/D2',
-    'DDF/D1',
-    'DDF/D1/D2',
-    'DDF/D1/D2/gamma',
+    'DF/D1',
     'DDD/D1',
+    'DDF/D1',
+    treeconflict='C', wc_rev=2)
+  # Anything that's below a tree-conflict is also at an earlier rev.
+  expected_status.tweak(
+    'DD/D1/D2',
+    'DF/D1/beta',
     'DDD/D1/D2',
     'DDD/D1/D2/D3',
-    )
-
-  expected_status = svntest.wc.State('', {
-    ''                  : Item(status='  ', wc_rev=3),
-    'D'                 : Item(status='  ', wc_rev=3),
-    'DD'                : Item(status='  ', wc_rev=3),
-    'DDD'               : Item(status='  ', wc_rev=3),
-    'DDF'               : Item(status='  ', wc_rev=3),
-    'DF'                : Item(status='  ', wc_rev=3),
-    'F'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='D ', wc_rev=2, treeconflict='C'),
-    'F/alpha'           : Item(status='D ', wc_rev=2, treeconflict='C'),
-    })
+    'DDF/D1/D2',
+    'DDF/D1/D2/gamma',
+    wc_rev=2)
+  # The locally deleted nodes.
+  expected_status.tweak(
+    'D/D1',
+    'F/alpha',
+    'DD/D1/D2',
+    'DF/D1/beta',
+    'DDD/D1/D2/D3',
+    'DDF/D1/D2/gamma',
+    status='D ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
@@ -4112,7 +4111,7 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_empty_dirs
+  expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del
 
@@ -4183,7 +4182,7 @@ test_list = [ None,
               tree_conflicts_on_update_1_1,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
-              tree_conflicts_on_update_2_2,
+              XFail(tree_conflicts_on_update_2_2),
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
              ]
