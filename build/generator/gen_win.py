@@ -373,7 +373,7 @@ class WinGeneratorBase(GeneratorBase):
     deps = self.graph.deps[gen_base.DT_LINK]
     deps[dep.name] = deps[target.name]
 
-    for key in deps.iterkeys():
+    for key in deps.keys():
       # Link everything except tests against the dll. Tests need to be linked
       # against the static libraries because they sometimes access internal
       # library functions.
