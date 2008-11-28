@@ -2200,8 +2200,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached, ffd->rev_root_id_cache,
-                         &rev, pool));
+  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
+                         ffd->rev_root_id_cache, &rev, pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
