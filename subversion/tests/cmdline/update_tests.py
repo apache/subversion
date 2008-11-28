@@ -4081,16 +4081,19 @@ def tree_conflicts_on_update_2_3(sbox):
     'D/D1',
     'F/alpha',
     'DDD/D1',
-    'DDD/D1/D2/D3',  ### No output!
+    'DDD/D1/D2/D3',
     ]
 
   chdir_skip_paths = [
     ('D', 'D1'),
-    ('D/D1', ''),  ### 16005: path does not exist (in repo)
     ('F', 'alpha'),
     ('DDD', 'D1'),
-    ('DDD/D1/D2/D3', ''), ### ditto
     ]
+  # Note: We don't step *into* a directory that's deleted in the repository.
+  # E.g. ('DDD/D1/D2', '') would correctly issue a "path does not
+  # exist" error, because at that point it can't know about the
+  # tree-conflict on DDD/D1. ('D/D1', '') likewise, as tree-conflict
+  # information is stored in the parent of a victim directory.
 
   svntest.actions.deep_trees_skipping_on_update(sbox,
     DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
@@ -4183,7 +4186,7 @@ test_list = [ None,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
               tree_conflicts_on_update_2_2,
-              XFail(tree_conflicts_on_update_2_3),
+              tree_conflicts_on_update_2_3,
               tree_conflicts_on_update_3,
              ]
 
