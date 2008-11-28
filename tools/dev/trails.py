@@ -87,7 +87,7 @@ def list_frequencies(list):
   for item in list:
     counter[item] = counter.get(item, 0) + 1
 
-  frequencies = counter.items()
+  frequencies = list(counter.items())
   frequencies.sort(_freqtable_cmp)
 
   return frequencies

@@ -990,7 +990,7 @@ class WinGeneratorBase(GeneratorBase):
           reldir = ''
         sources[src] = src, obj, reldir
 
-    return sources.values()
+    return list(sources.values())
 
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.

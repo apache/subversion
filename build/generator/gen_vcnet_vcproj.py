@@ -234,7 +234,7 @@ class Generator(gen_win.WinGeneratorBase):
       configs.append(gen_win.ProjectItem(name=self.configs[i], index=i))
 
     # sort the values for output stability.
-    guidvals = guids.values()
+    guidvals = list(guids.values())
     guidvals.sort()
 
     data = {

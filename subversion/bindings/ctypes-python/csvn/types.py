@@ -68,10 +68,10 @@ class Hash(DictMixin):
         apr_hash_set(self, key, len(key), NULL)
 
     def keys(self):
-        return list(self.iterkeys())
+        return list(self.keys())
 
     def __iter__(self):
-        for (key, _) in self.iteritems():
+        for (key, _) in self.items():
             yield key
 
     def iteritems(self):

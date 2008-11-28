@@ -4,7 +4,7 @@
 #                       C error codes
 #
 # ====================================================================
-# Copyright (c) 2007 CollabNet.  All rights reserved.
+# Copyright (c) 2007-2008 CollabNet.  All rights reserved.
 #
 # * This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -58,7 +58,7 @@ public class ErrorCodes
 {
 """)
 
-  keys = error_codes.keys()
+  keys = list(error_codes.keys())
   keys.sort()
 
   for key in keys:
