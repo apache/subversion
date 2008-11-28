@@ -325,9 +325,12 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  * is unversioned and so set the kind to 'none'. */
 static svn_node_kind_t
 node_kind_working(const char *path,
+                  const merge_cmd_baton_t *merge_b,
                   const svn_wc_entry_t *entry)
 {
-  if (!entry || entry->schedule == svn_wc_schedule_delete
+  if (!entry
+      || (entry->schedule == svn_wc_schedule_delete)
+      || (merge_b->dry_run && dry_run_deleted_p(merge_b, path))
       || (entry->deleted && entry->schedule != svn_wc_schedule_add))
     return svn_node_none;
   else
@@ -388,7 +391,7 @@ obstructed_or_missing(const char *path,
   if (entry && entry->absent)
     return svn_wc_notify_state_missing;
 
-  kind_expected = node_kind_working(path, entry);
+  kind_expected = node_kind_working(path, merge_b, entry);
   kind_on_disk = node_kind_on_disk(path, merge_b, pool);
 
   /* If it's a sched-delete directory, change the expected kind to "dir"
