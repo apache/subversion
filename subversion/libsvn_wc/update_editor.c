@@ -1264,24 +1264,30 @@ static svn_error_t *
 entry_has_local_mods(svn_boolean_t *modified,
                      svn_wc_adm_access_t *adm_access,
                      svn_node_kind_t kind,
+                     svn_wc_schedule_t schedule,
                      const char *full_path,
                      apr_pool_t *pool)
 {
-  svn_boolean_t text_modified;
-  svn_boolean_t props_modified;
-
-  /* Check for text modifications */
-  if (kind == svn_node_file)
-    SVN_ERR(svn_wc_text_modified_p(&text_modified, full_path, FALSE,
-                                   adm_access, pool));
+  if (schedule != svn_wc_schedule_normal)
+    *modified = TRUE;
   else
-    text_modified = FALSE;
+    {
+      svn_boolean_t text_modified;
+      svn_boolean_t props_modified;
 
-  /* Check for property modifications */
-  SVN_ERR(svn_wc_props_modified_p(&props_modified, full_path,
-                                  adm_access, pool));
+      /* Check for text modifications */
+      if (kind == svn_node_file)
+        SVN_ERR(svn_wc_text_modified_p(&text_modified, full_path, FALSE,
+                                       adm_access, pool));
+      else
+        text_modified = FALSE;
 
-  *modified = (text_modified || props_modified);
+      /* Check for property modifications */
+      SVN_ERR(svn_wc_props_modified_p(&props_modified, full_path,
+                                      adm_access, pool));
+
+      *modified = (text_modified || props_modified);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1321,7 +1327,9 @@ modcheck_found_entry(const char *path,
         return err;
     }
 
-  SVN_ERR(entry_has_local_mods(&modified, adm_access, entry->kind, path, pool));
+  SVN_ERR(entry_has_local_mods(&modified, adm_access, entry->kind, 
+                               entry->schedule, path, pool));
+
   if (modified)
     baton->found_mod = TRUE;
 
@@ -1442,7 +1450,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
           /* Use case 2: Deleting a locally-modified item. */
           if (entry->kind == svn_node_file)
             SVN_ERR(entry_has_local_mods(&modified, parent_adm_access, 
-                                         entry->kind, full_path, pool));
+                                         entry->kind, entry->schedule,
+                                         full_path, pool));
 
           else if (entry->kind == svn_node_dir)
             {
