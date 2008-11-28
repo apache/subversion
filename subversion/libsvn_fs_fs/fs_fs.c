@@ -264,6 +264,12 @@ path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static APR_INLINE const char *
+path_max_packed_rev(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join(fs->path, PATH_MAX_PACKED_REV, pool);
+}
+
+static APR_INLINE const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1070,6 +1076,21 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
+  /* Read the max packed revision. */
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+    {
+      apr_file_t *file;
+      apr_size_t len;
+      
+      SVN_ERR(svn_io_file_open(&file, path_max_packed_rev(fs, pool),
+                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+      len = sizeof(buf);
+      SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
+      SVN_ERR(svn_io_file_close(file, pool));
+
+      ffd->max_packed_rev = SVN_STR_TO_REV(buf);
+    }
+
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
                           svn_path_join(fs->path, PATH_CONFIG, pool),
@@ -1134,6 +1155,10 @@ upgrade_body(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_io_make_dir_recursively
               (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
     }
+
+  /* If our filesystem is new enough, write the max packed rev file. */
+  if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
+    SVN_ERR(svn_io_file_create(path_max_packed_rev(fs, pool), "0\n", pool));
 
   /* Bump the format file. */
   return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
@@ -1310,6 +1335,9 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
+
+  /* Copy the max packed rev. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MAX_PACKED_REV, pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
@@ -5780,6 +5808,10 @@ svn_fs_fs__create(svn_fs_t *fs,
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
         && rep_sharing_allowed)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
+
+  /* Create the max packed rev file. */
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+    SVN_ERR(svn_io_file_create(path_max_packed_rev(fs, pool), "0\n", pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */

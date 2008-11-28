@@ -55,6 +55,7 @@ repository) is:
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
+  max-packed-rev      File containing the youngest revision to be in a pack file
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
