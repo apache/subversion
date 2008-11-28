@@ -1043,6 +1043,25 @@ write_config(svn_fs_t *fs,
 }
 
 static svn_error_t *
+read_max_packed_rev(svn_revnum_t *max_packed_rev,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  char buf[80];
+  apr_file_t *file;
+  apr_size_t len;
+      
+  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  len = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  *max_packed_rev = SVN_STR_TO_REV(buf);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
 svn_error_t *
@@ -1078,18 +1097,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the max packed revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    {
-      apr_file_t *file;
-      apr_size_t len;
-      
-      SVN_ERR(svn_io_file_open(&file, path_max_packed_rev(fs, pool),
-                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-      len = sizeof(buf);
-      SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-
-      ffd->max_packed_rev = SVN_STR_TO_REV(buf);
-    }
+    SVN_ERR(read_max_packed_rev(&ffd->max_packed_rev,
+                                path_max_packed_rev(fs, pool), pool));
 
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
@@ -6710,12 +6719,17 @@ packer_func(void *baton,
    remove the pack file and start again. */
 static svn_error_t *
 pack_shard(const char *revs_dir,
+           const char *fs_path,
            apr_int64_t shard,
+           int max_files_per_dir,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *pool)
 {
-  svn_node_kind_t pack_kind;
+  svn_stream_t *stream;
+  const char *tmp_path;
+  const char *final_path;
+  svn_error_t *err;
   const char *pack_file_path = svn_path_join(
                   revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack",
                                          shard), pool);
@@ -6727,24 +6741,17 @@ pack_shard(const char *revs_dir,
                   pool);
   struct packer_baton pb;
 
-  /* Do some consistency checking. */
-  SVN_ERR(svn_io_check_path(pack_file_path, &pack_kind, pool));
-  if (pack_kind == svn_node_file)
+  /* Remove any existing pack file for this shard, since it is incomplete. */
+  err = svn_io_remove_file(pack_file_path, pool);
+  if (err)
     {
-      svn_node_kind_t shard_kind;
-      SVN_ERR(svn_io_check_path(shard_path, &shard_kind, pool));
-
-      if (shard_kind == svn_node_dir)
-        /* If the packed shard and the "normal" shard exist, assume the pack
-           wasn't cleanly completed, and just delete the packed shard. */
-        {
-          SVN_ERR(svn_io_remove_file(pack_file_path, pool));
-          SVN_ERR(svn_io_remove_file(manifest_file_path, pool));
-        }
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        svn_error_clear(err);
       else
-        /* We have already packed this shard, so just leave. */
-        return SVN_NO_ERROR;
+        return err;
     }
+  else
+    SVN_ERR(svn_io_remove_file(manifest_file_path, pool));
 
   /* Create the new pack and manifest files. */
   SVN_ERR(svn_stream_open_writable(&pb.pack_stream, pack_file_path, pool,
@@ -6759,6 +6766,15 @@ pack_shard(const char *revs_dir,
                           packer_func, &pb, pool));
   SVN_ERR(svn_stream_close(pb.manifest_stream));
   SVN_ERR(svn_stream_close(pb.pack_stream));
+
+  /* Update the max-pack-rev file to reflect our newly packed shard. */
+  final_path = svn_path_join(fs_path, PATH_MAX_PACKED_REV, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path, fs_path,
+                                   svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_stream_printf(stream, pool, "%ld\n",
+                            (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, final_path, pool));
 
   /* Finally, remove the existing shard directory. */
   return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
@@ -6777,6 +6793,7 @@ svn_fs_fs__pack(const char *fs_path,
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
   const char *data_path;
+  svn_revnum_t max_packed_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_path_join(fs_path, PATH_FORMAT, pool),
@@ -6792,20 +6809,29 @@ svn_fs_fs__pack(const char *fs_path,
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
       _("FS format too old to pack, please upgrade."));
 
+  SVN_ERR(read_max_packed_rev(&max_packed_rev,
+                              svn_path_join(fs_path, PATH_MAX_PACKED_REV, pool),
+                              pool));
+
   SVN_ERR(get_youngest(&youngest, fs_path, pool));
   completed_shards = youngest / max_files_per_dir;
+
+  /* See if we've already completed all possible shards thus far. */
+  if (max_packed_rev == (completed_shards * max_files_per_dir))
+    return SVN_NO_ERROR;
 
   data_path = svn_path_join(fs_path, PATH_REVS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
-  for (i = 0; i < completed_shards; i++)
+  for (i = max_packed_rev / max_files_per_dir; i < completed_shards; i++)
     {
       svn_pool_clear(iterpool);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      SVN_ERR(pack_shard(data_path, i, cancel_func, cancel_baton, iterpool));
+      SVN_ERR(pack_shard(data_path, fs_path, i, max_files_per_dir, cancel_func,
+                         cancel_baton, iterpool));
       /* We can't pack revprops, because they aren't immutable :(
          If we ever do get clever and figure out how to pack revprops,
          this is the place to do it. */
