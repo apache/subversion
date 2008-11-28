@@ -4182,7 +4182,7 @@ test_list = [ None,
               tree_conflicts_on_update_1_1,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
-              XFail(tree_conflicts_on_update_2_2),
+              tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
              ]

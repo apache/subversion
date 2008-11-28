@@ -2412,7 +2412,7 @@ test_list = [ None,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
               tree_conflicts_on_switch_2_1,
-              XFail(tree_conflicts_on_switch_2_2),
+              tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
              ]
 
