@@ -903,7 +903,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 
   SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
 
-  sb = svn_stringbuf_create(apr_psprintf(pool, "%d\n", format), pool);
+  sb = svn_stringbuf_createf(pool, "%d\n", format);
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
