@@ -162,6 +162,9 @@ pack_filesystem(const char **msg,
   int i;
   svn_node_kind_t kind;
   const char *path;
+  char buf[80];
+  apr_file_t *file;
+  apr_size_t len;
 
   *msg = "pack a FSFS filesystem";
 
@@ -200,6 +203,17 @@ pack_filesystem(const char **msg,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Unexpected directory '%s' found", path);
     }
+
+  /* Ensure the max-packed-rev jives with the above operations. */
+  SVN_ERR(svn_io_file_open(&file,
+                           svn_path_join(REPO_NAME, "max-packed-rev", pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  len = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+  if (SVN_STR_TO_REV(buf) != (MAX_REV / SHARD_SIZE) * SHARD_SIZE)
+    return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                             "Bad 'max-packed-rev' contents");
 
   /* Finally, make sure the final revision directory does exist. */
   path = svn_path_join_many(pool, REPO_NAME, "revs",
