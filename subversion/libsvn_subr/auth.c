@@ -548,6 +548,11 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
                                                           "kwallet",
                                                           "ssl_client_cert_pw",
                                                           pool));
+          if (provider)
+            APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+          continue;
+        }
 
       /* Keychain */
       if (apr_strnatcmp(password_store, "keychain") == 0)
@@ -592,11 +597,6 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
           continue;
         }
 
-          if (provider)
-            APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
-
-          continue;
-        }
       return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                _("Invalid config: unknown password store "
                                  "'%s'"),
