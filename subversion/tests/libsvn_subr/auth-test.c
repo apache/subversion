@@ -44,7 +44,7 @@ test_platform_specific_auth_providers(const char **msg,
        "return NULL");
 
   /* Make sure you get two providers when retrieving all auth providers */
-  svn_auth_get_platform_specific_client_providers(&providers, pool);
+  svn_auth_get_platform_specific_client_providers(&providers, NULL, pool);
 
 #if defined(SVN_HAVE_KEYCHAIN_SERVICES) || defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET) || (defined(WIN32) && !defined(__MINGW32__))
   if (providers->nelts != 2)

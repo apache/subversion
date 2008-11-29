@@ -410,7 +410,9 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   apr_array_header_t *providers;
 
   /* Populate the registered providers with the platform-specific providers */
-  SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers, pool));
+  SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
+                                                          cfg,
+                                                          pool));
 
   /* If we have a cancellation function, cram it and the stuff it
      needs into the prompt baton. */
