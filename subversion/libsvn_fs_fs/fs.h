@@ -223,6 +223,10 @@ typedef struct
      rep key to svn_string_t. */
   svn_cache__t *fulltext_cache;
 
+  /* Pack manifest cache; maps revision numbers to offsets in their respective
+     pack files. */
+  svn_cache__t *packed_offset_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 

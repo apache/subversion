@@ -1608,7 +1608,18 @@ get_packed_offset(apr_off_t *rev_offset,
   apr_file_t *manifest_file;
   char buf[PACK_MANIFEST_ENTRY_LEN + 1];
   apr_off_t rev_index_offset;
+  svn_boolean_t is_cached;
+  apr_off_t *cached_rev_offset;
   apr_size_t len;
+
+  SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
+                         ffd->packed_offset_cache, &rev, pool));
+
+  if (is_cached)
+    {
+      *rev_offset = *cached_rev_offset;
+      return SVN_NO_ERROR;
+    }
 
   /* Open the manifest file. */
   SVN_ERR(svn_io_file_open(&manifest_file, path_rev_packed(fs, rev, "manifest",
@@ -1628,7 +1639,7 @@ get_packed_offset(apr_off_t *rev_offset,
 
   *rev_offset = apr_atoi64(buf);
 
-  return SVN_NO_ERROR;
+  return svn_cache__set(ffd->packed_offset_cache, &rev, rev_offset, pool);
 }
 
 /* Open the revision file for revision REV in filesystem FS and store
