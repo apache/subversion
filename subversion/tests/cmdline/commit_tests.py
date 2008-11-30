@@ -1532,17 +1532,14 @@ def commit_nonrecursive(sbox):
   ### commit to behave differently from other commands taking -N.
   ###
   ### These days, -N should be equivalent to --depth=files in almost
-  ### all cases.  There are some exceptions (e.g., status), but commit
-  ### is not an exception.  Thus, the above recipe is now incorrect,
-  ### because "wc/dirA/dirB" was given as an explicit target, and
-  ### therefore the file "wc/dirA/dirB/nocommit" *should* have been
-  ### committed after all, since it's a file child of a named target
-  ### and -N means --depth=files.
+  ### all cases.  There are some exceptions (e.g., status), and commit
+  ### is one of them: 'commit -N' means 'commit --depth=empty'.
   ###
-  ### So we really need two tests: one for commit -N (--depth=files),
-  ### and another for --depth=empty.  I've changed this test to cover
-  ### the -N case, and added 'commit_propmods_with_depth_empty' to
-  ### depth_tests.py to cover the --depth=empty case.
+  ### The original implementation, as well as this test, mistakenly
+  ### mapped 'commit -N' to 'commit --depth=files'; that was a bug that
+  ### made 'svn ci -N' incompatible with 1.4 and earlier versions.
+  ###
+  ### See also 'commit_propmods_with_depth_empty' in depth_tests.py .
 
   # Now add these directories and files, except the last:
   dirA_path  = 'dirA'
@@ -1562,19 +1559,19 @@ def commit_nonrecursive(sbox):
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'add', '--depth=empty',
+                                     'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
-                                     os.path.join(wc_dir, fileB_path),
+                                     # don't add fileB
                                      os.path.join(wc_dir, dirB_path),
                                      os.path.join(wc_dir, nope_1_path),
-                                     os.path.join(wc_dir, nope_2_path))
+                                     # don't add nope_2
+                                     )
 
   expected_output = svntest.wc.State(
     wc_dir,
     { dirA_path  : Item(verb='Adding'),
-      fileA_path : Item(verb='Adding'),
-      fileB_path : Item(verb='Adding'),
+      # no children!
       }
     )
 
@@ -1593,11 +1590,11 @@ def commit_nonrecursive(sbox):
   # Expect some commits and some non-commits from this part of the test.
   expected_status.add({
     dirA_path     : Item(status='  ', wc_rev=3),
-    fileA_path    : Item(status='  ', wc_rev=3),
-    fileB_path    : Item(status='  ', wc_rev=3),
+    fileA_path    : Item(status='A ', wc_rev=0),
+    # no fileB
     dirB_path     : Item(status='A ', wc_rev=0),
     nope_1_path   : Item(status='A ', wc_rev=0),
-    nope_2_path   : Item(status='A ', wc_rev=0)
+    # no nope_2
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
