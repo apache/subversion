@@ -102,5 +102,15 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
      
+ * r34487
+   Fixed backward compatibility bug: it was not possible to commit only
+   property changes on a folder with modified child items.
+   Justification:
+     Backward compatibility of 'svn commit -N'.
+   Branch:
+     ^/branches/1.5.x-r34487
+   Votes:
+     +1: danielsh
+
 Approved changes:
 =================
