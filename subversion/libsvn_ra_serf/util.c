@@ -117,11 +117,6 @@ ssl_server_cert(void *baton, int failures,
 
   apr_pool_create(&subpool, conn->session->pool);
 
-  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
-  realmstring = apr_uri_unparse(subpool,
-                                &conn->session->repos_url,
-                                APR_URI_UNP_OMITPATHINFO);
-
   /* Extract the info from the certificate */
   subject = serf_ssl_cert_subject(cert, subpool);
   issuer = serf_ssl_cert_issuer(cert, subpool);
@@ -165,6 +160,24 @@ ssl_server_cert(void *baton, int failures,
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
+
+  /* OpenSSL/Serf will ask for validation of the entire chain (ie both
+   * server and CA).  This is generally a good thing - however, we need to
+   * then make SVN's cert storage keyed off the certificate info so as
+   * not to stomp on the entire chain on each request.
+   *
+   * If no hostname is provided in the cert, we'll construct the realmstring,
+   * e.g. https://svn.collab.net:443
+   */
+  if (cert_info.hostname)
+    {
+      realmstring = cert_info.hostname;
+    }
+  else
+    {
+      realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
+                                    APR_URI_UNP_OMITPATHINFO);
+    }
 
   err = svn_auth_first_credentials(&creds, &state,
                                    SVN_AUTH_CRED_SSL_SERVER_TRUST,
@@ -1134,7 +1147,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
    carry out operation-specific processing.  Afterwards, check for
    connection close.
 
-   If during the setup of the request we set a snapshot on the body buckets, 
+   If during the setup of the request we set a snapshot on the body buckets,
    handle_response has to make sure these buckets get destroyed iff the
    request doesn't have to be resent.
    */
@@ -1275,7 +1288,7 @@ handle_response(serf_request_t *request,
 #endif
 
 cleanup:
-  /* If a snapshot was set on the body bucket, it wasn't destroyed when the 
+  /* If a snapshot was set on the body bucket, it wasn't destroyed when the
      request was sent, we have to destroy it now upon successful handling of
      the response. */
   if (ctx->body_snapshot_set && ctx->body_buckets)
@@ -1351,7 +1364,7 @@ setup_request(serf_request_t *request,
                (req_bkt) including this barrier bucket, but this way our
                body_buckets bucket will not be destroyed and we can reuse it
                later.
-               This does put ownership of body_buckets in our own hands though, 
+               This does put ownership of body_buckets in our own hands though,
                so we have to make sure it gets destroyed when handling the
                response. */
             /* TODO: for now we assume restoring a snapshot on a bucket that

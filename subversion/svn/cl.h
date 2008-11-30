@@ -568,8 +568,8 @@ svn_cl__get_log_message(const char **log_msg,
    include COMMIT_ERR, and perhaps additional errors attached to the
    end of COMMIT_ERR's chain.  */
 svn_error_t *
-svn_cl__cleanup_log_msg(void *log_msg_baton, 
-                        svn_error_t *commit_err, 
+svn_cl__cleanup_log_msg(void *log_msg_baton,
+                        svn_error_t *commit_err,
                         apr_pool_t *pool);
 
 /* Add a message about --force if appropriate */

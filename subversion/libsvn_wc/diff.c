@@ -406,14 +406,9 @@ get_empty_file(struct edit_baton *b,
      that won't work on Windows: it's impossible to stat NUL */
   if (!b->empty_file)
     {
-      const char *temp_dir;
-
-      SVN_ERR(svn_io_temp_dir(&temp_dir, b->pool));
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &(b->empty_file),
-               svn_path_join(temp_dir, "tmp", b->pool),
-               "", svn_io_file_del_on_pool_cleanup,
-               b->pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &b->empty_file, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       b->pool, b->pool));
     }
 
   *empty_file = b->empty_file;
@@ -593,7 +588,7 @@ file_diff(struct dir_baton *dir_baton,
      revert text-base will be present; in the latter case only, a
      regular text-base be present as well.  So which text-base do we
      want to use for the diff?
-     
+
      One could argue that we should never diff against the revert
      base, and instead diff against the empty-file for both types of
      replacement.  After all, there is no ancestry relationship
@@ -642,7 +637,7 @@ file_diff(struct dir_baton *dir_baton,
                                 adm_access, path, pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_deleted
-              (NULL, NULL, path,
+              (NULL, NULL, NULL, path,
                textbase,
                empty_file,
                base_mimetype,
@@ -668,7 +663,7 @@ file_diff(struct dir_baton *dir_baton,
                pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_added
-              (NULL, NULL, NULL, path,
+              (NULL, NULL, NULL, NULL, path,
                empty_file,
                translated,
                0, entry->revision,
@@ -711,7 +706,7 @@ file_diff(struct dir_baton *dir_baton,
                                        adm_access, path, pool));
 
           SVN_ERR(dir_baton->edit_baton->callbacks->file_changed
-                  (NULL, NULL, NULL,
+                  (NULL, NULL, NULL, NULL,
                    path,
                    modified ? textbase : NULL,
                    translated,
@@ -763,6 +758,7 @@ dir_diff(struct dir_baton *dir_baton,
         SVN_ERR(eb->callbacks->dir_deleted
                 (NULL,
                  NULL,
+                 NULL,
                  path,
                  eb->callback_baton));
 
@@ -775,6 +771,7 @@ dir_diff(struct dir_baton *dir_baton,
       case svn_wc_schedule_add:
         SVN_ERR(eb->callbacks->dir_added
                 (NULL,
+                 NULL,
                  NULL,
                  path,
                  entry->revision,
@@ -861,7 +858,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
                                         dir_baton->pool));
 
           SVN_ERR(dir_baton->edit_baton->callbacks->dir_props_changed
-                  (adm_access, NULL,
+                  (adm_access, NULL, NULL,
                    dir_baton->path,
                    propchanges, baseprops,
                    dir_baton->edit_baton->callback_baton));
@@ -1128,7 +1125,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
            pool));
 
   SVN_ERR(eb->callbacks->file_added
-          (adm_access, NULL, NULL,
+          (adm_access, NULL, NULL, NULL,
            path,
            empty_file, translated_file,
            0, entry->revision,
@@ -1227,7 +1224,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
 
       if (propchanges->nelts > 0)
         SVN_ERR(eb->callbacks->dir_props_changed
-                (adm_access, NULL,
+                (adm_access, NULL, NULL,
                  dir_baton->path,
                  propchanges, emptyprops,
                  eb->callback_baton));
@@ -1818,8 +1815,8 @@ delete_entry(const char *path,
         {
           /* Whenever showing a deletion, we show the text-base vanishing. */
           /* ### This is wrong if we're diffing WORKING->repos. */
-          const char *textbase = svn_wc__text_base_path(full_path,
-                                                        FALSE, pool);
+          const char *textbase = svn_wc__text_base_path(full_path, FALSE,
+                                                        pool);
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
@@ -1827,7 +1824,7 @@ delete_entry(const char *path,
                                     adm_access, full_path, pool));
 
           SVN_ERR(pb->edit_baton->callbacks->file_deleted
-                  (NULL, NULL, full_path,
+                  (NULL, NULL, NULL, full_path,
                    textbase,
                    empty_file,
                    base_mimetype,
@@ -2009,7 +2006,7 @@ close_directory(void *dir_baton,
         reverse_propchanges(originalprops, b->propchanges, b->pool);
 
       SVN_ERR(b->edit_baton->callbacks->dir_props_changed
-              (NULL, NULL,
+              (NULL, NULL, NULL,
                b->path,
                b->propchanges,
                originalprops,
@@ -2342,7 +2339,7 @@ close_file(void *file_baton,
 
           /* Unidiff-related through libsvn_client. */
           return b->edit_baton->callbacks->file_added
-                  (NULL, NULL, NULL, b->path,
+                  (NULL, NULL, NULL, NULL, b->path,
                    empty_file,
                    temp_file_path,
                    0,
@@ -2361,7 +2358,7 @@ close_file(void *file_baton,
                     (b->path, SVN_INVALID_REVNUM, b->dir_baton, pool));
 
           return b->edit_baton->callbacks->file_deleted
-                  (NULL, NULL, b->path,
+                  (NULL, NULL, NULL, b->path,
                    temp_file_path,
                    empty_file,
                    repos_mimetype,
@@ -2449,7 +2446,7 @@ close_file(void *file_baton,
         }
 
       SVN_ERR(b->edit_baton->callbacks->file_changed
-              (NULL, NULL, NULL,
+              (NULL, NULL, NULL, NULL,
                b->path,
                eb->reverse_order ? localfile : temp_file_path,
                eb->reverse_order ? temp_file_path : localfile,

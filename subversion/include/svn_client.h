@@ -406,7 +406,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create2() to allocate and intialize this
+ * svn_client_commit_item_create2() to allocate and initialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -528,7 +528,7 @@ typedef struct svn_client_commit_item_t
 /** Return a new commit item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
- * is used to intialize and allocate the @c svn_client_commit_item3_t
+ * is used to initialize and allocate the @c svn_client_commit_item3_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *
@@ -808,7 +808,7 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
  * batons, serves as a cache for configuration options, and other various
  * and sundry things.  In order to avoid backwards compatibility problems
  * clients should use svn_client_create_context() to allocate and
- * intialize this structure instead of doing so themselves.
+ * initialize this structure instead of doing so themselves.
  */
 typedef struct svn_client_ctx_t
 {
@@ -907,7 +907,7 @@ typedef struct svn_client_ctx_t
  * represents a particular instance of an svn client.
  *
  * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
+ * use this function to initialize and allocate the
  * @c svn_client_ctx_t structure rather than doing so themselves, as
  * the size of this structure may change in the future.
  *
@@ -3066,6 +3066,8 @@ svn_client_resolved(const char *path,
  * all its immediate conflicted children (both files and directories,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
@@ -4626,7 +4628,7 @@ svn_client_uuid_from_url(const char **uuid,
 /** Return the repository @a uuid for working-copy @a path, allocated
  * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
  * entry; if not present in the entry, then look in its parents. If not
- * present in the workingcopy call svn_client_uuid_from_url() to 
+ * present in the workingcopy call svn_client_uuid_from_url() to
  * retrieve, using the entry's URL.  @a ctx is required for possible
  * repository authentication.
  *

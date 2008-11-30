@@ -151,7 +151,7 @@ struct svn_repos_t
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
-                              apr_array_header_t *capabilities,
+                              const apr_array_header_t *capabilities,
                               apr_pool_t *pool);
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
@@ -213,7 +213,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
                                      svn_revnum_t rev,
                                      const char *author,
                                      const char *name,
-                                     svn_string_t *old_value,
+                                     const svn_string_t *old_value,
                                      char action,
                                      apr_pool_t *pool);
 
@@ -246,7 +246,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_lock(svn_repos_t *repos,
-                           apr_array_header_t *paths,
+                           const apr_array_header_t *paths,
                            const char *username,
                            apr_pool_t *pool);
 
@@ -271,7 +271,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_unlock(svn_repos_t *repos,
-                             apr_array_header_t *paths,
+                             const apr_array_header_t *paths,
                              const char *username,
                              apr_pool_t *pool);
 
@@ -298,7 +298,7 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
 
    If there was no such copy operation in that portion
    of PATH's history, set *PREV_PATH to NULL, and set *PREV_REV and
-   *APPEARED_REV to SVN_INVALID_REVNUM.  
+   *APPEARED_REV to SVN_INVALID_REVNUM.
 
    NOTE: Any of PREV_PATH, PREV_REV, and APPEARED_REV may be NULL to
    if that information is of no interest to the caller.  */

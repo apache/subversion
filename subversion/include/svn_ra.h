@@ -451,6 +451,8 @@ typedef struct svn_ra_callbacks2_t
 {
   /** Open a unique temporary file for writing in the working copy.
    * This file will be automatically deleted when @a fp is closed.
+   *
+   * @deprecated This callback should no longer be used by RA layers.
    */
   svn_error_t *(*open_tmp_file)(apr_file_t **fp,
                                 void *callback_baton,
@@ -1756,6 +1758,29 @@ svn_ra_has_capability(svn_ra_session_t *session,
                       svn_boolean_t *has,
                       const char *capability,
                       apr_pool_t *pool);
+
+/**
+ * Given @a path at revision @a peg_revision, set @a *revision_deleted to the
+ * revision @a path was first deleted, within the inclusive revision range
+ * defined by @a peg_revision and @a end_revision.  @a path is relative
+ * to the URL in @a session.
+ *
+ * If @a path does not exist at @a peg_revision or was not deleted within
+ * the specified range, then set @a *revision_deleted to @c SVN_INVALID_REVNUM.
+ * If @a peg_revision or @a end_revision are invalid or if @a peg_revision is
+ * greater than @a end_revision, then return @c SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_ra_get_deleted_rev(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t peg_revision,
+                       svn_revnum_t end_revision,
+                       svn_revnum_t *revision_deleted,
+                       apr_pool_t *pool);
 
 /**
  * The capability of understanding @c svn_depth_t (e.g., the server

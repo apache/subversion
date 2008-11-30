@@ -853,9 +853,8 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 
   temp_dir = svn_wc__adm_child(path, SVN_WC__ADM_TMP, pool);
 
-  SVN_ERR(svn_io_open_unique_file2(&file, new_name,
-                                   svn_path_join(temp_dir, "tempfile", pool),
-                                   ".tmp", delete_when, pool));
+  SVN_ERR(svn_io_open_unique_file3(&file, new_name, temp_dir,
+                                   delete_when, pool, pool));
 
   if (fp)
     *fp = file;

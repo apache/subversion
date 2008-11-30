@@ -967,7 +967,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
                          apr_pool_t *pool)
 {
   svn_checksum_t *md5sum;
-  
+
   SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
                                pool));
   memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);

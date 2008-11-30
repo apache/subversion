@@ -931,7 +931,9 @@ write_format(const char *path, int format, int max_files_per_dir,
     {
       const char *path_tmp;
 
-      SVN_ERR(svn_io_write_unique(&path_tmp, path, contents, strlen(contents),
+      SVN_ERR(svn_io_write_unique(&path_tmp,
+                                  svn_path_dirname(path, pool),
+                                  contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
 #ifdef WIN32
@@ -970,23 +972,6 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
   return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
-svn_error_t *
-svn_fs_fs__get_config(svn_config_t **config,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  if (! ffd->config)
-    SVN_ERR(svn_config_read(&(ffd->config),
-                            svn_path_join(fs->path, PATH_CONFIG, pool),
-                            FALSE,
-                            fs->pool));
-
-  *config = ffd->config;
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 write_config(svn_fs_t *fs,
              apr_pool_t *pool)
@@ -1016,6 +1001,21 @@ write_config(svn_fs_t *fs,
 "### configured (and ignoring it with file:// access).  To make"             NL
 "### Subversion never ignore cache errors, uncomment this line."             NL
 "# " CONFIG_OPTION_FAIL_STOP " = true"                                       NL
+""                                                                           NL
+"[" CONFIG_SECTION_REP_SHARING "]"                                           NL
+"### To conserve space, the filesystem can optionally avoid storing"         NL
+"### duplicate representations.  This comes at a slight cost in performace," NL
+"### as maintaining a database of shared representations can increase"       NL
+"### commit times.  The space savings are dependent upon the size of the"    NL
+"### repository, the number of objects it contains and the amount of"        NL
+"### duplication between them, usually a function of the branching and"      NL
+"### merging process."                                                       NL
+"###"                                                                        NL
+"### The following parameter enables rep-sharing in the repository.  It can" NL
+"### be switched on and off at will, but for best space-saving results"      NL
+"### should be enabled consistently over the life of the repository."        NL
+CONFIG_OPTION_ENABLE_REP_SHARING " = true"                                   NL
+
 ;
 #undef NL
   return svn_io_file_create(svn_path_join(fs->path, PATH_CONFIG, pool),
@@ -1033,6 +1033,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   int format, max_files_per_dir;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
+  svn_boolean_t rep_sharing_allowed;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
@@ -1055,8 +1056,17 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
-  /* Open (and possibly create) the rep cache. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  /* Read the configuration file. */
+  SVN_ERR(svn_config_read(&ffd->config,
+                          svn_path_join(fs->path, PATH_CONFIG, pool),
+                          FALSE, fs->pool));
+  SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
+                              CONFIG_SECTION_REP_SHARING,
+                              CONFIG_OPTION_ENABLE_REP_SHARING, FALSE));
+
+  /* Open the rep cache. */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
+        && rep_sharing_allowed)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
@@ -2215,14 +2225,15 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 {
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
-  apr_file_t *f;
   svn_stream_t *stream;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_io_open_unique_file2
-          (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  /* ### do we have a directory sitting around already? we really shouldn't
+     ### have to get the dirname here. */
+  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
+                                 svn_path_dirname(final_path, pool  ),
+                                 svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 
@@ -3796,7 +3807,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_write_unique(&tmp_filename, txn_current_filename,
+  SVN_ERR(svn_io_write_unique(&tmp_filename,
+                              svn_path_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
   SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
                                      txn_current_filename, pool));
@@ -5133,7 +5145,9 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name, name, buf, strlen(buf),
+  SVN_ERR(svn_io_write_unique(&tmp_name,
+                              svn_path_dirname(name, pool),
+                              buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
   return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
@@ -5418,6 +5432,33 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
+   the same as commit_body().
+
+   XXX: If we decide to wrap other stuff with sqlite transactions, this should
+   probably be generalized and moved into libsvn_subr/sqlite.c.
+ */
+static svn_error_t *
+commit_body_rep_cache(void *baton, apr_pool_t *pool)
+{
+  struct commit_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
+  svn_error_t *err;
+
+  /* Start the sqlite transaction. */
+  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+
+  err = commit_body(baton, pool);
+
+  /* Commit or rollback the sqlite transaction. */
+  if (err)
+    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+  else
+    return svn_sqlite__transaction_commit(ffd->rep_cache.db);
+
+  return err;
+}
+
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -5425,11 +5466,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
+  return svn_fs_fs__with_write_lock(fs,
+                                    ffd->rep_cache.db ? commit_body_rep_cache :
+                                                        commit_body, 
+                                    &cb, pool);
 }
 
 svn_error_t *
@@ -5490,6 +5535,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t rep_sharing_allowed;
 
   fs->path = apr_pstrdup(pool, path);
   /* See if we had an explicitly requested pre-1.4- or pre-1.5-compatible.  */
@@ -5546,8 +5592,19 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   SVN_ERR(write_revision_zero(fs));
 
+  SVN_ERR(write_config(fs, pool));
+
+  /* Read the configuration file. */
+  SVN_ERR(svn_config_read(&ffd->config,
+                          svn_path_join(fs->path, PATH_CONFIG, pool),
+                          FALSE, fs->pool));
+  SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
+                              CONFIG_SECTION_REP_SHARING,
+                              CONFIG_OPTION_ENABLE_REP_SHARING, FALSE));
+
   /* Create the rep cache. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
+        && rep_sharing_allowed)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   /* Create the txn-current file if the repository supports
@@ -5559,8 +5616,6 @@ svn_fs_fs__create(svn_fs_t *fs,
       SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
                                  "", pool));
     }
-
-  SVN_ERR(write_config(fs, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
@@ -5962,29 +6017,32 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
                     const char *uuid,
                     apr_pool_t *pool)
 {
-  apr_file_t *uuid_file;
+  char *my_uuid;
+  apr_size_t my_uuid_len;
   const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_io_open_unique_file2(&uuid_file, &tmp_path, uuid_path,
-                                    ".tmp", svn_io_file_del_none, pool));
-
   if (! uuid)
     uuid = svn_uuid_generate(pool);
 
-  SVN_ERR(svn_io_file_write_full(uuid_file, uuid, strlen(uuid), NULL,
-                                 pool));
-  SVN_ERR(svn_io_file_write_full(uuid_file, "\n", 1, NULL, pool));
+  /* Make sure we have a copy in FS->POOL, and append a newline. */
+  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", NULL);
+  my_uuid_len = strlen(my_uuid);
 
-  SVN_ERR(svn_io_file_close(uuid_file, pool));
+  SVN_ERR(svn_io_write_unique(&tmp_path,
+                              svn_path_dirname(uuid_path, pool),
+                              my_uuid, my_uuid_len,
+                              svn_io_file_del_none, pool));
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, uuid_path,
                                      svn_fs_fs__path_current(fs, pool), pool));
 
-  ffd->uuid = apr_pstrdup(fs->pool, uuid);
+  /* Remove the newline we added, and stash the UUID. */
+  my_uuid[my_uuid_len - 1] = '\0';
+  ffd->uuid = my_uuid;
 
   return SVN_NO_ERROR;
 }

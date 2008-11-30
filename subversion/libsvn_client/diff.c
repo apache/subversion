@@ -438,6 +438,7 @@ diff_label(const char *path,
 static svn_error_t *
 diff_props_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
+                   svn_boolean_t *tree_conflicted,
                    const char *path,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
@@ -458,6 +459,8 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
 
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -668,6 +671,7 @@ static svn_error_t *
 diff_file_changed(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *content_state,
                   svn_wc_notify_state_t *prop_state,
+                  svn_boolean_t *tree_conflicted,
                   const char *path,
                   const char *tmpfile1,
                   const char *tmpfile2,
@@ -684,12 +688,15 @@ diff_file_changed(svn_wc_adm_access_t *adm_access,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2, diff_baton));
   if (prop_changes->nelts > 0)
-    SVN_ERR(diff_props_changed(adm_access, prop_state, path, prop_changes,
+    SVN_ERR(diff_props_changed(adm_access, prop_state, tree_conflicted,
+                               path, prop_changes,
                                original_props, diff_baton));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
   if (prop_state)
     *prop_state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -702,6 +709,7 @@ static svn_error_t *
 diff_file_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *content_state,
                 svn_wc_notify_state_t *prop_state,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 const char *tmpfile1,
                 const char *tmpfile2,
@@ -724,7 +732,8 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
      user see that *something* happened. */
   diff_cmd_baton->force_empty = TRUE;
 
-  SVN_ERR(diff_file_changed(adm_access, content_state, prop_state, path,
+  SVN_ERR(diff_file_changed(adm_access, content_state, prop_state,
+                            tree_conflicted, path,
                             tmpfile1, tmpfile2,
                             rev1, rev2,
                             mimetype1, mimetype2,
@@ -739,6 +748,7 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
                             const char *path,
                             const char *tmpfile1,
                             const char *tmpfile2,
@@ -750,7 +760,7 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   /* We don't list all the deleted properties. */
-  return diff_file_changed(adm_access, state, NULL, path,
+  return diff_file_changed(adm_access, state, NULL, tree_conflicted, path,
                            tmpfile1, tmpfile2,
                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
                            mimetype1, mimetype2,
@@ -763,6 +773,7 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
                           svn_wc_notify_state_t *state,
+                          svn_boolean_t *tree_conflicted,
                           const char *path,
                           const char *tmpfile1,
                           const char *tmpfile2,
@@ -775,6 +786,8 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
 
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   return file_printf_from_utf8
           (diff_cmd_baton->outfile,
@@ -783,13 +796,11 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
            path, equal_string);
 }
 
-/* An svn_wc_diff_callbacks3_t function.
-   For now, let's have 'svn diff' send feedback to the top-level
-   application, so that something reasonable about directories and
-   propsets gets printed to stdout. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 diff_dir_added(svn_wc_adm_access_t *adm_access,
                svn_wc_notify_state_t *state,
+               svn_boolean_t *tree_conflicted,
                const char *path,
                svn_revnum_t rev,
                const char *copyfrom_path,
@@ -798,8 +809,11 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
 {
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
-  /* ### todo:  send feedback to app */
+  /* Do nothing. */
+
   return SVN_NO_ERROR;
 }
 
@@ -807,11 +821,16 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_dir_deleted(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *state,
+                 svn_boolean_t *tree_conflicted,
                  const char *path,
                  void *diff_baton)
 {
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
 
   return SVN_NO_ERROR;
 }
@@ -819,22 +838,36 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 diff_dir_opened(svn_wc_adm_access_t *adm_access,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 svn_revnum_t rev,
                 void *diff_baton)
 {
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
+
   return SVN_NO_ERROR;
 }
 
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 diff_dir_closed(svn_wc_adm_access_t *adm_access,
-                svn_wc_notify_state_t *state,
+                svn_wc_notify_state_t *contentstate,
+                svn_wc_notify_state_t *propstate,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 void *diff_baton)
 {
-  if (state)
-    *state = svn_wc_notify_state_unknown;
+  if (contentstate)
+    *contentstate = svn_wc_notify_state_unknown;
+  if (propstate)
+    *propstate = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
 
   return SVN_NO_ERROR;
 }
@@ -1411,9 +1444,9 @@ diff_repos_wc(const char *path1,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
                                   reporter, report_baton,
-                                  FALSE, depth, (! server_supports_depth),
+                                  FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 

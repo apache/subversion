@@ -74,7 +74,7 @@
  * svn_wc_conflict_description_t.
  */
 
-/* 
+/*
  * When multiple tree conflict descriptions are present in an entry,
  * they are separated by the following character:
  */
@@ -86,7 +86,7 @@
  *
  *   foo.c:file:update:deleted:edited|bar.h:file:update:edited:deleted
  */
- 
+
 /*
  * If the field separator occurs in the victim_path, it must be escaped
  * with the following character:
@@ -94,7 +94,7 @@
 
 #define SVN_WC__TREE_CONFLICT_ESCAPE_CHAR '\\'
 
-/* 
+/*
  * Likewise, if a description separator character is present in the
  * victim_path, it must also escaped. A literal escape character
  * occurring in the victim_path must also be escaped.
@@ -103,7 +103,7 @@
  * also apply, but are transparent to the tree conflicts code.
  */
 
-/* 
+/*
  * The other fields have the following mappings to character strings:
  *
  *  node_kind:
@@ -141,23 +141,43 @@
 #define SVN_WC__CONFLICT_REASON_OBSTRUCTED "obstructed"
 
 
-/* Like svn_wc_add_tree_conflict_data(), but append to the log accumulator
+/* Like svn_wc__add_tree_conflict(), but append to the log accumulator
  * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
  * This function is meant to be used in the working copy library where
  * log accumulators are usually readily available.
+ *
+ * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
+ * POOL, else append to the existing stringbuf there.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
-svn_wc__loggy_add_tree_conflict_data(
-  svn_stringbuf_t *log_accum,
-  const svn_wc_conflict_description_t *conflict,
-  svn_wc_adm_access_t *adm_access,
-  apr_pool_t *pool);
+svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
+                                const svn_wc_conflict_description_t *conflict,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
 
-/**
- * Read tree conflict descriptions from @a dir_entry.
+/* Like svn_wc__del_tree_conflict(), but append to the log accumulator
+ * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
+ * This function is meant to be used in the working copy library where
+ * log accumulators are usually readily available.
+ *
+ * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
+ * POOL, else append to the existing stringbuf there.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
+                                const char *victim_path,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
+
+/*
+ * Read tree conflict descriptions from DIR_ENTRY.
  * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by @a conflicts.
- * @a dir_path is the path to the WC directory whose conflicts are being read.
+ * objects to the array pointed to by CONFLICTS.
+ * DIR_PATH is the path to the WC directory whose conflicts are being read.
  * Do all allocations in @a pool.
  *
  * @since New in 1.6.
@@ -169,10 +189,12 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                        apr_pool_t *pool);
 
 /*
- * Write tree conflicts (svn_wc_conflict_description_t)
- * in CONFLICTS to DIR_ENTRY.
+ * Write tree conflict descriptions to DIR_ENTRY.
+ * Replace the entry's list of tree conflicts with those in CONFLICTS, an
+ * array of zero or more pointers to svn_wc_conflict_description_t objects.
+ * Do all allocations in POOL.
  *
- * This function is used in a unit test in tests/libsvn_wc.
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
@@ -181,13 +203,15 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
 
 /*
  * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
- * conflicts) for a conflict with the given victim_path.
+ * conflicts) for a conflict with the given VICTIM_BASENAME.
  *
  * This function is used in a unit test in tests/libsvn_wc.
+ *
+ * @since New in 1.6.
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path,
+                             const char *victim_basename,
                              apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_WC_TREE_CONFLICTS_H */

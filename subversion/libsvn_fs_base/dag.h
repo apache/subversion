@@ -537,8 +537,8 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
 
 /* Index NODE's backing data representations by their checksum.  Do
    this as part of TRAIL.  Use POOL for allocations. */
-svn_error_t *svn_fs_base__dag_index_checksums(dag_node_t *node, 
-                                              trail_t *trail, 
+svn_error_t *svn_fs_base__dag_index_checksums(dag_node_t *node,
+                                              trail_t *trail,
                                               apr_pool_t *pool);
 
 

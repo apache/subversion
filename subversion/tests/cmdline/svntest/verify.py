@@ -182,7 +182,7 @@ class AnyOutput(ExpectedOutput):
 
   def display_differences(self, message, label, actual):
     if message:
-      print message
+      print(message)
 
 class RegexOutput(ExpectedOutput):
   def __init__(self, output, match_all=True, is_reg_exp=True):
@@ -255,12 +255,12 @@ class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
 def display_trees(message, label, expected, actual):
   'Print two trees, expected and actual.'
   if message is not None:
-    print message
+    print(message)
   if expected is not None:
-    print 'EXPECTED', label + ':'
+    print('EXPECTED %s:' % label)
     tree.dump_tree(expected)
   if actual is not None:
-    print 'ACTUAL', label + ':'
+    print('ACTUAL %s:' % label)
     tree.dump_tree(actual)
 
 
@@ -270,7 +270,7 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
   with LABEL) followed by ACTUAL (also labeled with LABEL).
   Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
-    print message
+    print(message)
   if expected is not None:
     output = 'EXPECTED %s' % label
     if expected_is_regexp:
@@ -278,13 +278,13 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
     if expected_is_unordered:
       output += ' (unordered)'
     output += ':'
-    print output
+    print(output)
     for x in expected:
       sys.stdout.write(x)
     if expected_is_regexp:
       sys.stdout.write('\n')
   if actual is not None:
-    print 'ACTUAL %s:' % label
+    print('ACTUAL %s:' % label)
     for x in actual:
       sys.stdout.write(x)
 

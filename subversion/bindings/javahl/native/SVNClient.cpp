@@ -1152,70 +1152,6 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
-#if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
-
-/* Set *PROVIDER according to PROVIDER_NAME and PROVIDER_TYPE,
- * allocating it in POOL.
- *
- * Valid PROVIDER_NAME values are: "gnome_keyring" and "kwallet"
- * (they correspond to the loadable libraries named, e.g.,
- * "libsvn_auth_gnome_keyring-1.so.0", etc.)
- *
- * Valid PROVIDER_TYPE values are: "simple" and "ssl_client_cert_pw"
- * (they correspond to function names found in the loaded library,
- * such as "svn_auth_get_gnome_keyring_simple_provider", etc).
- *
- * What actually happens is we load the library and invoke the
- * appropriate provider function to supply *PROVIDER, like so:
- *
- *    svn_auth_get_<name>_<type>_provider(PROVIDER, POOL);
- *
- * If the library load fails, return an error (with the effect on
- * *PROVIDER undefined).  But if the symbol is simply not found in the
- * library, or if the PROVIDER_TYPE is unrecognized, set *PROVIDER to
- * NULL and return success.
- */
-static svn_error_t *
-get_auth_provider(svn_auth_provider_object_t **provider,
-                  const char *provider_name,
-                  const char *provider_type,
-                  apr_pool_t *pool)
-{
-  apr_dso_handle_t *dso;
-  apr_dso_handle_sym_t symbol;
-  const char *libname;
-  const char *funcname;
-  *provider = NULL;
-  libname = apr_psprintf(pool,
-                         "libsvn_auth_%s-%d.so.0",
-                         provider_name,
-                         SVN_VER_MAJOR);
-  funcname = apr_psprintf(pool,
-                          "svn_auth_get_%s_%s_provider",
-                          provider_name, provider_type);
-  SVN_ERR(svn_dso_load(&dso, libname));
-  if (dso)
-    {
-      if (! apr_dso_sym(&symbol, dso, funcname))
-        {
-          if (strcmp(provider_type, "simple") == 0)
-            {
-              svn_auth_simple_provider_func_t func;
-              func = (svn_auth_simple_provider_func_t) symbol;
-              func(provider, pool);
-            }
-          else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
-            {
-              svn_auth_ssl_client_cert_pw_provider_func_t func;
-              func = (svn_auth_ssl_client_cert_pw_provider_func_t) symbol;
-              func(provider, pool);
-            }
-        }
-    }
-  return SVN_NO_ERROR;
-}
-#endif
-
 svn_client_ctx_t *SVNClient::getContext(const char *message)
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -1229,55 +1165,70 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
-#if defined(WIN32) && !defined(__MINGW32__)
-    svn_auth_get_windows_simple_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
-#ifdef SVN_HAVE_KEYCHAIN_SERVICES
-    svn_auth_get_keychain_simple_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-    svn_auth_get_keychain_ssl_client_cert_pw_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
-#ifdef SVN_HAVE_GNOME_KEYRING
-    SVN_JNI_ERR(get_auth_provider(&provider, "gnome_keyring", "simple",
-                                  pool), NULL);
+    /* Windows auth providers */
+    svn_auth_get_platform_specific_provider(&provider, "windows",
+                                            "simple", pool);
+
     if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-    SVN_JNI_ERR(get_auth_provider(&provider, "gnome_keyring",
-                                  "ssl_client_cert_pw", pool), NULL);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+    /* Keychain auth providers */
+    svn_auth_get_platform_specific_provider(&provider, "keychain",
+                                            "simple", pool);
+
     if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-#endif
-#ifdef SVN_HAVE_KWALLET
-    SVN_JNI_ERR(get_auth_provider(&provider, "kwallet", "simple",  pool),
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+    svn_auth_get_platform_specific_provider(&provider, "keychain",
+                                            "ssl_client_cert_pw", pool);
+
+    if (provider)
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+    /* Gnome Keyring auth providers */
+    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                        "gnome_keyring",
+                                                        "simple", pool),
                 NULL);
+
     if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-    SVN_JNI_ERR(get_auth_provider(&provider, "kwallet", "ssl_client_cert_pw",
-                                  pool), NULL);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                        "gnome_keyring",
+                                                        "ssl_client_cert_pw",
+                                                        pool), NULL);
+
     if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-#endif
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+    /* Kwallet auth providers */
+    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider, "kwallet",
+                                                        "simple", pool), NULL);
+
+    if (provider)
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider, "kwallet",
+                                                        "ssl_client_cert_pw",
+                                                        pool), NULL);
+
+    if (provider)
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
     svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_username_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-#if defined(WIN32) && !defined(__MINGW32__)
-    svn_auth_get_windows_ssl_server_trust_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
+    svn_auth_get_platform_specific_provider(&provider, "windows",
+                                            "ssl_server_trust", pool);
+
+    if (provider)
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
     svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_ssl_client_cert_file_provider(&provider, pool);

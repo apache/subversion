@@ -98,7 +98,7 @@ svn_fs_fs__dir_entries_serialize(char **data,
                                  void *in,
                                  apr_pool_t *pool);
 
-/* Deserialize a directory contents hash. 
+/* Deserialize a directory contents hash.
    Implements svn_cache__deserialize_func_t */
 svn_error_t *
 svn_fs_fs__dir_entries_deserialize(void **out,
@@ -212,14 +212,6 @@ svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
-
-/* Sets *CONFIG to the parsed version of FS's fsfs.conf, allocated
-   in FS->pool.  POOL is used for temporary allocations. */
-svn_error_t *
-svn_fs_fs__get_config(svn_config_t **config,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool);
-
 
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */

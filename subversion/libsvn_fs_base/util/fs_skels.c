@@ -303,7 +303,7 @@ is_valid_node_revision_skel(skel_t *skel)
       if (len > 4)
         return FALSE;
     }
-  
+
   return TRUE;
 }
 
@@ -710,12 +710,12 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
   else
     {
       /* This is a 2-tuple with a data rep key and a uniquifier. */
-      noderev->data_key = 
-        apr_pstrmemdup(pool, 
+      noderev->data_key =
+        apr_pstrmemdup(pool,
                        skel->children->next->next->children->data,
                        skel->children->next->next->children->len);
-      noderev->data_key_uniquifier = 
-        apr_pstrmemdup(pool, 
+      noderev->data_key_uniquifier =
+        apr_pstrmemdup(pool,
                        skel->children->next->next->children->next->data,
                        skel->children->next->next->children->next->len);
     }
@@ -1100,24 +1100,24 @@ prepend_checksum(skel_t *skel,
   switch (checksum->kind)
     {
     case svn_checksum_md5:
-      svn_fs_base__prepend(svn_fs_base__mem_atom(checksum->digest, 
+      svn_fs_base__prepend(svn_fs_base__mem_atom(checksum->digest,
                                                  APR_MD5_DIGESTSIZE, pool),
                            checksum_skel);
       svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool), checksum_skel);
       break;
-      
+
     case svn_checksum_sha1:
-      svn_fs_base__prepend(svn_fs_base__mem_atom(checksum->digest, 
+      svn_fs_base__prepend(svn_fs_base__mem_atom(checksum->digest,
                                                  APR_SHA1_DIGESTSIZE, pool),
                            checksum_skel);
       svn_fs_base__prepend(svn_fs_base__str_atom("sha1", pool), checksum_skel);
       break;
-      
+
     default:
       return skel_err("checksum");
     }
   svn_fs_base__prepend(checksum_skel, skel);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1137,7 +1137,7 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
   /* SHA1 */
   if ((format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT) && rep->sha1_checksum)
     prepend_checksum(header_skel, rep->sha1_checksum, pool);
-      
+
   /* MD5 */
   {
     svn_checksum_t *md5_checksum = rep->md5_checksum;
@@ -1338,7 +1338,7 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
     {
       /* Build a 2-tuple with a rep key and uniquifier. */
       skel_t *data_key_skel = svn_fs_base__make_empty_list(pool);
-      
+
       /* DATA-KEY-UNIQID */
       svn_fs_base__prepend(svn_fs_base__str_atom(noderev->data_key_uniquifier,
                                                  pool),

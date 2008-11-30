@@ -94,6 +94,11 @@ svn_xml_is_xml_safe(const char *data, apr_size_t len)
 
 /*** XML escaping. ***/
 
+/* ### ...?
+ *
+ * If *OUTSTR is @c NULL, set *OUTSTR to a new stringbuf allocated
+ * in POOL, else append to the existing stringbuf there.
+ */
 static void
 xml_escape_cdata(svn_stringbuf_t **outstr,
                  const char *data,

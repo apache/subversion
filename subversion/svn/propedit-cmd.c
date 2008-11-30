@@ -265,7 +265,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                         base_rev, NULL, opt_state->revprop_table,
                                         ctx, subpool);
               if (ctx->log_msg_func3)
-                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, 
+                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));
               else if (err)
                 return err;

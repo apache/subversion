@@ -1217,9 +1217,10 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Owner: %s\n"), lock->owner));
       SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
       SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
-      SVN_ERR(svn_cmdline_printf(pool, (comment_lines != 1)
-                                 ? _("Comment (%i lines):\n%s\n\n")
-                                 : _("Comment (%i line):\n%s\n\n"),
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 Q_("Comment (%i line):\n%s\n\n",
+                                    "Comment (%i lines):\n%s\n\n",
+                                    comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }

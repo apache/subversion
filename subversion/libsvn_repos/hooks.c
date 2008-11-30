@@ -170,7 +170,7 @@ run_hook_cmd(svn_string_t **result,
              apr_pool_t *pool)
 {
   apr_file_t *read_errhandle, *write_errhandle, *null_handle;
-  apr_file_t *read_outhandle, *write_outhandle;  
+  apr_file_t *read_outhandle, *write_outhandle;
   apr_status_t apr_err;
   svn_error_t *err;
   apr_proc_t cmd_proc;
@@ -291,19 +291,17 @@ run_hook_cmd(svn_string_t **result,
 }
 
 
-/* Create a temporary file F that will automatically be deleted when it is
-   closed.  Fill it with VALUE, and leave it open and rewound, ready to be
-   read from. */
+/* Create a temporary file F that will automatically be deleted when the
+   pool is cleaned up.  Fill it with VALUE, and leave it open and rewound,
+   ready to be read from. */
 static svn_error_t *
 create_temp_file(apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
 {
-  const char *dir;
   apr_off_t offset = 0;
 
-  SVN_ERR(svn_io_temp_dir(&dir, pool));
-  SVN_ERR(svn_io_open_unique_file2(f, NULL,
-                                   svn_path_join(dir, "hook-input", pool),
-                                   "", svn_io_file_del_on_close, pool));
+  SVN_ERR(svn_io_open_unique_file3(f, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool));
   SVN_ERR(svn_io_file_write_full(*f, value->data, value->len, NULL, pool));
   return svn_io_file_seek(*f, APR_SET, &offset, pool);
 }
@@ -376,7 +374,7 @@ hook_symlink_error(const char *hook)
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
-                              apr_array_header_t *capabilities,
+                              const apr_array_header_t *capabilities,
                               apr_pool_t *pool)
 {
   const char *hook = svn_repos_start_commit_hook(repos, pool);
@@ -420,7 +418,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
 /* Set *HANDLE to an open filehandle for a temporary file (i.e.,
    automatically deleted when closed), into which the LOCK_TOKENS have
    been written out in the format described in the pre-commit hook
-   template.  
+   template.
 
    LOCK_TOKENS is as returned by svn_fs__access_get_lock_tokens().
 
@@ -437,7 +435,7 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
     {
       void *val;
       const char *path, *token;
-        
+
       apr_hash_this(hi, (void *)&token, NULL, &val);
       path = val;
       svn_stringbuf_appendstr(lock_str,
@@ -593,7 +591,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
                                      svn_revnum_t rev,
                                      const char *author,
                                      const char *name,
-                                     svn_string_t *old_value,
+                                     const svn_string_t *old_value,
                                      char action,
                                      apr_pool_t *pool)
 {
@@ -682,7 +680,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 
 svn_error_t  *
 svn_repos__hooks_post_lock(svn_repos_t *repos,
-                           apr_array_header_t *paths,
+                           const apr_array_header_t *paths,
                            const char *username,
                            apr_pool_t *pool)
 {
@@ -756,7 +754,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
 
 svn_error_t  *
 svn_repos__hooks_post_unlock(svn_repos_t *repos,
-                             apr_array_header_t *paths,
+                             const apr_array_header_t *paths,
                              const char *username,
                              apr_pool_t *pool)
 {

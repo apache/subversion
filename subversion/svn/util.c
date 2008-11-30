@@ -256,7 +256,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                                const char *editor_cmd,
                                const char *base_dir /* UTF-8! */,
                                const svn_string_t *contents /* UTF-8! */,
-                               const char *prefix,
+                               const char *filename,
                                apr_hash_t *config,
                                svn_boolean_t as_text,
                                const char *encoding,
@@ -318,10 +318,12 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 
   /*** From here on, any problems that occur require us to cd back!! ***/
 
-  /* Ask the working copy for a temporary file that starts with
-     PREFIX. */
-  err = svn_io_open_unique_file2(&tmp_file, &tmpfile_name,
-                                 prefix, ".tmp", svn_io_file_del_none, pool);
+  /* Ask the working copy for a temporary file named FILENAME-something. */
+  err = svn_io_open_uniquely_named(&tmp_file, &tmpfile_name,
+                                   "" /* dirpath */,
+                                   filename,
+                                   ".tmp",
+                                   svn_io_file_del_none, pool, pool);
 
   if (err && (APR_STATUS_IS_EACCES(err->apr_err) || err->apr_err == EROFS))
     {
@@ -339,9 +341,11 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
             (apr_err, _("Can't change working directory to '%s'"), base_dir);
         }
 
-      err = svn_io_open_unique_file2(&tmp_file, &tmpfile_name,
-                                     prefix, ".tmp",
-                                     svn_io_file_del_none, pool);
+      err = svn_io_open_uniquely_named(&tmp_file, &tmpfile_name,
+                                       "" /* dirpath */,
+                                       filename,
+                                       ".tmp",
+                                       svn_io_file_del_none, pool, pool);
     }
 
   if (err)
@@ -579,7 +583,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      commit error chain, too. */
 
   err = svn_error_createf(commit_err->apr_err, NULL,
-                          "   '%s'", 
+                          "   '%s'",
                           svn_path_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,
@@ -661,7 +665,7 @@ svn_cl__get_log_message(const char **log_msg,
 
       /* Trim incoming messages of the EOF marker text and the junk
          that follows it.  */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data, 
+      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data,
                                 EDITOR_EOF_PREFIX);
 
       /* Make a string from a stringbuf, sharing the data allocation. */

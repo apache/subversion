@@ -115,7 +115,7 @@ svn_fs_bdb__write_rep(svn_fs_t *fs,
   skel_t *skel;
 
   /* Convert from native type to skel. */
-  SVN_ERR(svn_fs_base__unparse_representation_skel(&skel, rep, 
+  SVN_ERR(svn_fs_base__unparse_representation_skel(&skel, rep,
                                                    bfd->format, pool));
 
   /* Now write the record. */

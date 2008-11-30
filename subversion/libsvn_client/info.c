@@ -268,8 +268,8 @@ info_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access, path,
                                FALSE /* read-only */, 0 /* levels */,
                                NULL, NULL, pool));
-      SVN_ERR(svn_wc_get_tree_conflict(&info->tree_conflict, path, adm_access, 
-                                       pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, path, adm_access,
+                                        pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
@@ -297,8 +297,8 @@ info_error_handler(const char *path,
       SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
                                     svn_path_dirname(path, pool),
                                     FALSE, 0, NULL, NULL, pool));
-      SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict, path, adm_access,
-                                       pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access,
+                                        pool));
 
       if (tree_conflict)
         {

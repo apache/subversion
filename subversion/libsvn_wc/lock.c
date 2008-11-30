@@ -2,7 +2,7 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -428,7 +428,7 @@ pool_cleanup_child(void *p)
   return APR_SUCCESS;
 }
 
-/* Allocate from POOL, intialise and return an access baton. TYPE and PATH
+/* Allocate from POOL, initialise and return an access baton. TYPE and PATH
    are used to initialise the baton.  */
 static svn_wc_adm_access_t *
 adm_access_alloc(enum svn_wc__adm_access_type type,
@@ -698,6 +698,11 @@ do_open(svn_wc_adm_access_t **adm_access,
           if (entry->kind != svn_node_dir
               || ! strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
+
+          /* Also skip the excluded subdir. */
+          if (entry->depth == svn_depth_exclude)
+            continue;
+
           entry_path = svn_path_join(path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */
@@ -1595,7 +1600,7 @@ prune_deleted(svn_wc_adm_access_t *adm_access,
           if ((entry->deleted
                && (entry->schedule != svn_wc_schedule_add)
                && (entry->schedule != svn_wc_schedule_replace))
-              || entry->absent)
+              || entry->absent || (entry->depth == svn_depth_exclude))
             break;
         }
 
@@ -1618,7 +1623,8 @@ prune_deleted(svn_wc_adm_access_t *adm_access,
 
           apr_hash_this(hi, &key, NULL, &val);
           entry = val;
-          if (((entry->deleted == FALSE) && (entry->absent == FALSE))
+          if (((entry->deleted == FALSE) && (entry->absent == FALSE)
+               && (entry->depth != svn_depth_exclude))
               || (entry->schedule == svn_wc_schedule_add)
               || (entry->schedule == svn_wc_schedule_replace))
             {
