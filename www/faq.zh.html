@@ -1,0 +1,2541 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion FAQ(常见问题解答)</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1>Subversion FAQ(常见问题解答)</h1>
+
+
+<div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
+<h2>问题列表</h2>
+<p>
+<a href="http://subversion.tigris.org/faq.html">English</a>
+</p>
+
+<p>本文根据原文r33959，由<a href="http://www.subversion.org.cn">Subversion中文站</a>的中文化翻译小组翻译，欢迎各位参与翻译工作，加入地址：<a href="http://code.google.com/p/svncndoc/">http://code.google.com/p/svncndoc/</a>。参与翻译的志愿者包括<a href="http://rocksun.cn">rocksun</a>、akeybupt2004、<a href="http://www.devespace.cn">zhaozhi</a>和jiaqifeng。
+
+</p>
+<h4>常见问题：</h4>
+<ul>
+<li><a href="#why">为什么会有这样一个项目？</a></li>
+<li><a href="#collab">Subversion是私有软件吗?我听说它是属于CollabNet公司的。</a></li> 
+<li><a href="#stable">Subversion用在我的项目上是否足够稳定？</a></li>
+<li><a href="#interop">Subversion的客户端/服务器在协同工作时的策略是怎样的？ </a></li>
+<li><a href="#portability">Subversion可以运行在哪些操作系统上？
+ </a></li> 
+<li><a href="#filesystem">所有它的一切是否是一种新的文件系统？比方说ext2文件系统？</a></li> 
+<li><a href="#server-requirements">为了运行一个Subversion服务器，哪些硬件是我所需要的？</a></li>                                              
+<li><a href="#apache-extension">我听说Subversion是Apache项目的扩展？我是否需要Apache来做服务器呢？</a></li> 
+<li><a href="#need-apache">是否意味着我必须首先安装Apache才能使用Subversion？</a></li> 
+<li><a href="#multiple-apachim">我现在所运行的是Apache 1.x，但是我不能仅仅为了支持Subversion版本库而将其转换成Apache 2.0。这是否意味着我不能使用Subversion服务器？</a></li>  
+<li><a href="#feature-x">为什么不象SCM系统Y那样来做X？</a></li>
+<li><a href="#globalrev">为什么全部的库都使用相同的修订版本号码？我想让我的每一个工程都有其自己的修订版本号码。</a></li>
+<li><a href="#changesets">Subversion有没有变更集？</a></li>
+<li><a href="#release">下一个版本什么时候发布？</a></li>
+<li><a href="#symlinks">Subversion是否支持符号链（symlinks）？</a></li>
+<li><a href="#logo">我需要一个高分辨率的Subversion Logo，从哪里可以得到它呢？
+</a></li>
+<li><a href="#more-information">我还有些其他的问题，我从哪里可以得到更多的相关信息？</a></li>  
+<li><a href="#moderation">为什么我的邮件没有显示在邮件列表上？</a></li>
+</ul>
+
+<h4>如何使用：</h4>
+<ul>
+<li><a href="#co-svn">怎么样检出Subversion版本库里的代码？</a></li>
+<li><a href="#repository">怎么样创建一个版本库？怎样将数据导入到版本库中？</a></li> 
+<li><a href="#cvs2svn">怎么样将已经存在于CVS版本库中的代码转换并导入到Subversion版本库中？</a></li>
+    <li><a href="#proxy">我必须通过代理访问网络，我该怎么办？</a></li>
+<li><a href="#paranoid">我的管理员不想让我有一个Subversion的HTTP服务器，那么如何做我才可以远程使用？</a></li> 
+<li><a href="#multi-proj">如何在同一个版本库里管理几个不同的项目？</a></li>
+<li><a href="#multi-merge">我如何合并两个完全分开的版本库？</a></li>
+<li><a href="#nfs">我必须在NFS服务器上存储版本库/工作拷贝吗？</a></li>
+<li><a href="#bdblogs">为何我的版本库占去这么多的磁盘空间？</a></li>
+<li><a href="#reposperms">我如何恰当的设置我的版本库的权限呢？</a></li>
+<li><a href="#readonly">为何只读的操作仍然需要版本库的写访问？</a></li>
+<li><a href="#removal">如何完全的从版本库历史中删除一个文件？</a></li>
+<li><a href="#change-log-msg">一个版本提交之后，如何修改其日志信息？</a></li>
+<li><a href="#patch">怎么样向Subversion提交一个补丁？</a></li>
+<li><a href="#in-place-import">我如何进行“iplace”的导入（例如：向Subversion添加一个目录结构，而原先的数据直接成为工作拷贝）？</a></li> 
+<li><a href="#dumpload">人们在讨论升级Subversion时所说的“转储/加载（dump/load）”是什么？</a></li> 
+<li><a href="#sspi">如何设置客户端通过使用SSPI认证的Windows域控制器进行认证？</a></li>
+<li><a href="#adm-dir">我不喜欢“.svn”这样的目录名字，而喜欢“SVN”或者其他一些目录名，我该如何改变呢？</a></li>
+<li><a href="#case-change">如何更改一个文件名的大小写？</a></li>
+<li><a href="#merge-using-tags">我不能象CVS那样使用标签将一个分支的变更合并到主干（trunk），可以吗？</a></li>
+<li><a href="#version-value-in-source">为什么$Revision$关键字不是我预想的那样？它替换的是文件最后修改的修订版本，但有时候我希望它能替换文件的当前修订版本。</a></li>
+<li><a href="#log-in-source">Subversion是否有一个功能类似CVS的$Log$的关键字呢？</a></li>
+<li><a href="#ignore-commit">在我的工程里有一个文件，每个人都必须改变它，但是我不希望他们本地的修改被提交，如何让'svn commit'忽略这个文件？</a></li>
+<li><a href="#ssh-auth-cache">当我通过svn+ssh来访问一个版本库的时候，我的密码没有被缓存在~/.subversion/auth/，我应该如何避免每次都要键入密码？</a></li>
+<li><a href="#ssh-svnserve-location">我的<tt>svnserve</tt>二进制程序不在我的用户的默认<tt>路径</tt>中，他们使用svn+ssh，我不知道怎样修改他们的路径来让他们运行<tt>svnserve</tt>。</a></li>
+<li><a href="#ssh-authorized-keys-trick">
+我希望允许通过svn+ssh://来访问版本库，但我很忧虑。我讨厌为每个用户分配一个登录帐号的方法，那样我会为他们是否被允许访问我的机器感到担心。</a></li>
+<li><a href="#auto-props">我怎么才能为版本库的所有文件设置一个的属性？另外，我该如何确保每个添加到版本库里的新文件都有这些属性？</a></li>
+<li><a href="#svn-editor">我如何处理编辑器路径中的空白？另外，如何定义编辑器的命令行选项？</a></li>
+<li><a href="#divining-bdb-version">如何确定版本库正在使用的Berkeley DB的版本？</a></li>
+<li><a href="#website-auto-update">我在版本库中管理了一个网站，如何才能实现每次提交之后站点自动更新？</a></li>
+<li><a href="#single-file-checkout">我如何检出一个单独的文件？</a></li>
+<li><a href="#wc-change-detection">如何在工作拷贝执行完添加、删除、拷贝和重命名操作之后检测这些操作？</a></li>
+<li><a href="#svnserve-win-service">在Windows上如何将svnserve当作服务来运行？</a></li>
+<li><a href="#bdb-fsfs-convert">如何转换我的版本库，从BDB到FSFS，或者从FSFS到BDB？</a></li>
+<li><a href="#binary-files">版本库如何处理二进制文件？</a></li>
+<li><a href="#terse-diff">如何让<tt>svn diff</tt>仅显示被改变的文件的名字，而不是连内容也显示出来？</a></li>
+<li>
+  <a href="#sorry-no-globbing">我能否用通配符或者点符号来一次性移动多个文件？</a>
+</li>
+<li><a href="#vendor-branch">我如何用Subversion维护一个第三方不断修正的软件呢？("供方分支")？</a></li>
+</ul>
+
+<h4>疑难解答：</h4>
+<ul>
+<li><a href="#stuck-bdb-repos">我的版本库经常看起来卡住了，一直报一个需要重新恢复(DB_RUNRECOVERY)的错误，怎么会导致这个问题？
+    </a></li>
+<li><a href="#bdb-recovery">每次我想访问我的版本库，进程就会挂起。我的版本库坏掉了吗？</a></li>
+<li><a href="#bdb-cannot-allocate-memory">我的版本库一直报告错误"Cannot allocate memory"，我该怎么办？</a></li>
+<li><a href="#wedged-wc">每当我试图运行一个svn命令时，都会提示我的工作拷贝已经被锁定了，是我的工作拷贝坏掉了吗？</a></li>
+<li><a href="#wc-out-of-date">我试图去提交，但是Subversion提示我的工作拷贝已经过时。</a></li>
+<li><a href="#obstructed-add">我为项目贡献了一个补丁，而这个补丁添加了一个新文件，现在<tt>svn update</tt>不能工作了。</a></li>
+<li><a href="#unrecognized-url-error">我刚刚编译了分发二进制程序，但是当我试图检出版本库时，我得到一个错误“Unrecognized URL scheme”。这是怎么回事呢？</a></li>
+<li><a href="#db-recover">当我查找或打开一个版本库时出现错误，但是我知道我版本库URL是正确的，哪里出错了？</a></li> 
+<li><a href="#configure-sed-error">当我运行‘<tt>configure</tt>’命令时，出现一些错误<tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>，这是怎么回事？</a></li>
+<li><a href="#windows-msvc-build">我在Windows下用MSVC++6.0构建Subversion时候有些麻烦，我该怎么办？</a></li>
+<li><a href="#windows-drive-letter">如何在file:协议的URL中指定Windows盘符？<tt>file:</tt> URL?</a></li>
+<li><a href="#write-over-dav">我在通过网络对Subersion版本库进行写操作的时候有些麻烦。</a></li>
+<li><a href="#vs-asp-net">VS.NET/ASP.NET在处理".svn"目录名时好像有些问题，我该怎么办？</a></li>
+<li><a href="#windows-xp-server">在Windows XP下，Subversion服务器有时候会发布一些错误数据，真的是这样吗？</a></li>  
+<li><a href="#net-trace">在Subversion服务器和客户端之间进行交互时，跟踪网络的最好方法是什么？</a></li>
+<li><a href="#revert">为什么<tt>svn revert</tt>要求有一个明确的目标？为什么它默认不是递归执行的呢？这与所有其他的子命令都不同。</a></li>
+<li><a href="#db3db4">当我启动Apache时，mod_dav_svn报告"bad database version"，它发现的是db-3.X，而不是db-4.X。</a></li>
+<li><a href="#redhat-db">在Red Hat 9 上，我得到一个"Function not implemented"错误，一切都停止工作。我该如何修正它呢？</a></li>
+<li><a href="#no-author">为什么在文件在通过Apache（ra_dav）被提交和导入时，SVN的日志说"(no author)"？</a></li>
+<li><a href="#windows-access-denied">我在Windows平台上偶尔会得到一个"Access Denied"错误，它的发生好像没有什么规律，为什么呢？</a></li>
+<li><a href="#freebsd-hang">在FreeBSD上，某些操作(尤其是svnadmin create)有时候会被挂起。为什么？</a></li>
+<li><a href="#http-301-error">我可以从一个WEB浏览器上查看我的版本库，但是在执行'svn checkout' 时发生一个错误："301 Moved Permanently"。那个地方出错了？</a></li>
+<li><a href="#digest-auth">为什么HTTP的Digest认证不能工作？</a></li>
+<li><a href="#xlc-compile">在AIX上通过xlc编译文件，出现了一些编译错误？怎么回事呢？</a></li>
+<li><a href="#nonrecursive-checkout">我用非递归方式（通过-N选项）检出了一个目录，现在我想让某个子目录“出现”，但是<tt>svn up subdir</tt>不起作用。</a></li>
+<li><a href="#mod_dav_svn-win32">我试图在Win32平台Apache服务器上使用mod_dav_svn，但是我得到找不到module的错误，而mod_dav_svn.so文件确实处在<tt>\Apache\modules</tt>下。</a></li>
+<li><a href="#hook-debugging">为什么我的版本库钩子不工作？</a></li>
+<li><a href="#diff-cmd">为什么我的--diff-cmd会有关于‘-u’的报错，我想用--extensions去覆盖它，但是不起作用。</a></li>
+<li><a href="#plaintext-passwords">啊！我发现我的Subversion客户端在磁盘上以纯文本的形式缓存了密码！啊！</a></li>
+<li><a href="#bdb41-tabletype-bug">我得到一个错误"svn: bdb: call
+    implies an access method which is inconsistent with previous
+    calls"。我该如何修正它呢？</a></li>
+<li><a href="#hotcopy-large-repos">我无法热备份我的版本库，当文件大于2Gb时svnadmin会出错。</a></li>
+<li><a href="#hidden-log">我看不到我刚刚提交的文件的日志记录，为什么呢？</a></li>
+<li><a href="#bdb43-upgrade">升级到Berkeley DB 4.3或更新的版本之后，版本库出错了。</a></li>
+<li><a href="#tiger-apr-0.9.6">当我通过http://从MacOS X 10.4 (Tiger)的平台上检出版本库的时候，为什么偶尔会得到一些不一致的错误？</a></li>
+<li><a href="#debian-libtool">我不能构建Subversion，我的工作拷贝源码在Debian GNU/Linux上，在链接阶段我得到了一些错误，哪里错了呢？</a></li>
+<li><a href="#freebsd-listen-host">我在使用FreeBSD，并且已经启动了svnserve，但是看起来并没有监听3690端口。</a></li>
+<li><a href="#already-under-version-control">我不能添加一个目录，因为Subversion说“它已经处于版本控制了”。</a></li>
+<li><a href="#slow-private-svnserve">有时候通过svnserve访问一个非公开的版本库实在是太慢了。</a></li>
+<li><a href="#ssl-negotiation-error">当执行的Subversion操作需要通过SSL传递大量数据的时候，碰到一个错误<tt>SSL negotiation failed: SSL error: decryption failed or bad
+    record mac</tt>。</a></li>
+<li><a href="#broken-subclipse">我得到一个错误"This client is too
+    old"。</a></li>
+<li><a href="#switch-problems">为什么有时候<tt>svn switch</tt>不能工作？</a></li>
+<li><a href="#long-paths">在Windows平台上，通过命令行客户端的执行更新操作时，我碰到一个错误"The
+    system cannot find the path specified"，并且提示说我的工作拷贝可能损坏了，但是我能通过TortoiseSVN更新时完全正常，这是怎么回事呢？
+    </a></li>
+<li><a href="#working-copy-format-change">我碰到一个错误"This
+    client is too old to work with working copy '...' "，不升级Subversion能够解决吗？</a></li>
+<li><a href="#relocation-against-local-symbol">当我在64位Linux上编译Neon库时，发生一个错误"relocation R_X86_64_32 against `a local symbol' can not be used
+    when making a shared object"。</a></li>
+<li><a href="#secure-connection-truncated">为什么从Apache检出时得到“Could not read response body: Secure connection truncated”的错误？</a></li>    
+
+</ul>
+
+<h4>开发者问题</h4>
+<ul>
+<li><a href="#ramdisk-tests">怎样在RAM磁盘上进行回归测试？</a></li>
+<li><a href="#dynamic-exe-debugging">怎样在不安装的情况下对动态Subversion库运行调试器？</a></li>
+<li><a href="#avoiding-compiler-inlining">怎样让编译器不内联混淆（inlining obfuscating）源代码的情况下对Subversion库运行调试器？</a></li>
+</ul>
+
+<h4>说明:</h4>
+<ul>
+<li><a href="#http-methods">Subversion用到的HTTP方法是有哪些？ 
+    </a></li>
+<li><a href="#bikeshed">什么是'bikeshed'？</a></li> 
+<li><a href="#pronounce">你是怎样读"Subversion"的？</a></li> 
+<li><a href="#baton">什么是'baton'？</a></li> 
+<li><a href="#def-wedged-repository">当你说版本库是'楔住（wedged）'的时候，是什么意思？</a></li>
+</ul>
+
+</div>
+
+
+<hr/>
+
+<div class="h2" id="general-questions" title="general-questions">
+<h2>常见问题：</h2>
+
+
+<div class="h3" id="why" title="why">
+<h3>为什么会有这样一个项目？</h3>
+
+<p>为了接管CVS的用户基础。确切的说，我们写了一个新的版本控制系统，它和CVS很相似，但是它修正了以前CVS所没有解决的许多问题。请看我们的首页。</p>
+
+</div>
+
+
+<div class="h3" id="collab" title="collab">
+<h3>Subversion是私有软件的吗？我听说它是属于CollabNet公司的。</h3>
+
+<p>不是，Subversion一款开源/免费的软件。CollabNet公司为几个全职的开发人员支付薪水，并且拥有相关代码的版权，但是这个版权是<a
+href="http://subversion.tigris.org/license-1.html">一个Apache/BSD-风格的许可证</a>，它完全遵从于<a
+href="http://www.debian.org/social_contract#guidelines">Debian Free
+Software Guidelines</a>。换句话说，你可以随心所欲的去下载，修改，或者重新发布新的版本，而不需要经过CollabNet公司或者其他任何一个人的许可。</p>
+
+</div>
+
+
+<div class="h3" id="stable" title="stable">
+<h3>Subversion用在我的项目上是否足够稳定？</h3>
+
+<p>是的，绝对可以。它是一款已经准备好进入黄金时段的产品。</p>
+
+<p>Subversion从2000年开始开发，在一年之后成为一个自足执行(self-hosting)的项目。在之后的一年，当我们将其称为"alpha"版本的时候，Subversion已经被很多的个人开发人员所使用，并确实发挥了真正的作用。在那之后，有两年多的时间被用来进行Bug追踪(bugfixing)和增强稳定性(stabilization)，直到我们发布了1.0版本。大多数的其它项目可能都会把产品的“1.0”版本叫做早期版本，但是我们故意的尽可能长的推迟了这个版本的发布。我们意识到很多人在他们最初使用了Subversion之后一直在等待1.0版本的发布，并且对这个意义非凡的版本有着特别的期待，所以我们在这样一个版本上用了很多的时间而不至于让他们失望。</p>
+
+</div>
+
+
+
+<div class="h3" id="interop" title="interop">
+<h3>Subversion的客户端/服务器在协同工作时的策略是怎样的？</h3>
+
+<p>客户端和服务器被设计成只要他们相互之间没有超过一个主要的发行版本，就可以协调工作。例如任何一个1.x的客户端都可以和一个1.y的服务器协调工作。然而，如果客户端和服务器的版本不相匹配，某些特性可能不能使用。</p>
+
+<p>客户端和服务器之间的兼容性策略记录在<a href="hacking.html">Hacker's Guide
+to Subversion</a>的“兼容性”一节里面。</p>
+
+</div>
+
+
+<div class="h3" id="portability" title="portability">
+<h3>Subversion可以运行在哪些操作系统上？</h3>
+
+<p>所有现代风格的操作系统，比如Unix, Win32, BeOS, OS/2, MacOS X。</p>
+
+<p>Subversion是用ANSI C来写的，并且使用了APR，也就是<a
+href="http://apr.apache.org">Apache Portable Runtime</a>库作为可移植层。Subversion的客户端将可以运行在任何APR运行的地方，这是最重要的一点。Subversion服务器（例如，版本库端）同样，唯一的例外是在Berkeley DB的Win9x(Win95/Win98/WinME)作为平台的主机上，因为Berkeley DB在Win9x平台上共享存储器的有段问题。FSFS版本库（从版本1.1开始引入）没有这种限制；然而由于Win9x对文件锁定的支持限制，他们仍然不能在Win9x的平台上工作。</p>
+
+<p>重申一下，Subversion客户端可以运行在任何APR所运行的平台上。Subversion服务器也可以运行在任何APR平台所能运行的平台，但是不能在Win95/Win98/WinMe上管理版本库。</p>
+
+</div>
+
+
+<div class="h3" id="filesystem" title="filesystem">
+<h3>所有它的一切是否是一种新的文件系统？比方说ext2文件系统？</h3>
+
+<p>不是。"Subversion文件系统"不是一个可以装在操作系统上的内核级的文件系统，相反，它是Subversion版本库的接口，是一个版本文件系统，在某种意义上说，它可以存储一个文件目录结构（树）并且使这个目录结构从一个修订版本到下一个修订版本的过程中保留版本信息。访问这个版本库来编写程序和使用其他文件系统的API是很相似的，但是最大的不同在于，这个特殊的文件系统在你写入的时候不会丢失数据。目录结构(树)的一些旧的状态信息可以被很容易的恢复，就像恢复到最近的状态那样容易。</p>
+
+</div>
+
+
+<div class="h3" id="server-requirements" title="server-requirements">          
+<h3>为了运行一个Subversion服务器，哪种硬件是我所需要的？</h3>           
+                                                                               
+<p>运行Subversion服务器要依赖各方面的多种因素，比如说一定数量的用户，经常性的提交，其它相关联的服务器，版本库的大小以及自定义版本库的负载等。当使用Apache时，有可能Apache本身在内存的使用情况将成为最大的制约因素。请参阅邮件列表上对这个问题的<a href="http://subversion.tigris.org/servlets/BrowseList?list=users&amp;by=thread&amp;from=330941"
+>讨论</a>，这里有针对这个问题的明确的答案。</p>
+
+<p>需要记住的是，在同一台服务器上运行其它的应用程序，比如版本库的浏览器同样会使用内存，它是独立于Subversion本身。</p>
+
+<p>通常，和CVS本版库相比，你可以期望需要更少的服务器内存。</p>
+
+</div>
+
+
+<div class="h3" id="apache-extension" title="apache-extension">
+<h3>我听说Subversion是Apache项目的扩展？我是否需要Apache来做服务器呢？</h3>
+
+<p>不用。Subversion是一系列的库，它与一个命令行的客户端相互配合工作。有两类不同的Subversion的服务器进程，包括一个<b>svnserve</b>进程，这是一个小的类似CVS的pserver进程的独立运行程序，另一个是使用<b>mod_dav_svn</b>模块的Apache<b>httpd-2.0</b>。<b>svnserve</b>进程可以说是一个常用协议，而<b>mod_dav_svn</b>进程使用了WebDAV作为它的网络协议。请参阅Subversion手册<a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html">第六章</a>以了解更多的内容。</p>
+
+</div>
+
+
+
+<div class="h3" id="need-apache" title="need-apache">
+<h3>是否意味着我必须首先安装Apache才能使用Subversion？</h3>
+
+<p>一句话：不必。</p>
+
+<p>详细的回答是：如果你仅仅是想去访问一个版本库，你只需要构建一个Subversion的客户端。如果你想拥有一个网络的版本库，那么你需要安装Apache2或者一个“svnserve”服务器。</p>
+
+<p>关于安装一个可以访问的Subversion服务器的详细信息，请参阅：Subversion手册<a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html">第六章</a>。
+</p>
+
+</div>
+
+
+
+<div class="h3" id="multiple-apachim" title="multiple-apachim">
+<h3>我现在所运行的是Apache 1.x，但是我不能仅仅为了支持Subversion版本库而将其转换成Apache 2.0。这是否意味着我不能使用Subversion服务器？</h3>
+
+<p>不必，你可以用<b>svnserve</b>作为Subversion的服务器，它可以很好的工作。</p>
+
+<p>在使用Apache server时，如果你想使用分布式创作和版本管理协议（WebDAV）和所有其他一些好的功能特性，那么是的，你需要Apache 2.0。但是不管怎样，当你继续在80端口运行Apache1.0的时候，你总是可以在另外一个不同的端口运行Apache2.0。不同版本的Apache可以在同一台机器上很好的和平相处。仅仅需要在改变httpd.conf文件中把<tt>Listen</tt>指令从80改成8080，或者其他你想要改成的端口。然后确保在你公布版本库的URL的时候加以说明：(例如，<tt>http://svn.mydomain.com:8080/repos/blah/trunk/</tt>)。</p>
+
+</div>
+
+
+<div class="h3" id="feature-x" title="feature-x">
+<h3>为什么不象SCM系统Y那样来做X？</h3>
+
+<p>我们从来没有试图在SCM系统上推到重来，开辟出一个新的天地，也没有试图完全模仿每一个SCM系统的好的特性，我们只是要取代CVS。请参阅我们的第一个问题。</p>
+
+</div>
+
+
+<div class="h3" id="globalrev" title="globalrev">
+<h3>为什么整个库都使用相同的版本号码？我想让我的每一个工程都有其自己的版本号。</h3>
+<p>首先，请注意Subversion没有项目这个概念。版本库只是存储版本化的目录树&nbsp;&mdash;&nbsp;你可以将某个子目录当作项目，但是Subversion不会对其特殊对待。因此，对于一个项目的构成完全由用户自己解释。（与之类似的<a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.using.html"
+>branches</a>和<a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a>的习惯是建立在复制之上，而不是建立在Subversion的概念之上。）</p>
+
+<p>每当你提交变更时，版本库会在版本库目录树整体上增加一个修订版本，并将新的树赋予一个新的修订版本号，当然，大多数目录树和前一个修订版本完全一样，只是部分被更改。</p>
+
+<p>新修订版本号码是一个顺序增加的标签，会附加给每个新增的树，而不是这个修订中的某个文件或目录，然而，通俗来说，会使用修订版本号码来引用修订中提交的变更；例如“r588中的变更”（“r588”是“修订版本588”的简写）的真实含义是“版本库目录树587和588的区别”，或者是另一个说法“将目录树587变成588的变更”。
+
+<p>因此，不断增加的修改版本号码会以一个整体标示版本库的进展；你通常不会使用修订版本号码来度量版本库中特定项目的进展，当然，修订版本号码不应该作为项目可见的发布号码，对此，你应该通过其他机制来区别发布，例如使用<a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a>。
+</p>
+
+</div>
+
+
+<div class="h3" id="changesets" title="changesets">
+<h3>Subversion是否有变更集？</h3>
+
+<p>这个问题有些麻烦，因为好像每个人对变更集的定义多少有些不同，或者至少对版本控制系统的变更集特性多少有些不同的期望。</p>
+
+<p>基于这个讨论的目的，这里对变更集有一个简单的定义：它是所有改变的唯一的名字的集合，这些改变可能包括对文件内容句法的编辑，目录结构的改变，或者是一些元数据的重新组合。更加通常的理解，一个变更集仅仅是一个你所能进行参阅的补丁的名字。</p>
+
+<p>Subversion按照一阶对象的方式管理版本化目录树（版本库是一个目录树数组），而变更集则是被推生出来的东西（通过比较相邻的目录树）。Arch或Bitkeeper这类程序以相反方向创建：他们用一阶对象的方式管理变更集（版本库是一系列的补丁），而目录树则是由一系列的补丁组合而成。</p>
+
+<p>从根本上来说，两者都不够好：争论至少可以追溯到三十年以前。对于不同类型的软件开发，各有利弊。现在我们不打算讨论这些，这里我将解释使用Subversion能怎么做。</p>
+
+<p>用Subversion，用一个全局的版本编号N来命名版本库目录树：这是说版本库是经过第N次提交。它还包括一些不明显的变更集：如果你比较目录树N和目录树N-1，你可以精确得到提交的补丁。
+</p>
+
+<p>因此，可以很容易的想到，版本N不仅仅是一个变更集。如果你用一个事件追踪去管理bug，你可以用版本号码去引用特殊的补丁，这些补丁很适合bug。例如，“这个事件被稳定在9238版本。”一些人可能运行‘svn log -r9238’来阅读对应Bug的补丁信息，运行‘svn diff -r9237:9238’来查看补丁本身。svn合并命令也是利用了版本号码。只要在合并参数中指明结果集，就可以把结果集从一个分支明确的合并到另一个分支：‘svn merge -r9237:9238 branchURL’将合并结果集＃9238到你的工作拷贝。</p>
+
+<p>似乎根据结果集构建和主要对象的构建一样复杂，但是已经比CVS方便许多了。</p>
+
+</div>
+
+
+<div class="h3" id="release" title="release">
+<h3>下一个版本什么时候发布？</h3>
+
+<p>看我们的状态页<a
+href="http://subversion.tigris.org/project_status.html">
+http://subversion.tigris.org/project_status.html</a>。</p>
+
+</div>
+
+
+<div class="h3" id="symlinks" title="symlinks">
+<h3>Subversion是否支持符号链？</h3>
+
+<p>Subversion 1.1（和后续版本）已经可以把一个符号链置于版本控制之中，通过一个常用的<tt>svn add</tt>命令即可。</p>
+
+<p>详细：版本库还没有一个关于符号链的内部概念，它存储一个附加'svn:special'属性的普通文件作为“符号链接”。svn客户端（在unix上）可以看到属性，并且在工作拷贝里转换成一个符号链。Win32没有符号链，所以一个win32的客户端不会做任何的转换：对象表现的像一个平常的文件。</p>
+
+</div>
+
+
+<div class="h3" id="logo" title="logo">
+<h3>我需要一个高分辨率的Subversion Logo，从哪里可以得到它呢？</h3>
+
+<p>可用的矢量Subversion logo在<a href="http://svn.collab.net/repos/svn/trunk">Subversion
+版本库</a>的<a
+href="http://svn.collab.net/repos/svn/trunk/www">www文件夹</a>下可以得到。</p>
+
+<p>特别的是，<a
+href="http://svn.collab.net/repos/svn/trunk/www/logo/subversion_logo.eps">EPS
+版本</a>,和一个<a
+href="http://svn.collab.net/repos/svn/trunk/www/logo/subversion_logo.ai">Adobe
+插图文档</a>也是可用的。</p>
+
+</div>
+
+
+<div class="h3" id="more-information" title="more-information">
+<h3>我还有其他的一些问题，我从哪里可以得到更多的信息呢？</h3>
+
+<p>如果你在阅读这个常见问题回答之后，没有找到你问题的答案，那么你还有其他的几个资源可以利用：</p>
+<ul>
+  <li><a href="http://svnbook.red-bean.com">Subversion手册</a>，以及中文手册<a href="http://www.subversion.org.cn/svnbook/">Subversion手册</a></li>
+  <li><a href="http://subversion.tigris.org/servlets/ProjectMailingListList">The
+       Subversion用户邮件列表</a> (<a
+       href="mailto:users@subversion.tigris.org"
+       >users@subversion.tigris.org</a>)
+       &mdash; 注意这个列表需要经过<a href="#moderation">审核</a>，所以在显示之前有一些延迟。</li>
+  <li><a href="http://svn.haxx.se/users/">Subversion用户信息列表。</a></li>
+  <li>在线聊天系统（IRC）在irc.freenode.net的#svn频道。</li>
+  <li><a href="http://www.svnforum.org/">svnforum.org</a>一个非官方基于网络的论坛，针对的读者和邮件列表近似。</li>
+</ul>
+
+</div>
+
+
+<div class="h3" id="moderation" title="moderation">
+<h3>为什么我的邮件没有显示在邮件列表上？</h3>
+
+<p>我们的邮件列表为了保持在一个适度的标准，所以你最初的邮件可能会被延迟通过，直到维护人员有机会让它通过。一旦邮件允许通过，所有从相同的地址挂起的邮件将被自动支持，所以你应该不会再被拒绝。当然，如果你的发送地址改变了的话，你将不得不再次让维护人员检测通过。</p>
+
+</div>
+
+
+</div>
+
+<div class="h2" id="how-to" title="how-to">
+<h2>如何：</h2>
+<p/>
+
+
+<div class="h3" id="co-svn" title="co-svn">
+<h3>我如何才能检出Subversion版本库里的代码？</h3>
+<p>使用Subversion客户端：</p>
+<pre>
+	$ svn co http://svn.collab.net/repos/svn/trunk subversion
+</pre>
+<p>这将会从Subversion源文件目录里检出一个名叫subersion的目录到你的本机上。 </p>
+
+</div>
+
+
+<div class="h3" id="repository" title="repository">
+<h3>我如何创建一个版本库呢？并且我又该如何向里导入数据呢？</h3>
+
+<p>请参阅<a
+href="http://svn.collab.net/repos/svn/trunk/README">
+http://svn.collab.net/repos/svn/trunk/README</a>；特别的，在第IV部分，即“快速指南”。</p>
+
+<p>更详细的资料，请阅读<a
+ href="http://svnbook.red-bean.com">Subversion手册</a>第五章。</p>
+
+</div>
+
+
+
+<div class="h3" id="cvs2svn" title="cvs2svn">
+<h3>我如何把一个现存的CVS版本库转换成Subversion版本库？</h3>
+
+<p>试一下cvs2svn转换工具，从<a
+href="http://cvs2svn.tigris.org/">http://cvs2svn.tigris.org/</a> (或者从这里 <a href="http://cvs2svn.tigris.org/features.html" >特性列表</a>和<a href="http://cvs2svn.tigris.org/cvs2svn.html"
+>相关文档</a>)。cvs2svn是大多数人的选择，但是如果有别的原因使他不能满足你的要求，至少还有其他两种工具供你选择：</p>
+
+<ul>
+
+<li>一个是基于<a
+href="http://public.perforce.com/public/revml/index.html">VCP</a>，由Chia-liang Kao编写，可以在<a
+href="http://search.cpan.org/perldoc?VCP::Dest::svk">CPAN</a>找到。</li>
+
+<li>另一个由Lev Serebryakov写的refinecvs，在 <a
+href="http://lev.serebryakov.spb.ru/refinecvs/"
+>http://lev.serebryakov.spb.ru/refinecvs/</a>上面可以找到。</li>
+
+</ul>
+
+<p>也可以参阅<a href="links.html">Subversion链接</a>页面。</p>
+
+</div>
+
+
+
+<div class="h3" id="proxy" title="proxy">
+<h3>我必须通过代理访问网络,我该怎么办?</h3>
+
+<p>Subversion支持通过代理访问网络。首先，修改配置文件中的"servers"部分，并指定你的代理服务器。配置文件所在目录在不同的操作系统上可能不同，在Linux或
+Unix系统中，通常是~/.subversion；在Windows系统中，通常是"%APPDATA%\Subversion"。（执行"echo %APPDATA%"显示目录的具体路径，注意这是一个隐藏目录。）</p>
+
+<p>配置文件中的注释描述了配置文件书写的格式。如果配置文件还不存在，可以取得最新版的svn，并执行任何svn命令，这将创建配置文件模板及其相应的目录。</p>
+
+<p>其次，请确认你的代理服务器支持所有Subversion必须的HTTP方法。有些代理服务器默认不支持以下命令：PROPFIND, REPORT, MERGE, MKACTIVITY,
+CHECKOUT。解决办法依赖于你使用的代理服务器软件，对于Squid，配置选项如下：</p>
+
+<pre>
+   #  TAG: extension_methods
+   #       Squid only knows about standardized HTTP request methods.
+   #       You can add up to 20 additional "extension" methods here.
+   #
+   #Default:
+   # none
+   extension_methods REPORT MERGE MKACTIVITY CHECKOUT
+</pre>
+
+<p>(Squid 2.4及其之后的版本支持PROPFIND.)</p>
+
+<p>参见"<a href="#http-methods">Subversion用到的HTTP方法是有哪些？</a>"来配置代理服务器来支持HTTP方法。</p>
+
+<p>如果让代理服务器支持Subversion访问网络很困难甚至是不可能的话,而你只想checkout
+ Subversion的源代码，你可以绕过代理服务器。一些代理服务器封锁了80端口，如果是这样的话，可以通过81端口访问<tt>svn.collab.net</tt>代码库服务器。执行：
+</p>
+
+<pre>
+   svn checkout http://svn.collab.net:81/repos/svn/trunk subversion
+</pre>
+
+<p>可能代理服务器会放行。另一个办法是通过SSL来checkout，SSL被大部分代理服务器所支持：</p>
+
+<pre>
+   svn checkout https://svn.collab.net/repos/svn/trunk subversion
+</pre>
+
+<p>当然，你的svn客户端应该支持ssl。在编译源代码的时候，在<tt>./configure</tt>时添加<tt>--with-ssl</tt>选项。执行<tt>svn --version</tt>可以知道你的svn是否支持'https'。</p>
+
+</div>
+
+
+<div class="h3" id="paranoid" title="paranoid">
+<h3>我的管理员不想让我有一个Subversion的HTTP服务器，那么如何做我才可以远程使用？</h3>
+
+<p>一个简单的选择是使用<b>svnserve</b>服务器来代替。请参阅SVN手册<a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html">第6章</a>中的详细内容。
+</p>
+
+<p>然而，如果你的管理员不希望你运行Apache，这很可能是他们不想让你在3690端口运行一个客户服务器，则备选答案是假定你的管理员同意你使用现有的SSH设施。</p>
+
+<p>如果你使用CVS，你可能已经使用SSH来登录CVS服务器，ra_svn Subversion的访问方法是和使用Subversion是相同的。仅仅是在你的版本库的URL上加上一个"svn+ssh"的前缀。</p>
+<pre>
+$ svn checkout svn+ssh://your.domain.com/full/path/to/repository
+</pre>
+
+<p>这将使你的SSH的程序在远程运行一个私有的'svnserve'进程，用你的用户ID访问版本库，并通过加密管道将数据传递回来。</p>
+
+<p>然而，另外的一种可以用来替代的解决方案是将SSH端口转向连接到通过ra_dav保护的服务器上。你可以通过SSH连接到一个防火墙后的一个机器，这个机器可以访问Subversion服务器。注意，这个SSH服务器<b>不</b>需要与Subversion安装在同一个机器上，可以是，但不是必须是。</p>
+
+<p>然后你可以创建一个本地端口来连接在你家里的Subversion版本库的HTTP服务器。你可以通过本地端口’连接‘Subversion版本库。然后，请求将被通过SSH服务器’通道‘发送到你的Subversion服务器。</p>
+
+<p>一个示例：在你们公司位于10.1.1.50（叫它svn-server.example.com）的防火墙后面设置了一个Subversion ra_dav，你的公司允许SSH通过公共方式访问ssh-server.example.com，而在内部可以通过http://svn-server.example.com/repos/ours访问Subversion版本库。</p>
+
+<p><i>实例</i>：那么客户端通过端口转向连接ssh服务器，并通过端口转向检出</p>
+
+<pre>
+% ssh -L 8888:svn-server.example.com:80 me@ssh-server.example.com
+% svn checkout http://localhost:8888/repos/ours
+</pre>
+
+<p>请注意svn-server.example.com也可以让httpd实例被非信任用户运行在无特权的端口上，这允许Subversion不需要root访问权限。</p>
+
+<!-- Can you use svn switch to switch your WC between your internal and
+     external Subversion server?  I think so.  -->
+
+<p>Joe Orton注明</p>
+<pre>
+服务器对正在使用的MOVE和COPY请求头的主机名字是很敏感的，所以这个地方你必须要小心&mdash;工作正常可能需要配置"ServerAlias localhost"。
+</pre>
+
+<p>一些SSH端口转向的链接</p>
+
+<ul>
+<li><a href="http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html"
+>http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html</a></li>
+<li><a href="http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/"
+>http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
+<li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
+</ul>
+
+</div>
+
+
+<div class="h3" id="multi-proj" title="multi-proj">
+<h3>我如何在Subversion下面管理几个不同的项目？</h3>
+
+<p>这决定与你的项目的复杂度，如果你的项目是相关的，并且有可能要共享数据，那么最好的方式是通过子目录创建一个版本库。像下面这样子：</p>
+<pre>
+	$ svnadmin create /repo/svn
+	$ svn mkdir file:///repo/svn/projA
+	$ svn mkdir file:///repo/svn/projB
+	$ svn mkdir file:///repo/svn/projC
+</pre>
+
+<p>如果你的工程是完全不相关的，并且他们之间不可能共享数据，这样最好创建几个独立的完全不相关的版本库。</p>
+<pre>
+	$ mkdir /repo/svn
+	$ svnadmin create /repo/svn/projA
+	$ svnadmin create /repo/svn/projB
+	$ svnadmin create /repo/svn/projC
+</pre>
+<p>
+这两种方式之间不同之处在于： (由
+Ben Collins-Sussman解释 &lt;sussman@collab.net&gt;)：</p>
+
+<ul>
+  <li>
+     在第一种情况之下，代码可以很容易的在两个项目之间拷贝和移动，并且操作的历史记录会被保存下来。（'svn cp/mv'现在只能在单个版本库中工作。）
+  </li>
+  <li>
+     因为修订版本号是版本库范围的，在第一种情况下，对任何项目的提交都可能造成全局的版本冲突。所以如果有个人检出了‘projB’，并发现已经发生的10次修订，但是projB没有完全改变，这看起来有些奇怪。事实上，这无关紧要，只是一开始会感到有些奇怪。这就像每当人们向rapidsvn提交，而rapidsvn和svn在同一个版本库之下时，svn的状况。:-)
+  </li>
+  <li>
+     第二种情况可能更利于安全管理吗；可以很容易的使用Apache访问控制将每个项目隔绝（就用户和许可的角度来讲）。在第一种情况下，你需要在版本库放一个钩子脚本来区分不同的项目（“是否允许用户在特定的子目录提交？”）当然，我们已经准备了这些脚本供你使用。
+  </li>
+</ul>
+
+</div>
+
+  
+<div class="h3" id="multi-merge" title="multi-merge">
+<h3>我如何合并两个完全分开的版本库？</h3>
+
+<p>如果你不在意某个版本库的完全历史，你可以只是在某个版本库为另一个项目创建一个新的目录，然后导入另一个项目。</p>
+
+<p>如果你在意两边的历史，那么你可以使用'svnadmin dump'将一个版本库的内容转储出来，然后使用'svnadmin load'加载到另一个版本库。原来的修订版本号码会取消，但你还有历史。</p>
+
+<p>Peter Davis &lt;peter@pdavis.cx&gt;也解释了一种方法，可以使用像CVS模块那样使用svn：</p>
+
+<blockquote>
+	<p>只要合并发生在不同的目录树，你可以使用svn版的CVS模块。</p>
+
+	<p>将<em>svn:externals</em>属性设置到从其他版本库检出的目录上，无论原来的目录是何时检出的。版本库还是分离的，但是从工作拷贝的角度看，他们好像合并了。如果你在导入的目录中提交，也将会影响外部版本库。</p>
+
+	<p>合并并不意味着完全的干净：导入只是影响了工作拷贝，所以你应该不能使用第一个版本库的URL访问从第二个导入的模块，他们都还是有各自的URL。</p>
+</blockquote>
+
+<p>也可以看<a href="links.html#misc_utils">miscellaneous utilities</a>，里面有一些在合并不同版本库时帮助选择和重排序修订版本的工具，特别如基本操作的perl脚本<a href="http://www.coelho.net/svn-merge-repos.html">svn-merge-repos.pl</a>和高级组织的python类<a href="http://svn.borg.ch/svndumptool/">SvnDumpTool</a>。</p>
+</div>
+
+
+  
+<div class="h3" id="nfs" title="nfs">
+<h3>我必须在NFS服务器上存储版本库/工作拷贝吗？</h3>
+
+<p>如果你使用Berkeley DB作为版本库的后端（在Subversion 1.0和1.1这是默认值，此后不是默认值），我们建议你<i>不要</i>将版本库存放在远程文件系统（例如，NFS）。虽然Berkeley DB数据库和日志文件可以存放到远程文件系统，但是Berkeley DB的共享区域文件不可以放到远程文件系统上，所以版本库只有被一个文件系统客户访问时才能保证安全，而且那种情况下并不是所有的Subversion功能都在一个客户下工作正常。</p>
+
+<p>如果你使用<a
+href="http://svn.collab.net/repos/svn/trunk/notes/fsfs">FSFS</a>作为后端，那么将版本库存放到NFS服务器（应当是支持锁定的服务器）也应当没问题。</p>
+
+<p>工作拷贝可以存放到NFS（一个常见的场景是你的主目录在NFS服务器上）上，在Linux NFS服务器上，因为在检出时Subversion内部使用的重命名的量比较大，一些用户报告应当关闭‘子目录检查（subtree checking）’应当关闭，如果关闭子目录检查的详细信息可以看<a
+href="http://nfs.sourceforge.net/nfs-howto/server.html" >NFS Howto
+Server Guide</a>和<b>exports(5)</b>。</p>
+
+<p>我们至少接到一份对于通过SMB访问造成工作拷贝楔住的报告，造成错误的服务器是版本非常老的Samba（2.2.7a），在新版本（3.0.6）Samba中并没有再出现这个问题。</p>
+
+</div>
+
+  
+<div class="h3" id="bdblogs" title="bdblogs">
+<h3>为何我的版本库占去这么多的磁盘空间？</h3>
+
+<p>在Berkeley DB环境中，版本库会在repos/db/子目录存放所有的数据，这个环境会包含一组表和一组日志文件（log.*）。Berkeley DB会记录对表所作的变更，这样在出现中断后能够恢复到一致的状态（<a
+href="#bdb-recovery">more info</a>）。</p>
+
+<p>如果你放任不管（作为版本库管理员），日志文件会不断的生长，吞噬磁盘空间。在任何时刻，Berkeley DB只使用很小一部分的日志文件（可以看<a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=users&amp;msgNo=15194"
+>这个帖子</a>以及相关的线索）；其余的可以安全的删除。如果你永久保存所有的日志文件，理论上Berkeley DB能够根据这个文件回到出生的时刻。但是在实践中，如果你进行了备份，就没有必要在磁盘中浪费空间了。</p>
+
+<p>可以使用<code>svnadmin</code>查看哪些日志文件可以删除，你可以通过crob程序完成这个任务。</p>
+
+<pre>
+$ svnadmin list-unused-dblogs /repos
+/repos/db/log.000003
+/repos/db/log.000004
+[...]
+
+$ svnadmin list-unused-dblogs /repos | xargs rm
+# disk space reclaimed!
+</pre>
+
+<p>你也可以使用Berkeley DB的<code>db_archive</code>命令：</p>
+
+<pre>
+$ db_archive -a -h /repos/db | xargs rm
+# disk space reclaimed!
+</pre>
+
+<p>还可以看<code>svnadmin hotcopy</code>或<code>hotbackup.py</code>。</p>
+
+<p><strong>注意：</strong>如果你正在使用Berkeley DB 4.2，Subversion创建的版本库会自动删除日志文件，如果你想关闭这个功能，可以在<code>svnadmin create</code>命令中使用<code>--bdb-log-keep</code>选项。可以参考Berkeley DB手册中的<a
+href="http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
+<code>DB_LOG_AUTOREMOVE</code></a>参数。</p>
+
+</div>
+
+
+<div class="h3" id="reposperms" title="reposperms">
+<h3>我如何恰当的设置我的版本库的权限呢？</h3>
+
+<p>试图保证尽可能<em>少的</em>用户能够访问版本库，例如以某个用户运行apache或'svnserve -d'，那么版本库由这个用户完全拥有。不允许任何其他的用户通过<tt>file:///</tt>的URL访问版本库，必须只让拥有版本库的用户运行'svnlook'和'svnadmin'。</p>
+
+<p>如果你的客户端通过<tt>file:///</tt>或<tt>svn+ssh://</tt>访问，则无法避免多个用户的访问。在那种情况下，可以阅读<a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.multimethod.html">第6章最后一小节</a>，看一下最下面工具栏的“检查列表”，它总结了让这个场景更安全的步骤。</p>
+
+<b>SELinux / Fedora Core 3+ / Red Hat Enterprise的用户注意：</b>
+
+<p>作为标准Unix许可的补充，在SELinux下，每个文件、目录和进程都有一个‘安全上下文’。当进程试图访问一个文件时，除了检查Unix访问许可，系统还会检查进程的安全上下文与文件的安全上下文是否兼容。</p>
+
+<p>而Fedora Core 3，随SELinux一起安装，在默认情况下Apache会在一个限制的安全上下文中运行。为了在Apache下运行Subversion，你必须设置版本库的安全上下文使之支持Apache的访问（或者关闭对Apache的限制，如果你认为这是过分小心）。<tt>chcon</tt>命令可以用来设置文件的安全上下文（与<tt>chmod</tt>设置Unix访问许可类似）。例如，一个用户可以这样运行命令</p>
+
+<pre>   $ chcon -R -h -t httpd_sys_content_t <i>PATH_TO_REPOSITORY</i></pre>
+
+<p>设置安全上下文可以成功的访问版本库。</p>
+
+</div>
+
+
+
+<div class="h3" id="readonly" title="readonly">
+<h3>为何只读的操作仍然需要版本库的写访问？</h3>
+
+<p>某些客户端操作是“只读的”，例如检出和更新。从访问控制的角度，Apache会这样处理。但是libsvn_fs（版本库文件系统API）在生成增量树的时候还是需要写临时数据，所以访问版本库的进程应该能够读写访问Berkeley DB的文件，才能完成功能。</p>
+
+<p>尤其是版本库需要应答许多比较两个目录树的“只读”操作时，一个树可能是HEAD修订版本，而另一个则是临时的事务-目录树 -- 因此许多写权限。</p>
+
+<p>这种限制只存在于Berkeley DB后端；<a
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.planning.html#svn.reposadmin.basics.backends.fsfs">FSFS后端</a>并没有显示这种特性。</p>
+
+</div>
+
+
+<div class="h3" id="removal" title="removal">
+<h3>
+如何完全的从版本库历史中删除一个文件？
+</h3>
+
+<p>有某些特殊情况下，你可能希望完全的删除你曾经提交文件的所有信息（或许有人意外的提交了一份保密的文档）。但是这个操作不是很容易完成，因为Subversion有意被设计成决不丢失信息，修订版本是基于上一个版本所构建的不可改变（immutable）的文件树。从版本的历史记录里删除一个修订版本将会造成多米诺骨牌效应，造成后继版本的混乱，还有可能使得所有的工作拷贝无效。</p>
+
+<p>项目有计划在未来实现一个<b>svnadmin
+obliterate</b>命令，能够完成永久删除信息的任务（可以看<a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue
+516</a>。）</p>
+
+<p>现在，你只有求助于你版本库的<b>svnadmin dump</b>命令，将转储文件经过<b>svndumpfilter</b>过滤（排除错误的路径）传递给<b>svnadmin load</b>命令，请参阅Subversion手册<a
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.html">第五章</a>的相关详细信息。
+</p>
+
+</div>
+
+
+<div class="h3" id="change-log-msg" title="change-log-msg">
+<h3>
+一个版本提交之后，如何修改其日志信息？
+</h3>
+
+<p>日志信息作为每个修订版本的附加属性保存在版本库，默认情况下，日志信息属性（<em>svn:log</em>）不能在提交后修改。这是因为对于<a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">修订版本属性</a>（<em>svn:log</em>是其中一个）的修改会导致以前的属性永久的消失，Subversion会防止这种意外情况发生。但是，还是有一些方法可以修改修订版本属性。</p>
+
+<p>第一种方法是让版本库管理员允许修订版本属性修改，这可以通过创建"pre-revprop-change"（更多相关细节可以看Subversion手册的<a
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks">这个小节</a>）。钩子"pre-revprop-change"可以在修改之前访问老的日志信息（例如，通过发送一个邮件），所以可以以某种方式保存它（例如，通过发送邮件）。一旦开启了修订版本属性修改，你可以通过<b>svn propedit</b>或<b>svn
+propset</b>的--revprop选项修改修订版本属性，就像下面这个：</p>
+
+<pre>
+$ svn propedit -r N --revprop svn:log URL
+$ svn propset -r N --revprop svn:log "new log message" URL
+</pre>
+
+<p>这里N是希望修改的日志信息的修订版本号码，而URL是版本库的位置。如果你从工作拷贝运行这个命令，你可以省略URL。</p>
+
+<p>第二种方法是通过<b>svnadmin setlog</b>修改日志信息。这必须通过引用版本库的文件系统位置来执行，你不能使用这个命令远程修改版本库。</p>
+
+<pre>
+$ svnadmin setlog REPOS_PATH -r N FILE
+</pre>
+
+<p>
+这里REPOS_PATH是版本库的位置，而N是你希望修改日志信息的修订版本，而FILE是包含新日志信息的文件。如果"pre-revprop-change"钩子不存在（或者因为钩子脚本的原因你希望绕过），你还是可以通过--bypass-hooks选项实现。然而，如果你要使用这个选项，要非常小心。你会绕过诸如变更的邮件提醒，或者保存修订版本属性的备份系统。</p>
+
+</div>
+
+
+<div class="h3" id="patch" title="patch">
+<h3>怎么样向Subversion提交一个补丁？</h3>
+
+<p>首先，看一下<a href="hacking.html">Hacker's Guide to
+Subversion</a>。</p> 
+
+<p>一旦你消化了这些内容，可以在dev邮件列表发送一个题目有[PATCH]的邮件，并在邮件中包含你的补丁（除非你的邮件客户端会完全处理它），不久之后就会有提交者捡起来，应用它（作出合适的格式化或内容变更），并将其检入。</p>
+
+<p>基本的过程看起来如下：</p>
+
+<blockquote><pre>
+	$ svn co http://svn.collab.net/repos/svn/trunk subversion
+	$ cd subversion/www
+
+		[ make changes to faq.html ]
+	
+	$ svn diff faq.html &gt; /tmp/foo
+
+	$ Mail -s "[PATCH] FAQ updates" &lt; /tmp/foo
+</pre></blockquote>
+
+<p>当然，你的邮件应当包含补丁完成什么功能的解释，按照<a href="hacking.html">Hacker's Guide to Subversion</a>所说的，但是你已经知道了，因为在你Hack之前已经完全阅读和理解，不是吗？:)</p>
+
+</div>
+
+
+<div class="h3" id="in-place-import" title="in-place-import">
+<h3>我如何进行“iplace”的导入（例如：向Subversion添加一个目录结构，而原先的数据直接成为工作拷贝）？</h3> 
+
+<p>例如，假设你希望把/etc下的一些文件纳入版本控制：</p>
+
+<pre>
+     # svn mkdir file:///root/svn-repository/etc \
+         -m "Make a directory in the repository to correspond to /etc"
+     # cd /etc
+     # svn checkout file:///root/svn-repository/etc .
+     # svn add apache samba alsa X11 
+     # svn commit -m "Initial version of my config files"
+</pre>
+
+<p>这里利用了<tt>svn&nbsp;checkout</tt>的一个非立即但明显的优势：你可以从版本库直接检出一个目录到已存在的目录，这里，我们首先在版本库创建一个目录，然后将其检出到已存在的目录<tt>/etc</tt>，将<tt>/etc</tt>目录变成工作拷贝。一旦完成，你可以使用普通的<tt>svn&nbsp;add</tt>命令选择文件和子目录进入版本库。</p>
+
+<p>这是<tt>svn&nbsp;import</tt>的一个增强问题，它本应该能够在导入目录树时自动创建工作拷贝；可以看<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1328"
+>issue 1328</a>。</p>
+
+</div>
+
+
+<div class="h3" id="dumpload" title="dumpload">
+<h3>人们在讨论升级Subversion时所说的“转储/加载（dump/load）”是什么？</h3>
+
+<p>Subversion的版本库数据库模式在开发中会偶尔改变，使用1.0以前的Subversion开发版本创建的老版本库在升级时需要如下操作。如果在发布X和Y之间的模式发生变更，则版本库管理员升级到Y的时候必须如下操作：</p>
+
+<ol>
+ <li>关闭svnserve、Apache和任何可能访问版本库的东西。
+ </li>
+
+ <li>使用版本X的svnadmin执行<b><tt>svnadmin&nbsp;dump&nbsp;/path/to/repository&nbsp;>&nbsp;dumpfile.txt</tt>
+ </b>。
+ </li>
+
+ <li>
+ <b>
+ <tt>mv&nbsp;/path/to/repository&nbsp;/path/to/saved-old-repository</tt>
+ </b>
+ </li>
+
+ <li>现在升级到Subversion Y（通过构建和安装Y，替换X）。
+ </li>
+
+ <li>使用版本Y的svnadmin执行<b><tt>svnadmin&nbsp;create&nbsp;/path/to/repository</tt></b>。
+ </li>
+
+ <li>
+ <b>在使用版本Y的svnadmin执行<tt>svnadmin&nbsp;load&nbsp;/path/to/repository&nbsp;&lt;&nbsp;dumpfile.txt</tt>
+ </b>。
+   
+ </li>
+
+ <li>从老版本库拷贝钩子脚本等到新版本库。
+ </li>
+
+ <li>重启svnserve、Apache等等。
+ </li>
+</ol>
+
+<p>关于转储和加载的更多信息可以看<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate"
+>Subversion手册的这个小节</a>。</p>
+
+<p> <b>注意</b>：大多数Subversion的升级<i>不</i>会需要转储和加载，如果某个版本需要，新版本的发布声明和CHANGES文件会显著说明这一点。如果你没有看到这个说明，那么应该是没有模式变更，也就没有转储/加载的必要。</p>
+
+</div>
+
+ 
+<div class="h3" id="sspi" title="sspi">
+<h3>如何设置客户端通过使用SSPI认证的Windows域控制器进行认证？</h3>
+
+<p><a href="http://tortoisesvn.tigris.org">TortoiseSVN</a>有个在Windows下设置Subversion服务器的完美文档，可以看<a href="http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup.html#tsvn-serversetup-apache-5"
+>http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup.html#tsvn-serversetup-apache-5</a>中的SSPI authentication小节。</p>
+
+<p>配置中比较重要的一部分是这几行：</p>
+<pre>
+   SSPIOfferBasic On
+</pre>
+
+<p>如果没有这行，支持SSPI的浏览器会提示用户输入凭证，但是不支持SSPI的客户端例如Subversion就不会提示。（当前版本的Neon - Subversion的HTTP库 - 只能处理基本的认证。）因为客户端永远不会被请求凭证，任何需要认证的操作都会失败。添加这一行告诉<tt>mod_auth_sspi</tt>对客户端使用基本认证，但使用Windows域控制器认证凭证。</p>
+
+</div>
+
+  
+<div class="h3" id="adm-dir" title="adm-dir">
+<h3>我不喜欢“.svn”这样的目录名字，而喜欢“SVN”或者其他一些目录名，我该如何改变呢？</h3>
+
+<p>如果可能，我们推荐你使用".svn"，然而，如果你在Windows下使用ASP.NET，你可能需要按<a href="#vs-asp-net">这里的介绍</a>设置环境变量SVN_ASP_DOT_NET_HACK。</p>
+
+<p>或者你可以使用一个完全自定义的管理区域名称，我们反对这样做，因为你的工作拷贝可能无法与你的Subversion客户端协调工作，然而，如果你喜欢，只需要将<tt>subversion/include/svn_wc.h</tt>的这一行从</p>
+
+<pre>
+#define SVN_WC_ADM_DIR_NAME   ".svn"
+</pre>
+
+<p>
+修改为（例如）
+</p>
+
+<pre>
+#define SVN_WC_ADM_DIR_NAME   "SVN"
+</pre>
+
+<p>
+然后重新编译客户端。
+</p>
+
+</div>
+
+
+<div class="h3" id="case-change" title="case-change">
+<h3>如何更改一个文件名的大小写？</h3>
+
+<p>这个问题在两种情况下会发生。如果你的操作系统使用的文件系统对大小写不敏感，例如windows系统，当你在添加文件的时候，你可能会不小心的添加一个文件名大小写错误的文件。或者，你可能只是想改变版本库中已有文件的大小写。</p>
+
+<p>如果你是在一个大小写敏感的文件系统上工作，那基本上就不会出现这样的问题。直接将文件改成新的名字。例如，</p>
+
+<pre>
+svn&nbsp;mv&nbsp;file.java&nbsp;File.java
+</pre>
+
+<p>但这样的方式在windows这类大小写不敏感的文件系统上是不能正常运作的。在windows下，你只能临时地将文件拷贝到其他地方，然后从Subversion中删除该文件，然后重新添加名字大小写正确的文件副本。或者更好的办法就是对Subversion的URL执行移动操作。推荐使用操作URL的方法，因为这样可以保持文件的历史日志，而且能够立即生效。</p>
+
+<p>尽管如此，这两种方式都会导致windows下的工作拷贝出现一些问题，因为当试图更新文件名产生冲突的文件的时候，windows还是会不知所措。（你可能会得到一条消息如：<tt>svn: Failed to
+add file 'File.java': object of the same name already
+exists</tt>)。一个解决这个问题的办法就是删除工作拷贝然后重新检出。如果你不想这么做的话，那么你就必须执行上面提到的两个步骤来更新。</p>
+
+<p>对于每个大小写错误的文件，执行下面的命令将会改变大小写：</p>
+
+<pre>
+svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java
+</pre>
+
+<p>要更新工作拷贝，你先得转到相关的目录，然后执行：</p>
+
+<pre>
+svn update file.java
+svn update
+</pre>
+
+<p>第一步的更新会从你的工作拷贝中删除<tt>file.java</tt>，第二步更新会添加<tt>File.java</tt>，这样就会生成一个正确的工作拷贝。或者如果你有很多这种问题的文件，你可以按下面的方式来更新工作拷贝：</p>
+
+<pre>
+svn update *
+svn update
+</pre>
+
+<p>就像你看到的，添加一个大小写错误的文件在文件系统大小写不敏感的操作系统上，是需要一些小技巧来修正的。所以最好当你第一次添加文件的时候，一次性就添加对了。为了防止类似的问题再发生，你可以创建一个pre-commit的钩子脚本，在其中调用文件<tt>check-case-insensitive.pl</tt>。这个文件放在Subversion的源代码包里，在<tt>contrib/hook-scripts</tt>目录中</p>
+
+</div>
+
+
+<div class="h3" id="merge-using-tags" title="merge-using-tags">
+<h3>我不能象CVS那样使用标签将一个分支的变更合并到主干（trunk），可以吗？</h3>
+
+<p>就像下面展示的，你可以不需要记住版本号就将一个分支合并到主线上面。反之亦然（在例子中并没有展示）。</p>
+
+<p>下面这个例子假设在<tt>/home/repos</tt>存在一个版本库，你希望从中创建一个名叫<tt>bar</tt>的、包含你即将编辑的文件<tt>foo</tt>的分支。</p>
+
+<p>为了跟踪分支合并的历史，版本库建立了<tt>tags/branch_traces/</tt>目录用来保存tags。</p>
+
+<pre># setup branch and tags
+$ svn copy file:///home/repos/trunk \
+           file:///home/repos/branches/bar_branch \
+           -m "start of bar branch"
+$ svn copy file:///home/repos/branches/bar_branch \
+           file:///home/repos/tags/branch_traces/bar_last_merge \
+           -m "start"
+
+# checkout branch working copy
+$ svn checkout file:///home/repos/branches/bar_branch wc
+$ cd wc
+
+# edit foo.txt file and commit
+$ echo "some text" &gt;&gt;foo.txt
+$ svn commit -m "edited foo"
+
+# switch to trunk and merge changes from branch
+$ svn switch file:///home/repos/trunk
+$ svn merge file:///home/repos/tags/branch_traces/bar_last_merge \
+            file:///home/repos/branches/bar_branch
+
+# Now check the file content of 'foo.txt', it should contain the changes.
+
+# commit the merge
+$ svn commit -m "Merge change X from bar_branch."
+
+# finally, update the trace branch to reflect the new state of things
+$ svn delete -m "Remove old trace branch in preparation for refresh." \
+             file:///home/repos/tags/branch_traces/bar_last_merge
+$ svn copy file:///home/repos/branches/bar_branch                     \
+           file:///home/repos/tags/branch_traces/bar_last_merge       \
+           -m "Reflect merge of change X."
+</pre>
+
+</div>
+
+
+<div class="h3" id="version-value-in-source" title="version-value-in-source">
+<h3>为什么$Revision$关键字不是我预想的那样？它替换的是文件最后修改的修订版本，但有时候我希望它能替换文件的当前修订版本。</h3>
+
+<p>
+Subversion每次都将整个版本库的版本号整个进行自增，所以它不能将关键词替换成你想要的数字 - 它可能不得不在每次更新或者提交时对工作拷贝中的每个文件进行搜索或者修改。
+</p>
+
+<p>
+你想要的信息（你的工作拷贝的版本号）可以通过<tt>svnversion</tt>命令来获取；你可以根据指定的工作拷贝的路径提供其版本相关的信息（更多细节参考<tt>svnversion --help</tt>）。
+</p>
+
+<p>你可以将其组合到你的构建或发布过程中，以获取需要存放到源代码的信息。例如，在一个基于<tt>GNU&nbsp;make</tt>的构建环境中，在你的<tt>Makefile</tt>中添加<a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112564"
+>如下的信息</a>：
+</p>
+
+<pre>
+##
+## To use this, in yourfile.c do something like this:
+## printf("this program was compiled from SVN revision %s\n",SVN_REV);
+##
+
+SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
+CFLAGS := $(SVNDEF) ... continue with your other flags ...
+</pre>
+
+<p>
+（注意这段代码在非GNU版本的<tt>make</tt>中无效，如果你的构建过程需要可移植，请不要使用它。）
+</p>
+
+<p>或者使用如这些方法：</p>
+
+<pre>
+##
+## on every build, record the working copy revision string
+##
+svn_version.c: FORCE
+    echo -n 'const char* svn_version(void) { const char* SVN_Version = "' \
+                                       &gt; svn_version.c
+    svnversion -n .                   &gt;&gt; svn_version.c
+    echo '"; return SVN_Version; }'   &gt;&gt; svn_version.c
+
+##
+## Then any executable that links in <tt>svn_version.o</tt> will be able
+## to call the function <tt>svn_version()</tt> to get a string that
+## describes exactly what revision was built.
+##
+</pre>
+
+<p>
+Windows用户会希望使用<tt>SubWCRev.exe</tt>，<a
+href='http://tortoisesvn.net/downloads'>TortoiseSVN的下载页面</a>就有；可以用当前工作拷贝的修订版本替换给定文件中的所有<tt>$WCREV$</tt>标签。
+</p>
+
+</div>
+
+
+<div class="h3" id="log-in-source" title="log-in-source">
+<h3>Subversion是否有一个功能类似CVS的$Log$的关键字呢？</h3>
+
+<p>没有。在CVS中没有对应的$Log$关键字，如果你希望将日志信息输入某个特定文件，你可以使用'svn log your-file-name'或'svn log url-to-your-file'。邮件列表中有几个解释$Log$缺点的例子：</p>
+
+<pre>“当你开始合并分支之间的变更时，$Log$会是一个完全的梦魇。你一定会在这里得到冲突 -- 因为关键字的本性 -- 很难简单的自动解决冲突。”</pre>
+
+<p>而且：</p>
+
+<pre>Subversion的日志信息是可以改变的，可以通过设置svn:log修订版本属性修改。所以在任意文件扩展$Log:$会造成数据的过时，更新操作可能需要访问所有出现$Log:$关键字的文件，即使这些文件没有其他的变更。</pre>
+
+<p><i>我对此并不在意，我还是期望使用它，你能实现吗？</i></p>
+
+<p>不能，我们自己没有计划实现它，也不会接受实现这个特性的补丁。如果你希望发布包含某种变更日志的文件，你可以在你的构建系统中跳出这个限制。</p>
+
+</div>
+
+
+
+<div class="h3" id="ignore-commit" title="ignore-commit">
+<h3>在我的工程里有一个文件，每个人都必须改变它，但是我不希望他们本地的修改被提交，如何让'svn commit'忽略这个文件？</h3>
+
+<p>答案是：不要将文件纳入版本控制，而是将文件的<em>模板</em>纳入版本控制，例如“file.tmpl”。</p>
+
+<p>然后，在初始化的‘svn checkout’之后，让你的用户（或你的构建系统）执行通过普通的操作系统复制将文件修改为正确的文件名，文件未版本化，所以绝不会提交。并且如果你希望，你可以将文件加入到父目录的svn:ignore属性中，这样它就不会在‘svn status’命令中显示‘?’。</p>
+
+</div>
+
+
+<div class="h3" id="ssh-auth-cache" title="ssh-auth-cache">
+<h3>当我通过svn+ssh来访问一个版本库的时候，我的密码没有被缓存在~/.subversion/auth/，我应该如何避免每次都要键入密码？</h3>
+
+<p>ssh拥有自己的密码短语和认证缓存模式，它的认证缓存是Subversion之外的，需要独立于Subversion设置。</p>
+
+<p>OpenSSH使用<b><tt>ssh-keygen</tt></b>创建密钥、通过<b><tt>ssh-agent</tt></b>缓存密码短语、使用<b><tt>ssh-add</tt></b>将密码短语添加到代理缓存中。一个简化<tt>ssh-agent</tt>使用的脚本是<b><tt>keychain</tt></b>。在Windows下，<b><tt>PuTTY</tt></b>是一个流行的ssh客户端选择；将OpenSSH密钥导入到<b><tt>pageant</tt></b>并缓存密码短语可以看<b><tt>PuTTYgen</tt></b>。</p>
+
+<p>设置<tt>ssh-agent</tt>已经超出了本文的范围，但是<a
+href="http://www.google.com/search?hl=en&amp;lr=&amp;ie=UTF-8&amp;q=%22ssh-agent%22"
+>在Google中搜索“ssh-agent”</a>可以快速得到答案，或者如果你没有耐心，可以是看这些：</p>
+
+<pre>
+   <a href="http://mah.everybody.org/docs/ssh"
+           >http://mah.everybody.org/docs/ssh</a>
+   <a href="http://kimmo.suominen.com/docs/ssh/"
+           >http://kimmo.suominen.com/docs/ssh/</a>
+</pre>
+
+</div>
+
+
+<div class="h3" id="ssh-svnserve-location" title="ssh-svnserve-location">
+<h3>我的<tt>svnserve</tt>二进制程序不在我的用户的默认<tt>路径</tt>中，他们使用svn+ssh，我不知道怎样修改他们的路径来让他们运行<tt>svnserve</tt>。</h3>
+
+      <p>注意：这里都假设你使用了OpenSSH。也有一些其他的ssh实现，大概它们也实现了这些功能，但是我们不知道具体的方法。</p>
+      
+      <p>你已经对修改过各种诸如<tt>.bash_profile</tt>的登录文件，但是没有效果！那是因为当Subversion客户端调用ssh时会忽略那些文件。但是没有必要修改<tt>PATH</tt>；相反，你可以直接在<tt>svnserve</tt>命令中使用ssh的完全名，下面是一个例子：</p>
+
+      <p>对于每个需要通过svn+ssh访问的用户，生成一个新的Subversion使用的ssh公钥对&mdash;不是用来登陆的。让他们给密钥对不同的名称，例如<tt>~/.ssh/id_dsa.subversion</tt>。将密钥的公共部分添加到服务器主机的<tt>~/.ssh/authorized_keys</tt>中，在开始部分包含<tt>ssh-rsa</tt>或<tt>ssh-dss</tt>以及一些幻数的行中，如下：</p>
+
+      <table border="1" cellspacing="2" cellpadding="2">
+        <tr><th>之前</th></tr>
+        <tr><td><tt>ssh-dss&nbsp;AAAAB3Nblahblahblahblah</tt></td></tr>
+        <tr><th>之后</th></tr>
+        <tr><td><tt>
+        command="/opt/subversion/bin/svnserve&nbsp;-t"&nbsp;ssh-dss&nbsp;AAAAB3Nblahblahblahblah
+        </tt></td></tr>
+      </table>
+
+      <p>很明显，需要将<tt>/opt/subversion/bin/svnserve</tt>替换为你主机上的相应值。你也会希望在命令行指明Subversion版本库的完全路径（通过<tt>-r</tt>选项），节省用户使用时的输入。</p>
+      
+      <p><tt>command=</tt>魔法可以让远程主机的sshd调用<tt>svnserve</tt>，即使你的用户尝试运行其他命令，更多细节可以看sshd(8)的man页（<tt>AUTHORIZED_KEYS FILE FORMAT</tt>部分）。</p>
+      
+      <p>现在当你的用户运行Subversion客户端时，请确定他们有一个<tt>SVN_SSH</tt>环境变量是“指向”他们密钥对的私有部分，通过下面的方法（Bourne Again shell）：</p>
+
+<pre>
+SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
+export SVN_SSH
+</pre>
+
+      <p>这个主题的详细讨论可以看<a
+      href="http://svn.collab.net/repos/svn/trunk/notes/ssh-tricks">这个文件</a>。</p>
+      
+</div>
+
+
+<div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
+<h3>我希望允许通过svn+ssh://来访问版本库，但我很忧虑。我讨厌为每个用户分配一个登录帐号的方法，那样我会为他们是否允许访问我的机器感到担心。</h3>
+<p>可以看<a href="#ssh-svnserve-location">对其他问题</a>的回答中关于修改<tt>~/.ssh/authorized_keys</tt>的部分；先不管将<tt>svnserve</tt>设置到路径的问题。</p>
+</div>      
+
+
+<div class="h3" id="auto-props" title="auto-props">
+<h3>我怎么才能为版本库的所有文件设置一个的属性？另外，我该如何确保每个添加到版本库里的新文件都有这些属性？</h3>
+
+<p>Subversion缺省情况下不会修改文件的内容；你可以设置<tt>svn:eol-style</tt>或<tt>svn:keywords</tt>属性实现这个功能。这让Subversion比CVS的缺省行为模式更加安全，但是安全也带来了不便。</p>
+
+<p>第一个问题的答案是：设置所有已经进入版本库的文件，将会有点困难。你所要做的是在每个文件（工作拷贝文件）上执行<tt>svn propset</tt>，然后执行<tt>svn commit</tt>，通过脚本应该可以帮助你做这件事。</p>
+
+<p>但是对以后的文件呢？很不幸，没有在服务端自动设置提交文件属性的机制。这意味着你需要让你的用户记住在每个<tt>svn add</tt>的文件上添加属性，幸运的是，有一个客户端的工具可以帮助我们做这件事，可以阅读本书的<a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto">auto-props</a>特性。你需要保证所有的用户配置了合适的自动化属性。</p>
+
+<p>你可以写一个pre-commit钩子脚本来拒绝忘记在新文件添加属性的提交（例子可以看<a
+href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl"
+>http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl</a>）。然而这个方法有点过激了，例如某人忘记了设置<tt>svn:eol-style</tt>，那么在其他系统上用户很快就会注意到，一旦发现，可以很简单的修正：只要设置正确的值，并提交。</p>
+
+<p>注意：许多用户期望得到服务器“自动广播”运行中设置的特性，例如自动化属性设置。对此已经有了一个特性请求（<a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue
+1974</a>），然而这个特性还存在争议，还没有去实现。</p>
+
+</div>
+
+
+<div class="h3" id="svn-editor" title="auto-props">
+<h3>我如何处理编辑器路径中的空白？另外，如何定义编辑器的命令行选项？</h3>
+
+<p>Subversion命令行客户端会调用通过环境变量SVN_EDITOR.&nbsp;定义的编辑器，这个环境变量以及要编辑日志的临时文件会直接传递给操作系统。</p>
+
+<p>因为是要将SVN_EDITOR的字符串传递给系统命令行，所以如果你不加引号，编辑器名称中的空格或路径中的空格会造成错误。</p>
+
+<p>例如，在Windows下，如果你的编辑器在<code>C:\Program&nbsp;Files\Posix&nbsp;Tools\bin\vi</code>，你需要这样设置环境变量：
+</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi"
+</pre>
+
+<p>请注意没有必要在windows下回避引号，因为他们不是<code>set</code>命令语法的一部分。
+</p>
+
+<p>
+而在UNIX系统中，你需要遵从你shell的特定方法来设定变量，例如在bash shell中，应该这样：
+</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs"'
+   export SVN_EDITOR
+</pre>
+
+<p>如果调用编辑器需要命令行选项，只要在SVN_EDITOR环境变量的编辑器名称后面输入选项，就像你平时调用它时那样。例如，如果你的编辑器需要<code>-nx -r</code>选项，可以按照下面的方式设置：
+</p>
+
+<p>在Windows下：</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi" -nx -r
+</pre>
+
+<p>在UNIX/bash中：</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs" -nx -r'
+   export SVN_EDITOR
+</pre>
+
+<p>请注意SVN_EDITOR是Subversion特定的设置编辑器的环境变量，Subversion也支持使用更普遍的EDITOR环境变量，但是如果你希望一些对于Subversion特殊的行为方式，最好还是使用SVN_EDITOR变量。
+</p>
+
+</div>
+
+
+<div class="h3" id="divining-bdb-version" title="divining-bdb-version">
+<h3>如何确定版本库正在使用的Berkeley DB的版本？</h3>
+
+<p>如果它是一个活动的版本库，那么对于这个问题最简单的答案是“你安装的Berkeley DB的版本”。但是，如果它是备份的或其它未知源得到的版本库，你对其的Berkeley DB版本一无所知，下面是你确定它的方法：</p>
+
+<p>运行命令查看版本库中的高位计数文件db/log.*中位移12到16（10进制）的两个4字节的整数。这里是GNU od的例子：“<tt>od -j12 -N8 -tx4
+log.<i>&lt;number&gt;</i></tt>”。而这里是Mac OS X
+hexdump的例子：“<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>”。第一个整数一定是幻数0x00040988，用来注明这是Berkeley DB日志文件，第二个数字是日志格式版本 - 可以使用下面的表格和Berkeley DB的版本匹配：</p>
+
+<table border="1" cellspacing="2" cellpadding="2">
+  <tr><th>日志格式版本</th><th>Berkeley DB版本</th></tr>
+  <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
+  <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
+  <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
+  <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
+  <tr><td>11 (0x0000000b)</td><td>4.4</td></tr>
+  <tr><td>12 (0x0000000c)</td><td>4.5</td></tr>
+  <tr><td>13 (0x0000000d)</td><td>4.6</td></tr>
+</table>
+
+</div>
+
+
+<div class="h3" id="website-auto-update" title="website-auto-update">
+<h3>我在版本库中管理了一个网站，如何才能实现每次提交之后站点自动更新？</h3>
+
+<p>这个早已经解决，可以通过为版本库添加post-commit钩子脚本简单实现，可以读一下手册<a
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks">第5章</a>关于钩子脚本的内容，基本的思想是让“活动站点”变成一个普通的工作拷贝，让post-commit在工作拷贝中执行‘svn update’。</p>
+
+<p>在实践中，有许多地方需要小心。执行提交的服务器程序（svnserve或apache）也是执行post-commit钩子脚本的程序，这意味着程序必须有正确的更新工作拷贝的访问许可。换句话说，运行svnserve或apache的用户应该拥有工作拷贝 -- 或至少工作拷贝设置了合适的访问许可。</p>
+
+<p>如果服务器需要更新它并不拥有的工作拷贝（例如，用户joe的~/public_html/区域），一个技巧是创建一个+s的二进制程序运行更新，因为Unix不允许为脚本运行+s，编译一个小的C程序：</p>
+
+<pre>
+#include &lt;stddef.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+int main(void)
+{
+  execl("/usr/local/bin/svn", "svn", "update", "/home/joe/public_html/",
+        (const char *) NULL);
+  return(EXIT_FAILURE);
+}
+</pre>
+
+<p>... 然后对二进制程序<tt>chmod +s</tt>，并确认它确实被用户‘joe’所有，然后在post-commit钩子中，添加一行运行二进程程序。</p>
+
+<p>如果在让钩子运行时发生了问题，可以看<a
+href="#hook-debugging">“为什么我的钩子脚本都不能正常工作?”</a>。</p>
+
+<p>另外，你可能希望防止apache把工作拷贝中的.svn/目录暴露出去，在你的<tt>httpd.conf</tt>添加下面的内容：
+</p>
+
+<pre>
+# Disallow browsing of Subversion working copy administrative dirs.
+&lt;DirectoryMatch "^/.*/\.svn/"&gt;
+    Order deny,allow
+    Deny from all
+&lt;/DirectoryMatch&gt;
+</pre>
+
+</div>
+
+
+<div class="h3" id="single-file-checkout" title="single-file-checkout">
+<h3>我如何检出一个单独的文件？</h3>
+
+<p>Subversion不支持检出单个文件，它只支持检出目录结构。</p>
+
+<p>然而，你可以使用‘svn export’来导出单个文件，这会获得文件的内容，只是不会创建版本化的工作拷贝。</p>
+
+</div>
+
+
+<div class="h3" id="wc-change-detection" title="wc-change-detection">
+<h3>如何在工作拷贝执行完添加、删除、拷贝和重命名操作之后检测这些操作？</h3>
+
+<p>你不需要检测，你也最好不要尝试去做这样的检测。</p>
+
+<p>工作拷贝的基本设计有两个原则：(1) 你可以任意编辑文件，然后(2)使用Subversion客户端执行任何树目录的改动（增加、删除、移动、拷贝）。如果这两个原则能够很好的遵守，那么客户端就可以顺利的维护工作拷贝。如果重命名或者其他改动是在Subversion之外进行的，那么UI就会被破坏，工作拷贝也可能发生问题。客户端不能猜测究竟发生了什么事。</p>
+
+<p>人们有时候会遇到这样的错误，因为他们想要把版本控制变得透明化。他们诱使用户使用一份工作拷贝，然后在稍候运行一个脚本，这个脚本会猜测用户做了什么样的操作，然后执行相应的客户端命令。不幸的是，这样的方式只能在短期内正常工作。‘svn status’会显示出缺失条目或者未被纳入版本控制的条目，这些条目在脚本运行的时候会自动的被‘svn rm’或者‘svn add’。但如果发生了文件移动或者拷贝，那么你就不那么幸运了。即使脚本有非常可靠的方法来检测这些动作，但‘svn mv’和‘svn cp’不能在这些操作已经完成的情况下运行。</p>
+
+<p>总的来说，工作拷贝必须整个放置在Subversion的版本控制之下，Subversion本来就不是设计成对用户透明的。如果你想要获得这种透明性，那么你应该建立一个apache服务器，然后本书附录C使用的“SVNAutoversioning”特性。这将允许用户将版本库挂载成一个网络磁盘的形式，任何对这个磁盘的修改，都会自动提交到远程服务器上。</p>
+
+</div>
+
+
+<div class="h3" id="svnserve-win-service" title="svnserve-win-service">
+<h3>在Windows上如何将svnserve当作服务来运行？</h3>
+
+<p>对于1.4.0及以后的版本，你可以查看<a
+href="http://svn.collab.net/repos/svn/trunk/notes/windows-service.txt">这里</a>。</p>
+
+<p>对于1.4.0以前的版本，<tt>svnserve</tt>二进制本身并不可以被安装成一个windows服务，但有很多&ldquo;service wrappers&rdquo;可以完成一样的工作。例如：</p>
+
+<ul>
+<li><a href="http://www.clanlib.org/~mbn/svnservice/">SVNService</a>
+Magnus Norddahl写的一个免费的工具</li>
+<li><a href="http://support.microsoft.com/kb/q137890/">SrvAny</a>
+微软出的免费的工具</li>
+</ul>
+
+<p>在
+<a
+href="http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup-svnserve.html">
+TortoiseSVN手册</a>还有一点内容关于怎么将<tt>svnserve</tt>安装成服务的形式。</p>
+
+</div>
+
+
+<div class="h3" id="bdb-fsfs-convert" title="bdb-fsfs-convert">
+<h3>如何转换我的版本库，从BDB到FSFS，或者从FSFS到BDB？</h3>
+
+<p>有三步：</p>
+
+<ol>
+  <li>使用<a href="#dumpload">dump/load</a>将旧格式转到新格式。</li>
+  <li>拷贝钩子脚本。</li>
+  <li>拷贝配置文件。</li>
+</ol>
+
+<p>假设你在<tt>/svn/myrepos</tt>目录中放置了一个版本库，使用的是BDB，你想要将其转换成FSFS：</p>
+
+<ol>
+  <li>关闭你的服务器，这样在这个过程中数据不会发生变化。</li>
+  <li>创建一个使用fsfs的新的版本库（这在1.2版本依赖就是默认的行为)。例如，<tt>svnadmin create /svn/myreposfsfs --fs-type
+  fsfs</tt>。</li>
+  <li>将<tt>/svn/myrepos</tt>的转储输出通过管道重定向到<tt>/svn/myreposfsfs</tt>的加载输入上，例如，<tt>svnadmin dump /svn/myrepos
+  -q | svnadmin load /svn/myreposfsfs</tt>。Windows用户应该转储到一个文件中，并且从那个文件中加载，需要分两步完成。</li>
+  <li>复制在<tt>/svn/myrepos/hooks</tt>中仍使用的钩子脚本到<tt>/svn/myreposfsfs/hooks</tt>中。不要所有东西都拷贝，有些模板是由Subversion自动生成的，可能会不一样。</li>
+  <li>比较<tt>/svn/myreposfsfs/hooks</tt>目录中<tt>svnadmin create</tt>命令生成的脚本模板和<tt>/svn/myrepos/hooks</tt>中的有什么不一样，将这些不同按需合并到你正在使用的钩子脚本中。</li>
+  <li>从<tt>/svn/myrepos/conf</tt>复制配置文件到<tt>/svn/myreposfsfs/conf</tt>中（如果有密码文件的话，也不要忘了）。或者你想要将配置文件中所做的<em>修改</em>合并到新的默认配置文件中。</li>
+  <li>重命名<tt>/svn/myrepos</tt>为<tt>/svn/myreposbdb</tt>，还有<tt>/svn/myreposfsfs</tt>重命名为<tt>/svn/myrepos</tt>，这样可以确保文件权限和BDB版本的一样。</li>
+  <li>重启服务器。</li>
+</ol>
+
+<p>一旦一切工作正常后，删除旧的版本库即可。</p>
+
+<p>如果要反过来操作，即从FSFS移植到BDB，只需要改变<tt>svnadmin create</tt>命令，将其指定为BDB即可。</p>
+
+</div>
+ 
+<div class="h3" id="binary-files" title="binary-files">
+<h3>版本库如何处理二进制文件？</h3>
+
+<p>当你第一次添加或者导入文件到Subversion中时，Subversion会检测该文件是否是二进制文件。目前，Subversion的策略是只检测文件的前1024个字节；如果每个字节都是0，或者超过15%都是非ASCII码可打印字符的话，那么Subversion就认定该文件是二进制文件。这种启发式方法将来可能会改进。</p>
+
+<p>如果Subversion认定文件是二进制文件，那么这个文件就会自动添加svn:mime-type属性，并设置为“application/octet-stream”。（你随时可以使用<a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
+>auto-props特性</a>来重写这样的行为，或者使用<tt>svn propset</tt>手动设置属性。)</p>
+
+<p>Subversion对以下的文件做普通文本处理：</p>
+
+<ul>
+  <li>没有设置svn:mime-type属性的文件</li>
+  <li>文件的svn:mime-type属性值以“text/”开头</li>
+  <li>文件的svn:mime-type属性值等于“image/x-xbitmap”</li>
+  <li>文件的svn:mime-type属性值等于“image/x-xpixmap”</li>
+</ul>
+
+<p>所有其他文件都将被视为二进制文件处理，这意味着Subversion：</p>
+
+<ul>
+  <li>不会尝试在<tt>svn update</tt>或者<tt>svn merge</tt>操作时将远程修改合并到本地中</li>
+  <li>在<tt>svn diff</tt>中不会显示出不同</li>
+  <li>在<tt>svn blame</tt>不会显示出每一行的贡献者</li>
+</ul>
+
+<p>在其他方面，Subversion将二进制文件和其他文本文件一样对待，例如，如果你设置了svn:keywords或者svn:eol-style属性，Subversion会在二进制文件中执行关键词替换或者行转换。</p>
+
+<p>需要注意，不管是不是二进制文件，都不会影响版本库中用来存储文件变更的空间大小，也不会影响客户端和服务端之间的通讯量。出于存储和传输考虑，Subversion使用的是对二进制文件和普通文本文件一致处理的diffing方法；这和‘svn&nbsp;diff’使用的diffing方法完全不相关。</p>
+
+</div>
+
+<div class="h3" id="terse-diff" title="terse-diff">
+<h3>如何让<tt>svn diff</tt>仅显示被改变的文件的名字，而不是连内容也显示出来？</h3>
+<p>
+<tt>svn diff</tt>没有一个选项可以做到这一点，但是
+</p>
+<ul>
+<li>
+  如果你只是对修订版本号10和之前的版本之间的变动感兴趣，那么使用<pre>svn log -vq -r10</pre>完全可以实现你的目的；
+</li>
+<li>
+  否则，如果你是在使用Unix系统的话，下面这个方法对于任意范围的版本号都起作用：
+  <pre>
+    svn log -vq -r123:456 | egrep '^ {3}[ADMR] ' | cut -c6- | sort | uniq </pre> </li>
+</ul>
+1.4版本的<tt>svn diff</tt>命令有一个“--summarize”的参数。
+</div>
+
+<div class="h3" id="sorry-no-globbing" title="sorry-no-globbing">
+<h3>我如何使用通配符（wildcards）或者点号来一次移动多个文件？</h3>
+<p>
+你或许是想做这样一些事情
+</p>
+<pre>
+svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
+</pre>
+<p>
+但是却失败了 
+</p>
+<pre>
+svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
+</pre>
+<p>
+... 或者还有其他一些看起来不可理解的错误信息。
+</p>
+
+<p>
+简而言之，很不幸：Subversion没有内置这样的方法来进行这样一种操作；许多其他的命令，例如<tt>mv</tt>，不会接受任意数目的参数...在任何情况下，Subversion都不会扩展如shell所支持的“*”号通配符。
+</p>
+
+<p>
+如果你刚好有一个工作拷贝包含了和目标目录一摸一样的源文件，那么你可以使用你的shell中的通配符特性来完成移动文件的目的，例如（在bash下）：
+</p>
+<pre>
+  for i in stuff/*; do svn mv $i some-other-dir; done
+  svn ci -m "moved all the stuff into some other dir"
+</pre>
+
+<p>
+在任何情况下，你都可以将源文件的名字拼成一个列表，然后使用“svn mv”命令对列表中的每一项都执行同样的指令，就像下面所做的一样：
+</p>
+<pre>
+        s=svn://server/trunk/stuff/
+        svn ls "$s"  | \
+        while read f
+           do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
+        done
+</pre>
+<p>
+但是需要注意的是，这样会造成每个文件都执行一次提交动作，这和上面的方法（使用工作拷贝）不同，上面的方法总共就会执行一次提交动作。
+</p>
+
+<p>
+有一个程序叫“svnmucc”或者“mucc”可以解决你的这个问题，不过它依赖于你的Subversion版本号，它的源代码已经发布在Subversion中了（对于Subversion 1.4以及更早的版本，这个工具的源文件放置在<tt>/contrib/client-side/mucc/mucc.c</tt>，对于1.5及之后的版本，则在<tt>/contrib/client-side/svnmucc/svnmucc.c</tt>可以找到）。
+</p>
+
+<p>
+<b>注意：</b>随着1.5版本的正式发布，Subversion事实上允许你一次性同时“cp”和“mv”多个文件。
+</p>
+</div>
+
+<div class="h3" id="vendor-branch" title="vendor-branch">
+<h3>我如何用Subversion维护一个由第三方不断修正版本的软件呢？(一个"供方分支")？</h3>
+
+<p>人们通常希望使用Subversion去跟踪他们的变化的第三方代码，甚至从第三的代码进行升级，换句话说，他们想维护他们自己的一个分支，与此同时仍然希望从上游的代码并入新的发布。这通常被叫做<em>供方分支</em>（这个术语早于Subversion），Subversion维护这种分支的技术可以看<a
+href="http://svnbook.red-bean.com/en/1.4/svn-book.html#svn.advanced.vendorbr"
+>这个描述</a>。</p>
+
+<p>如果供方代码是远程的主机上的Subversion版本库，你可以使用<a href="http://piston.rubyforge.org/">Piston</a>来管理你的供方代码拷贝。</p>
+
+<p>最后，如果使用<tt>svn_load_dirs.pl</tt>花太多时间的话，或者你正在寻找一个偷懒的方案，则可以参考Jon
+Stevens的渐进介绍<a
+href="http://lookfirst.com/2007/11/subversion-vendor-branches-howto.html"
+>如何使用Subversion供方分支</a>。这种解决方案在你拷贝新的代码去覆盖旧代码的时候并不能利用Subversion后端的节省空间特性换；在这种解决方案中，每一份导入的供方代码都会是一个新的拷贝，相同的文件不会节省存储空间。</p>
+
+</div>
+
+</div>
+
+<div class="h2" id="troubleshooting" title="troubleshooting">
+<h2>疑难解答：</h2>
+<p/>
+
+
+<div id="permissions"></div>
+<div class="h3" id="stuck-bdb-repos" title="stuck-bdb-repos">
+<h3>我的版本库经常看起来卡住了，一直报一个需要重新恢复(DB_RUNRECOVERY)的错误，怎么会导致这个问题？</h3>
+
+<p>版本库使用的Berkeley DB数据库很容易受到破坏。如果进程退出时没有正常关闭数据库，那么数据库就处在非正常状态中。常见的原因可能是：</p>
+
+<ul>
+  <li>进程遇到访问权限问题而退出时</li>
+  <li>进程崩溃或段错误</li>
+  <li>进程被强制杀死</li>
+  <li>磁盘空间用尽</li>
+</ul>
+
+<p>多数情况下，你可以执行"svnadmin recover"，这个命令可以将版本库回退到上一个正常状态，详细解释请见<a href="#bdb-recovery">bdb-recovery</a>。注意，当频繁的checkout和update且磁盘空间用尽的时候，可能导致版本库处于无法恢复的状态（所以请多做备份）。</p>
+
+<p>进程崩溃，被杀死以及磁盘空间用尽都是极端情况。访问权限问题可能是更常见的原因：当一个进程访问版本库且改变了版本库的所有者或访问权限，那么另一个访问这个版本库的进程可能被阻塞在访问权限上。</p>
+
+<p>避免这种情况出现的最好办法是正确设置你的版本库的所有者和权限。<a href="#reposperms">查看更多信息</a>。</p>
+
+</div>
+
+
+<div id="wedged-repos"></div>
+<div class="h3" id="bdb-recovery" title="bdb-recovery">
+<h3>每次我想访问我的版本库，进程就会挂起。我的版本库坏掉了吗？</h3>
+
+<p>你的版本库没有坏掉，数据也没有丢失。当你的进程直接访问版本库（mod_dav_svn、svnlook、svnadmin，或通过‘file://’）的时候，进程将直接通过Berkeley DB来访问版本库。Berkekey DB包含日志系统，也就是说所有的操作在执行前都被记录在日志中。当你的进程崩溃（Control-C,或段错误），遗留下文件锁，它记录了所有未完成操作的信息。此时所有试图访问数据库的进程将因为要访问文件锁而被挂起。要想解除文件锁，你可以调用Berkeley DB来完成所有未完成的操作或者回退到前一个正常状态。</p>
+
+<p><b><span style="color: red">警告：</span>当一个进程正在访问版本库，而你又试图恢复版本库的时候，版本库可能会严重损坏。</b></p>
+
+<p>在你恢复数据库之前，请确保没有其他进程在访问版本库(关闭Apache, 去掉'svn'的执行权限)
+。确认你是以数据库所有者及管理员的用户进行操作的，而不是root用户。否则数据库将只能被root用户访问，而其他用户（你自己或Apache）将无法对数据库进行操作。同时，还要确保umask被正确设置，否则其他隶属与可以访问该数据库的组的用户可能无法对数据库进行操作。</p>
+
+<p>
+执行:</p>
+
+<pre>
+   svnadmin recover /path/to/repos
+</pre>
+
+<p>当命令执行完毕, 检查版本库<code>db</code>目录的访问权限</p>
+
+<p>有时"svnadmin&nbsp;recover"会失败，错误信息如下：</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svnadmin: DB_RUNRECOVERY: Fatal error, run database recovery
+  svnadmin: bdb: Recovery function for LSN 175 7066018 failed on backward pass
+  svnadmin: bdb: PANIC: No such file or directory
+  svnadmin: bdb: PANIC: fatal region error detected; run recovery
+</pre>
+
+<p>或者：</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svn: DB_RUNRECOVERY: Fatal error, run database recovery
+  svn: bdb: DB_ENV-&gt;log_flush: LSN of 115/802071 past current end-of-log
+  of 115/731460
+  svn: bdb: Database environment corrupt; the wrong log files may have
+  been removed or incompatible database files imported from another
+  environment
+  [...]
+  svn: bdb: changes: unable to flush page: 0
+  svn: bdb: txn_checkpoint: failed to flush the buffer cache Invalid argument
+  svn: bdb: PANIC: Invalid argument
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  [...]
+</pre>
+
+<p>这种情况下可以试试Berkeley DB的工具<b>db_recover</b>
+（参见<a href="http://www.oracle.com/technology/documentation/berkeley-db/db/utility/db_recover.html"
+>db_recover文档</a>）.这个命令通常在Berkeley DB安装目录的子目录"bin/"中,
+例如你从源代码安装的Berkeley DB,命令可能是
+<tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>;或在某些系统中预安装的Berkeley DB，可能是
+<tt>/usr/bin/db_recover</tt>.如果你的系统中安装了多个版本的
+Berkeley DB,请确保使用匹配版本库的Berkeley DB版本</p>
+
+<p>执行db_recover，附带参数"-c" （"灾难恢复"）.你还可以附带
+"-v"来看到执行的详细信息, "-h"指定被恢复的数据库。例如：</p>
+
+<pre>
+   db_recover -c -v -h /path/to/repos/db
+</pre>
+
+<p>用版本库的拥有者的帐号执行这个命令，同时，请绝对确保没有其他进程在
+访问版本库。（例如，关闭svnserve或）。</p>
+
+</div>
+
+
+<div class="h3" id="bdb-cannot-allocate-memory" title="bdb-cannot-allocate-memory">
+<h3>我的版本库一直报告错误"Cannot allocate memory"，我该怎么办？</h3>
+
+<p>如果你通过http://来访问版本库，"<b>Cannot allocate memory</b>"应该出现在httpd服务器的日志中，像下面这样：</p>
+
+<blockquote>
+<pre>
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] (20014)
+Error string not specified yet: Berkeley DB error while opening 
+'strings' table for filesystem /usr/local/svn/repositories/svn/db: 
+Cannot allocate memory
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] 
+Could not fetch resource information.  [500, #0]
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] 
+Could not open the requested SVN filesystem  [500, #160029]     
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] (17) 
+File exists: Could not open the requested SVN filesystem  [500, #160029]
+</pre>
+</blockquote>
+
+<p>这通常表示Berkeley DB版本库用光了所有数据库锁（FSFS版本库不会出现这种情况）。通常的运行过程中不应该出现这种情况，如果确实出现了，解决办法是用本文中描述的方法来<a href="#bdb-recovery">恢复数据库</a>。如果这种情况时常发生，你很可能应该提高db/DB_CONFIG文件中锁设置（<tt>set_lk_max_locks</tt>、<tt>set_lk_max_lockers</tt>和<tt>set_lk_max_objects</tt>）的默认值。改变已存在的版本库的DB_CONFIG配置后，记得恢复数据库。</p>
+
+</div>
+
+
+<div class="h3" id="wedged-wc" title="wedged-wc">
+<h3>每当我试图运行一个svn命令时，都会提示我的工作拷贝已经被锁定了，是我的工作拷贝坏掉了吗？</h3>
+
+<p>
+你的工作拷贝没有坏掉，数据也没有丢失。Subversion的工作拷贝是一个日志系统，所有的操作在执行之前都被记录在日志中。如果svc客户端程序被强制中止（段错误或杀进程，不包括Control-C），会有多个文件锁遗留下来，记录了未完成的操作。（'svn status'命令会在被锁定的目录后显示'L'。）其他试图访问工作拷贝的进程看到这些锁后会返回操作失败。想解锁你的工作拷贝，需要让svn客户端完成未完的操作。执行：</p>
+
+<pre>
+svn cleanup working-copy
+</pre>
+
+</div>
+
+
+<div class="h3" id="wc-out-of-date" title="wc-out-of-date">
+<h3>我试图去提交，但是Subversion说我的工作拷贝是过时的？</h3>
+
+<p>三种情况下会出现这个问题</p>
+
+<ol>
+
+<li><p>提交失败导致了你的工作拷贝被破环。</p>
+
+    <p>在你提交时，新版本被添加到服务器上，然后你的客户端执行提交后的管理任务（包括刷新本地拷贝）。在第二个操作之前，你的提交处在一个“过期”的状态之中。导致这种情况发生的原因有，（极少数情况下）数据库一端出现了问题，（大多数情况下）网络在错误的时间中断了。</p>
+
+    <p>这时，很可能你的提交已经成功了。你可以执行"svn log -rHEAD"来查看提交是否真的成功了。如果成功了，执行“svn revert”，回退本地修改，然后执行“svn update”来取回你已经提交的修改。（注意，“svn update”能更新你的本地拷贝，而revert不能。）</p>
+</li>
+
+<li><p>版本混杂。</p>
+
+     <p>提交的时候，在客户端的工作拷贝中，只有此次提交涉及的节点会被更新，而不是所有节点。这意味着，你最后一次提交决定你的工作拷贝中了文件和目录的版本号，他们可能不是同一版本。对于像修改目录属性等特定操作，如果版本库中有更新的版本，你的提交会被拒绝，以防止数据丢失。详细请见<a href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.basic.in-action.mixedrevs.limits">版本混杂的局限</a>在<a href="http://svnbook.red-bean.com/">使用Subversion做版本控制</a>中。</p>
+
+     <p>执行'svn update'可以解决这个问题。</p>
+</li>
+
+<li><p>你的版本可能确实是过时的&nbsp;&mdash;&nbsp;即在你提交的时候，有人基于你的上一次改动又作了更新。执行'svn update'来解决这个问题。</p>
+</li>
+</ol>
+</div>
+
+
+<div class="h3" id="obstructed-add" title="obstructed-add">
+<h3>我为项目贡献了一个补丁，而这个补丁添加了一个新文件，现在<tt>svn update</tt>不能工作了。</h3>
+
+<p>如果要往补丁里加入新文件，你可能得使用<tt>svn add</tt>命令，这样<tt>svn diff</tt>命令才会将新文件包含在补丁里面。如果你的补丁已经提交到代码库里头了，然后你运行<tt>svn update</tt>，这个时候你可能会收到错误提示：“svn：Failed to add file ‘my.new.file’。object of the same name already exists”（不能增加“my.new.file”，同名文件已经存在）。</p>
+
+<p>之所以会产生这个错误是因为你的工作拷贝中已经有这个文件了。解决这个问题的步骤如下：</p>
+
+<ol>
+	<li>运行<tt>svn revert</tt>命令，把原先标记为添加的修改撤销掉。</li>
+	<li>删除文件或者将其移动到工作拷贝外的其他位置。</li>
+	<li>现在你应该可以运行<tt>svn update</tt>命令了。</li>
+</ol>
+
+<p>你可能需要把版本库中的新文件和你的本地的文件做一下比较。</p>
+</div>
+
+
+<div class="h3" id="unrecognized-url-error" title="unrecognized-url-error">
+<h3>我编译了Subversion的发行版，当我试图check out的时候，我得到一个错误"Unrecognized URL scheme."这时怎么回事呢?</h3>
+
+<p>Subversion使用了插件系统来访问版本库。现在支持三个插件：ra_local支持访问本地版本库，ra_dav支持通过WebDAV访问版本库，ra_svn支持通过svnserver服务器访问远程或本地的版本库。当你执行Subversion的操作时，会根据URL scheme来决定加载哪一个插件。以`file://'开头的URL会加载ra_local，`http://'开头的URL会加载ra_dav。</p>
+
+<p>你看到的错误是说无法找到正确的插件。发生这个问题，通常是因为你将Subversion的库文件编译成动态库后，却没有执行'make install'。或者虽然你执行了'make install'，但是操作系统还是找不到Subversion的动态库所在的路径。在Linux系统中，你可以把相应的路径加入到/etc/ld.so.conf中，然后运行ldconfig。如果你不想这么作，又或者你没有root权限，你可以在LD_LIBRARY_PATH中指定相应的路径。</p>
+
+</div>
+
+
+<div class="h3" id="db-recover" title="db-recover">
+<h3>当我查找或打开一个版本库时出现错误，但是我知道我版本库URL是正确的，哪里出错了？</h3> 
+
+<p>参考<a href="#bdb-recovery">这个FAQ条目。</a></p>
+
+</div>
+
+
+
+<div class="h3" id="configure-sed-error" title="configure-sed-error">
+<h3>当我运行`<tt>configure</tt>'命令时，出现一些错误<tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>。
+这是怎么回事？</h3>
+
+<p>
+可能你系统里的<tt>/usr/local/bin/apr-config</tt>和<tt>/usr/local/bin/apu-config</tt>太旧了。删了它们，更新<tt>apr/</tt>和<tt>apr-util/</tt>，使其和你编译的版本保持一致，再重新编译。
+</p>
+
+</div>
+
+ 
+<div class="h3" id="windows-msvc-build" title="windows-msvc-build">
+<h3>我在Windows下用MSVC++6.0构建Subversion时候有些麻烦，我该怎么办？</h3>
+
+<p>
+可能你需要最新版本的platform SDK，VC++ 6.0带的SDK太旧了。
+</p>
+
+</div>
+
+
+<div class="h3" id="windows-drive-letter" title="windows-drive-letter">
+<h3>我如何在<tt>file:</tt>格式的URL中指定Windows盘符?</h3>
+
+<p>像这样：</p>
+<pre>
+svn import file:///d:/some/path/to/repos/on/d/drive
+</pre>
+<p>更多细节请见Subversion书中的<a
+href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.advanced.reposurls">版本库URL</a>。</p>
+
+</div>
+
+  
+<div class="h3" id="vs-asp-net" title="vs-asp-net">
+<h3>VS.NET/ASP.NET似乎不能处理".svn"目录名。我该怎么办?</h3>
+
+<p>VS.Net有一个ASP.Net子系统，它使用WebDAV来通过IIS来远程发布。这个子系统剔除了所有以"."开头的目录。在你试图远程发布你的工作目录的时候，".svn"将导致问题。错误信息类似"unable to read project information"。</p>
+
+<p>要想绕过这个问题，设置环境变量SVN_ASP_DOT_NET_HACK为任意值&nbsp;&mdash;&nbsp;这将告诉Windows clients在你的工作拷贝中使用"_svn"作为目录名。参见<a href="http://subversion.tigris.org/svn_1.3_releasenotes.html#_svn-hack">Subversion 1.3发布说明的相关章节</a>来取得更多信息，参见<a href="#adm-dir">这个问题</a>来用其他方法配置管理目录名。</p>
+
+</div>
+
+
+<div class="h3" id="write-over-dav" title="write-over-dav">
+<h3>我在通过网络对Subersion版本库进行写操作的时候有些麻烦。</h3>
+
+<p>例如，有用户反映，通过本地协议访问的，导入功能正常工作：</p>
+<pre>
+  $ mkdir test
+  $ touch test/testfile
+  $ svn import test file:///var/svn/test -m "Initial import"
+  Adding         test/testfile
+  Transmitting file data .
+  Committed revision 1.
+</pre>
+但如果从远程访问的话就出错了：
+<pre>
+  $ svn import http://svn.sabi.net/test testfile -m "import"
+  nicholas's password: xxxxxxx
+
+  svn_error: #21110 : &lt;Activity not found&gt;
+
+  The specified activity does not exist.
+</pre>
+
+<p>我们曾经遇到过这样的问题，当httpd进程对REPOS/dav/目录没有可写权限的时候会发生。你需要检查一下相关的权限问题，确保Apache能够往<tt>dav/</tt>目录中写入东西。（当然还有<tt>db/</tt>目录）。</p>
+
+</div>
+
+
+
+<div class="h3" id="windows-xp-server" title="windows-xp-server">
+<h3>在Windows XP下，Subversion服务器有时候会发布一些错误数据，真的是这样吗？</h3>
+
+<p>你需要安装Windows XP的SP1补丁。你可以在下面这里找到所有相关的信息：</p>
+
+    <ul><li>
+    <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
+    >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
+    </li></ul>
+
+</div>
+
+
+<a name="ethereal"></a> <!-- for compatibility with old question -->
+<div class="h3" id="net-trace" title="net-trace">
+<h3>在Subversion服务器和客户端之间进行交互时，跟踪网络的最好方法是什么？</h3>
+
+<p>可以参考<a href="hacking.html#net-trace"
+>hacking.html#net-trace</a>。</p>
+
+</div>
+
+
+<div class="h3" id="revert" title="revert">
+<h3>为什么<tt>svn revert</tt>要求有一个明确的目标？为什么它默认不是递归执行的呢？这与所有其他的子命令都不同。</h3>
+
+<p>简而言之，这是为你好。</p>
+
+<p>Subversion对保护你的数据非常重视，不只是你已经版本化的数据。你对已经版本控制的文件所做的修改，或者你即将添加到版本库中的文件，都必须小心对待。</p>
+
+<p>使用<tt>svn revert</tt>命令需要非常明确地指定目标&mdash;即使目标是‘.’&mdash;就是其中一个方面。这个要求（同样对于<tt>--recursive (-R)</tt>标记，如果你真的需要递归执行某个操作，你也要这样做）是为了让你清楚的知道你要做的事情，因为一旦你执行了撤销工作拷贝修改的命令，所有本地的修改都会永远消失。</p>
+
+</div>
+
+
+
+<div class="h3" id="db3db4" title="db3db4">
+<h3>当我启动Apache时，mod_dav_svn报告"bad database version"，它发现的是db-3.X，而不是db-4.X。</h3>
+
+<p>你的apr-util链接的是DB-3，而svn链接的是DB-4。不幸的是，DB符号并不是不相同的。当mod_dav_svn被加载入Apace的进程空间的时候，他会使用apr-util的DB-3库来解析符号。</p>
+
+<p>解决办法就是确保apr-util是在DB-4下编译的。你可以在编译的时候指定特定的开关为apr-util的配置或者apache的配置：“--with-dbm=db4 --with-berkeley-db=/the/db/prefix”。</p>
+
+</div>
+
+
+
+<div class="h3" id="redhat-db" title="redhat-db">
+<h3>在Red Hat 9中，我得到一个"Function not implemented"错误，一切都停止工作。我该如何修正它呢？</h3>
+
+<p>这确实不是Subversion的问题，但经常会影响Subversion用户。</p>
+
+<p>随Red Hat 9还有Fedora发行的Berkeley DB库依赖于对NPTL的内核支持（本地Posix线程库）。</p>
+
+<p>Red Hat提供的内核对这方面有内置的支持，但如果你是自己编译的内核，那么你可能不会有NPTL的支持。如果是这个原因的话，那么你可能会看到如下的错误：</p>
+<blockquote><pre>
+svn: Berkeley DB error
+svn: Berkeley DB error while creating environment for filesystem tester/db:
+Function not implemented
+</pre></blockquote>
+<p>这个问题可以按照下面的方法解决：</p>
+<ul>
+<li>根据你使用的内核重新编译Berkeley DB。</li>
+<li>使用Red Hat 9内核。</li>
+<li>使用NPTL内核补丁。</li>
+<li>使用内置了NPTL支持的比较新的内核版本（2.5.x）。</li>
+<li>检查<code>LD_ASSUME_KERNEL</code>环境变量是否已经设置为了<code>2.2.5</code>，如果是的话，在重新启动Subversion（Apache）之前删除此环境变量。（通常只有当你在Red Hat 9上面运行 Wine或者Winex才需要设置这个环境变量）</li>
+</ul>
+<p>要使用NPTL版本的Berkeley DB，你还需要使用支持NPTL的glibc库，很可能是i686版本。参考<a
+href="http://svn.haxx.se/users/archive-2004-03/0488.shtml">
+http://svn.haxx.se/users/archive-2004-03/0488.shtml</a>。
+</p>
+
+</div>
+
+
+<div class="h3" id="no-author" title="no-author">
+<h3>为什么文件通过Apache（ra_dav）被提交和导入时，SVN的日志说“(no author)”?</h3>
+
+<p>如果你在Apache上开启了匿名用户的写权限的时候，Apache服务器就不会向svn客户端询问用户名，而是直接不经过验证就允许执行写操作。因为Subversion不知道谁做了这些操作，日志中这些操作信息就变成下面这样了：</p>
+
+<blockquote><pre>
+$ svn log
+------------------------------------------------------------------------
+rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
+</pre></blockquote>
+
+<p>关于如何配置Apache的访问权限，参考Subversion书籍（<a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.httpd.html"
+>"Networking a Repository"</a>）。</p>
+
+</div>
+
+
+
+<div class="h3" id="windows-access-denied" title="windows-access-denied">
+<h3>我在Windows平台上偶尔会得到一个"Access Denied"错误，它的发生好像没有什么规律，为什么呢？</h3>
+
+<p>这可能是由于一些监听文件系统变化的windows服务（如杀毒软件，索引服务，COM+事件通知服务）。这不属于Subversion的Bug，所以我们很难修正这个问题。关于这种情况的调查说明可以在<a href="http://svn.haxx.se/dev/archive-2003-10/0136.shtml">这里</a>找到。在7598版本中，对这个问题做了改进，对于大多数人来说，应该会降低这种情况出现的几率。如果你使用的是较早的版本，请更新到最新的发行版。
+</p>
+
+</div>
+
+
+<div class="h3" id="freebsd-hang" title="freebsd-hang">
+<h3>在FreeBSD上，某些操作（尤其是svnadmin create）有时候会被挂起。为什么？</h3>
+
+<p>这通常是由于系统中某些资源不足的缘故造成的。你很可能需要配置一下系统，使其能够从源那里获取足够的资源，如硬盘还有网络中断。查阅你的系统说明手册，找到random(4)还有rndcontrol(8)这几节，看如何修改。</p>
+
+</div>
+
+
+<a name="301-error"></a> <!-- for compatibility with old
+  non-XML-name-compliant fragment id -->
+<div class="h3" id="http-301-error" title="http-301-error">
+<h3>我可以从一个WEB浏览器上查看我的版本库，但是在执行'svn checkout' 时发生一个错误：&quot;301 Moved Permanently&quot;。那个地方出错了？</h3>
+
+<p>这意味着你的httpd.conf配置有问题，通常情况下，当你设置的Subversion虚拟目录同时存在两种寻址方式的时候会出现这样的错误。</p>
+
+<p>例如，当你将版本库放到<tt>/www/foo目录下</tt>，但是你又同时设置了你的版本库的根目录为/www，那么你就麻烦了。当有人请求一个/www/foo/bar文件的时候，apache根本不会知道，对方真正想要寻找的文件，是在根目录里下的/foo/bar，还是通过调用mod_dav_svn模块从/www/foo版本库中去把/bar文件给取回来，通常Apache的处理行为是采取前者的方式，因此就会出现“永久转移”这样的错误了。</p>
+
+<p>解决这个问题的办法就是确认你的版本库路径不会有重叠，或者存在其他网络共享可访问的路径里面。</p>
+
+<p>出现这个问题还有一个可能的原因，就是在网站根目录存在一个和版本库的URL同名的文件（文件夹）。例如，假设你的WEB服务器的根目录设置在/var/www，你的Subversion版本库被放置在/home/svn/repo目录下，然后你在Apache下将该版本库的URL配置成<tt>http://localhost/myrepo</tt>。如果你这时又在/var/www下创建了一个myrepo的目录，那么同样会产生301的错误。</p>
+
+
+</div>
+
+
+<div class="h3" id="digest-auth" title="digest-auth">
+<h3>为什么HTTP摘要认证（HTTP Digest auth）不能正常工作？</h3>
+
+<p>这个问题很可能是因为Apache服务器的一个已知的bug（存在于2.0.48或者更早期的版本），你可以在<a href="http://nagoya.apache.org/bugzilla/show_bug.cgi?id=25040"
+   >http://nagoya.apache.org/bugzilla/show_bug.cgi?id=25040</a>找到相应的补丁。你也可以在<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1608"
+   >http://subversion.tigris.org/issues/show_bug.cgi?id=1608</a>
+上看有没有和你说的情况类似的已反馈的bug。</p>
+
+</div>
+
+
+<div class="h3" id="xlc-compile" title="xlc-compile">
+<h3>我在AIX上面编译xls的时候出现编译错误，为什么呢？</h3>
+
+<p>在环境变量CFLAGS中加入<tt>-qlanglvl=extended</tt>作为配置参数，这会使到编译xls的时候更加灵活，这样应该不会再出现编译错误了。更详细的信息请参阅
+<a href="http://svn.haxx.se/dev/archive-2004-01/0922.shtml"
+>http://svn.haxx.se/dev/archive-2004-01/0922.shtml</a> 及相关的文章。</p>
+
+</div>
+ 
+
+<div class="h3" id="nonrecursive-checkout" title="nonrecursive-checkout">
+<h3>我使用非递归的方式（使用 -N参数）检出一个目录后，现在我想让某些特定的子目录再“出现”，但svn up subdir命令不能正常使用。</h3>
+
+<p>参考 <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=695">issue
+695</a>.  当前的<tt>svn checkout -N命令的实现非常糟糕。它会造成工作拷贝某些条目缺失，但它本身又没有意识到已经出现了不完整性的问题。</tt>很显然，很多的CVS用户已经对这种使用方式习以为常了，但是Subversion的用户还并不习惯。目前还没有好的办法解决这个问题，只能让你自己改变操作的流程：先试着检出单独的子目录，然后再手动嵌入到你的工作拷贝中。</p>
+
+</div>
+
+
+<div class="h3" id="mod_dav_svn-win32" title="mod_dav_svn-win32">
+<h3>我试着在win32平台的Apache上使用mod_dav_svn模块，但是却提示我模块未找到的错误，但是mod_dav_svn.so 这个文件明明就放在<tt>\Apache\modules目录中。</tt></h3>
+
+<p>这个错误信息在这里有点误导人。通常这样的错误是因为Apache无法正确加载<tt>mod_dav_svn.so</tt>模块所依赖的模块。如果当前Apache是以服务的形式运行的，那么它的path环境变量和普通用户的并不相同。请确认<tt>libdb4*.dll、</tt><tt>intl3_svn.dll、</tt> <tt>libeay32.dll还有</tt><tt>ssleay32.dll</tt>都可以在<tt>\Apache\bin</tt>或者<tt>\Apache\modules</tt>目录中找到。如果没有找到，你可以从Subversion的安装目录下拷贝一份。</p>
+
+<p>如果这样还解决不了问题的话，那么你可以使用类似<a href="http://www.dependencywalker.com">Dependency Walker</a>这样的工具来查看<tt>mod_dav_svn.so</tt>库的依赖性，看是否还有尚未解决的依赖性问题存在。</p>
+
+</div>
+
+
+<a name="win32-hooks"></a> <!-- for compatibility with old question -->
+<a name="hook-environment"></a> <!-- for yet more compatibility with old question -->
+<div class="h3" id="hook-debugging" title="hook-debugging">
+<h3>为什么我的钩子脚本都不能正常工作?</h3>
+
+<p>这些钩子脚本应该会触发外部程序的，但是这个触发过程似乎并没有执行。</p>
+
+<p>当Subversion调用一个钩子脚本时，它会将所有环境变量都清除干净，包括unix下的$Path和windows下的%Path%变量，因此，如果你的脚本要访问外部程序的话你就必须指定好外部程序的完整路径。</p>
+
+<p><b>调试技巧：</b></p>
+<p>
+如果你正在运行Linux或者Unix操作系统，试一下按照下面的步骤手动运行一下脚本：</p>
+
+  <ol>
+            <li>使用 "su"、"sudo"或者类似的命令来切换到一般情况下可能会运行该脚本的用户。如果你运行的是Apache服务器的话，那么这个用户通常是httpd或者www-data。如果你运行svnserve的话，那么很可能是使用svn的帐户来运行该脚本。这样切换用户之后来运行脚本的好处就是不会再有脚本运行权限错误的问题出现。</li>
+<li>
+              使用env程序清除所有环境变量然后再运行该脚本，如下所示：
+          <blockquote><pre>
+                  $ env - ./post-commit /var/lib/svn-repos 1234
+</pre></blockquote>
+              注意到传递给env程序的第一个参数是一个横杠，这样可以保证环境变量为空。            </li>
+    <li>
+            查看控制台有没有输出错误信息。</li>
+      </ol>
+
+</div>
+
+
+<div class="h3" id="diff-cmd" title="diff-cmd">
+<h3>为什么我的--diff-cmd会有关于‘-u’的报错，我想用--extensions去覆盖它，但是不起作用。</h3>
+
+<p>当使用一个外部的diff命令时，Subversion会生成一个非常复杂的命令行。第一个参数就是具体的--diff-cmd，然后就是具体的--extensions （尽管使用空白的 --符号时会忽略扩展），或者如果没有指定--extensions或者--extensions为空的话，就加上‘-u’参数。第三和第四个参数，Subversion会传递一个“-L”还有第一个文件的标签（例如，“"project_issues.html    (revision 11209)”)。第五个和第六个就是另一个“-L”和第二个文件的标签。第七和第八个参数分别是第一个和第二个文件的名称（例如，“.svn/text-base/project_issues.html.svn-base”和“.svn/tmp/project_issues.html.tmp”）。</p>
+
+<p>如果你指定的diff命令不支持这些参数的话，你可能需要创建一个简单的封装脚本来忽略这些参数，然后将最后的你需要的文件的路径参数传递给diff命令。</p>
+
+<p>警告：Subversion并不希望外部的diff工具会改变它接收到的文件，否则可能会破坏当前工作拷贝。</p>
+
+<p>更多信息请参考issue
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044">#2044</a>.</p>
+
+</div>
+
+
+<div class="h3" id="plaintext-passwords" title="plaintext-passwords">
+<h3> 啊呀，我刚刚发现我的Subversion客户端居然把我的密码以明文的方式缓存在本地硬盘中！！！</h3>
+
+<p>冷静一下，深呼吸。</p>
+
+<p>在windows 2000及之后的版本上，svn 1.2之后的版本都使用标准的windows API来加密数据，所以只有用户自己能够解密出缓存的密码来。</p>
+
+<p>在Mac OS X, svn 1.4以后的版本使用系统的keychain功能来加密以及存储svn的密码。</p>
+
+<p>Subversion 1.6会为UNIX/Linux处理这个问题，对于GNOME Keyring和KWallet的支持已经实现，都可以方便的在磁盘上存储加密的密码。这些程序可以在运行中的或编译中添加。如果没有，客户端会使用明文缓存密码，但是它如果以明文存储我们会首先询问是否允许。</p>
+
+<p>Subversion 1.5以及之前的版本在UNIX/Linux中，密码会以明文形式保存在~/.subversion/auth/中，请注意，虽然是明文存储（通常是~/.subversion/auth/），但是密码的访问许可是700，只有你可以阅读。</p>
+
+
+<p>尽管如此，如果你还是担心的话，那么你可以将密码缓存的功能永久关闭。在svn 1.0的客户端中，你只需要在你的运行时配置文件设置‘store-auth-creds
+= no’。对于svn 1.1以及之后的版本来说，你可以使用粒度更细的设置‘store-passwords = no' （这样服务器的证书还是会缓存）。更多关于密码缓存的信息已经可以看<a 
+href="http://www.subversion.org.cn/svnbook/">“日构建”Subversion手册之中</a>第六章的<a href="http://www.subversion.org.cn/svnbook/nightly/svn.serverconfig.netmodel.html#svn.serverconfig.netmodel.credcache">“客户端凭证缓存</a>。</p>
+
+<p>最后要说的是，我们知道CVS很多年来一直都是将缓存的密码存放在.cvspass文件中的。表面上来看存放在里面的数据是加密过的，但实际上，他们只是使用非常简单的算法来进行混淆，就像rot13一样。这些所谓的密码可以很轻易就被破解掉。这种混淆的唯一作用就是防止其他用户如管理员意外的看到密码。但是目前还没有人希望Subversion也这样做。如果你感兴趣的话，你可以为其写补丁然后发送到dev@list。</p>
+
+</div>
+
+
+<div class="h3" id="bdb41-tabletype-bug" title="bdb41-tabletype-bug">
+<h3>我得到一个错误&quot;svn: bdb: call      implies an access method which is inconsistent with previous      calls&quot;。我该如何修正它呢？</h3>
+
+<p>Berkeley DB 4.1版本相当的不稳定，而4.0和4.2都相对比较稳定。这条错误信息就是4.1版本有时候发生问题时的提示信息。</p>
+
+<p>这个问题是由于使用Berkeley数据库做支撑的Subversion版本库中的其中一张表的某个数据库格式域（database format field）被破坏了。目前还不知道什么原因，这通常都是因为“copies”表出错，导致它从“btree”类型转换成“recno”类型。你可以按照下面列举的简单的恢复流程来处理。如果下面的步骤未能成功，你应该联系Subversion的用户邮件列表。</p>
+
+<ul>
+  <li>确保当前没有其他的进程在访问版本库。</li>
+  <li>现在，将你的版本库备份到一个tar或者zip或者类似格式的文件中。</li>
+  <li>转到你版本库的db子目录。</li>
+  <li>执行删除指令：<tt>rm __db.* log.*</tt></li>
+  <li>执行转储指令：<tt>db_dump -p -r copies &gt; copies.dump</tt></li>
+  <li>现在编辑<tt>copies.dump</tt>文件，在最上面的内容中将“<tt>type=recno</tt>”改成 to “<tt>type=btree</tt>”，然后删除以“re_len=”开头的行。</li>
+  <li>执行删除指令：<tt>rm copies</tt></li>
+  <li><tt>执行重加载指令：db_load copies &lt; copies.dump</tt></li>
+  <li><tt>svnadmin dump .. &gt; ../../my-recovered.svndump</tt></li>
+  <li>现在创建一个新的版本库，重新加载刚刚生成的转储文件（dump file），然后拷贝所有自定义的钩子脚本或者配置文件，最后查看一下最新的版本号是否是你期望的。</li>
+</ul>
+
+</div>
+
+
+<div class="h3" id="hotcopy-large-repos" title="hotcopy-large-repos">
+<h3>我无法热备份我的版本库，当文件大于2Gb时svnadmin会出错。</h3>
+
+<p>早期版本的APR在0.9版本分支上，如果使用Apache 2.0.x和Subversion 1.x，那么对于大文件是没有支持的（2Gb以上）。在APR 0.9.5及以后的版本还有Apache 2.0.50及以后的版本中已经考虑到这个问题了，并做了修正。但是这个修正并不是针对所有操作系统的，而是只针对Linux。</p>
+
+</div>
+
+
+<div class="h3" id="hidden-log" title="hidden-log">
+<h3>我看不到我刚刚提交的文件的日志记录，为什么呢？</h3>
+
+<p>假设你在版本库上运行‘<tt>svn&nbsp;checkout</tt>’，并且获得了修订号为7的工作拷贝（aka，r7），其中有一个文件叫做foo.c。你对这个文件进行了修改并且提交了修改，那么这个时候会发生两件事情。</p>
+
+<ul>
+<li>服务器上的版本库升级到修改号为8。</li>
+<li>在你的工作拷贝中，只有foo.c升级到修订号8，其他工作拷贝目录下的内容都保持在修订号7。</li>
+</ul>
+
+<p>现在你有了一个我们称为混合版本（<i>mixed revision）</i>的工作拷贝。其中一个文件修订号为8，其余的为7。只有在当你把所有文件都提交的时候版本号才会更新，或者你可以显式的运行‘<tt>svn&nbsp;update</tt>’。</p>
+
+<pre>   $ svn -v status
+   7        7 nesscg       .
+   8        8 nesscg       foo.c
+   $</pre>
+
+<p>如果你运行‘<tt>svn&nbsp;log</tt>’命令但是没有传递任何参数，那么它会打印出当前目录下的日志信息（对应上面列表中的.）。既然目录版本号还是停留在第7次修订，那么你当然看不到第8次修订的日志信息了。</p>
+
+<p>如果你想要查看最新的日志，可以按照下面的方法来做。</p>
+
+<ol>
+<li>运行‘<tt>svn&nbsp;log&nbsp;-rHEAD</tt>’。</li>
+<li>运行‘<tt>svn&nbsp;log&nbsp;URL</tt>’，其中URL指向的就是版本库的路径。</li>
+<li>运行<tt>‘svn&nbsp;log&nbsp;foo.c</tt>’直接获取之前修改的文件的日志信息。</li>
+<li>将工作拷贝更新到第8次修订，然后在运行‘<tt>svn&nbsp;log</tt>’。</li>
+</ol>
+
+</div>
+
+
+<div class="h3" id="bdb43-upgrade" title="bdb43-upgrade">
+<h3>升级到Berkeley DB 4.3或更新的版本之后，版本库出错了。</h3>
+
+<p>在Berkeley DB 4.3之前，<tt>svnadmin recover</tt>能够适当的将Berkeley DB的版本库进行升级。但是Berkeley DB 4.3版本中的一个行为的改变导致了现在的升级过程失败。</p>
+
+<p>使用下面的流程来置换升级你目前基于Berkeley
+DB 4.3及之后版本之上的版本库：</p>
+
+<ul>
+
+<li>确认没有其他进程在访问你的版本库（停止Apache、svnserve、svnlook和svnadmin，显示通过file://的访问，等等）。</li>
+
+<li>使用旧的<tt>svnadmin</tt>工具（即用来链接到老版本Berkeley DB上的）：
+
+  <ol>
+
+  <li>修复版本库：‘<tt>svnadmin&nbsp;recover&nbsp;/path/to/repository</tt>’</li>
+
+  <li>将当前版本库做一个备份。</li>
+
+  <li>删除所有未使用的日志文件，你可以通过运行‘<tt>svnadmin&nbsp;list-unused-dblogs&nbsp;/path/to/repeository</tt>’来查看。</li>
+
+  <li>删除共享内存的文件，它们应该位于版本库中的db子目录下，文件名形如<tt>__db.00*</tt>。</li>
+
+  </ol>
+</li>
+
+</ul>
+
+
+<p>现在版本库应该能够在Berkeley DB 4.3上正常使用了。</p>
+
+</div>
+
+
+<div class="h3" id="tiger-apr-0.9.6" title="tiger-apr-0.9.6">
+<h3>当我通过http://从MacOS X 10.4 (Tiger)的平台上检出版本库的时候，为什么偶尔会得到一些不一致的错误？</h3>
+
+<p>注意，这里假设版本库是运行在Apache 2.0.x之上。</p>
+
+<p><a href="http://issues.apache.org/bugzilla/show_bug.cgi?id=34332"
+> APR 0.9.6</a> 有个bug，当运行在Tiger上的时候会存在，当你尝试检出一个大于64KB的文件时会出现这个错误。这会导致检出失败，通常给出的错误信息都是不可预料的。下面是可能会出现的提示信息，你看到的可能不大一样。</p>
+
+<pre>
+   svn: Invalid diff stream: [tgt] insn 1 starts beyond the target view position
+</pre>
+
+<pre>
+   svn: Unexpected end of svndiff input
+</pre>
+
+<pre>
+   svn: REPORT request failed on '/path/to/repository'
+   svn: REPORT of '/path/to/repository/!svn/vcc/default': Chunk delimiter was invalid
+</pre>
+
+<p>同样，在Apache的error_log日志中也会记录相应的错误，如：</p>
+
+<pre>
+   [error] Provider encountered an error while streaming a REPORT response.  [500, #0]
+   [error] A failure occurred while driving the update report editor [500, #190004]
+</pre>
+
+<p>为了确认这个bug是否存在&mdash;假设你可以访问版本库所在的机器&mdash;尝试使用File://的方式来检出，这样就可以绕过Apache直接通过文件系统来访问了。如果这样检出成功的话，那么问题就出在上面提到的bug上。</p>
+
+<p>目前最好的解决方案就是升级到APR 1.2.0+。</p>
+
+<p>或者你也可以从各自的源里重新编译Apache还有Subversion，在运行Apache配置前先设置好相应的环境变量。</p>
+
+<pre>
+   setenv ac_cv_func_poll no
+</pre>
+
+<p>或者以Bourne shell 的语法，如下：</p>
+
+<pre>
+   ac_cv_func_poll=no; export ac_cv_func_poll
+</pre>
+
+<p>如果你分别编译APR / APRUTIL（例如，你并不想使用Apache发行包中的某些部分），你必须在配置APR之前设置好环境变量，因为这就是问题所在。</p>
+
+</div>
+
+
+<div class="h3" id="debian-libtool" title="debian-libtool">
+<h3>我不能构建Subversion，我的工作拷贝源码在Debian GNU/Linux上，在链接阶段我得到了一些错误，哪里错了呢？</h3>
+    
+<p>如果你在编译Subversion主线源代码的最后一步出现了下面的错误：</p>
+
+<pre>
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_create'
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_strerror'
+</pre>
+
+<p>那很可能是由于你使用的是Debian系统，你需要升级你的‘libtool’。（我听说Debian的打包者不得不做了一些小的改动来修正一些错误。这可能会导致Subversion编译的时候出现问题。但这只是猜测，在写这个FAQ条目的时候我并没有时间去验证一下细节的东西。你可以查看<a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112617"
+>http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112617</a>
+还有相关的帖子得到更详细的讨论。）</p>
+
+<p>不管怎么样，如果你在2005年11月15号的时候在Debian GNU/Linux系统上面运行最新的testing发行版，然后遇到这个问题，那么解决方法就是，将libtool 1.5.20的源代码使用标准的“./configure &amp;&amp; make &amp;&amp;
+sudo&nbsp;make&nbsp;install”重新编译，再对工作拷贝执行了一次“make clean”的清理，然后运行“./autogen.sh”, “./configure”,“make”，最后一切都正常了。</p>
+
+<p>注意，有一个类似的反馈也已经发布在 <a
+href="http://svn.haxx.se/dev/archive-2003-01/1125.shtml"
+>http://svn.haxx.se/dev/archive-2003-01/1125.shtml</a>，但是在上面却没有提到这个解决方案。</p>
+
+</div>
+
+
+<div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
+<h3>我在使用FreeBSD，并且已经启动了svnserve，但是看起来并没有监听3690端口。</h3>
+    
+<p>一句话概括：使用--listen-host=0.0.0.0参数调用svnserveShort。</p>
+<p>再具体一点，FreeBSD的守护进程默认情况下只监听tcp6。上面这个选项用来启用tcp4的监听。</p>
+</div>
+
+<div class="h3" id="already-under-version-control" title="already-under-version-control">
+<h3>我不能添加一个目录，因为Subversion说“它已经处于版本控制了”。</h3>
+<p>那是因为你要添加的目录已经包含了.svn的目录了&nbsp;&mdash;&nbsp;它已经是工作拷贝了&nbsp;&mdash;&nbsp;但那个目录是来自其他的版本库中而不是你当前正在访问的版本库。这种现象很可能就是因为你使用了操作系统的拷贝功能直接从另外一个工作拷贝上复制（没有使用<tt>svn copy</tt>）该目录到当前工作拷贝中。</p>
+<p>
+  比较快但是有些不雅的解决方案就是删除你之前复制的文件夹下所有的.svn目录，然后add命令就可以顺利执行了。如果你使用的是Unix，你可以使用下面的命令：</p>
+<pre>
+  find dir -type d -name .svn -exec rm -rf {} \;
+</pre>
+<p>然而，如果工作拷贝来自同一个版本库，直接删除或移走工作拷贝，然后通过<tt>svn copy</tt>获得一个正确的拷贝也比较理想，可以节省版本库的空间。</p>
+
+
+<p>如果来自不同的版本库，你应当问自己为什么要作这个拷贝；你应该确保通过添加目录，你不会在版本库中做出非预期的拷贝。
+</p>
+</div>
+
+<div class="h3" id="slow-private-svnserve" title="slow-private-svnserve">
+<h3>有时候通过svnserve访问一个非公开的版本库实在是太慢了。</h3>
+
+<p>当编译APR时使用/dev/random设备，服务器没有办法获取足够的内存量的时候这个问题经常会出现。如果服务器上只有Subversion在使用APR，那么你可以安全的重新编译APR，编译的时候带上参数 <tt>--with-devrandom=/dev/urandom</tt> 。当然，如果有其他进程在使用APR的时候，那么你就不能这样来做了，否则会造成其他服务不安全。</p>
+
+</div>
+
+<div class="h3" id="ssl-negotiation-error" title="ssl-negotiation-error">
+<h3>当执行的Subversion操作需要通过SSL传递大量数据的时候，碰到一个错误SSL negotiation failed: SSL error: decryption failed or bad      record mac。</h3>
+
+<p>这个错误可能是由于OpenSSL 0.9.8版本的问题。你可以下载早期不存在此问题的版本（或者可能的话，升级到更新的版本）。</p>
+
+</div>
+
+<div class="h3" id="broken-subclipse" title="broken-subclipse">
+<h3>我得到一个错误&quot;This client is too      old&quot;。（客户端版本太旧）</h3>
+
+如果你正在同时使用很老的（1.4以前的）Subversion命令行客户端还有Subclipse，然后你最近更新了Subclipse，接着你的命令行客户端提示你：
+<pre>
+svn: This client is too old to work with working copy
+'/path/to/your/working/copy'; please get a newer Subversion client
+</pre>
+
+这是因为Subversion工作拷贝的格式发生了不兼容的改动&mdash;新版本的Subclipse对你的工作拷贝做了升级，所以你的命令行客户端程序，因为是版本比较老的，因此无法读取其内容。（这个问题并不只是存在于Subclipse上，也有可能是当你同时使用另外一个1.4以后的新版本的时候，旧版本的程序也会出现类似的问题）你可以简单的把你的命令行客户端升级到1.4及之后的版本。
+
+对于Subversion 1.5，提供了一个降级工作拷贝到较早版本的辅助脚本；见
+<a href="#working-copy-format-change">这个FAQ。</a>
+</div>
+
+<div class="h3" id="switch-problems" title="switch-problems">
+<h3>为什么有时候svn switch不能工作？</h3>
+
+<p>有时候，工作拷贝中包含了一些未被纳入版本控制的文件，这个时候svn switch就会发生错误。switch的过程就会停止，这会导致工作拷贝一半被switch，另一半却保持原样。</p>
+
+<p>不幸的是，如果这个时候你采取的措施不正确的话，那么你的工作拷贝将会不能使用。有时候，svn会提示用户执行清理（svn cleanup）。但清理命令又有可能造成错误。参考：<a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">issue
+      #2505</a>。</p>
+<p>用户可以手动的删除那些造成问题的文件或目录，然后再执行清理命令，接着继续swich，这样便可以恢复。</p>
+
+<p>注意，对从版本库中检出的原始副本进行switch通常不会发生错误。如果你正在开发过程中需要使用到svn switch命令，那么有3种方式可以使用：</p>
+
+<ol>
+
+<li>在进行路径切换之前，完整地清理一下你的工作拷贝中的未被纳入版本控制的文件（包括那些被忽略的文件） <br/>
+  <b>警告！这会删除所有未被版本控制的目录或文件，一定要确定你即将删除的文件是你已经不再需要了的。</b>
+
+    <blockquote>
+<div><pre><code>
+# Check and delete svn unversioned files: 
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//'
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//' | xargs rm -rf
+</code></pre></div>
+</blockquote>
+</li>
+
+<li>保持最原始的干净的检出，更新到最新版本，然后复制到你原先希望switch到某个分支的工作拷贝上。</li>
+
+<li>这个方法比较危险 ：不需要预先进行清理，直接在分支之间进行switch，但如果你遇到一个switch错误，你要知道你必须对这次switch进行适当的修复。删除错误提示中提到的未被版本控制的文件及目录，如果需要的话，使用svn cleanup，然后再继续进行切换工作，除非你删除了所有的未被版本控制的文件，否则你会重复好几次刚才遇到的错误。</li>
+</ol>
+
+<p>在 <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505"> issue 2505</a> 中有更详细的例子。这个问题的产生是因为svn客户端为了保险起见，不会直接删除所有未被版本控制的文件。</p>
+
+<p>下面还有两个更具体的例子描述了类似的问题。还有其他的svn switch错误在这里没有提及，你只有在从一个干净检出的工作拷贝中执行swich才能避免。</p>
+
+<ol>
+
+<li>如果分支中的任何目录被移动或者改名，那么任何没有被版本控制的东西都会造成错误。在这种情况下，你会看到如下的错误：<br/>
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</code></pre></div>
+</blockquote>
+<p>删除所有未被版本控制的文件，然后继续切换过程，这样可以恢复。</p>
+</li>
+
+<li>如果一个临时的编译文件（刚编译完）被加入版本库或者从版本库中删除了，那么从包含这个未被版本控制文件的版本库中检出就会失败你会看到和下面一摸一样的错误。
+  <blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</code></pre></div>
+</blockquote>
+
+<p>在这种情况下，删除未被版本控制的文件并不能恢复，执行cleanup的时候会出错，但是svn switch会提示你去执行svn cleanup。</p>
+
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Directory '&lt;dir&gt;/.svn' containing working copy admin area is missing
+wc/$ svn cleanup
+svn: '&lt;dir&gt;' is not a working copy directory
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Working copy '.' locked
+svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)
+</code></pre></div>
+</blockquote>
+
+<p>删除目录（还有其他所有未被版本控制的文件，这样可以避免转换命令不会再重复出现类似的错误。然后继续转换的过程，这样可以恢复。</p>
+</li>
+
+</ol>
+
+<p>TortoiseSVN的cleanup错误有一点不同，你可能会遇到下面的错误：</p>
+<blockquote>
+<div><pre><code>
+Subversion reported an error while doing a cleanup!
+&lt;dir&gt;/&lt;anotherdir&gt; is not a working copy directory
+</code></pre></div>
+</blockquote>
+
+<p>在这里讲到的每一个例子中，svn switch命令会失败，使到你的工作拷贝变成只有一半发生转换成功的，svn status会显示出所有发生转换的文件，用S标记出来（在根目录看到的情况可能有所不同），用！标记出发生问题的目录，~标记出出错的问题文件（可能还有L用来标记锁定的文件），就像下面列举的一样：</p>
+<blockquote>
+<div><pre><code>
+wc/$ svn status 
+!      .
+!      &lt;dir&gt;
+    S  &lt;switched_things&gt;
+~      &lt;dir&gt;/&lt;thing_that_is_now_unversioned&gt;
+</code></pre></div>
+</blockquote>
+
+</div>
+
+<div class="h3" id="long-paths" title="long-paths">
+<h3>在Windows平台上，通过命令行客户端的执行更新操作时，我碰到一个错误&quot;The      system cannot find the path specified&quot;，并且提示说我的工作拷贝可能损坏了，但是我能通过TortoiseSVN更新时完全正常，这是怎么回事呢？ </h3>
+
+<p>仔细研究了windows关于文件命名的API文档才发现造成这一问题的最常见原因。简单的说，当你使用unicode版本的windows和路径相关的函数时，你可以指定的路径长度比较长，而且提供了绝对路径定位，而不是相对路径定位。幸运的是Subversion使用的Apache Portable Runtime（APR）库透明的对这种绝对路径（如<tt>C:\WorkingCopy\file.txt</tt>）进行了转换，将其转换成符合windows API要求的格式（\\<tt>?\C:\WorkingCopy\file.txt</tt>），这种转换也可以反向。不幸的是，你只有在使用绝对路径的时候才享用了这些长路径的好处。</p>
+
+<p>要查看路径长度是不是造成你所遇到的问题，你可以在Subversion命令行客户端下使用绝对路径代替相对路径（或者根本不提供路径参数）。换句话说，如果你原先是这么做的：</p>
+
+<blockquote>
+<div><pre><code>
+C:\> svn up WorkingCopy
+</code></pre></div>
+</blockquote>
+
+<p>或者这样做的：</p>
+
+<blockquote>
+<div><pre><code>
+C:\> cd C:\WorkingCopy
+C:\WorkingCopy> svn up
+</code></pre></div>
+</blockquote>
+
+<p>把它改成下面这样的方式</p>
+
+<blockquote>
+<div><pre><code>
+C:\> svn update C:\WorkingCopy
+</code></pre></div>
+</blockquote>
+
+<p>如果问题解决了，那么恭喜你——你已经成功突破了windows的路径长度限制，并且现在你已经知道怎么解决这个问题了。</p>
+
+<p><strong>为什么这个问题不会影响TortoiseSVN呢？</strong>
+因为TortoiseSVN对SubversionAPI提供的<em>永远</em>都是绝对路径。</p>
+
+<p><strong>那为什么Subversion命令行客户端不是永远都把输入转换成绝对路径，然后使用绝对路径呢？</strong>Subversion的开发者在开发的时候基于一个原则，那就是出于对用户体验的考虑，在工具的输出中显示的路径必须匹配输入的路径的语法。如果输入的相对路径转换到绝对路径没有太多价值的话，那么这个转换出于复杂性考虑就去掉了。（换句话说，这是一个比较难的问题，但不是一个比较迫切的问题）。</p>
+
+</div>
+
+<div class="h3"
+     id="working-copy-format-change" title="working-copy-format-change">
+<h3>我碰到一个错误&quot;This      client is too old to work with working copy '...' &quot;，不升级Subversion能够解决吗？</h3>
+
+<p>有时候在次版本改动的发行包下，工作拷贝中的元信息格式也会发生不兼容的改变。例如，假设你使用Subversion1.4.4创建了一个工作拷贝，但有一天你升级到1.5.0版本。但后来你又想将其改成1.4.4，这个时候就出错了——提示信息就如你所描述的。</p>
+
+<p>这是因为1.5.0将你的工作拷贝升级到可以支持新特性的格式（例如，修改列表，keep-local标志，variable-depth目录）尽管1.4.4并不知道任何这些特性，但它能够识别出来，工作拷贝里面使用的格式已经被升级到一个新的它不能支持的版本。</p>
+
+<p>1.5.0升级工作拷贝是出于一个好的原因，那就是它知道1.4.4现在并不了解工作拷贝的任何元信息，因此如果让1.4.4的版本去干扰工作拷贝中的元数据，那么重要的信息可能会丢失，很有可能会造成破坏（例如你可以参考<a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2961" >issue
+#2961</a>）。</p>
+
+<p>但是这种自动升级的行为在当你想要尝试一个新版本但是又不想永久安装时，挺让人讨厌的。出于这一点的考虑，我们发布了一个脚本，用来安全的对工作拷贝进行版本降级。你可以在下面的地址下载到：</p>
+
+<blockquote>
+<p><a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+>http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py</a></p>
+</blockquote>
+
+<p>使用--help参数调用此脚本，可以查看怎么脚本的运行帮助。未来Subversion新版本发布时，我们会尽量更新这个FAQ条目，使他覆盖到更多的降级的场景。</p>
+
+</div>
+
+<div class="h3"
+     id="relocation-against-local-symbol"
+     title="relocation-against-local-symbol">
+<h3>当我在64位Linux上编译Neon库时，发生一个错误&quot;relocation R_X86_64_32 against `a local symbol' can not be used      when making a shared object&quot;。</h3>
+
+<p>Neon库，是用来作为Subversion服务器和HTTP客户端进行通讯的库，通常被编译成静态库。但是它后来被链接到不同的动态链接库中，这会导致在AMD 64位操作系统系统上面编译的过程出现错误，出现类似下面的信息：</p>
+
+<blockquote>
+<div><pre><code>
+subversion-1.4.6/neon/src/.libs/libneon.a(ne_request.o): relocation R_X86_64_32
+against `a local symbol' can not be used when making a shared object;
+recompile with -fPIC
+/home/jrandom/subversion/subversion-1.4.6/neon/src/.libs/libneon.a: could not
+read symbols: Bad value
+</code></pre></div>
+</blockquote>
+
+<p>在开发者邮件列表中有一篇文章提到了这一点。</p>
+
+<p>解决方法就是为Subversion的配置脚本提供一个“--enable-shared”的参数。</p>
+
+</div>
+
+<div class="h3"
+     id="secure-connection-truncated"
+     title="secure-connection-truncated">
+<h3>为什么从Apache检出时得到“Could not read response body: Secure connection truncated”的错误？</h3>
+
+<p>简而言之，这个错误代表了一类问题，也就是Apache认为Subversion的客户端不会再处理它建立的网络连接。取决于是否使用SSL，或者Apache何时决定中断连接，类似情形也会报告一些其他的错误信息，</p>
+
+<p>Subversion客户端保证工作拷贝永远处于正常状态，一个方法是会临时保存所有检出文件的所有原始版本，直到获得给定目录的所有文件和子目录。一旦目录的数据被下载，客户端会整理目录，并将将文件的原始版本复制回工作区域，作为管理数据等等。在这个目录整理过程中，客户端会关注这些任务而不会去关心网络连接。有时候
+&mdash;通常是版本化目录包含大量文件，或者非常大的文件&mdash;客户端会在整理目录（不管网络传输流）上花费大量时间，所以Apache会认为客户端已经永远离开了，所Apache关闭了网络传输流，然后客户端发现服务器放弃了连接，并报告了这样的错误。</p>
+
+<p>一个办法是增加Apache一直等待客户端还在监听网络流的最长时间，你可以修改Apache的<tt>Timeout</tt>配置参数。你也应该注意一下你的数据集。如果你一个目录有大量的文件，就会更容易导致这个问题。如果你能将一组文件分配到一些目录中，将会对大家都有益。</p>
+
+</div>
+
+</div>
+
+<div class="h2" id="developer-questions" title="developer-questions">
+<h2>开发者问题：</h2>
+<p/>
+
+<div class="h3" id="ramdisk-tests" title="ramdisk-tests">
+<h3>怎样在RAM磁盘上进行回归测试？</h3>
+
+<p>如果将Subversion的测试数据保存在RAM磁盘上，那么测试的过程将会变得非常快。在Linux系统上，你可以直接将RAM磁盘挂载：</p>
+
+<blockquote>
+<div><code>mount -t tmpfs tmpfs
+/path/to/src/subversion/tests/cmdline/svn-test-work
+-o uid=$USER,mode=770,size=32m</code></div>
+</blockquote>
+
+<p>或者，如果要更长期的挂载，可以将下面这一行添加到你的<code>/etc/fstab</code>文件中：</p>
+
+<blockquote>
+<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
+tmpfs  defaults,user,noauto,exec,size=32m</code></div>
+</blockquote>
+
+<p>RAM磁盘空间至少为大约700MB。尽管如此，你还是可以通过清理测试目标来大大降低空间需求（在上面的配置例子中我们已经看到了）还有你的内存占用。清理意味着占用更多的IO资源，但是由于测试数据还是存在于内存中的，因此不会造成任何性能的下降。</p>
+
+<blockquote><div><code>
+make check CLEANUP=true
+</code></div></blockquote>
+
+<p>参考 <a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml"
+>http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a> 可以看到更多关于RAM磁盘使用的权威讨论。</p>
+
+</div>
+
+
+<div class="h3" id="dynamic-exe-debugging" title="dynamic-exe-debugging">
+
+<h3>怎样在不安装的情况下对动态Subversion库运行调试器？</h3>
+
+<p>在往unix-y系统上运行make install这一步之前，动态编译Subversion源代码实际上执行的是libtool-generated脚本，这个脚本会重新链接并且运行真正的二进制文件，就如下面显示的一样，这会让调试更加复杂：</p>
+
+<blockquote>
+<div><code>subversion$ gdb subversion/svn/svn</code></div>
+<div><code>... "/path/to/subversion/subversion/svn/svn": not in
+executable format: File format not recognized</code></div>
+</blockquote>
+
+<p>如果编译的时候使用<code>--disable-shared</code>参数来配置使用静态链接到二进制库，或者重新安装然后将调试器指向新安装的版本，这样可能能解决一部分问题，但是经常我们需要在源代码中临时直接的进行调试。</p>
+
+<p>要做到这一点，在shell脚本中编辑上一次执行的语句，然后在你的调试器中运行真正的二进制库。在gdb中，就是将<code>exec "$progdir/$progname"</code>替换<code>exec gdb --args "$progdir/$progname"</code>。</p>
+
+<p>这个小技巧在使用libtool-generated的shell脚本进行白盒测试的时候中非常有用。</p>
+
+</div>
+
+
+<div class="h3" id="avoiding-compiler-inlining"
+title="avoiding-compiler-inlining">
+
+<h3>怎样在让编译器不内联混淆（inlining obfuscating）源代码的情况下对Subversion库运行调试器？</h3>
+
+<p>默认情况下，gcc会经常优化那些私有变量及函数，还有相关的操作。这样会造成调试的时候跟进一段代码变得更复杂。</p>
+
+<p>unix-y systems上的解决办法就是在make这一步的时候将这个优化过程关闭。</p>
+
+<blockquote>
+<div><code>subversion$ make EXTRA_CFLAGS=-O0</code></div>
+</blockquote>
+
+<p>（那是一个横杠加两个字母的O）。你也可以通过运行下面的配置使到此配置应用到以后所有的调试过程中：</p>
+
+<blockquote>
+<div><code>subversion$ ./configure --enable-debug</code></div>
+</blockquote>
+
+<p>对于产品的安装来说，要记住在从源码安装Subversion时撤销这个操作，你可以通过重新运行make或者configure并不附加任何参数来撤销上面的修改操作。</p>
+
+</div>
+
+
+</div>
+
+<div class="h2" id="references" title="references">
+<h2>参考：</h2>
+<p/>
+
+<div class="h3" id="http-methods" title="http-methods">
+<h3>Subversion用到的HTTP方法是有哪些？</h3>
+
+<p>Subversion 客户端使用WebDAV/DeltaV 协议的一个子集来作为 mod_dav_svn server 模块的一部分。简而言之：</p>
+
+<pre>
+     OPTIONS, PROPFIND, GET, REPORT,
+     MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL,
+     MOVE, COPY, DELETE, LOCK, UNLOCK, MERGE
+</pre>
+
+<p>关于协议的细节问题可以在下面这个链接找到相应的文档：</p>
+
+<a href="http://svn.collab.net/repos/svn/trunk/notes/webdav-protocol">http://svn.collab.net/repos/svn/trunk/notes/webdav-protocol</a>
+
+
+
+</div>
+
+
+<div class="h3" id="bikeshed" title="bikeshed">
+<h3>什么是'bikeshed'？</h3>
+
+<p>参阅 Poul-Henning Kamp的关于freebsd-hackers的帖子：<a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
+</p>
+
+</div>
+
+
+<div class="h3" id="pronounce" title="pronounce">
+<h3>你是怎样读&quot;Subversion&quot;的？</h3>
+
+<p>Jim Blandy设计了Subversion的名字和版本库的设计，把“Subversion”读作 <a href="http://svn.collab.net/repos/svn-committers/trunk/sounds/pronunciation/index.html">“Subversion”。</a></p>
+
+</div>
+
+
+<div class="h3" id="baton" title="baton">
+<h3>什么是'baton'？</h3>
+
+<p>在Subversion的源代码中有很多引用指向‘baton’对象。他们只是一些对象。有很多void *的数据结构作为某个函数的上下文。在另外一些API里，他们通常通过void *ctx或者void *userdata来调用的，就像Subversion的开发者通过“batons”数据结构来调用一样，但是更省资源。</p>
+
+</div>
+
+
+<div class="h3" id="def-wedged-repository" title="def-wedged-repository">
+<h3>当你说版本库是'楔住（wedged）'的时候，是什么意思？</h3>
+
+<p>被楔住版本库：</p>
+
+<blockquote>
+<p>一个Subversion版本库由两个不同的内部组件组成，一个是工作区，一个是存储区。一个楔住的版本库指的是出于未知的原因，版本库的工作区不能访问了，但是存储区是完整的。因此，一个楔住的版本库并不会丢失任何数据，但是在你正常访问版本库之前工作区必须修复好。参阅<a href="#stuck-bdb-repos">this</a>条目查看具体怎么去修复。</p>
+</blockquote>
+
+<p>被破坏了的版本库：</p>
+
+<blockquote>
+<p>一个被破坏了的版本库指的是存储区已经被破坏了，因此版本库中的数据可能多多少少会有丢失。</p>
+</blockquote>
+
+<p>你可能需要查看Jargon File关于‘<a href="http://catb.org/~esr/jargon/html/W/wedged.html">wedged’</a>的定义。</p>
+
+</div>
+
+</div>
+
+</div>
+</body>
+</html>

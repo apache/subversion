@@ -34,17 +34,6 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
-  return svn_client_resolve(path, depth,
-                            svn_wc_conflict_choose_merged, ctx, pool);
-}
-
-svn_error_t *
 svn_client_resolve(const char *path,
                    svn_depth_t depth,
                    svn_wc_conflict_choice_t conflict_choice,
@@ -68,12 +57,18 @@ svn_client_resolve(const char *path,
   SVN_ERR(svn_wc_is_wc_root(&wc_root, path, adm_access, pool));
   if (wc_root)
     {
-      /* Switched subtrees are considered working copy roots by
+      /* Check whether this is a switched subtree or an absent item.
+       * Switched subtrees are considered working copy roots by
        * svn_wc_is_wc_root(). But it's OK to check for tree conflict
        * info in the parent of a switched subtree, because the
        * subtree itself might be a tree conflict victim. */
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
+      /* If this has no entry, it can't possibly be a switched subdir.
+       * It can't be a WC root either, for that matter.*/
+      if (entry == NULL)
+        wc_root = FALSE;
+      else
       if (entry->kind == svn_node_dir)
         {
           svn_error_t *err;
@@ -82,10 +77,17 @@ svn_client_resolve(const char *path,
           err = svn_wc__path_switched(path, &switched, entry, pool);
 
           if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
-            svn_error_clear(err);
+            {
+              /* This is e.g. a locally deleted dir. It has an entry but
+               * no repository URL. It cannot be a WC root. */
+              svn_error_clear(err);
+              wc_root = FALSE;
+            }
           else
             {
               SVN_ERR(err);
+              /* The query for a switched dir succeeded. If switched,
+               * don't consider this a WC root. */
               wc_root = switched ? FALSE : TRUE;
             }
         }
@@ -113,4 +115,15 @@ svn_client_resolve(const char *path,
                                     pool));
 
   return svn_wc_adm_close2(adm_access, pool);
+}
+
+svn_error_t *
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
+  return svn_client_resolve(path, depth,
+                            svn_wc_conflict_choose_merged, ctx, pool);
 }

@@ -2808,7 +2808,6 @@ svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
      N_("Can't truncate file '%s'"),
      N_("Can't truncate stream"),
      pool);
-  return SVN_NO_ERROR;
 }
 
 

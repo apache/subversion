@@ -3379,8 +3379,9 @@ visit_tc_too_found_entry(const char *path,
       int i;
 
       /* Loop through all the tree conflict victims */
-      SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry,
-                                                     path, pool));
+      SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
+                                          entry->tree_conflict_data, path,
+                                          pool));
 
       if (conflicts->nelts > 0)
         SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, path,

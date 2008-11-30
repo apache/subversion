@@ -109,6 +109,7 @@
  *  node_kind:
  */
 
+#define SVN_WC__NODE_NONE "none"
 #define SVN_WC__NODE_FILE "file"
 #define SVN_WC__NODE_DIR "dir"
 
@@ -174,22 +175,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
                                 apr_pool_t *pool);
 
 /*
- * Read tree conflict descriptions from DIR_ENTRY.
- * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by CONFLICTS.
- * DIR_PATH is the path to the WC directory whose conflicts are being read.
- * Do all allocations in @a pool.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                       const svn_wc_entry_t *dir_entry,
-                                       const char *dir_path,
-                                       apr_pool_t *pool);
-
-/*
- * Write tree conflict descriptions to DIR_ENTRY.
+ * Write tree conflict descriptions to CONFLICT_DATA.
  * Replace the entry's list of tree conflicts with those in CONFLICTS, an
  * array of zero or more pointers to svn_wc_conflict_description_t objects.
  * Do all allocations in POOL.
@@ -197,9 +183,9 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
-                                      svn_wc_entry_t *dir_entry,
-                                      apr_pool_t *pool);
+svn_wc__write_tree_conflicts(char **conflict_data,
+                             apr_array_header_t *conflicts,
+                             apr_pool_t *pool);
 
 /*
  * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree

@@ -583,7 +583,7 @@ int svn_cstring_count_newlines(const char *msg)
 }
 
 char *
-svn_cstring_join(apr_array_header_t *strings,
+svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool)
 {
