@@ -2,7 +2,7 @@
  * patch.c:  wrapper around wc patch functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -98,6 +98,7 @@ dry_run_deleted_p(struct patch_cmd_baton *patch_b, const char *wcpath)
 static svn_error_t *
 merge_props_changed(svn_wc_adm_access_t *adm_access,
                     svn_wc_notify_state_t *state,
+                    svn_boolean_t *tree_conflicted,
                     const char *path,
                     const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
@@ -152,6 +153,7 @@ static svn_error_t *
 merge_file_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *content_state,
                    svn_wc_notify_state_t *prop_state,
+                   svn_boolean_t *tree_conflicted,
                    const char *mine,
                    const char *older,
                    const char *yours,
@@ -208,8 +210,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   /* Do property merge before content merge so that keyword expansion takes
      into account the new property values. */
   if (prop_changes->nelts > 0)
-    SVN_ERR(merge_props_changed(adm_access, prop_state, mine, prop_changes,
-                                original_props, baton));
+    SVN_ERR(merge_props_changed(adm_access, prop_state, tree_conflicted, mine,
+                                prop_changes, original_props, baton));
   else
     if (prop_state)
       *prop_state = svn_wc_notify_state_unchanged;
@@ -287,6 +289,7 @@ static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
                  svn_wc_notify_state_t *prop_state,
+                 svn_boolean_t *tree_conflicted,
                  const char *mine,
                  const char *older,
                  const char *yours,
@@ -416,7 +419,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 
         /* Now regardless of the schedule-add nature, merge properties. */
         if (prop_changes->nelts > 0)
-          SVN_ERR(merge_props_changed(adm_access, prop_state,
+          SVN_ERR(merge_props_changed(adm_access, prop_state, tree_conflicted,
                                       mine, prop_changes,
                                       original_props, baton));
         else
@@ -469,7 +472,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
               {
                   SVN_ERR(merge_file_changed
                           (adm_access, content_state,
-                           prop_state, mine, NULL, yours,
+                           prop_state, tree_conflicted, mine, NULL, yours,
                            SVN_IGNORED_REVNUM, SVN_IGNORED_REVNUM,
                            mimetype1, mimetype2,
                            prop_changes, original_props,
@@ -492,6 +495,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
+                   svn_boolean_t *tree_conflicted,
                    const char *mine,
                    const char *older,
                    const char *yours,
@@ -570,6 +574,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 merge_dir_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *state,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 svn_revnum_t rev,
                 const char *copyfrom_path,
@@ -731,6 +736,7 @@ merge_delete_notify_func(void *baton,
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
+                  svn_boolean_t *tree_conflicted,
                   const char *path,
                   void *baton)
 {
@@ -1139,7 +1145,7 @@ delete_entry(const char *path,
                                 SVN_IGNORED_REVNUM, pool);
             
             SVN_ERR(eb->diff_callbacks->file_deleted 
-                    (adm_access, &state, b->wcpath,
+                    (adm_access, &state, NULL, b->wcpath,
                      NULL, NULL, NULL, NULL, NULL, /* useless for del */
                      b->edit_baton->diff_cmd_baton));
             
@@ -1148,7 +1154,7 @@ delete_entry(const char *path,
         case svn_node_dir:
           {
             SVN_ERR(eb->diff_callbacks->dir_deleted 
-                    (adm_access, &state, 
+                    (adm_access, &state, NULL,
                      svn_path_join(eb->target, path, pool),
                      eb->diff_cmd_baton));
             break;
@@ -1212,7 +1218,7 @@ add_directory(const char *path,
                           pool));
 
   SVN_ERR(eb->diff_callbacks->dir_added 
-          (adm_access, &state, b->wcpath, SVN_IGNORED_REVNUM,
+          (adm_access, &state, NULL, b->wcpath, SVN_IGNORED_REVNUM,
            copyfrom_path, copyfrom_revision,
            eb->diff_cmd_baton));
 
@@ -1408,6 +1414,7 @@ close_file(void *file_baton,
       if (b->added)
         SVN_ERR(eb->diff_callbacks->file_added
                 (adm_access, &content_state, &prop_state,
+                 NULL,
                  b->wcpath,
                  NULL,
                  b->path_incoming,
@@ -1420,6 +1427,7 @@ close_file(void *file_baton,
       else
         SVN_ERR(eb->diff_callbacks->file_changed
                 (adm_access, &content_state, &prop_state,
+                 NULL,
                  b->wcpath,
                  NULL,
                  b->path_incoming,
@@ -1496,7 +1504,7 @@ close_directory(void *dir_baton,
          have been recognised as added, in which case they cannot conflict. */
       if (! eb->dry_run || adm_access)
         SVN_ERR(eb->diff_callbacks->dir_props_changed
-                (adm_access, &prop_state,
+                (adm_access, &prop_state, NULL,
                  b->wcpath,
                  b->propchanges, NULL,
                  b->edit_baton->diff_cmd_baton));
