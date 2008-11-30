@@ -964,8 +964,8 @@ print_diff_tree(svn_fs_root_t *root,
       if (binary)
         {
           svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
-          SVN_ERR(svn_cmdline_printf(pool, header->data));
-        }          
+          SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
+        }
       else
         {
           svn_diff_t *diff;
@@ -983,7 +983,7 @@ print_diff_tree(svn_fs_root_t *root,
               const char *orig_label, *new_label;
 
               /* Print diff header. */
-              SVN_ERR(svn_cmdline_printf(pool, header->data));
+              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
 
               /* This fflush() might seem odd, but it was added to deal
                  with this bug report:
@@ -1933,9 +1933,9 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
       SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
       SVN_ERR(svn_cmdline_printf(pool,
-                                 (comment_lines != 1)
-                                 ? _("Comment (%i lines):\n%s\n")
-                                 : _("Comment (%i line):\n%s\n"),
+                                 Q_("Comment (%i line):\n%s\n",
+                                    "Comment (%i lines):\n%s\n",
+                                    comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }

@@ -128,7 +128,7 @@ def relative_path_from_urls(root_url, url, leading_slash=False):
     """Return the relative path (not URI-encoded) created by
     subtracting from URL the ROOT_URL.  Add a LEADING_SLASH if
     requested."""
-    
+
     if root_url == url:
         return leading_slash and '/' or ''
     assert url.startswith(root_url)
@@ -139,17 +139,17 @@ def relative_path_from_urls(root_url, url, leading_slash=False):
 
 def pretty_print_mergeinfo(mergeinfo, indent=0):
     """Print MERGEINFO hash, one source per line, with a given INDENT."""
-    
+
     mstr = core.svn_mergeinfo_to_string(mergeinfo)
     sys.stdout.write('\n'.join(map(lambda x: indent * ' ' + x,
                                    filter(None, mstr.split('\n')))) + '\n')
-    
-    
+
+
 ### -------------------------------------------------------------------------
-    
+
 class SvnClient:
     """Subversion client operation abstraction."""
-    
+
     def __init__(self, config_dir=None):
         core.svn_config_ensure(config_dir)
         self.ctx = client.ctx_t()
@@ -173,7 +173,7 @@ class SvnClient:
         """Return a 2-tuple containing the repository URL associated
         with the versioned working file or directory located at
         PATH and the repository URL for the same."""
-    
+
         infos = []
         def _info_cb(infopath, info, pool, retval=infos):
           infos.append(info)
@@ -185,7 +185,7 @@ class SvnClient:
     def get_path_revision(self, path):
         """Return the current base revision of versioned file or
         directory PATH."""
-        
+
         infos = []
         def _info_cb(infopath, info, pool, retval=infos):
           infos.append(info)
@@ -193,7 +193,7 @@ class SvnClient:
                                _info_cb, 0, self.ctx)
         assert len(infos) == 1
         return infos[0].rev
-        
+
     def get_path_mergeinfo(self, path, root_url=None):
         mergeinfo = client.mergeinfo_get_merged(path, self.base_optrev,
                                                 self.ctx)
@@ -259,7 +259,7 @@ class SvnClient:
 
 class SvnmergeHistoryMigrator:
     """svnmerge.py tracking data conversion class."""
-    
+
     def __init__(self, client_context, verbose=False, naive=False):
         self.cc = client_context
         self.verbose = verbose
@@ -267,14 +267,14 @@ class SvnmergeHistoryMigrator:
 
     def migrate_path(self, path):
         sys.stdout.write("Searching for merge tracking information...\n")
-        
+
         # Get svnmerge-integrated property for PATH, as Subversion mergeinfo.
         integrated_mergeinfo = svnmerge_prop_to_mergeinfo(
             self.cc.get_path_property(path, 'svnmerge-integrated'))
         if integrated_mergeinfo and self.verbose:
             sys.stdout.write("Found svnmerge-integrated:\n")
             pretty_print_mergeinfo(integrated_mergeinfo, 3)
-            
+
         # Get svnmerge-blocked property for PATH, as Subversion mergeinfo.
         blocked_mergeinfo = svnmerge_prop_to_mergeinfo(
             self.cc.get_path_property(path, 'svnmerge-blocked'))
@@ -303,10 +303,10 @@ class SvnmergeHistoryMigrator:
         # empty, mergeinfo anyway), start trying to cleanup after
         # svnmerge.py's history-ignorant initialization.
         if not self.naive and new_mergeinfo:
-            
+
             sys.stdout.write("Sanitizing mergeinfo (this can take a "
                              "while)...\n")
-            
+
             # What we need:
             #    - the relative path in the repository for PATH
             #    - repository root URL and an RA session rooted thereat
@@ -334,7 +334,7 @@ class SvnmergeHistoryMigrator:
             if self.verbose:
                 sys.stdout.write("   remaining mergeinfo to be filtered:\n")
                 pretty_print_mergeinfo(new_mergeinfo, 6)
-                
+
             # Unfortunately, svnmerge.py tends to initialize using
             # oft-bogus revision ranges like 1-SOMETHING when the
             # merge source didn't even exist in r1.  So if the natural
@@ -377,7 +377,7 @@ class SvnmergeHistoryMigrator:
         self.cc.set_path_property(path, 'svnmerge-blocked', None)
         self.cc.set_path_property(path, 'svn:mergeinfo',
                                   core.svn_mergeinfo_to_string(new_mergeinfo))
-            
+
 
 ### -------------------------------------------------------------------------
 
@@ -427,7 +427,7 @@ def main():
         usage_and_exit("No working copy path provided.")
     else:
         branch_path = core.svn_path_canonicalize(args[0])
-        
+
     # Process options.
     verbose = naive_mode = False
     for opt, value in opts:

@@ -131,7 +131,6 @@ svn_wc_create_notify(const char *path,
   ret->changelist_name = NULL;
   ret->merge_range = NULL;
   ret->path_prefix = NULL;
-  ret->tree_conflicted = FALSE;
 
   return ret;
 }
@@ -340,7 +339,7 @@ svn_wc_conflict_description_create_tree(const char *path,
 {
   svn_wc_conflict_description_t *conflict;
 
-  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
   conflict->path = path;
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_tree;

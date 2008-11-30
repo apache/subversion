@@ -911,29 +911,29 @@ txn_body_read_rep(void *baton, trail_t *trail)
               SVN_ERR(svn_fs_bdb__read_rep(&rep, args->rb->fs,
                                            args->rb->rep_key,
                                            trail, trail->pool));
-              
+
               if (rep->md5_checksum
-                  && (! svn_checksum_match(rep->md5_checksum, 
+                  && (! svn_checksum_match(rep->md5_checksum,
                                            args->rb->md5_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
                    _("MD5 checksum mismatch on rep '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
-                   svn_checksum_to_cstring_display(rep->md5_checksum, 
+                   svn_checksum_to_cstring_display(rep->md5_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(checked_checksum,
                                                    trail->pool));
 
               if (rep->sha1_checksum
-                  && (! svn_checksum_match(rep->sha1_checksum, 
+                  && (! svn_checksum_match(rep->sha1_checksum,
                                            args->rb->sha1_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
                    _("SHA1 checksum mismatch on rep '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
-                   svn_checksum_to_cstring_display(rep->sha1_checksum, 
+                   svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(checked_checksum,
                                                    trail->pool));
@@ -1111,9 +1111,9 @@ txn_body_write_rep(void *baton, trail_t *trail)
                     args->wb->txn_id,
                     trail,
                     trail->pool));
-  SVN_ERR(svn_checksum_update(args->wb->md5_checksum_ctx, 
+  SVN_ERR(svn_checksum_update(args->wb->md5_checksum_ctx,
                               args->buf, args->len));
-  SVN_ERR(svn_checksum_update(args->wb->sha1_checksum_ctx, 
+  SVN_ERR(svn_checksum_update(args->wb->sha1_checksum_ctx,
                               args->buf, args->len));
   return SVN_NO_ERROR;
 }

@@ -1017,7 +1017,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
           /* Don't revisit this name in the target or source entries. */
           apr_hash_set(t_entries, name, APR_HASH_KEY_STRING, NULL);
-          if (s_entries)
+          if (s_entries
+              /* Keep the entry for later process if it is reported as
+                 excluded and got deleted in repos. */ 
+              && (! info || info->depth != svn_depth_exclude || t_entry))
             apr_hash_set(s_entries, name, APR_HASH_KEY_STRING, NULL);
 
           /* pathinfo entries live in their own subpools due to lookahead,
@@ -1364,7 +1367,6 @@ svn_repos_begin_report2(void **report_baton,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
-  const char *tempdir;
 
   if (depth == svn_depth_exclude)
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
@@ -1389,10 +1391,9 @@ svn_repos_begin_report2(void **report_baton,
   b->authz_read_func = authz_read_func;
   b->authz_read_baton = authz_read_baton;
 
-  SVN_ERR(svn_io_temp_dir(&tempdir, pool));
-  SVN_ERR(svn_io_open_unique_file2(&b->tempfile, NULL,
-                                   apr_psprintf(pool, "%s/report", tempdir),
-                                   ".tmp", svn_io_file_del_on_close, pool));
+  SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool));
 
   /* Hand reporter back to client. */
   *report_baton = b;

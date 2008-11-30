@@ -128,7 +128,8 @@ svn_wc_relocate3(const char *path,
   if (! entry)
     return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
 
-  if (entry->kind == svn_node_file)
+  if (entry->kind == svn_node_file
+      || entry->depth == svn_depth_exclude)
     return relocate_entry(adm_access, entry, from, to,
                           validator, validator_baton, TRUE /* sync */,
                           pool);
@@ -160,7 +161,8 @@ svn_wc_relocate3(const char *path,
 
       if (recurse && (entry->kind == svn_node_dir)
           && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
-          && ! entry->absent)
+          && ! entry->absent
+          && (entry->depth != svn_depth_exclude))
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_path_join(path, key, subpool);

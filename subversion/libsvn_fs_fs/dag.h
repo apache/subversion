@@ -79,7 +79,7 @@ svn_fs_fs__dag_dup_for_cache(void **out,
                              void *in,
                              apr_pool_t *pool);
 
-/* Serialize a DAG node. 
+/* Serialize a DAG node.
    Implements svn_cache__serialize_func_t */
 svn_error_t *
 svn_fs_fs__dag_serialize(char **data,
@@ -87,7 +87,7 @@ svn_fs_fs__dag_serialize(char **data,
                          void *in,
                          apr_pool_t *pool);
 
-/* Deserialize a DAG node. 
+/* Deserialize a DAG node.
    Implements svn_cache__deserialize_func_t */
 svn_error_t *
 svn_fs_fs__dag_deserialize(void **out,

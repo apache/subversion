@@ -459,11 +459,11 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   else
     filepool = frb->currpool;
 
-  SVN_ERR(svn_io_open_unique_file2(&delta_baton->file,
+  SVN_ERR(svn_io_open_unique_file3(&delta_baton->file,
                                    &delta_baton->filename,
-                                   frb->tmp_path,
-                                   ".tmp", svn_io_file_del_on_pool_cleanup,
-                                   filepool));
+                                   NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   filepool, filepool));
   cur_stream = svn_stream_from_aprfile2(delta_baton->file, TRUE, frb->currpool);
 
   /* Get window handler for applying delta. */

@@ -1003,7 +1003,8 @@ remove_deleted_entry(void *baton, const void *key,
   const svn_wc_entry_t *cur_entry = val;
   svn_wc_adm_access_t *entry_access;
 
-  /* Skip each entry that isn't scheduled for deletion. */
+  /* Skip each entry that isn't scheduled for deletion. This gracefully
+     includes excluded item. */
   if (cur_entry->schedule != svn_wc_schedule_delete)
     return SVN_NO_ERROR;
 
@@ -1163,7 +1164,7 @@ log_do_committed(struct log_runner *loggy,
           SVN_ERR(svn_wc_entry(&parentry,
                                svn_wc_adm_access_path(loggy->adm_access),
                                loggy->adm_access,
-                               TRUE, pool));
+                               FALSE, pool));
           if (new_rev > parentry->revision)
             {
               /* ...then the parent's revision is now officially a
@@ -1325,7 +1326,8 @@ log_do_committed(struct log_runner *loggy,
     finfo.size = 0;
 
   /* Files have been moved, and timestamps have been found.  It is now
-     time for The Big Entry Modification. */
+     time for The Big Entry Modification. Here we set fields in the entry
+     to values which we know must be so because it has just been committed. */
   entry->revision = SVN_STR_TO_REV(rev);
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
@@ -1340,7 +1342,9 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
   entry->working_size = finfo.size;
-  entry->tree_conflict_data = NULL;
+  /* We don't reset tree_conflict_data, because it's about conflicts on
+     children, not on this node, and it could conceivably be valid to commit
+     this node non-recursively while children are still in conflict. */
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -1357,7 +1361,6 @@ log_do_committed(struct log_runner *loggy,
                                       : 0)
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                                   | SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2011,7 +2014,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
-                           const char *name,
+                           const char *path,
                            svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool)
@@ -2177,7 +2180,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
     return SVN_NO_ERROR;
 
   apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
-               APR_HASH_KEY_STRING, loggy_path(name, adm_access));
+               APR_HASH_KEY_STRING, loggy_path(path, adm_access));
 
   svn_xml_make_open_tag_hash(log_accum, pool,
                              svn_xml_self_closing,

@@ -108,12 +108,18 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t have_row;
 
+  if (ffd->rep_cache.db == NULL)
+    {
+      *rep = NULL;
+      return SVN_NO_ERROR;
+    }
+
   /* We only allow SHA1 checksums in this table. */
   if (checksum->kind != svn_checksum_sha1)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
-  
+
   if (!ffd->rep_cache.get_rep_stmt)
     SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.get_rep_stmt, ffd->rep_cache.db,
                   "select revision, offset, size, expanded_size from rep_cache "
@@ -150,6 +156,9 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   svn_boolean_t have_row;
   representation_t *old_rep;
 
+  if (ffd->rep_cache.db == NULL)
+    return SVN_NO_ERROR;
+
   /* We only allow SHA1 checksums in this table. */
   if (rep->checksum->kind != svn_checksum_sha1)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
@@ -184,7 +193,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
       else
         return SVN_NO_ERROR;
     }
-    
+
   if (!ffd->rep_cache.set_rep_stmt)
     SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.set_rep_stmt, ffd->rep_cache.db,
                   "insert into rep_cache (hash, revision, offset, size, "
@@ -210,6 +219,9 @@ svn_fs_fs__inc_rep_reuse(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t have_row;
+
+  if (ffd->rep_cache.db == NULL)
+    return SVN_NO_ERROR;
 
   /* Fetch the current count. */
   if (!ffd->rep_cache.inc_select_stmt)

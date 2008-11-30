@@ -2,7 +2,7 @@
  * info-cmd.c -- Display information about a resource
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -417,9 +417,9 @@ print_info(void *baton,
           /* NOTE: The stdio will handle newline translation. */
           comment_lines = svn_cstring_count_newlines(info->lock->comment) + 1;
           SVN_ERR(svn_cmdline_printf(pool,
-                                     (comment_lines != 1)
-                                     ? _("Lock Comment (%i lines):\n%s\n")
-                                     : _("Lock Comment (%i line):\n%s\n"),
+                                     Q_("Lock Comment (%i line):\n%s\n",
+                                        "Lock Comment (%i lines):\n%s\n",
+                                        comment_lines),
                                      comment_lines,
                                      info->lock->comment));
         }

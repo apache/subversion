@@ -65,9 +65,9 @@ def verify_xml_elements(lines, exprs):
     str = str[m.end():] # skip xml version tag
   (unmatched_str, unmatched_exprs) = match_xml_element(str, exprs)
   if unmatched_exprs:
-    print "Failed to find the following expressions:"
+    print("Failed to find the following expressions:")
     for expr in unmatched_exprs:
-      print expr
+      print(expr)
     raise SVNTreeUnequal
 
 def match_xml_element(str, exprs):
@@ -106,7 +106,7 @@ def match_xml_element(str, exprs):
     content_re = re.compile(content_re_str % name, re.DOTALL)
     m = content_re.match(str)
     if not m:
-      print "No XML end-tag for '%s' found in '%s...'" % (name, str[:100])
+      print("No XML end-tag for '%s' found in '%s...'" % (name, str[:100]))
       raise(SVNTreeUnequal)
     content = m.group('content')
     str = str[m.end():]
@@ -173,7 +173,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = "The update attempted to " + action_verb + " '" + fname
+    expected_str1 = ".*The update attempted to %s '%s'.*" % (action_verb, fname)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -193,18 +193,35 @@ def info_with_tree_conflicts(sbox):
                                             },
                           )])
 
+  # Check recursive info.  Just ensure that all victims are listed.
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                G, '-R')
+  for fname, action_verb, action, reason in scenarios:
+    found = False
+    expected = ".*The update attempted to %s '%s'.*" % (action_verb, fname)
+    for item in output:
+      if re.search(expected, item):
+        found = True
+        break
+    if not found:
+      raise svntest.verify.SVNUnexpectedStdout(
+        "Tree conflict missing in svn info -R output:\n"
+        "  Expected: '%s'\n"
+        "  Found: '%s'" % (expected, output))
+  
 def info_on_added_file(sbox):
   """info on added file"""
-  
+
   svntest.actions.make_repo_and_wc(sbox)
   wc_dir = sbox.wc_dir
-  
+
   # create new file
   new_file = os.path.join(wc_dir, 'new_file')
   svntest.main.file_append(new_file, '')
 
   svntest.main.run_svn(None, 'add', new_file)
-  
+
   uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
 
   # check that we have a Repository Root and Repository UUID
@@ -219,7 +236,7 @@ def info_on_added_file(sbox):
              }
 
   svntest.actions.run_and_verify_info([expected], new_file)
-  
+
   # check XML info
   exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
                                                                 [], 'info',
@@ -240,11 +257,11 @@ def info_on_mkdir(sbox):
   """info on new dir with mkdir"""
   svntest.actions.make_repo_and_wc(sbox)
   wc_dir = sbox.wc_dir
-  
+
   # create a new directory using svn mkdir
   new_dir = os.path.join(wc_dir, 'new_dir')
   svntest.main.run_svn(None, 'mkdir', new_dir)
-  
+
   uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
 
   # check that we have a Repository Root and Repository UUID

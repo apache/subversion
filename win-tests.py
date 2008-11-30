@@ -31,7 +31,7 @@ def _usage_exit():
 
   print("Driver for running the tests on Windows.")
   print("Usage: python win-tests.py [option] [test-path]")
-  print()
+  print("")
   print("Valid options:")
   print("  -r, --release          : test the Release configuration")
   print("  -d, --debug            : test the Debug configuration (default)")

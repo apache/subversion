@@ -107,7 +107,7 @@ write_new_rep(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-write-new-rep",
+          (&fs, "test-repo-write-new-rep", opts,
            pool));
 
   /* Set up transaction baton */
@@ -146,7 +146,7 @@ write_rep(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-write-rep",
+          (&fs, "test-repo-write-rep", opts,
            pool));
 
   /* Set up transaction baton */
@@ -224,7 +224,7 @@ read_rep(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-read-rep",
+          (&fs, "test-repo-read-rep", opts,
            pool));
 
   /* Set up transaction baton */
@@ -309,7 +309,7 @@ delete_rep(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-delete-rep",
+          (&fs, "test-repo-delete-rep", opts,
            pool));
 
   /* Set up transaction baton */
@@ -544,7 +544,7 @@ test_strings(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-test-strings",
+          (&fs, "test-repo-test-strings", opts,
            pool));
 
   /* The plan (after each step below, verify the size and contents of
@@ -649,7 +649,7 @@ write_null_string(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-test-strings",
+          (&fs, "test-repo-test-strings", opts,
            pool));
 
   args.fs = fs;
@@ -679,7 +679,7 @@ abort_string(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-abort-string",
+          (&fs, "test-repo-abort-string", opts,
            pool));
 
   /* The plan:
@@ -747,7 +747,7 @@ copy_string(const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-copy-string",
+          (&fs, "test-repo-copy-string", opts,
            pool));
 
   /*  Write a new string (string1). */

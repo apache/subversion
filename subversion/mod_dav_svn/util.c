@@ -437,7 +437,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
         svn_error_clear(serr);
       }
     return dav_svn__convert_err(safe_err, http_status,
-                                apr_psprintf(r->pool, safe_err->message),
+                                apr_psprintf(r->pool, "%s", safe_err->message),
                                 r->pool);
 }
 
