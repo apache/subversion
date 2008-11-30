@@ -1019,8 +1019,9 @@ get_dir_status(struct edit_baton *eb,
   /* Add empty status structures for nonexistent tree conflict victims. */
   tree_conflicts = apr_array_make(pool, 0,
                                   sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(tree_conflicts, dir_entry,
-                                                 path, subpool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
+                                      dir_entry->tree_conflict_data,
+                                      path, subpool));
 
   for (j = 0; j < tree_conflicts->nelts; j++)
     {

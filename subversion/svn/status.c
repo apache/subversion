@@ -88,7 +88,6 @@ generate_status_desc(enum svn_wc_status_kind status)
     case svn_wc_status_unversioned: return "unversioned";
     default:                        abort();
     }
-  return NULL;
 }
 
 

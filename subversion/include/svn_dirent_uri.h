@@ -91,7 +91,7 @@ svn_uri_local_style(const char *uri,
  * empty string is returned.
  *
  * If the @a component is an absolute dirent, then it is copied and returned.
- * Exactly one slash character ('/') is used to joined the components,
+ * Exactly one slash character ('/') is used to join the components,
  * accounting for any trailing slash in @a base, except on Windows when
  * @a base is "X:".
  *
@@ -187,8 +187,8 @@ svn_dirent_split(const char *dirent,
                  apr_pool_t *pool);
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
- * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
- * '\\\\server\\share\\foo' on Windows.
+ * hand, amongst which '/foo' on all platforms or 'X:/foo', 
+ * '//server/share/foo' on Windows.
  *
  * @since New in 1.6.
  */
@@ -203,8 +203,8 @@ svn_boolean_t
 svn_uri_is_absolute(const char *dirent);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
- * '\\\\.\\..', '\\\\server\\share' on Windows.
+ * at hand, amongst which '/' on all platforms or 'X:/', '//server/share'
+ * on Windows.
  *
  * @since New in 1.5.
  */

@@ -1012,8 +1012,7 @@ svn_fs_fs__dag_finalize_edits(dag_node_t *file,
       svn_checksum_t *file_checksum;
 
       SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, pool));
-      if (checksum->kind == file_checksum->kind
-            && !svn_checksum_match(checksum, file_checksum))
+      if (!svn_checksum_match(checksum, file_checksum))
         return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                                  _("Checksum mismatch, file '%s':\n"
                                    "   expected:  %s\n"

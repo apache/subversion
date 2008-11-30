@@ -1537,6 +1537,11 @@ svn_subst_copy_and_translate3(const char *src,
                                     repair, keywords, expand, pool);
   if (err)
     {
+      /* Cleanup streams and tempfiles, ignoring errors. */
+      svn_error_clear(svn_stream_close(src_stream));
+      svn_error_clear(svn_stream_close(dst_stream));
+      svn_error_clear(svn_io_remove_file(dst_tmp, pool));
+
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
         return svn_error_createf
           (SVN_ERR_IO_INCONSISTENT_EOL, err,
@@ -1546,9 +1551,11 @@ svn_subst_copy_and_translate3(const char *src,
         return err;
     }
 
-  /* clean up nicely. */
-  SVN_ERR(svn_stream_close(src_stream));
-  SVN_ERR(svn_stream_close(dst_stream));
+  /* Clean up nicely. */
+  err = svn_stream_close(src_stream);
+  err = svn_error_compose_create(err, svn_stream_close(dst_stream));
+  if (err)
+    return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   return svn_io_file_rename(dst_tmp, dst, pool);

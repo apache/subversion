@@ -9804,12 +9804,62 @@ def reintegrate_fail_on_stale_source(sbox):
                                      '-m', 'a change to mu', mu_path);
   # Unmix the revisions in the working copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir);
-  # The merge --reintegrate should fail because target has changes not
-  # present in source.
-  svntest.actions.run_and_verify_merge(
-    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
-    ".*", ###TODO(reint): need a more specific check here
-    None, None, None, None, True, False, '--reintegrate')
+  # The merge --reintegrate succeeds but since there were no changes
+  # on A_COPY after it was branched the only result is updated mergeinfo
+  # on the reintegrate target.
+  expected_output = wc.State(A_path, {})
+  expected_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=7)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-7'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\nsome text appended to mu\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_path, { })
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], None, None, None, None, True, True,
+                                       '--reintegrate')
 
 def dont_add_mergeinfo_from_own_history(sbox):
   "cyclic merges don't add mergeinfo from own history"
@@ -14385,22 +14435,24 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_disk, expected_status = set_up_branch(sbox, False, 3)
 
   # Some paths we'll care about
-  gamma_COPY_3_path = os.path.join(wc_dir, "A_COPY_3", "D", "gamma")
-  D_path            = os.path.join(wc_dir, "A", "D")
-  gamma_path        = os.path.join(wc_dir, "A", "D", "gamma")
-  mu_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2", "mu")
-  mu_path           = os.path.join(wc_dir, "A", "mu")
-  mu_COPY_path      = os.path.join(wc_dir, "A_COPY", "mu")
-  A_COPY_path       = os.path.join(wc_dir, "A_COPY")
-  D_COPY_path       = os.path.join(wc_dir, "A_COPY")
-  beta_COPY_path    = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
-  gamma_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "gamma")
-  rho_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
-  omega_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
-  psi_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
-  D_COPY_path       = os.path.join(wc_dir, "A_COPY", "D")
-  alpha_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "alpha")
-  A_path            = os.path.join(wc_dir, "A")
+  gamma_COPY_3_path     = os.path.join(wc_dir, "A_COPY_3", "D", "gamma")
+  D_path                = os.path.join(wc_dir, "A", "D")
+  gamma_path            = os.path.join(wc_dir, "A", "D", "gamma")
+  mu_COPY_2_path        = os.path.join(wc_dir, "A_COPY_2", "mu")
+  mu_path               = os.path.join(wc_dir, "A", "mu")
+  mu_COPY_path          = os.path.join(wc_dir, "A_COPY", "mu")
+  A_COPY_path           = os.path.join(wc_dir, "A_COPY")
+  D_COPY_path           = os.path.join(wc_dir, "A_COPY")
+  beta_COPY_path        = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  gamma_COPY_path       = os.path.join(wc_dir, "A_COPY", "D", "gamma")
+  gamma_moved_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "gamma_moved")
+  gamma_moved_path      = os.path.join(wc_dir, "A", "D", "gamma_moved")
+  rho_COPY_path         = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  omega_COPY_path       = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
+  psi_COPY_path         = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  D_COPY_path           = os.path.join(wc_dir, "A_COPY", "D")
+  alpha_COPY_path       = os.path.join(wc_dir, "A_COPY", "B", "E", "alpha")
+  A_path                = os.path.join(wc_dir, "A")
   
   # Now set up a situation where we try to reintegrate A_COPY back to A but
   # both of these paths have subtree mergeinfo.  Iff the mergeinfo on A_COPY
@@ -14636,6 +14688,195 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                 None,
                                 True) # Match *all* lines of stdout
 
+  # Test another common situation that can break reintegrate as a result
+  # of copies and moves:
+  #
+  #   A) On our 'trunk' rename a subtree in such a way as the new
+  #      subtree has explicit mergeinfo.  Commit this rename as rev N.
+  #
+  #   B) Synch merge the rename in A) to our 'branch' in rev N+1.  The
+  #      renamed subtree now has explicit mergeinfo.
+  #
+  #   C) Make some more changes on the renamed subtree in 'trunk' and
+  #      commit in rev N+2.
+  #
+  #   D) Synch merge the changes in C) from 'trunk' to 'branch' and commit in
+  #      rev N+3.  The renamed subtree on 'branch' now has explicit mergeinfo
+  #      from 'trunk' for rev.
+  #
+  #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
+  #      of 'trunk' was previously merged to 'branch'
+
+  # r16 - A) REPOS-to-REPOS rename of A/D/gamma to A/D/gamma_moved.  Since
+  # r34184 WC-to-WC moves won't create mergeinfo on the dest if the source
+  # doesn't have any.  So do a repos-to-repos move so explicit mergeinfo
+  # *is* created on the destination.
+  svntest.actions.run_and_verify_svn(None, None,[], 'move',
+                                     sbox.repo_url + '/A/D/gamma',
+                                     sbox.repo_url + '/A/D/gamma_moved',
+                                     '-m', 'REPOS-to-REPOS move'
+                                     )
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_disk.remove('A/D/gamma')
+  expected_disk.add({
+    'A/D/gamma_moved' : Item(props={SVN_PROP_MERGEINFO: '/A_COPY_3/D/gamma:9'},
+                             contents="New content")
+    })
+  expected_status.tweak(wc_rev=16)
+  expected_status.remove('A/D/gamma')
+  expected_status.add({'A/D/gamma_moved' : Item(status='  ', wc_rev=16)})
+
+  # r17 - B) Synch merge from A to A_COPY
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[8], [13,16]],
+                          ['U    ' + omega_COPY_path + '\n',
+                           'A    ' + gamma_moved_COPY_path + '\n',
+                           'D    ' + gamma_COPY_path + '\n']),
+    [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
+  expected_output = wc.State(
+    wc_dir,
+    {'A_COPY'               : Item(verb='Sending'), # Mergeinfo update
+     'A_COPY/mu'            : Item(verb='Sending'), # Mergeinfo update
+     'A_COPY/D'             : Item(verb='Sending'), # Mergeinfo update
+     'A_COPY/D/gamma'       : Item(verb='Deleting'),
+     'A_COPY/D/gamma_moved' : Item(verb='Adding'),
+     'A_COPY/D/H/omega'     : Item(verb='Sending'), # Redoing r15's
+                                                    # reverse merge of r8.
+     })
+  expected_status.remove('A_COPY/D/gamma')
+
+  expected_status.tweak('A_COPY',
+                        'A_COPY/mu',
+                        'A_COPY/D',
+                        'A_COPY/D/H/omega',
+                        wc_rev=17)
+  expected_status.add({'A_COPY/D/gamma_moved' : Item(status='  ', wc_rev=17)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.remove('A_COPY/D/gamma')
+  expected_disk.add({
+    'A/D/gamma_moved' : Item(props={SVN_PROP_MERGEINFO: '/A_COPY_3/D/gamma:9'},
+                             contents="New content")
+    })
+
+  # r18 - C) Text mod to A/D/gamma_moved
+  svntest.main.file_write(gamma_moved_path, "Even newer content")
+  expected_output = wc.State(wc_dir, {'A/D/gamma_moved' : Item(verb='Sending')})
+  expected_status.tweak('A/D/gamma_moved', wc_rev=18)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # r19 - D) Synch merge from A to A_COPY
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[17,18]],
+                          ['U    ' + gamma_moved_COPY_path + '\n']),
+    [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
+  expected_output = wc.State(
+    wc_dir,
+    {'A_COPY'               : Item(verb='Sending'), # Mergeinfo update
+     'A_COPY/mu'            : Item(verb='Sending'), # Mergeinfo update
+     'A_COPY/D'             : Item(verb='Sending'), # Mergeinfo update
+     'A_COPY/D/gamma_moved' : Item(verb='Sending'), # Text change
+     })
+  expected_status.tweak('A_COPY',
+                        'A_COPY/mu',
+                        'A_COPY/D',
+                        'A_COPY/D/gamma_moved',
+                        wc_rev=19)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Reintegrate A_COPY to A, this should work, but is currently failing
+  # with an error like this:
+  #
+  #   svn: Reintegrate can only be used if the revisions previously merged
+  #   from the reintegrate target to 'URL/merge_tests-126/A_COPY' are the
+  #   same, but there are differences:
+  #     A_COPY
+  #       /A:2-18
+  #     A_COPY/D/gamma_moved
+  #       /A/D/gamma_moved:17-18
+  #
+  # Reintegrate currently acts as if A_COPY/D/gamma_moved@2-16 hasn't been
+  # merged, but A_COPY/D/gamma_moved's natural history,
+  #
+  #   /A/D/gamma:1-15
+  #   /A/D/gamma_moved:16
+  #   /A_COPY/D/gamma_moved:17-19
+  #
+  # already shows that it is fully synched up with trunk.  This test is marked
+  # as XFail until this is fixed. 
+  svntest.actions.run_and_verify_svn(None, ["At revision 19.\n"], [], 'up',
+                                     wc_dir)
+  expected_output = wc.State(A_path, {
+    ''              : Item(status=' U'),
+    'B/E/alpha'     : Item(status='U '),
+    'mu'            : Item(status='UU'),
+    'D'             : Item(status=' U'),
+    'D/gamma_moved' : Item(status=' U'),
+    })
+  expected_A_status = wc.State(A_path, {
+    ''              : Item(status=' M'),
+    'B'             : Item(status='  '),
+    'mu'            : Item(status='MM'),
+    'B/E'           : Item(status='  '),
+    'B/E/alpha'     : Item(status='M '),
+    'B/E/beta'      : Item(status='  '),
+    'B/lambda'      : Item(status='  '),
+    'B/F'           : Item(status='  '),
+    'C'             : Item(status='  '),
+    'D'             : Item(status=' M'),
+    'D/G'           : Item(status='  '),
+    'D/G/pi'        : Item(status='  '),
+    'D/G/rho'       : Item(status='  '),
+    'D/G/tau'       : Item(status='  '),
+    'D/gamma_moved' : Item(status=' M'),
+    'D/H'           : Item(status='  '),
+    'D/H/chi'       : Item(status='  '),
+    'D/H/psi'       : Item(status='  '),
+    'D/H/omega'     : Item(status='  '),
+    })
+  expected_A_status.tweak(wc_rev=19)
+  expected_A_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-19'}),
+    'B'         : Item(),
+    'mu'        : Item("New content",
+                       props={SVN_PROP_MERGEINFO :
+                              '/A_COPY/mu:2-19\n/A_COPY_2/mu:11'}),
+    'B/E'           : Item(),
+    'B/E/alpha'     : Item("New content"),
+    'B/E/beta'      : Item("New content"),
+    'B/lambda'      : Item("This is the file 'lambda'.\n"),
+    'B/F'           : Item(),
+    'C'             : Item(),
+    'D'             : Item(props={SVN_PROP_MERGEINFO :
+                                  '/A_COPY/D:2-19\n/A_COPY_3/D:9'}),
+    'D/G'           : Item(),
+    'D/G/pi'        : Item("This is the file 'pi'.\n"),
+    'D/G/rho'       : Item("New content"),
+    'D/G/tau'       : Item("This is the file 'tau'.\n"),
+    'D/gamma_moved' : Item(
+      "Even newer content", props={SVN_PROP_MERGEINFO :
+                                   '/A_COPY/D/gamma_moved:2-19\n'
+                                   '/A_COPY_3/D/gamma:9'}),
+    'D/H'           : Item(),
+    'D/H/chi'       : Item("This is the file 'chi'.\n"),
+    'D/H/psi'       : Item("New content"),
+    'D/H/omega'     : Item("New content"),
+    })
+  expected_A_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A_COPY',
+                                       expected_output,
+                                       expected_A_disk,
+                                       expected_A_status,
+                                       expected_A_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, "--reintegrate")
+
 ########################################################################
 # Run the tests
 
@@ -14784,8 +15025,8 @@ test_list = [ None,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
               reintegrate_fail_on_shallow_wc,
-              XFail(SkipUnless(reintegrate_fail_on_stale_source,
-                               server_has_mergeinfo)),
+              SkipUnless(reintegrate_fail_on_stale_source,
+                         server_has_mergeinfo),
               SkipUnless(dont_add_mergeinfo_from_own_history,
                          server_has_mergeinfo),
               merge_range_predates_history,
@@ -14842,8 +15083,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(merge_range_prior_to_rename_source_existence,
                                server_has_mergeinfo)),
-              SkipUnless(reintegrate_with_subtree_mergeinfo,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(reintegrate_with_subtree_mergeinfo,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':

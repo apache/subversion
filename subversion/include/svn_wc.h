@@ -3788,9 +3788,14 @@ svn_wc_crawl_revisions(const char *path,
 /* Updates. */
 
 /** Set @a *wc_root to @c TRUE if @a path represents a "working copy root",
- * @c FALSE otherwise.  Use @a pool for any intermediate allocations.
+ * @c FALSE otherwise. Here, @a path is a "working copy root" if its parent
+ * directory is not a WC or if its parent directory's repository URL is not
+ * the parent of its own repository URL. Thus, a switched subtree is
+ * considered to be a working copy root.
  *
  * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * Use @a pool for any intermediate allocations.
  *
  * @note Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
@@ -4614,7 +4619,7 @@ typedef enum svn_wc_merge_outcome_t
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.  If @a
  * merge_options is non-NULL, either pass its elements to @a diff3_cmd or
- * parse it and use as options to the internal merge code (@see
+ * parse it and use as options to the internal merge code (see
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
