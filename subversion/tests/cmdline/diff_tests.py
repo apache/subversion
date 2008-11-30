@@ -3053,6 +3053,18 @@ def diff_svnpatch(sbox):
                   "".join(l))),
                 76))
 
+  def svnpatch_decode(l):
+    svnpatch = ""
+    for i in l:
+      svnpatch += i.rstrip("\n")
+    return zlib.decompress(base64.decodestring(svnpatch))
+
+  def compare_svnpatch(actual, expected):
+    print("EXPECTED DECODED SVNPATCH:\n%s" % svnpatch_decode(expected))
+    print("ACTUAL DECODED SVNPATCH:\n%s" % svnpatch_decode(actual))
+    if actual != expected:
+      raise svntest.verify.SVNUnexpectedStdout("Unexpected svnpatch")
+
   sbox.build()
   wc_dir = sbox.wc_dir
   os.chdir(wc_dir)
@@ -3166,8 +3178,7 @@ def diff_svnpatch(sbox):
                                    'diff', '--svnpatch')
   svnpatch_output = extract_svnpatch(diff_output)
 
-  if (svnpatch_output != expected_svnpatch):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch)
 
   # subtest 2
   # Now commit r3 and update to r2 to perform a base/repos diff.
@@ -3197,8 +3208,7 @@ def diff_svnpatch(sbox):
 
   svnpatch_output = extract_svnpatch(diff_output)
 
-  if (svnpatch_output != expected_svnpatch_base_head):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch_base_head)
 
   # subtest 3
   # now do some local mods and diff -rBASE:HEAD once more
@@ -3223,8 +3233,7 @@ def diff_svnpatch(sbox):
 
   svnpatch_output = extract_svnpatch(diff_output)
 
-  if (svnpatch_output != expected_svnpatch_base_head):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch_base_head)
 
   # subtest r4
   # conversely compare HEAD to BASE now
@@ -3282,8 +3291,7 @@ def diff_svnpatch(sbox):
 
   svnpatch_output = extract_svnpatch(diff_output)
 
-  if (svnpatch_output != expected_svnpatch_head_base):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch_head_base)
 
   # subtest 5
   # compare HEAD to WC (with local mods)
@@ -3350,8 +3358,7 @@ def diff_svnpatch(sbox):
                                   '-r', 'HEAD')
   svnpatch_output = extract_svnpatch(diff_output)
 
-  if (svnpatch_output != expected_svnpatch_head_wc):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch_head_wc)
 
   # subtest 6
   # repos/repos diff, r2:r3
@@ -3364,8 +3371,7 @@ def diff_svnpatch(sbox):
   svnpatch_output = extract_svnpatch(diff_output)
 
   # should be rigorously equal to -rBASE:HEAD svnpatch diff (BASE is r2)
-  if (svnpatch_output != expected_svnpatch_base_head):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch_base_head)
 
   # subtest 7
   # conversely, repos/repos diff, r3:r2
@@ -3428,8 +3434,7 @@ def diff_svnpatch(sbox):
 
   svnpatch_output = extract_svnpatch(diff_output)
 
-  if (svnpatch_output != expected_svnpatch_head_r2):
-    raise svntest.Failure
+  compare_svnpatch(svnpatch_output, expected_svnpatch_head_r2)
 
 ########################################################################
 #Run the tests
