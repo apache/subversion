@@ -937,8 +937,10 @@ def depth_update_to_more_depth(sbox):
   verify_depth("Non-infinity depth detected after an upgrade to depth-infinity",
                "infinity", "A")
 
-def commit_propmods_with_depth_empty(sbox):
-  "commit property mods only, using --depth=empty"
+def commit_propmods_with_depth_empty_helper(sbox, depth_arg):
+  """Helper for commit_propmods_with_depth_empty().
+  DEPTH_ARG should be either '--depth=empty' or '-N'."""
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -987,8 +989,19 @@ def commit_propmods_with_depth_empty(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        '--depth=empty',
+                                        depth_arg,
                                         wc_dir, D_path)
+
+# See also commit_tests 26: commit_nonrecursive
+def commit_propmods_with_depth_empty(sbox):
+  "commit property mods only, using --depth=empty"
+
+  sbox2 = sbox.clone_dependent(True)
+
+  # Run once with '-N' and once with '--depth=empty' to make sure they
+  # function identically.
+  commit_propmods_with_depth_empty_helper(sbox, '-N')
+  commit_propmods_with_depth_empty_helper(sbox2, '--depth=empty')
 
 # Test for issue #2845.
 def diff_in_depthy_wc(sbox):
