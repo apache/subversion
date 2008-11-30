@@ -538,6 +538,8 @@ file_added(svn_wc_adm_access_t *adm_access,
            svn_revnum_t rev2,
            const char *mimetype1,
            const char *mimetype2,
+           const char *copyfrom_path,
+           svn_revnum_t copyfrom_revision,
            const apr_array_header_t *propchanges,
            apr_hash_t *originalprops,
            void *diff_baton)
@@ -581,6 +583,8 @@ dir_added(svn_wc_adm_access_t *adm_access,
           svn_wc_notify_state_t *state,
           const char *path,
           svn_revnum_t rev,
+          const char *copyfrom_path,
+          svn_revnum_t copyfrom_revision,
           void *diff_baton)
 {
   struct callbacks_wrapper_baton *b = diff_baton;
