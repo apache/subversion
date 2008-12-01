@@ -13386,6 +13386,8 @@ state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
 state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
 state_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
+deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
+
 j = os.path.join
 
 DeepTreesTestCase = svntest.actions.DeepTreesTestCase
@@ -13403,14 +13405,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
   # use case 4, as in notes/tree-conflicts/use-cases.txt
   # 4.1) local tree delete, incoming leaf edit
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = state_after_tree_del
 
@@ -13448,14 +13443,7 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
 
   # 4.2) local tree delete, incoming leaf delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = state_after_tree_del
 
@@ -13496,46 +13484,32 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
   # use case 5, as in notes/tree-conflicts/use-cases.txt
   # 5.1) local leaf edit, incoming tree delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='D '),
-    'DF/D1'             : Item(status='D '),
-    'DD/D1'             : Item(status='D '),
-    'DDF/D1'            : Item(status='D '),
-    'DDD/D1'            : Item(status='D '),
-    })
+  expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'DF/D1'             : Item(),
-    'DDF/D1/D2'         : Item(),
-    'F/alpha'           : Item(contents="This is the file 'alpha'.\nMore text for file alpha.\n"),
-    'DDD/D1/D2/D3'      : Item(),
-    'DD/D1/D2'          : Item(),
-    'D/D1'              : Item(),
-    })
+  expected_disk = disk_after_leaf_edit
 
   # We should detect 6 tree conflicts, and nothing should be deleted (when
   # we skip tree conflict victims).
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', wc_rev='3'), # tree conflict?
+    'D/D1'              : Item(status='  ', treeconflict='C', wc_rev='4'),
     'D/D1/delta'        : Item(status='D ', wc_rev='4'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='4'),
     'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='4'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='4'),
     'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='4'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='4'),
     'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='4'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='4'),
     'DF/D1/beta'        : Item(status='D ', wc_rev='4'),
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='  ', treeconflict='C', wc_rev='4'),
@@ -13561,15 +13535,7 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
 
   # 5.2) local leaf del, incoming tree delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='D '),
-    'DD/D1'             : Item(status='D '),
-    'DDF/D1'            : Item(status='D '),
-    'DDD/D1'            : Item(status='D '),
-    })
-
+  expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
     'F'                 : Item(),
@@ -13585,14 +13551,14 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
     'D'                 : Item(status='  ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DD/D1'             : Item(status='! ', treeconflict='C'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DF/D1'             : Item(status='! ', treeconflict='C'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DDD/D1'            : Item(status='! ', treeconflict='C'),
     'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DDF/D1'            : Item(status='! ', treeconflict='C'),
     'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
     'D/D1'              : Item(status='! ', treeconflict='C'),
     'F/alpha'           : Item(status='! ', treeconflict='C'),
@@ -13617,14 +13583,7 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
   # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = state_after_tree_del
 
@@ -13665,14 +13624,7 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
   # use case 4, as in notes/tree-conflicts/use-cases.txt
   # 4.1) local tree delete, incoming leaf edit
 
-  expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
     'F'                 : Item(),
@@ -13725,14 +13677,7 @@ def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
 
   # 4.2) local tree delete, incoming leaf delete
 
-  expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
     'F'                 : Item(),
@@ -13789,43 +13734,36 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
   # use case 5, as in notes/tree-conflicts/use-cases.txt
   # 5.1) local leaf edit, incoming tree delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = state_after_leaf_edit
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status=' M', wc_rev='3'),
+    'D/D1'              : Item(status=' M', treeconflict='C', wc_rev='3'),
     'D/D1/delta'        : Item(status='A ', wc_rev='0'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status=' M', wc_rev='3'),
+    'DD/D1'             : Item(status=' M', treeconflict='C', wc_rev='3'),
     'DD/D1/D2'          : Item(status='  ', wc_rev='3'),
     'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev='0'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status=' M', wc_rev='3'),
+    'DDD/D1'            : Item(status=' M', treeconflict='C', wc_rev='3'),
     'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
     'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='3'),
     'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev='0'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status=' M', wc_rev='3'),
+    'DDF/D1'            : Item(status=' M', treeconflict='C', wc_rev='3'),
     'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
     'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status=' M', wc_rev='3'),
+    'DF/D1'             : Item(status=' M', treeconflict='C', wc_rev='3'),
     'DF/D1/beta'        : Item(status='M ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='M ', treeconflict='C', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1'             : Item(),
-    'DDF/D1'            : Item(),
-    'DDD/D1'            : Item(),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
@@ -13846,15 +13784,7 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
 
   # 5.2) local leaf del, incoming tree delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='D '),
-    'DD/D1'             : Item(status='D '),
-    'DDF/D1'            : Item(status='D '),
-    'DDD/D1'            : Item(status='D '),
-    })
-
+  expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
     'F'                 : Item(),
@@ -13872,17 +13802,17 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DD/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DF/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DDD/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
+    'DDF/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
     })
@@ -13908,14 +13838,7 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
   # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
 
-  expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
     'F'                 : Item(),
@@ -13933,17 +13856,17 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
     'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
     })
@@ -15153,13 +15076,13 @@ test_list = [ None,
               tree_conflicts_and_obstructions,
               tree_conflicts_on_merge_local_ci_4_1,
               tree_conflicts_on_merge_local_ci_4_2,
-              tree_conflicts_on_merge_local_ci_5_1,
-              tree_conflicts_on_merge_local_ci_5_2,
+              XFail(tree_conflicts_on_merge_local_ci_5_1),
+              XFail(tree_conflicts_on_merge_local_ci_5_2),
               tree_conflicts_on_merge_local_ci_6,
               tree_conflicts_on_merge_no_local_ci_4_1,
               tree_conflicts_on_merge_no_local_ci_4_2,
-              tree_conflicts_on_merge_no_local_ci_5_1,
-              tree_conflicts_on_merge_no_local_ci_5_2,
+              XFail(tree_conflicts_on_merge_no_local_ci_5_1),
+              XFail(tree_conflicts_on_merge_no_local_ci_5_2),
               tree_conflicts_on_merge_no_local_ci_6,
               SkipUnless(subtree_gets_changes_even_if_ultimately_deleted,
                          server_has_mergeinfo),

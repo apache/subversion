@@ -70,7 +70,7 @@ for entry in \
                                   entry.date.as_human_string(), num_lines))
     if options.verbose:
         print("Changed paths:")
-        for key, value in entry.changed_paths.iteritems():
+        for key, value in entry.changed_paths.items():
             value = value[0]
             if value.copyfrom_rev != SVN_INVALID_REVNUM:
                 print("   %s %s (from %s:%d)" % (value.action, key,

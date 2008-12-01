@@ -396,7 +396,7 @@ svn_subst_copy_and_translate(const char *src,
  * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
  * defined the same as in svn_subst_translate_stream3().
  *
- * If @a special is TRUE, then the stream should define a special fine,
+ * If @a special is TRUE, then the stream should define a special file,
  * and be in "normal form". The file @a dst will then be a special file.
  *
  * The contents will be copied/translated into a temporary file, and then

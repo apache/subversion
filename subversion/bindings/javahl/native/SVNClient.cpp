@@ -1164,7 +1164,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     /* Populate the registered providers with the platform-specific providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
-                                                                pool), NULL);
+                                                                NULL,
+                                                                pool),
+                NULL);
 
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
