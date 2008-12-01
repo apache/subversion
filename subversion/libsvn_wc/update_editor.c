@@ -248,14 +248,12 @@ in_skipped_tree(struct edit_baton *eb,
                 const char *path,
                 apr_pool_t *scratch_pool)
 {
-  char *ancestor = apr_pstrdup(scratch_pool, path);
-
-  while (! svn_path_is_empty(ancestor))
+  while (! svn_path_is_empty(path))
     {
-      if (apr_hash_get(eb->skipped_trees, ancestor, APR_HASH_KEY_STRING))
+      if (apr_hash_get(eb->skipped_trees, path, APR_HASH_KEY_STRING))
         return TRUE;
 
-      ancestor = svn_path_dirname(ancestor, scratch_pool);
+      path = svn_path_dirname(path, scratch_pool);
     }
 
   return FALSE;
