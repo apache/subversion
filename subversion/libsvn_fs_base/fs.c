@@ -877,6 +877,16 @@ base_bdb_recover(svn_fs_t *fs,
   return bdb_recover(fs->path, FALSE, pool);
 }
 
+static svn_error_t *
+base_bdb_pack(const char *path,
+              svn_cancel_func_t cancel,
+              void *cancel_baton,
+              apr_pool_t *pool)
+{
+  /* Packing is currently a no op for BDB. */
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Running the 'archive' command on a Berkeley DB-based filesystem.  */
@@ -1327,6 +1337,7 @@ static fs_library_vtable_t library_vtable = {
   base_hotcopy,
   base_get_description,
   base_bdb_recover,
+  base_bdb_pack,
   base_bdb_logfiles,
   svn_fs_base__id_parse
 };
