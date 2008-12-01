@@ -64,7 +64,7 @@ Candidate changes for 1.5.5:
      I just lost a night tracking this issue for an AnkhSVN user and I saw a
      few similar error reports earlier of users that couldn't reproduce.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, hwright
 
  * r34385, r34393
    Fix broken merge when the merge target's natural history includes
@@ -102,6 +102,9 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
      
+Approved changes:
+=================
+
  * r34487, r34492, r34494
    Fixed backward compatibility bug: it was not possible to commit only
    property changes on a folder with modified child items.
@@ -113,7 +116,4 @@ Candidate changes for 1.5.5:
    Branch:
      ^/branches/1.5.x-r34487
    Votes:
-     +1: danielsh, rhuijben
-
-Approved changes:
-=================
+     +1: danielsh, rhuijben, hwright
