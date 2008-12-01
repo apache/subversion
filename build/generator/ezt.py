@@ -192,7 +192,7 @@ _re_args = re.compile(r'"(?:[^\\"]|\\.)*"|[-\w.]+')
 
 # block commands and their argument counts
 _block_cmd_specs = { 'if-index':2, 'for':1, 'is':2 }
-_block_cmds = _block_cmd_specs.keys()
+_block_cmds = list(_block_cmd_specs.keys())
 
 # two regular expressions for compressing whitespace. the first is used to
 # compress any whitespace including a newline into a single newline. the

@@ -1,19 +1,23 @@
 #!/usr/bin/env python
 
-import os, sys
+import os, re, sys
+
+msgstr_re = re.compile('msgstr\[\d+\] "')
 
 def parse_translation(f):
     """Read a single translation entry from the file F and return a
-    tuple with the comments, msgid and msgstr.  The comments is returned
-    as a list of lines which do not end in new-lines.  The msgid and
-    msgstr are strings, possibly with embedded newlines"""
+    tuple with the comments, msgid, msgid_plural and msgstr.  The comments is
+    returned as a list of lines which do not end in new-lines.  The msgid is
+    string.  The msgid_plural is string or None.  The msgstr is a list of
+    strings.  The msgid, msgid_plural and msgstr strings can contain embedded
+    newlines"""
     line = f.readline()
 
     # Parse comments
     comments = []
     while 1:
         if line.strip() == '':
-            return comments, None, None
+            return comments, None, None, None
         elif line[0] == '#':
             comments.append(line[:-1])
         else:
@@ -30,20 +34,51 @@ def parse_translation(f):
             break
         msgid += '\n' + line[:-1]
 
+    # Parse optional msgid_plural
+    msgid_plural = None
+    if line[:14] == 'msgid_plural "':
+        if line[-2] != '"':
+            raise RuntimeError("parse error")
+        msgid_plural = line[13:-1]
+        while 1:
+            line = f.readline()
+            if line[0] != '"':
+                break
+            msgid_plural += '\n' + line[:-1]
+
     # Parse msgstr
-    if line[:8] != 'msgstr "' or line[-2] != '"':
-        raise RuntimeError("parse error")
-    msgstr = line[7:-1]
-    while 1:
-        line = f.readline()
-        if len(line) == 0 or line[0] != '"':
-            break
-        msgstr += '\n' + line[:-1]
+    msgstr = []
+    if not msgid_plural:
+        if line[:8] != 'msgstr "' or line[-2] != '"':
+            raise RuntimeError("parse error")
+        msgstr.append(line[7:-1])
+        while 1:
+            line = f.readline()
+            if len(line) == 0 or line[0] != '"':
+                break
+            msgstr[0] += '\n' + line[:-1]
+    else:
+        if line[:7] != 'msgstr[' or line[-2] != '"':
+            raise RuntimeError("parse error")
+        i = 0
+        while 1:
+            matched_msgstr = msgstr_re.match(line)
+            if matched_msgstr:
+                matched_msgstr_len = len(matched_msgstr.group(0))
+                msgstr.append(line[matched_msgstr_len-1:-1])
+            else:
+                break
+            while 1:
+                line = f.readline()
+                if len(line) == 0 or line[0] != '"':
+                    break
+                msgstr[i] += '\n' + line[:-1]
+            i += 1
 
     if line.strip() != '':
         raise RuntimeError("parse error")
 
-    return comments, msgid, msgstr
+    return comments, msgid, msgid_plural, msgstr
 
 def split_comments(comments):
     """Split COMMENTS into flag comments and other comments.  Flag
@@ -74,7 +109,7 @@ def main(argv):
     # Read the source po file into a hash
     source = {}
     while 1:
-        comments, msgid, msgstr = parse_translation(sys.stdin)
+        comments, msgid, msgid_plural, msgstr = parse_translation(sys.stdin)
         if not comments and msgid is None:
             break
         if msgid is not None:
@@ -92,7 +127,7 @@ def main(argv):
     update_count = 0
     untranslated = 0
     while 1:
-        comments, msgid, msgstr = parse_translation(infile)
+        comments, msgid, msgid_plural, msgstr = parse_translation(infile)
         if not comments and msgid is None:
             break
         if not first:
@@ -114,9 +149,17 @@ def main(argv):
                     comments = new_comments
             outfile.write('\n'.join(comments) + '\n')
             outfile.write('msgid ' + msgid + '\n')
-            outfile.write('msgstr ' + msgstr + '\n')
-        if msgstr == '""':
-            untranslated += 1
+            if not msgid_plural:
+                outfile.write('msgstr ' + msgstr[0] + '\n')
+            else:
+                outfile.write('msgid_plural ' + msgid_plural + '\n')
+                n = 0
+                for i in msgstr:
+                    outfile.write('msgstr[%s] %s\n' % (n, msgstr[n]))
+                    n += 1
+        for m in msgstr:
+            if m == '""':
+                untranslated += 1
 
     # We're done.  Tell the user what we did.
     print('%d strings updated. '

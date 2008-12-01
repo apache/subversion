@@ -926,7 +926,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 
   SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
 
-  sb = svn_stringbuf_create(apr_psprintf(pool, "%d\n", format), pool);
+  sb = svn_stringbuf_createf(pool, "%d\n", format);
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
@@ -934,7 +934,7 @@ write_format(const char *path, int format, int max_files_per_dir,
         svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
                                                   max_files_per_dir));
       else
-        svn_stringbuf_appendcstr(sb, "layout linear");
+        svn_stringbuf_appendcstr(sb, "layout linear\n");
     }
 
   contents = svn_string_create_from_buf(sb, pool);
@@ -2369,8 +2369,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached, ffd->rev_root_id_cache,
-                         &rev, pool));
+  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
+                         ffd->rev_root_id_cache, &rev, pool));
   if (is_cached)
     return SVN_NO_ERROR;
 

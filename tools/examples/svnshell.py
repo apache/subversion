@@ -117,7 +117,7 @@ class SVNShell(Cmd):
         print "Path '%s' not found." % newpath
         return
 
-    keys = entries.keys()
+    keys = list(entries.keys())
     keys.sort()
 
     print "   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
