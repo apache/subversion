@@ -273,7 +273,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
                                         dup_pack_offset, sizeof(svn_revnum_t),
-                                        16, 1024, FALSE, fs->pool));
+                                        16, 512, FALSE, fs->pool));
 
   if (! no_handler)
     SVN_ERR(svn_cache__set_error_handler(ffd->packed_offset_cache,
