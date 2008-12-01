@@ -9989,8 +9989,22 @@ def reintegrate_with_rename(sbox):
     ""             : Item(status=' M', wc_rev=9),
   })
   k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-9'})
+
+  # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
+  # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
+  # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
+  # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
+  # merge to record mergeinfo and a component of that mergeinfo describes
+  # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
+  # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
+  # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
+  # doesn't even exist until r9!", and you are quite right.  But this
+  # inheritance of bogus mergeinfo is a known problem, see
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
+  # and is not what this test is about, so we won't fail because of it.
   k_expected_disk.add({
-    'D/G/tauprime' : Item(props={SVN_PROP_MERGEINFO: '/A/D/G/tau:2-7'},
+    'D/G/tauprime' : Item(props={SVN_PROP_MERGEINFO :
+                                 '/A/D/G/tau:2-7\n/A_COPY/D/G/tauprime:2-9'},
                           contents="This is the file 'tau'.\n")
     })
   expected_skip = wc.State(short_A_path, {})
@@ -10118,9 +10132,31 @@ def reintegrate_branch_never_merged_to(sbox):
     'D/G/pi'       : Item("This is the file 'pi'.\n"),
     'D/G/rho'      : Item("New content"),
     'D/G/tau'      : Item("This is the file 'tau'.\n"),
-    'D/G/tauprime' : Item("This is the file 'tau'.\n",
-                          ### TODO(reint): why empty?
-                          props={SVN_PROP_MERGEINFO: ''}),
+    # Why no explicit mergeinfo on 'A/D/G/tauprime'?  The underlying 2-URL
+    # merge initially adds the empty mergeinfo from the source
+    # 'A_COPY/D/G/tauprime' and this is initially the *only* explicit
+    # mergeinfo on the entire tree rooted at 'A'.  But then the merge
+    # logic sets mergeinfo describing the reintegration merge of A_COPY@2
+    # through A_COPY@8, this creates the following mergeinfo on 'A':
+    #
+    #  Properties on 'A':
+    #    svn:mergeinfo
+    #      /A_COPY:2-8
+    #  Properties on 'A/D/G/tauprime':
+    #    svn:mergeinfo
+    #      /A_COPY/D/G/tauprime:2-8
+    #
+    # But wait, 'A_COPY/D/G/tauprime' doesn't come into existence until r8,
+    # so the mergeinfo on A/D/G/tauprime' describes non-existent ranges!
+    # This is a known drawback of mergeinfo's inheritable nature, see
+    # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8.  But
+    # until that issue is resolved the above is the correct and expected
+    # behavior under the current implementation.  And even that isn't the
+    # end of the story, since after the above mergeinfo is set, the mergeinfo
+    # on 'A/D/G/tauprime' elides to 'A'.  So at the end of the reintegrate
+    # merge the only explict mergeinfo on the tree rooted at 'A' is on 'A'
+    # itself.    
+    'D/G/tauprime' : Item("This is the file 'tau'.\n"),
     'D/H'          : Item(),
     'D/H/chi'      : Item("This is the file 'chi'.\n"),
     'D/H/omega'    : Item("New content"),
@@ -13582,6 +13618,266 @@ def no_self_referential_filtering_on_added_path(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def reintegrate_with_subtree_mergeinfo(sbox):
+  "merge --reintegrate with subtree mergeinfo"
+
+  # Create a standard greek tree, branch A to A_COPY in r2, A to A_COPY_2 in
+  # r3, A to A_COPY_3 in r3, and then make some changes under A in r5-8.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox, False, 3)
+
+  # Some paths we'll care about
+  gamma_COPY_3_path = os.path.join(wc_dir, "A_COPY_3", "D", "gamma")
+  D_path            = os.path.join(wc_dir, "A", "D")
+  gamma_path        = os.path.join(wc_dir, "A", "D", "gamma")
+  mu_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2", "mu")
+  mu_path           = os.path.join(wc_dir, "A", "mu")
+  mu_COPY_path      = os.path.join(wc_dir, "A_COPY", "mu")
+  A_COPY_path       = os.path.join(wc_dir, "A_COPY")
+  D_COPY_path       = os.path.join(wc_dir, "A_COPY")
+  beta_COPY_path    = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  gamma_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "gamma")
+  rho_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  omega_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
+  psi_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  D_COPY_path       = os.path.join(wc_dir, "A_COPY", "D")
+  alpha_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "alpha")
+  A_path            = os.path.join(wc_dir, "A")
+  
+  # Now set up a situation where we try to reintegrate A_COPY back to A but
+  # both of these paths have subtree mergeinfo.  Iff the mergeinfo on A_COPY
+  # reflects that the same revisions have been applied across all of A_COPY,
+  # then the reintegrate merge should succeed.
+  #
+  # r9 - Make a text change to A_COPY_3/D/gamma
+  svntest.main.file_write(gamma_COPY_3_path, "New content")
+  expected_output = wc.State(wc_dir, {'A_COPY_3/D/gamma' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY_3/D/gamma', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY_3/D/gamma', contents="New content")
+
+  # r10 - Merge r9 from A_COPY_3/D to A/D, creating explicit subtree
+  # mergeinfo under A.  For this an every subsequent merge we update the WC
+  # first to allow full inheritance and elision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
+                                     wc_dir)
+  expected_status.tweak(wc_rev=9)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[9]], 'U    ' +
+                                                           gamma_path + '\n'),
+                                     [], 'merge', '-c9',
+                                     sbox.repo_url + '/A_COPY_3/D',
+                                     D_path)
+  expected_output = wc.State(wc_dir,
+                             {'A/D'       : Item(verb='Sending'),
+                              'A/D/gamma' : Item(verb='Sending')})
+  expected_status.tweak('A/D', 'A/D/gamma', wc_rev=10)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A/D/gamma', contents="New content")
+  expected_disk.tweak('A/D', props={SVN_PROP_MERGEINFO : '/A_COPY_3/D:9'})
+
+  # r11 - Make a text change to A_COPY_2/mu
+  svntest.main.file_write(mu_COPY_2_path, "New content")
+  expected_output = wc.State(wc_dir, {'A_COPY_2/mu' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY_2/mu', wc_rev=11)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY_2/mu', contents="New content")
+  
+  # r12 - Merge r11 from A_COPY_2/mu to A_COPY/mu
+  svntest.actions.run_and_verify_svn(None, ["At revision 11.\n"], [], 'up',
+                                     wc_dir)
+  expected_status.tweak(wc_rev=11)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[11]], 'U    ' +
+                                                           mu_COPY_path + '\n'),
+                                     [], 'merge', '-c11',
+                                     sbox.repo_url + '/A_COPY_2/mu',
+                                     mu_COPY_path)
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/mu' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/mu', wc_rev=12)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY/mu', contents="New content")
+
+  # r13 - Do a 'synch' cherry harvest merge of all available revisions
+  # from A to A_COPY
+  svntest.actions.run_and_verify_svn(None, ["At revision 12.\n"], [], 'up',
+                                     wc_dir)
+  expected_status.tweak(wc_rev=12)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[2,12]],
+                          ['U    ' + beta_COPY_path  + '\n',
+                           'U    ' + gamma_COPY_path + '\n',
+                           'U    ' + rho_COPY_path   + '\n',
+                           'U    ' + omega_COPY_path + '\n',
+                           'U    ' + psi_COPY_path   + '\n',
+                           ' U   ' + D_COPY_path     + '\n']),
+    [], 'merge', sbox.repo_url + '/A', A_COPY_path)
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY'           : Item(verb='Sending'),
+                              'A_COPY/mu'        : Item(verb='Sending'),
+                              'A_COPY/B/E/beta'  : Item(verb='Sending'),
+                              'A_COPY/D'         : Item(verb='Sending'),
+                              'A_COPY/D/G/rho'   : Item(verb='Sending'),
+                              'A_COPY/D/H/omega' : Item(verb='Sending'),
+                              'A_COPY/D/H/psi'   : Item(verb='Sending'),
+                              'A_COPY/D/gamma'   : Item(verb='Sending')})
+  expected_status.tweak('A_COPY',
+                        'A_COPY/mu',
+                        'A_COPY/B/E/beta',
+                        'A_COPY/D',
+                        'A_COPY/D/G/rho',
+                        'A_COPY/D/H/omega',
+                        'A_COPY/D/H/psi',
+                        'A_COPY/D/gamma',
+                        wc_rev=13)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY/B/E/beta',
+                      'A_COPY/D',
+                      'A_COPY/D/G/rho',
+                      'A_COPY/D/H/omega',
+                      'A_COPY/D/H/psi',
+                      'A_COPY/D/gamma',
+                      contents="New content")
+  expected_disk.tweak('A_COPY',   props={SVN_PROP_MERGEINFO : '/A:2-12'})
+  expected_disk.tweak('A_COPY/D',
+                      props={SVN_PROP_MERGEINFO : '/A/D:2-12\n/A_COPY_3/D:9\n'})
+
+  # r14 - Make a text change on A_COPY/B/E/alpha
+  svntest.main.file_write(alpha_COPY_path, "New content")
+  expected_output = wc.State(wc_dir, {'A_COPY/B/E/alpha' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/B/E/alpha', wc_rev=14)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY/B/E/alpha', contents="New content")
+
+  # Now, reintegrate A_COPY to A.  This should succeed.  
+  svntest.actions.run_and_verify_svn(None, ["At revision 14.\n"], [], 'up',
+                                     wc_dir)
+  expected_status.tweak(wc_rev=14)
+  expected_output = wc.State(A_path, {
+    ''          : Item(status=' U'),
+    'B/E/alpha' : Item(status='U '),
+    'mu'        : Item(status='UU'),
+    'D'         : Item(status=' U'),
+    })
+  expected_A_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='MM'),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='M '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status=' M'),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_A_status.tweak(wc_rev=14)
+  expected_A_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-14'}),
+    'B'         : Item(),
+    'mu'        : Item("New content",
+                       props={SVN_PROP_MERGEINFO :
+                              '/A_COPY/mu:2-14\n/A_COPY_2/mu:11'}),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("New content"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(props=
+                       {SVN_PROP_MERGEINFO : '/A_COPY/D:2-14\n/A_COPY_3/D:9'}),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("New content"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_A_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A_COPY',
+                                       expected_output,
+                                       expected_A_disk,
+                                       expected_A_status,
+                                       expected_A_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, "--reintegrate")
+
+  # Make some more changes to A_COPY so that the same revisions have *not*
+  # been uniformly applied from A to A_COPY.  In this case the reintegrate
+  # merge should fail, but should provide a helpful message as to where the
+  # problems are.
+  #
+  # First revert the previous reintegrate merge
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', wc_dir)
+
+  # r15 - Reverse Merge r8 from A/D to A_COPY/D.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[-8]], 'U    ' +
+                                                           omega_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c-8',
+                                     sbox.repo_url + '/A/D',
+                                     D_COPY_path)
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/D'         : Item(verb='Sending'),
+                              'A_COPY/D/H/omega' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/D', 'A_COPY/D/H/omega', wc_rev=15)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now reintegrate A_COPY back to A.  Since A_COPY/D no longer has r8 merged
+  # to it from A, the merge should fail.  Further we expect an error message
+  # that highlights the fact that A_COPY/D is the offending subtree. 
+  #
+  # The actions.run_and_verify_* methods are happy if one line of the error
+  # matches the regex, but we want to know that the error actually provides
+  # specific information about the paths that are stopping --reintegrate from
+  # working.  So we will pass the stderr to svntest.verify.verify_outputs()
+  # ourselves, but as the 'actual_stdout' argument, that way each line of
+  # error must match the regex.
+  out, err = svntest.actions.run_and_verify_svn(
+    None, [], svntest.verify.AnyOutput,
+    'merge', '--reintegrate', sbox.repo_url + '/A_COPY', A_path)
+
+  svntest.verify.verify_outputs("Reintegrate failed but not "
+                                "in the way expected",
+                                err, None,
+                                "(svn: Reintegrate can only be used if the "
+                                "revisions previously merged from the "
+                                "reintegrate target to '.*A_COPY' are the "
+                                "same, but there are differences:\n)"
+                                "|(  A_COPY\n)"
+                                "|(    /A:2-12\n)"
+                                "|(  A_COPY/D\n)"
+                                "|(    /A/D:2-7,9-12\n)"
+                                "|(\n)",
+                                None,
+                                True) # Match *all* lines of stdout
+
 ########################################################################
 # Run the tests
 
@@ -13724,8 +14020,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(basic_reintegrate,
                          server_has_mergeinfo),
-              XFail(reintegrate_with_rename),
-              XFail(reintegrate_branch_never_merged_to),
+              reintegrate_with_rename,
+              reintegrate_branch_never_merged_to,
               reintegrate_fail_on_modified_wc,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
@@ -13765,6 +14061,8 @@ test_list = [ None,
               SkipUnless(merge_adds_mergeinfo_correctly,
                          server_has_mergeinfo),
               SkipUnless(no_self_referential_filtering_on_added_path,
+                         server_has_mergeinfo),
+              SkipUnless(reintegrate_with_subtree_mergeinfo,
                          server_has_mergeinfo),
              ]
 
