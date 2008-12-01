@@ -996,7 +996,7 @@ def commit_propmods_with_depth_empty_helper(sbox, depth_arg):
 def commit_propmods_with_depth_empty(sbox):
   "commit property mods only, using --depth=empty"
 
-  sbox2 = sbox.clone_dependent(True)
+  sbox2 = sbox.clone_dependent()
 
   # Run once with '-N' and once with '--depth=empty' to make sure they
   # function identically.
