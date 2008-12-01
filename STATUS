@@ -111,10 +111,9 @@ Candidate changes for 1.5.5:
    Justification:
      Backward compatibility of 'svn commit -N'.
    Branch:
-     ^/branches/1.5.x-r34487 (r34487 only)
+     ^/branches/1.5.x-r34487
    Votes:
-     +1: danielsh
-     +1: rhuijben (without r34494)
+     +1: danielsh, rhuijben
 
 Approved changes:
 =================
