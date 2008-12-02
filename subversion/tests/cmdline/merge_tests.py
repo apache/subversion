@@ -10299,12 +10299,62 @@ def reintegrate_fail_on_stale_source(sbox):
                                      '-m', 'a change to mu', mu_path);
   # Unmix the revisions in the working copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir);
-  # The merge --reintegrate should fail because target has changes not
-  # present in source.
-  svntest.actions.run_and_verify_merge(
-    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
-    ".*", ###TODO(reint): need a more specific check here
-    None, None, None, None, True, False, '--reintegrate')
+  # The merge --reintegrate succeeds but since there were no changes
+  # on A_COPY after it was branched the only result is updated mergeinfo
+  # on the reintegrate target.
+  expected_output = wc.State(A_path, {})
+  expected_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=7)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-7'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\nsome text appended to mu\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_path, { })
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], None, None, None, None, True, True,
+                                       '--reintegrate')
 
 def dont_add_mergeinfo_from_own_history(sbox):
   "cyclic merges dont add mergeinfo from own history"
@@ -14218,7 +14268,7 @@ test_list = [ None,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
               reintegrate_fail_on_shallow_wc,
-              SkipUnless(XFail(reintegrate_fail_on_stale_source),
+              SkipUnless(reintegrate_fail_on_stale_source,
                          server_has_mergeinfo),
               SkipUnless(dont_add_mergeinfo_from_own_history,
                          server_has_mergeinfo),
