@@ -1731,12 +1731,23 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   /* Find the version-control state of this path */
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
 
+  SVN_ERR(svn_io_check_path(path, &kind, subpool));
+
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
 
     obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
-    if (obstr_state != svn_wc_notify_state_inapplicable)
+
+    /* In this case of adding a directory, we have an exception to the usual
+     * "skip if it's inconsistent" rule. If the directory exists on disk
+     * unexpectedly, we simply make it versioned, because we can do so without
+     * risk of destroying data. Only skip if it is versioned but unexpectedly
+     * missing from disk, or is unversioned but obstructed by a node of the
+     * wrong kind. */
+    if (obstr_state == svn_wc_notify_state_missing
+        || (obstr_state == svn_wc_notify_state_obstructed
+            && kind == svn_node_file))
       {
         if (state)
           *state = obstr_state;
@@ -1746,7 +1757,6 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   }
 
   /* Switch on the on-disk state of this path */
-  SVN_ERR(svn_io_check_path(path, &kind, subpool));
   switch (kind)
     {
     case svn_node_none:
