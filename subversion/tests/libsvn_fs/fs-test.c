@@ -4798,11 +4798,6 @@ node_origin_rev(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "bdb") == 0) 
-      && (opts->server_minor_version && (opts->server_minor_version < 5)))
-    return SVN_NO_ERROR;
-
   /* Create the repository. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-origin-rev",
                               opts, pool));
