@@ -322,7 +322,11 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
 
 /* Return the node kind of the working version of local path PATH,
  * according to the WC metadata in ENTRY. If ENTRY is null, assume the node
- * is unversioned and so set the kind to 'none'. */
+ * is unversioned and so set the kind to 'none'.
+ *
+ * However, if this is a dry run, set *NODE_KIND to 'none' if the node would
+ * already have been deleted by the merge if this were not a dry run. Use
+ * MERGE_B to determine the dry-run details. */
 static svn_node_kind_t
 node_kind_working(const char *path,
                   const merge_cmd_baton_t *merge_b,
