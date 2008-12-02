@@ -1607,12 +1607,11 @@ get_packed_offset(apr_off_t *rev_offset,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *manifest_file;
-  char buf[PACK_MANIFEST_ENTRY_LEN + 1];
-  apr_off_t rev_index_offset;
+  svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
   apr_off_t *cached_rev_offset;
-  apr_size_t len;
+  svn_revnum_t tmp_rev, start_rev, end_rev;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
                          ffd->packed_offset_cache, &rev, pool));
@@ -1624,24 +1623,37 @@ get_packed_offset(apr_off_t *rev_offset,
     }
 
   /* Open the manifest file. */
-  SVN_ERR(svn_io_file_open(&manifest_file, path_rev_packed(fs, rev, "manifest",
-                                                           pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_stream_open_readonly(&manifest_stream,
+                                   path_rev_packed(fs, rev, "manifest", pool),
+                                   pool, pool));
 
-  /* Seek to the correct offset. */
-  rev_index_offset = (rev % ffd->max_files_per_dir) *
-                                                 (PACK_MANIFEST_ENTRY_LEN + 1);
-  SVN_ERR(svn_io_file_seek(manifest_file, APR_SET, &rev_index_offset, pool));
+  /* While we're here, let's just read the entire manifest into our cache. */
+  start_rev = rev - (rev % ffd->max_files_per_dir);
+  end_rev = start_rev + ffd->max_files_per_dir - 1;
+  iterpool = svn_pool_create(pool);
+  for (tmp_rev = start_rev; tmp_rev <= end_rev; tmp_rev++)
+    {
+      svn_stringbuf_t *sb;
+      apr_off_t offset;
+      svn_boolean_t eof;
 
-  /* Read the revision offset and close the file. */
-  len = PACK_MANIFEST_ENTRY_LEN;
-  SVN_ERR(svn_io_file_read(manifest_file, buf, &len, pool));
-  buf[PACK_MANIFEST_ENTRY_LEN] = 0;
-  SVN_ERR(svn_io_file_close(manifest_file, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
+      offset = apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
+      SVN_ERR(svn_cache__set(ffd->packed_offset_cache, &tmp_rev, &offset,
+                             iterpool));
+    }
+  svn_pool_destroy(iterpool);
 
-  *rev_offset = apr_atoi64(buf);
+  /* Close everything up, and get the value we're interested in from the
+     cache. */
+  SVN_ERR(svn_stream_close(manifest_stream));
 
-  return svn_cache__set(ffd->packed_offset_cache, &rev, rev_offset, pool);
+  SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
+                         ffd->packed_offset_cache, &rev, pool));
+  *rev_offset = *cached_rev_offset;
+
+  return SVN_NO_ERROR;
 }
 
 /* Open the revision file for revision REV in filesystem FS and store
