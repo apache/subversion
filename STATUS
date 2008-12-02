@@ -91,7 +91,7 @@ Candidate changes for 1.5.5:
      +1: pburba
 
  * r34091, r34094, r34244, r34256, r34306
-    Various svn merge --reintegrate improvements.
+   Various svn merge --reintegrate improvements.
    Notes:
      There is a backport branch for these changes at
      http://svn.collab.net/repos/svn/branches/1.5.x-reintegrate-improvements.
@@ -107,6 +107,13 @@ Candidate changes for 1.5.5:
      occurred when reintegrate was thwarted by subtree mergeinfo.
    Votes:
      +1: pburba
+
+ * r34506
+   Fix a pair of bugs in the BDB backend's node-origins cache-miss fallback
+   logic, one of which can cause a SEGFAULT, the other of which can result
+   in an incorrect return value.
+   Votes:
+     +1: cmpilato
 
 Approved changes:
 =================
