@@ -54,18 +54,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: cmpilato
 
- * r31311, r31314
-   Fix bug whereby 'svn cp --parents URL/TO/EXISTING/FILE URL/TO/EXISTING/DIR'
-   would seg fault.
-   Notes:
-     r31311 is the testcase and r31314 the fix. 
-     Backport branch available as ^/branches/1.5.x-r31314.
-   Justification:
-     I just lost a night tracking this issue for an AnkhSVN user and I saw a
-     few similar error reports earlier of users that couldn't reproduce.
-   Votes:
-     +1: rhuijben, hwright
-
  * r34385, r34393
    Fix broken merge when the merge target's natural history includes
    resurrections.
@@ -122,3 +110,15 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
+
+ * r31311, r31314
+   Fix bug whereby 'svn cp --parents URL/TO/EXISTING/FILE URL/TO/EXISTING/DIR'
+   would seg fault.
+   Notes:
+     r31311 is the testcase and r31314 the fix. 
+     Backport branch available as ^/branches/1.5.x-r31314.
+   Justification:
+     I just lost a night tracking this issue for an AnkhSVN user and I saw a
+     few similar error reports earlier of users that couldn't reproduce.
+   Votes:
+     +1: rhuijben, hwright, pburba
