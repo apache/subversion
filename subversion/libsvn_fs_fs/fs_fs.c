@@ -103,10 +103,6 @@
 #define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
 
-/* The size of an entry in the pack file manifest, not including terminating
-   characters. */
-#define PACK_MANIFEST_ENTRY_LEN    19
-
 /* Notes:
 
 To avoid opening and closing the rev-files all the time, it would
@@ -6753,9 +6749,8 @@ pack_shard(const char *revs_dir,
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* Update the manifest. */
-      svn_stream_printf(manifest_stream, iterpool,
-                 "%-" APR_STRINGIFY(PACK_MANIFEST_ENTRY_LEN) APR_OFF_T_FMT"\n",
-                 next_offset);
+      svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT "\n",
+                        next_offset);
       next_offset += finfo.size;
   
       /* Copy all the bits from the rev file to the end of the pack file. */
