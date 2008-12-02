@@ -1620,3 +1620,129 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
+                                   svn_revnum_t *oldest_rev,
+                                   svn_mergeinfo_t mergeinfo,
+                                   apr_pool_t *pool)
+{
+  *youngest_rev = *oldest_rev = SVN_INVALID_REVNUM;
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *value;
+          const char *path;
+          apr_array_header_t *rangelist;
+
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          rangelist = value;
+
+          if (rangelist->nelts)
+            {
+              svn_merge_range_t *range = APR_ARRAY_IDX(rangelist,
+                                                       rangelist->nelts - 1,
+                                                       svn_merge_range_t *);
+              if (!SVN_IS_VALID_REVNUM(*youngest_rev)
+                  || (range->end > *youngest_rev))
+                *youngest_rev = range->end;
+
+              range = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
+              if (!SVN_IS_VALID_REVNUM(*oldest_rev)
+                  || (range->start < *oldest_rev))
+                *oldest_rev = range->start;
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__filter_catalog_by_ranges(svn_mergeinfo_catalog_t *filtered_cat,
+                                        svn_mergeinfo_catalog_t catalog,
+                                        svn_revnum_t youngest_rev,
+                                        svn_revnum_t oldest_rev,
+                                        apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *filtered_cat = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, catalog);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+
+      svn_mergeinfo_t mergeinfo, filtered_mergeinfo;
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      mergeinfo = val;
+      SVN_ERR(svn_mergeinfo__filter_mergefino_by_ranges(&filtered_mergeinfo,
+                                                        mergeinfo,
+                                                        youngest_rev,
+                                                        oldest_rev,
+                                                        pool));
+      if (apr_hash_count(filtered_mergeinfo))
+        apr_hash_set(*filtered_cat,
+                     apr_pstrdup(pool, path),
+                     APR_HASH_KEY_STRING,
+                     filtered_mergeinfo);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__filter_mergefino_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
+                                          svn_mergeinfo_t mergeinfo,
+                                          svn_revnum_t youngest_rev,
+                                          svn_revnum_t oldest_rev,
+                                          apr_pool_t *pool)
+{
+  *filtered_mergeinfo = apr_hash_make(pool);
+
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
+      apr_array_header_t *filter_rangelist =
+        apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+
+      range->start = oldest_rev;
+      range->end = youngest_rev;
+      range->inheritable = TRUE;
+      APR_ARRAY_PUSH(filter_rangelist, svn_merge_range_t *) = range;
+
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *value;
+          const char *path;
+          apr_array_header_t *rangelist;
+
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          rangelist = value;
+
+          if (rangelist->nelts)
+            {
+              apr_array_header_t *new_rangelist;
+
+              svn_rangelist_intersect(&new_rangelist, rangelist,
+                                      filter_rangelist, FALSE, pool);
+              if (new_rangelist->nelts)
+                apr_hash_set(*filtered_mergeinfo,
+                             apr_pstrdup(pool, path),
+                             APR_HASH_KEY_STRING,
+                             new_rangelist);
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
