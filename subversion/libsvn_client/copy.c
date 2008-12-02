@@ -801,6 +801,26 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
       dir = svn_path_is_child(top_url, svn_path_dirname(pair->dst, pool),
                               pool);
+
+      /* Imagine a situation where the user passes --parents
+         unnecessarily (that is, the destination directory already
+         exists).  Suppose they're copying a file when they do this.
+         There are two syntaxes they might use:
+
+            1. svn copy --parents URL/src/foo.txt URL/dst/foo.txt
+            2. svn copy --parents URL/src/foo.txt URL/dst
+
+         Assuming src/ and dst/ exist already, then both ways should
+         create dst/foo.txt.  However, the svn_path_dirname() call
+         above will produce a string equivalent to top_url, which
+         means the svn_path_is_child() will return NULL (quirkily,
+         that's what it does when the two paths are the same).  We
+         must compensate for that behavior, while making sure not to
+         add dst/ to the list of new_dirs to be created. */
+
+      if (! dir)
+        dir = svn_path_is_child(top_url, pair->dst, pool);
+
       SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
                                 iterpool));
 
