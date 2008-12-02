@@ -104,6 +104,48 @@ dup_dir_listing(void **out,
   return SVN_NO_ERROR;
 }
 
+
+/** Caching packed rev offsets. **/
+/* Implements svn_cache__serialize_func_t */
+static svn_error_t *
+offset_serialize(char **data,
+                 apr_size_t *data_len,
+                 void *in,
+                 apr_pool_t *pool)
+{
+  *data = apr_off_t_toa(pool, *((apr_off_t *) in));
+  *data_len = strlen(*data);
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__deserialize_func_t */
+static svn_error_t *
+offset_deserialize(void **out,
+                   const char *data,
+                   apr_size_t data_len,
+                   apr_pool_t *pool)
+{
+  *out = apr_palloc(pool, sizeof (apr_off_t));
+  apr_strtoff((apr_off_t *)*out, data, NULL, 0);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__dup_func_t */
+static svn_error_t *
+dup_pack_offset(void **out,
+                void *in,
+                apr_pool_t *pool)
+{
+  apr_off_t *offset = apr_palloc(pool, sizeof(*offset));
+
+  *offset = *((apr_off_t *) in);
+
+  *out = offset;
+  return SVN_NO_ERROR;
+}
+
+
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
    indicating whether cache errors should be returned to the caller or
@@ -216,6 +258,25 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   if (! no_handler)
     SVN_ERR(svn_cache__set_error_handler(ffd->dir_cache,
+                                         warn_on_cache_errors, fs, pool));
+
+  /* Only 16 bytes per entry (a revision number + the corresponding offset). */
+  if (memcache)
+    SVN_ERR(svn_cache__create_memcache(&(ffd->packed_offset_cache),
+                                       memcache,
+                                       offset_serialize,
+                                       offset_deserialize,
+                                       sizeof(svn_revnum_t),
+                                       apr_pstrcat(pool, prefix, "PACK-OFFSET",
+                                                   NULL),
+                                       fs->pool));
+  else
+    SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
+                                        dup_pack_offset, sizeof(svn_revnum_t),
+                                        16, 512, FALSE, fs->pool));
+
+  if (! no_handler)
+    SVN_ERR(svn_cache__set_error_handler(ffd->packed_offset_cache,
                                          warn_on_cache_errors, fs, pool));
 
   if (memcache)

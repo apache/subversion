@@ -234,7 +234,7 @@ class DependencyGraph:
     return sources
 
   def get_deps(self, type):
-    return self.deps[type].items()
+    return list(self.deps[type].items())
 
 # dependency types
 dep_types = [
@@ -581,7 +581,7 @@ class TargetSWIG(TargetLib):
         self.targets[lang] = target
 
     def get_targets(self):
-      return self.targets.values()
+      return list(self.targets.values())
 
     def get_dep_targets(self, target):
       target = self.targets.get(target.lang, None)

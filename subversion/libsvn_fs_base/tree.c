@@ -4795,6 +4795,8 @@ base_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(svn_fs_base__test_required_feature_format
           (fs, "node-origins", SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT));
 
+  path = svn_fs__canonicalize_abspath(path, pool);
+
   SVN_ERR(base_node_id(&id, root, path, pool));
   args.node_id = svn_fs_base__id_node_id(id);
   err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin,
@@ -4847,6 +4849,7 @@ base_node_origin_rev(svn_revnum_t *revision,
           /* Update our LASTPATH and LASTREV variables (which survive
              SUBPOOL). */
           svn_stringbuf_set(lastpath, curpath);
+          lastrev = currev;
         }
 
       /* Walk the predecessor links back to origin. */
