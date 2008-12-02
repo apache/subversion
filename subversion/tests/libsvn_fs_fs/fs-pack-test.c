@@ -209,16 +209,17 @@ pack_filesystem(const char **msg,
                                  "Unexpected directory '%s' found", path);
     }
 
-  /* Ensure the max-packed-rev jives with the above operations. */
+  /* Ensure the min-unpacked-rev jives with the above operations. */
   SVN_ERR(svn_io_file_open(&file,
-                           svn_path_join(REPO_NAME, "max-packed-rev", pool),
+                           svn_path_join(REPO_NAME, PATH_MIN_UNPACKED_REV,
+                                         pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
   len = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
   if (SVN_STR_TO_REV(buf) != (MAX_REV / SHARD_SIZE) * SHARD_SIZE)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                             "Bad 'max-packed-rev' contents");
+                             "Bad '%s' contents", PATH_MIN_UNPACKED_REV);
 
   /* Finally, make sure the final revision directory does exist. */
   path = svn_path_join_many(pool, REPO_NAME, "revs",
