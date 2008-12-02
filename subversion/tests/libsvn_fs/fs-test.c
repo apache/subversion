@@ -4850,21 +4850,24 @@ node_origin_rev(const char **msg,
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
-  /* Revision 7: Move A/D2 to A/D (replacing it), and tweak A/D/floop.  */
+  /* Revision 7: Move A/D2 to A/D (replacing it), Add a new file A/D2,
+     and tweak A/D/floop.  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_delete(txn_root, "A/D", subpool));
   SVN_ERR(svn_fs_copy(root, "A/D2", txn_root, "A/D", subpool));
   SVN_ERR(svn_fs_delete(txn_root, "A/D2", subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/D2", subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/floop", "7", subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
   /* Now test some origin revisions. */
   {
-    struct path_rev_t pathrevs[4] = { { "A/D",             1 },
+    struct path_rev_t pathrevs[5] = { { "A/D",             1 },
                                       { "A/D/floop",       3 },
+                                      { "A/D2",            7 },
                                       { "iota",            1 },
                                       { "A/B/E/alfalfa",   5 } };
 
