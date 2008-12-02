@@ -113,7 +113,7 @@ Candidate changes for 1.5.5:
    logic, one of which can cause a SEGFAULT, the other of which can result
    in an incorrect return value.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, glasser
 
 Approved changes:
 =================
