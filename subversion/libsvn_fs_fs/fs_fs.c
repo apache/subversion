@@ -1346,7 +1346,9 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
 
   /* Copy the max packed rev. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MAX_PACKED_REV, pool));
+  if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MAX_PACKED_REV,
+                                 pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
