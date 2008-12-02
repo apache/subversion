@@ -101,6 +101,24 @@ Candidate changes for 1.5.5:
      --dry-run merge, r34432 fixes this.
    Votes:
      +1: pburba
-     
+
+ * r34091, r34094, r34244, r34256, r34306
+    Various svn merge --reintegrate improvements.
+   Notes:
+     There is a backport branch for these changes at
+     http://svn.collab.net/repos/svn/branches/1.5.x-reintegrate-improvements.
+   Justification:
+     Prior to these changes reintegrate would not work if the merge source
+     had any subtree mergeinfo.  Since subtree mergeinfo is quite common,
+     this meant reintegrate was largely unuseable.  With these changes
+     reintegrate will work as long as the source's subtree mergeinfo and
+     implicit mergeinfo reflect the fact that the reintegrate target was
+     previously merged uniformly to the source for some contiguous revision
+     range starting at the revision the source was branched from the target.
+     These changes also improve the notoriously vague error message which
+     occurred when reintegrate was thwarted by subtree mergeinfo.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
