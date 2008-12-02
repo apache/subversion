@@ -6755,16 +6755,17 @@ pack_shard(const char *revs_dir,
   
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
-  svn_pool_destroy(iterpool);
 
   /* Update the max-pack-rev file to reflect our newly packed shard. */
-  final_path = svn_path_join(fs_path, PATH_MAX_PACKED_REV, pool);
+  final_path = svn_path_join(fs_path, PATH_MAX_PACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                   svn_io_file_del_none, pool, pool));
-  SVN_ERR(svn_stream_printf(tmp_stream, pool, "%ld\n",
+                                   svn_io_file_del_none, iterpool, iterpool));
+  SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
                             (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
   SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, final_path, pool));
+  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, final_path,
+                                     iterpool));
+  svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
   return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
