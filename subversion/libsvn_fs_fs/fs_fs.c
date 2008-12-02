@@ -6667,42 +6667,6 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
 
 
 /****** Packing FSFS shards *********/
-struct packer_baton
-{
-  apr_off_t next_offset;
-  svn_stream_t *pack_stream;
-  svn_stream_t *manifest_stream;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-};
-
-/* Walker function used by pack_shard().
-   This implements svn_io_walk_func_t */
-static svn_error_t *
-packer_func(void *baton,
-            const char *path,
-            const apr_finfo_t *finfo,
-            apr_pool_t *pool)
-{
-  struct packer_baton *pb = baton;
-  svn_stream_t *rev_stream;
-
-  /* Ignore any directories we find. */
-  if (finfo->filetype == APR_DIR)
-    return SVN_NO_ERROR;
-
-  /* Update the manifest. */
-  svn_stream_printf(pb->manifest_stream, pool, 
-               "%-" APR_STRINGIFY(PACK_MANIFEST_ENTRY_LEN) APR_OFF_T_FMT"\n",
-               pb->next_offset);
-  pb->next_offset += finfo->size;
-  
-  /* Copy all the bits from the rev file to the end of the pack file. */
-  SVN_ERR(svn_stream_open_readonly(&rev_stream, path, pool, pool));
-  return svn_stream_copy3(rev_stream, svn_stream_disown(pb->pack_stream, pool),
-                          pb->cancel_func, pb->cancel_baton, pool);
-}
-
 /* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
    CANCEL_FUNC and CANCEL_BATON are what you think they are.
 
@@ -6717,20 +6681,25 @@ pack_shard(const char *revs_dir,
            void *cancel_baton,
            apr_pool_t *pool)
 {
-  svn_stream_t *stream;
-  const char *tmp_path;
-  const char *final_path;
+  const char *tmp_path, *final_path;
+  const char *pack_file_path, *manifest_file_path, *shard_path;
+  svn_stream_t *pack_stream, *manifest_stream;
+  svn_revnum_t start_rev, end_rev, rev;
+  svn_stream_t *tmp_stream;
   svn_error_t *err;
-  const char *pack_file_path = svn_path_join(
-                  revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack",
-                                         shard), pool);
-  const char *manifest_file_path = svn_path_join(
-                  revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT ".manifest",
-                                         shard), pool);
-  const char *shard_path = svn_path_join(
-                  revs_dir, apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
-                  pool);
-  struct packer_baton pb;
+  apr_off_t next_offset;
+  apr_pool_t *iterpool;
+
+  /* Some useful paths. */
+  pack_file_path = svn_path_join(revs_dir,
+                                 apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack",
+                                              shard), pool);
+  manifest_file_path = svn_path_join(revs_dir,
+                             apr_psprintf(pool, "%" APR_INT64_T_FMT ".manifest",
+                                          shard), pool);
+  shard_path = svn_path_join(revs_dir,
+                             apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
+                             pool);
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
   err = svn_io_remove_file(pack_file_path, pool);
@@ -6745,26 +6714,54 @@ pack_shard(const char *revs_dir,
     SVN_ERR(svn_io_remove_file(manifest_file_path, pool));
 
   /* Create the new pack and manifest files. */
-  SVN_ERR(svn_stream_open_writable(&pb.pack_stream, pack_file_path, pool,
+  SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
                                     pool));
-  SVN_ERR(svn_stream_open_writable(&pb.manifest_stream, manifest_file_path,
+  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
                                    pool, pool));
-  pb.next_offset = 0;
-  pb.cancel_func = cancel_func;
-  pb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_io_dir_walk(shard_path,
-                          APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_SIZE,
-                          packer_func, &pb, pool));
-  SVN_ERR(svn_stream_close(pb.manifest_stream));
-  SVN_ERR(svn_stream_close(pb.pack_stream));
+
+  start_rev = (svn_revnum_t) (shard * max_files_per_dir);
+  end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
+  next_offset = 0;
+  iterpool = svn_pool_create(pool);
+
+  /* Iterate over the revisions in this shard, squashing them together. */
+  for (rev = start_rev; rev <= end_rev; rev++)
+    {
+      svn_stream_t *rev_stream;
+      apr_finfo_t finfo;
+      const char *path;
+
+      svn_pool_clear(iterpool);
+
+      /* Get the size of the file. */
+      path = svn_path_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
+                           iterpool);
+      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
+
+      /* Update the manifest. */
+      svn_stream_printf(manifest_stream, iterpool,
+                 "%-" APR_STRINGIFY(PACK_MANIFEST_ENTRY_LEN) APR_OFF_T_FMT"\n",
+                 next_offset);
+      next_offset += finfo.size;
+  
+      /* Copy all the bits from the rev file to the end of the pack file. */
+      SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
+      SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
+                                                             iterpool),
+                          cancel_func, cancel_baton, iterpool));
+    }
+  
+  SVN_ERR(svn_stream_close(manifest_stream));
+  SVN_ERR(svn_stream_close(pack_stream));
+  svn_pool_destroy(iterpool);
 
   /* Update the max-pack-rev file to reflect our newly packed shard. */
   final_path = svn_path_join(fs_path, PATH_MAX_PACKED_REV, pool);
-  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path, fs_path,
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, pool, pool));
-  SVN_ERR(svn_stream_printf(stream, pool, "%ld\n",
+  SVN_ERR(svn_stream_printf(tmp_stream, pool, "%ld\n",
                             (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream_close(tmp_stream));
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, final_path, pool));
 
   /* Finally, remove the existing shard directory. */
