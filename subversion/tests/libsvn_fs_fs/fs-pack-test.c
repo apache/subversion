@@ -171,6 +171,11 @@ pack_filesystem(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
+    return SVN_NO_ERROR;
+
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
@@ -250,6 +255,11 @@ read_packed_fs(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
+    return SVN_NO_ERROR;
+
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
 
@@ -293,6 +303,11 @@ commit_packed_fs(const char **msg,
   *msg = "commit to a packed FSFS filesystem";
 
   if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
