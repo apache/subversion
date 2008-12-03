@@ -304,7 +304,7 @@ svn_client__dry_run_deletions(void *merge_cmd_baton)
    weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
    still versioned (e.g. has an associated entry). */
 static APR_INLINE svn_boolean_t
-dry_run_deleted_p(merge_cmd_baton_t *merge_b, const char *wcpath)
+dry_run_deleted_p(const merge_cmd_baton_t *merge_b, const char *wcpath)
 {
   return (merge_b->dry_run &&
           apr_hash_get(merge_b->dry_run_deletions, wcpath,
@@ -318,6 +318,100 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
 {
   return (merge_b->conflicted_paths &&
           apr_hash_count(merge_b->conflicted_paths) > 0);
+}
+
+/* Return the node kind of the working version of local path PATH,
+ * according to the WC metadata in ENTRY. If ENTRY is null, assume the node
+ * is unversioned and so set the kind to 'none'.
+ *
+ * However, if this is a dry run, set *NODE_KIND to 'none' if the node would
+ * already have been deleted by the merge if this were not a dry run. Use
+ * MERGE_B to determine the dry-run details. */
+static svn_node_kind_t
+node_kind_working(const char *path,
+                  const merge_cmd_baton_t *merge_b,
+                  const svn_wc_entry_t *entry)
+{
+  if (!entry
+      || (entry->schedule == svn_wc_schedule_delete)
+      || (merge_b->dry_run && dry_run_deleted_p(merge_b, path))
+      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+    return svn_node_none;
+  else
+    return entry->kind;
+}
+
+/* Return the node kind that is found on disk at local path PATH.
+ *
+ * However, if this is a dry run, set *NODE_KIND to 'none' if the node would
+ * already have been deleted by the merge if this were not a dry run. Use
+ * MERGE_B to determine the dry-run details. */
+static svn_node_kind_t
+node_kind_on_disk(const char *path,
+                  const merge_cmd_baton_t *merge_b,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_node_kind_t node_kind;
+
+  err = svn_io_check_path(path, &node_kind, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return svn_node_unknown;
+    }
+  else if (dry_run_deleted_p(merge_b, path))
+    return svn_node_none;
+  else
+    return node_kind;
+}
+
+/* Return a state indicating whether the WC metadata in ENTRY matches the
+ * node kind on disk of the local path PATH. If ENTRY is null, assume the
+ * node is unversioned. In the case of a dry-run merge, use the disk node
+ * kind that would exist if it were not a dry run. Use MERGE_B to determine
+ * the dry-run details.
+ *
+ *   - Return svn_wc_notify_state_inapplicable if the node kind matches.
+ *   - Return 'obstructed' if there is a node on disk where none or a
+ *     different kind is expected, or if the disk node cannot be read.
+ *   - Return 'missing' if there is no node on disk but one is expected. */
+static svn_wc_notify_state_t
+obstructed_or_missing(const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      const merge_cmd_baton_t *merge_b,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const svn_wc_entry_t *entry;
+  svn_node_kind_t kind_expected, kind_on_disk;
+
+  err = svn_wc_entry(&entry, path, adm_access, TRUE, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      entry = NULL;
+    }
+
+  if (entry && entry->absent)
+    return svn_wc_notify_state_missing;
+
+  kind_expected = node_kind_working(path, merge_b, entry);
+  kind_on_disk = node_kind_on_disk(path, merge_b, pool);
+
+  /* If it's a sched-delete directory, change the expected kind to "dir"
+   * because the directory should not yet have gone from disk. */
+  if (entry && entry->kind == svn_node_dir
+      && entry->schedule == svn_wc_schedule_delete
+      && kind_on_disk == svn_node_dir)
+    kind_expected = svn_node_dir;
+
+  if (kind_expected == kind_on_disk)
+    return svn_wc_notify_state_inapplicable;
+  else if (kind_on_disk == svn_node_none)
+    return svn_wc_notify_state_missing;
+  else
+    return svn_wc_notify_state_obstructed;
 }
 
 /* Record a tree conflict in the WC, unless this is a dry run or a record-
@@ -825,6 +919,20 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   if (tree_conflicted)
     *tree_conflicted = FALSE;
 
+  /* Check for an obstructed or missing node on disk. */
+  {
+    svn_wc_notify_state_t obstr_state;
+
+    obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
+    if (obstr_state != svn_wc_notify_state_inapplicable)
+      {
+        if (state)
+          *state = obstr_state;
+        svn_pool_destroy(subpool);
+        return SVN_NO_ERROR;
+      }
+  }
+
   /* ### TODO check tree-conflicts! */
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
@@ -1005,6 +1113,20 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
+
+  /* Check for an obstructed or missing node on disk. */
+  {
+    svn_wc_notify_state_t obstr_state;
+
+    obstr_state = obstructed_or_missing(mine, adm_access, merge_b, subpool);
+    if (obstr_state != svn_wc_notify_state_inapplicable)
+      {
+        if (content_state)
+          *content_state = obstr_state;
+        svn_pool_destroy(subpool);
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
@@ -1241,35 +1363,25 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       return SVN_NO_ERROR;
     }
 
+  /* Check for an obstructed or missing node on disk. */
+  {
+    svn_wc_notify_state_t obstr_state;
+
+    obstr_state = obstructed_or_missing(mine, adm_access, merge_b, subpool);
+    if (obstr_state != svn_wc_notify_state_inapplicable)
+      {
+        if (content_state)
+          *content_state = obstr_state;
+        svn_pool_destroy(subpool);
+        return SVN_NO_ERROR;
+      }
+  }
+
   SVN_ERR(svn_io_check_path(mine, &kind, subpool));
   switch (kind)
     {
     case svn_node_none:
       {
-        const svn_wc_entry_t *entry;
-        SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
-        if (entry && entry->schedule != svn_wc_schedule_delete)
-          {
-            /* It's versioned but missing.
-             *
-             * The file add the merge wants to carry out is obstructed by
-             * something which isn't present on disk but which is recorded
-             * in meta data. So the file the merge wants to add is a tree
-             * conflict victim.
-             * See notes about obstructions in
-             * notes/tree-conflicts/detection.txt.
-             */
-            SVN_ERR(tree_conflict(merge_b, adm_access, mine,
-                                  svn_node_file,
-                                  svn_wc_conflict_action_add,
-                                  svn_wc_conflict_reason_obstructed));
-            if (tree_conflicted)
-              *tree_conflicted = TRUE;
-            if (content_state)
-              *content_state = svn_wc_notify_state_obstructed;
-            svn_pool_destroy(subpool);
-            return SVN_NO_ERROR;
-          }
         if (! merge_b->dry_run)
           {
             const char *copyfrom_url = NULL;
@@ -1343,23 +1455,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_file:
       {
-        /* file already exists, is it under version control? */
-        const svn_wc_entry_t *entry;
-        SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
-
-        /* If it's an unversioned file, don't touch it.  If it's scheduled
-           for deletion, then rm removed it from the working copy and the
-           user must have recreated it, don't touch it */
-        if (!entry || entry->schedule == svn_wc_schedule_delete)
-          {
-            /* The file add the merge wants to carry out is obstructed by
-             * an unversioned file, so this path should be skipped. */
-            /* this will make the repos_editor send a 'skipped' message */
-            if (content_state)
-              *content_state = svn_wc_notify_state_obstructed;
-          }
-        else
-          {
             if (dry_run_deleted_p(merge_b, mine))
               {
                 if (content_state)
@@ -1379,7 +1474,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 if (tree_conflicted)
                   *tree_conflicted = TRUE;
               }
-          }
         break;
       }
     default:
@@ -1485,6 +1579,20 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
+
+  /* Check for an obstructed or missing node on disk. */
+  {
+    svn_wc_notify_state_t obstr_state;
+
+    obstr_state = obstructed_or_missing(mine, adm_access, merge_b, subpool);
+    if (obstr_state != svn_wc_notify_state_inapplicable)
+      {
+        if (state)
+          *state = obstr_state;
+        svn_pool_destroy(subpool);
+        return SVN_NO_ERROR;
+      }
+  }
 
   SVN_ERR(svn_io_check_path(mine, &kind, subpool));
   switch (kind)
@@ -1623,19 +1731,35 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   /* Find the version-control state of this path */
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
 
-  /* Switch on the on-disk state of this path */
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
+
+  /* Check for an obstructed or missing node on disk. */
+  {
+    svn_wc_notify_state_t obstr_state;
+
+    obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
+
+    /* In this case of adding a directory, we have an exception to the usual
+     * "skip if it's inconsistent" rule. If the directory exists on disk
+     * unexpectedly, we simply make it versioned, because we can do so without
+     * risk of destroying data. Only skip if it is versioned but unexpectedly
+     * missing from disk, or is unversioned but obstructed by a node of the
+     * wrong kind. */
+    if (obstr_state == svn_wc_notify_state_missing
+        || (obstr_state == svn_wc_notify_state_obstructed
+            && kind == svn_node_file))
+      {
+        if (state)
+          *state = obstr_state;
+        svn_pool_destroy(subpool);
+        return SVN_NO_ERROR;
+      }
+  }
+
+  /* Switch on the on-disk state of this path */
   switch (kind)
     {
     case svn_node_none:
-      if (entry && entry->schedule != svn_wc_schedule_delete)
-        {
-          /* Versioned but missing */
-          if (state)
-            *state = svn_wc_notify_state_obstructed;
-          svn_pool_destroy(subpool);
-          return SVN_NO_ERROR;
-        }
       /* Unversioned or schedule-delete */
       if (merge_b->dry_run)
         merge_b->added_path = apr_pstrdup(merge_b->pool, path);
@@ -1768,6 +1892,20 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
 
   /* Find the version-control state of this path */
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+
+  /* Check for an obstructed or missing node on disk. */
+  {
+    svn_wc_notify_state_t obstr_state;
+
+    obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
+    if (obstr_state != svn_wc_notify_state_inapplicable)
+      {
+        if (state)
+          *state = obstr_state;
+        svn_pool_destroy(subpool);
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* Switch on the on-disk state of this path */
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
