@@ -260,7 +260,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     SVN_ERR(svn_cache__set_error_handler(ffd->dir_cache,
                                          warn_on_cache_errors, fs, pool));
 
-  /* Only 16 bytes per entry (a revision number + the corresponding offset). */
+  /* Only 16 bytes per entry (a revision number + the corresponding offset).
+     Since we want ~8k pages, that means 512 entries per page. */
   if (memcache)
     SVN_ERR(svn_cache__create_memcache(&(ffd->packed_offset_cache),
                                        memcache,

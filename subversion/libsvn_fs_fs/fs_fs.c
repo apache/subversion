@@ -103,10 +103,6 @@
 #define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
 
-/* The size of an entry in the pack file manifest, not including terminating
-   characters. */
-#define PACK_MANIFEST_ENTRY_LEN    19
-
 /* Notes:
 
 To avoid opening and closing the rev-files all the time, it would
@@ -264,9 +260,9 @@ path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static APR_INLINE const char *
-path_max_packed_rev(svn_fs_t *fs, apr_pool_t *pool)
+path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_MAX_PACKED_REV, pool);
+  return svn_path_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
 }
 
 static APR_INLINE const char *
@@ -1043,9 +1039,9 @@ write_config(svn_fs_t *fs,
 }
 
 static svn_error_t *
-read_max_packed_rev(svn_revnum_t *max_packed_rev,
-                    const char *path,
-                    apr_pool_t *pool)
+read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
+                      const char *path,
+                      apr_pool_t *pool)
 {
   char buf[80];
   apr_file_t *file;
@@ -1057,7 +1053,7 @@ read_max_packed_rev(svn_revnum_t *max_packed_rev,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-  *max_packed_rev = SVN_STR_TO_REV(buf);
+  *min_unpacked_rev = SVN_STR_TO_REV(buf);
   return SVN_NO_ERROR;
 }
 
@@ -1095,10 +1091,10 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
-  /* Read the max packed revision. */
+  /* Read the min unpacked revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(read_max_packed_rev(&ffd->max_packed_rev,
-                                path_max_packed_rev(fs, pool), pool));
+    SVN_ERR(read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                                  path_min_unpacked_rev(fs, pool), pool));
 
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
@@ -1165,9 +1161,9 @@ upgrade_body(void *baton, apr_pool_t *pool)
               (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
     }
 
-  /* If our filesystem is new enough, write the max packed rev file. */
+  /* If our filesystem is new enough, write the min unpacked rev file. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_max_packed_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
 
   /* Bump the format file. */
   return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
@@ -1345,9 +1341,9 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
 
-  /* Copy the max packed rev. */
+  /* Copy the min unpacked rev. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MAX_PACKED_REV,
+    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MIN_UNPACKED_REV,
                                  pool));
 
   /* Find the youngest revision from this current file. */
@@ -1583,7 +1579,7 @@ open_pack_or_rev_file(apr_file_t **file,
   svn_error_t *err;
 
    err = svn_io_file_open(file,
-                          rev < ffd->max_packed_rev
+                          rev < ffd->min_unpacked_rev
                               ? path_rev_packed(fs, rev, "pack", pool)
                               : svn_fs_fs__path_rev(fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -1607,12 +1603,11 @@ get_packed_offset(apr_off_t *rev_offset,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *manifest_file;
-  char buf[PACK_MANIFEST_ENTRY_LEN + 1];
-  apr_off_t rev_index_offset;
+  svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
   apr_off_t *cached_rev_offset;
-  apr_size_t len;
+  svn_revnum_t tmp_rev, start_rev, end_rev;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
                          ffd->packed_offset_cache, &rev, pool));
@@ -1624,24 +1619,37 @@ get_packed_offset(apr_off_t *rev_offset,
     }
 
   /* Open the manifest file. */
-  SVN_ERR(svn_io_file_open(&manifest_file, path_rev_packed(fs, rev, "manifest",
-                                                           pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_stream_open_readonly(&manifest_stream,
+                                   path_rev_packed(fs, rev, "manifest", pool),
+                                   pool, pool));
 
-  /* Seek to the correct offset. */
-  rev_index_offset = (rev % ffd->max_files_per_dir) *
-                                                 (PACK_MANIFEST_ENTRY_LEN + 1);
-  SVN_ERR(svn_io_file_seek(manifest_file, APR_SET, &rev_index_offset, pool));
+  /* While we're here, let's just read the entire manifest into our cache. */
+  start_rev = rev - (rev % ffd->max_files_per_dir);
+  end_rev = start_rev + ffd->max_files_per_dir - 1;
+  iterpool = svn_pool_create(pool);
+  for (tmp_rev = start_rev; tmp_rev <= end_rev; tmp_rev++)
+    {
+      svn_stringbuf_t *sb;
+      apr_off_t offset;
+      svn_boolean_t eof;
 
-  /* Read the revision offset and close the file. */
-  len = PACK_MANIFEST_ENTRY_LEN;
-  SVN_ERR(svn_io_file_read(manifest_file, buf, &len, pool));
-  buf[PACK_MANIFEST_ENTRY_LEN] = 0;
-  SVN_ERR(svn_io_file_close(manifest_file, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
+      offset = apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
+      SVN_ERR(svn_cache__set(ffd->packed_offset_cache, &tmp_rev, &offset,
+                             iterpool));
+    }
+  svn_pool_destroy(iterpool);
 
-  *rev_offset = apr_atoi64(buf);
+  /* Close everything up, and get the value we're interested in from the
+     cache. */
+  SVN_ERR(svn_stream_close(manifest_stream));
 
-  return svn_cache__set(ffd->packed_offset_cache, &rev, rev_offset, pool);
+  SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
+                         ffd->packed_offset_cache, &rev, pool));
+  *rev_offset = *cached_rev_offset;
+
+  return SVN_NO_ERROR;
 }
 
 /* Open the revision file for revision REV in filesystem FS and store
@@ -1661,7 +1669,7 @@ open_and_seek_revision(apr_file_t **file,
 
   SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, pool));
 
-  if (rev < ffd->max_packed_rev)
+  if (rev < ffd->min_unpacked_rev)
     {
       apr_off_t rev_offset;
 
@@ -2226,7 +2234,7 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
   apr_hash_t *headers;
   const char *node_id_str;
 
-  if (rev < ffd->max_packed_rev)
+  if (rev < ffd->min_unpacked_rev)
     {
       apr_off_t rev_offset;
 
@@ -2288,7 +2296,7 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if ((rev < ffd->max_packed_rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if ((rev < ffd->min_unpacked_rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -5812,9 +5820,9 @@ svn_fs_fs__create(svn_fs_t *fs,
         && rep_sharing_allowed)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
-  /* Create the max packed rev file. */
+  /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_max_packed_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
@@ -6741,9 +6749,8 @@ pack_shard(const char *revs_dir,
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* Update the manifest. */
-      svn_stream_printf(manifest_stream, iterpool,
-                 "%-" APR_STRINGIFY(PACK_MANIFEST_ENTRY_LEN) APR_OFF_T_FMT"\n",
-                 next_offset);
+      svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT "\n",
+                        next_offset);
       next_offset += finfo.size;
   
       /* Copy all the bits from the rev file to the end of the pack file. */
@@ -6757,7 +6764,7 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* Update the max-pack-rev file to reflect our newly packed shard. */
-  final_path = svn_path_join(fs_path, PATH_MAX_PACKED_REV, iterpool);
+  final_path = svn_path_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, iterpool, iterpool));
   SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
@@ -6784,7 +6791,7 @@ svn_fs_fs__pack(const char *fs_path,
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
   const char *data_path;
-  svn_revnum_t max_packed_rev;
+  svn_revnum_t min_unpacked_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_path_join(fs_path, PATH_FORMAT, pool),
@@ -6800,21 +6807,22 @@ svn_fs_fs__pack(const char *fs_path,
   if (!max_files_per_dir)
     return SVN_NO_ERROR;
 
-  SVN_ERR(read_max_packed_rev(&max_packed_rev,
-                              svn_path_join(fs_path, PATH_MAX_PACKED_REV, pool),
-                              pool));
+  SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
+                                svn_path_join(fs_path, PATH_MIN_UNPACKED_REV,
+                                              pool),
+                                pool));
 
   SVN_ERR(get_youngest(&youngest, fs_path, pool));
   completed_shards = youngest / max_files_per_dir;
 
   /* See if we've already completed all possible shards thus far. */
-  if (max_packed_rev == (completed_shards * max_files_per_dir))
+  if (min_unpacked_rev == (completed_shards * max_files_per_dir))
     return SVN_NO_ERROR;
 
   data_path = svn_path_join(fs_path, PATH_REVS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
-  for (i = max_packed_rev / max_files_per_dir; i < completed_shards; i++)
+  for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)
     {
       svn_pool_clear(iterpool);
 

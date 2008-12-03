@@ -199,10 +199,9 @@ records the indexes of the corresponding revision files in the pack file.
 In addition, the original shard is removed, and reads are redirected to the
 pack file.
 
-The manifest file consists of fixed-width fields, one for each revision in the
-pack file.  Each field contains the offset, stored as ASCII decimal,
-right-padding to the length of the field, and a newline character.  Currently,
-each field is 20 bytes wide.
+The manifest file consists of a list of offsets, one for each revision in the
+pack file.  The offsets are stored as ASCII decimal, and separated by a newline
+character.
 
 Node-revision IDs
 -----------------
