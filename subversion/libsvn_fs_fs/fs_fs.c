@@ -1636,6 +1636,9 @@ get_packed_offset(apr_off_t *rev_offset,
       svn_pool_clear(iterpool);
       SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
       offset = apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
+      if (tmp_rev == rev)
+        *rev_offset = offset;
+
       SVN_ERR(svn_cache__set(ffd->packed_offset_cache, &tmp_rev, &offset,
                              iterpool));
     }
@@ -1643,13 +1646,7 @@ get_packed_offset(apr_off_t *rev_offset,
 
   /* Close everything up, and get the value we're interested in from the
      cache. */
-  SVN_ERR(svn_stream_close(manifest_stream));
-
-  SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
-                         ffd->packed_offset_cache, &rev, pool));
-  *rev_offset = *cached_rev_offset;
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(manifest_stream);
 }
 
 /* Open the revision file for revision REV in filesystem FS and store
