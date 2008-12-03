@@ -1742,7 +1742,6 @@ def merge_skips_obstructions(sbox):
   svntest.actions.run_and_verify_status(wc_dir, pre_merge_status)
 
   expected_output = wc.State(C_path, {
-    ''       : Item(status='C '),
     'foo'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
@@ -1751,7 +1750,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''     : Item(status='CM', wc_rev=1),
+    ''     : Item(status=' M', wc_rev=1),
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, {
@@ -1795,11 +1794,9 @@ def merge_skips_obstructions(sbox):
   os.mkdir(G_path) # unversioned
 
   expected_output = wc.State(wc_dir, {
-    'iota'   : Item(status='D '),
-    ''       : Item(status='C '),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'iota')
+  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_disk.add({
     ''             : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
     'A/B/F/Q'      : Item(),
@@ -1807,9 +1804,11 @@ def merge_skips_obstructions(sbox):
     'A/B/F/foo'    : Item("foo"),
     'A/C/Q'        : Item("foo"),
     })
+  expected_disk.tweak('iota', contents="foo")
   # No-op merge still sets mergeinfo
-  expected_status.tweak('', status='CM')
+  expected_status.tweak('', status=' M')
   expected_skip = wc.State(wc_dir, {
+    'iota'   : Item(),
     'A/D/G'  : Item(),
     })
 
@@ -1858,9 +1857,6 @@ def merge_skips_obstructions(sbox):
   svntest.main.file_append(lambda_path, "foo") # unversioned
 
   expected_output = wc.State(wc_dir, { })
-  expected_output = wc.State(wc_dir, {
-    'A/B'         : Item(status='C ')
-    })
   expected_disk.add({
     'A/B/lambda'      : Item("foo"),
     })
@@ -1872,7 +1868,6 @@ def merge_skips_obstructions(sbox):
   # No-op merge still sets mergeinfo.
   expected_status_short = expected_status.copy(wc_dir)
   expected_status_short.tweak('', status=' M')
-  expected_status_short.tweak('A/B', status='C ')
 
   svntest.actions.run_and_verify_merge(wc_dir, '3', '4',
                                        sbox.repo_url,
@@ -14921,8 +14916,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_in_new_file_and_diff,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_skips_obstructions,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_skips_obstructions,
+                         server_has_mergeinfo),
               XFail(SkipUnless(merge_into_missing,
                                server_has_mergeinfo)),
               SkipUnless(dry_run_adds_file_with_prop,
