@@ -14879,6 +14879,119 @@ def dont_merge_gaps_in_history(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+#----------------------------------------------------------------------
+# Test for issue #3323 'Mergeinfo deleted by a merge should disappear'
+def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
+  "mergeinfo deleted by a merge should disappear"
+
+
+  # r1: Create a greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
+  A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
+  
+  # r2 - r6: Copy A to A_COPY and then make some text changes under A.
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # r7: Merge all available revisions from A/D to A_COPY/D, this creates
+  #     mergeinfo on A_COPY/D.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     None, # Don't check stdout, we test this
+                                           # type of merge to death elsewhere.
+                                     [], 'merge', sbox.repo_url + '/A/D',
+                                     D_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None, None, [], 'ci', '-m',
+    'Merge all available revisions from A/D to A_COPY/D', wc_dir)
+
+  # r8: Copy A_COPY to A_COPY_2, this carries the mergeinf on A_COPY/D
+  #     to A_COPY_2/D.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None,[],
+                                     'copy', A_COPY_path, A_COPY_2_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Copy A_COPY to A_COPY_2', wc_dir)
+
+  # r9: Propdel the mergeinfo on A_COPY/D.
+  svntest.actions.run_and_verify_svn(None, None,[],
+                                     'pd', SVN_PROP_MERGEINFO, D_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Propdel the mergeinfo on A_COPY/D',
+                                     wc_dir)
+  
+  # r10: Merge r5 from A to A_COPY_2 so the latter gets some explicit
+  #      mergeinfo.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c5',
+                                     sbox.repo_url + '/A', A_COPY_2_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r5 from A to A_COPY_2', wc_dir)
+  
+  # Now merge r9 from A_COPY to A_COPY_2.  Since the merge itself cleanly
+  # removes all explicit mergeinfo from A_COPY_2/D, we should not set any
+  # mergeinfo on that subtree describing the merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY_2_path, {
+    'D' : Item(status=' U'),
+    })
+  expected_status = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status=' M'),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=10)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5\n/A_COPY:9'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_2_path, '8', '9',
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -15088,6 +15201,8 @@ test_list = [ None,
               SkipUnless(reintegrate_with_subtree_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(dont_merge_gaps_in_history,
+                         server_has_mergeinfo),
+              SkipUnless(mergeinfo_deleted_by_a_merge_should_disappear,
                          server_has_mergeinfo),
              ]
 
