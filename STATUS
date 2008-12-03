@@ -42,7 +42,7 @@ Candidate changes for 1.5.5:
      Regression against 1.4 which can prevent users from even checking
      out repositories that they could check out with a 1.4 client.
    Votes:
-     +1: glasser
+     +1: glasser, ghudson
 
  * r34082, r34096, r34545
    Fix issue #3275 by making WebDAV proxy slave servers pass through
