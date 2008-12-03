@@ -171,6 +171,11 @@ pack_filesystem(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
+    return SVN_NO_ERROR;
+
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
@@ -204,16 +209,17 @@ pack_filesystem(const char **msg,
                                  "Unexpected directory '%s' found", path);
     }
 
-  /* Ensure the max-packed-rev jives with the above operations. */
+  /* Ensure the min-unpacked-rev jives with the above operations. */
   SVN_ERR(svn_io_file_open(&file,
-                           svn_path_join(REPO_NAME, "max-packed-rev", pool),
+                           svn_path_join(REPO_NAME, PATH_MIN_UNPACKED_REV,
+                                         pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
   len = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
   if (SVN_STR_TO_REV(buf) != (MAX_REV / SHARD_SIZE) * SHARD_SIZE)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                             "Bad 'max-packed-rev' contents");
+                             "Bad '%s' contents", PATH_MIN_UNPACKED_REV);
 
   /* Finally, make sure the final revision directory does exist. */
   path = svn_path_join_many(pool, REPO_NAME, "revs",
@@ -248,6 +254,11 @@ read_packed_fs(const char **msg,
   *msg = "read from a packed FSFS filesystem";
 
   if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
@@ -293,6 +304,11 @@ commit_packed_fs(const char **msg,
   *msg = "commit to a packed FSFS filesystem";
 
   if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
