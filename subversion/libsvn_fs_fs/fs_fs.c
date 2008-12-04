@@ -1605,16 +1605,18 @@ get_packed_offset(apr_off_t *rev_offset,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
-  apr_off_t *cached_rev_offset;
-  svn_revnum_t tmp_rev, start_rev, end_rev;
+  int shard;
+  apr_array_header_t *manifest;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_cache__get((void **) &cached_rev_offset, &is_cached,
-                         ffd->packed_offset_cache, &rev, pool));
+  shard = rev / ffd->max_files_per_dir;
+  SVN_ERR(svn_cache__get((void **) &manifest, &is_cached,
+                         ffd->packed_offset_cache, &shard, pool));
 
   if (is_cached)
     {
-      *rev_offset = *cached_rev_offset;
+      *rev_offset = APR_ARRAY_IDX(manifest, rev % ffd->max_files_per_dir,
+                                  apr_off_t);
       return SVN_NO_ERROR;
     }
 
@@ -1623,30 +1625,34 @@ get_packed_offset(apr_off_t *rev_offset,
                                    path_rev_packed(fs, rev, "manifest", pool),
                                    pool, pool));
 
-  /* While we're here, let's just read the entire manifest into our cache. */
-  start_rev = rev - (rev % ffd->max_files_per_dir);
-  end_rev = start_rev + ffd->max_files_per_dir - 1;
+  /* While we're here, let's just read the entire manifest file into an array,
+     so we can cache the entire thing. */
   iterpool = svn_pool_create(pool);
-  for (tmp_rev = start_rev; tmp_rev <= end_rev; tmp_rev++)
+  manifest = apr_array_make(pool, ffd->max_files_per_dir, sizeof(apr_off_t));
+  while (1)
     {
       svn_stringbuf_t *sb;
-      apr_off_t offset;
       svn_boolean_t eof;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
-      offset = apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
-      if (tmp_rev == rev)
-        *rev_offset = offset;
+      if (eof)
+        break;
 
-      SVN_ERR(svn_cache__set(ffd->packed_offset_cache, &tmp_rev, &offset,
-                             iterpool));
+      APR_ARRAY_PUSH(manifest, apr_off_t) =
+                apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
+      if (errno == ERANGE)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                "Manifest offset too large");
     }
   svn_pool_destroy(iterpool);
 
-  /* Close everything up, and get the value we're interested in from the
-     cache. */
-  return svn_stream_close(manifest_stream);
+  *rev_offset = APR_ARRAY_IDX(manifest, rev % ffd->max_files_per_dir,
+                              apr_off_t);
+
+  /* Close up shop and cache the array. */
+  SVN_ERR(svn_stream_close(manifest_stream));
+  return svn_cache__set(ffd->packed_offset_cache, &shard, manifest, pool);
 }
 
 /* Open the revision file for revision REV in filesystem FS and store
