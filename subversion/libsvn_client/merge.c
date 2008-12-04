@@ -6340,12 +6340,10 @@ do_directory_merge(const char *url1,
                   svn_mergeinfo_t merge_mergeinfo, added_path_mergeinfo;
                   apr_array_header_t *rangelist;
                   const svn_wc_entry_t *entry;
-                  const char *common_ancestor_path =
-                    svn_path_get_longest_ancestor(added_path,
-                                                  target_merge_path->path,
-                                                  iterpool);
-                  const char *relative_added_path =
-                    added_path + strlen(common_ancestor_path) + 1;
+                  const char *rel_added_path, *common_ancestor_path,
+                    *abs_added_path, *abs_target_path,
+                    *added_path_mergeinfo_path;
+
                   SVN_ERR(svn_wc__entry_versioned(&entry, added_path,
                                                   adm_access, FALSE,
                                                   iterpool));
@@ -6362,10 +6360,32 @@ do_directory_merge(const char *url1,
                       (!(depth == svn_depth_infinity
                          || depth == svn_depth_immediates));
                   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = rng;
+
+                  /* Create the new mergeinfo path for
+                     added_path's mergeinfo. */
+                  SVN_ERR(svn_path_get_absolute(&abs_target_path,
+                                                target_merge_path->path,
+                                                iterpool));
+                  SVN_ERR(svn_path_get_absolute(&abs_added_path,
+                                                added_path,
+                                                iterpool));
+                  /* abs_added_path had better be a child of abs_target_path
+                     or something is *really* wrong. */
+                  SVN_ERR_ASSERT(svn_path_is_child(abs_target_path,
+                                                   abs_added_path,
+                                                   iterpool));
+                  common_ancestor_path =
+                    svn_path_get_longest_ancestor(abs_added_path,
+                                                  abs_target_path,
+                                                  iterpool);
+                  /* Need to +1 to avoid a leading '/'. */
+                  rel_added_path =
+                    abs_added_path + strlen(common_ancestor_path) + 1;
+                  added_path_mergeinfo_path = svn_path_join(mergeinfo_path,
+                                                            rel_added_path,
+                                                            iterpool);
                   apr_hash_set(merge_mergeinfo,
-                               svn_path_join(mergeinfo_path,
-                                             relative_added_path,
-                                             iterpool),
+                               added_path_mergeinfo_path,
                                APR_HASH_KEY_STRING, rangelist);
 
                   /* Get any explicit mergeinfo the added path has. */
