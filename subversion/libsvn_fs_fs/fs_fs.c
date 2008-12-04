@@ -6167,6 +6167,7 @@ recover_body(void *baton, apr_pool_t *pool)
                                           iterpool));
           SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
+          SVN_ERR(svn_io_file_close(rev_file, iterpool));
         }
       svn_pool_destroy(iterpool);
 
