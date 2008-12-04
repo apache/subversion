@@ -311,7 +311,7 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   db_err = db_env_create(&(bdb->env), 0);
   if (!db_err)
     {
-      bdb->env->set_errpfx(bdb->env, bdb->errpfx_string);
+      bdb->env->set_errpfx(bdb->env, (char *) bdb);
       /* bdb_error_gatherer is in parens to stop macro expansion. */
       bdb->env->set_errcall(bdb->env, (bdb_error_gatherer));
 
