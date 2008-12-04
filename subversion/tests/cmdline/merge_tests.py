@@ -7188,8 +7188,6 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   expected_status.tweak('nu', wc_rev='-')
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:2-7*,9'}),
-    # This test is marked as XFail as currently the following expected
-    # mergeinfo is not being set, rather we get '/A/u:9'.
     'nu'        : Item("This is the file 'nu'.\n",
                        props={SVN_PROP_MERGEINFO : '/A/nu:9'}),
     'B'         : Item(),
@@ -15201,8 +15199,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_away_subtrees_noninheritable_ranges,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_away_subtrees_noninheritable_ranges,
+                         server_has_mergeinfo),
               SkipUnless(merge_to_sparse_directories,
                          server_has_mergeinfo),
               SkipUnless(merge_old_and_new_revs_from_renamed_dir,
