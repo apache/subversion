@@ -1685,7 +1685,6 @@ do_entry_deletion(struct edit_baton *eb,
   char *victim_path;
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description_t *tree_conflict;
-  svn_wc_notify_t *notify;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
@@ -1824,11 +1823,8 @@ do_entry_deletion(struct edit_baton *eb,
 
   if (eb->notify_func)
     {
-      notify = svn_wc_create_notify(full_path,
-                                    (tree_conflict != NULL)
-                                      ? svn_wc_notify_tree_conflict
-                                      : svn_wc_notify_update_delete,
-                                    pool);
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(full_path, svn_wc_notify_update_delete, pool);
 
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
