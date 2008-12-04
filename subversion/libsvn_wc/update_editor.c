@@ -248,7 +248,7 @@ in_skipped_tree(struct edit_baton *eb,
                 const char *path,
                 apr_pool_t *scratch_pool)
 {
-  while (! svn_path_is_empty(path))
+  while (! svn_path_is_empty(path) && strcmp(path, "/") != 0)
     {
       if (apr_hash_get(eb->skipped_trees, path, APR_HASH_KEY_STRING))
         return TRUE;
