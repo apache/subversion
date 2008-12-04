@@ -231,7 +231,9 @@ typedef struct merge_cmd_baton_t {
   const char *added_path;             /* Set to the dir path whenever the
                                          dir is added as a child of a
                                          versioned dir (dry-run only) */
-  const char *target;                 /* Working copy target of merge */
+  const char *target;                 /* Working copy target of merge,
+                                         either absolute or relative to
+                                         the current working directory. */
 
   /* The left and right URLs and revs.  The value of this field changes to
      reflect the merge_source_t *currently* being merged by do_merge(). */
@@ -2110,15 +2112,19 @@ typedef struct
   /* The number of operative notifications received. */
   apr_uint32_t nbr_operative_notifications;
 
-  /* The list of merged paths. */
+  /* The list of merged paths; either absolute or relative to the 
+     current working directory */
   apr_hash_t *merged_paths;
 
   /* The list of any skipped paths, which should be examined and
-     cleared after each invocation of the callback. */
+     cleared after each invocation of the callback.  The paths
+     are  either absolute or relative to the current working
+     directory. */
   apr_hash_t *skipped_paths;
 
   /* A list of the root paths of any added subtrees which might require
-     their own explicit mergeinfo. */
+     their own explicit mergeinfo.  The paths are either absolute or
+     relative to the current working directory. */
   apr_hash_t *added_paths;
 
   /* Flag indicating whether it is a single file merge or not. */
