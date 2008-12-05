@@ -1679,26 +1679,27 @@ do_entry_deletion(struct edit_baton *eb,
                   int *log_number,
                   apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *parent_adm_access;
   const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   char *victim_path;
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description_t *tree_conflict;
 
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
+  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                               parent_path, pool));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, parent_adm_access, TRUE,
+                                  pool));
 
   /* Receive the remote removal of excluded entry. Do not notify. */
   if (entry->depth == svn_depth_exclude)
     {
       apr_hash_t *entries;
       const char *base_name = svn_path_basename(full_path, pool);
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, TRUE, pool));
       svn_wc__entry_remove(entries, base_name);
-      SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+      SVN_ERR(svn_wc__entries_write(entries, parent_adm_access, pool));
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
       return SVN_NO_ERROR;
@@ -1718,15 +1719,16 @@ do_entry_deletion(struct edit_baton *eb,
   tree_conflict = NULL;
   if (victim_path == NULL)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path,
-                                entry, adm_access, 
+                                entry, parent_adm_access,
                                 svn_wc_conflict_action_delete,
                                 svn_node_none, their_url, pool));
 
   if (tree_conflict != NULL)
     {
       /* Run the log immediately, so that the tree conflict is recorded. */
-      SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
+                                pool));
+      SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
       *log_number = 0;
     }
 
@@ -1747,7 +1749,7 @@ do_entry_deletion(struct edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, parent_adm_access, full_path,
                                      pool));
 
   /* If the thing being deleted is the *target* of this update, then
@@ -1761,7 +1763,7 @@ do_entry_deletion(struct edit_baton *eb,
       tmp_entry.kind = entry->kind;
       tmp_entry.deleted = TRUE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
                                          full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
                                          | SVN_WC__ENTRY_MODIFY_KIND
@@ -1771,7 +1773,7 @@ do_entry_deletion(struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
+  SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item, pool));
 
   if (eb->switch_url)
     {
@@ -1817,7 +1819,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Note: these two lines are duplicated in the tree-conflicts bail out
    * above. */
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+  SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
   *log_number = 0;
 
   if (eb->notify_func)
