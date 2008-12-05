@@ -39,7 +39,7 @@ opmap = {
 def am_uuid(ctx):
   "uuids"
   db = ctx.uuids_db
-  ok(db.keys() == [1], 'uuid Table Structure')
+  ok(list(db.keys()) == [1], 'uuid Table Structure')
   ok(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
     db[1]), 'UUID format')
   print "Repos UUID: %s" % db[1]
@@ -153,7 +153,7 @@ def am_nodes(ctx):
       nid,cid,tid = rec[0].split(".")
       data[tid.rjust(20)+nd.createpath] = (rec[0], nd)
       rec = cur.next()
-    k = data.keys()
+    k = list(data.keys())
     k.sort()
     reptype = {"fulltext":"F", "delta":"D"}
     for i in k:

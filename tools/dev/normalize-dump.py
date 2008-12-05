@@ -12,7 +12,7 @@ class NodePath:
 
     def dump(self):
         print (' ' * 3) + self.path
-        headers = self.headers.keys()
+        headers = list(self.headers.keys())
         headers.sort()
         for header in headers:
             print (' ' * 6) + header + ': ' + self.headers[header]
@@ -21,7 +21,7 @@ class NodePath:
 def dump_revision(rev, nodepaths):
     sys.stderr.write('* Normalizing revision ' + rev + '...')
     print 'Revision ' + rev
-    paths = nodepaths.keys()
+    paths = list(nodepaths.keys())
     paths.sort()
     for path in paths:
         nodepath = nodepaths[path]

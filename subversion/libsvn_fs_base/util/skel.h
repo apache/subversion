@@ -44,8 +44,8 @@ extern "C" {
 
    Here's a description of the syntax of a skel:
 
-   A "whitespace" byte is either 9, 10, 12, 13, or 32 (ASCII tab,
-   newline, form feed, and space).
+   A "whitespace" byte is 9, 10, 12, 13, or 32 (ASCII tab, newline,
+   form feed, carriage return, or space).
 
    A "digit" byte is 48 -- 57 (ASCII digits).
 

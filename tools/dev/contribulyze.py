@@ -364,7 +364,7 @@ class Contributor:
                           self.big_name(html=True), True))
     unique_logs = { }
 
-    sorted_activities = self.activities.keys()
+    sorted_activities = list(self.activities.keys())
     sorted_activities.sort()
 
     out.write('<div class="h2" id="activities" title="activities">\n\n')
@@ -389,7 +389,7 @@ class Contributor:
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = unique_logs.keys()
+    sorted_logs = list(unique_logs.keys())
     sorted_logs.sort()
     for log in sorted_logs:
       out.write('<hr />\n')
@@ -658,7 +658,7 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = Contributor.all_contributors.values()
+  sorted_contributors = list(Contributor.all_contributors.values())
   sorted_contributors.sort()
   for c in sorted_contributors:
     if c not in seen_contributors:

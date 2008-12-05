@@ -19,7 +19,7 @@
 ######################################################################
 
 # General modules
-import sys, os, re
+import os
 
 # Our testing module
 import svntest
@@ -937,8 +937,10 @@ def depth_update_to_more_depth(sbox):
   verify_depth("Non-infinity depth detected after an upgrade to depth-infinity",
                "infinity", "A")
 
-def commit_propmods_with_depth_empty(sbox):
-  "commit property mods only, using --depth=empty"
+def commit_propmods_with_depth_empty_helper(sbox, depth_arg):
+  """Helper for commit_propmods_with_depth_empty().
+  DEPTH_ARG should be either '--depth=empty' or '-N'."""
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -987,8 +989,19 @@ def commit_propmods_with_depth_empty(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        '--depth=empty',
+                                        depth_arg,
                                         wc_dir, D_path)
+
+# See also commit_tests 26: commit_nonrecursive
+def commit_propmods_with_depth_empty(sbox):
+  "commit property mods only, using --depth=empty"
+
+  sbox2 = sbox.clone_dependent()
+
+  # Run once with '-N' and once with '--depth=empty' to make sure they
+  # function identically.
+  commit_propmods_with_depth_empty_helper(sbox, '-N')
+  commit_propmods_with_depth_empty_helper(sbox2, '--depth=empty')
 
 # Test for issue #2845.
 def diff_in_depthy_wc(sbox):
@@ -2340,27 +2353,6 @@ def make_depth_tree_conflicts(sbox):
                                         None, None, None, None, None, False,
                                         wc)
 
-# Helper for text output.
-def verify_lines(lines, regexes):
-  """Return True if each of the given regular expressions matches
-     exactly one line in the list of lines."""
-  for regex in regexes:
-    num_patterns_found = 0
-    for line in lines:
-      if re.search(regex, line):
-        num_patterns_found += 1
-    if num_patterns_found != 1:
-      print(("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
-        " occurrences of '" + regex + "'"))
-      if svntest.main.verbose_mode:
-        print(" Actual output:")
-        for line in lines:
-          sys.stdout.write("  %s" % line)
-        print(" Expected regexes:")
-        for regex in regexes:
-          sys.stdout.write("  %s\n" % regex)
-      return False
-  return True
 
 
 def tree_conflicts_resolved_depth_empty(sbox):
@@ -2405,13 +2397,12 @@ def tree_conflicts_resolved_depth_immediates(sbox):
   m =    j(A, 'mu')
   B =    j(A, 'B')
 
-  exit_code, output, error = svntest.main.run_svn(None, 'resolved',
-                                                  '--depth=immediates', A) 
-  if not verify_lines(output, [
-      "Resolved conflicted state of '%s'\n" % re.escape(m),
-      "Resolved conflicted state of '%s'\n" % re.escape(B),
-      ]):
-    raise svntest.Failure("Unexpected tree-conflict resolution output")
+  svntest.actions.run_and_verify_svn(None, 
+    svntest.verify.UnorderedOutput(
+      ["Resolved conflicted state of '%s'\n" % m,
+       "Resolved conflicted state of '%s'\n" % B]),
+    [],
+    'resolved', '--depth=immediates', A)
 
 
 def tree_conflicts_resolved_depth_infinity(sbox):
@@ -2427,14 +2418,13 @@ def tree_conflicts_resolved_depth_infinity(sbox):
   g =    j(A, 'D', 'gamma')
 
 
-  exit_code, output, error = svntest.main.run_svn(None, 'resolved',
-                                                  '--depth=infinity', A) 
-  if not verify_lines(output, [
-      "Resolved conflicted state of '%s'\n" % re.escape(m),
-      "Resolved conflicted state of '%s'\n" % re.escape(B),
-      "Resolved conflicted state of '%s'\n" % re.escape(g),
-      ]):
-    raise svntest.Failure("Unexpected tree-conflict resolution output")
+  svntest.actions.run_and_verify_svn(None, 
+    svntest.verify.UnorderedOutput(
+      ["Resolved conflicted state of '%s'\n" % m,
+       "Resolved conflicted state of '%s'\n" % B,
+       "Resolved conflicted state of '%s'\n" % g]),
+    [],
+    'resolved', '--depth=infinity', A)
 
 
 #----------------------------------------------------------------------

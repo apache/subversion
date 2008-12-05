@@ -1172,6 +1172,69 @@ typedef enum svn_wc_operation_t
 } svn_wc_operation_t;
 
 
+/** Info about one of the conflicting versions of a node. Each field may
+ * have its respective null/invalid/unknown value if the corresponding
+ * information is not relevant or not available.
+ *
+ * ### Consider making some or all of the info mandatory, to reduce
+ * complexity.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @see svn_wc_conflict_version_create()
+ * @see svn_wc_conflict_version_dup()
+ *
+ * @since New in 1.6.
+*/
+typedef struct svn_wc_conflict_version_t
+{
+  /* Where to find this node version in a repository */
+  const char *repos_url;  /* URL of repository root */
+  svn_revnum_t peg_rev;  /* revision at which to look up path_in_repos */
+  const char *path_in_repos;  /* path within repos; must not start with '/' */
+  /* TODO: We may decide to add the repository UUID, to handle conflicts
+   * properly during a repository move. */
+
+  /* Info about this node */
+  svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+
+  /* TODO: Add metadata about a local copy of the node, if and when
+   * we store one. */
+
+  /* Remember to update svn_wc_conflict_version_create() and 
+   * svn_wc_conflict_version_dup() in case you add fields to this struct. */
+} svn_wc_conflict_version_t;
+
+/**
+ * Allocate an @c svn_wc_conflict_version_t structure in @a pool,
+ * initialize to contain a conflict origin, and return it.
+ *
+ * Set the @c repos_url field of the created struct to @a repos_url, the
+ * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
+ * @a peg_rev and the the @c node_kind to @c node_kind. Make only shallow
+ * copies of the pointer arguments.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char* path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool);
+
+/** Return a duplicate of @a version, allocated in @a pool.
+ * No part of the new version will be shared with @a version.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
+                            apr_pool_t *pool);
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
@@ -1193,7 +1256,8 @@ typedef struct svn_wc_conflict_description_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
-  /** The node type of the path being operated on */
+  /** The node type of the path being operated on (for a tree conflict,
+   *  ### which version?) */
   svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
@@ -1214,7 +1278,10 @@ typedef struct svn_wc_conflict_description_t
 
   /** If not NULL, an open working copy access baton to either the
    *  path itself (if @c path is a directory), or to the parent
-   *  directory (if @c path is a file.) */
+   *  directory (if @c path is a file.)
+   *  For a tree conflict, this will always be an access baton
+   *  to the parent directory of the path, even if the path is
+   *  a directory. */
   svn_wc_adm_access_t *access;
 
   /** The action being attempted on the conflicted node or property.
@@ -1258,6 +1325,14 @@ typedef struct svn_wc_conflict_description_t
    * @since New in 1.6.
    */
   svn_wc_operation_t operation;
+
+  /** Info on the "merge-left source" or "older" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t *src_left_version;
+
+  /** Info on the "merge-right source" or "their" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t *src_right_version;
 
   /* Remember to adjust svn_wc__conflict_description_dup()
    * if you add new fields to this struct. */
@@ -1312,9 +1387,11 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c path field of the created struct to @a path, the @c access
  * field to @a adm_access, the @c kind field to @c
- * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, and the @c
- * operation to @a operation. Make only shallow copies of the pointer
- * arguments.
+ * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
+ * operation to @a operation, the @c src_left_version field to
+ * @a src_left_version, and the @c src_right_version field to
+ * @a src_right_version.
+ * Make only shallow copies of the pointer arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
@@ -1326,6 +1403,10 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_node_kind_t node_kind,
                                         svn_wc_operation_t operation,
+                                        svn_wc_conflict_version_t
+                                          *src_left_version,
+                                        svn_wc_conflict_version_t
+                                          *src_right_version,
                                         apr_pool_t *pool);
 
 

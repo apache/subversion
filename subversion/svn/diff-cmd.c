@@ -94,7 +94,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
     path = svn_path_local_style(path, pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
-                        "kind", svn_cl__node_kind_str(summary->node_kind),
+                        "kind", svn_cl__node_kind_str_xml(summary->node_kind),
                         "item", kind_to_word(summary->summarize_kind),
                         "props", summary->prop_changed ? "modified" : "none",
                         NULL);

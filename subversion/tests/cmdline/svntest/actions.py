@@ -793,7 +793,7 @@ def run_and_verify_info(expected_infos, *args):
   try:
     for actual, expected in zip(actual_infos, expected_infos):
       # compare dicts
-      for key, value in expected.iteritems():
+      for key, value in expected.items():
         if value is None and key in actual:
           raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
                                     % (key, actual[key]))
@@ -1110,7 +1110,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
         del(exp_hash[rev])
       else:
         extra_out.append(rev)
-    extra_exp = exp_hash.keys()
+    extra_exp = list(exp_hash.keys())
     raise Exception("Unexpected 'svn mergeinfo' output:\n"
                     "  expected but not found: %s\n"
                     "  found but not expected: %s"
