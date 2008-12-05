@@ -405,13 +405,14 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
   svn_cmdline_prompt_baton2_t *pb = NULL;
-  const char *password_stores_config_option;
-  apr_array_header_t *password_stores;
-  int i;
 
   /* The whole list of registered providers */
-  apr_array_header_t *providers
-    = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
+  apr_array_header_t *providers;
+
+  /* Populate the registered providers with the platform-specific providers */
+  SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
+                                                          cfg,
+                                                          pool));
 
   /* If we have a cancellation function, cram it and the stuff it
      needs into the prompt baton. */
@@ -421,110 +422,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
       pb->cancel_func = cancel_func;
       pb->cancel_baton = cancel_baton;
       pb->config_dir = config_dir;
-    }
-
-  /* Disk-caching auth providers, for both
-     'username/password' creds and 'username' creds,
-     which store passwords encrypted.  */
-  svn_config_get(cfg,
-                 &password_stores_config_option,
-                 SVN_CONFIG_SECTION_AUTH,
-                 SVN_CONFIG_OPTION_PASSWORD_STORES,
-                 "gnome-keyring,kwallet,keychain,windows-cryptoapi");
-
-  password_stores
-    = svn_cstring_split(password_stores_config_option, " ,", TRUE, pool);
-
-  for (i = 0; i < password_stores->nelts; i++)
-    {
-      const char *password_store = APR_ARRAY_IDX(password_stores, i,
-                                                 const char *);
-      if (apr_strnatcmp(password_store, "keychain") == 0)
-        {
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "keychain",
-                                                          "simple",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "keychain",
-                                                          "ssl_client_cert_pw",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          continue;
-        }
-
-      if (apr_strnatcmp(password_store, "windows-cryptoapi") == 0)
-        {
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "windows",
-                                                          "simple",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "windows",
-                                                          "ssl_client_cert_pw",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          continue;
-        }
-
-      if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
-        {
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "gnome_keyring",
-                                                          "simple",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "gnome_keyring",
-                                                          "ssl_client_cert_pw",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          continue;
-        }
-
-      if (apr_strnatcmp(password_store, "kwallet") == 0)
-        {
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "kwallet",
-                                                          "simple",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                          "kwallet",
-                                                          "ssl_client_cert_pw",
-                                                          pool));
-
-          if (provider)
-            APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-          continue;
-        }
-      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                               _("Invalid config: unknown password store "
-                                 "'%s'"),
-                               password_store);
     }
 
   if (non_interactive == FALSE)
@@ -539,6 +436,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
     {
       svn_auth_get_simple_provider2(&provider, NULL, NULL, pool);
     }
+
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;

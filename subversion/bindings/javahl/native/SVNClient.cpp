@@ -1159,88 +1159,18 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     svn_client_ctx_t *ctx;
     SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
-    apr_array_header_t *providers
-        = apr_array_make(pool, 10, sizeof(svn_auth_provider_object_t *));
+    /* The whole list of registered providers */
+    apr_array_header_t *providers;
+
+    /* Populate the registered providers with the platform-specific providers */
+    SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
+                                                                NULL,
+                                                                pool),
+                NULL);
 
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
-
-    /* Windows auth providers */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "windows",
-                                                        "simple",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "windows",
-                                                        "ssl_client_cert_pw",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    /* Keychain auth providers */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "keychain",
-                                                        "simple",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "keychain",
-                                                        "ssl_client_cert_pw",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    /* GNOME Keyring auth providers */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "gnome_keyring",
-                                                        "simple",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "gnome_keyring",
-                                                        "ssl_client_cert_pw",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    /* KWallet auth providers */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "kwallet",
-                                                        "simple",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "kwallet",
-                                                        "ssl_client_cert_pw",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;

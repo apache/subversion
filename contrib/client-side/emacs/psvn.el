@@ -936,7 +936,7 @@ If POS is nil, use current buffer location."
 (defun svn-substring-no-properties (string &optional from to)
   (if (fboundp 'substring-no-properties)
       (substring-no-properties string from to)
-    (substring string from to)))
+    (substring string (or from 0) to)))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler

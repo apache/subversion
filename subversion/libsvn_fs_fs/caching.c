@@ -104,6 +104,54 @@ dup_dir_listing(void **out,
   return SVN_NO_ERROR;
 }
 
+
+/** Caching packed rev offsets. **/
+/* Implements svn_cache__serialize_func_t */
+static svn_error_t *
+manifest_serialize(char **data,
+                   apr_size_t *data_len,
+                   void *in,
+                   apr_pool_t *pool)
+{
+  apr_array_header_t *manifest = in;
+
+  *data_len = sizeof(apr_off_t) *manifest->nelts;
+  *data = apr_palloc(pool, *data_len);
+  memcpy(*data, manifest->elts, *data_len);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__deserialize_func_t */
+static svn_error_t *
+manifest_deserialize(void **out,
+                     const char *data,
+                     apr_size_t data_len,
+                     apr_pool_t *pool)
+{
+  apr_array_header_t *manifest = apr_array_make(pool,
+                                                data_len / sizeof(apr_off_t),
+                                                sizeof(apr_off_t));
+  memcpy(manifest->elts, data, data_len);
+  manifest->nelts = data_len / sizeof(apr_off_t);
+  *out = manifest;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__dup_func_t */
+static svn_error_t *
+dup_pack_manifest(void **out,
+                  void *in,
+                  apr_pool_t *pool)
+{
+  apr_array_header_t *manifest = in;
+
+  *out = apr_array_copy(pool, manifest);
+  return SVN_NO_ERROR;
+}
+
+
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
    indicating whether cache errors should be returned to the caller or
@@ -216,6 +264,26 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   if (! no_handler)
     SVN_ERR(svn_cache__set_error_handler(ffd->dir_cache,
+                                         warn_on_cache_errors, fs, pool));
+
+  /* Only 16 bytes per entry (a revision number + the corresponding offset).
+     Since we want ~8k pages, that means 512 entries per page. */
+  if (memcache)
+    SVN_ERR(svn_cache__create_memcache(&(ffd->packed_offset_cache),
+                                       memcache,
+                                       manifest_serialize,
+                                       manifest_deserialize,
+                                       sizeof(svn_revnum_t),
+                                       apr_pstrcat(pool, prefix, "PACK-MANIFEST",
+                                                   NULL),
+                                       fs->pool));
+  else
+    SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
+                                        dup_pack_manifest, sizeof(svn_revnum_t),
+                                        32, 1, FALSE, fs->pool));
+
+  if (! no_handler)
+    SVN_ERR(svn_cache__set_error_handler(ffd->packed_offset_cache,
                                          warn_on_cache_errors, fs, pool));
 
   if (memcache)

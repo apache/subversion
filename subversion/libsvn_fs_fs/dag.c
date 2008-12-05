@@ -1097,9 +1097,11 @@ svn_fs_fs__dag_serialize(char **data,
     }
   else
     {
+      fs_fs_data_t *ffd = node->fs->fsap_data;
       svn_stringbuf_appendcstr(buf, "I");
       SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_stringbuf(buf, pool),
-                                       node->node_revision, TRUE, pool));
+                                       node->node_revision, ffd->format,
+                                       TRUE, pool));
     }
 
   *data = buf->data;

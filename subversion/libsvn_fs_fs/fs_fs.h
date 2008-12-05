@@ -60,12 +60,13 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
-/* Write the node-revision NODEREV into the stream OUTFILE.  Only write
-   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
-   allocations are from POOL. */
+/* Write the node-revision NODEREV into the stream OUTFILE, compatible with
+   filesystem format FORMAT.  Only write mergeinfo-related metadata if
+   INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
+                         int format,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
@@ -507,6 +508,18 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
    temporary allocations. */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
+
+
+/* Possibly pack the repository at PATH.  This just take full shards, and
+   combines all the revision files into a single one, with a manifest header.
+   Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
+
+   Existing filesystem references need not change.  */
+svn_error_t *
+svn_fs_fs__pack(const char *fs_path,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool);
 
 
 #endif
