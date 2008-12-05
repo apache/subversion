@@ -1548,8 +1548,9 @@ svn_wc_add2(const char *path,
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
-                                     0, svn_depth_infinity, pool));
+          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url, 
+                                     p_entry->repos, 0, svn_depth_infinity,
+                                     pool));
         }
       else
         {
@@ -1557,7 +1558,7 @@ svn_wc_add2(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
+          SVN_ERR(svn_wc_ensure_adm3(path, parent_entry->uuid, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
                                      svn_depth_infinity, pool));
         }
