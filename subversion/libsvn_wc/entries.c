@@ -2145,13 +2145,13 @@ write_entry_xml(svn_stringbuf_t **output,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR))
     {
       /* This is NOT the "this dir" entry */
-      if (strcmp(name, ".") == 0)
-        {
+
+      SVN_ERR_ASSERT(strcmp(name, ".") != 0);
           /* By golly, if this isn't recognized as the "this dir"
              entry, and it looks like '.', we're just asking for an
              infinite recursion to happen.  Abort! */
-          abort();
-        }
+
+
 
       if (entry->kind == svn_node_dir)
         {

@@ -248,7 +248,7 @@ backup_subdir = os.path.join(backup_dir, repo + "-" + youngest)
 regexp = re.compile("^" + repo + "-" + youngest +
                     "(-(?P<increment>[0-9]+))?" + ext_re + "$")
 directory_list = os.listdir(backup_dir)
-young_list = filter(lambda x: regexp.search(x), directory_list)
+young_list = [x for x in directory_list if regexp.search(x)]
 if young_list:
   young_list.sort(comparator)
   increment = regexp.search(young_list.pop()).groupdict()['increment']
@@ -334,7 +334,7 @@ if archive_type:
 if num_backups > 0:
   regexp = re.compile("^" + repo + "-[0-9]+(-[0-9]+)?" + ext_re + "$")
   directory_list = os.listdir(backup_dir)
-  old_list = filter(lambda x: regexp.search(x), directory_list)
+  old_list = [x for x in directory_list if regexp.search(x)]
   old_list.sort(comparator)
   del old_list[max(0,len(old_list)-num_backups):]
   for item in old_list:

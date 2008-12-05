@@ -218,6 +218,15 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
                             const char *dir_path,
                             apr_pool_t *pool);
  
+/** Return a duplicate of @a conflict, allocated in @a pool.
+ * A deep copy of all members, except the adm_access member, will be made.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
+                                 apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

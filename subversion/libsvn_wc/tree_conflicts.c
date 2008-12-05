@@ -629,50 +629,6 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
-svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
-                                const svn_wc_conflict_description_t *conflict,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
-{
-  const char *dir_path;
-  const svn_wc_entry_t *entry;
-  apr_array_header_t *conflicts;
-  char *conflict_data;
-  svn_wc_entry_t tmp_entry;
-
-  /* Make sure the node is a directory.
-   * Otherwise we should not have been called. */
-  dir_path = svn_wc_adm_access_path(adm_access);
-  SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
-  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
-
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      dir_path, pool));
-
-  /* If CONFLICTS has a tree conflict with the same victim path as the
-   * new conflict, then the working copy has been corrupted. */
-  if (svn_wc__tree_conflict_exists(conflicts,
-                                   svn_path_basename(conflict->path, pool),
-                                   pool))
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-        _("Attempt to add tree conflict that already exists"));
-
-  APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description_t *) = conflict;
-
-  SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
-  tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
-
-  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-                                     pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                           const char *victim_path,
                           svn_wc_adm_access_t *adm_access,

@@ -218,9 +218,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, to_addr_in[3:].split(to_addr_in[1]))
+        [_f for _f in to_addr_in[3:].split(to_addr_in[1]) if _f]
     else:
-      self.to_addrs = filter(None, to_addr_in.split())
+      self.to_addrs = [_f for _f in to_addr_in.split() if _f]
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one

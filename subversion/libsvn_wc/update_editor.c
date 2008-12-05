@@ -3203,7 +3203,7 @@ choose_base_paths(const char **old_text_base,
 
   replaced = entry && entry->schedule == svn_wc_schedule_replace;
   if (replaced)
-    *old_text_base = svn_wc__text_revert_path(path, FALSE, result_pool);
+    *old_text_base = svn_wc__text_revert_path(path, result_pool);
   else
     *old_text_base = svn_wc__text_base_path(path, FALSE, result_pool);
 
@@ -4742,7 +4742,7 @@ svn_wc_add_repos_file3(const char *dst_path,
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, adm_access, FALSE, pool));
   if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
     {
-      const char *dst_rtext = svn_wc__text_revert_path(dst_path, FALSE, pool);
+      const char *dst_rtext = svn_wc__text_revert_path(dst_path, pool);
       const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
 
       SVN_ERR(svn_wc__loggy_move(&log_accum,

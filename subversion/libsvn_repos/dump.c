@@ -253,8 +253,7 @@ make_dir_baton(const char *path,
   const char *full_path;
 
   /* A path relative to nothing?  I don't think so. */
-  if (path && (! pb))
-    abort();
+  SVN_ERR_ASSERT_NO_RETURN(!path || pb);
 
   /* Construct the full path of this node. */
   if (pb)
@@ -451,8 +450,17 @@ dump_node(struct edit_baton *eb,
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                          SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM
-                                          ": %s\n", hex_digest));
+                                      SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5
+                                      ": %s\n", hex_digest));
+
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
+                                           compare_root, compare_path,
+                                           TRUE, pool));
+              hex_digest = svn_checksum_to_cstring(checksum, pool);
+              if (hex_digest)
+                SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_SHA1
+                                      ": %s\n", hex_digest));
             }
         }
     }
@@ -524,8 +532,17 @@ dump_node(struct edit_baton *eb,
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                          SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM
+                                          SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
                                           ": %s\n", hex_digest));
+
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
+                                           compare_root, compare_path,
+                                           TRUE, pool));
+              hex_digest = svn_checksum_to_cstring(checksum, pool);
+              if (hex_digest)
+                SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_SHA1
+                                      ": %s\n", hex_digest));
             }
         }
       else
@@ -544,7 +561,15 @@ dump_node(struct edit_baton *eb,
       hex_digest = svn_checksum_to_cstring(checksum, pool);
       if (hex_digest)
         SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM
+                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
+                                  ": %s\n", hex_digest));
+
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
+                                   eb->fs_root, path, TRUE, pool));
+      hex_digest = svn_checksum_to_cstring(checksum, pool);
+      if (hex_digest)
+        SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_SHA1
                                   ": %s\n", hex_digest));
     }
 

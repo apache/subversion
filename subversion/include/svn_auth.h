@@ -805,6 +805,26 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
                                         const char *provider_type,
                                         apr_pool_t *pool);
 
+/** Create and return an array of <tt>svn_auth_provider_object_t *</tt> objects.
+ * Only client auth providers available for the current platform are returned.
+ *
+ * Create and allocate @a *providers in @a pool.
+ *
+ * Can throw an error if the platform supports the "gnome_keyring" or the
+ * "kwallet" auth provider and loading the respective shared library fails.
+ *
+ * Order of the platform-specific auth providers:
+ *   1. gnome-keyring
+ *   2. kwallet
+ *   3. keychain
+ *   4. windows-cryptoapi
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
+                                                apr_pool_t *pool);
+
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c

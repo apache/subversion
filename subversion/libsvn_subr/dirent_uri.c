@@ -1083,6 +1083,7 @@ svn_uri_is_canonical(const char *uri)
   if (*uri == '\0')
     return TRUE;
 
+  /* Maybe parse hostname and scheme. */
   if (*ptr != '/')
     {
       while (*ptr && (*ptr != '/') && (*ptr != ':'))
@@ -1120,6 +1121,12 @@ svn_uri_is_canonical(const char *uri)
                 return FALSE;
               ptr++;
             }
+        }
+      else
+        {
+          /* Didn't find a scheme; finish the segment. */
+          while (*ptr && *ptr != '/')
+            ptr++;
         }
     }
 
