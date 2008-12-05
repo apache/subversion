@@ -83,12 +83,21 @@ struct bdb_env_t
   /**************************************************************************/
   /* Error Reporting */
 
-  /* Berkeley DB returns extended error info by callback before returning
-     an error code from the failing function.  The callback baton type is a
-     string, not an arbitrary struct, so we prefix our struct with a valid
-     string, to avoid problems should BDB ever try to interpret our baton as
-     a string.  Initializers of this structure must strcpy the value of
-     BDB_ERRPFX_STRING into this array.  */
+  /* A (char *) casted pointer to this structure is passed to BDB's
+     set_errpfx(), which treats it as a NUL-terminated character
+     string to prefix all BDB error messages.  However, svn also
+     registers bdb_error_gatherer() as an error handler with
+     set_errcall() which turns off BDB's default printing of errors to
+     stderr and anytime thereafter when BDB reports an error and
+     before the BDB function returns, it calls bdb_error_gatherer()
+     and passes the same error prefix (char *) pointer given to
+     set_errpfx().  The bdb_error_gatherer() callback casts the
+     (char *) it back to a (bdb_env_t *).
+
+     To avoid problems should BDB ever try to interpret our baton as a
+     string, the first field in the structure is a char
+     errpfx_string[].  Initializers of this structure must strcpy the
+     value of BDB_ERRPFX_STRING into this array.  */
   char errpfx_string[sizeof(BDB_ERRPFX_STRING)];
 
   /* Extended error information. */
@@ -205,6 +214,8 @@ convert_bdb_error(bdb_env_t *bdb, int db_err)
 static void
 bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 {
+  /* See the documentation at bdb_env_t's definition why the
+     (bdb_env_t *) cast is safe and why it is done. */
   bdb_error_info_t *error_info = get_error_info((bdb_env_t *) baton);
   svn_error_t *new_err;
 
@@ -311,7 +322,10 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   db_err = db_env_create(&(bdb->env), 0);
   if (!db_err)
     {
+      /* See the documentation at bdb_env_t's definition why the
+         (char *) cast is safe and why it is done. */
       bdb->env->set_errpfx(bdb->env, (char *) bdb);
+
       /* bdb_error_gatherer is in parens to stop macro expansion. */
       bdb->env->set_errcall(bdb->env, (bdb_error_gatherer));
 
