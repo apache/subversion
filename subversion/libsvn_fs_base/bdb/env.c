@@ -257,7 +257,7 @@ cleanup_env(void *data)
 /* This cleanup is the fall back plan.  If the thread exits and the
    environment hasn't been closed it's responsible for cleanup of the
    thread local error info variable, which would otherwise be leaked.
-   Normally it will not be called, because svn_fs_base__close will
+   Normally it will not be called, because svn_fs_bdb__close will
    set the thread's error info to NULL after cleaning it up. */
 static void
 cleanup_error_info(void *baton)
