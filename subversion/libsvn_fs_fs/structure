@@ -58,6 +58,7 @@ repository) is:
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   max-packed-rev      File containing the youngest revision to be in a pack file
+  rep-cache.db        SQLite database mapping rep checksums to locations
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
@@ -93,6 +94,15 @@ file is locked during this operation.
 "fsfs.conf" is a configuration file in the standard Subversion/Python
 config format.  It is automatically generated when you create a new
 repository; read the generated file for details on what it controls.
+
+When represenation sharing is enabled, the filesystem tracks
+representation checksum and location mappings using a SQLite database in
+"rep-cache.db".  The database has a single table, which stores the sha1
+hash text as the primary key, mapped to the repretation revision, offset,
+size and expanded size.  A final field, reuse count, is currently used
+for distiguishing represenations which are shared.  This file is not
+required, and may be removed at an abritrary time, with the subsequent
+loss of rep-sharing capabilities.
 
 Filesystem formats
 ------------------
