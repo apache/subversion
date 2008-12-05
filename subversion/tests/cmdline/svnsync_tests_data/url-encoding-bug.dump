@@ -36,6 +36,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 15
 Text-content-md5: e58d666df0d6cc6e87a7e48440d637e9
+Text-content-sha1: ca53b1f604b633a6bc3cf75325932596efc4717f
 Content-length: 25
 
 PROPS-END
@@ -66,6 +67,7 @@ Node-action: add
 Node-copyfrom-rev: 1
 Node-copyfrom-path: foo%20bar.txt
 Text-copy-source-md5: e58d666df0d6cc6e87a7e48440d637e9
+Text-copy-source-sha1: ca53b1f604b633a6bc3cf75325932596efc4717f
 
 
 Node-path: foo%20bar.txt
@@ -96,6 +98,7 @@ Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: foo bar.txt
 Text-copy-source-md5: e58d666df0d6cc6e87a7e48440d637e9
+Text-copy-source-sha1: ca53b1f604b633a6bc3cf75325932596efc4717f
 
 
 Node-path: foo bar.txt

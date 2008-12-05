@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -430,7 +430,7 @@ def main():
                     tmp = start
                     start = end
                     end = tmp
-                revisions = range(start, end + 1)[-max_items:]
+                revisions = list(range(start, end + 1)[-max_items:])
             else:
                 raise ValueError()
         except ValueError, msg:

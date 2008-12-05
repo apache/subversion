@@ -60,12 +60,13 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
-/* Write the node-revision NODEREV into the stream OUTFILE.  Only write
-   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
-   allocations are from POOL. */
+/* Write the node-revision NODEREV into the stream OUTFILE, compatible with
+   filesystem format FORMAT.  Only write mergeinfo-related metadata if
+   INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
+                         int format,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
@@ -172,11 +173,12 @@ representation_t *svn_fs_fs__rep_copy(representation_t *rep,
                                       apr_pool_t *pool);
 
 
-/* Return the recorded checksum of the text representation of NODREV
-   into CHECKSUM, allocating from POOL.  If no stored checksum is
+/* Return the recorded checksum of type KIND for the text representation
+   of NODREV into CHECKSUM, allocating from POOL.  If no stored checksum is
    available, put all NULL into CHECKSUM. */
 svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                                       node_revision_t *noderev,
+                                      svn_checksum_kind_t kind,
                                       apr_pool_t *pool);
 
 /* Find the paths which were changed in revision REV of filesystem FS

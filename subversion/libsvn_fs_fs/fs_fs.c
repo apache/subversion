@@ -992,7 +992,7 @@ write_config(svn_fs_t *fs,
 "### however, if you do this, you *must* ensure that repositories have"      NL
 "### distinct UUIDs and paths, or else cached data from one repository"      NL
 "### might be used by another accidentally.  Note also that memcached has"   NL
-"### no authentication for reads or writes, so you must sure that your"      NL
+"### no authentication for reads or writes, so you must ensure that your"    NL
 "### memcached servers are only accessible by trusted users."                NL
 ""                                                                           NL
 "[" CONFIG_SECTION_CACHES "]"                                                NL
@@ -1644,16 +1644,24 @@ read_rep_offsets(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool));
+  SVN_ERR(svn_checksum_parse_hex(&rep->md5_checksum, svn_checksum_md5, str,
+                                 pool));
+
+  /* The remaining fields are only used for formats >= 4, so check that. */
+  str = apr_strtok(NULL, " ", &last_str);
+  if (str == NULL)
+    return SVN_NO_ERROR;
+
+  /* Read the SHA1 hash. */
+  if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Malformed text rep offset line in node-rev"));
+
+  SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum, svn_checksum_sha1, str,
+                                 pool));
 
   /* Read the reuse count. */
   str = apr_strtok(NULL, " ", &last_str);
-  if (str == NULL)
-    {
-      /* The reuse_count field is only in formats >= 4. */
-      return SVN_NO_ERROR;
-    }
-
   rep->reuse_count = apr_atoi64(str);
 
   return SVN_NO_ERROR;
@@ -1858,30 +1866,46 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
 }
 
 
-/* Return a formatted string that represents the location of
-   representation REP.  If MUTABLE_REP_TRUNCATED is given, the rep is
-   for props or dir contents, and only a "-1" revision number will be
-   given for a mutable rep.  Perform the allocation from POOL.  */
+/* Return a formatted string, compatible with filesystem format FORMAT,
+   that represents the location of representation REP.  If
+   MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
+   and only a "-1" revision number will be given for a mutable rep.
+   Perform the allocation from POOL.  */
 static const char *
 representation_string(representation_t *rep,
-                      svn_boolean_t mutable_rep_truncated, apr_pool_t *pool)
+                      int format,
+                      svn_boolean_t mutable_rep_truncated,
+                      apr_pool_t *pool)
 {
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
-  else
+
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                        " %" SVN_FILESIZE_T_FMT " %s %" APR_INT64_T_FMT,
+                        " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
-                        svn_checksum_to_cstring_display(rep->checksum,
+                        svn_checksum_to_cstring_display(rep->md5_checksum,
                                                         pool),
+                        rep->sha1_checksum ?
+                            svn_checksum_to_cstring_display(rep->sha1_checksum,
+                                                            pool) :
+                            "0000000000000000000000000000000000000000",
                         rep->reuse_count);
+
+  return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+                      " %" SVN_FILESIZE_T_FMT " %s",
+                      rep->revision, rep->offset, rep->size,
+                      rep->expanded_size,
+                      svn_checksum_to_cstring_display(rep->md5_checksum,
+                                                      pool));
 }
 
 
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
+                         int format,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool)
 {
@@ -1904,14 +1928,15 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
   if (noderev->data_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TEXT ": %s\n",
                               representation_string(noderev->data_rep,
+                                                    format,
                                                     (noderev->kind
                                                      == svn_node_dir),
                                                     pool)));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
-                              representation_string(noderev->prop_rep, TRUE,
-                                                    pool)));
+                              representation_string(noderev->prop_rep, format,
+                                                    TRUE, pool)));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));
@@ -1953,6 +1978,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                              svn_boolean_t fresh_txn_root,
                              apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
 
@@ -1968,7 +1994,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(noderev_file, TRUE,
                                                             pool),
-                                   noderev,
+                                   noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
@@ -2363,6 +2389,8 @@ create_rep_state(struct rep_state **rep_state,
   svn_error_t *err = create_rep_state_body(rep_state, rep_args, rep, fs, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
+      fs_fs_data_t *ffd = fs->fsap_data;
+
       /* ### This always returns "-1" for transaction reps, because
          ### this particular bit of code doesn't know if the rep is
          ### stored in the protorev or in the mutable area (for props
@@ -2372,7 +2400,8 @@ create_rep_state(struct rep_state **rep_state,
          ### going to jump straight to this comment anyway! */
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt representation '%s'",
-                               representation_string(rep, TRUE, pool));
+                               representation_string(rep, ffd->format, TRUE,
+                                                     pool));
     }
   return err;
 }
@@ -2442,15 +2471,19 @@ struct rep_read_baton
   apr_size_t buf_pos;
   apr_size_t buf_len;
 
-  /* A checksum context for summing the data read in order to verify it. */
-  svn_checksum_ctx_t *checksum_ctx;
+  /* A checksum context for summing the data read in order to verify it.
+     Note: we don't need to use the sha1 checksum because we're only doing
+     data verification, for which md5 is perfectly safe.  */
+  svn_checksum_ctx_t *md5_checksum_ctx;
+
   svn_boolean_t checksum_finalized;
 
   /* The stored checksum of the representation we are reading, its
      length, and the amount we've read so far.  Some of this
      information is redundant with rs_list and src_state, but it's
      convenient for the checksumming code to have it here. */
-  svn_checksum_t *checksum;
+  svn_checksum_t *md5_checksum;
+
   svn_filesize_t len;
   svn_filesize_t off;
 
@@ -2486,9 +2519,9 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->fs = fs;
   b->chunk_index = 0;
   b->buf = NULL;
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
-  b->checksum = svn_checksum_dup(rep->checksum, pool);
+  b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
   b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
@@ -2766,22 +2799,22 @@ rep_read_contents(void *baton,
      twice. */
   if (!rb->checksum_finalized)
     {
-      SVN_ERR(svn_checksum_update(rb->checksum_ctx, buf, *len));
+      SVN_ERR(svn_checksum_update(rb->md5_checksum_ctx, buf, *len));
       rb->off += *len;
       if (rb->off == rb->len)
         {
-          svn_checksum_t *checksum;
+          svn_checksum_t *md5_checksum;
 
           rb->checksum_finalized = TRUE;
-          svn_checksum_final(&checksum, rb->checksum_ctx, rb->pool);
-          if (!svn_checksum_match(checksum, rb->checksum))
+          svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx, rb->pool);
+          if (!svn_checksum_match(md5_checksum, rb->md5_checksum))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, NULL,
                _("Checksum mismatch while reading representation:\n"
                  "   expected:  %s\n"
                  "     actual:  %s\n"),
-               svn_checksum_to_cstring_display(rb->checksum, rb->pool),
-               svn_checksum_to_cstring_display(checksum, rb->pool));
+               svn_checksum_to_cstring_display(rb->md5_checksum, rb->pool),
+               svn_checksum_to_cstring_display(md5_checksum, rb->pool));
         }
     }
 
@@ -2932,7 +2965,8 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
           drb->rs = rep_state;
-          drb->checksum = svn_checksum_dup(target->data_rep->checksum, pool);
+          drb->checksum = svn_checksum_dup(target->data_rep->md5_checksum,
+                                           pool);
           *stream_p = svn_txdelta_stream_create(drb, delta_read_next_window,
                                                 delta_read_md5_digest, pool);
           return SVN_NO_ERROR;
@@ -3233,10 +3267,25 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
 svn_error_t *
 svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                          node_revision_t *noderev,
+                         svn_checksum_kind_t kind,
                          apr_pool_t *pool)
 {
   if (noderev->data_rep)
-    *checksum = svn_checksum_dup(noderev->data_rep->checksum, pool);
+    {
+      switch(kind)
+        {
+          case svn_checksum_md5:
+            *checksum = svn_checksum_dup(noderev->data_rep->md5_checksum,
+                                         pool);
+            break;
+          case svn_checksum_sha1:
+            *checksum = svn_checksum_dup(noderev->data_rep->sha1_checksum,
+                                         pool);
+            break;
+          default:
+            *checksum = NULL;
+        }
+    }
   else
     *checksum = NULL;
 
@@ -3255,7 +3304,8 @@ svn_fs_fs__rep_copy(representation_t *rep,
   rep_new = apr_pcalloc(pool, sizeof(*rep_new));
 
   memcpy(rep_new, rep, sizeof(*rep_new));
-  rep_new->checksum = svn_checksum_dup(rep->checksum, pool);
+  rep_new->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
+  rep_new->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, pool);
 
   return rep_new;
 }
@@ -4404,7 +4454,8 @@ struct rep_write_baton
      writing to it. */
   void *lockcookie;
 
-  svn_checksum_ctx_t *checksum_ctx;
+  svn_checksum_ctx_t *md5_checksum_ctx;
+  svn_checksum_ctx_t *sha1_checksum_ctx;
 
   apr_pool_t *pool;
 
@@ -4421,7 +4472,8 @@ rep_write_contents(void *baton,
 {
   struct rep_write_baton *b = baton;
 
-  SVN_ERR(svn_checksum_update(b->checksum_ctx, data, *len));
+  SVN_ERR(svn_checksum_update(b->md5_checksum_ctx, data, *len));
+  SVN_ERR(svn_checksum_update(b->sha1_checksum_ctx, data, *len));
   b->rep_size += *len;
 
   /* If we are writing a delta, use that stream. */
@@ -4493,7 +4545,8 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   b = apr_pcalloc(pool, sizeof(*b));
 
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   b->fs = fs;
   b->parent_pool = pool;
@@ -4576,12 +4629,15 @@ rep_write_contents_close(void *baton)
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
-  svn_checksum_final(&rep->checksum, b->checksum_ctx, b->parent_pool);
+  SVN_ERR(svn_checksum_final(&rep->md5_checksum, b->md5_checksum_ctx,
+                              b->parent_pool));
+  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, b->sha1_checksum_ctx,
+                              b->parent_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
+    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
                                          b->parent_pool));
   else
     old_rep = NULL;
@@ -4592,6 +4648,7 @@ rep_write_contents_close(void *baton)
       SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
       /* Use the old rep for this content. */
+      old_rep->md5_checksum = rep->md5_checksum;
       b->noderev->data_rep = old_rep;
 
       /* Get the reuse count and put it in the node-rev. */
@@ -4881,7 +4938,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           noderev->data_rep->revision = rev;
           SVN_ERR(get_file_offset(&noderev->data_rep->offset, file, pool));
           SVN_ERR(write_hash_rep(&noderev->data_rep->size,
-                                 &noderev->data_rep->checksum, file,
+                                 &noderev->data_rep->md5_checksum, file,
                                  str_entries, pool));
           noderev->data_rep->expanded_size = noderev->data_rep->size;
         }
@@ -4907,7 +4964,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
       SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
       SVN_ERR(write_hash_rep(&noderev->prop_rep->size,
-                             &noderev->prop_rep->checksum, file,
+                             &noderev->prop_rep->md5_checksum, file,
                              proplist, pool));
 
       noderev->prop_rep->txn_id = NULL;
@@ -4956,13 +5013,14 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Write out our new node-revision. */
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   noderev,
+                                   noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
   /* Save the data representation's hash in the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
-        && noderev->data_rep && noderev->kind == svn_node_file)
+        && noderev->data_rep && noderev->kind == svn_node_file
+        && noderev->data_rep->sha1_checksum != NULL)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */

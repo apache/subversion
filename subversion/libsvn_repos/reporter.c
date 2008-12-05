@@ -1159,8 +1159,9 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Check if the target path exists first.  */
   if (!*b->s_operand && !(t_entry))
-    return svn_error_create(SVN_ERR_FS_PATH_SYNTAX, NULL,
-                            _("Target path does not exist"));
+    return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+                             _("Target path '%s' does not exist"),
+                             b->t_path);
 
   /* If the anchor is the operand, the source and target must be dirs.
      Check this before opening the root to avoid modifying the wc. */

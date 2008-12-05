@@ -235,7 +235,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assertEqual(1, len(editor.textdeltas))
 
   def test_get_locations(self):
-    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, range(1,5))
+    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, list(range(1,5)))
     self.assertEqual(locations, {
         2: '/trunk/README.txt',
         3: '/trunk/README.txt',
