@@ -2422,7 +2422,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   /* ### do we have a directory sitting around already? we really shouldn't
      ### have to get the dirname here. */
   SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_path_dirname(final_path, pool  ),
+                                 svn_path_dirname(final_path, pool),
                                  svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
