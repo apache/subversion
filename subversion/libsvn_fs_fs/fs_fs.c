@@ -2413,6 +2413,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
                                  apr_hash_t *proplist,
                                  apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
   svn_stream_t *stream;
@@ -2432,7 +2433,9 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
   return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    svn_fs_fs__path_rev(fs, rev, pool),
+                                    rev < ffd->min_unpacked_rev
+                                      ? path_rev_packed(fs, rev, "pack", pool)
+                                      : svn_fs_fs__path_rev(fs, rev, pool),
                                     pool);
 }
 
