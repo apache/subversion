@@ -8,33 +8,6 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Fix a bunch of rep-sharing issues in FSFS (or remove the feature):
-
-   - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
-     used outside of the control of the FSFS lock.  Thus its
-     read-modify-write can have race conditions, leading to two
-     different rep key with the same reuse number.  Now, I'm not 100%
-     sure how much of a problem this is; it would be good to document
-     the point of the reuse number somewhere (unless I'm missing it).
-     But I think it's to enable our dumb
-     compare-if-a-node-has-changed-by-if-its-rep-key-has-changed thing
-     to work, right?  And so there could be a subtle,
-     difficult-to-diagnose problem if two reps end up with the same
-     reuse number.  You could try to do this by wrapping the read and
-     write inside a transaction (with retry loop), but I don't
-     remember if SQLite transactions work that way.
-
-     A potentially better solution: The point of the reuse column,
-     AFAICT, is *not* to do a reference count.  It's just to uniquify
-     references to the rep.  So switch it from a number to a string,
-     and qualify the string by the name of the transaction that is
-     creating the reference.  You can stick a counter for the current
-     transaction in foo.txn/next-ids or something.  (Then you still
-     might have to worry about concurrent writes to the same
-     transaction, but of course that situation is full of problematic
-     race conditions in FSFS anyway; fortunately all you have to avoid
-     those is to avoid mod_dav_svn like the plague.)
-
  * Other items
 
    - implement or back out svn_wc_queue_committed2()
