@@ -3009,6 +3009,7 @@ def merge_dir_branches(sbox):
   expected_output = ["Path: " + foo_path + "\n",
                      "URL: " + sbox.repo_url + "/foo\n",
                      "Repository Root: " + sbox.repo_url + "\n",
+                     "Repository UUID: .*\n",
                      "Revision: 2\n",
                      "Node Kind: directory\n",
                      "Schedule: add\n",
