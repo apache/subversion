@@ -33,8 +33,9 @@
 */
 typedef struct svn_client__merge_path_t
 {
-  const char *path;                  /* Working copy path relative to the
-                                        merge target. */
+  const char *path;                  /* Working copy path, either absolute or
+                                        relative to the current working
+                                        directory. */
   svn_boolean_t missing_child;       /* PATH has an immediate child which is
                                         missing. */
   svn_boolean_t switched;            /* PATH is switched. */

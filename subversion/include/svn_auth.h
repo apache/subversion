@@ -25,6 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_config.h"
 #include "svn_version.h"
 
 #ifdef __cplusplus
@@ -793,10 +794,6 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
  *
  *    svn_auth_get_<name>_<type>_provider(@a provider, @a pool);
  *
- * In the case of the "gnome_keyring" and the "kwallet" @a platform_type, an
- * error can be thrown in the event that loading the respective shared library
- * fails.
- *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -804,6 +801,27 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
                                         const char *provider_name,
                                         const char *provider_type,
                                         apr_pool_t *pool);
+
+/** Create and return an array of <tt>svn_auth_provider_object_t *</tt> objects.
+ * Only client authentication providers available for the current platform are
+ * returned. Order of the platform-specific authentication providers is
+ * determined by the 'password-stores' configuration option which is retrieved
+ * from @a config. @a config can be NULL.
+ *
+ * Create and allocate @a *providers in @a pool.
+ *
+ * Default order of the platform-specific authentication providers:
+ *   1. gnome-keyring
+ *   2. kwallet
+ *   3. keychain
+ *   4. windows-cryptoapi
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
+                                                svn_config_t *config,
+                                                apr_pool_t *pool);
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**

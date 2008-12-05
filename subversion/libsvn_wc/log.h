@@ -70,6 +70,7 @@ const char *svn_wc__logfile_path(int log_number,
    human-readable non-parsed property conflict files) should be
    rewritten.  See Issue #3015.
 */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,

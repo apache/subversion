@@ -80,6 +80,9 @@ make_fs_config(const char *fs_type,
       else if (server_minor_version == 4)
         apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
                      APR_HASH_KEY_STRING, "1");
+      else if (server_minor_version == 3)
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
     }
   return fs_config;
 }

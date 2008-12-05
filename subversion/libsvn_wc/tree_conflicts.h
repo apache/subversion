@@ -175,10 +175,17 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
                                 apr_pool_t *pool);
 
 /*
- * Write tree conflict descriptions to CONFLICT_DATA.
- * Replace the entry's list of tree conflicts with those in CONFLICTS, an
- * array of zero or more pointers to svn_wc_conflict_description_t objects.
+ * Encode tree conflict descriptions into a single string.
+ *
+ * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
+ * conflicts in CONFLICTS in a form suitable for storage in a single string
+ * field in a WC entry. CONFLICTS is an array of zero or more pointers to
+ * svn_wc_conflict_description_t objects. All of the conflict victim paths
+ * must be siblings.
+ *
  * Do all allocations in POOL.
+ *
+ * @see svn_wc__read_tree_conflicts()
  *
  * @since New in 1.6.
  */

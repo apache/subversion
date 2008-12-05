@@ -338,8 +338,10 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
  * and @a start is less than or equal to @a end, then exclude only the
  * non-inheritable revisions that intersect inclusively with the range
  * defined by @a start and @a end.  If @a path is not NULL remove
- * non-inheritable ranges only for @a path.  Allocate the copy in @a
- * pool.
+ * non-inheritable ranges only for @a path.  If all ranges are removed
+ * for a given path then remove that path as well.  If all paths are
+ * removed or @a rangelist is empty then set @a *inheritable_rangelist
+ * to an empty array.  Allocate the copy in @a pool.
  *
  * @since New in 1.5.
  */

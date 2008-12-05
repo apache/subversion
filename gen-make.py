@@ -46,13 +46,13 @@ def main(fname, gentype, verfname=None,
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
-      sorted_targets = target_dict.keys(); sorted_targets.sort()
+      sorted_targets = list(target_dict.keys()); sorted_targets.sort()
       for target in sorted_targets:
         print(dep_type + ": " + _objinfo(target))
         for source in target_dict[target]:
           print("  " + _objinfo(source))
       print("=" * 72)
-    gen_keys = generator.__dict__.keys()
+    gen_keys = list(generator.__dict__.keys())
     gen_keys.sort()
     for name in gen_keys:
       value = generator.__dict__[name]
@@ -82,7 +82,7 @@ def _usage_exit():
   print("  --reload  reuse all options from the previous invocation")
   print("            of the script, except -s, -t, --debug and --reload")
   print("  -t TYPE   use the TYPE generator; can be one of:")
-  items = gen_modules.items()
+  items = list(gen_modules.items())
   items.sort()
   for name, (module, desc) in items:
     print('            %-12s  %s' % (name, desc))

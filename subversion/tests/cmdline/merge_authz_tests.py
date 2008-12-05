@@ -127,14 +127,13 @@ def mergeinfo_and_skipped_paths(sbox):
   # directory A_COPY/D/H.
   expected_output = wc.State(A_COPY_path, {
     'D/G/rho'   : Item(status='U '),
-    'D/H/omega' : Item(status='  ', treeconflict='C'),
     'D/H/psi'   : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/psi'   : Item(status='M ', wc_rev=8),
-    'D/H/omega' : Item(status='! ', wc_rev=8, treeconflict='C'),
+    'D/H/omega' : Item(status='!M', wc_rev=8),
     'D/H'       : Item(status='  ', wc_rev=8),
     'D/G/pi'    : Item(status='  ', wc_rev=8),
     'D/G/rho'   : Item(status='M ', wc_rev=8),
@@ -176,6 +175,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_path, {
     'B/E'       : Item(),
+    'D/H/omega' : Item(),
     })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
@@ -189,7 +189,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, 1)
 
   # Manually check the props on A_COPY/D/H/omega.
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, ['\n'], [],
                                     'pg', SVN_PROP_MERGEINFO, omega_path)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
@@ -207,7 +207,6 @@ def mergeinfo_and_skipped_paths(sbox):
   # takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
     'D/G'       : Item(status='  ', treeconflict='C'),
-    'D/H/psi'   : Item(status='  ', treeconflict='C'),
     'D/H/omega' : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_path, {
@@ -247,6 +246,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_2_path, {
     'B/E'     : Item(),
+    'D/H/psi'   : Item(),
     })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
@@ -327,7 +327,6 @@ def mergeinfo_and_skipped_paths(sbox):
   # but is a no-op, r8 get's merged next and is operative so the mergeinfo
   # should be updated to reflect both merges.
   expected_output = wc.State(A_COPY_2_H_path, {
-    'psi'   : Item(status='  ', treeconflict='C'),
     'omega' : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_H_path, {
@@ -342,7 +341,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'chi'   : Item("This is the file 'chi'.\n",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5,8'}),
     })
-  expected_skip = wc.State(A_COPY_2_H_path, {})
+  expected_skip = wc.State(A_COPY_2_H_path, {
+    'psi'   : Item(),
+    })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '5',
                                        sbox.repo_url + \

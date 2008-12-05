@@ -315,7 +315,7 @@ try:
 
             colon = line.find(":")
 
-            if colon != -1 and len(line) > colon + 2:
+            if state is not 300 and colon != -1 and len(line) > colon + 2:
                 action   = line[:colon]
                 filename = line[colon+2:]
 
@@ -354,7 +354,7 @@ try:
 
             assert state in (100, 300)
 
-        if state is 10: # Expecting a bar (follows "Modified:" line)
+        if state is 10: # Expecting a bar (follows "(Added|Modified|Deleted):" line)
             assert line == "=" * 67
             state = 11
             continue
@@ -416,7 +416,7 @@ try:
                 "Name",                        # svn versions < 1.5
                 "Added", "Modified", "Deleted" # svn versions >= 1.5
             ):
-                if line.startswith(label + " :"):
+                if line.startswith(label + ": "):
                     break
             else:
                 raise AssertionError("Unexpected property name line: %r" % line)
@@ -425,6 +425,11 @@ try:
             # Fall through to state 300
 
         if state is 300:
+
+            if not line:
+                state = 0
+                continue
+
             for label in (
                 "Name",                        # svn versions < 1.5
                 "Added", "Modified", "Deleted" # svn versions >= 1.5
@@ -432,28 +437,29 @@ try:
                 if line.startswith(label + ": "):
                     current_property = line[len(label)+2:]
                     current_verify_property_function = None
-                    continue
-
-            for prefix, verify in (
-                ("   - ", verify_property_line_removed),
-                ("   + ", verify_property_line_added)
-            ):
-                if line.startswith(prefix):
-                    try: verify(current_filename, current_property, line[5:])
-                    except Exception, e:
-                        sys.stderr.write(str(e))
-                        sys.stderr.write("\n")
-                        sys.exit(1)
-                    current_verify_property_function = verify
                     break
-            else:
-                if not line: continue
 
-                if current_verify_property_function is None:
-                    raise AssertionError("Expected property diff data, got: %r" % line)
+            else:
+                for prefix, verify in (
+                    ("   - ", verify_property_line_removed),
+                    ("   + ", verify_property_line_added)
+                ):
+                    if line.startswith(prefix):
+                        try: verify(current_filename, current_property, line[5:])
+                        except Exception, e:
+                            sys.stderr.write(str(e))
+                            sys.stderr.write("\n")
+                            sys.exit(1)
+                        current_verify_property_function = verify
+                        break
                 else:
-                    # Multi-line property value
-                    current_verify_property_function(current_filename, current_property, line)
+                    if not line: continue
+
+                    if current_verify_property_function is None:
+                        raise AssertionError("Expected property diff data, got: %r" % line)
+                    else:
+                        # Multi-line property value
+                        current_verify_property_function(current_filename, current_property, line)
 
             continue
 

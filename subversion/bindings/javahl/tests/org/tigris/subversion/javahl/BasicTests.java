@@ -871,6 +871,20 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         assertExpectedSuggestion(sources[0].getPath(), "A/B/F/alpha", thisTest);
+
+        // Now test a WC to URL copy
+        CopySource wcSource[] = new CopySource[1];
+        wcSource[0] = new CopySource(new File(thisTest.getWorkingCopy(),
+                                        "A/B").getPath(), Revision.WORKING, Revision.WORKING);
+        client.commitMessageHandler(null);
+        client.copy(wcSource,
+                    thisTest.getUrl() + "/parent/A/B",
+                    "Copy WC to URL", true, true, null);
+
+        // update the WC to get new folder and confirm the copy
+        assertEquals("wrong revision number from update",
+                     client.update(thisTest.getWCPath(), null, true),
+                     3);
     }
 
     /**

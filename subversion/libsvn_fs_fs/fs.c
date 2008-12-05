@@ -321,6 +321,7 @@ static fs_library_vtable_t library_vtable = {
   fs_hotcopy,
   fs_get_description,
   svn_fs_fs__recover,
+  svn_fs_fs__pack,
   fs_logfiles
 };
 

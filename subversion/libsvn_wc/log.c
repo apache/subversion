@@ -570,11 +570,12 @@ log_do_merge(struct log_runner *loggy,
                        loggy->pool);
 
   /* Now do the merge with our full paths. */
+  /* ### TODO: Fill in the left_version and right_version args. */
   err = svn_wc__merge_internal(&log_accum, &merge_outcome,
-                               left, right, name, NULL, loggy->adm_access,
-                               left_label, right_label, target_label,
-                               FALSE, loggy->diff3_cmd, NULL, NULL,
-                               NULL, NULL, loggy->pool);
+                               left, NULL, right, NULL, name, NULL, 
+                               loggy->adm_access, left_label, right_label, 
+                               target_label, FALSE, loggy->diff3_cmd, NULL, 
+                               NULL, NULL, NULL, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
@@ -1499,11 +1500,9 @@ log_do_add_tree_conflict(struct log_runner *loggy,
 {
   apr_array_header_t *new_conflicts;
   const svn_wc_conflict_description_t *new_conflict;
-  const char* dir_path =svn_wc_adm_access_path(loggy->adm_access);
+  const char *dir_path = svn_wc_adm_access_path(loggy->adm_access);
 
   /* Convert the text data to a conflict. */
-  new_conflict = apr_pcalloc(loggy->pool,
-                             sizeof(svn_wc_conflict_description_t *));
   new_conflicts = apr_array_make(loggy->pool, 1,
                                  sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&new_conflicts,
@@ -1520,7 +1519,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                          _("Attempt to add tree conflict that already exists"));
 
-  /* Copy the new conflict to to the result pool.  Add its pointer to
+  /* Copy the new conflict to the result pool.  Add its pointer to
      the array of existing conflicts. */
   APR_ARRAY_PUSH(loggy->tree_conflicts,
                  const svn_wc_conflict_description_t *) = 

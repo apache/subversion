@@ -2024,6 +2024,20 @@ svn_error_t *
 svn_fs_print_modules(svn_stringbuf_t *output,
                      apr_pool_t *pool);
 
+
+/**
+ * Possibly update the filesystem located in the directory @a path
+ * to use disk space more efficiently.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_fs_pack(const char *db_path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool);
+
+
 /** @} */
 
 #ifdef __cplusplus

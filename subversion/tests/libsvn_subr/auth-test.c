@@ -27,8 +27,9 @@ test_platform_specific_auth_providers(const char **msg,
                                       svn_test_opts_t *opts,
                                       apr_pool_t *pool)
 {
+  apr_array_header_t *providers;
   svn_auth_provider_object_t *provider;
-  *msg = "test svn_auth_get_platform_provider";
+  *msg = "test retrieving platform-specific auth providers";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -41,6 +42,23 @@ test_platform_specific_auth_providers(const char **msg,
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_auth_get_platform_specific_provider('fake', 'fake') should " \
        "return NULL");
+
+  /* Make sure you get two providers when retrieving all auth providers */
+  svn_auth_get_platform_specific_client_providers(&providers, NULL, pool);
+
+#if defined(SVN_HAVE_KEYCHAIN_SERVICES) || defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET) || (defined(WIN32) && !defined(__MINGW32__))
+  if (providers->nelts != 2)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "svn_auth_get_platform_specific_client_providers should return " \
+       "an array of two providers");
+#else
+  if (providers->nelts != 0)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "svn_auth_get_platform_specific_client_providers should return " \
+       "an array of zero providers");
+#endif
 
   /* Test Keychain auth providers */
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES

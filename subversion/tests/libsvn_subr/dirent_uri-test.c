@@ -731,6 +731,7 @@ test_dirent_is_canonical(const char **msg,
     { "X:",                    TRUE },
     { "X:foo",                 TRUE },
     { "X:foo/",                FALSE },
+    { "file with spaces",      TRUE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",                   TRUE },
     /* We permit UNC dirents on Windows.  By definition UNC
