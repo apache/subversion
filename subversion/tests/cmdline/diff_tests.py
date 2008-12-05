@@ -3143,7 +3143,6 @@ def diff_svnpatch(sbox):
     '( close-dir ( 2:d6 ) ) ',
     '( add-dir ( 3:A/T 2:d1 2:d8 ( ) ) ) ',
     '( add-file ( 8:A/T/mumu 2:d8 2:c9 ( 4:A/mu ) ) ) ',
-    '( change-file-prop ( 2:c9 13:svn:mergeinfo ( 0: ) ) ) ',
     '( close-file ( 2:c9 ( ) ) ) ',
     '( close-dir ( 2:d8 ) ) ',
     '( close-dir ( 2:d1 ) ) ',
