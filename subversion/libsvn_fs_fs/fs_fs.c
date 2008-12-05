@@ -1806,9 +1806,13 @@ read_rep_offsets(representation_t **rep_p,
   SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum, svn_checksum_sha1, str,
                                  pool));
 
-  /* Read the reuse count. */
+  /* Read the original txn id. */
   str = apr_strtok(NULL, " ", &last_str);
-  rep->reuse_count = apr_atoi64(str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Malformed text rep offset line in node-rev"));
+
+  rep->orig_txn_id = apr_pstrdup(pool, str);
 
   return SVN_NO_ERROR;
 }
@@ -2035,7 +2039,7 @@ representation_string(representation_t *rep,
                                                         pool));
 
   return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                      " %" SVN_FILESIZE_T_FMT " %s %s %" APR_INT64_T_FMT,
+                      " %" SVN_FILESIZE_T_FMT " %s %s %s",
                       rep->revision, rep->offset, rep->size,
                       rep->expanded_size,
                       svn_checksum_to_cstring_display(rep->md5_checksum,
@@ -2044,7 +2048,7 @@ representation_string(representation_t *rep,
                           svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                           pool) :
                           "0000000000000000000000000000000000000000",
-                      rep->reuse_count);
+                      rep->orig_txn_id);
 }
 
 
@@ -3428,10 +3432,7 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a->revision != b->revision)
     return FALSE;
 
-  if (a->reuse_count != b->reuse_count)
-    return FALSE;
-
-  return TRUE;
+  return strcmp(a->orig_txn_id, b->orig_txn_id) == 0;
 }
 
 svn_error_t *
@@ -3476,6 +3477,7 @@ svn_fs_fs__rep_copy(representation_t *rep,
   memcpy(rep_new, rep, sizeof(*rep_new));
   rep_new->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
   rep_new->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, pool);
+  rep_new->orig_txn_id = apr_pstrdup(pool, rep->orig_txn_id);
 
   return rep_new;
 }
@@ -4467,6 +4469,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
       rep->txn_id = txn_id;
+      rep->orig_txn_id = txn_id;
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
                                            parent_noderev, FALSE, pool));
@@ -4795,6 +4798,7 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
+  rep->orig_txn_id = rep->txn_id;
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
@@ -4818,10 +4822,8 @@ rep_write_contents_close(void *baton)
 
       /* Use the old rep for this content. */
       old_rep->md5_checksum = rep->md5_checksum;
+      old_rep->orig_txn_id = rep->orig_txn_id;
       b->noderev->data_rep = old_rep;
-
-      /* Get the reuse count and put it in the node-rev. */
-      SVN_ERR(svn_fs_fs__inc_rep_reuse(b->fs, b->noderev->data_rep, b->pool));
     }
   else
     {
