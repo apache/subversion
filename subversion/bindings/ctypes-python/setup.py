@@ -114,9 +114,9 @@ class build(_build):
   # finalize_options()
 
   ##############################################################################
-  # Get the APR configuration
+  # Get build configuration
   ##############################################################################
-  def get_apr_config (self):
+  def get_build_config (self):
     flags = []
     ldflags = []
     library_path = []
@@ -184,14 +184,14 @@ class build(_build):
                 " ".join(ldflags) + " " + self.ldflags, " ".join(flags),
                 ":".join(library_path))
 
-  # get_apr_config()
+  # get_build_config()
 
   ##############################################################################
   # Build csvn/core/functions.py
   ##############################################################################
   def build_functions_py(self):
     (apr_prefix, apr_include_dir, cpp, ldflags, flags,
-     library_path) = self.get_apr_config()
+     library_path) = self.get_build_config()
     tempdir = mkdtemp()
     try:
       includes = ('%s/svn_*.h '
