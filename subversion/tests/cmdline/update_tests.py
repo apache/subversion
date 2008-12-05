@@ -2301,7 +2301,7 @@ def update_wc_with_replaced_file(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='CM', wc_rev='-', copied='+'),
+    'iota' : Item(status='C ', wc_rev='-', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
