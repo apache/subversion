@@ -1758,14 +1758,13 @@ do_entry_deletion(struct edit_baton *eb,
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.kind =
-        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;  /* ### redundant? */
+      tmp_entry.kind = entry->kind;
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
                                          full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND  /* ### redundant change? */
+                                         | SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
                                          pool));
 
