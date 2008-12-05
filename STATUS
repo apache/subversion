@@ -128,5 +128,15 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
      
+ * r33775, r33782, r33786 (adm_ops.c), r33788, r33974 (actions.py)
+   Various changes that r34050 (which has been backported already)
+   depends on.
+   Justification:
+     Fix merge_tests 89.
+   Branch:
+     1.5.x-r34050-followups
+   Votes:
+     +1: danielsh
+
 Approved changes:
 =================
