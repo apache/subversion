@@ -1831,7 +1831,8 @@ main(int argc, const char *argv[])
           opt_state.depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(FALSE);
         }
       else if (subcommand->cmd_func == svn_cl__revert
-               || subcommand->cmd_func == svn_cl__add)
+               || subcommand->cmd_func == svn_cl__add
+               || subcommand->cmd_func == svn_cl__commit)
         {
           /* In pre-1.5 Subversion, some commands treated -N like
              --depth=empty, so force that mapping here.  Anyway, with

@@ -587,7 +587,7 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Missing id field in node-rev")
+    expected_stderr=".*Found malformed header in revision file")
 
 #----------------------------------------------------------------------
 

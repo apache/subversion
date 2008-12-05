@@ -90,7 +90,7 @@ print_info_xml(void *baton,
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_path_local_style(target, pool),
-                        "kind", svn_cl__node_kind_str(info->kind),
+                        "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
 
@@ -431,10 +431,34 @@ print_info(void *baton,
 
   if (info->tree_conflict)
     {
-      const char *desc;
+      const char *desc, *src_left_version, *src_right_version;
+
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
-      svn_cmdline_printf(pool, _("Tree conflict: %s"), desc);
+      src_left_version =
+        svn_cl__node_description(info->tree_conflict->src_left_version, pool);
+      src_right_version =
+        svn_cl__node_description(info->tree_conflict->src_right_version, pool);
+
+      svn_cmdline_printf(pool,
+                         "%s: %s\n",
+                         _("Tree conflict"),
+                         desc);
+ 
+      if (src_left_version)
+        svn_cmdline_printf(pool,
+                           "  %s: %s\n",
+                           _("Source  left"), /* (1) */
+                           src_left_version);
+        /* (1): Sneaking in a space in "Source  left" so that it is the
+         * same length as "Source right" while it still starts in the same
+         * column. That's just a tiny tweak in the English `svn'. */
+ 
+      if (src_right_version)
+        svn_cmdline_printf(pool,
+                           "  %s: %s\n",
+                           _("Source right"),
+                           src_right_version);
     }
 
   /* Print extra newline separator. */

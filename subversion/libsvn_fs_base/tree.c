@@ -4786,29 +4786,45 @@ base_node_origin_rev(svn_revnum_t *revision,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  svn_error_t *err;
+  base_fs_data_t *bfd = fs->fsap_data;
   struct get_set_node_origin_args args;
-  const svn_fs_id_t *id, *origin_id;
+  const svn_fs_id_t *origin_id = NULL;
   struct id_created_rev_args icr_args;
 
-  /* Verify that our filesystem version supports node origins stuff. */
-  SVN_ERR(svn_fs_base__test_required_feature_format
-          (fs, "node-origins", SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT));
+  /* Canonicalize the input path so that the path-math that
+     prev_location() does below will work. */
+  path = svn_fs__canonicalize_abspath(path, pool);
 
-  SVN_ERR(base_node_id(&id, root, path, pool));
-  args.node_id = svn_fs_base__id_node_id(id);
-  err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin,
-                               &args, pool);
-
-  /* If we got a value for the origin node-revision-ID, that's great.
-     If we didn't, that's sad but non-fatal -- we'll just figure it
-     out the hard way, then record it so we don't have suffer again
-     the next time. */
-  if (! err)
+  /* If we have support for the node-origins table, we'll try to use
+     it. */
+  if (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
     {
-      origin_id = args.origin_id;
+      const svn_fs_id_t *id;
+      svn_error_t *err;
+
+      SVN_ERR(base_node_id(&id, root, path, pool));
+      args.node_id = svn_fs_base__id_node_id(id);
+      err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin,
+                                   &args, pool);
+
+      /* If we got a value for the origin node-revision-ID, that's
+         great.  If we didn't, that's sad but non-fatal -- we'll just
+         figure it out the hard way, then record it so we don't have
+         suffer again the next time. */
+      if (! err)
+        {
+          origin_id = args.origin_id;
+        }
+      else if (err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      SVN_ERR(err);
     }
-  else if (err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+
+  /* If we haven't yet found a node origin ID, we'll go spelunking for one. */
+  if (! origin_id)
     {
       svn_fs_root_t *curroot = root;
       apr_pool_t *subpool = svn_pool_create(pool);
@@ -4817,9 +4833,6 @@ base_node_origin_rev(svn_revnum_t *revision,
         svn_stringbuf_create(path, pool);
       svn_revnum_t lastrev = SVN_INVALID_REVNUM;
       const svn_fs_id_t *pred_id;
-
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
 
       /* Walk the closest-copy chain back to the first copy in our history.
 
@@ -4847,6 +4860,7 @@ base_node_origin_rev(svn_revnum_t *revision,
           /* Update our LASTPATH and LASTREV variables (which survive
              SUBPOOL). */
           svn_stringbuf_set(lastpath, curpath);
+          lastrev = currev;
         }
 
       /* Walk the predecessor links back to origin. */
@@ -4866,17 +4880,20 @@ base_node_origin_rev(svn_revnum_t *revision,
           pred_id = svn_fs_base__id_copy(pid_args.pred_id, predidpool);
         }
 
-      /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
-         this value from now on, shall we?  */
-      args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
-      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
-                                      &args, subpool));
+      /* Okay.  PRED_ID should hold our origin ID now.  */
+      origin_id = svn_fs_base__id_copy(pred_id, pool);
+
+      /* If our filesystem version supports it, let's remember this
+         value from now on.  */
+      if (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
+        {
+          args.origin_id = origin_id;
+          SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
+                                         &args, subpool));
+        }
+
       svn_pool_destroy(predidpool);
       svn_pool_destroy(subpool);
-    }
-  else
-    {
-      return err;
     }
 
   /* Okay.  We have an origin node-revision-ID.  Let's get a created
