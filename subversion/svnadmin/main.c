@@ -193,6 +193,7 @@ static svn_opt_subcommand_t
   subcommand_list_unused_dblogs,
   subcommand_lslocks,
   subcommand_lstxns,
+  subcommand_pack,
   subcommand_recover,
   subcommand_rmlocks,
   subcommand_rmtxns,
@@ -200,8 +201,7 @@ static svn_opt_subcommand_t
   subcommand_setrevprop,
   subcommand_setuuid,
   subcommand_upgrade,
-  subcommand_verify,
-  subcommand_pack;
+  subcommand_verify;
 
 enum
   {
@@ -397,6 +397,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Print the names of all uncommitted transactions.\n"),
    {0} },
 
+  {"pack", subcommand_pack, {0}, N_
+   ("usage: svnadmin pack REPOS_PATH\n\n"
+    "Possibly compact the repository into a more effecient storage model.\n"
+    "This may not apply to all repositories, in which case, exit.\n"),
+   {0} },
+
   {"recover", subcommand_recover, {0}, N_
    ("usage: svnadmin recover REPOS_PATH\n\n"
     "Run the recovery procedure on a repository.  Do this if you've\n"
@@ -462,12 +468,6 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
    {'r', 'q'} },
-
-  {"pack", subcommand_pack, {0}, N_
-   ("usage: svnadmin pack REPOS_PATH\n\n"
-    "Possibly compact the repository into a more effecient storage model.\n"
-    "This may not apply to all repositories, in which case, exit.\n"),
-  {0} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
