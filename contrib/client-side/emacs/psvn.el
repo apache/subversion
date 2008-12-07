@@ -1167,7 +1167,7 @@ If there is no .svn directory, examine if there is CVS and run
             svn-status-remote (when arg t))
       (set-buffer cur-buf)
       (if want-edit
-          (let (svn-status-edit-svn-command t)
+          (let ((svn-status-edit-svn-command t))
             (svn-run t t 'status "status" svn-status-default-status-arguments status-option))
         (svn-run t t 'status "status" svn-status-default-status-arguments status-option)))))
 
@@ -1452,17 +1452,28 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (while (accept-process-output process 0 100))
            ;; find last error message and show it.
            (goto-char (point-max))
-           (if (re-search-backward "^svn: \\(.*\\)" nil t)
-               (svn-process-handle-error (match-string 1))
+           (if (re-search-backward "^svn: " nil t)
+               (let ((error-strings))
+                 (while (looking-at "^svn: ")
+                   (setq error-strings (append error-strings (list (buffer-substring-no-properties (+ 5 (svn-point-at-bol)) (svn-point-at-eol)))))
+                   (forward-line -1))
+                 (svn-process-handle-error (mapconcat 'identity (reverse error-strings) "\n")))
              (message "svn failed: %s" event)))
           (t
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-output nil t))))
 
 (defvar svn-process-handle-error-msg nil)
+(defvar svn-handle-error-function nil
+  "A function that will be called with an error string received from the svn client.
+When this function resets `svn-process-handle-error-msg' to nil, the default error handling
+(just show the error message) is not executed.")
 (defun svn-process-handle-error (error-msg)
   (let ((svn-process-handle-error-msg error-msg))
-    (electric-helpify 'svn-process-help-with-error-msg)))
+    (when (functionp svn-handle-error-function)
+      (funcall svn-handle-error-function error-msg))
+    (when svn-process-handle-error-msg
+      (electric-helpify 'svn-process-help-with-error-msg))))
 
 (defun svn-process-help-with-error-msg ()
   (interactive)
@@ -1473,7 +1484,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
         (save-excursion
           (with-output-to-temp-buffer (help-buffer)
             (princ (format "svn failed: %s\n\n%s" svn-process-handle-error-msg help-msg))))
-      (message "svn failed: %s" svn-process-handle-error-msg))))
+      (message "svn failed:\n%s" svn-process-handle-error-msg))))
 
 
 (defun svn-process-filter (process str)
