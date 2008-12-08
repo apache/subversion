@@ -22,6 +22,10 @@ Blocker:
    if the text in sqlite.m4 about being able to use a sqlite/
    subdirectory is in any way true, etc etc)
 
+ * Tree conflicts - essential issues:
+
+   - #3334: "Merry-go-round" about update updating the base.
+
 
 Optional:
 
@@ -32,8 +36,6 @@ Optional:
 
    - #3209: Tests XFAIL due to changed tree-conflicts behaviour
 
-   - #3334: "Merry-go-round" about update updating the base.
-
  * Tree conflicts - non-essential issues:
 
    - #3329: Update/switch fails if the target itself is a tree conflict victim.
@@ -41,8 +43,8 @@ Optional:
      inside a tree conflict, and that no longer exists in the repo, does
      nothing.  Should print a 'Skipped' message instead.
 
-   - Making use of skels to store tree conflict data in entries file
-     
+   - #3343: Making use of skels to store tree conflict data in entries file
+
      Mailing list thread:
      http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145582
 
