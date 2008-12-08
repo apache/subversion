@@ -32,7 +32,8 @@
 
 #include "ra_svn.h"
 
-static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
+svn_boolean_t svn_ra_svn__find_mech(apr_array_header_t *mechlist,
+                                    const char *mech)
 {
   int i;
   svn_ra_svn_item_t *elt;
@@ -73,23 +74,23 @@ svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
 
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
 
-  if (sess->is_tunneled && find_mech(mechlist, "EXTERNAL"))
+  if (sess->is_tunneled && svn_ra_svn__find_mech(mechlist, "EXTERNAL"))
     {
         /* Ask the server to use the tunnel connection environment (on
         * Unix, that means uid) to determine the authentication name. */
       SVN_ERR(svn_ra_svn__auth_response(conn, pool, "EXTERNAL", ""));
       return read_success(conn, pool);
     }
-  else if (find_mech(mechlist, "ANONYMOUS"))
+  else if (svn_ra_svn__find_mech(mechlist, "ANONYMOUS"))
     {
       SVN_ERR(svn_ra_svn__auth_response(conn, pool, "ANONYMOUS", ""));
       return read_success(conn, pool);
     }
-  else if (find_mech(mechlist, "CRAM-MD5"))
+  else if (svn_ra_svn__find_mech(mechlist, "CRAM-MD5"))
     {
       SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
-                                        SVN_AUTH_CRED_SIMPLE, realmstring,
-                                        sess->callbacks->auth_baton, pool));
+                                         SVN_AUTH_CRED_SIMPLE, realmstring,
+                                         sess->callbacks->auth_baton, pool));
       if (!creds)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                 _("Can't get password"));
