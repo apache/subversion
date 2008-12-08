@@ -95,12 +95,12 @@ file is locked during this operation.
 config format.  It is automatically generated when you create a new
 repository; read the generated file for details on what it controls.
 
-When represenation sharing is enabled, the filesystem tracks
+When representation sharing is enabled, the filesystem tracks
 representation checksum and location mappings using a SQLite database in
 "rep-cache.db".  The database has a single table, which stores the sha1
-hash text as the primary key, mapped to the repretation revision, offset,
+hash text as the primary key, mapped to the representation revision, offset,
 size and expanded size.  A final field, reuse count, is currently used
-for distiguishing represenations which are shared.  This file is not
+for distinguishing representations which are shared.  This file is not
 required, and may be removed at an abritrary time, with the subsequent
 loss of rep-sharing capabilities.
 

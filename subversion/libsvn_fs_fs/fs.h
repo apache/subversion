@@ -296,7 +296,7 @@ typedef struct
   const char *txn_id;
 
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
-     same represenation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
+     same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!) here. */
   const char *orig_txn_id;
 } representation_t;
