@@ -1030,7 +1030,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"### " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                            NL
+"### " CONFIG_OPTION_ENABLE_REP_SHARING " = false"                           NL
 
 ;
 #undef NL
