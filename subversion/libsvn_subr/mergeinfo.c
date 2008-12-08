@@ -1321,9 +1321,13 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
       else
         inheritable_rangelist =
           svn_rangelist_dup((apr_array_header_t *)rangelist, pool);
-      apr_hash_set(inheritable_mergeinfo,
-                   apr_pstrmemdup(pool, key, keylen), keylen,
-                   inheritable_rangelist);
+
+      /* Only add this rangelist if some ranges remain.  A rangelist with
+         a path mapped to an empty rangelist is not syntactically valid */
+      if (inheritable_rangelist->nelts)
+        apr_hash_set(inheritable_mergeinfo,
+                     apr_pstrmemdup(pool, key, keylen), keylen,
+                     inheritable_rangelist);
     }
   *output = inheritable_mergeinfo;
   return SVN_NO_ERROR;
