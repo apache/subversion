@@ -29,8 +29,12 @@ Version 1.5.5
 http://svn.collab.net/repos/svn/tags/1.5.5
 
  User-visible changes:
+  * allow prop commits on dirs with modified children (r34487, -92, -94)
+  * make Cyrus auth implementation always prefer EXTERNAL to ANONYMOUS (r33866)
   * fixed: foreign merges keep UUID of foreign repository (r34050, -1, -3)
   * fixed: properly encode diff headers used in conflict resolution (r34171)
+  * fixed: segfault in 'svn cp --parents' (r31311, -4)
+  * fixed: mergeinfo for '...' maps to empty revision range (issue #3312)
 
  Developer-visible changes:
   * fixed: svn_repos_get_logs() chokes on some revision arguments (r33873, -4)
