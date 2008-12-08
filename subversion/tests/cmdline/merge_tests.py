@@ -2972,6 +2972,7 @@ def merge_dir_branches(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
 
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   F_url = sbox.repo_url + '/A/B/F'
@@ -3009,6 +3010,7 @@ def merge_dir_branches(sbox):
   expected_output = ["Path: " + foo_path + "\n",
                      "URL: " + sbox.repo_url + "/foo\n",
                      "Repository Root: " + sbox.repo_url + "\n",
+                     "Repository UUID: %s\n" % wc_uuid,
                      "Revision: 2\n",
                      "Node Kind: directory\n",
                      "Schedule: add\n",

@@ -130,24 +130,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34423
-   Fix issue #3312 "Mergeinfo for '...' maps to an empty revision range"
-   due to sparse merging.
-   Justification:
-     Some people do merge into sparse directories or targets with switched
-     subtrees; this produces non-inheritable mergeinfo.  This non-inheritable
-     mergeinfo can cause an error during merging or log -g.  See issue #3312
-     and http://svn.haxx.se/dev/archive-2008-10/1170.shtml.
-   Votes:
-     +1: pburba, rhuijben, cmpilato
-
- * r33775, r33782, r33786 (adm_ops.c), r33788, r33974 (actions.py)
-   Various changes that r34050 (which has been backported already)
-   depends on.
-   Justification:
-     Fix merge_tests 89.
-   Branch:
-     1.5.x-r34050-followups
-   Votes:
-     +1: danielsh, pburba, cmpilato
