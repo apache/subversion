@@ -74,7 +74,7 @@ Commit access for specific areas:
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
-        holden   Holden Karau <holden@pigscanfly.ca>         (Swig-Scheme bindings)
+          sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
 
   Packages:
 
@@ -154,12 +154,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               improvements br.)
     nikclayton   Nik Clayton <nik@ngo.org.uk>                (perl-bindings-
                                                               improvements br.)
-          sage   Sage LaTorra <sagelt@gmail.com>             (ctypes-python-
-                                                              bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
-    firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
-                                                              br.)
+        holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
@@ -180,6 +177,8 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
          ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
       dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
+    firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
+                                                              br.)
 
 Committers who have asked to be listed as dormant:
 
