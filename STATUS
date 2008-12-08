@@ -33,17 +33,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
- * r33866
-   Make ra_svn's Cyrus auth implementation (like the internal auth
-   implementation) always prefer EXTERNAL to ANONYMOUS.  This prevents
-   a weird regression vs 1.4 where svn+ssh:// would be treated as
-   anonymous in some cases.
-   Justification:
-     Regression against 1.4 which can prevent users from even checking
-     out repositories that they could check out with a 1.4 client.
-   Votes:
-     +1: glasser, ghudson
-
  * r34082, r34096, r34545
    Fix issue #3275 by making WebDAV proxy slave servers pass through
    any GET or PROPFIND requests aimed at working resource URLs, even
@@ -65,17 +54,6 @@ Candidate changes for 1.5.5:
      cherry harvest merges are completely broken.
    Votes:
      +1: pburba
-
- * r34423
-   Fix issue #3312 "Mergeinfo for '...' maps to an empty revision range"
-   due to sparse merging.
-   Justification:
-     Some people do merge into sparse directories or targets with switched
-     subtrees; this produces non-inheritable mergeinfo.  This non-inheritable
-     mergeinfo can cause an error during merging or log -g.  See issue #3312
-     and http://svn.haxx.se/dev/archive-2008-10/1170.shtml.
-   Votes:
-     +1: pburba, rhuijben
 
  * r34432
    Follow-up to r32975, which is already backported and had a bug, see
@@ -128,16 +106,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
      
- * r33775, r33782, r33786 (adm_ops.c), r33788, r33974 (actions.py)
-   Various changes that r34050 (which has been backported already)
-   depends on.
-   Justification:
-     Fix merge_tests 89.
-   Branch:
-     1.5.x-r34050-followups
-   Votes:
-     +1: danielsh, pburba
-
  * r34184, r34585
    Don't create explicit mergeinfo on a WC-to-WC move/copy destination
    unless the source already had some.
@@ -158,7 +126,39 @@ Candidate changes for 1.5.5:
      See this thread for more:
      subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=98145.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
 Approved changes:
 =================
+
+ * r33866
+   Make ra_svn's Cyrus auth implementation (like the internal auth
+   implementation) always prefer EXTERNAL to ANONYMOUS.  This prevents
+   a weird regression vs 1.4 where svn+ssh:// would be treated as
+   anonymous in some cases.
+   Justification:
+     Regression against 1.4 which can prevent users from even checking
+     out repositories that they could check out with a 1.4 client.
+   Votes:
+     +1: glasser, ghudson, cmpilato
+
+ * r34423
+   Fix issue #3312 "Mergeinfo for '...' maps to an empty revision range"
+   due to sparse merging.
+   Justification:
+     Some people do merge into sparse directories or targets with switched
+     subtrees; this produces non-inheritable mergeinfo.  This non-inheritable
+     mergeinfo can cause an error during merging or log -g.  See issue #3312
+     and http://svn.haxx.se/dev/archive-2008-10/1170.shtml.
+   Votes:
+     +1: pburba, rhuijben, cmpilato
+
+ * r33775, r33782, r33786 (adm_ops.c), r33788, r33974 (actions.py)
+   Various changes that r34050 (which has been backported already)
+   depends on.
+   Justification:
+     Fix merge_tests 89.
+   Branch:
+     1.5.x-r34050-followups
+   Votes:
+     +1: danielsh, pburba, cmpilato
