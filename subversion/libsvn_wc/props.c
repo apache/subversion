@@ -79,22 +79,27 @@ get_prop_path(const char **ppath,
                            props_kind, FALSE, pool);
 }
 
-/* If PROPFILE_PATH exists (and is a file), assume it's full of
-   properties and load this file into HASH.  Otherwise, leave HASH
-   untouched.  */
+/* Get PATH's properies of PROPS_KIND, and put them into HASH.
+   PATH should be of kind NODE_KIND. */
 static svn_error_t *
-load_prop_file(const char *propfile_path,
-               apr_hash_t *hash,
-               apr_pool_t *pool)
+load_props(const char *path,
+           svn_node_kind_t node_kind,
+           svn_wc__props_kind_t props_kind,
+           apr_hash_t *hash,
+           apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stream_t *stream;
   apr_finfo_t finfo;
+  const char *prop_path;
+
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, FALSE,
+                            pool));
 
   /* We shouldn't be calling load_prop_file() with an empty file, but
      we do.  This check makes sure that we don't call svn_hash_read2()
      on an empty stream.  Ugly, hacky and crude. */
-  err = svn_io_stat(&finfo, propfile_path, APR_FINFO_SIZE, pool);
+  err = svn_io_stat(&finfo, prop_path, APR_FINFO_SIZE, pool);
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
               || APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
@@ -105,7 +110,7 @@ load_prop_file(const char *propfile_path,
   if (finfo.size == 0)
     return SVN_NO_ERROR;
 
-  err = svn_stream_open_readonly(&stream, propfile_path, pool, pool);
+  err = svn_stream_open_readonly(&stream, prop_path, pool, pool);
 
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
               || APR_STATUS_IS_ENOTDIR(err->apr_err)))
@@ -116,9 +121,7 @@ load_prop_file(const char *propfile_path,
 
   SVN_ERR(err);
 
-  SVN_ERR_W(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool),
-            apr_psprintf(pool, _("Can't parse '%s'"),
-                         svn_path_local_style(propfile_path, pool)));
+  SVN_ERR(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   return svn_stream_close(stream);
 }
@@ -289,12 +292,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
   if (base_props_p
       || (has_propcaching && ! entry->has_prop_mods && entry->has_props))
     {
-      const char *prop_base_path;
-
-      SVN_ERR(svn_wc__prop_path(&prop_base_path,
-                                path, kind, svn_wc__props_base, FALSE, pool));
       base_props = apr_hash_make(pool);
-      SVN_ERR(load_prop_file(prop_base_path, base_props, pool));
+      SVN_ERR(load_props(path, kind, svn_wc__props_base, base_props, pool));
 
       if (base_props_p)
         *base_props_p = base_props;
@@ -306,12 +305,9 @@ svn_wc__load_props(apr_hash_t **base_props_p,
         *props_p = apr_hash_copy(pool, base_props);
       else if (! has_propcaching || entry->has_props)
         {
-          const char *prop_path;
-
-          SVN_ERR(svn_wc__prop_path(&prop_path, path, kind,
-                                    svn_wc__props_working, FALSE, pool));
           *props_p = apr_hash_make(pool);
-          SVN_ERR(load_prop_file(prop_path, *props_p, pool));
+          SVN_ERR(load_props(path, kind, svn_wc__props_working, *props_p,
+                             pool));
         }
       else
         *props_p = apr_hash_make(pool);
@@ -322,13 +318,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
       *revert_props_p = apr_hash_make(pool);
 
       if (entry->schedule == svn_wc_schedule_replace)
-        {
-          const char *revert_prop_path;
-
-          SVN_ERR(svn_wc__prop_path(&revert_prop_path, path, kind,
-                                    svn_wc__props_revert, FALSE, pool));
-          SVN_ERR(load_prop_file(revert_prop_path, *revert_props_p, pool));
-        }
+        SVN_ERR(load_props(path, kind, svn_wc__props_revert, *revert_props_p,
+                           pool));
     }
 
   return SVN_NO_ERROR;
@@ -2091,7 +2082,6 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
                     svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
-  const char *prop_path;
   const svn_wc_entry_t *entry;
   apr_hash_t *all_wcprops;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
@@ -2128,12 +2118,8 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
     }
 
   /* Fall back on individual files for backwards compatibility. */
-
-  /* Construct a path to the relevant property file */
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                            svn_wc__props_wcprop, FALSE, pool));
   *wcprops = apr_hash_make(pool);
-  return load_prop_file(prop_path, *wcprops, pool);
+  return load_props(path, entry->kind, svn_wc__props_wcprop, *wcprops, pool);
 }
 
 
@@ -2983,8 +2969,10 @@ modified_props(svn_boolean_t *modified_p,
     apr_hash_t *baseprops = apr_hash_make(subpool);
 
     /* ### Amazingly, this stats the files again! */
-    SVN_ERR(load_prop_file(prop_path, localprops, subpool));
-    SVN_ERR(load_prop_file(prop_base_path, baseprops, subpool));
+    SVN_ERR(load_props(path, entry->kind, svn_wc__props_working, localprops,
+                       subpool));
+    SVN_ERR(load_props(path, entry->kind, svn_wc__props_base, baseprops,
+                       subpool));
 
     /* Don't use the subpool is we are hanging on to the changed props. */
     SVN_ERR(svn_prop_diffs(&local_propchanges, localprops,
