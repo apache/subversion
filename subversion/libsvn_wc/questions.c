@@ -211,20 +211,6 @@ svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
       return SVN_NO_ERROR;
     }
 
-  {
-    /* Put the disk timestamp through a string conversion, so it's
-       at the same resolution as entry timestamps. */
-    /* This string conversion here may be goodness, but it does
-       nothing currently _and_ it is somewhat expensive _and_ it eats
-       memory _and_ it is tested for in the regression tests. But I
-       will only comment it out because I do not possess the guts to
-       remove it altogether. */
-    /*
-    const char *tstr = svn_time_to_cstring (wfile_time, pool);
-    SVN_ERR (svn_time_from_cstring (&wfile_time, tstr, pool));
-    */
-  }
-
   if (wfile_time == entrytime)
     *equal_p = TRUE;
   else
