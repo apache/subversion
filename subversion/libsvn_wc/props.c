@@ -159,51 +159,43 @@ save_prop_file(const char *propfile_path,
 
 /*** Misc ***/
 
-/* Opens reject temporary file for FULL_PATH. */
+/* Opens reject temporary stream for FULL_PATH in the appropriate tmp space. */
 static svn_error_t *
-open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
-                     const char *full_path,
-                     svn_wc_adm_access_t *adm_access,
-                     svn_boolean_t is_dir, apr_pool_t *pool)
+open_reject_tmp_stream(svn_stream_t **stream, const char **reject_tmp_path,
+                       const char *full_path,
+                       svn_boolean_t is_dir, apr_pool_t *pool)
 {
-  const char *tmp_path;
-  const char *tmp_dirpath;
-  const char *tmp_filename;
+  const char *tmp_base_path;
 
-  /* Get path to /temporary/ local prop file */
-  SVN_ERR(svn_wc__prop_path(&tmp_path, full_path,
-                            is_dir ? svn_node_dir : svn_node_file,
-                            svn_wc__props_working, TRUE, pool));
+  if (is_dir)
+    tmp_base_path = svn_wc__adm_child(full_path, SVN_WC__ADM_TMP, pool);
+  else
+    tmp_base_path = svn_wc__adm_child(svn_path_dirname(full_path, pool),
+                                      SVN_WC__ADM_TMP, pool);
 
-  svn_path_split(tmp_path, &tmp_dirpath, &tmp_filename, pool);
-
-  /* Reserve a .prej file based on it.  */
-  return svn_io_open_uniquely_named(fp, reject_tmp_path,
-                                    tmp_dirpath,
-                                    tmp_filename,
-                                    SVN_WC__PROP_REJ_EXT,
-                                    svn_io_file_del_none, pool, pool);
+  return svn_stream_open_unique(stream, reject_tmp_path, tmp_base_path,
+                                svn_io_file_del_none, pool, pool);
 }
 
 
-/* Assuming FP is a filehandle already open for appending, write
-   CONFLICT_DESCRIPTION to file, plus a trailing EOL sequence. */
+/* Write CONFLICT_DESCRIPTION to STREAM, plus a trailing EOL sequence. */
 static svn_error_t *
-append_prop_conflict(apr_file_t *fp,
+append_prop_conflict(svn_stream_t *stream,
                      const svn_string_t *conflict_description,
                      apr_pool_t *pool)
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
-  apr_size_t written;
+  apr_size_t len;
   const char *native_text =
     svn_utf_cstring_from_utf8_fuzzy(conflict_description->data, pool);
-  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
-                                 &written, pool));
+
+  len = strlen(native_text);
+  SVN_ERR(svn_stream_write(stream, native_text, &len));
 
   native_text = svn_utf_cstring_from_utf8_fuzzy(APR_EOL_STR, pool);
-  return svn_io_file_write_full(fp, native_text, strlen(native_text),
-                                &written, pool);
+  len = strlen(native_text);
+  return svn_stream_write(stream, native_text, &len);
 }
 
 
@@ -1891,7 +1883,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   svn_boolean_t is_dir;
 
   const char *reject_path = NULL;
-  apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
+  svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
 
   if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
@@ -1978,14 +1970,13 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
           if (dry_run)
             continue;   /* skip to next incoming change */
 
-          if (! reject_tmp_fp)
+          if (! reject_tmp_stream)
             /* This is the very first prop conflict found on this item. */
-            SVN_ERR(open_reject_tmp_file(&reject_tmp_fp, &reject_tmp_path,
-                                         path, adm_access, is_dir,
-                                         pool));
+            SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream, &reject_tmp_path,
+                                           path, is_dir, pool));
 
           /* Append the conflict to the open tmp/PROPS/---.prej file */
-          SVN_ERR(append_prop_conflict(reject_tmp_fp, conflict, pool));
+          SVN_ERR(append_prop_conflict(reject_tmp_stream, conflict, pool));
         }
 
     }  /* foreach propchange ... */
@@ -1999,14 +1990,14 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                 base_props, working_props, base_merge,
                                 pool));
 
-  if (reject_tmp_fp)
+  if (reject_tmp_stream)
     {
-      /* There's a .prej file sitting in .svn/tmp/ somewhere.  Deal
+      /* There's a temporary reject file sitting in .svn/tmp/ somewhere.  Deal
          with the conflicts.  */
 
       /* First, _close_ this temporary conflicts file.  We've been
          appending to it all along. */
-      SVN_ERR(svn_io_file_close(reject_tmp_fp, pool));
+      SVN_ERR(svn_stream_close(reject_tmp_stream));
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
