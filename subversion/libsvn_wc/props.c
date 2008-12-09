@@ -2974,7 +2974,7 @@ modified_props(svn_boolean_t *modified_p,
     SVN_ERR(load_props(path, entry->kind, svn_wc__props_base, baseprops,
                        subpool));
 
-    /* Don't use the subpool is we are hanging on to the changed props. */
+    /* Don't use the subpool if we are hanging on to the changed props. */
     SVN_ERR(svn_prop_diffs(&local_propchanges, localprops,
                            baseprops,
                            want_props ? pool : subpool));
