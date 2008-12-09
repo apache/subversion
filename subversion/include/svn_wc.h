@@ -3544,7 +3544,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * svn_wc_process_committed_queue().
  *
  * All pointer data passed to this function (@a path, @a adm_access,
- * @a wcprop_changes and @a digest) should remain valid until the queue
+ * @a wcprop_changes and @a checksum) should remain valid until the queue
  * has been processed by svn_wc_process_committed_queue().
  *
  * Record in @a queue that @a path will need to be bumped after a commit
@@ -3568,6 +3568,9 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
+ * Temporary allocations will be performed in @a scratch_pool, and persistent
+ * allocations will use the same pool as @a queue used when it was created.
+ *
  * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
@@ -3583,7 +3586,7 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
                         svn_checksum_t *checksum,
-                        apr_pool_t *pool);
+                        apr_pool_t *scratch_pool);
 
 
 /** Same as svn_wc_queue_committed2() but the @a queue parameter has an

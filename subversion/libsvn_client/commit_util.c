@@ -1490,7 +1490,7 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
-                      apr_hash_t **digests,
+                      apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -1516,9 +1516,9 @@ svn_client__do_commit(const char *base_url,
   if (tempfiles)
     *tempfiles = apr_hash_make(pool);
 
-  /* Ditto for the md5 digests. */
-  if (digests)
-    *digests = apr_hash_make(pool);
+  /* Ditto for the md5 checksums. */
+  if (checksums)
+    *checksums = apr_hash_make(pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      URI-decoded relative paths (which come from the item URLs).  And
@@ -1595,11 +1595,12 @@ svn_client__do_commit(const char *base_url,
           tempfile = apr_pstrdup(pool, tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
-      if (digests)
+      if (checksums)
         {
-          unsigned char *new_digest = apr_pmemdup(apr_hash_pool_get(*digests),
-                                                  digest, APR_MD5_DIGESTSIZE);
-          apr_hash_set(*digests, item->path, APR_HASH_KEY_STRING, new_digest);
+          svn_checksum_t *checksum
+            = svn_checksum__from_md5_digest(digest,
+                                            apr_hash_pool_get(*checksums));
+          apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING, checksum);
         }
     }
 

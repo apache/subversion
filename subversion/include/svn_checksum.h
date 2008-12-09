@@ -203,6 +203,16 @@ apr_size_t
 svn_checksum_size(svn_checksum_t *checksum);
 
 
+/**
+ * Internal function for creating a checksum from an old-style MD5 digest.
+ *
+ * @since New in 1.6
+ */
+svn_checksum_t *
+svn_checksum__from_md5_digest(const unsigned char *digest,
+                              apr_pool_t *result_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

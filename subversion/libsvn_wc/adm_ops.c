@@ -639,10 +639,29 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
                         svn_checksum_t *checksum,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
-  /* ### fill this in... */
-  SVN_ERR_MALFUNCTION();
+  committed_queue_item_t *cqi;
+
+  queue->have_recursive |= recurse;
+
+  /* Use the same pool as the one QUEUE was allocated in,
+     to prevent lifetime issues.  Intermediate operations
+     should use SCRATCH_POOL. */
+
+  /* Add to the array with paths and options */
+  cqi = apr_palloc(queue->pool, sizeof(*cqi));
+  cqi->path = path;
+  cqi->adm_access = adm_access;
+  cqi->recurse = recurse;
+  cqi->remove_lock = remove_lock;
+  cqi->remove_changelist = remove_changelist;
+  cqi->wcprop_changes = wcprop_changes;
+  cqi->checksum = checksum;
+
+  APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -656,34 +675,20 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const unsigned char *digest,
                        apr_pool_t *pool)
 {
-  committed_queue_item_t *cqi;
-
-  (*queue)->have_recursive |= recurse;
-
-  /* Use the same pool as the one *QUEUE was allocated in,
-     to prevent lifetime issues.  Intermediate operations
-     should use POOL. */
-
-  /* Add to the array with paths and options */
-  cqi = apr_palloc((*queue)->pool, sizeof(*cqi));
-  cqi->path = path;
-  cqi->adm_access = adm_access;
-  cqi->recurse = recurse;
-  cqi->remove_lock = remove_lock;
-  cqi->remove_changelist = remove_changelist;
-  cqi->wcprop_changes = wcprop_changes;
+  svn_checksum_t *checksum;
 
   if (digest)
     {
-      cqi->checksum = svn_checksum_create(svn_checksum_md5, (*queue)->pool);
-      cqi->checksum->digest = digest;
+      checksum = svn_checksum_create(svn_checksum_md5, (*queue)->pool);
+      checksum->digest = digest;
     }
   else
-    cqi->checksum = NULL;
+    checksum = NULL;
 
-  APR_ARRAY_PUSH((*queue)->queue, committed_queue_item_t *) = cqi;
-
-  return SVN_NO_ERROR;
+  return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
+                                 wcprop_changes, remove_lock,
+                                 remove_changelist,
+                                 checksum, pool);
 }
 
 typedef struct affected_adm_t
