@@ -1172,7 +1172,7 @@ typedef enum svn_wc_operation_t
  * have its respective null/invalid/unknown value if the corresponding
  * information is not relevant or not available.
  *
- * ### Consider making some or all of the info mandatory, to reduce
+ * @todo Consider making some or all of the info mandatory, to reduce
  * complexity.
  *
  * @note Fields may be added to the end of this structure in future
@@ -1186,17 +1186,25 @@ typedef enum svn_wc_operation_t
 */
 typedef struct svn_wc_conflict_version_t
 {
-  /* Where to find this node version in a repository */
-  const char *repos_url;  /* URL of repository root */
-  svn_revnum_t peg_rev;  /* revision at which to look up path_in_repos */
-  const char *path_in_repos;  /* path within repos; must not start with '/' */
-  /* TODO: We may decide to add the repository UUID, to handle conflicts
-   * properly during a repository move. */
+  /** @name Where to find this node version in a repository */
+  /**@{*/
 
-  /* Info about this node */
+  /** URL of repository root */
+  const char *repos_url;
+
+  /** revision at which to look up path_in_repos */
+  svn_revnum_t peg_rev;
+
+  /** path within repos; must not start with '/' */
+  const char *path_in_repos; 
+  /* @todo We may decide to add the repository UUID, to handle conflicts
+   * properly during a repository move. */
+  /** @} */
+
+  /** Info about this node */
   svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
 
-  /* TODO: Add metadata about a local copy of the node, if and when
+  /* @todo Add metadata about a local copy of the node, if and when
    * we store one. */
 
   /* Remember to update svn_wc_conflict_version_create() and 
