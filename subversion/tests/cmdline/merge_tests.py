@@ -13579,7 +13579,7 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_after_leaf_edit
+  expected_disk = state_after_leaf_edit
 
   # We should detect 6 tree conflicts, and nothing should be deleted (when
   # we skip tree conflict victims).
