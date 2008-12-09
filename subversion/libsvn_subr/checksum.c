@@ -75,7 +75,7 @@ svn_checksum__from_digest(const unsigned char *digest,
 {
   svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
 
-  checksum->digest = apr_pmemdup(result_pool, digest, DIGESTSIZE(kind));
+  memcpy((unsigned char *)checksum->digest, digest, DIGESTSIZE(kind));
   return checksum;
 }
 
