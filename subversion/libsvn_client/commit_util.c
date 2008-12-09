@@ -1596,12 +1596,9 @@ svn_client__do_commit(const char *base_url,
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
       if (checksums)
-        {
-          svn_checksum_t *checksum
-            = svn_checksum__from_md5_digest(digest,
-                                            apr_hash_pool_get(*checksums));
-          apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING, checksum);
-        }
+        apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
+                     svn_checksum__from_digest(digest, svn_checksum_md5,
+                                               apr_hash_pool_get(*checksums)));
     }
 
   svn_pool_destroy(iterpool);

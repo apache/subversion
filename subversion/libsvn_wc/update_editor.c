@@ -934,9 +934,8 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       fb->new_text_base_path = apr_pstrdup(fb->pool, hb->work_path);
 
       /* ... and its checksum. */
-      fb->actual_checksum = svn_checksum_create(svn_checksum_md5, fb->pool);
-      fb->actual_checksum->digest = apr_pmemdup(fb->pool, hb->digest,
-                                                sizeof(hb->digest));
+      fb->actual_checksum =
+        svn_checksum__from_digest(hb->digest, svn_checksum_md5, fb->pool);
     }
 
   svn_pool_destroy(hb->pool);
