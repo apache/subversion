@@ -69,13 +69,13 @@ svn_checksum_create(svn_checksum_kind_t kind,
 }
 
 svn_checksum_t *
-svn_checksum__from_md5_digest(const unsigned char *digest,
-                              apr_pool_t *result_pool)
+svn_checksum__from_digest(const unsigned char *digest,
+                          svn_checksum_kind_t kind,
+                          apr_pool_t *result_pool)
 {
-  svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
-                                                 result_pool);
+  svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
 
-  memcpy((unsigned char *)checksum->digest, digest, APR_MD5_DIGESTSIZE);
+  checksum->digest = apr_pmemdup(result_pool, digest, DIGESTSIZE(kind));
   return checksum;
 }
 

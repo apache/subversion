@@ -21,6 +21,7 @@
 #include "svn_string.h"
 #include "svn_types.h"
 #include "svn_time.h"
+#include "svn_checksum.h"
 #include "fs_skels.h"
 #include "skel.h"
 #include "../id.h"
@@ -548,17 +549,17 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
   if (header_skel->children->next->next)
     {
       skel_t *checksum_skel = header_skel->children->next->next;
-      rep->md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      memcpy((unsigned char *)rep->md5_checksum->digest,
-             checksum_skel->children->next->data, APR_MD5_DIGESTSIZE);
+      rep->md5_checksum =
+        svn_checksum__from_digest(checksum_skel->children->next->data,
+                                  svn_checksum_md5, pool);
 
       /* SHA1 */
       if (header_skel->children->next->next->next)
         {
           checksum_skel = header_skel->children->next->next->next;
-          rep->sha1_checksum = svn_checksum_create(svn_checksum_sha1, pool);
-          memcpy((unsigned char *)rep->sha1_checksum->digest,
-                 checksum_skel->children->next->data, APR_SHA1_DIGESTSIZE);
+          rep->sha1_checksum =
+            svn_checksum__from_digest(checksum_skel->children->next->data,
+                                      svn_checksum_sha1, pool);
         }
     }
 
