@@ -173,13 +173,6 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Write old-style wcprops files (rather than one big file). */
-svn_error_t *svn_wc__write_old_wcprops(const char *path,
-                                       apr_hash_t *prophash,
-                                       svn_node_kind_t kind,
-                                       apr_pool_t *scratch_pool);
-
-
 /* Blow away the admistrative directory associated with the access baton
    ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
    again, after calling this function. */
