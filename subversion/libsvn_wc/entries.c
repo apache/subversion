@@ -2371,6 +2371,8 @@ svn_wc__entries_write(apr_hash_t *entries,
    will be created with exactly those properties described by the set
    of changes. Also cleanups meaningless fields combinations.
 
+   The SVN_WC__ENTRY_MODIFY_FORCE flag is ignored.
+
    POOL may be used to allocate memory referenced by ENTRIES.
  */
 static svn_error_t *
@@ -2642,24 +2644,10 @@ fold_scheduling(apr_hash_t *entries,
   /* Get the current entry */
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
 
-  /* If we're not merging in changes, only the _add, _delete, _replace
-     and _normal schedules are allowed. */
+  /* If we're not merging in changes, the requested schedule is the final
+     schedule. */
   if (*modify_flags & SVN_WC__ENTRY_MODIFY_FORCE)
-    {
-      switch (*schedule)
-        {
-        case svn_wc_schedule_add:
-        case svn_wc_schedule_delete:
-        case svn_wc_schedule_replace:
-        case svn_wc_schedule_normal:
-          /* Since we aren't merging in a change, not only are these
-             schedules legal, but they are final.  */
-          return SVN_NO_ERROR;
-
-        default:
-          return svn_error_create(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL, NULL);
-        }
-    }
+    return SVN_NO_ERROR;
 
   /* The only operation valid on an item not already in revision
      control is addition. */
@@ -2880,6 +2868,13 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
       SVN_ERR(fold_scheduling(entries, name, &modify_flags,
                               &entry->schedule, pool));
 
+      /* Do a bit of self-testing. The "folding" algorithm should do the
+       * same whether we give it the normal entries or all entries including
+       * "deleted" ones. Check that it does. */
+      /* Note: This pointer-comparison will always be true unless
+       * undocumented implementation details are in play, so it's not
+       * necessarily saying the contents of the two hashes differ. So this
+       * check may be invoked redundantly, but that is harmless. */
       if (entries != entries_nohidden)
         {
           SVN_ERR(fold_scheduling(entries_nohidden, name, &orig_modify_flags,
