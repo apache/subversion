@@ -16,14 +16,18 @@
  */
 
 #include <string.h>
+
 #include <apr_md5.h>
+
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_types.h"
 #include "svn_time.h"
+
+#include "private/svn_skel.h"
+
 #include "svn_checksum.h"
 #include "fs_skels.h"
-#include "skel.h"
 #include "../id.h"
 
 

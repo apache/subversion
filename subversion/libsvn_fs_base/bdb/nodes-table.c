@@ -17,14 +17,15 @@
 
 #include <string.h>
 #include <assert.h>
+
 #include "bdb_compat.h"
 
 #include "svn_fs.h"
+#include "private/svn_skel.h"
 
 #include "../fs.h"
 #include "../err.h"
 #include "dbt.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../key-gen.h"
@@ -33,8 +34,8 @@
 #include "bdb-err.h"
 #include "nodes-table.h"
 
-
 #include "svn_private_config.h"
+
 
 
 /* Opening/creating the `nodes' table.  */
