@@ -8455,10 +8455,10 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
     'lambda' : Item(status='U '),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:1-3'}),
+    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:2-3'}),
     'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
-    'F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:1,2-3*'}),
-    'E'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:1,2-3*'}),
+    'F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2-3*'}),
+    'E'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:2-3*'}),
     'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
     'E/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -8486,7 +8486,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
     'E/newfile'     : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:1-3'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:2-3'}),
     'lambda'    : Item(contents="This is the file 'lambda' modified.\n"),
     'F'         : Item(),
     'E'         : Item(),
