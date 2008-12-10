@@ -1993,6 +1993,7 @@ typedef struct svn_wc_entry_t
   /** in a copied state (possibly because the entry is a child of a
    *  path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
    *  when the entry itself is @c svn_wc_schedule_normal) */
+  /** ### How is this related to (copyfrom_url != NULL)? */
   svn_boolean_t copied;
 
   /** The directory containing this entry had a versioned child of this

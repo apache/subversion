@@ -183,7 +183,8 @@ struct edit_baton
   /* Allow unversioned obstructions when adding a path. */
   svn_boolean_t allow_unver_obstructions;
 
-  /* Non-null if this is a 'switch' operation. */
+  /* If this is a 'switch' operation, the target URL (### corresponding to
+     the ANCHOR plus TARGET path?), else NULL. */
   const char *switch_url;
 
   /* The URL to the root of the repository, or NULL. */
@@ -1759,6 +1760,8 @@ do_entry_deletion(struct edit_baton *eb,
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.revision = *(eb->target_revision);
+      /* ### Why not URL as well? This might be a switch. ... */
+      /* tmp_entry.url = *(eb->target_url) or db->new_URL ? */
       tmp_entry.kind = entry->kind;
       tmp_entry.deleted = TRUE;
 
