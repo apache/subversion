@@ -741,11 +741,10 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       /* Pre-1.2 filesystems did not have a format file (you could say
          they were format "0"), so they get upgraded on the fly.
          However, we stopped "upgrading on the fly" in 1.5, so older
-         filesystems should only be bumped to 1.4, which is format "2".
-         SVN_FS_BASE__MIN_SVNDIFF1_FORMAT is format "2". */
+         filesystems should only be bumped to 1.3, which is format "1". */
       svn_error_clear(svn_err);
       svn_err = SVN_NO_ERROR;
-      format = SVN_FS_BASE__MIN_SVNDIFF1_FORMAT;
+      format = 1;
       write_format_file = TRUE;
     }
   else if (svn_err)
