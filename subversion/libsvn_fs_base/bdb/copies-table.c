@@ -194,7 +194,7 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
   SVN_ERR(BDB_WRAP(fs, _("reading copy"), db_err));
 
   /* Unparse COPY skel */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_copy(fs, copy_id);
 

@@ -220,7 +220,7 @@ svn_fs_bdb__get_node_revision(node_revision_t **noderev_p,
     return SVN_NO_ERROR;
 
   /* Parse and the NODE-REVISION skel.  */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
 
   /* Convert to a native FS type. */
   SVN_ERR(svn_fs_base__parse_node_revision_skel(&noderev, skel, pool));
