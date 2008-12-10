@@ -667,7 +667,8 @@ def update_delete_modified_files(sbox):
                       "This is the file 'pi'.\nappended pi text\n")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E/alpha', status ='M ', wc_rev=1,
+  # The expectation on 'alpha' reflects partial progress on issue #3334.
+  expected_status.tweak('A/B/E/alpha', status='A ', copied='+', wc_rev='-',
                         treeconflict='C')
   expected_status.tweak('A/D/G/pi', status='M ')
   expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', wc_rev=1)

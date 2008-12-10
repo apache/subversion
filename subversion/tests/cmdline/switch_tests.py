@@ -759,8 +759,9 @@ def failed_anchor_is_target(sbox):
   # ever starts failing, you read it here first :-).
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
-  expected_status.tweak('A/D/H/psi', status='M ', switched='S', wc_rev=1,
-                        treeconflict='C')
+  # The expectation on 'psi' reflects partial progress on issue #3334.
+  expected_status.tweak('A/D/H/psi', status='A ', copied='+', switched='S',
+                        wc_rev='-', treeconflict='C')
   expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
     'A/D/H/pi'      : Item(status='  ', wc_rev=2),
@@ -2287,7 +2288,9 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_status = deep_trees_status_local_leaf_edit
   expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
- 
+  # The expectation on 'alpha' reflects partial progress on issue #3334.
+  expected_status.tweak('F/alpha', status='A ', copied='+', wc_rev='-')
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
