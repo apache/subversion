@@ -24,7 +24,7 @@
 #include <apu_want.h>
 
 #include "svn_fs.h"
-#include "../util/skel.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {

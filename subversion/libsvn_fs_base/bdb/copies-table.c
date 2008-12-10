@@ -18,11 +18,13 @@
 #include <string.h>
 
 #include "bdb_compat.h"
+
+#include "private/svn_skel.h"
+
 #include "../fs.h"
 #include "../err.h"
 #include "../key-gen.h"
 #include "dbt.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"

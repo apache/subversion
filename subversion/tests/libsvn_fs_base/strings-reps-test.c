@@ -23,12 +23,12 @@
 #include <apr.h>
 
 #include "svn_error.h"
+#include "private/svn_skel.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 #include "../../libsvn_fs/fs-loader.h"
 #include "../../libsvn_fs_base/fs.h"
-#include "../../libsvn_fs_base/util/skel.h"
 #include "../../libsvn_fs_base/util/fs_skels.h"
 #include "../../libsvn_fs_base/bdb/strings-table.h"
 #include "../../libsvn_fs_base/bdb/reps-table.h"
