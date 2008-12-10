@@ -8015,16 +8015,16 @@ def mergeinfo_recording_in_skipped_merge(sbox):
 
   # Merge /A to /A_COPY ie., r1 to r4
   expected_output = wc.State(A_COPY_path, {
-    'mu' : Item(status='U '),
-    'B'        : Item(status='C ', wc_rev=2),
+    'mu'  : Item(status='U '),
+    'B/E' : Item(status='  ', treeconflict='C'),
     })
   expected_status = wc.State(A_COPY_path, {
     ''         : Item(status=' M', wc_rev=2),
     'mu'       : Item(status='M ', wc_rev=2),
-    'B'        : Item(status='C ', wc_rev=2),
+    'B'        : Item(status='  ', wc_rev=2),
     'B/lambda' : Item(status='  ', wc_rev=2),
     'B/F'      : Item(status='  ', wc_rev=2),
-    'B/E'      : Item(status='D ', wc_rev=2),
+    'B/E'      : Item(status='D ', wc_rev=2, treeconflict='C'),
     'B/E/alpha': Item(status='D ', wc_rev=2),
     'B/E/beta' : Item(status='D ', wc_rev=2),
     'C'        : Item(status='  ', wc_rev=2),
@@ -8058,9 +8058,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'D/H/omega': Item("This is the file 'omega'.\n"),
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
-  expected_skip = wc.State(A_COPY_path, {
-    'B/E/alpha' : Item(),
-    })
+  expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        A_url,
                                        expected_output,
@@ -15211,8 +15209,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_with_auto_rev_range_detection,
                          server_has_mergeinfo),
-              XFail(SkipUnless(mergeinfo_recording_in_skipped_merge,
-                               server_has_mergeinfo)),
+              SkipUnless(mergeinfo_recording_in_skipped_merge,
+                         server_has_mergeinfo),
               SkipUnless(cherry_picking,
                          server_has_mergeinfo),
               SkipUnless(propchange_of_subdir_raises_conflict,
