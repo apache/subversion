@@ -27,12 +27,27 @@
 
 #define OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
 
+/** A statement macro, similar to @c SVN_INT_ERR, but issues a
+ * message saying "svnraisetreeconflict:" instead of "svn:".
+ *
+ * Evaluate @a expr. If it yields an error, handle that error and
+ * return @c EXIT_FAILURE.
+ */
+#define SVNRAISETC_INT_ERR(expr)                                 \
+  do {                                                           \
+    svn_error_t *svn_err__temp = (expr);                         \
+    if (svn_err__temp) {                                         \
+      svn_handle_error2(svn_err__temp, stderr, FALSE,            \
+                        "svnraisetreeconflict: ");               \
+      svn_error_clear(svn_err__temp);                            \
+      return EXIT_FAILURE; }                                     \
+  } while (0)
 
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnversion", TRUE, FALSE, NULL, NULL,
-                             NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help3(NULL, "svnraisetreeconflict", TRUE, FALSE, NULL,
+                             NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -122,6 +137,29 @@ read_enum_field(int *result,
   return SVN_NO_ERROR;
 }
 
+static const char*
+get_enum_str(const enum_mapping_t *map,
+             int enum_val)
+{
+  int i;
+  for (i = 0; map[i].str != NULL; i++)
+    {
+      if (map[i].val == enum_val)
+        return map[i].str;
+    }
+  return NULL;
+}
+
+static void
+print_enum_map(const enum_mapping_t *map,
+               apr_pool_t *pool)
+{
+  int i;
+  for (i = 0; map[i].str != NULL; i++)
+    svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+        " %s", map[i].str));
+}
+
 static svn_error_t *
 raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 {
@@ -202,7 +240,45 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
       svn_error_clear(svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
       ++options;
     }
-  svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+      _("\n"
+      "Valid enum argument values:\n"
+      "  NODE_KIND, NODE_KIND1, NODE_KIND2:\n"
+      "   ")));
+  print_enum_map(node_kind_map, pool);
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+      _("\n"
+      "  OPERATION:\n"
+      "   ")));
+  print_enum_map(operation_map, pool);
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+      _("\n"
+      "  ACTION (what svn tried to do):\n"
+      "   ")));
+  print_enum_map(action_map, pool);
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+      _("\n"
+      "  REASON (what local change made svn fail):\n"
+      "   ")));
+  print_enum_map(reason_map, pool);
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+      _("\n"
+      "  REPOS_URL1, REPOS_URL2:\n"
+      "    The URL of the repository itself, e.g.: file://usr/repos\n"
+      "  PATH_IN_REPOS1, PATH_IN_REPOS2:\n"
+      "    The complete path of the node in the repository, e.g.: sub/dir/foo\n"
+      "  PEG_REV1, PEG_REV2:\n"
+      "    The revision number at which the given path is relevant.\n"
+      "\n"
+      "Example:\n"
+      "  svnraisetreeconflict ./foo %s %s %s %s file://usr/repos sub/dir/foo 1 %s file://usr/repos sub/dir/foo 3 %s\n\n"),
+      get_enum_str(node_kind_map, svn_node_file),
+      get_enum_str(operation_map, svn_wc_operation_update),
+      get_enum_str(action_map, svn_wc_conflict_action_delete),
+      get_enum_str(reason_map, svn_wc_conflict_reason_deleted),
+      get_enum_str(node_kind_map, svn_node_file),
+      get_enum_str(node_kind_map, svn_node_none)
+      ));
   exit(0);
 }
 
@@ -296,7 +372,7 @@ main(int argc, const char *argv[])
           help(options, pool);
           break;
         case OPT_VERSION:
-          SVN_INT_ERR(version(pool));
+          SVNRAISETC_INT_ERR(version(pool));
           exit(0);
           break;
         default:
@@ -311,18 +387,26 @@ main(int argc, const char *argv[])
     {
       const char *s;
 
-      SVN_INT_ERR(svn_utf_cstring_to_utf8(&s, os->argv[os->ind++], pool));
+      SVNRAISETC_INT_ERR(svn_utf_cstring_to_utf8(&s, os->argv[os->ind++],
+                                                 pool));
       APR_ARRAY_PUSH(remaining_argv, const char *) = s;
     }
 
+  if (remaining_argv->nelts < 1)
+    {
+      usage(pool);
+      return EXIT_FAILURE;
+    }
+
   /* Do the main task */
-  SVN_INT_ERR(raise_tree_conflict(remaining_argv->nelts,
-                                  (const char **)remaining_argv->elts, pool));
+  SVNRAISETC_INT_ERR(raise_tree_conflict(remaining_argv->nelts,
+                                         (const char **)remaining_argv->elts,
+                                         pool));
 
   svn_pool_destroy(pool);
 
   /* Flush stdout to make sure that the user will see any printing errors. */
-  SVN_INT_ERR(svn_cmdline_fflush(stdout));
+  SVNRAISETC_INT_ERR(svn_cmdline_fflush(stdout));
 
   return EXIT_SUCCESS;
 }
