@@ -112,7 +112,7 @@ write_new_rep(const char **msg,
 
   /* Set up transaction baton */
   args.fs = fs;
-  args.skel = svn_fs_base__parse_skel(rep, strlen(rep), pool);
+  args.skel = svn_skel__parse(rep, strlen(rep), pool);
   args.key = NULL;
 
   /* Write new rep to reps table. */
@@ -151,7 +151,7 @@ write_rep(const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs_base__parse_skel(new_rep, strlen(new_rep), pool);
+  new_args.skel = svn_skel__parse(new_rep, strlen(new_rep), pool);
   new_args.key = NULL;
 
   /* Write new rep to reps table. */
@@ -165,7 +165,7 @@ write_rep(const char **msg,
 
   /* Set up transaction baton for re-writing reps. */
   args.fs = new_args.fs;
-  args.skel = svn_fs_base__parse_skel(rep, strlen(rep), pool);
+  args.skel = svn_skel__parse(rep, strlen(rep), pool);
   args.key = new_args.key;
 
   /* Overwrite first rep in reps table. */
@@ -229,8 +229,8 @@ read_rep(const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs_base__parse_skel(new_rep_before,
-                                          strlen(new_rep_before), pool);
+  new_args.skel = svn_skel__parse(new_rep_before, strlen(new_rep_before),
+                                  pool);
   new_args.key = NULL;
 
   /* Write new rep to reps table. */
@@ -254,14 +254,14 @@ read_rep(const char **msg,
     return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                             "error reading new representation");
 
-  skel_data = svn_fs_base__unparse_skel(read_args.skel, pool);
+  skel_data = svn_skel__unparse(read_args.skel, pool);
   if (memcmp(skel_data->data, new_rep_after, new_rep_after_len) != 0)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                              "representation corrupted (first check)");
 
   /* Set up transaction baton for re-writing reps. */
   args.fs = new_args.fs;
-  args.skel = svn_fs_base__parse_skel(rep, strlen(rep), pool);
+  args.skel = svn_skel__parse(rep, strlen(rep), pool);
   args.key = new_args.key;
 
   /* Overwrite first rep in reps table. */
@@ -280,7 +280,7 @@ read_rep(const char **msg,
     return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                             "error reading new representation");
 
-  skel_data = svn_fs_base__unparse_skel(read_args.skel, pool);
+  skel_data = svn_skel__unparse(read_args.skel, pool);
   if (memcmp(skel_data->data, rep_after, rep_after_len) != 0)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                              "representation corrupted (second check)");
@@ -314,7 +314,7 @@ delete_rep(const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs_base__parse_skel(new_rep, strlen(new_rep), pool);
+  new_args.skel = svn_skel__parse(new_rep, strlen(new_rep), pool);
   new_args.key = NULL;
 
   /* Write new rep to reps table. */
