@@ -167,30 +167,6 @@ svn_boolean_t svn_skel__equal(const skel_t *skel1, const skel_t *skel2);
 /* Make a copy of SKEL and its data in POOL.  */
 skel_t *svn_skel__copy(const skel_t *skel, apr_pool_t *pool);
 
-
-/* Number parsing/generation
-
-   ### WTF?
-*/
-
-/* Return the value of the string of digits at DATA as an ASCII
-   decimal number.  The string is at most LEN bytes long.  The value
-   of the number is at most MAX.  Set *END to the address of the first
-   byte after the number, or zero if an error occurred while
-   converting the number (overflow, for example).
-
-   We would like to use strtoul, but that family of functions is
-   locale-dependent, whereas we're trying to parse data in a
-   locale-independent format.  */
-apr_size_t svn_skel__getsize(const char *data, apr_size_t len,
-                             const char **endptr, apr_size_t max);
-
-
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-int svn_skel__putsize(char *data, apr_size_t len, apr_size_t value);
-
 
 
 /* ### temporary support for old names for the above functions */
@@ -206,8 +182,6 @@ int svn_skel__putsize(char *data, apr_size_t len, apr_size_t value);
 #define svn_fs_base__list_length svn_skel__list_length
 #define svn_fs_base__skels_are_equal svn_skel__equal
 #define svn_fs_base__copy_skel svn_skel__copy
-#define svn_fs_base__getsize svn_skel__getsize
-#define svn_fs_base__putsize svn_skel__putsize
 
 
 #ifdef __cplusplus

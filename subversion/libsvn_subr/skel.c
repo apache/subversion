@@ -62,6 +62,109 @@ static const enum char_type skel_char_type[256] = {
 };
 
 
+
+/* ### WTF? since when is number conversion LOCALE DEPENDENT? */
+
+/* Converting text to numbers.  */
+
+/* Return the value of the string of digits at DATA as an ASCII
+   decimal number.  The string is at most LEN bytes long.  The value
+   of the number is at most MAX.  Set *END to the address of the first
+   byte after the number, or zero if an error occurred while
+   converting the number (overflow, for example).
+
+   We would like to use strtoul, but that family of functions is
+   locale-dependent, whereas we're trying to parse data in a
+   locale-independent format.  */
+apr_size_t
+getsize(const char *data, apr_size_t len,
+        const char **endptr, apr_size_t max)
+{
+  /* We can't detect overflow by simply comparing value against max,
+     since multiplying value by ten can overflow in strange ways if
+     max is close to the limits of apr_size_t.  For example, suppose
+     that max is 54, and apr_size_t is six bits long; its range is
+     0..63.  If we're parsing the number "502", then value will be 50
+     after parsing the first two digits.  50 * 10 = 500.  But 500
+     doesn't fit in an apr_size_t, so it'll be truncated to 500 mod 64
+     = 52, which is less than max, so we'd fail to recognize the
+     overflow.  Furthermore, it *is* greater than 50, so you can't
+     detect overflow by checking whether value actually increased
+     after each multiplication --- sometimes it does increase, but
+     it's still wrong.
+
+     So we do the check for overflow before we multiply value and add
+     in the new digit.  */
+  apr_size_t max_prefix = max / 10;
+  apr_size_t max_digit = max % 10;
+  apr_size_t i;
+  apr_size_t value = 0;
+
+  for (i = 0; i < len && '0' <= data[i] && data[i] <= '9'; i++)
+    {
+      apr_size_t digit = data[i] - '0';
+
+      /* Check for overflow.  */
+      if (value > max_prefix
+          || (value == max_prefix && digit > max_digit))
+        {
+          *endptr = 0;
+          return 0;
+        }
+
+      value = (value * 10) + digit;
+    }
+
+  /* There must be at least one digit there.  */
+  if (i == 0)
+    {
+      *endptr = 0;
+      return 0;
+    }
+  else
+    {
+      *endptr = data + i;
+      return value;
+    }
+}
+
+/* Store the ASCII decimal representation of VALUE at DATA.  Return
+   the length of the representation if all goes well; return zero if
+   the result doesn't fit in LEN bytes.  */
+int
+putsize(char *data, apr_size_t len, apr_size_t value)
+{
+  apr_size_t i = 0;
+
+  /* Generate the digits, least-significant first.  */
+  do
+    {
+      if (i >= len)
+        return 0;
+
+      data[i] = (value % 10) + '0';
+      value /= 10;
+      i++;
+    }
+  while (value > 0);
+
+  /* Put the digits in most-significant-first order.  */
+  {
+    int left, right;
+
+    for (left = 0, right = i-1; left < right; left++, right--)
+      {
+        char t = data[left];
+        data[left] = data[right];
+        data[right] = t;
+      }
+  }
+
+  return i;
+}
+
+
+
 static skel_t *parse(const char *data, apr_size_t len,
                      apr_pool_t *pool);
 static skel_t *list(const char *data, apr_size_t len,
@@ -230,7 +333,7 @@ explicit_atom(const char *data,
   skel_t *s;
 
   /* Parse the length.  */
-  size = svn_skel__getsize(data, end - data, &next, end - data);
+  size = getsize(data, end - data, &next, end - data);
   data = next;
 
   /* Exit if we overflowed, or there wasn't a valid number there.  */
@@ -362,7 +465,7 @@ unparse(const skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
           char buf[200];
           int length_len;
 
-          length_len = svn_skel__putsize(buf, sizeof(buf), skel->len);
+          length_len = putsize(buf, sizeof(buf), skel->len);
 
           SVN_ERR_ASSERT_NO_RETURN(length_len > 0);
 
@@ -602,93 +705,4 @@ svn_skel__copy(const skel_t *skel, apr_pool_t *pool)
     }
 
   return copy;
-}
-
-
-
-/* Converting text to numbers.  */
-
-apr_size_t
-svn_skel__getsize(const char *data, apr_size_t len,
-                  const char **endptr, apr_size_t max)
-{
-  /* We can't detect overflow by simply comparing value against max,
-     since multiplying value by ten can overflow in strange ways if
-     max is close to the limits of apr_size_t.  For example, suppose
-     that max is 54, and apr_size_t is six bits long; its range is
-     0..63.  If we're parsing the number "502", then value will be 50
-     after parsing the first two digits.  50 * 10 = 500.  But 500
-     doesn't fit in an apr_size_t, so it'll be truncated to 500 mod 64
-     = 52, which is less than max, so we'd fail to recognize the
-     overflow.  Furthermore, it *is* greater than 50, so you can't
-     detect overflow by checking whether value actually increased
-     after each multiplication --- sometimes it does increase, but
-     it's still wrong.
-
-     So we do the check for overflow before we multiply value and add
-     in the new digit.  */
-  apr_size_t max_prefix = max / 10;
-  apr_size_t max_digit = max % 10;
-  apr_size_t i;
-  apr_size_t value = 0;
-
-  for (i = 0; i < len && '0' <= data[i] && data[i] <= '9'; i++)
-    {
-      apr_size_t digit = data[i] - '0';
-
-      /* Check for overflow.  */
-      if (value > max_prefix
-          || (value == max_prefix && digit > max_digit))
-        {
-          *endptr = 0;
-          return 0;
-        }
-
-      value = (value * 10) + digit;
-    }
-
-  /* There must be at least one digit there.  */
-  if (i == 0)
-    {
-      *endptr = 0;
-      return 0;
-    }
-  else
-    {
-      *endptr = data + i;
-      return value;
-    }
-}
-
-
-int
-svn_skel__putsize(char *data, apr_size_t len, apr_size_t value)
-{
-  apr_size_t i = 0;
-
-  /* Generate the digits, least-significant first.  */
-  do
-    {
-      if (i >= len)
-        return 0;
-
-      data[i] = (value % 10) + '0';
-      value /= 10;
-      i++;
-    }
-  while (value > 0);
-
-  /* Put the digits in most-significant-first order.  */
-  {
-    int left, right;
-
-    for (left = 0, right = i-1; left < right; left++, right--)
-      {
-        char t = data[left];
-        data[left] = data[right];
-        data[right] = t;
-      }
-  }
-
-  return i;
 }
