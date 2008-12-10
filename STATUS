@@ -140,5 +140,12 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
+ * r34653
+   Don't autoupgrade ancient BDB filesystems to 1.5 format.
+   Justification:
+     Small fix, but avoids confusing/surprising users.
+   Votes:
+     +1: hwright, cmpilato
+
 Approved changes:
 =================
