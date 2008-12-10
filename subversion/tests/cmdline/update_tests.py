@@ -4002,6 +4002,14 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  expected_status.tweak(
+    'D/D1',
+    'F/alpha',
+    'DD/D1',
+    'DF/D1',
+    'DDD/D1',
+    'DDF/D1',
+    status='A ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
