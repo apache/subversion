@@ -2184,8 +2184,15 @@ svn_wc__wcprop_set(const char *name,
     value = svn_string_dup(value, cache_pool);
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
 
-  if (force_write)
-    SVN_ERR(write_wcprops(adm_access, pool));
+  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__WCPROPS_MANY_FILES_VERSION)
+    {
+      if (force_write)
+        SVN_ERR(write_wcprops(adm_access, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__write_old_wcprops(path, prophash, entry->kind, pool));
+    }
 
   return SVN_NO_ERROR;
 }

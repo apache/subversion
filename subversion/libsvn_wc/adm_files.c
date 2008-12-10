@@ -571,6 +571,56 @@ svn_wc__open_writable_base(svn_stream_t **stream,
 }
 
 
+svn_error_t *
+svn_wc__write_old_wcprops(const char *path,
+                          apr_hash_t *prophash,
+                          svn_node_kind_t kind,
+                          apr_pool_t *scratch_pool)
+{
+  apr_pool_t *pool = scratch_pool;
+  const char *parent_dir;
+  const char *base_name;
+  svn_stream_t *stream;
+  const char *temp_dir_path;
+  const char *temp_prop_path;
+  const char *prop_path;
+  int wc_format_version;
+
+  if (kind == svn_node_dir)
+    parent_dir = path;
+  else
+    svn_path_split(path, &parent_dir, &base_name, pool);
+
+  /* At this point, we know we need to open a file in the admin area
+     of parent_dir.  First check that parent_dir is a working copy: */
+  SVN_ERR(svn_wc_check_wc(parent_dir, &wc_format_version, pool));
+  if (wc_format_version == 0)
+    return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                             _("'%s' is not a working copy"),
+                             svn_path_local_style(parent_dir, pool));
+
+  /* Write to a temp file, then rename into place. */
+  temp_dir_path = svn_wc__adm_child(parent_dir, SVN_WC__ADM_TMP, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, &temp_prop_path,
+                                 temp_dir_path,
+                                 svn_io_file_del_none,
+                                 pool, pool));
+  SVN_ERR_W(svn_hash_write2(prophash, stream, SVN_HASH_TERMINATOR,
+                            pool),
+            apr_psprintf(pool,
+                         _("Cannot write property hash for '%s'"),
+                         svn_path_local_style(path, pool)));
+  svn_stream_close(stream);
+
+  /* Close file, then do an atomic "move". */
+
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, kind, svn_wc__props_wcprop,
+                            FALSE, pool));
+  SVN_ERR(svn_io_file_rename(temp_prop_path, prop_path, pool));
+  return svn_io_set_file_read_only(prop_path, FALSE, pool);
+}
+
+
 
 /*** Checking for and creating administrative subdirs. ***/
 
