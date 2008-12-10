@@ -213,7 +213,7 @@ svn_fs_bdb__get_txn(transaction_t **txn_p,
   SVN_ERR(BDB_WRAP(fs, "reading transaction", db_err));
 
   /* Parse TRANSACTION skel */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_txn(fs, txn_name);
 
@@ -277,7 +277,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
         continue;
 
       /* Parse TRANSACTION skel */
-      txn_skel = svn_fs_base__parse_skel(value.data, value.size, subpool);
+      txn_skel = svn_skel__parse(value.data, value.size, subpool);
       if (! txn_skel)
         {
           svn_bdb_dbc_close(cursor);
