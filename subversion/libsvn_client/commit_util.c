@@ -203,7 +203,8 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
 
 /* Helper for harvest_committables().
  * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
- * encountering a tree-conflicted child node within the bounds of DEPTH.
+ * encountering a tree-conflicted immediate child node. However, do
+ * not consider immediate children that are outside the bounds of DEPTH.
  *
  * PATH, ENTRY, ADM_ACCESS, DEPTH, CHANGELISTS and POOL are the same ones
  * originally received by harvest_committables().
