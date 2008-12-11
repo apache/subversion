@@ -64,9 +64,9 @@ Candidate changes for 1.5.5:
      r34432 is the fix, r34669 adjusts an existing merge test to demonstrate
      the bug.  There is a very minor whitespace conflict in
      merge_props_changed() in r34432 and a conflict with r34669 due to the
-     usual problem that not all the merge tests are backported.  A backport
-     branch can be found at
-     http://svn.collab.net/repos/svn/branches/1.5.x-34432.
+     usual problem that not all the merge tests are backported.
+   Branch:
+     ^/branches/1.5.x-34432.
    Justification:
      r32975 fixed a bug which occurred when a merge added explicit mergeinfo
      to a subtree that had no explicit mergeinfo prior to the merge.  But
@@ -77,9 +77,8 @@ Candidate changes for 1.5.5:
 
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
-   Notes:
-     There is a backport branch for these changes at
-     http://svn.collab.net/repos/svn/branches/1.5.x-reintegrate-improvements.
+   Branch:
+     ^/branches/1.5.x-reintegrate-improvements.
    Justification:
      Prior to these changes reintegrate would not work if the merge source
      had any subtree mergeinfo.  Since subtree mergeinfo is quite common,
