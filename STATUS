@@ -73,7 +73,7 @@ Candidate changes for 1.5.5:
      this fix itself had a bug which could result in an error during a
      --dry-run merge, r34432 fixes this.
    Votes:
-     +1: pburba
+     +1: pburba, kameshj
 
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
