@@ -127,25 +127,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34184, r34585
-   Don't create explicit mergeinfo on a WC-to-WC move/copy destination
-   unless the source already had some.
-   Notes:
-     r34184 is the main fix, r34585 is a minor follow-up that tweaks a
-     test that is failing on trunk for unlreated reasons, but not on
-     1.5.x.  There were some minor conflicts on libsvn_client\copy.c,
-     copy_tests.py, and merge_tests.py.  Mostly due to whitespace differences
-     and some changes to the tests that have not been backported yet.
-     A backport branch can be found at:
-     http://svn.collab.net/repos/svn/branches/1.5.x-34184
-   Justification:
-     WC-to-WC copy/move's creation of explicit, usually empty, mergeinfo on
-     the destination path isn't technically a bug, but it is arguably the
-     primary cause of excessive subtree mergeinfo, which has caused a lot of
-     user frustration and confusion, makes merges slower, and has been a
-     factor in a number of serious bugs (see issue #3067 for example).
-     See this thread for more:
-     subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=98145.
-   Votes:
-     +1: pburba, cmpilato, zhakov
