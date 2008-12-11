@@ -678,10 +678,8 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
   svn_checksum_t *checksum;
 
   if (digest)
-    {
-      checksum = svn_checksum_create(svn_checksum_md5, (*queue)->pool);
-      checksum->digest = digest;
-    }
+    checksum = svn_checksum__from_digest(digest, svn_checksum_md5,
+                                         (*queue)->pool);
   else
     checksum = NULL;
 
@@ -819,10 +817,7 @@ svn_wc_process_committed4(const char *path,
   int log_number = 0;
 
   if (digest)
-    {
-      checksum = svn_checksum_create(svn_checksum_md5, pool);
-      checksum->digest = digest;
-    }
+    checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
   else
     checksum = NULL;
 

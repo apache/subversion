@@ -342,7 +342,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'r', 'q'} },
 
   {"dump", subcommand_dump, {0}, N_
-   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
+   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n\n"
     "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
     "portable format, sending feedback to stderr.  Dump revisions\n"
     "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"

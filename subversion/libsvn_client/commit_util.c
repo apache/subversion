@@ -203,7 +203,8 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
 
 /* Helper for harvest_committables().
  * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
- * encountering a tree-conflicted child node within the bounds of DEPTH.
+ * encountering a tree-conflicted immediate child node. However, do
+ * not consider immediate children that are outside the bounds of DEPTH.
  *
  * PATH, ENTRY, ADM_ACCESS, DEPTH, CHANGELISTS and POOL are the same ones
  * originally received by harvest_committables().
@@ -1596,12 +1597,9 @@ svn_client__do_commit(const char *base_url,
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
       if (checksums)
-        {
-          svn_checksum_t *checksum
-            = svn_checksum__from_md5_digest(digest,
-                                            apr_hash_pool_get(*checksums));
-          apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING, checksum);
-        }
+        apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
+                     svn_checksum__from_digest(digest, svn_checksum_md5,
+                                               apr_hash_pool_get(*checksums)));
     }
 
   svn_pool_destroy(iterpool);
