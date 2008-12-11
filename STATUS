@@ -112,6 +112,9 @@ Candidate changes for 1.5.5:
      not depend on r34432 to function properly, so can be backported by
      itself if necessary.
    Justification:
+     A merge that should remove subtree mergeinfo doesn't actually do so.
+     The subtree mergeinfo is initially deleted, but then is replaced by
+     mergeinfo describing the merge itself.
    Votes:
      +1: pburba
 
