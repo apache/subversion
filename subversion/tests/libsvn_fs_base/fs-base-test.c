@@ -58,7 +58,7 @@ create_berkeley_filesystem(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create and close a repository. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-create-berkeley",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-create-berkeley", opts,
                                   pool));
 
   return SVN_NO_ERROR;
@@ -88,7 +88,7 @@ open_berkeley_filesystem(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create and close a repository (using fs). */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-open-berkeley",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-open-berkeley", opts,
                                   pool));
 
   /* Create a different fs object, and use it to re-open the
@@ -278,7 +278,7 @@ abort_txn(const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare two txns to receive the Greek tree. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-abort-txn",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-abort-txn", opts,
                                   pool));
   SVN_ERR(svn_fs_begin_txn(&txn1, fs, 0, pool));
   SVN_ERR(svn_fs_begin_txn(&txn2, fs, 0, pool));
@@ -517,7 +517,7 @@ delete_mutables(const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-del-from-dir",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-del-from-dir", opts,
                                   pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
@@ -713,7 +713,7 @@ delete(const char **msg,
    */
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-del-tree",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-del-tree", opts,
                                   pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
@@ -1200,7 +1200,7 @@ create_within_copy(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-create-within-copy",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-create-within-copy", opts,
                                   pool));
 
   /*** Revision 1:  Create the greek tree in revision.  ***/
@@ -1329,7 +1329,7 @@ skip_deltas(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-skip-deltas",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-skip-deltas", opts,
                                   pool));
 
   /* Create the file. */
@@ -1408,7 +1408,7 @@ redundant_copy(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-redundant-copy",
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-redundant-copy", opts,
                                   pool));
 
   /* Create the greek tree in revision 1. */

@@ -436,16 +436,10 @@ svn_stream_open_unique(svn_stream_t **stream,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const char *prefix;
   apr_file_t *file;
 
-  if (!dirpath)
-    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
-
-  prefix = svn_path_join(dirpath, "tempfile", scratch_pool);
-
-  SVN_ERR(svn_io_open_unique_file2(&file, temp_path, prefix, ".tmp",
-                                   delete_when, result_pool));
+  SVN_ERR(svn_io_open_unique_file3(&file, temp_path, dirpath,
+                                   delete_when, result_pool, scratch_pool));
   *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
 
   return SVN_NO_ERROR;

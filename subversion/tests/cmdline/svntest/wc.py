@@ -72,9 +72,13 @@ class State:
     return State(new_root, desc)
 
   def tweak(self, *args, **kw):
-    """Tweak the items' values, optional restricting based on a filter.
+    """Tweak the items' values.
 
-    The general form of this method is .tweak(paths..., key=value). If
+    Each argument in ARGS is the path of a StateItem that already exists in
+    this State. Each keyword argument in KW is a modifiable property of
+    StateItem.
+
+    The general form of this method is .tweak([paths...,] key=value...). If
     one or more paths are provided, then those items' values are
     modified.  If no paths are given, then all items are modified.
     """
@@ -95,7 +99,7 @@ class State:
   def tweak_some(self, filter, **kw):
     "Tweak the items for which the filter returns true."
     for path, item in self.desc.items():
-      if filter(path, item):
+      if list(filter(path, item)):
         item.tweak(**kw)
 
   def subtree(self, subtree_path):

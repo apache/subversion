@@ -713,23 +713,15 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 static svn_error_t *
 check_format(int format)
 {
-  /* We support format 1, 2, 3 and 4 simultaneously.  */
-  if (format == 1 && SVN_FS_BASE__FORMAT_NUMBER == 2)
-    return SVN_NO_ERROR;
-  if ((format == 1 || format == 2) && SVN_FS_BASE__FORMAT_NUMBER == 3)
-    return SVN_NO_ERROR;
-  if ((format >= 1 && format <= 3) && SVN_FS_BASE__FORMAT_NUMBER == 4)
+  /* We currently support any format less than the compiled format number
+     simultaneously.  */
+  if (format <= SVN_FS_BASE__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
-  if (format != SVN_FS_BASE__FORMAT_NUMBER)
-    {
-      return svn_error_createf
-        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-         _("Expected FS format '%d'; found format '%d'"),
-         SVN_FS_BASE__FORMAT_NUMBER, format);
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_createf(
+        SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+        _("Expected FS format '%d'; found format '%d'"),
+        SVN_FS_BASE__FORMAT_NUMBER, format);
 }
 
 static svn_error_t *
@@ -747,10 +739,12 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
       /* Pre-1.2 filesystems did not have a format file (you could say
-         they were format "0"), so they get upgraded on the fly. */
+         they were format "0"), so they get upgraded on the fly.
+         However, we stopped "upgrading on the fly" in 1.5, so older
+         filesystems should only be bumped to 1.3, which is format "1". */
       svn_error_clear(svn_err);
       svn_err = SVN_NO_ERROR;
-      format = SVN_FS_BASE__FORMAT_NUMBER;
+      format = 1;
       write_format_file = TRUE;
     }
   else if (svn_err)
@@ -875,6 +869,16 @@ base_bdb_recover(svn_fs_t *fs,
   /* The fs pointer is a fake created in base_open_for_recovery above.
      We only care about the path. */
   return bdb_recover(fs->path, FALSE, pool);
+}
+
+static svn_error_t *
+base_bdb_pack(const char *path,
+              svn_cancel_func_t cancel,
+              void *cancel_baton,
+              apr_pool_t *pool)
+{
+  /* Packing is currently a no op for BDB. */
+  return SVN_NO_ERROR;
 }
 
 
@@ -1327,6 +1331,7 @@ static fs_library_vtable_t library_vtable = {
   base_hotcopy,
   base_get_description,
   base_bdb_recover,
+  base_bdb_pack,
   base_bdb_logfiles,
   svn_fs_base__id_parse
 };

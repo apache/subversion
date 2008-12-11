@@ -125,7 +125,7 @@ class IndexBuildParse(ExpatParseJob):
 
 def attrlist_to_dict(l):
   d = {}
-  for i in xrange(0, len(l), 2):
+  for i in range(0, len(l), 2):
     d[l[i]] = l[i+1]
   return d
 

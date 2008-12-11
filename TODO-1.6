@@ -8,67 +8,84 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Make SHA1 code in FSFS backend conditional on format version. [hwright]
+ * Actually document how to build with SQLite (ie, make the part in
+   INSTALL not blank, explain how to build against a newer version
+   of SQLite than what may be installed in your system, figure out
+   if the text in sqlite.m4 about being able to use a sqlite/
+   subdirectory is in any way true, etc etc)
 
- * Fix a bunch of rep-sharing issues in FSFS (or remove the feature):
+ * Tree conflicts - essential issues:
 
-   - Storing only SHA1 checksums and not MD5 for new files almost
-     certainly leads to less robust updates/commits or performance
-     penalties; at the very least, we should figure out which one of
-     those it is doing and make sure we're making the right
-     decision. I'd recommend just storing both though (or removing
-     rep-sharing from FSFS).  [BDB is now storing both.]
+   - #3334: "Merry-go-round" about update updating the base.
+     Julian Foad has this under way in branch "tc-issue-3334".
 
-   - If a commit gets aborted (or the server crashes, or whatever)
-     after having written new references to the database, the database
-     will still contain the references; future commits of files with
-     the same contents will then use the garbage at those offsets.
-     You can probably fix this by opening a SQLite transaction at the
-     top of commit_body and commit it after updating "current".  (If
-     there's a crash between updating "current" and committing the
-     transaction, then the only downside is that you fail to do a bit
-     of sharing, which is OK.)
+ * Switch to skel for TC information, rather than using another
+   serialization format.
 
-   - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
-     used outside of the control of the FSFS lock.  Thus its
-     read-modify-write can have race conditions, leading to two
-     different rep key with the same reuse number.  Now, I'm not 100%
-     sure how much of a problem this is; it would be good to document
-     the point of the reuse number somewhere (unless I'm missing it).
-     But I think it's to enable our dumb
-     compare-if-a-node-has-changed-by-if-its-rep-key-has-changed thing
-     to work, right?  And so there could be a subtle,
-     difficult-to-diagnose problem if two reps end up with the same
-     reuse number.  You could try to do this by wrapping the read and
-     write inside a transaction (with retry loop), but I don't
-     remember if SQLite transactions work that way.
+ * Test failures in tree conflicts tests on RA-Serf:
+   <http://www.mobsol.be/buildbot/x86-macosx-gnu%2520shared%2520daily%2520ra_serf/builds/96>
 
-     A potentially better solution: The point of the reuse column,
-     AFAICT, is *not* to do a reference count.  It's just to uniquify
-     references to the rep.  So switch it from a number to a string,
-     and qualify the string by the name of the transaction that is
-     creating the reference.  You can stick a counter for the current
-     transaction in foo.txn/next-ids or something.  (Then you still
-     might have to worry about concurrent writes to the same
-     transaction, but of course that situation is full of problematic
-     race conditions in FSFS anyway; fortunately all you have to avoid
-     those is to avoid mod_dav_svn like the plague.)
+ * Test failures in Ruby bindings.
 
-   - 'structure' has not been updated.
-
- * Tree conflicts:
-   - "svn resolved" target must be a victim, not a parent.
-
-   - Tree conflicts can break working copy as noted by markphip:
-     http://svn.haxx.se/dev/archive-2008-10/1090.shtml
-
- * Bug: External diff can't find its temp file - regression in trunk since
-   1.5.4, <http://svn.haxx.se/dev/archive-2008-11/0047.shtml>.
+ * Test failures in JavaHL bindings. Mark Phippard said "There is an error in
+   JavaHL but the test was specifically added to show a bug that was recently
+   discovered."
 
 Optional:
 
  * Merge the sparse-directories deselection branch, as noted by kfogel:
    http://svn.haxx.se/dev/archive-2008-10/1001.shtml
 
- * Secure certificate passphrase caching on Windows, to bring it upto the
-   same level as the other password stores. (Issue 2489)
+ * Tree conflicts - essential issues:
+
+   - #3209: Tests XFAIL due to changed tree-conflicts behaviour
+
+ * Tree conflicts - non-essential issues:
+
+   - #3329: Update/switch fails if the target itself is a tree conflict victim.
+     Should print a 'Skipped' message instead.  Update of an item that is
+     inside a tree conflict, and that no longer exists in the repo, does
+     nothing.  Should print a 'Skipped' message instead.
+
+   - #3343: Making use of skels to store tree conflict data in entries file
+
+     Mailing list thread:
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145582
+
+     IRC conversation excerpts:
+     <stsp> gstein, made up your mind about skels yet?
+     <gstein> yeah. skels are all-ascii, so they'll work just fine in entries
+     <gstein> two files to move to libsvn_subr
+     <stsp> that was the only other tc-blocking issue I can remember
+     <stsp> but the code as-is is working fine and has been tested for more
+            than half a year
+     <gstein> stsp: and the skel code works and has been tested for 8 years
+     [...]
+     <gstein> anyways, I do agree/believe that the code is solid,
+     <stsp> well, I'm still not entirely convince the extra effort of changing
+            the code to use skels is really worth it, but we'll see --
+            I'd still say solve the other issues first, and convert to skels
+            then if time is left
+     <gstein> but it is more code to support over the long haul
+     <gstein> the "read" code has to exist forever
+     <stsp> yes
+     <stsp> till 2.0
+     <gstein> right
+     <stsp> I don't mind maintaining the read code :)
+     <gstein> I'd prefer that we don't have to carry it around
+     <gstein> haha
+     <gstein> well, the community has to maintain it
+     <gstein> oh. what I was about to say, is that I'm leaving in 2 hrs,
+     <gstein> but will work on skel'ing the code when I get home
+     <stsp> right
+     <gstein> I'll make the skels svn-private in trunk,
+     <gstein> and then do the skel work on a branch for eval
+     <stsp> that's fine -- I'm just objected to taking tc-focused resources
+            away for skels from other things
+     <stsp> if you do it, +1
+     <gstein> well, I can more or less buy the "will only have to leave
+              read code" argument,
+     <gstein> so it is hard to strenuously object and maintain my -1,
+     <gstein> so I'm good with doing the work myself
+     <gstein> my wc work isn't going to be done for 1.6, so distraction
+              is fine :-P

@@ -303,26 +303,21 @@ class WinGeneratorBase(GeneratorBase):
                       + self.projects
 
     # Don't create projects for scripts
-    install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
-                             install_targets)
+    install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if not self.bdb_lib:
-      install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
-                               install_targets)
-      install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
-                                              and x.install == 'bdb-test'),
-                               install_targets)
+      install_targets = [x for x in install_targets if x.name != 'libsvn_fs_base']
+      install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
+                                                            and x.install == 'bdb-test')]
 
     # Drop the serf target if we don't have both serf and openssl
     if not self.serf_lib:
-      install_targets = filter(lambda x: x.name != 'serf', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_serf',
-                               install_targets)
+      install_targets = [x for x in install_targets if x.name != 'serf']
+      install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
     if self.without_neon:
-      install_targets = filter(lambda x: x.name != 'neon', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_neon',
-                               install_targets)
+      install_targets = [x for x in install_targets if x.name != 'neon']
+      install_targets = [x for x in install_targets if x.name != 'libsvn_ra_neon']
 
     dll_targets = []
     for target in install_targets:
@@ -378,7 +373,7 @@ class WinGeneratorBase(GeneratorBase):
     deps = self.graph.deps[gen_base.DT_LINK]
     deps[dep.name] = deps[target.name]
 
-    for key in deps.iterkeys():
+    for key in deps.keys():
       # Link everything except tests against the dll. Tests need to be linked
       # against the static libraries because they sometimes access internal
       # library functions.
@@ -995,7 +990,7 @@ class WinGeneratorBase(GeneratorBase):
           reldir = ''
         sources[src] = src, obj, reldir
 
-    return sources.values()
+    return list(sources.values())
 
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.

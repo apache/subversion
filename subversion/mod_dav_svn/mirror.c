@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+#include <assert.h>
+
 #include <apr_strmatch.h>
 
 #include <httpd.h>
@@ -23,37 +25,73 @@
 
 #include "dav_svn.h"
 
+
+/* Tweak the request record R, and add the necessary filters, so that
+   the request is ready to be proxied away.  MASTER_URI is the URI
+   specified in the SVNMasterURI Apache configuration value.
+   URI_SEGMENT is the URI bits relative to the repository root (but if
+   non-empty, *does* have a leading slash delimiter).  */
+static void proxy_request_fixup(request_rec *r,
+                                const char *master_uri,
+                                const char *uri_segment)
+{
+    assert((uri_segment[0] == '\0')
+           || (uri_segment[0] == '/'));
+
+    r->proxyreq = PROXYREQ_REVERSE;
+    r->uri = r->unparsed_uri;
+    r->filename = apr_pstrcat(r->pool, "proxy:", master_uri, 
+                              uri_segment, NULL);
+    r->handler = "proxy-server";
+    ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
+    ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
+    ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
+}
+
+
 int dav_svn__proxy_merge_fixup(request_rec *r)
 {
-    const char *root_dir, *master_uri;
+    const char *root_dir, *master_uri, *special_uri;
 
     root_dir = dav_svn__get_root_dir(r);
     master_uri = dav_svn__get_master_uri(r);
+    special_uri = dav_svn__get_special_uri(r);
 
     if (root_dir && master_uri) {
         const char *seg;
 
         /* We know we can always safely handle these. */
-        if (r->method_number == M_PROPFIND ||
-            r->method_number == M_GET ||
-            r->method_number == M_REPORT ||
+        if (r->method_number == M_REPORT ||
             r->method_number == M_OPTIONS) {
             return OK;
         }
 
-        seg = ap_strstr(r->unparsed_uri, root_dir);
-        if (seg && (r->method_number == M_MERGE ||
-            ap_strstr_c(seg, dav_svn__get_special_uri(r)))) {
-            seg += strlen(root_dir);
+        /* These are read-only requests -- the kind we like to handle
+           ourselves -- but we need to make sure they aren't aimed at
+           working resource URIs before trying to field them.  Why?
+           Because working resource URIs are modeled in Subversion
+           using uncommitted Subversion transactions -- stuff our copy
+           of the repository isn't guaranteed to have on hand. */
+        if (r->method_number == M_PROPFIND ||
+            r->method_number == M_GET) {
+            seg = ap_strstr(r->unparsed_uri, root_dir);
+            if (seg && ap_strstr_c(seg,
+                                   apr_pstrcat(r->pool, special_uri, 
+                                               "/wrk/", NULL))) {
+                seg += strlen(root_dir);
+                proxy_request_fixup(r, master_uri, seg);
+            }
+            return OK;
+        }
 
-            r->proxyreq = PROXYREQ_REVERSE;
-            r->uri = r->unparsed_uri;
-            r->filename = apr_pstrcat(r->pool, "proxy:", master_uri,
-                                      "/", seg, NULL);
-            r->handler = "proxy-server";
-            ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
-            ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
-            ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
+        /* If this is a MERGE request or a request using a "special
+           URI", we have to doctor it a bit for proxying. */
+        seg = ap_strstr(r->unparsed_uri, root_dir);
+        if (seg && (r->method_number == M_MERGE || 
+                    ap_strstr_c(seg, special_uri))) {
+            seg += strlen(root_dir);
+            proxy_request_fixup(r, master_uri, seg);
+            return OK;
         }
     }
     return OK;

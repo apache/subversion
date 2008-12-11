@@ -131,15 +131,11 @@ send_file_contents(const char *path,
   /* If we have EOL styles or keywords to de-translate, do it.  */
   if (svn_subst_translation_required(eol_style, eol, keywords, special, TRUE))
     {
-      const char *temp_dir;
-
       /* Now create a new tempfile, and open a stream to it. The temp file
          is removed by the pool cleanup run by the caller */
-      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &tmpfile_path,
-               svn_path_join(temp_dir, "svn-import", pool),
-               ".tmp", svn_io_file_del_on_pool_cleanup, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmpfile_path, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
 
       SVN_ERR(svn_subst_translate_to_normal_form
               (path, tmpfile_path, eol_style, eol, FALSE,
@@ -181,7 +177,6 @@ import_file(const svn_delta_editor_t *editor,
   void *file_baton;
   const char *mimetype = NULL;
   unsigned char digest[APR_MD5_DIGESTSIZE];
-  svn_checksum_t *checksum;
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
@@ -251,9 +246,9 @@ import_file(const svn_delta_editor_t *editor,
                              properties, digest, pool));
 
   /* Finally, close the file. */
-  checksum = svn_checksum_create(svn_checksum_md5, pool);
-  checksum->digest = digest;
-  text_checksum = svn_checksum_to_cstring(checksum, pool);
+  text_checksum =
+    svn_checksum_to_cstring(svn_checksum__from_digest(digest, svn_checksum_md5,
+                                                      pool), pool);
 
   return editor->close_file(file_baton, text_checksum, pool);
 }
@@ -1136,7 +1131,7 @@ struct post_commit_baton
   svn_wc_adm_access_t *base_dir_access;
   svn_boolean_t keep_changelists;
   svn_boolean_t keep_locks;
-  apr_hash_t *digests;
+  apr_hash_t *checksums;
 };
 
 static svn_error_t *
@@ -1188,13 +1183,13 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 
   /* Allocate the queue in a longer-lived pool than (iter)pool:
      we want it to survive the next iteration. */
-  return svn_wc_queue_committed
-          (&(btn->queue),
-           item->path, adm_access, loop_recurse,
-           item->incoming_prop_changes,
-           remove_lock, (! btn->keep_changelists),
-           apr_hash_get(btn->digests, item->path, APR_HASH_KEY_STRING),
-           subpool);
+  return svn_wc_queue_committed2(btn->queue, item->path, adm_access,
+                                 loop_recurse, item->incoming_prop_changes,
+                                 remove_lock, !btn->keep_changelists,
+                                 apr_hash_get(btn->checksums,
+                                              item->path,
+                                              APR_HASH_KEY_STRING),
+                                 subpool);
 }
 
 
@@ -1309,7 +1304,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_array_header_t *dirs_to_lock;
   apr_array_header_t *dirs_to_lock_recursive;
   svn_boolean_t lock_base_dir_recursive = FALSE;
-  apr_hash_t *committables, *lock_tokens, *tempfiles = NULL, *digests;
+  apr_hash_t *committables;
+  apr_hash_t *lock_tokens;
+  apr_hash_t *tempfiles = NULL;
+  apr_hash_t *checksums;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
@@ -1654,7 +1652,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
                                   editor, edit_baton,
                                   notify_prefix,
-                                  &tempfiles, &digests, ctx, pool);
+                                  &tempfiles, &checksums, ctx, pool);
 
   /* Handle a successful commit. */
   if ((! cmt_err)
@@ -1668,7 +1666,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       btn.base_dir_access = base_dir_access;
       btn.keep_changelists = keep_changelists;
       btn.keep_locks = keep_locks;
-      btn.digests = digests;
+      btn.checksums = checksums;
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;

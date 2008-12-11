@@ -1124,43 +1124,21 @@ static svn_error_t *
 authz_get_handle(svn_authz_t **authz_p, const char *authz_contents,
                  apr_pool_t *pool)
 {
-  apr_file_t *authz_file;
-  apr_status_t apr_err;
   const char *authz_file_path;
-  svn_error_t *err;
 
-  /* Create a temporary file, and fetch its name. */
-  SVN_ERR_W(svn_io_open_unique_file2(&authz_file, &authz_file_path,
-                                     "authz_file", "tmp",
-                                     svn_io_file_del_none, pool),
-            "Opening temporary file");
-
-  /* Write the authz ACLs to the file. */
-  if ((apr_err = apr_file_write_full(authz_file, authz_contents,
-                                     strlen(authz_contents), NULL)))
-    {
-      (void) apr_file_close(authz_file);
-      (void) apr_file_remove(authz_file_path, pool);
-      return svn_error_wrap_apr(apr_err, "Writing test authz file");
-    }
-
-  /* Close the temporary descriptor. */
-  if ((apr_err = apr_file_close(authz_file)))
-    {
-      (void) apr_file_remove(authz_file_path, pool);
-      return svn_error_wrap_apr(apr_err, "Closing test authz file");
-    }
+  /* Create a temporary file. */
+  SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
+                                authz_contents, strlen(authz_contents),
+                                svn_io_file_del_on_pool_cleanup, pool),
+            "Writing temporary authz file");
 
   /* Read the authz configuration back and start testing. */
-  if ((err = svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool)))
-    {
-      (void) apr_file_remove(authz_file_path, pool);
-      return svn_error_quick_wrap(err, "Opening test authz file");
-    }
+  SVN_ERR_W(svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool),
+            "Opening test authz file");
 
-  /* Delete the file, but ignore the error if we've a more important one. */
-  if ((apr_err = apr_file_remove(authz_file_path, pool)))
-    return svn_error_wrap_apr(apr_err, "Removing test authz file");
+  /* Done with the file. */
+  SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
+            "Removing test authz file");
 
   return SVN_NO_ERROR;
 }
@@ -1823,6 +1801,11 @@ node_location_segments(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "bdb") == 0) 
+      && (opts->server_minor_version == 4))
+    return SVN_NO_ERROR;
+
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
                                  opts, pool));
@@ -2131,11 +2114,11 @@ reporter_depth_exclude(const char **msg,
                                     entries,
                                     sizeof(entries)/sizeof(entries[0]),
                                     subpool));
-    svn_pool_clear(subpool);
   }
 
   /* Clean up after ourselves. */
   svn_error_clear(svn_fs_abort_txn(txn, subpool));
+  svn_pool_clear(subpool);
 
   /* Expect an error on an illegal report for r1 to r2.  The illegal
      sequence is that we exclude A/D, then set_path() below A/D. */

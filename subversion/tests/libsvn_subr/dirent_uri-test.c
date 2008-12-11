@@ -731,6 +731,7 @@ test_dirent_is_canonical(const char **msg,
     { "X:",                    TRUE },
     { "X:foo",                 TRUE },
     { "X:foo/",                FALSE },
+    { "file with spaces",      TRUE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",                   TRUE },
     /* We permit UNC dirents on Windows.  By definition UNC
@@ -744,6 +745,10 @@ test_dirent_is_canonical(const char **msg,
     { "//SERVER/SHare",        FALSE },
 #else /* WIN32 or Cygwin */
     { "X:/",                   FALSE },
+    /* Some people use colons in their filenames. */
+    { ":", TRUE },
+    { ".:", TRUE },
+    { "foo/.:", TRUE },
 #endif /* non-WIN32 */
     { NULL, FALSE },
   };
@@ -818,6 +823,7 @@ test_uri_is_canonical(const char **msg,
     { "http://hst/",           FALSE },
     { "http://HST/",           FALSE },
     { "http://HST/FOO/BaR",    FALSE },
+    { "svn+ssh://jens@10.0.1.1", TRUE },
     { "svn+ssh://j.raNDom@HST/BaR", FALSE },
     { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
     { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },
@@ -830,6 +836,10 @@ test_uri_is_canonical(const char **msg,
     { "X:",                    TRUE },
     { "X:foo",                 TRUE },
     { "X:foo/",                FALSE },
+    /* Some people use colons in their filenames. */
+    { ":", TRUE },
+    { ".:", TRUE },
+    { "foo/.:", TRUE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },

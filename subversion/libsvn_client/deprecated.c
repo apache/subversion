@@ -297,7 +297,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recurse);
 
   return svn_client_commit4(commit_info_p, targets, depth, keep_locks,
                             FALSE, NULL, NULL, ctx, pool);

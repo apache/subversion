@@ -61,14 +61,14 @@ typedef struct
 /* This implements the svn_auth__password_get_t interface.
    Set **PASSPHRASE to the plaintext passphrase retrieved from CREDS;
    ignore other parameters. */
-static svn_boolean_t
-simple_passphrase_get(const char **passphrase,
-                      apr_hash_t *creds,
-                      const char *realmstring,
-                      const char *username,
-                      apr_hash_t *parameters,
-                      svn_boolean_t non_interactive,
-                      apr_pool_t *pool)
+svn_boolean_t
+svn_auth__ssl_client_cert_pw_get(const char **passphrase,
+                                 apr_hash_t *creds,
+                                 const char *realmstring,
+                                 const char *username,
+                                 apr_hash_t *parameters,
+                                 svn_boolean_t non_interactive,
+                                 apr_pool_t *pool)
 {
   svn_string_t *str;
   str = apr_hash_get(creds, AUTHN_PASSPHRASE_KEY, APR_HASH_KEY_STRING);
@@ -82,14 +82,14 @@ simple_passphrase_get(const char **passphrase,
 
 /* This implements the svn_auth__password_set_t interface.
    Store PASSPHRASE in CREDS; ignore other parameters. */
-static svn_boolean_t
-simple_passphrase_set(apr_hash_t *creds,
-                      const char *realmstring,
-                      const char *username,
-                      const char *passphrase,
-                      apr_hash_t *parameters,
-                      svn_boolean_t non_interactive,
-                      apr_pool_t *pool)
+svn_boolean_t
+svn_auth__ssl_client_cert_pw_set(apr_hash_t *creds,
+                                 const char *realmstring,
+                                 const char *username,
+                                 const char *passphrase,
+                                 apr_hash_t *parameters,
+                                 svn_boolean_t non_interactive,
+                                 apr_pool_t *pool)
 {
   apr_hash_set(creds, AUTHN_PASSPHRASE_KEY, APR_HASH_KEY_STRING,
                svn_string_create(passphrase, pool));
@@ -108,7 +108,7 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
    apr_pool_t *pool)
 {
   svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG,
+                                   SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                    APR_HASH_KEY_STRING);
   const char *server_group = apr_hash_get(parameters,
                                           SVN_AUTH_PARAM_SERVER_GROUP,
@@ -208,7 +208,8 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
       /* If the passphrase is going to be stored encrypted, go right
          ahead and store it to disk. Else determine whether saving
          in plaintext is OK. */
-      if (strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
+      if (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
           || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0
           || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0)
         {
@@ -339,7 +340,7 @@ ssl_client_cert_pw_file_first_credentials(void **credentials_p,
             provider_baton,
             parameters,
             realmstring,
-            simple_passphrase_get,
+            svn_auth__ssl_client_cert_pw_get,
             SVN_AUTH__SIMPLE_PASSWORD_TYPE,
             pool);
 }
@@ -360,7 +361,7 @@ ssl_client_cert_pw_file_save_credentials(svn_boolean_t *saved,
             provider_baton,
             parameters,
             realmstring,
-            simple_passphrase_set,
+            svn_auth__ssl_client_cert_pw_set,
             SVN_AUTH__SIMPLE_PASSWORD_TYPE,
             pool);
 }

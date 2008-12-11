@@ -126,9 +126,9 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                       "Missing revision range 'non-inheritable' flag")
 
   def compare_mergeinfo_catalogs(self, catalog1, catalog2):
-    keys1 = catalog1.keys()
+    keys1 = list(catalog1.keys())
     keys1.sort()
-    keys2 = catalog2.keys()
+    keys2 = list(catalog2.keys())
     keys2.sort()
     self.assertEqual(keys1, keys2)
 
@@ -136,9 +136,9 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
         self.compare_mergeinfos(catalog1[k], catalog2[k])
 
   def compare_mergeinfos(self, mergeinfo1, mergeinfo2):
-    keys1 = mergeinfo1.keys()
+    keys1 = list(mergeinfo1.keys())
     keys1.sort()
-    keys2 = mergeinfo2.keys()
+    keys2 = list(mergeinfo2.keys())
     keys2.sort()
     self.assertEqual(keys1, keys2)
 

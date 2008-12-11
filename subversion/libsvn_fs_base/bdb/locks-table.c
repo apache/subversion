@@ -17,13 +17,15 @@
 
 #include <string.h>
 #include <assert.h>
+
 #include "bdb_compat.h"
 
 #include "svn_pools.h"
+#include "private/svn_skel.h"
+
 #include "dbt.h"
 #include "../err.h"
 #include "../fs.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"
@@ -134,7 +136,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   SVN_ERR(BDB_WRAP(fs, "reading lock", db_err));
 
   /* Parse TRANSACTION skel */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_lock(fs, lock_token);
 

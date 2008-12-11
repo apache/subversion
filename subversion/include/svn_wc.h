@@ -64,7 +64,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_wc_version(void);
+const svn_version_t *
+svn_wc_version(void);
 
 /**
  * @defgroup svn_wc  Working copy management
@@ -409,24 +410,29 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  *
  * @since New in 1.6
  */
-svn_error_t *svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *scratch_pool);
+svn_error_t *
+svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
+                  apr_pool_t *scratch_pool);
 
 /* @deprecated Provided for backward compabibility with the 1.5 API. */
 SVN_DEPRECATED
-svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
+svn_error_t *
+svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
-const char *svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
+const char *
+svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
-apr_pool_t *svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
+apr_pool_t *
+svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
  */
-svn_boolean_t svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
+svn_boolean_t
+svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *
@@ -446,7 +452,8 @@ svn_wc_locked(svn_boolean_t *locked,
  *
  * @since New in 1.3.
  */
-svn_boolean_t svn_wc_is_adm_dir(const char *name, apr_pool_t *pool);
+svn_boolean_t
+svn_wc_is_adm_dir(const char *name, apr_pool_t *pool);
 
 
 /**
@@ -458,7 +465,8 @@ svn_boolean_t svn_wc_is_adm_dir(const char *name, apr_pool_t *pool);
  *
  * @since New in 1.3.
  */
-const char *svn_wc_get_adm_dir(apr_pool_t *pool);
+const char *
+svn_wc_get_adm_dir(apr_pool_t *pool);
 
 
 /**
@@ -474,7 +482,9 @@ const char *svn_wc_get_adm_dir(apr_pool_t *pool);
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_wc_set_adm_dir(const char *name, apr_pool_t *pool);
+svn_error_t *
+svn_wc_set_adm_dir(const char *name,
+                   apr_pool_t *pool);
 
 
 
@@ -490,7 +500,8 @@ typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
 
 
 /** Return a new, empty traversal info object, allocated in @a pool. */
-svn_wc_traversal_info_t *svn_wc_init_traversal_info(apr_pool_t *pool);
+svn_wc_traversal_info_t *
+svn_wc_init_traversal_info(apr_pool_t *pool);
 
 
 /** Set @a *externals_old and @a *externals_new to hash tables representing
@@ -1157,6 +1168,77 @@ typedef enum svn_wc_operation_t
 } svn_wc_operation_t;
 
 
+/** Info about one of the conflicting versions of a node. Each field may
+ * have its respective null/invalid/unknown value if the corresponding
+ * information is not relevant or not available.
+ *
+ * @todo Consider making some or all of the info mandatory, to reduce
+ * complexity.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @see svn_wc_conflict_version_create()
+ * @see svn_wc_conflict_version_dup()
+ *
+ * @since New in 1.6.
+*/
+typedef struct svn_wc_conflict_version_t
+{
+  /** @name Where to find this node version in a repository */
+  /**@{*/
+
+  /** URL of repository root */
+  const char *repos_url;
+
+  /** revision at which to look up path_in_repos */
+  svn_revnum_t peg_rev;
+
+  /** path within repos; must not start with '/' */
+  const char *path_in_repos; 
+  /* @todo We may decide to add the repository UUID, to handle conflicts
+   * properly during a repository move. */
+  /** @} */
+
+  /** Info about this node */
+  svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+
+  /* @todo Add metadata about a local copy of the node, if and when
+   * we store one. */
+
+  /* Remember to update svn_wc_conflict_version_create() and 
+   * svn_wc_conflict_version_dup() in case you add fields to this struct. */
+} svn_wc_conflict_version_t;
+
+/**
+ * Allocate an @c svn_wc_conflict_version_t structure in @a pool,
+ * initialize to contain a conflict origin, and return it.
+ *
+ * Set the @c repos_url field of the created struct to @a repos_url, the
+ * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
+ * @a peg_rev and the the @c node_kind to @c node_kind. Make only shallow
+ * copies of the pointer arguments.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char* path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool);
+
+/** Return a duplicate of @a version, allocated in @a pool.
+ * No part of the new version will be shared with @a version.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
+                            apr_pool_t *pool);
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
@@ -1178,7 +1260,8 @@ typedef struct svn_wc_conflict_description_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
-  /** The node type of the path being operated on */
+  /** The node type of the path being operated on (for a tree conflict,
+   *  ### which version?) */
   svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
@@ -1199,7 +1282,10 @@ typedef struct svn_wc_conflict_description_t
 
   /** If not NULL, an open working copy access baton to either the
    *  path itself (if @c path is a directory), or to the parent
-   *  directory (if @c path is a file.) */
+   *  directory (if @c path is a file.)
+   *  For a tree conflict, this will always be an access baton
+   *  to the parent directory of the path, even if the path is
+   *  a directory. */
   svn_wc_adm_access_t *access;
 
   /** The action being attempted on the conflicted node or property.
@@ -1244,6 +1330,16 @@ typedef struct svn_wc_conflict_description_t
    */
   svn_wc_operation_t operation;
 
+  /** Info on the "merge-left source" or "older" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t *src_left_version;
+
+  /** Info on the "merge-right source" or "their" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t *src_right_version;
+
+  /* Remember to adjust svn_wc__conflict_description_dup()
+   * if you add new fields to this struct. */
 } svn_wc_conflict_description_t;
 
 /**
@@ -1295,9 +1391,11 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c path field of the created struct to @a path, the @c access
  * field to @a adm_access, the @c kind field to @c
- * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, and the @c
- * operation to @a operation. Make only shallow copies of the pointer
- * arguments.
+ * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
+ * operation to @a operation, the @c src_left_version field to
+ * @a src_left_version, and the @c src_right_version field to
+ * @a src_right_version.
+ * Make only shallow copies of the pointer arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
@@ -1309,6 +1407,10 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_node_kind_t node_kind,
                                         svn_wc_operation_t operation,
+                                        svn_wc_conflict_version_t
+                                          *src_left_version,
+                                        svn_wc_conflict_version_t
+                                          *src_right_version,
                                         apr_pool_t *pool);
 
 
@@ -1580,6 +1682,16 @@ typedef struct svn_wc_diff_callbacks3_t
                              svn_boolean_t *tree_conflicted,
                              const char *path,
                              svn_revnum_t rev,
+                             void *diff_baton);
+
+  /**
+   * A directory @a path has been closed.
+   */
+  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *contentstate,
+                             svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
+                             const char *path,
                              void *diff_baton);
 
 } svn_wc_diff_callbacks3_t;
@@ -1879,11 +1991,21 @@ typedef struct svn_wc_entry_t
   svn_wc_schedule_t schedule;
 
   /** in a copied state (possibly because the entry is a child of a
-      path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
-      when the entry itself is @c svn_wc_schedule_normal) */
+   *  path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
+   *  when the entry itself is @c svn_wc_schedule_normal).
+   *  COPIED is true for nodes under a directory that was copied, but
+   *  COPYFROM_URL is null there. They are both set for the root
+   *  destination of the copy.
+   */
   svn_boolean_t copied;
 
-  /** deleted, but parent rev lags behind */
+  /** The directory containing this entry had a versioned child of this
+   * name, but this entry represents a different revision or a switched
+   * path at which no item exists in the repository. This typically
+   * arises from committing or updating to a deletion of this entry
+   * without committing or updating the parent directory.
+   *
+   * The schedule can be 'normal' or 'add'. */
   svn_boolean_t deleted;
 
   /** absent -- we know an entry of this name exists, but that's all
@@ -2070,11 +2192,12 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
-/** Set @a *entry to an entry for @a path, allocated in the access baton
- * pool.  If @a show_hidden is TRUE, return the entry even if it's in
- * 'deleted' or 'absent' state.  If @a path is not under revision
- * control, or if entry is hidden, not scheduled for re-addition,
- * and @a show_hidden is @c FALSE, then set @a *entry to @c NULL.
+/** Set @a *entry to an entry for @a path, allocated in the access baton pool.
+ * If @a show_hidden is TRUE, return the entry even if it's in 'excluded',
+ * 'deleted' or 'absent' state. Excluded entries are those with their depth
+ * set to @c svn_depth_exclude. If @a path is not under revision control, or
+ * if entry is hidden, not scheduled for re-addition, and @a show_hidden is @c
+ * FALSE, then set @a *entry to @c NULL.
  *
  * @a *entry should not be modified, since doing so modifies the entries
  * cache in @a adm_access without changing the entries file on disk.
@@ -2109,9 +2232,10 @@ svn_wc_entry(const svn_wc_entry_t **entry,
  * baton (that's how the entries caching works).  @a pool is used for
  * transient allocations.
  *
- * Entries that are in a 'deleted' or 'absent' state (and not
+ * Entries that are in a 'excluded', 'deleted' or 'absent' state (and not
  * scheduled for re-addition) are not returned in the hash, unless
- * @a show_hidden is TRUE.
+ * @a show_hidden is TRUE. Excluded entries are those with their depth set to
+ * @c svn_depth_exclude.
  *
  * @par Important:
  * The @a entries hash is the entries cache in @a adm_access
@@ -2152,7 +2276,7 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
  * answers are uninteresting, simply pass @c NULL pointers.
  *
- * If @path is unversioned or does not exist, @a *text_conflicted_p and
+ * If @a path is unversioned or does not exist, @a *text_conflicted_p and
  * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
  * @a adm_access is the admin access baton of the parent directory.
@@ -2258,9 +2382,10 @@ typedef struct svn_wc_entry_callbacks_t
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
  *
- * Like our other entries interfaces, entries that are in a 'deleted'
- * or 'absent' state (and not scheduled for re-addition) are not
- * discovered, unless @a show_hidden is TRUE.
+ * Like our other entries interfaces, entries that are in a 'excluded',
+ * 'deleted' or 'absent' state (and not scheduled for re-addition) are not
+ * discovered, unless @a show_hidden is TRUE. Excluded entries are those with
+ * their depth set to @c svn_depth_exclude.
  *
  * When a new directory is entered, @c SVN_WC_ENTRY_THIS_DIR will always
  * be returned first.
@@ -2582,10 +2707,10 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
-  /** True if the entry is the victim of a tree conflict.
+  /** Non-NULL if the entry is the victim of a tree conflict.
    * @since New in 1.6
    */
-  svn_boolean_t tree_conflicted;
+  svn_wc_conflict_description_t *tree_conflict;
 
   /** If the item is a file that was added to the working copy with an
       svn:externals; if file_external is TRUE, then switched is always
@@ -3431,7 +3556,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * svn_wc_process_committed_queue().
  *
  * All pointer data passed to this function (@a path, @a adm_access,
- * @a wcprop_changes and @a digest) should remain valid until the queue
+ * @a wcprop_changes and @a checksum) should remain valid until the queue
  * has been processed by svn_wc_process_committed_queue().
  *
  * Record in @a queue that @a path will need to be bumped after a commit
@@ -3455,6 +3580,9 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
+ * Temporary allocations will be performed in @a scratch_pool, and persistent
+ * allocations will use the same pool as @a queue used when it was created.
+ *
  * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
@@ -3470,7 +3598,7 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
                         svn_checksum_t *checksum,
-                        apr_pool_t *pool);
+                        apr_pool_t *scratch_pool);
 
 
 /** Same as svn_wc_queue_committed2() but the @a queue parameter has an
@@ -3618,6 +3746,23 @@ svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
+ * Iff @a honor_depth_exclude is TRUE, the crawler will report paths
+ * whose ambient depth is @c svn_depth_exclude as being excluded, and
+ * thus prevent the server from pushing update data for those paths;
+ * therefore, don't set this flag if you wish to pull in excluded paths.
+ * Note that @c svn_depth_exclude on the target @a path is never
+ * honored, even if @a honor_depth_exclude is TRUE, because we need to
+ * be able to explicitly pull in a target.  For example, if this is
+ * the working copy...
+ *
+ *    svn co greek_tree_repos wc_dir
+ *    svn up --set-depth exclude wc_dir/A/B/E  # now A/B/E is excluded
+ *
+ * ...then 'svn up wc_dir/A/B' would report E as excluded (assuming
+ * @a honor_depth_exclude is TRUE), but 'svn up wc_dir/A/B/E' would
+ * not, because the latter is trying to explicitly pull in E.  In
+ * general, we never report the update target as excluded.
+ *
  * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
  * flag on @a reporter->set_path() and @a reporter->link_path() calls
  * as necessary to trick a pre-1.5 (i.e., depth-unaware) server into
@@ -3636,7 +3781,28 @@ svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_crawl_revisions4(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions4, but with @a honor_depth_exclude always
+ * set to false.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,
@@ -3698,9 +3864,15 @@ svn_wc_crawl_revisions(const char *path,
 /* Updates. */
 
 /** Set @a *wc_root to @c TRUE if @a path represents a "working copy root",
- * @c FALSE otherwise.  Use @a pool for any intermediate allocations.
+ * @c FALSE otherwise. Here, @a path is a "working copy root" if its parent
+ * directory is not a WC or if its parent directory's repository URL is not
+ * the parent of its own repository URL. Thus, a switched subtree is
+ * considered to be a working copy root. Also, a deleted tree-conflict
+ * victim is considered a "working copy root" because it has no URL.
  *
  * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * Use @a pool for any intermediate allocations.
  *
  * @note Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
@@ -4111,15 +4283,18 @@ svn_wc_prop_set(const char *name,
  * If these patterns aren't found, then the property is assumed to be
  * Normal.
  */
-svn_boolean_t svn_wc_is_normal_prop(const char *name);
+svn_boolean_t
+svn_wc_is_normal_prop(const char *name);
 
 
 
 /** Return TRUE iff @a name is a 'wc' property name. */
-svn_boolean_t svn_wc_is_wc_prop(const char *name);
+svn_boolean_t
+svn_wc_is_wc_prop(const char *name);
 
 /** Return TRUE iff @a name is a 'entry' property name. */
-svn_boolean_t svn_wc_is_entry_prop(const char *name);
+svn_boolean_t
+svn_wc_is_entry_prop(const char *name);
 
 /** Callback type used by @c svn_wc_canonicalize_svn_prop.
  *
@@ -4506,7 +4681,7 @@ typedef enum svn_wc_merge_outcome_t
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.  If @a
  * merge_options is non-NULL, either pass its elements to @a diff3_cmd or
- * parse it and use as options to the internal merge code (@see
+ * parse it and use as options to the internal merge code (see
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
@@ -5262,33 +5437,47 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool);
 
+/** Crop @a target according to @a depth. 
+ *
+ * Remove any item that exceeds the boundary of @a depth (relative to
+ * @a target) from revision control.  Leave modified items behind
+ * (unversioned), while removing unmodified ones completely.
+ *
+ * If @a target starts out with a shallower depth than @a depth, do not
+ * upgrade it to @a depth (that would not be cropping); however, do
+ * check children and crop them appropriately according to @a depth.
+ *
+ * Returns immediately with no error if @a target is not a directory,
+ * or if @a depth is not restrictive (e.g., @c svn_depth_infinity).
+ *
+ * @a anchor is an access baton, with a tree lock, for the local path to the
+ * working copy which will be used as the root of this operation.  If
+ * @a target is not empty, it represents an entry in the @a anchor path;
+ * otherwise, the @a anchor path is the target.  @a target may not be
+ * @c NULL.
+ *
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
+ * various points to determine if the client has cancelled the operation.
+ *
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to
+ * report changes as they are made.
+ *
+ * @note: svn_depth_exclude currently does nothing; passing it results
+ * in immediate success with no side effects.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
+                 const char *target,
+                 svn_depth_t depth,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
 /** @} */
-
-/** Set @a *tree_conflict to a newly allocated @c
- * svn_wc_conflict_description_t structure describing the tree
- * conflict state of @a victim_path, or to @c NULL if @a victim_path
- * is not in a state of tree conflict. @a adm_access is the admin
- * access baton for @a victim_path. Use @a pool for all allocations.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                         const char *victim_path,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool);
-
-/**
- * Add the tree conflict described by @a conflict to the directory entry
- * belonging to @a adm_access.
- * Do all allocations in @a pool.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
-                              svn_wc_adm_access_t *adm_access,
-                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

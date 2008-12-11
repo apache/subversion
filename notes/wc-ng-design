@@ -21,6 +21,7 @@ Content
    - delta-application algorithm
       (in light of metadata, tree and textual conflicts)
    - 
+ * Implementation plan
 
 
 Context
@@ -778,6 +779,29 @@ Note that removing access batons (and other API changes) will ripple
 up until libsvn_client, and may even have an affect on *its* API.
 
 ### the form of a new API is unknown/TBD.
+
+
+Implementation Plan
+===================
+The following are tests which need to be accomplished for WC-NG.  There
+isn't a strict ordering here, but rather a possible plan.  There may be
+dependencies between some items, but that is left as an exercise for the
+reader.
+
+* Pristine file management
+* Properties management
+* Tree management (BASE v. WORKING v. ACTUAL for APIs and storage)
+* Journaled actions
+* Finding/using the correct admin area
+* Upgrading
+  - Including multiple heterogenous admin areas
+* Move entries into SQLite
+* Relocating datastore in useful ways
+
+Afterwards, we'll need:
+* A second pass at the WC code to find/fix patterns and solutions.
+* Revamp of WC API, to propagate up into libsvn_client.
+* Reexamine any client/wc interactions, and look for final cleanups.
 
 
 Other sections

@@ -1648,9 +1648,16 @@ svn_fs_fs__commit_txn(const char **conflict_p,
    * Lather, rinse, repeat.
    */
 
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_revnum_t new_rev;
+  svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
   svn_fs_t *fs = txn->fs;
+
+  /* Limit memory usage when the repository has a high commit rate and
+     needs to run the following while loop multiple times.  The memory
+     growth without an iteration pool is very noticeable when the
+     transaction modifies a node that has 20,000 sibling nodes. */
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Initialize output params. */
   new_rev = SVN_INVALID_REVNUM;
@@ -1662,7 +1669,8 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       svn_revnum_t youngish_rev;
       svn_fs_root_t *youngish_root;
       dag_node_t *youngish_root_node;
-      svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
+
+      svn_pool_clear(iterpool);
 
       /* Get the *current* youngest revision, in one short-lived
          Berkeley transaction.  (We don't want the revisions table
@@ -1670,9 +1678,9 @@ svn_fs_fs__commit_txn(const char **conflict_p,
          because new revisions might get committed after we've
          obtained it. */
 
-      SVN_ERR(svn_fs_fs__youngest_rev(&youngish_rev, fs, pool));
+      SVN_ERR(svn_fs_fs__youngest_rev(&youngish_rev, fs, iterpool));
       SVN_ERR(svn_fs_fs__revision_root(&youngish_root, fs, youngish_rev,
-                                       pool));
+                                       iterpool));
 
       /* Get the dag node for the youngest revision, also in one
          Berkeley transaction.  Later we'll use it as the SOURCE
@@ -1681,23 +1689,23 @@ svn_fs_fs__commit_txn(const char **conflict_p,
          was the target of the merge (but note that the youngest rev
          may have changed by then -- that's why we're careful to get
          this root in its own bdb txn here). */
-      SVN_ERR(get_root(&youngish_root_node, youngish_root, pool));
+      SVN_ERR(get_root(&youngish_root_node, youngish_root, iterpool));
 
       /* Try to merge.  If the merge succeeds, the base root node of
          TARGET's txn will become the same as youngish_root_node, so
          any future merges will only be between that node and whatever
          the root node of the youngest rev is by then. */
-      err = merge_changes(NULL, youngish_root_node, txn, conflict, pool);
+      err = merge_changes(NULL, youngish_root_node, txn, conflict, iterpool);
       if (err)
         {
           if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
             *conflict_p = conflict->data;
-          return err;
+          goto cleanup;
         }
       txn->base_rev = youngish_rev;
 
       /* Try to commit. */
-      err = svn_fs_fs__commit(&new_rev, fs, txn, pool);
+      err = svn_fs_fs__commit(&new_rev, fs, txn, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
@@ -1706,25 +1714,28 @@ svn_fs_fs__commit_txn(const char **conflict_p,
              commit again.  Or if that's not what happened, then just
              return the error. */
           svn_revnum_t youngest_rev;
-          SVN_ERR(svn_fs_fs__youngest_rev(&youngest_rev, fs, pool));
+          SVN_ERR(svn_fs_fs__youngest_rev(&youngest_rev, fs, iterpool));
           if (youngest_rev == youngish_rev)
-            return err;
+            goto cleanup;
           else
             svn_error_clear(err);
         }
       else if (err)
         {
-          return err;
+          goto cleanup;
         }
       else
         {
           /* Set the return value -- our brand spankin' new revision! */
           *new_rev_p = new_rev;
-          return SVN_NO_ERROR;
+          err = SVN_NO_ERROR;
+          goto cleanup;
         }
     }
 
-  /* NOTREACHED */
+ cleanup:
+  svn_pool_destroy(iterpool);
+  return err;
 }
 
 
@@ -1852,7 +1863,7 @@ fs_make_dir(svn_fs_root_t *root,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, pool);
 
   /* Create the subdirectory.  */
   SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
@@ -2194,7 +2205,7 @@ fs_make_file(svn_fs_root_t *root,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, pool);
 
   /* Check (non-recursively) to see if path is locked;  if so, check
      that we can use it. */
@@ -2252,12 +2263,9 @@ fs_file_checksum(svn_checksum_t **checksum,
                  apr_pool_t *pool)
 {
   dag_node_t *file;
-  svn_checksum_t *file_checksum;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, pool));
-  *checksum = (file_checksum->kind == kind) ? file_checksum : NULL;
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_file_checksum(checksum, file, kind, pool);
 }
 
 
@@ -2425,9 +2433,9 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
-      SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node, pool));
-      if (tb->base_checksum->kind == checksum->kind
-          && !svn_checksum_match(tb->base_checksum, checksum))
+      SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node,
+                                           tb->base_checksum->kind, pool));
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,

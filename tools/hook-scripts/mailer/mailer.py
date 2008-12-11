@@ -218,9 +218,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, to_addr_in[3:].split(to_addr_in[1]))
+        [_f for _f in to_addr_in[3:].split(to_addr_in[1]) if _f]
     else:
-      self.to_addrs = filter(None, to_addr_in.split())
+      self.to_addrs = [_f for _f in to_addr_in.split() if _f]
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one
@@ -349,7 +349,7 @@ class Commit(Messenger):
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
-    self.changelist = editor.get_changes().items()
+    self.changelist = list(editor.get_changes().items())
     self.changelist.sort()
 
     # collect the set of groups and the unique sets of params for the options
@@ -357,7 +357,7 @@ class Commit(Messenger):
     for path, change in self.changelist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
+        param_list = list(params.items())
         param_list.sort()
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
@@ -379,7 +379,7 @@ class Commit(Messenger):
         else:
           dirs[path[:idx]] = None
 
-    dirlist = dirs.keys()
+    dirlist = list(dirs.keys())
 
     commondir, dirlist = get_commondir(dirlist)
 
@@ -446,7 +446,7 @@ class PropChange(Messenger):
     self.groups = { }
     for (group, params) in self.cfg.which_groups(''):
       # turn the params into a hashable object and stash it away
-      param_list = params.items()
+      param_list = list(params.items())
       param_list.sort()
       self.groups[group, tuple(param_list)] = params
 
@@ -537,7 +537,7 @@ class Lock(Messenger):
     for path in self.dirlist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
+        param_list = list(params.items())
         param_list.sort()
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:

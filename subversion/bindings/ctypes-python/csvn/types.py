@@ -28,6 +28,8 @@ class SvnDate(str):
 class Hash(DictMixin):
     """A dictionary wrapper for apr_hash_t"""
 
+    _keys = DictMixin.iterkeys
+
     def __init__(self, type, items={}, wrapper=None, dup=None):
         self.type = type
         self.pool = Pool()
@@ -68,13 +70,13 @@ class Hash(DictMixin):
         apr_hash_set(self, key, len(key), NULL)
 
     def keys(self):
-        return list(self.iterkeys())
+        return list(self._keys())
 
     def __iter__(self):
-        for (key, _) in self.iteritems():
+        for (key, _) in self.items():
             yield key
 
-    def iteritems(self):
+    def items(self):
         pool = Pool()
         hi = apr_hash_first(pool, self)
         while hi:
@@ -137,7 +139,7 @@ class Array(ListMixin):
             l = len(self)
 
             # Make space for the new items
-            for i in xrange(diff):
+            for i in range(diff):
                 apr_array_push(self)
 
             # Move the old items out of the way, if necessary
@@ -157,7 +159,7 @@ class Array(ListMixin):
                         (len(self)-end)*self.header[0].elt_size)
 
             # Shrink the array
-            for i in xrange(-diff):
+            for i in range(-diff):
                 apr_array_pop(self)
 
 try:

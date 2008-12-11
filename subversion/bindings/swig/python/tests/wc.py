@@ -188,7 +188,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
 
-      self.assertEqual(['', 'tags', 'branches', 'trunk'], entries.keys())
+      self.assertEqual(['', 'tags', 'branches', 'trunk'], list(entries.keys()))
 
   def test_get_ignores(self):
       self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
@@ -301,7 +301,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     # Save prop changes.
     got_prop_changes = []
     def props_changed(path, propchanges):
-      for (name, value) in propchanges.iteritems():
+      for (name, value) in propchanges.items():
         (kind, unused_prefix_len) = core.svn_property_kind(name)
         if kind != core.svn_prop_regular_kind:
           continue

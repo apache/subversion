@@ -1725,7 +1725,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
  * @a changelist_name, FALSE for @a keep_changelist, NULL for @a
  * revprop_table, and @a depth set according to @a recurse: if @a
  * recurse is TRUE, use @c svn_depth_infinity, else @c
- * svn_depth_files.
+ * svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -3117,6 +3117,8 @@ svn_client_resolved(const char *path,
  * all its immediate conflicted children (both files and directories,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if

@@ -73,7 +73,65 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           const char *prefix,
                                           apr_pool_t *pool);
 
+/* Create a string representation of CATALOG in *OUTPUT, allocated in POOL.
+   The hash keys of CATALOG and the merge source paths of each key's mergeinfo
+   are represented in sorted order as per svn_sort_compare_items_as_paths.
+   If CATALOG is empty or NULL then *OUTPUT->DATA is set to "\n".  If SVN_DEBUG
+   is true, then a NULL or empty CATALOG causes *OUTPUT to be set to an
+   appropriate newline terminated string.  If KEY_PREFIX is not NULL then
+   KEY_PREFIX to each key (path) in *OUTPUT.  if VAL_PREFIX is not NULL then
+   prepend VAL_PREFIX to each merge source:rangelist line in *OUTPUT. */
+svn_error_t *
+svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
+                                           svn_mergeinfo_catalog_t catalog,
+                                           const char *key_prefix,
+                                           const char *val_prefix,
+                                           apr_pool_t *pool);
 
+/* Create a string representation of MERGEINFO in *OUTPUT, allocated in POOL.
+   Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
+   in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
+   causes *OUTPUT to be set to an appropriate newline terminated string.  If
+   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT. */
+svn_error_t *
+svn_mergeinfo__to_formatted_string(svn_string_t **output,
+                                   svn_mergeinfo_t mergeinfo,
+                                   const char *prefix,
+                                   apr_pool_t *pool);
+
+/* Set *YOUNGEST_REV and *OLDEST_REV to the youngest and oldest revisions
+   found in the rangelists within MERGEINFO.  If MERGEINFO is NULL or empty
+   set *YOUNGEST_REV and *OLDEST_REV to SVN_INVALID_REVNUM. */
+svn_error_t *
+svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
+                                   svn_revnum_t *oldest_rev,
+                                   svn_mergeinfo_t mergeinfo,
+                                   apr_pool_t *pool);
+
+/* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in POOL, less
+   any rangelists that fall outside of the range OLDEST_REV:YOUGEST_REV
+   (inclusive).  If all the rangelists mapped to a given path are filtered
+   then filter that path as well.  If all paths are filtered or MERGEINFO is 
+   empty or NULL then *FILTERED_MERGEINFO is set to an empty hash. */
+svn_error_t *
+svn_mergeinfo__filter_mergefino_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
+                                          svn_mergeinfo_t mergeinfo,
+                                          svn_revnum_t youngest_rev,
+                                          svn_revnum_t oldest_rev,
+                                          apr_pool_t *pool);
+
+/* Filter each mergeinfo in CATALOG as per
+   svn_mergeinfo__filter_mergefino_by_ranges and put a deep copy of the
+   result in *FILTERED_CATALOG.  If any mergeinfo is filtered to an empty
+   hash then filter that path/mergeinfo as well.  If all mergeinfo is filtered
+   or CATALOG is NULL then set *FILTERED_CATALOG to an empty hash. */
+svn_error_t*
+svn_mergeinfo__filter_catalog_by_ranges(
+  svn_mergeinfo_catalog_t *filtered_catalog,
+  svn_mergeinfo_catalog_t catalog,
+  svn_revnum_t youngest_rev,
+  svn_revnum_t oldest_rev,
+  apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

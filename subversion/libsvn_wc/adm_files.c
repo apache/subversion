@@ -312,7 +312,6 @@ svn_wc__text_base_path(const char *path,
 
 const char *
 svn_wc__text_revert_path(const char *path,
-                         svn_boolean_t tmp,
                          apr_pool_t *pool)
 {
   const char *newpath, *base_name;
@@ -320,7 +319,7 @@ svn_wc__text_revert_path(const char *path,
   svn_path_split(path, &newpath, &base_name, pool);
   return extend_with_adm_name(newpath,
                               SVN_WC__REVERT_EXT,
-                              tmp,
+                              FALSE,
                               pool,
                               SVN_WC__ADM_TEXT_BASE,
                               base_name,
@@ -334,7 +333,7 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  const char *revert_base = svn_wc__text_revert_path(path, FALSE, scratch_pool);
+  const char *revert_base = svn_wc__text_revert_path(path, scratch_pool);
 
   if (revert_base == NULL)
     {
@@ -853,9 +852,8 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 
   temp_dir = svn_wc__adm_child(path, SVN_WC__ADM_TMP, pool);
 
-  SVN_ERR(svn_io_open_unique_file2(&file, new_name,
-                                   svn_path_join(temp_dir, "tempfile", pool),
-                                   ".tmp", delete_when, pool));
+  SVN_ERR(svn_io_open_unique_file3(&file, new_name, temp_dir,
+                                   delete_when, pool, pool));
 
   if (fp)
     *fp = file;

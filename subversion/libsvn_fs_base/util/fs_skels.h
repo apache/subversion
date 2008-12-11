@@ -27,7 +27,7 @@
 
 #include "svn_fs.h"
 #include "../fs.h"
-#include "skel.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {

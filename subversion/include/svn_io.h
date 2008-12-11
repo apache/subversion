@@ -118,9 +118,9 @@ svn_io_check_resolved_path(const char *path,
 
 
 /** Open a new file (for reading and writing) with a unique name based on
- * utf-8 encoded @a path, in the same directory as @a path.  The file handle is
- * returned in @a *f, and the name, which ends with @a suffix, is returned
- * in @a *unique_name_p, also utf8-encoded.  Either @a f or @a unique_name_p
+ * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
+ * returned in @a *file, and the name, which ends with @a suffix, is returned
+ * in @a *unique_name, also utf8-encoded.  Either @a file or @a unique_name
  * may be @c NULL.
  *
  * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
@@ -130,13 +130,9 @@ svn_io_check_resolved_path(const char *path,
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
  * followed by an iteration number ("2", then "3", and so on),
- * followed by the suffix.  For example, if @a path is
+ * followed by the suffix.  For example, successive calls to
  *
- *    tests/t1/A/D/G/pi
- *
- * then successive calls to
- *
- *    svn_io_open_unique_file2(&f, &unique_name, @a path, ".tmp", ..., pool)
+ *    svn_io_open_uniquely_named(&f, &u, "tests/t1/A/D/G", "pi", ".tmp", ...)
  *
  * will open
  *
@@ -147,13 +143,18 @@ svn_io_check_resolved_path(const char *path,
  *    tests/t1/A/D/G/pi.5.tmp
  *    ...
  *
- * Assuming @a suffix is non-empty, @a *unique_name_p will never be exactly
- * the same as @a path, even if @a path does not exist.
+ * Assuming @a suffix is non-empty, @a *unique_name will never be exactly
+ * the same as @a filename, even if @a filename does not exist.
  *
- * It doesn't matter if @a path is a file or directory, the unique name will
- * be in @a path's parent either way.
+ * If @a dirpath is NULL, then the directory returned by svn_io_temp_dir()
+ * will be used.
  *
- * Allocate @a *f and @a *unique_name_p in @a pool.
+ * If @a filename is NULL, then "tempfile" will be used.
+ *
+ * If @a suffix is NULL, then ".tmp" will be used.
+ *
+ * Allocates @a *file and @a *unique_name in @a result_pool. All
+ * intermediate allocations will be performed in @a scratch_pool.
  *
  * If no unique name can be found, @c SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED is
  * the error returned.
@@ -164,10 +165,53 @@ svn_io_check_resolved_path(const char *path,
  *    - tmpnam() is not thread-safe.
  *    - tempname() tries standard system tmp areas first.
  *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_io_open_uniquely_named(apr_file_t **file,
+                           const char **unique_name,
+                           const char *dirpath,
+                           const char *filename,
+                           const char *suffix,
+                           svn_io_file_del_t delete_when,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+
+/** Create a writable file in the directory @a dirpath. The file will have
+ * an arbitrary and unique name, and the full path will be returned in
+ * @a temp_path. The file will be returned in @a file. Both will be
+ * allocated from @a result_pool.
+ *
+ * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
+ * (Note that when using the system-provided temp directory, it may not
+ * be possibly to atomically rename the resulting file due to cross-device
+ * issues.)
+ *
+ * The file will be deleted according to @a delete_when.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ * @see svn_stream_open_unique()
+ */
+svn_error_t *
+svn_io_open_unique_file3(apr_file_t **file,
+                         const char **temp_path,
+                         const char *dirpath,
+                         svn_io_file_del_t delete_when,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/** Like svn_io_open_uniquely_named(), but takes a joined dirpath and
+ * filename, and a single pool.
  *
  * @since New in 1.4
  *
+ * @deprecated Provided for backward compatibility with the 1.5 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_open_unique_file2(apr_file_t **f,
                          const char **unique_name_p,
@@ -192,6 +236,7 @@ svn_io_open_unique_file(apr_file_t **f,
                         const char *suffix,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool);
+
 
 /**
  * Like svn_io_open_unique_file(), except that instead of creating a
@@ -728,6 +773,7 @@ svn_stream_open_writable(svn_stream_t **stream,
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.6
+ * @see svn_io_open_unique_file3()
  */
 svn_error_t *
 svn_stream_open_unique(svn_stream_t **stream,
@@ -918,7 +964,7 @@ svn_stream_readline(svn_stream_t *stream,
  * @note both @a from and @a to will be closed upon successul completion of
  * the copy (but an error may still be returned, based on trying to close
  * the two streams). If the closure is not desired, then you can use
- * @see svn_stream_disown() to protect either or both of the streams from
+ * svn_stream_disown() to protect either or both of the streams from
  * being closed.
  *
  * @since New in 1.6.

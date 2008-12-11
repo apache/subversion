@@ -597,7 +597,7 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
     return
 
   entries = LogParser().parse(stdout)
-  for index in xrange(len(entries)):
+  for index in range(len(entries)):
     entry = entries[index]
     if expected_revprops != None:
       entry.assert_revprops(expected_revprops[index])
@@ -793,7 +793,7 @@ def run_and_verify_info(expected_infos, *args):
   try:
     for actual, expected in zip(actual_infos, expected_infos):
       # compare dicts
-      for key, value in expected.iteritems():
+      for key, value in expected.items():
         if value is None and key in actual:
           raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
                                     % (key, actual[key]))
@@ -980,7 +980,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = filter(None, [int(x.rstrip()[1:]) for x in out])
+  out = [_f for _f in [int(x.rstrip()[1:]) for x in out] if _f]
   out.sort()
   expected_output.sort()
 
@@ -992,7 +992,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
         del(exp_hash[rev])
       else:
         extra_out.append(rev)
-    extra_exp = exp_hash.keys()
+    extra_exp = list(exp_hash.keys())
     raise Exception("Unexpected 'svn mergeinfo' output:\n"
                     "  expected but not found: %s\n"
                     "  found but not expected: %s"
@@ -1752,7 +1752,7 @@ deep_trees_virginal_state = wc.State('', {
 
 def deep_trees_leaf_edit(base):
   """Helper function for deep trees test cases. Append text to files,
-  create new files in empty directories."""
+  create new files in empty directories, and change leaf node properties."""
   j = os.path.join
   F   = j(base, 'F', 'alpha')
   DF  = j(base, 'DF', 'D1', 'beta')
@@ -1760,14 +1760,22 @@ def deep_trees_leaf_edit(base):
   main.file_append(F, "More text for file alpha.\n")
   main.file_append(DF, "More text for file beta.\n")
   main.file_append(DDF, "More text for file gamma.\n")
+  run_and_verify_svn(None, verify.AnyOutput, [],
+                     'propset', 'prop1', '1', F, DF, DDF)
 
+  D   = j(base, 'D', 'D1')
+  DD  = j(base, 'DD', 'D1', 'D2')
+  DDD = j(base, 'DDD', 'D1', 'D2', 'D3')
+  run_and_verify_svn(None, verify.AnyOutput, [],
+                     'propset', 'prop1', '1', D, DD, DDD)
   D   = j(base, 'D', 'D1', 'delta')
   DD  = j(base, 'DD', 'D1', 'D2', 'epsilon')
   DDD = j(base, 'DDD', 'D1', 'D2', 'D3', 'zeta')
   main.file_append(D, "This is the file 'delta'.\n")
   main.file_append(DD, "This is the file 'epsilon'.\n")
   main.file_append(DDD, "This is the file 'zeta'.\n")
-  main.run_svn(None, 'add', D, DD, DDD)
+  run_and_verify_svn(None, verify.AnyOutput, [],
+                     'add', D, DD, DDD)
 
 # deep trees state after a call to deep_trees_leaf_edit
 deep_trees_after_leaf_edit = wc.State('', {
@@ -1864,24 +1872,74 @@ deep_trees_empty_dirs = wc.State('', {
   'DDD/D1/D2/D3'    : Item(),
   })
 
-# Expected merge/update/switch output if tree conflict detection really works.
+# Expected merge/update/switch output.
+
 deep_trees_conflict_output = wc.State('', {
-  'F/alpha'           : Item(treeconflict='C'),
-  'D/D1'              : Item(treeconflict='C'),
-  'DF/D1'             : Item(treeconflict='C'),
-  'DD/D1'             : Item(treeconflict='C'),
-  'DDF/D1'            : Item(treeconflict='C'),
-  'DDD/D1'            : Item(treeconflict='C'),
+  'F/alpha'           : Item(status='  ', treeconflict='C'),
+  'D/D1'              : Item(status='  ', treeconflict='C'),
+  'DF/D1'             : Item(status='  ', treeconflict='C'),
+  'DD/D1'             : Item(status='  ', treeconflict='C'),
+  'DDF/D1'            : Item(status='  ', treeconflict='C'),
+  'DDD/D1'            : Item(status='  ', treeconflict='C'),
   })
 
-# Expected status output if tree conflict detection really works.
-def deep_trees_conflict_status(expected_disk):
-  """Add tree conflicts and default status stuff to a disk-state dict."""
-  status = expected_disk.copy()
-  status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', treeconflict='C ')
-  status.add({ '' : Item(status='  ') })
-  status.tweak(wc_rev=3)
-  return status
+deep_trees_conflict_output_skipped = wc.State('', {
+  'D/D1'              : Item(verb='Skipped'),
+  'F/alpha'           : Item(verb='Skipped'),
+  'DD/D1'             : Item(verb='Skipped'),
+  'DF/D1'             : Item(verb='Skipped'),
+  'DDD/D1'            : Item(verb='Skipped'),
+  'DDF/D1'            : Item(verb='Skipped'),
+  })
+
+# Expected status output after merge/update/switch.
+
+deep_trees_status_local_tree_del = wc.State('', {
+  ''                  : Item(status='  ', wc_rev=3),
+  'D'                 : Item(status='  ', wc_rev=3),
+  'D/D1'              : Item(status='D ', wc_rev=2, treeconflict='C'),
+  'DD'                : Item(status='  ', wc_rev=3),
+  'DD/D1'             : Item(status='D ', wc_rev=2, treeconflict='C'),
+  'DD/D1/D2'          : Item(status='D ', wc_rev=2),
+  'DDD'               : Item(status='  ', wc_rev=3),
+  'DDD/D1'            : Item(status='D ', wc_rev=2, treeconflict='C'),
+  'DDD/D1/D2'         : Item(status='D ', wc_rev=2),
+  'DDD/D1/D2/D3'      : Item(status='D ', wc_rev=2),
+  'DDF'               : Item(status='  ', wc_rev=3),
+  'DDF/D1'            : Item(status='D ', wc_rev=2, treeconflict='C'),
+  'DDF/D1/D2'         : Item(status='D ', wc_rev=2),
+  'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev=2),
+  'DF'                : Item(status='  ', wc_rev=3),
+  'DF/D1'             : Item(status='D ', wc_rev=2, treeconflict='C'),
+  'DF/D1/beta'        : Item(status='D ', wc_rev=2),
+  'F'                 : Item(status='  ', wc_rev=3),
+  'F/alpha'           : Item(status='D ', wc_rev=2, treeconflict='C'),
+  })
+
+deep_trees_status_local_leaf_edit = wc.State('', {
+  ''                  : Item(status='  ', wc_rev=3),
+  'D'                 : Item(status='  ', wc_rev=3),
+  'D/D1'              : Item(status=' M', wc_rev=2, treeconflict='C'),
+  'D/D1/delta'        : Item(status='A ', wc_rev=0),
+  'DD'                : Item(status='  ', wc_rev=3),
+  'DD/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
+  'DD/D1/D2'          : Item(status=' M', wc_rev=2),
+  'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev=0),
+  'DDD'               : Item(status='  ', wc_rev=3),
+  'DDD/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
+  'DDD/D1/D2'         : Item(status='  ', wc_rev=2),
+  'DDD/D1/D2/D3'      : Item(status=' M', wc_rev=2),
+  'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev=0),
+  'DDF'               : Item(status='  ', wc_rev=3),
+  'DDF/D1'            : Item(status='  ', wc_rev=2, treeconflict='C'),
+  'DDF/D1/D2'         : Item(status='  ', wc_rev=2),
+  'DDF/D1/D2/gamma'   : Item(status='MM', wc_rev=2),
+  'DF'                : Item(status='  ', wc_rev=3),
+  'DF/D1'             : Item(status='  ', wc_rev=2, treeconflict='C'),
+  'DF/D1/beta'        : Item(status='MM', wc_rev=2),
+  'F'                 : Item(status='  ', wc_rev=3),
+  'F/alpha'           : Item(status='MM', wc_rev=2, treeconflict='C'),
+  })
 
 
 class DeepTreesTestCase:
@@ -2034,13 +2092,74 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = base
 
-      run_and_verify_update(base, x_out, x_disk, x_status,
+      run_and_verify_update(base, x_out, x_disk, None,
                             error_re_string = test_case.error_re_string)
+      if x_status:
+        run_and_verify_unquiet_status(base, x_status)
     except:
       print("ERROR IN: Tests scheme for update: "
           + "while verifying in '%s'" % test_case.name)
       raise
 
+
+
+def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
+                                  chdir_skip_paths):
+  """
+  Create tree conflicts, then update again, expecting the existing tree
+  conflicts to be skipped.
+  """
+
+  j = os.path.join
+  wc_dir = sbox.wc_dir
+
+  # Initialize silently.
+  setup_case = DeepTreesTestCase(test_case.name,
+                                 test_case.local_action,
+                                 test_case.incoming_action,
+                                 None,
+                                 None,
+                                 None)
+  deep_trees_run_tests_scheme_for_update(sbox, [setup_case])
+
+  # Update whole working copy again.
+  base = j(wc_dir, test_case.name)
+
+  x_out = test_case.expected_output
+  if x_out != None:
+    x_out = x_out.copy()
+    x_out.wc_dir = base
+
+  x_disk = test_case.expected_disk
+
+  x_status = test_case.expected_status
+  if x_status != None:
+    x_status.copy()
+    x_status.wc_dir = base
+
+  run_and_verify_update(base, x_out, x_disk, None,
+                        error_re_string = test_case.error_re_string)
+
+  run_and_verify_unquiet_status(base, x_status)
+
+  # Update subtrees, expecting a single 'Skipped' output for each one.
+  for path in skip_paths:
+    run_and_verify_update(j(base, path),
+                          wc.State(base, {path : Item(verb='Skipped')}),
+                          None, None)
+
+  # Update subtrees, expecting a single 'Skipped' output for each one.
+  # This time, cd to the subdir before .
+  was_cwd = os.getcwd()
+  for path, skipped in chdir_skip_paths:
+    #print("CHDIR TO: %s" % j(base, path))
+    os.chdir(j(base, path))
+    run_and_verify_update('',
+                          wc.State('', {skipped : Item(verb='Skipped')}),
+                          None, None)
+    os.chdir(was_cwd)
+
+  run_and_verify_unquiet_status(base, x_status)
 
 
 def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
@@ -2155,8 +2274,9 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = local
 
-      run_and_verify_switch(local, local, incoming, x_out, x_disk, x_status,
+      run_and_verify_switch(local, local, incoming, x_out, x_disk, None,
                             error_re_string = test_case.error_re_string)
+      run_and_verify_unquiet_status(local, x_status)
     except:
       print("ERROR IN: Tests scheme for switch: "
           + "while verifying in '%s'" % test_case.name)
@@ -2332,9 +2452,10 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
         x_skip.wc_dir = local
 
       run_and_verify_merge(local, None, None, incoming,
-                           x_out, x_disk, x_status, x_skip,
+                           x_out, x_disk, None, x_skip,
                            error_re_string = test_case.error_re_string,
                            dry_run = False)
+      run_and_verify_unquiet_status(local, x_status)
     except:
       print("ERROR IN: Tests scheme for merge: "
           + "while verifying in '%s'" % test_case.name)

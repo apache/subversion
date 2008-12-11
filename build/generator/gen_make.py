@@ -135,7 +135,7 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('CLEAN_FILES = %s\n\n' % ' '.join(cfiles))
 
     # this is here because autogen-standalone needs it too
-    self.ofile.write('SWIG_INCLUDES = -I$(abs_srcdir)/subversion \\\n'
+    self.ofile.write('SWIG_INCLUDES = -I$(abs_builddir)/subversion \\\n'
         '  -I$(abs_srcdir)/subversion/include \\\n'
         '  -I$(abs_srcdir)/subversion/bindings/swig \\\n'
         '  -I$(abs_srcdir)/subversion/bindings/swig/include \\\n'

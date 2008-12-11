@@ -200,6 +200,101 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
+
+/* Helper for harvest_committables().
+ * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
+ * encountering a tree-conflicted immediate child node. However, do
+ * not consider immediate children that are outside the bounds of DEPTH.
+ *
+ * PATH, ENTRY, ADM_ACCESS, DEPTH, CHANGELISTS and POOL are the same ones
+ * originally received by harvest_committables().
+ *
+ * Tree-conflicts information is stored in the victim's immediate parent.
+ * In some cases of an absent tree-conflicted victim, the tree-conflict
+ * information in its parent dir is the only indication that the node
+ * is under version control. This function is necessary for this
+ * particular case. In all other cases, this simply bails out a little
+ * bit earlier.
+ *
+ * Note: Tree-conflicts info can only be found in "THIS_DIR" entries. */
+static svn_error_t *
+bail_on_tree_conflicted_children(const char *path,
+                                 const svn_wc_entry_t *entry,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_depth_t depth,
+                                 apr_hash_t *changelists,
+                                 apr_pool_t *pool)
+{
+  apr_array_header_t *conflicts;
+  int i;
+
+  if ((depth == svn_depth_empty)
+      || (entry->kind != svn_node_dir)
+      || (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
+    /* There can't possibly be tree-conflicts information here. */
+    return SVN_NO_ERROR;
+
+  conflicts = apr_array_make(pool, 0,
+                             sizeof(svn_wc_conflict_description_t *));
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      path, pool));
+
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      const svn_wc_conflict_description_t *conflict;
+      svn_wc_adm_access_t *child_adm_access;
+      const svn_wc_entry_t *child_entry = NULL;
+
+      conflict = APR_ARRAY_IDX(conflicts, i,
+                               svn_wc_conflict_description_t *);
+
+      if ((conflict->node_kind == svn_node_dir) &&
+          (depth == svn_depth_files))
+        continue;
+
+      /* So we've encountered a conflict that is included in DEPTH.
+       * Bail out. */
+
+      /* Get the child's entry, if it has one, else NULL. */
+      if (conflict->node_kind == svn_node_dir)
+        {
+          svn_error_t *err = svn_wc_adm_retrieve(
+                               &child_adm_access, adm_access,
+                               conflict->path, pool);
+          if (err 
+              && (svn_error_root_cause(err)->apr_err
+                  == SVN_ERR_WC_PATH_NOT_FOUND))
+            {
+              svn_error_clear(err);
+              err = 0;
+              child_adm_access = NULL;
+            }
+          SVN_ERR(err);
+        }
+      else
+        child_adm_access = adm_access;
+
+      if (child_adm_access != NULL)
+        SVN_ERR(svn_wc_entry(&child_entry, conflict->path,
+                             child_adm_access, TRUE, pool));
+
+      /* If changelists are used but there is no entry, no changelist
+       * can possibly match. */
+      /* TODO: Currently, there is no way to set a changelist name on
+       * a tree-conflict victim that has no entry (e.g. locally
+       * deleted). */
+      if ((changelists == NULL)
+          || ((child_entry != NULL)
+              && SVN_WC__CL_MATCH(changelists, child_entry)))
+        return svn_error_createf(
+                 SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                 _("Aborting commit: '%s' remains in conflict"),
+                 svn_path_local_style(conflict->path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -342,6 +437,9 @@ harvest_committables(apr_hash_t *committables,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
     }
+
+  SVN_ERR(bail_on_tree_conflicted_children(path, entry, adm_access, depth,
+                                           changelists, pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -561,6 +659,11 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           this_entry = val;
+
+          /* Skip the excluded item. */
+          if (this_entry->depth == svn_depth_exclude)
+            continue;
+
           name_uri = svn_path_uri_encode(name, loop_pool);
 
           full_path = svn_path_join(path, name, loop_pool);
@@ -767,6 +870,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *target;
+      svn_error_t *err;
 
       svn_pool_clear(subpool);
       /* Add the relative portion of our full path (if there are no
@@ -782,8 +886,27 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
                                         target, subpool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                     subpool));
+
+      err = svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
+                                    subpool);
+      /* If a target of the commit is a tree-conflicted node that
+       * has no entry (e.g. locally deleted), issue a proper tree-
+       * conflicts error instead of a "not under version control". */
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+        {
+          svn_wc_conflict_description_t *conflict = NULL;
+          svn_wc__get_tree_conflict(&conflict, target, adm_access, pool);
+          if (conflict != NULL)
+            {
+              svn_error_clear(err);
+              return svn_error_createf(
+                       SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                       _("Aborting commit: '%s' remains in conflict"),
+                       svn_path_local_style(conflict->path, pool));
+            }
+        }
+      SVN_ERR(err);
+
       if (! entry->url)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Entry for '%s' has no URL"),
@@ -797,7 +920,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
           const char *parent, *base_name;
           svn_wc_adm_access_t *parent_access;
           const svn_wc_entry_t *p_entry = NULL;
-          svn_error_t *err;
 
           svn_path_split(target, &parent, &base_name, subpool);
           err = svn_wc_adm_retrieve(&parent_access, parent_dir,
@@ -1271,7 +1393,11 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
+      /* Ensured by harvest_committables(), item->path will never be an
+         excluded path. However, will it be deleted/absent items?  I think
+         committing an modification on a deleted/absent item does not make
+         sense. So it's probably safe to turn off the show_hidden flag here.*/
+      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, FALSE, pool));
 
       /* When committing a directory that no longer exists in the
          repository, a "not found" error does not occur immediately
@@ -1365,7 +1491,7 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
-                      apr_hash_t **digests,
+                      apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -1391,9 +1517,9 @@ svn_client__do_commit(const char *base_url,
   if (tempfiles)
     *tempfiles = apr_hash_make(pool);
 
-  /* Ditto for the md5 digests. */
-  if (digests)
-    *digests = apr_hash_make(pool);
+  /* Ditto for the md5 checksums. */
+  if (checksums)
+    *checksums = apr_hash_make(pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      URI-decoded relative paths (which come from the item URLs).  And
@@ -1470,12 +1596,10 @@ svn_client__do_commit(const char *base_url,
           tempfile = apr_pstrdup(pool, tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
-      if (digests)
-        {
-          unsigned char *new_digest = apr_pmemdup(apr_hash_pool_get(*digests),
-                                                  digest, APR_MD5_DIGESTSIZE);
-          apr_hash_set(*digests, item->path, APR_HASH_KEY_STRING, new_digest);
-        }
+      if (checksums)
+        apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
+                     svn_checksum__from_digest(digest, svn_checksum_md5,
+                                               apr_hash_pool_get(*checksums)));
     }
 
   svn_pool_destroy(iterpool);

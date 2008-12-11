@@ -26,14 +26,14 @@ def blame(path, filename, rev=None):
   if rev is None:
     rev = fs.youngest_rev(fsob)
   filedata = ''
-  for i in xrange(0, rev+1):
+  for i in range(0, rev+1):
     root = fs.revision_root(fsob, i)
     if fs.check_path(root, filename) != core.svn_node_none:
       first = i
       break
   print "First revision is %d" % first
   print "Last revision is %d" % rev
-  for i in xrange(first, rev+1):
+  for i in range(first, rev+1):
     previousroot = root
     root = fs.revision_root(fsob, i)
     if i != first:
@@ -70,7 +70,7 @@ def blame(path, filename, rev=None):
         k = k + 1
 #    print ''.join(diffresult)
 #  print annotresult
-  for x in xrange(len(annotresult.keys())):
+  for x in range(len(annotresult.keys())):
      sys.stdout.write("Line %d (rev %d):%s" % (x,
                                                annotresult[x][0],
                                                annotresult[x][1]))

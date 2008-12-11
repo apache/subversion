@@ -127,7 +127,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      ### lock the entire tree when we don't actually need to, that's a
      ### performance hit, but (except for access contention) it is not
      ### a correctness problem. */
-  levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+
+  /* We may have to crop the subtree if the depth is sticky, so lock the
+     entire tree in such a situation*/
+  levels_to_lock = depth_is_sticky 
+    ? -1 : SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Sanity check.  Without this, the update is meaningless. */
   SVN_ERR_ASSERT(path);
@@ -150,6 +154,21 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(anchor, pool));
+
+  /* We may need to crop the tree if the depth is sticky */
+  if (depth_is_sticky && depth < svn_depth_infinity)
+    {
+      SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+      /* If we are asked to exclude a target, we can just stop now. */
+      if (depth == svn_depth_exclude)
+        {
+          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
@@ -232,8 +251,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! server_supports_depth),
+  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
+                                TRUE, depth, (! depth_is_sticky), 
+                                (! server_supports_depth),
                                 use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);

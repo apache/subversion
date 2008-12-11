@@ -333,15 +333,9 @@ create_empty_file(apr_file_t **file,
     return svn_wc_create_tmp_file2(file, empty_file_path,
                                    svn_wc_adm_access_path(adm_access),
                                    delete_when, pool);
-  else
-    {
-      const char *temp_dir;
 
-      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      return svn_io_open_unique_file2(file, empty_file_path,
-                                      svn_path_join(temp_dir, "tmp", pool),
-                                      "", delete_when, pool);
-    }
+  return svn_io_open_unique_file3(file, empty_file_path, NULL,
+                                  delete_when, pool, pool);
 }
 
 /* Return in *PATH_ACCESS the access baton for the directory PATH by
@@ -824,13 +818,16 @@ close_file(void *file_baton,
     {
       /* ### maybe try to stat the local b->wcpath? */
       /* If the file path doesn't exist, then send a 'skipped' notification. */
+      /* Currently, there is no way how this could be a tree-conflict
+       * notification, because tree conflicts are only detected below.
+       * Neither open_file, add_file or apply_textdelta tack tree-conflicts
+       * on the file baton. delete_file is only carried out on dir close.
+       * This is a skip due to lock failure. */
       if (eb->notify_func)
         {
           svn_wc_notify_t *notify = svn_wc_create_notify(
                                       b->wcpath,
-                                      b->tree_conflicted
-                                       ? svn_wc_notify_tree_conflict
-                                       : svn_wc_notify_skip,
+                                      svn_wc_notify_skip,
                                       pool);
           notify->kind = svn_node_file;
           notify->content_state = svn_wc_notify_state_missing;
@@ -972,11 +969,20 @@ close_directory(void *dir_baton,
      have an access baton, since in that case the directory will already
      have been recognised as added, in which case they cannot conflict. */
   if ((b->propchanges->nelts > 0) && (! eb->dry_run || adm_access))
-    SVN_ERR(eb->diff_callbacks->dir_props_changed
-            (adm_access, &prop_state, &b->tree_conflicted,
-             b->wcpath,
-             b->propchanges, b->pristine_props,
-             b->edit_baton->diff_cmd_baton));
+    {
+      svn_boolean_t tree_conflicted;
+      SVN_ERR(eb->diff_callbacks->dir_props_changed
+              (adm_access, &prop_state, &tree_conflicted,
+               b->wcpath,
+               b->propchanges, b->pristine_props,
+               b->edit_baton->diff_cmd_baton));
+      if (tree_conflicted)
+        b->tree_conflicted = TRUE;
+    }
+
+  SVN_ERR(eb->diff_callbacks->dir_closed
+          (adm_access, NULL, NULL, NULL,
+           b->wcpath, b->edit_baton->diff_cmd_baton));
 
   /* ### Don't notify added directories as they triggered notification
      in add_directory.  Does this mean that directory notification

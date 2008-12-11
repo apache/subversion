@@ -854,6 +854,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Seventh column: Whether the item is the victim of a tree conflict\n"
      "      ' ' normal\n"
      "      'C' tree-Conflicted\n"
+     "    If the item is a tree conflict victim, an additional line is printed\n"
+     "    after the item's status line, explaining the nature of the conflict.\n"
      "\n"
      "  The out-of-date information appears in the ninth column (with -u):\n"
      "      '*' a newer revision exists on the server\n"
@@ -881,7 +883,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "           *     965       922 sussman      wc/foo.c\n"
      "    A  +         965       687 joe          wc/qax.c\n"
      "                 965       687 joe          wc/zig.c\n"
-     "    Status against revision:   981\n"),
+     "    Status against revision:   981\n"
+     "\n"
+     "    svn status\n"
+     "     M      wc/bar.c\n"
+     "    !     C wc/qaz.c\n"
+     "          >   incoming edit, local missing\n"
+     "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
       opt_ignore_externals, opt_changelist, opt_ignore_mergeinfo} },
 
@@ -1299,7 +1307,7 @@ main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
-                                 "from locale to UTF8")), pool, "svn: ");
+                                 "from locale to UTF-8")), pool, "svn: ");
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
         if (opt_state.depth == svn_depth_unknown
             || opt_state.depth == svn_depth_exclude)
@@ -1318,15 +1326,15 @@ main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
-                                 "from locale to UTF8")), pool, "svn: ");
+                                 "from locale to UTF-8")), pool, "svn: ");
         opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
-        if (opt_state.set_depth == svn_depth_unknown
-            || opt_state.set_depth == svn_depth_exclude)
+        /* svn_depth_exclude is okay for --set-depth. */
+        if (opt_state.set_depth == svn_depth_unknown)
           {
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("'%s' is not a valid depth; try "
-                                   "'empty', 'files', 'immediates', "
+                                   "'exclude', 'empty', 'files', 'immediates', "
                                    "or 'infinity'"),
                                  utf8_opt_arg), pool, "svn: ");
           }
@@ -1799,7 +1807,8 @@ main(int argc, const char *argv[])
           opt_state.depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(FALSE);
         }
       else if (subcommand->cmd_func == svn_cl__revert
-               || subcommand->cmd_func == svn_cl__add)
+               || subcommand->cmd_func == svn_cl__add
+               || subcommand->cmd_func == svn_cl__commit)
         {
           /* In pre-1.5 Subversion, some commands treated -N like
              --depth=empty, so force that mapping here.  Anyway, with

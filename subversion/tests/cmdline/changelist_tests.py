@@ -122,7 +122,7 @@ def verify_changelist_output(output, expected_adds=None,
     num_expected += len(expected_skips)
 
   if not expected_skips:
-    output = filter(lambda line: (not _re_cl_skip.match(line)), output)
+    output = [line for line in output if (not _re_cl_skip.match(line))]
 
   if len(output) != num_expected:
     raise svntest.Failure("Unexpected number of 'svn changelist' output lines")

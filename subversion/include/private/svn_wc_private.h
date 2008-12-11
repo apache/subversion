@@ -157,6 +157,86 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
                                    const char *repos_root_url,
                                    apr_pool_t *pool);
 
+/** Set @a *tree_conflict to a newly allocated @c
+ * svn_wc_conflict_description_t structure describing the tree
+ * conflict state of @a victim_path, or to @c NULL if @a victim_path
+ * is not in a state of tree conflict. @a adm_access is the admin
+ * access baton for @a victim_path. Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                          const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
+
+/** Record the tree conflict described by @a conflict in the WC.
+ * @a adm_access must be a write-access baton for the parent directory of
+ * @a victim->path. Use @a pool for all allocations.
+ *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in @a adm_access.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
+
+/* Remove any tree conflict on victim @a victim_path from the directory entry
+ * belonging to @a adm_access. (If there is no such conflict recorded, do
+ * nothing and return success.) @a adm_access must be an access baton for the
+ * parent directory of @a victim_path.
+ *
+ * Warning: This function updates the entry on disk but not the cached entry
+ * in @a adm_access.
+ *
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__del_tree_conflict(const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
+
+/*
+ * Read tree conflict descriptions from @a conflict_data.  Append
+ * pointers to newly allocated svn_wc_conflict_description_t objects to
+ * the array pointed to by @a conflicts.  @a dir_path is the path to the
+ * working copy directory whose conflicts are being read.  The conflicts
+ * read are the tree conflicts on the immediate child nodes of @a
+ * dir_path.  Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
+                            const char *conflict_data,
+                            const char *dir_path,
+                            apr_pool_t *pool);
+ 
+/** Return a duplicate of @a conflict, allocated in @a pool.
+ * A deep copy of all members, except the adm_access member, will be made.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
+                                 apr_pool_t *pool);
+
+/** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
+ * deleted entries as working copy roots.
+ * 
+ * @since New in 1.6.*/
+svn_error_t *
+svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
+                            const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
