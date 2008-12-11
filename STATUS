@@ -119,13 +119,6 @@ Candidate changes for 1.5.5:
 Approved changes:
 =================
 
- * r34506
-   Fix a pair of bugs in the BDB backend's node-origins cache-miss fallback
-   logic, one of which can cause a SEGFAULT, the other of which can result
-   in an incorrect return value.
-   Votes:
-     +1: cmpilato, glasser, pburba
-
  * r34653, r34656
    Don't autoupgrade ancient BDB filesystems to 1.5 or 1.4 format.
    Justification:
