@@ -3867,7 +3867,8 @@ svn_wc_crawl_revisions(const char *path,
  * @c FALSE otherwise. Here, @a path is a "working copy root" if its parent
  * directory is not a WC or if its parent directory's repository URL is not
  * the parent of its own repository URL. Thus, a switched subtree is
- * considered to be a working copy root.
+ * considered to be a working copy root. Also, a deleted tree-conflict
+ * victim is considered a "working copy root" because it has no URL.
  *
  * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
