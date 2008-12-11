@@ -114,7 +114,10 @@ Candidate changes for 1.5.5:
    Justification:
      A merge that should remove subtree mergeinfo doesn't actually do so.
      The subtree mergeinfo is initially deleted, but then is replaced by
-     mergeinfo describing the merge itself.
+     mergeinfo describing the merge itself.  This isn't a very common
+     situation, see http://subversion.tigris.org/issues/show_bug.cgi?id=3323,
+     but anything that reduces the amount of explicit subtree mergeinfo
+     is a good thing.
    Votes:
      +1: pburba
 
