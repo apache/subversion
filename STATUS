@@ -108,6 +108,26 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
      
+ * r34547
+   Fix issue #3323 'Mergeinfo deleted by a merge should disappear'
+   Notes:
+     Will conflict if r34432 is not applied first.  Note that r34547 does
+     not depend on r34432 to function properly, so can be backported by
+     itself if necessary.
+   Justification:
+   Votes:
+     +1: pburba
+
+ * r34653, r34656
+   Don't autoupgrade ancient BDB filesystems to 1.5 or 1.4 format.
+   Justification:
+     Small fix, but avoids confusing/surprising users.
+   Votes:
+     +1: hwright, cmpilato
+
+Approved changes:
+=================
+
  * r34184, r34585
    Don't create explicit mergeinfo on a WC-to-WC move/copy destination
    unless the source already had some.
@@ -128,24 +148,4 @@ Candidate changes for 1.5.5:
      See this thread for more:
      subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=98145.
    Votes:
-     +1: pburba, cmpilato
-
- * r34547
-   Fix issue #3323 'Mergeinfo deleted by a merge should disappear'
-   Notes:
-     Will conflict if r34432 is not applied first.  Note that r34547 does
-     not depend on r34432 to function properly, so can be backported by
-     itself if necessary.
-   Justification:
-   Votes:
-     +1: pburba
-
- * r34653, r34656
-   Don't autoupgrade ancient BDB filesystems to 1.5 or 1.4 format.
-   Justification:
-     Small fix, but avoids confusing/surprising users.
-   Votes:
-     +1: hwright, cmpilato
-
-Approved changes:
-=================
+     +1: pburba, cmpilato, zhakov
