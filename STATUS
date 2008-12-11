@@ -93,13 +93,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
- * r34506
-   Fix a pair of bugs in the BDB backend's node-origins cache-miss fallback
-   logic, one of which can cause a SEGFAULT, the other of which can result
-   in an incorrect return value.
-   Votes:
-     +1: cmpilato, glasser
-
  * r34560, r34562
    Fix a bug which occurs when a merge adds a subtree as an immediate child
    of the merge target when the merge target has non-inheritable mergeinfo
@@ -132,3 +125,10 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
+
+ * r34506
+   Fix a pair of bugs in the BDB backend's node-origins cache-miss fallback
+   logic, one of which can cause a SEGFAULT, the other of which can result
+   in an incorrect return value.
+   Votes:
+     +1: cmpilato, glasser, pburba
