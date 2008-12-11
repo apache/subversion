@@ -24,11 +24,11 @@
 
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "private/svn_skel.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 #include "../../libsvn_fs_base/fs.h"
-#include "../../libsvn_fs_base/util/skel.h"
 
 
 /* Some utility functions.  */
@@ -62,7 +62,7 @@ get_empty_string(apr_pool_t *pool)
 static skel_t *
 parse_str(svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  return svn_fs_base__parse_skel(str->data, str->len, pool);
+  return svn_skel__parse(str->data, str->len, pool);
 }
 
 
@@ -70,7 +70,7 @@ parse_str(svn_stringbuf_t *str, apr_pool_t *pool)
 static skel_t *
 parse_cstr(const char *str, apr_pool_t *pool)
 {
-  return svn_fs_base__parse_skel(str, strlen(str), pool);
+  return svn_skel__parse(str, strlen(str), pool);
 }
 
 
@@ -801,7 +801,7 @@ unparse_implicit_length(const char **msg,
           char buf =  (char)byte;
           skel_t *skel = build_atom(1, &buf, pool);
 
-          str = svn_fs_base__unparse_skel(skel, pool);
+          str = svn_skel__unparse(skel, pool);
 
           if (! (str
                  && str->len == 1
@@ -845,8 +845,8 @@ unparse_list(const char **msg,
 
     /* Unparse that, parse it again, and see if we got the same thing
        back.  */
-    str = svn_fs_base__unparse_skel(list, pool);
-    reparsed = svn_fs_base__parse_skel(str->data, str->len, pool);
+    str = svn_skel__unparse(list, pool);
+    reparsed = svn_skel__parse(str->data, str->len, pool);
 
     if (! reparsed || reparsed->is_atom)
       return fail(pool, "result is syntactically misformed, or not a list");
@@ -910,8 +910,8 @@ unparse_list(const char **msg,
         add(middle, top);
       }
 
-    str = svn_fs_base__unparse_skel(top, pool);
-    reparsed = svn_fs_base__parse_skel(str->data, str->len, pool);
+    str = svn_skel__unparse(top, pool);
+    reparsed = svn_skel__parse(str->data, str->len, pool);
 
     if (! skel_equal(top, reparsed))
       return fail(pool, "failed to reparse list of lists");

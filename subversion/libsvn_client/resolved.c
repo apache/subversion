@@ -43,7 +43,6 @@ svn_client_resolve(const char *path,
   svn_wc_adm_access_t *adm_access;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t wc_root;
-  const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
                                  path,
@@ -53,45 +52,10 @@ svn_client_resolve(const char *path,
                                  pool));
 
   /* Make sure we do not end up looking for tree conflict info
-   * above the working copy root. */
-  SVN_ERR(svn_wc_is_wc_root(&wc_root, path, adm_access, pool));
-  if (wc_root)
-    {
-      /* Check whether this is a switched subtree or an absent item.
-       * Switched subtrees are considered working copy roots by
-       * svn_wc_is_wc_root(). But it's OK to check for tree conflict
-       * info in the parent of a switched subtree, because the
-       * subtree itself might be a tree conflict victim. */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
-
-      /* If this has no entry, it can't possibly be a switched subdir.
-       * It can't be a WC root either, for that matter.*/
-      if (entry == NULL)
-        wc_root = FALSE;
-      else
-      if (entry->kind == svn_node_dir)
-        {
-          svn_error_t *err;
-          svn_boolean_t switched;
-
-          err = svn_wc__path_switched(path, &switched, entry, pool);
-
-          if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
-            {
-              /* This is e.g. a locally deleted dir. It has an entry but
-               * no repository URL. It cannot be a WC root. */
-              svn_error_clear(err);
-              wc_root = FALSE;
-            }
-          else
-            {
-              SVN_ERR(err);
-              /* The query for a switched dir succeeded. If switched,
-               * don't consider this a WC root. */
-              wc_root = switched ? FALSE : TRUE;
-            }
-        }
-    }
+   * above the working copy root. It's OK to check for tree conflict
+   * info in the parent of a *switched* subtree, because the
+   * subtree itself might be a tree conflict victim. */
+  SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root, path, adm_access, pool));
 
   if (! wc_root) /* but possibly a switched subdir */
     {
