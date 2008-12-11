@@ -65,13 +65,6 @@ Candidate changes:
     Votes
       +1: stsp
 
- * r34653, r34656
-   Don't autoupgrade ancient BDB filesystems to 1.5 or 1.4 format.
-   Justification:
-     Small fix, but avoids confusing/surprising users.
-   Votes:
-     +1: hwright, cmpilato
-
 Veto-blocked changes:
 
   * r21531, r21848, r21934
@@ -86,3 +79,10 @@ Veto-blocked changes:
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
 Approved changes:
+
+ * r34653, r34656
+   Don't autoupgrade ancient BDB filesystems to 1.5 or 1.4 format.
+   Justification:
+     Small fix, but avoids confusing/surprising users.
+   Votes:
+     +1: hwright, cmpilato, pburba
