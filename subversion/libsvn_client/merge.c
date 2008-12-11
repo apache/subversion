@@ -985,7 +985,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
               if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
                 {
                   /* Does PATH have any working mergeinfo? */
-                  svn_prop_t *mergeinfo_prop =
+                  svn_string_t *mergeinfo_prop =
                     apr_hash_get(original_props,
                                  SVN_PROP_MERGEINFO,
                                  APR_HASH_KEY_STRING);
