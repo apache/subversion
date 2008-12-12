@@ -4085,6 +4085,15 @@ def tree_conflicts_on_update_2_3(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  expected_status.tweak(
+    #'D/D1',
+    # The expectation on 'alpha' reflects partial progress on issue #3334.
+    'F/alpha',
+    #'DD/D1',
+    #'DF/D1',
+    #'DDD/D1',
+    #'DDF/D1',
+    status='A ', copied='+', wc_rev='-')
 
   # Paths where output should be a single 'Skipped' message.
   skip_paths = [
