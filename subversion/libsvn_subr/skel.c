@@ -76,7 +76,7 @@ static const enum char_type skel_char_type[256] = {
    We would like to use strtoul, but that family of functions is
    locale-dependent, whereas we're trying to parse data in a
    locale-independent format.  */
-apr_size_t
+static apr_size_t
 getsize(const char *data, apr_size_t len,
         const char **endptr, apr_size_t max)
 {
@@ -131,7 +131,7 @@ getsize(const char *data, apr_size_t len,
 /* Store the ASCII decimal representation of VALUE at DATA.  Return
    the length of the representation if all goes well; return zero if
    the result doesn't fit in LEN bytes.  */
-int
+static int
 putsize(char *data, apr_size_t len, apr_size_t value)
 {
   apr_size_t i = 0;
