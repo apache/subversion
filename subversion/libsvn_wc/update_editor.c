@@ -1730,9 +1730,8 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Is this path the victim of a newly-discovered tree conflict?  If so,
    * remember it and notify the client. Then (if it was existing and
-   * modified), re-schedule the node to be added back again, as a copy from
-   * the previously existing version.
-       ### previous base version? last existing version in repository?
+   * modified), re-schedule the node to be added back again, as a (modified)
+   * copy of the previous base version.
    */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
                               parent_adm_access, svn_wc_conflict_action_delete,
@@ -1755,8 +1754,7 @@ do_entry_deletion(struct edit_baton *eb,
           tmp_entry.schedule = svn_wc_schedule_add;
           tmp_entry.copyfrom_url = entry->url;
           tmp_entry.copyfrom_rev = entry->revision;
-          tmp_entry.copied = TRUE;  /* ### ? */
-            /* ### Need to set 'copied' recursively? */
+          tmp_entry.copied = TRUE;
           flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE
             | SVN_WC__ENTRY_MODIFY_FORCE
             | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
@@ -1767,6 +1765,7 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
                                              full_path, &tmp_entry, flags,
                                              pool));
+          /* ### Need to set 'copied' recursively */
         }
       else
         {
