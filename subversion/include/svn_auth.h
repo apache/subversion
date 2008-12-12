@@ -706,6 +706,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
  * default arguments when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @since New in 1.4.
  */
@@ -727,6 +728,7 @@ svn_auth_get_simple_prompt_provider(svn_auth_provider_object_t **provider,
  * default argument when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @since New in 1.4.
  */
@@ -1122,7 +1124,8 @@ svn_auth_get_ssl_server_trust_prompt_provider
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
- * a server.  The prompt will be retried @a retry_limit times.
+ * a server.  The prompt will be retried @a retry_limit times. For
+ * infinite retries, set @a retry_limit to value less than 0.
  *
  * @since New in 1.4.
  */
@@ -1141,7 +1144,8 @@ svn_auth_get_ssl_client_cert_prompt_provider
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
  * client certificate is protected by a passphrase.  The prompt will
- * be retried @a retry_limit times.
+ * be retried @a retry_limit times. For infinite retries, set
+ * @a retry_limit to value less than 0.
  *
  * @since New in 1.4.
  */
