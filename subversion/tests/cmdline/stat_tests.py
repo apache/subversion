@@ -1520,10 +1520,11 @@ def status_with_tree_conflicts(sbox):
   tau = os.path.join(G, 'tau')
 
   # check status of G
+  # The expectation on 'rho' reflects partial progress on issue #3334.
   expected = svntest.verify.UnorderedOutput(
          ["D     C %s\n" % pi,
           "      >   local delete, incoming edit upon update\n",
-          "M     C %s\n" % rho,
+          "A  +  C %s\n" % rho,
           "      >   local edit, incoming delete upon update\n",
           "D     C %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
@@ -1535,11 +1536,12 @@ def status_with_tree_conflicts(sbox):
                                      "status", G)
 
   # check status of G, with -v
+  # The expectation on 'rho' reflects partial progress on issue #3334.
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
           "D     C          1        1 jrandom      %s\n" % pi,
           "      >   local delete, incoming edit upon update\n",
-          "M     C          1        1 jrandom      %s\n" % rho,
+          "A  +  C          -        1 jrandom      %s\n" % rho,
           "      >   local edit, incoming delete upon update\n",
           "D     C          1        1 jrandom      %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
