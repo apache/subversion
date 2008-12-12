@@ -1960,16 +1960,6 @@ add_directory(const char *path,
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
 
-  /* The path can exist, but it must be a directory... */
-  if (kind == svn_node_file || kind == svn_node_unknown)
-    {
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add directory '%s': a non-directory object of the "
-         "same name already exists"),
-       svn_path_local_style(db->path, pool));
-    }
-
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
   if (in_skipped_tree(eb, full_path, pool))
@@ -1984,16 +1974,26 @@ add_directory(const char *path,
     {
       /* Record this conflict so that its descendants are skipped silently. */
       remember_skipped_tree(eb, full_path);
-      
+
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton, 
+        (*eb->notify_func)(eb->notify_baton,
                            svn_wc_create_notify(full_path,
                                                 svn_wc_notify_skip,
                                                 pool),
                            pool);
 
       return SVN_NO_ERROR;
+    }
+
+  /* The path can exist, but it must be a directory... */
+  if (kind == svn_node_file || kind == svn_node_unknown)
+    {
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       _("Failed to add directory '%s': a non-directory object of the "
+         "same name already exists"),
+       svn_path_local_style(db->path, pool));
     }
 
   if (kind == svn_node_dir)
