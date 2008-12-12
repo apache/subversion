@@ -265,7 +265,7 @@ username_prompt_next_creds(void **credentials_p,
                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                            APR_HASH_KEY_STRING);
 
-  if (ib->retries >= pb->retry_limit)
+  if ((pb->retry_limit >= 0) && (ib->retries >= pb->retry_limit))
     {
       /* give up, go on to next provider. */
       *credentials_p = NULL;
