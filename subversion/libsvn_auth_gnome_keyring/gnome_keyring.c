@@ -34,7 +34,6 @@
 #include <glib.h>
 #include <dbus/dbus.h>
 #include <gnome-keyring.h>
-#include <gnome-keyring-result.h>
 
 
 /*-----------------------------------------------------------------------*/
