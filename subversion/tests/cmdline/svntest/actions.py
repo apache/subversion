@@ -2108,6 +2108,11 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
   """
   Create tree conflicts, then update again, expecting the existing tree
   conflicts to be skipped.
+  SKIP_PATHS is a list of paths, relative to the "base dir", for which
+  "update" on the "base dir" should report as skipped.
+  CHDIR_SKIP_PATHS is a list of (base-path, skipped-path) pairs for which an
+  update of "base-path" (relative to the "base dir") should result in
+  "skipped-path" (relative to "base-path") being reported as skipped.
   """
 
   j = os.path.join
@@ -2134,7 +2139,7 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
 
   x_status = test_case.expected_status
   if x_status != None:
-    x_status.copy()
+    x_status = x_status.copy()
     x_status.wc_dir = base
 
   run_and_verify_update(base, x_out, x_disk, None,
