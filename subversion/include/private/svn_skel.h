@@ -133,12 +133,6 @@ skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
 void svn_skel__prepend(skel_t *skel, skel_t *list);
 
 
-/* Append SKEL to LIST.  This is not as efficient as prepending skels,
-   so prepend in places where you can sensibly do so, and you want to
-   save a couple clock cycles. */
-void svn_skel__append(skel_t *skel, skel_t *list);
-
-
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
 svn_stringbuf_t *svn_skel__unparse(const skel_t *skel, apr_pool_t *pool);
@@ -148,40 +142,8 @@ svn_stringbuf_t *svn_skel__unparse(const skel_t *skel, apr_pool_t *pool);
 svn_boolean_t svn_skel__matches_atom(const skel_t *skel, const char *str);
 
 
-/* Return true iff SKEL is an atom whose data is the same as STR.  */
-svn_boolean_t svn_skel__atom_matches_string(const skel_t *skel,
-                                            const svn_string_t *str);
-
-
 /* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
 int svn_skel__list_length(const skel_t *skel);
-
-
-/* Return TRUE if SKEL1 and SKEL2 are the same in structure and contents,
-   or 0 if they are not.  This is like a lisp `equal' not `eq': atoms
-   are equal if their lengths and contents are the same, lists are
-   equal if they have the same number and order of equal elements. */
-svn_boolean_t svn_skel__equal(const skel_t *skel1, const skel_t *skel2);
-
-
-/* Make a copy of SKEL and its data in POOL.  */
-skel_t *svn_skel__copy(const skel_t *skel, apr_pool_t *pool);
-
-
-
-/* ### temporary support for old names for the above functions */
-#define svn_fs_base__parse_skel svn_skel__parse
-#define svn_fs_base__str_atom svn_skel__str_atom
-#define svn_fs_base__mem_atom svn_skel__mem_atom
-#define svn_fs_base__make_empty_list svn_skel__make_empty_list
-#define svn_fs_base__prepend svn_skel__prepend
-#define svn_fs_base__append svn_skel__append
-#define svn_fs_base__unparse_skel svn_skel__unparse
-#define svn_fs_base__matches_atom svn_skel__matches_atom
-#define svn_fs_base__atom_matches_string svn_skel__atom_matches_string
-#define svn_fs_base__list_length svn_skel__list_length
-#define svn_fs_base__skels_are_equal svn_skel__equal
-#define svn_fs_base__copy_skel svn_skel__copy
 
 
 #ifdef __cplusplus
