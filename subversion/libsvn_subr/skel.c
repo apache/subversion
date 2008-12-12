@@ -76,7 +76,7 @@ static const enum char_type skel_char_type[256] = {
    We would like to use strtoul, but that family of functions is
    locale-dependent, whereas we're trying to parse data in a
    locale-independent format.  */
-apr_size_t
+static apr_size_t
 getsize(const char *data, apr_size_t len,
         const char **endptr, apr_size_t max)
 {
@@ -131,7 +131,7 @@ getsize(const char *data, apr_size_t len,
 /* Store the ASCII decimal representation of VALUE at DATA.  Return
    the length of the representation if all goes well; return zero if
    the result doesn't fit in LEN bytes.  */
-int
+static int
 putsize(char *data, apr_size_t len, apr_size_t value)
 {
   apr_size_t i = 0;
@@ -555,33 +555,6 @@ svn_skel__prepend(skel_t *skel, skel_t *list_skel)
 }
 
 
-void
-svn_skel__append(skel_t *skel, skel_t *list_skel)
-{
-  /* If list_skel isn't even a list, somebody's not using this
-     function properly. */
-  SVN_ERR_ASSERT_NO_RETURN(! list_skel->is_atom);
-
-  /* No kids?  Let's make one. */
-  if (! list_skel->children)
-    {
-      list_skel->children = skel;
-    }
-  else
-    {
-      skel_t *tmp = list_skel->children;
-
-      /* Find the last child... */
-      while (tmp->next)
-        {
-          tmp = tmp->next;
-        }
-      /* ...and then give her a sister. */
-      tmp->next = skel;
-    }
-}
-
-
 
 /* Examining skels.  */
 
@@ -601,18 +574,6 @@ svn_skel__matches_atom(const skel_t *skel, const char *str)
 
 
 int
-svn_skel__atom_matches_string(const skel_t *skel, const svn_string_t *str)
-{
-  if (skel && skel->is_atom)
-    {
-      return ((skel->len == str->len
-               && ! memcmp(skel->data, str->data, skel->len)) ? TRUE : FALSE);
-    }
-  return FALSE;
-}
-
-
-int
 svn_skel__list_length(const skel_t *skel)
 {
   int len = 0;
@@ -625,84 +586,4 @@ svn_skel__list_length(const skel_t *skel)
     len++;
 
   return len;
-}
-
-
-
-/* Comparing skels. */
-
-svn_boolean_t
-svn_skel__equal(const skel_t *skel1, const skel_t *skel2)
-{
-  if (skel1 == skel2)
-    return TRUE;
-
-  /* Else not `eq', but might still be `equal'. */
-
-  if (skel1->is_atom && skel2->is_atom)
-    {
-      if ((skel1->len == skel2->len)
-          && (! strncmp(skel1->data, skel2->data, skel1->len)))
-        return TRUE;
-      else
-        return FALSE;
-    }
-  else if (((! skel1->is_atom) && (! skel2->is_atom))
-           && ((svn_skel__list_length(skel1))
-               == (svn_skel__list_length(skel2))))
-    {
-      int len = svn_skel__list_length(skel1);
-      int i;
-
-      for (i = 0; i < len; i++)
-        if (! svn_skel__equal((skel1->children) + i,
-                              (skel2->children) + i))
-          return FALSE;
-
-      return TRUE;
-    }
-  else
-    return FALSE;
-}
-
-
-
-/* Copying skels.  */
-
-
-skel_t *
-svn_skel__copy(const skel_t *skel, apr_pool_t *pool)
-{
-  skel_t *copy = apr_pcalloc(pool, sizeof(*copy));
-
-  if (skel->is_atom)
-    {
-      apr_size_t len = skel->len;
-      char *s = apr_palloc(pool, len);
-
-      memcpy(s, skel->data, len);
-      copy->is_atom = TRUE;
-      copy->data = s;
-      copy->len = len;
-    }
-  else
-    {
-      skel_t *skel_child, **copy_child_ptr;
-
-      copy->is_atom = FALSE;
-      copy->data = NULL;
-      copy->len = 0;
-
-      copy_child_ptr = &copy->children;
-      for (skel_child = skel->children;
-           skel_child;
-           skel_child = skel_child->next)
-        {
-          *copy_child_ptr = svn_skel__copy(skel_child, pool);
-          copy_child_ptr = &(*copy_child_ptr)->next;
-        }
-      *copy_child_ptr = NULL;
-    }
-
-  return copy;
 }

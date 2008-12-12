@@ -28,7 +28,6 @@
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
-#include "../../libsvn_fs_base/fs.h"
 
 
 /* Some utility functions.  */
