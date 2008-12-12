@@ -201,7 +201,7 @@ gnome_keyring_simple_save_creds(svn_boolean_t *saved,
 }
 
 static void
-gnome_keyring_init()
+gnome_keyring_init(void)
 {
   const char *application_name = NULL;
   application_name = g_get_application_name();
