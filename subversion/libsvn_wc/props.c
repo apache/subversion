@@ -65,20 +65,6 @@
 /* The real functionality here is part of libsvn_subr, in hashdump.c.
    But these are convenience routines for use in libsvn_wc. */
 
-static svn_error_t *
-get_prop_path(const char **ppath,
-          const char *path,
-          svn_wc__props_kind_t props_kind,
-          svn_wc_adm_access_t *adm_access,
-          apr_pool_t *pool)
-{
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  return svn_wc__prop_path(ppath, path, entry->kind,
-                           props_kind, FALSE, pool);
-}
-
 /* Get PATH's properies of PROPS_KIND, and put them into *HASH.
    PATH should be of kind NODE_KIND. */
 static svn_error_t *
@@ -490,8 +476,11 @@ svn_wc__props_last_modified(apr_time_t *mod_time,
 {
   svn_error_t *err;
   const char *props_file;
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR(get_prop_path(&props_file, path, props_kind, adm_access, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
+                            FALSE, pool));
 
   err = svn_io_file_affected_time(mod_time, props_file, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -720,7 +709,11 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
     }
   else
     {
-      SVN_ERR(get_prop_path(&props_file, path, props_kind, adm_access, pool));
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
+                                FALSE, pool));
       SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
     }
 
@@ -793,7 +786,11 @@ svn_wc__props_delete(const char *path,
     }
   else
     {
-      SVN_ERR(get_prop_path(&props_file, path, props_kind, adm_access, pool));
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
+                                FALSE, pool));
       SVN_ERR(remove_file_if_present(props_file, pool));
     }
 
