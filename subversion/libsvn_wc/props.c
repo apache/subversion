@@ -135,25 +135,19 @@ load_props(apr_hash_t **hash,
    file on disk, otherwise an empty hash will result in no file
    being written at all. */
 static svn_error_t *
-save_prop_file(const char *propfile_path,
-               apr_hash_t *hash,
-               svn_boolean_t write_empty,
-               apr_pool_t *pool)
+save_prop_tmp_file(const char **tmp_file_path,
+                   apr_hash_t *hash,
+                   const char *tmp_base_dir,
+                   svn_boolean_t write_empty,
+                   apr_pool_t *pool)
 {
-  apr_file_t *prop_tmp;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_io_file_open(&prop_tmp, propfile_path,
-                           (APR_WRITE | APR_CREATE | APR_TRUNCATE
-                            | APR_BUFFERED),
-                           APR_OS_DEFAULT, pool));
-  stream = svn_stream_from_aprfile2(prop_tmp, FALSE, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, tmp_file_path, tmp_base_dir,
+                                 svn_io_file_del_none, pool, pool));
 
   if (apr_hash_count(hash) != 0 || write_empty)
-    SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
-              apr_psprintf(pool,
-                           _("Can't write property hash to '%s'"),
-                           svn_path_local_style(propfile_path, pool)));
+    SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   return svn_stream_close(stream);
 }
@@ -351,10 +345,9 @@ install_props_file(svn_stringbuf_t **log_accum,
                             node_kind, wc_prop_kind, FALSE, pool));
 
   /* Write the property hash into a temporary file. */
-  SVN_ERR(svn_wc__prop_path(&propfile_tmp_path, path,
-                            node_kind, wc_prop_kind, TRUE, pool));
-  SVN_ERR(save_prop_file(propfile_tmp_path, props,
-                         FALSE, pool));
+  SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props, 
+                             svn_path_dirname(propfile_path, pool),
+                             FALSE, pool));
 
   /* Write a log entry to move tmp file to real file. */
   SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
@@ -853,10 +846,9 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
          props needs to be made (it'll just see no file, and do nothing).
          So manufacture an empty propfile and force it to be written out. */
 
-      SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind,
-                                svn_wc__props_revert, TRUE, pool));
-
-      SVN_ERR(save_prop_file(dst_bprop, apr_hash_make(pool), TRUE, pool));
+      SVN_ERR(save_prop_tmp_file(&dst_bprop, apr_hash_make(pool),
+                                 svn_path_dirname(dst_bprop, pool),
+                                 TRUE, pool));
 
       SVN_ERR(svn_wc__loggy_move(log_accum,
                                  adm_access, dst_bprop, dst_rprop,
