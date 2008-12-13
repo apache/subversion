@@ -136,6 +136,15 @@ typedef enum {
  * ### parameter 'const char **wc_root_path', so a person can tell if
  * ### they opened the root or some subdir?
  *
+ * ### HKW: How are transactions handled?  Do the db_open* APIs automatically
+ * ### create db transactions, or do we need explicit APIs for that?  Would
+ * ### it be possible to automatically create/commit transactions as part
+ * ### of the existing APIs?
+ * ###
+ * ### Also, do we need an explicit svn_wc__db_close() function, or will that
+ * ### be handled on pool cleanup?  Does this close function commit any
+ * ### outstanding work, or will that need to be manual committed?  (See above.)
+ *
  * The configuration options are provided by @a config, and must live at
  * least as long as the database.
  *
