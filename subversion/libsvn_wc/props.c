@@ -87,26 +87,33 @@ load_props(apr_hash_t **hash,
      we do.  This check makes sure that we don't call svn_hash_read2()
      on an empty stream.  Ugly, hacky and crude. */
   err = svn_io_stat(&finfo, prop_path, APR_FINFO_SIZE, pool);
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+  if (err)
     {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      if (APR_STATUS_IS_ENOENT(err->apr_err)
+            || APR_STATUS_IS_ENOTDIR(err->apr_err))
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
     }
-  SVN_ERR(err);
   if (finfo.size == 0)
     return SVN_NO_ERROR;
 
   err = svn_stream_open_readonly(&stream, prop_path, pool, pool);
 
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+  if (err)
     {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      if ((APR_STATUS_IS_ENOENT(err->apr_err)
+            || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+        {
+           svn_error_clear(err);
+           return SVN_NO_ERROR;
+        }
+      else
+        return err;
     }
-
-  SVN_ERR(err);
 
   SVN_ERR(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool));
 
