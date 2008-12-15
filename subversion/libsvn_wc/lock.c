@@ -44,17 +44,6 @@ typedef struct
      path to directories that are open. */
   apr_hash_t *set;
 
-  /* NEW_PRISTINES hashes char* paths of working copy paths to char*
-     paths of files in the svn temp area which will be installed as the
-     new pristine (text base) file during post-commit processing.
-
-     Logically, this doesn't belong here. It is effectively a hack to
-     pass information from the commit processing to the post-commit
-     processing code (via the access baton code). In the future, the
-     commit process will properly carry this information around.
-  */
-  apr_hash_t *new_pristines;
-
 } svn_wc__adm_shared_t;
 
 
@@ -1754,29 +1743,3 @@ svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
                               svn_depth_infinity, FALSE, NULL, NULL, pool);
 }
 
-
-void
-svn_wc__adm_save_pristine_path(svn_wc_adm_access_t *adm_access,
-                               const char *wc_path,
-                               const char *new_pristine_path)
-{
-  if (adm_access->shared == NULL)
-    adm_access->shared = apr_pcalloc(adm_access->pool,
-                                     sizeof(*adm_access->shared));
-  if (adm_access->shared->new_pristines == NULL)
-    adm_access->shared->new_pristines = apr_hash_make(adm_access->pool);
-
-  apr_hash_set(adm_access->shared->new_pristines, wc_path, APR_HASH_KEY_STRING,
-               new_pristine_path);
-}
-
-const char *
-svn_wc__adm_get_pristine_path(svn_wc_adm_access_t *adm_access,
-                              const char *wc_path)
-{
-  if (adm_access->shared->new_pristines == NULL)
-    return NULL;
-
-  return apr_hash_get(adm_access->shared->new_pristines,
-                      wc_path, APR_HASH_KEY_STRING);
-}

@@ -96,7 +96,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
   SVN_ERR(BDB_WRAP(fs, _("reading representation"), db_err));
 
   /* Parse the REPRESENTATION skel.  */
-  skel = svn_fs_base__parse_skel(result.data, result.size, pool);
+  skel = svn_skel__parse(result.data, result.size, pool);
 
   /* Convert to a native type.  */
   return svn_fs_base__parse_representation_skel(rep_p, skel, pool);

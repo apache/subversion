@@ -25,8 +25,20 @@ module Svn
     class Session
       class << self
         def open(url, config=nil, callbacks=nil)
-          Ra.open2(url, callbacks, config || Svn::Core::Config.get)
+          pool = Core::Pool.new
+          session = Ra.open2(url, callbacks, config || Svn::Core::Config.get, pool)
+          session.instance_variable_set(:@pool, pool)
+          return session unless block_given?
+          begin
+            yield session
+          ensure
+            session.close
+          end
         end
+      end
+
+      def close
+        @pool.destroy
       end
 
       def latest_revnum

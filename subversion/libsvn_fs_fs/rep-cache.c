@@ -35,8 +35,7 @@ static const char * const upgrade_sql[] = { NULL,
   "                        revision integer not null,        "
   "                        offset integer not null,          "
   "                        size integer not null,            "
-  "                        expanded_size integer not null,   "
-  "                        reuse_count integer not null);    "
+  "                        expanded_size integer not null);  "
   APR_EOL_STR
   };
 
@@ -197,8 +196,8 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   if (!ffd->rep_cache.set_rep_stmt)
     SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.set_rep_stmt, ffd->rep_cache.db,
                   "insert into rep_cache (hash, revision, offset, size, "
-                  "expanded_size, reuse_count) "
-                  "values (:1, :2, :3, :4, :5, 0);", fs->pool));
+                  "expanded_size) "
+                  "values (:1, :2, :3, :4, :5);", fs->pool));
 
   SVN_ERR(svn_sqlite__bind_text(ffd->rep_cache.set_rep_stmt, 1,
                                 svn_checksum_to_cstring(rep->sha1_checksum,
@@ -211,54 +210,4 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
 
   SVN_ERR(svn_sqlite__step(&have_row, ffd->rep_cache.set_rep_stmt));
   return svn_sqlite__reset(ffd->rep_cache.set_rep_stmt);
-}
-
-svn_error_t *
-svn_fs_fs__inc_rep_reuse(svn_fs_t *fs,
-                         representation_t *rep,
-                         apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t have_row;
-
-  if (ffd->rep_cache.db == NULL)
-    return SVN_NO_ERROR;
-
-  /* Fetch the current count. */
-  if (!ffd->rep_cache.inc_select_stmt)
-    SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.inc_select_stmt,
-                  ffd->rep_cache.db,
-                  "select reuse_count from rep_cache where hash = :1",
-                  fs->pool));
-
-  SVN_ERR(svn_sqlite__bind_text(ffd->rep_cache.inc_select_stmt, 1,
-                                svn_checksum_to_cstring(rep->sha1_checksum,
-                                                        pool)));
-  SVN_ERR(svn_sqlite__step(&have_row, ffd->rep_cache.inc_select_stmt));
-
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Representation for hash '%s' not found"),
-                             svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                             pool));
-
-  rep->reuse_count =
-           svn_sqlite__column_int(ffd->rep_cache.inc_select_stmt, 0) + 1;
-  SVN_ERR(svn_sqlite__reset(ffd->rep_cache.inc_select_stmt));
-
-  /* Update the reuse_count. */
-  if (!ffd->rep_cache.inc_update_stmt)
-    SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.inc_update_stmt,
-                         ffd->rep_cache.db,
-                         "update rep_cache set reuse_count = :1 where hash = :2",
-                         fs->pool));
-
-  SVN_ERR(svn_sqlite__bind_int64(ffd->rep_cache.inc_update_stmt, 1,
-                                 rep->reuse_count));
-  SVN_ERR(svn_sqlite__bind_text(ffd->rep_cache.inc_update_stmt, 2,
-                                svn_checksum_to_cstring(rep->sha1_checksum,
-                                                        pool)));
-  SVN_ERR(svn_sqlite__step_done(ffd->rep_cache.inc_update_stmt));
-
-  return svn_sqlite__reset(ffd->rep_cache.inc_update_stmt);
 }
