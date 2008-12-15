@@ -62,6 +62,40 @@
 
 /*** Reading/writing property hashes from disk ***/
 
+/* ### HKW/WC-NG: This is a summary of the my efforts to localize accesses to
+   svn_wc__prop_path(), in preparation to moving to the wc_db API.  The
+   general idea here is to combine all calls to svn_wc__prop_path() into a 
+   single one, which will make conversion to the new db API easier.  The catch
+   is our currently loggy implementation, which uses the properties file path
+   all over the place.  Rather than attempt to refactor all of those right
+   now, I'm going to punt and leave properties loggy-ness to the SQLite
+   transaction mechanism.
+   
+   Also, several of these could be funnelled through the load_props()
+   interface, but for the fact that it may complicate handling of propcaching.
+   I'm happy to do that, but I'm wary of killing performance right before
+   branching 1.6, so those will happen after we branch, and trunk is once
+   again a free-for-all.
+
+   The following functions currently call this API:
+     load_props(): The current "gateway" function through we all access to 
+       properties should be funneled.
+     svn_wc__working_props_committed(): Moves WORKING props to BASE props,
+       sync'ing to disk and clearing appropriate caches.
+     empty_props_p(): Used to determine if a path has properties or not.
+     svn_wc__props_last_modified(): Reads mtime of the props file.  Used
+       externally to answer the question about when a node changed.  We can
+       answer this question other ways in the SQLite schema, so this function
+       may disappear.
+     svn_wc_props_modified_p(): Used to shortcut property differences by
+       checking property filesize differences.
+     install_props_file(): Used with loggy.
+     svn_wc__install_props(): Used with loggy.
+     svn_wc__loggy_props_delete(): Used with loggy.
+     svn_wc__loggy_revert_props_create(): Used with loggy.
+     svn_wc__loggy_revert_props_restore(): Used with loggy.
+ */
+
 /* The real functionality here is part of libsvn_subr, in hashdump.c.
    But these are convenience routines for use in libsvn_wc. */
 
