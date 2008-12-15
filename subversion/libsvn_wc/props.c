@@ -2778,26 +2778,16 @@ svn_wc__has_props(svn_boolean_t *has_props,
 }
 
 
-/* Common implementation for svn_wc_props_modified_p()
-   and svn_wc__has_prop_mods().
-
-   Set *MODIFIED_P to true if PATH's properties are modified
-   with regard to the base revision, else set MODIFIED_P to false.
-
-   If WHICH_PROPS is non-null and there are prop mods then set
-   *WHICH_PROPS to a (const char *propname) ->
-   (const svn_string_t *propvalue) key:value mapping of only
-   the modified properties. */
-static svn_error_t *
-modified_props(svn_boolean_t *modified_p,
-               const char *path,
-               apr_hash_t **which_props,
-               svn_wc_adm_access_t *adm_access,
-               apr_pool_t *pool)
+svn_error_t *
+svn_wc_props_modified_p(svn_boolean_t *modified_p,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create(pool);
   int wc_format = svn_wc__adm_wc_format(adm_access);
+  apr_hash_t **which_props = NULL;
   svn_boolean_t want_props = which_props ? TRUE : FALSE;
 
   if (want_props)
@@ -2997,26 +2987,6 @@ modified_props(svn_boolean_t *modified_p,
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_props_modified_p(svn_boolean_t *modified_p,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *pool)
-{
-  return modified_props(modified_p, path, NULL, adm_access, pool);
-}
-
-
-svn_error_t *
-svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
-                      const char *path,
-                      svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *pool)
-{
-  return modified_props(prop_mods, path, NULL, adm_access, pool);
 }
 
 
