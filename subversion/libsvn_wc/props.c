@@ -2772,10 +2772,7 @@ svn_wc__has_props(svn_boolean_t *has_props,
                             svn_wc__props_working, FALSE, pool));
   SVN_ERR(empty_props_p(&is_empty, prop_path, pool));
 
-  if (is_empty)
-    *has_props = FALSE;
-  else
-    *has_props = TRUE;
+  *has_props = !is_empty;
 
   return SVN_NO_ERROR;
 }
