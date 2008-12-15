@@ -104,22 +104,22 @@ class SvnReposTest < Test::Unit::TestCase
     props = {"myprop" => "value"}
     path = File.join(@wc_path, file)
 
-    ctx = make_context(log1)
+    ctx1 = make_context(log1)
     File.open(path, "w") {|f| f.print(src)}
-    ctx.add(path)
-    info1 = ctx.ci(@wc_path)
+    ctx1.add(path)
+    info1 = ctx1.ci(@wc_path)
     start_rev = info1.revision
 
-    ctx = make_context(log2)
+    ctx2 = make_context(log2)
     File.open(path, "a") {|f| f.print(src)}
-    info2 = ctx.ci(@wc_path)
+    info2 = ctx2.ci(@wc_path)
 
-    ctx = make_context(log3)
+    ctx3 = make_context(log3)
     File.open(path, "a") {|f| f.print(src)}
     props.each do |key, value|
-      ctx.prop_set(key, value, path)
+      ctx3.prop_set(key, value, path)
     end
-    info3 = ctx.ci(@wc_path)
+    info3 = ctx3.ci(@wc_path)
     end_rev = info3.revision
 
     logs = @repos.logs(file, start_rev, end_rev, end_rev - start_rev + 1)
@@ -186,6 +186,10 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(info3.revision, rev)
     assert_equal(info3.date, date)
     assert_equal(info3.author, author)
+  ensure
+    ctx3.close unless ctx3.nil?
+    ctx2.close unless ctx2.nil?
+    ctx1.close unless ctx1.nil?
   end
 
   def test_hotcopy
@@ -194,69 +198,71 @@ class SvnReposTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     FileUtils.touch(path)
 
-    ctx = make_context(log)
-    ctx.add(path)
-    commit_info = ctx.commit(@wc_path)
-    rev = commit_info.revision
+    make_context(log) do |ctx|
+      ctx.add(path)
+      commit_info = ctx.commit(@wc_path)
+      rev = commit_info.revision
 
-    assert_equal(log, ctx.log_message(path, rev))
+      assert_equal(log, ctx.log_message(path, rev))
 
-    dest_path = File.join(@tmp_path, "dest")
-    backup_path = File.join(@tmp_path, "back")
-    config = {}
-    fs_config = {}
+      dest_path = File.join(@tmp_path, "dest")
+      backup_path = File.join(@tmp_path, "back")
+      config = {}
+      fs_config = {}
 
-    repos = Svn::Repos.create(dest_path, config, fs_config)
-    repos.fs.set_warning_func(&warning_func)
+      repos = Svn::Repos.create(dest_path, config, fs_config)
+      repos.fs.set_warning_func(&warning_func)
 
-    FileUtils.mv(@repos.path, backup_path)
-    FileUtils.mv(repos.path, @repos.path)
+      FileUtils.mv(@repos.path, backup_path)
+      FileUtils.mv(repos.path, @repos.path)
 
-    assert_raises(Svn::Error::FsNoSuchRevision) do
+      assert_raises(Svn::Error::FsNoSuchRevision) do
+        assert_equal(log, ctx.log_message(path, rev))
+      end
+
+      FileUtils.rm_r(@repos.path)
+      Svn::Repos.hotcopy(backup_path, @repos.path)
       assert_equal(log, ctx.log_message(path, rev))
     end
-
-    FileUtils.rm_r(@repos.path)
-    Svn::Repos.hotcopy(backup_path, @repos.path)
-    assert_equal(log, ctx.log_message(path, rev))
   end
 
   def assert_transaction
     log = "sample log"
-    ctx = make_context(log)
-    ctx.checkout(@repos_uri, @wc_path)
-    ctx.mkdir(["#{@wc_path}/new_dir"])
+    make_context(log) do |ctx|
+      ctx.checkout(@repos_uri, @wc_path)
+      ctx.mkdir(["#{@wc_path}/new_dir"])
 
-    prev_rev = @repos.youngest_rev
-    past_date = Time.now
-    args = {
-      :author => @author,
-      :log => log,
-      :revision => prev_rev,
-    }
-    callback = Proc.new do |txn|
-      txn.abort
-    end
-    yield(:commit, @repos, args, callback)
-    assert_equal(prev_rev, @repos.youngest_rev)
-    assert_equal(prev_rev, @repos.dated_revision(past_date))
+      prev_rev = @repos.youngest_rev
+      past_date = Time.now
+      args = {
+        :author => @author,
+        :log => log,
+        :revision => prev_rev,
+      }
+      callback = Proc.new do |txn|
+        txn.abort
+      end
+      yield(:commit, @repos, args, callback)
+      assert_equal(prev_rev, @repos.youngest_rev)
+      assert_equal(prev_rev, @repos.dated_revision(past_date))
 
-    prev_rev = @repos.youngest_rev
-    @repos.transaction_for_commit(@author, log) do |txn|
-    end
-    assert_equal(prev_rev + 1, @repos.youngest_rev)
-    assert_equal(prev_rev, @repos.dated_revision(past_date))
-    assert_equal(prev_rev + 1, @repos.dated_revision(Time.now))
+      prev_rev = @repos.youngest_rev
+      @repos.transaction_for_commit(@author, log) do |txn|
+      end
+      assert_equal(prev_rev + 1, @repos.youngest_rev)
+      assert_equal(prev_rev, @repos.dated_revision(past_date))
+      assert_equal(prev_rev + 1, @repos.dated_revision(Time.now))
 
-    prev_rev = @repos.youngest_rev
-    args = {
-      :author => @author,
-      :revision => prev_rev,
-    }
-    callback = Proc.new do |txn|
+      prev_rev = @repos.youngest_rev
+      args = {
+        :author => @author,
+        :revision => prev_rev,
+      }
+      callback = Proc.new do |txn|
+      end
+      yield(:update, @repos, args, callback)
+      assert_equal(prev_rev, @repos.youngest_rev)
     end
-    yield(:update, @repos, args, callback)
-    assert_equal(prev_rev, @repos.youngest_rev)
   end
 
   def test_transaction
@@ -324,25 +330,26 @@ class SvnReposTest < Test::Unit::TestCase
     path2 = File.join(@wc_path, file2)
     path3 = File.join(@wc_path, file3)
     log = "sample log"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    FileUtils.touch(path1)
-    ctx.add(path1)
-    rev1 = ctx.ci(@wc_path).revision
+      FileUtils.touch(path1)
+      ctx.add(path1)
+      rev1 = ctx.ci(@wc_path).revision
 
-    ctx.mv(path1, path2)
-    rev2 = ctx.ci(@wc_path).revision
+      ctx.mv(path1, path2)
+      rev2 = ctx.ci(@wc_path).revision
 
-    ctx.cp(path2, path3)
-    rev3 = ctx.ci(@wc_path).revision
+      ctx.cp(path2, path3)
+      rev3 = ctx.ci(@wc_path).revision
 
-    assert_equal({
-                   rev1 => "/#{file1}",
-                   rev2 => "/#{file2}",
-                   rev3 => "/#{file2}",
-                 },
-                 @repos.fs.trace_node_locations("/#{file2}",
-                                                [rev1, rev2, rev3]))
+      assert_equal({
+                     rev1 => "/#{file1}",
+                     rev2 => "/#{file2}",
+                     rev3 => "/#{file2}",
+                   },
+                   @repos.fs.trace_node_locations("/#{file2}",
+                                                  [rev1, rev2, rev3]))
+    end
   end
 
   def assert_report
@@ -353,38 +360,39 @@ class SvnReposTest < Test::Unit::TestCase
     path2 = File.join(@wc_path, file2)
     source = "sample source"
     log = "sample log"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    File.open(path, "w") {|f| f.print(source)}
-    ctx.add(path)
-    rev = ctx.ci(@wc_path).revision
+      File.open(path, "w") {|f| f.print(source)}
+      ctx.add(path)
+      rev = ctx.ci(@wc_path).revision
 
-    assert_equal(Svn::Core::NODE_FILE, @repos.fs.root.stat(file).kind)
+      assert_equal(Svn::Core::NODE_FILE, @repos.fs.root.stat(file).kind)
 
-    editor = TestEditor.new
-    args = {
-      :revision => rev,
-      :user_name => @author,
-      :fs_base => fs_base,
-      :target => "/",
-      :target_path => nil,
-      :editor => editor,
-      :text_deltas => true,
-      :recurse => true,
-      :ignore_ancestry => false,
-    }
-    callback = Proc.new do |baton|
-      baton.link_path(file, file2, rev)
-      baton.delete_path(file)
+      editor = TestEditor.new
+      args = {
+        :revision => rev,
+        :user_name => @author,
+        :fs_base => fs_base,
+        :target => "/",
+        :target_path => nil,
+        :editor => editor,
+        :text_deltas => true,
+        :recurse => true,
+        :ignore_ancestry => false,
+      }
+      callback = Proc.new do |baton|
+        baton.link_path(file, file2, rev)
+        baton.delete_path(file)
+      end
+      yield(@repos, args, callback)
+      assert_equal([
+                     :set_target_revision,
+                     :open_root,
+                     :close_directory,
+                     :close_edit,
+                   ],
+                   editor.sequence.collect{|meth, *args| meth})
     end
-    yield(@repos, args, callback)
-    assert_equal([
-                   :set_target_revision,
-                   :open_root,
-                   :close_directory,
-                   :close_edit,
-                 ],
-                 editor.sequence.collect{|meth, *args| meth})
   end
 
   def test_report
@@ -544,41 +552,42 @@ class SvnReposTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     source = "sample source"
     log = "sample log"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    File.open(path, "w") {|f| f.print(source)}
-    ctx.add(path)
-    ctx.ci(@wc_path)
+      File.open(path, "w") {|f| f.print(source)}
+      ctx.add(path)
+      ctx.ci(@wc_path)
 
-    assert_equal([
-                   Svn::Core::PROP_REVISION_AUTHOR,
-                   Svn::Core::PROP_REVISION_LOG,
-                   Svn::Core::PROP_REVISION_DATE,
-                 ].sort,
-                 @repos.proplist.keys.sort)
-    assert_equal(log, @repos.prop(Svn::Core::PROP_REVISION_LOG))
-    @repos.set_prop(@author, Svn::Core::PROP_REVISION_LOG, nil)
-    assert_nil(@repos.prop(Svn::Core::PROP_REVISION_LOG))
-    assert_equal([
-                   Svn::Core::PROP_REVISION_AUTHOR,
-                   Svn::Core::PROP_REVISION_DATE,
-                 ].sort,
-                 @repos.proplist.keys.sort)
+      assert_equal([
+                     Svn::Core::PROP_REVISION_AUTHOR,
+                     Svn::Core::PROP_REVISION_LOG,
+                     Svn::Core::PROP_REVISION_DATE,
+                   ].sort,
+                   @repos.proplist.keys.sort)
+      assert_equal(log, @repos.prop(Svn::Core::PROP_REVISION_LOG))
+      @repos.set_prop(@author, Svn::Core::PROP_REVISION_LOG, nil)
+      assert_nil(@repos.prop(Svn::Core::PROP_REVISION_LOG))
+      assert_equal([
+                     Svn::Core::PROP_REVISION_AUTHOR,
+                     Svn::Core::PROP_REVISION_DATE,
+                   ].sort,
+                   @repos.proplist.keys.sort)
 
-    assert_raises(Svn::Error::ReposHookFailure) do
-      @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil)
+      assert_raises(Svn::Error::ReposHookFailure) do
+        @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil)
+      end
+      assert_not_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
+
+      assert_nothing_raised do
+        @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil, nil, nil,
+                        false)
+      end
+      assert_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
+      assert_equal([
+                     Svn::Core::PROP_REVISION_AUTHOR,
+                   ].sort,
+                   @repos.proplist.keys.sort)
     end
-    assert_not_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
-
-    assert_nothing_raised do
-      @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil, nil, nil,
-                      false)
-    end
-    assert_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
-    assert_equal([
-                   Svn::Core::PROP_REVISION_AUTHOR,
-                 ].sort,
-                 @repos.proplist.keys.sort)
   end
 
   def test_dump
@@ -586,29 +595,30 @@ class SvnReposTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     source = "sample source"
     log = "sample log"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    File.open(path, "w") {|f| f.print(source)}
-    ctx.add(path)
-    rev1 = ctx.ci(@wc_path).revision
+      File.open(path, "w") {|f| f.print(source)}
+      ctx.add(path)
+      rev1 = ctx.ci(@wc_path).revision
 
-    File.open(path, "a") {|f| f.print(source)}
-    rev2 = ctx.ci(@wc_path).revision
+      File.open(path, "a") {|f| f.print(source)}
+      rev2 = ctx.ci(@wc_path).revision
 
-    assert_nothing_raised do
-      @repos.dump_fs(nil, nil, rev1, rev2)
+      assert_nothing_raised do
+        @repos.dump_fs(nil, nil, rev1, rev2)
+      end
+
+      dump = StringIO.new("")
+      feedback = StringIO.new("")
+      @repos.dump_fs(dump, feedback, rev1, rev2)
+
+      dump_unless_feedback = StringIO.new("")
+      @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
+
+      dump.rewind
+      dump_unless_feedback.rewind
+      assert_equal(dump.read, dump_unless_feedback.read)
     end
-
-    dump = StringIO.new("")
-    feedback = StringIO.new("")
-    @repos.dump_fs(dump, feedback, rev1, rev2)
-
-    dump_unless_feedback = StringIO.new("")
-    @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
-
-    dump.rewind
-    dump_unless_feedback.rewind
-    assert_equal(dump.read, dump_unless_feedback.read)
   end
 
   def test_load
@@ -616,37 +626,38 @@ class SvnReposTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     source = "sample source"
     log = "sample log"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    File.open(path, "w") {|f| f.print(source)}
-    ctx.add(path)
-    rev1 = ctx.ci(@wc_path).revision
+      File.open(path, "w") {|f| f.print(source)}
+      ctx.add(path)
+      rev1 = ctx.ci(@wc_path).revision
 
-    File.open(path, "a") {|f| f.print(source)}
-    rev2 = ctx.ci(@wc_path).revision
+      File.open(path, "a") {|f| f.print(source)}
+      rev2 = ctx.ci(@wc_path).revision
 
-    dump = StringIO.new("")
-    @repos.dump_fs(dump, nil, rev1, rev2)
+      dump = StringIO.new("")
+      @repos.dump_fs(dump, nil, rev1, rev2)
 
-    dest_path = File.join(@tmp_path, "dest")
-    repos = Svn::Repos.create(dest_path)
-    assert_raises(NoMethodError) do
-      repos.load_fs(nil)
-    end
-
-    [
-     [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
-     [StringIO.new("")],
-     [],
-    ].each_with_index do |args, i|
-      dest_path = File.join(@tmp_path, "dest#{i}")
+      dest_path = File.join(@tmp_path, "dest")
       repos = Svn::Repos.create(dest_path)
-      assert_not_equal(@repos.fs.root.committed_info("/"),
-                       repos.fs.root.committed_info("/"))
-      dump.rewind
-      repos.load_fs(dump, *args)
-      assert_equal(@repos.fs.root.committed_info("/"),
-                   repos.fs.root.committed_info("/"))
+      assert_raises(NoMethodError) do
+        repos.load_fs(nil)
+      end
+
+      [
+       [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
+       [StringIO.new("")],
+       [],
+      ].each_with_index do |args, i|
+        dest_path = File.join(@tmp_path, "dest#{i}")
+        repos = Svn::Repos.create(dest_path)
+        assert_not_equal(@repos.fs.root.committed_info("/"),
+                         repos.fs.root.committed_info("/"))
+        dump.rewind
+        repos.load_fs(dump, *args)
+        assert_equal(@repos.fs.root.committed_info("/"),
+                     repos.fs.root.committed_info("/"))
+      end
     end
   end
 
@@ -662,25 +673,26 @@ class SvnReposTest < Test::Unit::TestCase
     source = "sample source"
     log = "sample log"
 
-    ctx = make_context(log)
-    FileUtils.mkdir_p(dir3_path)
-    FileUtils.touch(path)
-    ctx.add(dir1_path)
-    rev1 = ctx.ci(@wc_path).revision
+    make_context(log) do |ctx|
+      FileUtils.mkdir_p(dir3_path)
+      FileUtils.touch(path)
+      ctx.add(dir1_path)
+      rev1 = ctx.ci(@wc_path).revision
 
-    ctx.rm(dir3_path)
-    rev2 = ctx.ci(@wc_path).revision
+      ctx.rm(dir3_path)
+      rev2 = ctx.ci(@wc_path).revision
 
-    rev1_root = @repos.fs.root(rev1)
-    rev2_root = @repos.fs.root(rev2)
-    editor = @repos.node_editor(rev1_root, rev2_root)
-    rev2_root.replay(editor)
+      rev1_root = @repos.fs.root(rev1)
+      rev2_root = @repos.fs.root(rev2)
+      editor = @repos.node_editor(rev1_root, rev2_root)
+      rev2_root.replay(editor)
 
-    tree = editor.baton.node
+      tree = editor.baton.node
 
-    assert_equal("", tree.name)
-    assert_equal(dir1, tree.child.name)
-    assert_equal(dir2, tree.child.child.name)
+      assert_equal("", tree.name)
+      assert_equal(dir1, tree.child.name)
+      assert_equal(dir2, tree.child.child.name)
+    end
   end
 
   def test_lock
@@ -688,20 +700,21 @@ class SvnReposTest < Test::Unit::TestCase
     log = "sample log"
     path = File.join(@wc_path, file)
     path_in_repos = "/#{file}"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    FileUtils.touch(path)
-    ctx.add(path)
-    rev = ctx.ci(@wc_path).revision
+      FileUtils.touch(path)
+      ctx.add(path)
+      rev = ctx.ci(@wc_path).revision
 
-    access = Svn::Fs::Access.new(@author)
-    @repos.fs.access = access
-    lock = @repos.lock(file)
-    locks = @repos.get_locks(file)
-    assert_equal([path_in_repos], locks.keys)
-    assert_equal(lock.token, locks[path_in_repos].token)
-    @repos.unlock(file, lock.token)
-    assert_equal({}, @repos.get_locks(file))
+      access = Svn::Fs::Access.new(@author)
+      @repos.fs.access = access
+      lock = @repos.lock(file)
+      locks = @repos.get_locks(file)
+      assert_equal([path_in_repos], locks.keys)
+      assert_equal(lock.token, locks[path_in_repos].token)
+      @repos.unlock(file, lock.token)
+      assert_equal({}, @repos.get_locks(file))
+    end
   end
 
   def test_authz
@@ -739,24 +752,25 @@ EOF
     trunk_path_in_repos = "/trunk/#{file}"
     branch_path_in_repos = "/branch/#{file}"
 
-    ctx = make_context(log)
-    ctx.mkdir(trunk, branch)
-    File.open(trunk_path, "w") {}
-    File.open(branch_path, "w") {}
-    ctx.add(trunk_path)
-    ctx.add(branch_path)
-    original_rev = ctx.commit(@wc_path).revision
+    make_context(log) do |ctx|
+      ctx.mkdir(trunk, branch)
+      File.open(trunk_path, "w") {}
+      File.open(branch_path, "w") {}
+      ctx.add(trunk_path)
+      ctx.add(branch_path)
+      original_rev = ctx.commit(@wc_path).revision
 
-    File.open(branch_path, "w") {|f| f.print(src)}
-    merged_rev = ctx.commit(@wc_path).revision
+      File.open(branch_path, "w") {|f| f.print(src)}
+      merged_rev = ctx.commit(@wc_path).revision
 
-    ctx.merge(branch, original_rev, branch, merged_rev, trunk)
-    ctx.commit(@wc_path)
+      ctx.merge(branch, original_rev, branch, merged_rev, trunk)
+      ctx.commit(@wc_path)
 
-    mergeinfo = Svn::Core::MergeInfo.parse("#{branch_path_in_repos}:#{merged_rev}")
-    assert_equal({trunk_path_in_repos => mergeinfo},
-                 @repos.mergeinfo([trunk_path_in_repos]))
-    assert_equal(mergeinfo, @repos.mergeinfo(trunk_path_in_repos))
+      mergeinfo = Svn::Core::MergeInfo.parse("#{branch_path_in_repos}:#{merged_rev}")
+      assert_equal({trunk_path_in_repos => mergeinfo},
+                   @repos.mergeinfo([trunk_path_in_repos]))
+      assert_equal(mergeinfo, @repos.mergeinfo(trunk_path_in_repos))
+    end
   end
 
   private

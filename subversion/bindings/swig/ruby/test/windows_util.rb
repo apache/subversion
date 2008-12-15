@@ -69,7 +69,7 @@ module SvnTestUtil
           end
           targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil.dll libapr.dll)
+                       libaprutil.dll libapr.dll libapriconv.dll sqlite3.dll libdb44.dll libdb44d.dll)
           ENV["PATH"].split(";").each do |path|
             found_targets = []
             targets.each do |target|
@@ -128,7 +128,8 @@ exit 1
 
     module SetupEnvironment
       def setup_test_environment(top_dir, base_dir, ext_dir)
-        build_type = "Release"
+
+        build_type = ENV["BUILD_TYPE"] || "Debug"
 
         FileUtils.mkdir_p(ext_dir)
 
@@ -189,11 +190,15 @@ EOC
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
+         ["sqlite", "bin"],
         ].each do |lib, sub_dir|
-          lib_dir = config["--with-#{lib}"] || lib
-          dirs = [top_dir, lib_dir, sub_dir].compact
-          dll_dir = File.expand_path(File.join(*dirs))
-          util.puts("add_path.call(#{dll_dir.dump})")
+          lib_dir = Pathname.new(config["--with-#{lib}"] || lib)
+          dll_dir = lib_dir.absolute? ?
+                        lib_dir :
+                        Pathname.new(top_dir) + lib_dir
+          dll_dir += sub_dir
+          dll_dir = dll_dir.expand_path
+          util.puts("add_path.call(#{dll_dir.to_s.dump})")
         end
       end
 

@@ -17,13 +17,15 @@
 
 #include <string.h>
 #include <assert.h>
+
 #include "bdb_compat.h"
 
 #include "svn_pools.h"
+#include "private/svn_skel.h"
+
 #include "dbt.h"
 #include "../err.h"
 #include "../fs.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"
