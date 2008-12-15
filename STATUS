@@ -33,7 +33,7 @@ Candidate changes for 1.5.5:
      This change also improves reverse merge performance as it eliminates
      some unnecessary communication with the repository.
    Votes:
-     +1: pburba
+     +1: pburba, kameshj
 
  * r34082, r34096, r34545
    Fix issue #3275 by making WebDAV proxy slave servers pass through
