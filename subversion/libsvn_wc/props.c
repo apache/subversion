@@ -2694,14 +2694,19 @@ svn_wc_is_entry_prop(const char *name)
    which means that the file must contain real properties.  */
 static svn_error_t *
 empty_props_p(svn_boolean_t *empty_p,
-              const char *path_to_prop_file,
+              const char *path,
+              svn_node_kind_t node_kind,
+              svn_wc__props_kind_t props_kind,
               apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_finfo_t finfo;
+  const char *prop_path;
 
-  err = svn_io_stat(&finfo, path_to_prop_file, APR_FINFO_MIN | APR_FINFO_TYPE,
-                    pool);
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, FALSE,
+                            pool));
+
+  err = svn_io_stat(&finfo, prop_path, APR_FINFO_MIN | APR_FINFO_TYPE, pool);
   if (err)
     {
       if (! APR_STATUS_IS_ENOENT(err->apr_err)
@@ -2711,26 +2716,23 @@ empty_props_p(svn_boolean_t *empty_p,
       /* nonexistent */
       svn_error_clear(err);
       *empty_p = TRUE;
+      return SVN_NO_ERROR;
     }
+
+  /* If we remove props from a propfile, eventually the file will
+     be empty, or, for working copies written by pre-1.3 libraries, will
+     contain nothing but "END\n" */
+  if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
+    *empty_p = TRUE;
   else
-    {
+    *empty_p = FALSE;
 
-
-      /* If we remove props from a propfile, eventually the file will
-         be empty, or, for working copies written by pre-1.3 libraries, will
-         contain nothing but "END\n" */
-      if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
-        *empty_p = TRUE;
-      else
-        *empty_p = FALSE;
-
-      /* If the size is between 1 and 4, then something is corrupt.
-         If the size is between 4 and 16, then something is corrupt,
-         because 16 is the -smallest- the file can possibly be if it
-         contained only one property.  So long as we say it is "not
-         empty", we will discover such corruption later when we try
-         to read the properties from the file. */
-    }
+  /* If the size is between 1 and 4, then something is corrupt.
+     If the size is between 4 and 16, then something is corrupt,
+     because 16 is the -smallest- the file can possibly be if it
+     contained only one property.  So long as we say it is "not
+     empty", we will discover such corruption later when we try
+     to read the properties from the file. */
 
   return SVN_NO_ERROR;
 }
@@ -2744,7 +2746,6 @@ svn_wc__has_props(svn_boolean_t *has_props,
                   apr_pool_t *pool)
 {
   svn_boolean_t is_empty;
-  const char *prop_path;
   const svn_wc_entry_t *entry;
   svn_boolean_t has_propcaching =
     svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
@@ -2768,9 +2769,8 @@ svn_wc__has_props(svn_boolean_t *has_props,
 
   /* The rest is for compatibility with WCs that don't have propcaching. */
 
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                            svn_wc__props_working, FALSE, pool));
-  SVN_ERR(empty_props_p(&is_empty, prop_path, pool));
+  SVN_ERR(empty_props_p(&is_empty, path, entry->kind, svn_wc__props_working,
+                        pool));
 
   *has_props = !is_empty;
 
@@ -2832,18 +2832,12 @@ modified_props(svn_boolean_t *modified_p,
   if (wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
     {
       svn_boolean_t bempty, wempty;
-      const char *prop_path;
-      const char *prop_base_path;
-
-      /* First, get the paths of the working and 'base' prop files. */
-      SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                                svn_wc__props_working, FALSE, subpool));
-      SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
-                                svn_wc__props_base, FALSE, subpool));
 
       /* Decide if either path is "empty" of properties. */
-      SVN_ERR(empty_props_p(&wempty, prop_path, subpool));
-      SVN_ERR(empty_props_p(&bempty, prop_base_path, subpool));
+      SVN_ERR(empty_props_p(&wempty, path, entry->kind, svn_wc__props_working,
+                            subpool));
+      SVN_ERR(empty_props_p(&bempty, path, entry->kind, svn_wc__props_base,
+                            subpool));
 
       /* If something is scheduled for replacement, we do *not* want to
          pay attention to any base-props;  they might be residual from the
@@ -2891,6 +2885,8 @@ modified_props(svn_boolean_t *modified_p,
       else
         {
           svn_boolean_t different_filesizes;
+          const char *prop_path;
+          const char *prop_base_path;
 
           /* At this point, we know both files exists.  Therefore we have no
              choice but to start checking their contents. */
@@ -2898,6 +2894,12 @@ modified_props(svn_boolean_t *modified_p,
           /* There are at least three tests we can try in succession. */
 
           /* Easy-answer attempt #1:  (### this stat's the files again) */
+
+          /* Get the paths of the working and 'base' prop files. */
+          SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
+                                    svn_wc__props_working, FALSE, subpool));
+          SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
+                                    svn_wc__props_base, FALSE, subpool));
 
           /* Check if the local and prop-base file have *definitely*
              different filesizes. */
