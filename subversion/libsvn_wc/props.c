@@ -2795,8 +2795,6 @@ modified_props(svn_boolean_t *modified_p,
                svn_wc_adm_access_t *adm_access,
                apr_pool_t *pool)
 {
-  const char *prop_path;
-  const char *prop_base_path;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create(pool);
   int wc_format = svn_wc__adm_wc_format(adm_access);
@@ -2829,17 +2827,20 @@ modified_props(svn_boolean_t *modified_p,
      but need to find the specific prop changes.  Either way we
      have some work to do... */
 
-  /* First, get the paths of the working and 'base' prop files. */
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                            svn_wc__props_working, FALSE, subpool));
-  SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
-                            svn_wc__props_base, FALSE, subpool));
-
   /* Check for numerous easy outs on older WC formats before we
      resort to svn_prop_diffs(). */
   if (wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
     {
       svn_boolean_t bempty, wempty;
+      const char *prop_path;
+      const char *prop_base_path;
+
+      /* First, get the paths of the working and 'base' prop files. */
+      SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
+                                svn_wc__props_working, FALSE, subpool));
+      SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
+                                svn_wc__props_base, FALSE, subpool));
+
       /* Decide if either path is "empty" of properties. */
       SVN_ERR(empty_props_p(&wempty, prop_path, subpool));
       SVN_ERR(empty_props_p(&bempty, prop_base_path, subpool));
