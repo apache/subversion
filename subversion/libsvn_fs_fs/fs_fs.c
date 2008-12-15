@@ -3423,10 +3423,7 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a == b)
     return TRUE;
 
-  if (a && (! b))
-    return FALSE;
-
-  if (b && (! a))
+  if (a == NULL || b == NULL)
     return FALSE;
 
   if (a->offset != b->offset)
