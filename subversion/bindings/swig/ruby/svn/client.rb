@@ -100,6 +100,11 @@ module Svn
         _initialize
         self.auth_baton = Core::AuthBaton.new
         init_callbacks
+        @pool = Core::Pool.new
+      end
+
+      def close
+        @pool.destroy
       end
 
       def auth_baton=(baton)
@@ -136,7 +141,7 @@ module Svn
         Client.mkdir3(normalize_path(arguments[:paths]),
                       arguments[:make_parents],
                       arguments[:revprop_table],
-                      self)
+                      self, @pool)
       end
 
       def mkdir_p(*paths)
@@ -154,7 +159,7 @@ module Svn
                  revprop_table=nil)
         targets = [targets] unless targets.is_a?(Array)
         Client.commit4(targets, recurse, keep_locks, keep_changelist,
-                       changelist_name, revprop_table, self)
+                       changelist_name, revprop_table, self, @pool)
       end
       alias ci commit
 
@@ -437,7 +442,7 @@ module Svn
       end
 
       def open_ra_session(url)
-        Client.open_ra_session(url, self)
+        Client.open_ra_session(url, self, @pool)
       end
 
       # Scans revisions from +start_rev+ to +end_rev+ for each path in
@@ -568,7 +573,7 @@ module Svn
       def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         peg_rev ||= rev
-        Client.ls3(path_or_uri, rev, peg_rev, recurse, self)
+        Client.ls3(path_or_uri, rev, peg_rev, recurse, self, @pool)
       end
 
       # Invokes block once for each path below +path_or_uri+ at +rev+

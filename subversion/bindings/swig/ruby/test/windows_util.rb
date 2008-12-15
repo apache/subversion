@@ -69,7 +69,7 @@ module SvnTestUtil
           end
           targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil.dll libapr.dll)
+                       libaprutil.dll libapr.dll libapriconv.dll sqlite3.dll libdb44.dll libdb44d.dll)
           ENV["PATH"].split(";").each do |path|
             found_targets = []
             targets.each do |target|
@@ -189,6 +189,7 @@ EOC
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
+         ["sqlite", "bin"],
         ].each do |lib, sub_dir|
           lib_dir = config["--with-#{lib}"] || lib
           dirs = [top_dir, lib_dir, sub_dir].compact
