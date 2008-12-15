@@ -191,10 +191,13 @@ EOC
          ["berkeley-db", "bin"],
          ["sqlite", "bin"],
         ].each do |lib, sub_dir|
-          lib_dir = config["--with-#{lib}"] || lib
-          dirs = [top_dir, lib_dir, sub_dir].compact
-          dll_dir = File.expand_path(File.join(*dirs))
-          util.puts("add_path.call(#{dll_dir.dump})")
+          lib_dir = Pathname.new(config["--with-#{lib}"] || lib)
+          dll_dir = lib_dir.absolute? ?
+                        lib_dir :
+                        Pathname.new(top_dir) + lib_dir
+          dll_dir += sub_dir
+          dll_dir = dll_dir.expand_path
+          util.puts("add_path.call(#{dll_dir.to_s.dump})")
         end
       end
 
