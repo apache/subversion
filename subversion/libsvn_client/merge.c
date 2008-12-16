@@ -7300,7 +7300,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                                             APR_HASH_KEY_STRING);
 
           /* A path might not have any inherited mergeinfo either. */
-          if(!source_mergeinfo)
+          if (!source_mergeinfo)
             source_mergeinfo = apr_hash_make(iterpool);
         }
 
