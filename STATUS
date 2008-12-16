@@ -54,6 +54,23 @@ Candidate changes for 1.5.5:
      Rare bug, but it results in incorrect mergeinfo.
    Votes:
      +1: pburba, kameshj
+
+ * ^/branches/1.5.x-build-fixes
+   Fix the build, which resulted from the merge in r34393.  For full analysis,
+   see:  http://svn.haxx.se/dev/archive-2008-12/0445.shtml
+   Justification:
+     The build shouldn't be broken.  Ever.
+   Notes:
+     The merge in r34393 was dependent on additional APIs.  The fixes branch
+     includes code which will (probably) be merged as part of the
+     reintegrate-improvements branch.  If that branch gets merged, this item
+     can disappear.
+     This is currently a test failure on the branch, but I think that it's
+     also on 1.5.x, and a result of the r34393 merge.
+   Branch:
+     ^/branches/1.5.x-build-fixes
+   Votes:
+     +1: hwright
      
 Approved changes:
 =================
