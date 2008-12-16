@@ -105,21 +105,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
-* r34432, r34669
-   Follow-up to r32975, which is already backported and had a bug, see
-   http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145757.
-   Notes:
-     r34432 is the fix, r34669 adjusts an existing merge test to demonstrate
-     the bug.  There is a very minor whitespace conflict in
-     merge_props_changed() in r34432 and a conflict with r34669 due to the
-     usual problem that not all the merge tests are backported.
-   Branch:
-     ^/branches/1.5.x-34432
-   Justification:
-     r32975 fixed a bug which occurred when a merge added explicit mergeinfo
-     to a subtree that had no explicit mergeinfo prior to the merge.  But
-     this fix itself had a bug which could result in an error during a
-     --dry-run merge, r34432 fixes this.
-   Votes:
-     +1: pburba, kameshj, rhuijben
