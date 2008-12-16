@@ -24,18 +24,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: cmpilato, hwright
 
- * r34385, r34393
-   Fix broken merge when the merge target's natural history includes
-   resurrections.
-   Notes:
-     r34385 is a new test.  r34393 is the fix.
-   Justification:
-     This problem was encountered 'in the wild' - see
-     http://svn.haxx.se/dev/archive-2008-11/0618.shtml.  When encountered
-     cherry harvest merges are completely broken.
-   Votes:
-     +1: pburba, stylesen
-
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
    Branch:
@@ -105,4 +93,16 @@ Approved changes:
      some unnecessary communication with the repository.
    Votes:
      +1: pburba, kameshj, cmpilato
+
+ * r34385, r34393
+   Fix broken merge when the merge target's natural history includes
+   resurrections.
+   Notes:
+     r34385 is a new test.  r34393 is the fix.
+   Justification:
+     This problem was encountered 'in the wild' - see
+     http://svn.haxx.se/dev/archive-2008-11/0618.shtml.  When encountered
+     cherry harvest merges are completely broken.
+   Votes:
+     +1: pburba, stylesen, cmpilato
 
