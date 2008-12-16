@@ -55,7 +55,7 @@ Candidate changes for 1.5.5:
      http://svn.haxx.se/dev/archive-2008-11/0618.shtml.  When encountered
      cherry harvest merges are completely broken.
    Votes:
-     +1: pburba
+     +1: pburba, stylesen
 
  * r34432, r34669
    Follow-up to r32975, which is already backported and had a bug, see
