@@ -78,7 +78,7 @@ Candidate changes for 1.5.5:
    Branch:
      ^/branches/1.5.x-build-fixes
    Votes:
-     +1: hwright
+     +1: hwright, pburba
 
  * Remove exit_code on merge_test.py 106, follow up to merge in r34393.
    Justification:
@@ -88,7 +88,7 @@ Candidate changes for 1.5.5:
      This was tested on the 1.5.x-build-fixes branch, since 1.5.x doesn't
      currently build.
    Votes:
-     +1: hwright
+     +1: hwright, pburba
      
 Approved changes:
 =================
