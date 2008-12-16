@@ -41,6 +41,14 @@ Candidate changes for 1.5.5:
      occurred when reintegrate was thwarted by subtree mergeinfo.
    Votes:
      +1: pburba
+     +0: stsp (With my limited understanding of merge tracking it takes
+               ages for me to review this properly.
+               The change is fairly large. I've read all log messages and
+               most of the diffs, including the history of the branch
+               merged to trunk in r34091.
+               I understand what the change is supposed to be doing,
+               and from that point of view I can say that it actually
+               does improve things a lot.)
 
  * r34560, r34562
    Fix a bug which occurs when a merge adds a subtree as an immediate child
