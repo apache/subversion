@@ -14786,8 +14786,8 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Reintegrate A_COPY to A, this should work A_COPY/D/gamma_moved's natural
-  # history,
+  # Reintegrate A_COPY to A, this should work since
+  # A_COPY/D/gamma_moved's natural history,
   #
   #   /A/D/gamma:1-15
   #   /A/D/gamma_moved:16
