@@ -103,7 +103,7 @@ Candidate changes for 1.5.5:
    Justification:
      Rare bug, but it results in incorrect mergeinfo.
    Votes:
-     +1: pburba
+     +1: pburba, kameshj
      
  * r34547
    Fix issue #3323 'Mergeinfo deleted by a merge should disappear'
