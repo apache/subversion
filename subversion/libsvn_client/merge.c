@@ -1009,8 +1009,8 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                          allocated do so in BATON->POOL so it has a
                          sufficient lifetime. */
                       if (!merge_b->paths_with_deleted_mergeinfo)
-                      merge_b->paths_with_deleted_mergeinfo =
-                              apr_hash_make(merge_b->pool);
+                        merge_b->paths_with_deleted_mergeinfo =
+                          apr_hash_make(merge_b->pool);
 
                       apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
                                    apr_pstrdup(merge_b->pool, path),
