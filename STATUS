@@ -43,7 +43,7 @@ Candidate changes for 1.5.5:
    uncommitted transaction when said transaction's data lives solely
    on the master server.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r34385, r34393
    Fix broken merge when the merge target's natural history includes
