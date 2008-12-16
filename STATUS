@@ -79,6 +79,16 @@ Candidate changes for 1.5.5:
      ^/branches/1.5.x-build-fixes
    Votes:
      +1: hwright
+
+ * Remove exit_code on merge_test.py 106, follow up to merge in r34393.
+   Justification:
+     Fixes a test failure caused by differences in the test API between 1.5.x
+     and trunk.
+   Notes:
+     This was tested on the 1.5.x-build-fixes branch, since 1.5.x doesn't
+     currently build.
+   Votes:
+     +1: hwright
      
 Approved changes:
 =================
