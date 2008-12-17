@@ -258,6 +258,13 @@ typedef struct merge_cmd_baton_t {
      meet the criteria or DRY_RUN is true. */
   apr_hash_t *paths_with_new_mergeinfo;
 
+  /* A list of paths which had explicit mergeinfo prior to the merge but
+     had this mergeinfo deleted by the merge.  This is populated by
+     merge_change_props() and is allocated in POOL so it is subject to the
+     lifetime limitations of POOL.  Is NULL if no paths are found which
+     meet the criteria or DRY_RUN is true. */
+  apr_hash_t *paths_with_deleted_mergeinfo;
+
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
@@ -765,23 +772,23 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                 ctx->conflict_baton, subpool);
 
       /* If this is not a dry run then make a record in BATON if we find a
-         PATH where mergeinfo is added where none existed previously. */
+         PATH where mergeinfo is added where none existed previously or PATH
+         is having its existing mergeinfo deleted. */
       if (!merge_b->dry_run)
         {
           for (i = 0; i < props->nelts; ++i)
             {
               svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-              /* Is this prop change the addition of mergeinfo to PATH? */
-              if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
-                  && prop->value) /* No value if a prop delete. */
+              if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
                 {
                   /* Does PATH have any working mergeinfo? */
                   svn_prop_t *mergeinfo_prop =
                     apr_hash_get(original_props,
                                  SVN_PROP_MERGEINFO,
                                  APR_HASH_KEY_STRING);
-                  if (!mergeinfo_prop)
+
+                  if (!mergeinfo_prop && prop->value)
                     {
                       /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
                          allocated do so in BATON->POOL so it has a
@@ -793,8 +800,21 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                    apr_pstrdup(merge_b->pool, path),
                                    APR_HASH_KEY_STRING, path);
                     }
+                  else if (mergeinfo_prop && !prop->value)
+                    {
+                      /* If BATON->PATHS_WITH_DELETED_MERGEINFO needs to be
+                         allocated do so in BATON->POOL so it has a
+                         sufficient lifetime. */
+                      if (!merge_b->paths_with_deleted_mergeinfo)
+                        merge_b->paths_with_deleted_mergeinfo =
+                          apr_hash_make(merge_b->pool);
+
+                      apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
+                                   apr_pstrdup(merge_b->pool, path),
+                                   APR_HASH_KEY_STRING, path);
                 }
             }
+        }
         }
 
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
@@ -2986,6 +3006,43 @@ remove_absent_children(const char *target_wcpath,
                          APR_HASH_KEY_STRING, NULL);
           APR_ARRAY_IDX(children_with_mergeinfo, i,
                         svn_client__merge_path_t *) = NULL;
+        }
+    }
+}
+
+/* Helper for do_directory_merge() to handle the case were a merge editor
+   drive removes explicit mergeinfo from a subtree of the merge target.
+
+   MERGE_B, NOTIFY_B are cascaded from the arguments of the same name in
+   do_directory_merge().  If MERGE_B->DRY_RUN is true do nothing, if it is
+   false then for each path (if any) in MERGE_B->PATHS_WITH_DELETED_MERGEINFO
+   remove that path from NOTIFY_B->CHILDREN_WITH_MERGEINFO by setting that
+   child to NULL.  The one exception is for the merge target itself,
+   MERGE_B->TARGET, this must always be present in
+   NOTIFY_B->CHILDREN_WITH_MERGEINFO so this is never removed by this
+   function. */
+static void
+remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
+                                       notification_receiver_baton_t *notify_b)
+{
+  if (!merge_b->dry_run && merge_b->paths_with_deleted_mergeinfo)
+    {
+      int i;
+      /* NOTIFY_B->CHILDREN_WITH_MERGEINFO[0] is the always the merge target
+         so start at the first child. */
+      for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
+        {
+          svn_client__merge_path_t *child =
+            APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
+                          i, svn_client__merge_path_t *);
+          if (child
+              && apr_hash_get(merge_b->paths_with_deleted_mergeinfo,
+                              child->path,
+                              APR_HASH_KEY_STRING))
+            {
+              APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
+                            svn_client__merge_path_t *) = NULL;
+            }
         }
     }
 }
@@ -5501,6 +5558,14 @@ do_directory_merge(const char *url1,
                                                           adm_access,
                                                           iterpool));
 
+              /* If any subtrees had their explicit mergeinfo deleted as a
+                 result of the merge then remove these paths from 
+                 MERGE_B->CHILDREN_WITH_MERGEINFO since there is no need
+                 to consider these subtrees for subsequent editor drives
+                 nor do we want to record mergeinfo on them describing
+                 the merge itself. */
+              remove_children_with_deleted_mergeinfo(merge_b, notify_b);
+
               /* Prepare for the next iteration (if any). */
               remove_first_range_from_remaining_ranges(
                 end_rev, children_with_mergeinfo, pool);
@@ -5977,6 +6042,7 @@ do_merge(apr_array_header_t *merge_sources,
       merge_cmd_baton.conflicted_paths = NULL;
       merge_cmd_baton.target_has_dummy_merge_range = FALSE;
       merge_cmd_baton.paths_with_new_mergeinfo = NULL;
+      merge_cmd_baton.paths_with_deleted_mergeinfo = NULL;
       merge_cmd_baton.ra_session1 = ra_session1;
       merge_cmd_baton.ra_session2 = ra_session2;
 
