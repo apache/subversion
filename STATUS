@@ -72,6 +72,13 @@ Candidate changes for 1.5.5:
      ^/branches/1.5.x-build-fixes
    Votes:
      +1: hwright, pburba, jerenkrantz
+     -1: julianfoad (because the fix contains redundant functions, and they
+           are without prototypes, causing compiler warnings, and when a bad
+           back-port is made we should revert (which is quick & safe) rather
+           than try hastily to fix it, and I haven't checked whether the
+           original reviews of the broken back-port were faulty or just the
+           merge: it looks like not enough care is being taken: see email
+           thread <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985193>.)
 
 Approved changes:
 =================
