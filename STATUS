@@ -56,25 +56,6 @@ Candidate changes for 1.5.5:
                and from that point of view I can say that it actually
                does improve things a lot.)
 
- * ^/branches/1.5.x-build-fixes
-   Fix the build, which resulted from the merge in r34393.  For full analysis,
-   see:  http://svn.haxx.se/dev/archive-2008-12/0445.shtml
-   Justification:
-     The build shouldn't be broken.  Ever.
-   Notes:
-     The merge in r34393 was dependent on additional APIs.  The fixes branch
-     includes code which will (probably) be merged as part of the
-     reintegrate-improvements branch.  If that branch gets merged, this item
-     can disappear.
-     This is currently a test failure on the branch, but I think that it's
-     also on 1.5.x, and a result of the r34393 merge.
-     See email thread <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985193>.
-   Branch:
-     ^/branches/1.5.x-build-fixes@34764
-   Votes:
-     +1: hwright (@r?????), pburba (@r?????), jerenkrantz (@r?????)
-     +0: julianfoad (@r34764)
-
 Approved changes:
 =================
 
