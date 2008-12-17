@@ -14,9 +14,11 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
- * r30756
+ * r30756, r32907, r32913, small parts of r32405
    Allow 'svn merge' to merge diffs which add 'svn:eol-style' properties
    to files that used to have inconsistent newlines.
+   Backport branch:
+     https://svn.collab.net/repos/svn/branches/1.5.x-r30756
    Justification:
      Prevents you from doing merges in some situations involving
      svn:eol-style; the fix appears to allow them. Fix has been available
