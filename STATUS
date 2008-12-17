@@ -14,27 +14,6 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
- * r30257, r33024, r33026
-   Don't try to filter natural history from added mergeinfo during
-   reverse merges.
-   Notes:
-     r30257 is the urelated removal of an unused private struct in merge.c,
-     not required but avoids a conflict with r33024.  r33024 is a change to
-     include more information in the merge command baton, it results in no
-     functional change itself but r33026 relies on this new information.
-     There's a single trailing whitespace conflict during merge of r33024.
-     r33026 is the core change.  To solve the specific problem noted in
-     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777,
-     this group relies upon the r34547 group.
-   Justification:
-     A reverse merge should simply return mergeinfo to a previous
-     representation -- see
-     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777.
-     This change also improves reverse merge performance as it eliminates
-     some unnecessary communication with the repository.
-   Votes:
-     +1: pburba, kameshj
-
  * r34082, r34096, r34545
    Fix issue #3275 by making WebDAV proxy slave servers pass through
    any GET or PROPFIND requests aimed at working resource URLs, even
@@ -43,19 +22,7 @@ Candidate changes for 1.5.5:
    uncommitted transaction when said transaction's data lives solely
    on the master server.
    Votes:
-     +1: cmpilato
-
- * r34385, r34393
-   Fix broken merge when the merge target's natural history includes
-   resurrections.
-   Notes:
-     r34385 is a new test.  r34393 is the fix.
-   Justification:
-     This problem was encountered 'in the wild' - see
-     http://svn.haxx.se/dev/archive-2008-11/0618.shtml.  When encountered
-     cherry harvest merges are completely broken.
-   Votes:
-     +1: pburba, stylesen
+     +1: cmpilato, hwright
 
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
@@ -87,12 +54,36 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba, kameshj
      
- * r34547
+Approved changes:
+=================
+
+ * r30257, r33024, r33026
+   Don't try to filter natural history from added mergeinfo during
+   reverse merges.
+   Notes:
+     r30257 is the urelated removal of an unused private struct in merge.c,
+     not required but avoids a conflict with r33024.  r33024 is a change to
+     include more information in the merge command baton, it results in no
+     functional change itself but r33026 relies on this new information.
+     There's a single trailing whitespace conflict during merge of r33024.
+     r33026 is the core change.  To solve the specific problem noted in
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777,
+     this group relies upon the r34547 group.
+   Justification:
+     A reverse merge should simply return mergeinfo to a previous
+     representation -- see
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777.
+     This change also improves reverse merge performance as it eliminates
+     some unnecessary communication with the repository.
+   Votes:
+     +1: pburba, kameshj, cmpilato
+
+ * r34547, r34732
    Fix issue #3323 'Mergeinfo deleted by a merge should disappear'
    Notes:
      Will conflict if r34432 is not applied first.  Note that r34547 does
      not depend on r34432 to function properly, so can be backported by
-     itself if necessary.
+     itself if necessary.  r34732 is an "obvious fix" indentation tweak.
    Justification:
      A merge that should remove subtree mergeinfo doesn't actually do so.
      The subtree mergeinfo is initially deleted, but then is replaced by
@@ -101,7 +92,4 @@ Candidate changes for 1.5.5:
      but anything that reduces the amount of explicit subtree mergeinfo
      is a good thing.
    Votes:
-     +1: pburba, kameshj
-
-Approved changes:
-=================
+     +1: pburba, kameshj, cmpilato
