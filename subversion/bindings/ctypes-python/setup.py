@@ -12,7 +12,6 @@ from distutils.errors import DistutilsExecError
 from distutils.errors import DistutilsOptionError
 
 from glob import glob
-from tempfile import mkdtemp
 
 class clean(_clean):
   """Special distutils command for cleaning the Subversion ctypes bindings."""
@@ -33,25 +32,17 @@ class clean(_clean):
                                 "functions.py")
     functions_pyc = os.path.join(os.path.dirname(__file__), "csvn", "core",
                                  "functions.pyc")
+    svn_all_py = os.path.join(os.path.dirname(__file__), "svn_all.py")
+    svn_all2_py = os.path.join(os.path.dirname(__file__), "svn_all2.py")
 
-    if os.path.exists(functions_py):
-      log.info("removing '%s'", os.path.normpath(functions_py))
+    for f in (functions_py, functions_pyc, svn_all_py, svn_all2_py):
+      if os.path.exists(f):
+        log.info("removing '%s'", os.path.normpath(f))
 
-      if not self.dry_run:
-        os.remove(functions_py)
-    else:
-      log.warn("'%s' does not exist -- can't clean it",
-               os.path.normpath(functions_py))
-
-    if os.path.exists(functions_pyc):
-      log.info("removing '%s'" % os.path.normpath(functions_pyc))
-
-      if not self.dry_run:
-        os.remove(functions_pyc)
-    else:
-      log.warn("'%s' does not exist -- can't clean it",
-               os.path.normpath(functions_pyc))
-
+        if not self.dry_run:
+          os.remove(f)
+      else:
+        log.warn("'%s' does not exist -- can't clean it", os.path.normpath(f))
 
     # Run standard clean command
     _clean.run(self)
@@ -114,9 +105,9 @@ class build(_build):
   # finalize_options()
 
   ##############################################################################
-  # Get the APR configuration
+  # Get build configuration
   ##############################################################################
-  def get_apr_config (self):
+  def get_build_config (self):
     flags = []
     ldflags = []
     library_path = []
@@ -158,7 +149,10 @@ class build(_build):
 
         if self.subversion != "/usr":
           ldflags.append("-L%s/lib" % self.subversion)
-        flags.append("-I%s" % self.svn_include_dir)
+        if self.svn_include_dir[-18:] == "subversion/include":
+          flags.append("-Isubversion/include")
+        else:
+          flags.append("-I%s" % self.svn_include_dir)
 
         # List the libraries in the order they should be loaded
         libraries = [
@@ -184,72 +178,79 @@ class build(_build):
                 " ".join(ldflags) + " " + self.ldflags, " ".join(flags),
                 ":".join(library_path))
 
-  # get_apr_config()
+  # get_build_config()
 
   ##############################################################################
   # Build csvn/core/functions.py
   ##############################################################################
   def build_functions_py(self):
     (apr_prefix, apr_include_dir, cpp, ldflags, flags,
-     library_path) = self.get_apr_config()
-    tempdir = mkdtemp()
-    try:
+     library_path) = self.get_build_config()
+    cwd = os.getcwd()
+    if self.svn_include_dir[-18:] == "subversion/include":
+      includes = ('subversion/include/svn_*.h '
+                  '%s/ap[ru]_*.h' % apr_include_dir)
+      cmd = ["%s %s --cpp '%s %s' %s "
+             "%s -o subversion/bindings/ctypes-python/svn_all.py "
+             "--no-macro-warnings --strip-build-path=%s" % (sys.executable,
+                                                            self.ctypesgen_py, cpp,
+                                                            flags, ldflags,
+                                                            includes, self.svn_include_dir[:-19])]
+      os.chdir(self.svn_include_dir[:-19])
+    else:
       includes = ('%s/svn_*.h '
                   '%s/ap[ru]_*.h' % (self.svn_include_dir, apr_include_dir))
-      cmd = ["cd %s && %s %s --cpp '%s %s' %s "
-             "%s -o svn_all.py --no-macro-warnings" % (tempdir, sys.executable,
+      cmd = ["%s %s --cpp '%s %s' %s "
+             "%s -o svn_all.py --no-macro-warnings" % (sys.executable,
                                                        self.ctypesgen_py, cpp,
                                                        flags, ldflags,
                                                        includes)]
-      if self.lib_dirs:
-        cmd.extend('-R ' + x for x in self.lib_dirs.split(":"))
-      cmd = ' '.join(cmd)
+    if self.lib_dirs:
+      cmd.extend('-R ' + x for x in self.lib_dirs.split(":"))
+    cmd = ' '.join(cmd)
 
-      if self.save_preprocessed_headers:
-        cmd += " --save-preprocessed-headers=%s" % \
-            os.path.abspath(self.save_preprocessed_headers)
+    if self.save_preprocessed_headers:
+      cmd += " --save-preprocessed-headers=%s" % \
+          os.path.abspath(self.save_preprocessed_headers)
 
-      if self.verbose or self.dry_run:
-        status = self.execute(os.system, (cmd,), cmd)
-      else:
-        f = os.popen(cmd, 'r')
-        f.read() # Required to avoide the 'Broken pipe' error.
-        status = f.close() # None is returned for the usual 0 return code
+    if self.verbose or self.dry_run:
+      status = self.execute(os.system, (cmd,), cmd)
+    else:
+      f = os.popen(cmd, 'r')
+      f.read() # Required to avoid the 'Broken pipe' error.
+      status = f.close() # None is returned for the usual 0 return code
 
-      if os.name == "posix" and status and status != 0:
-        if os.WIFEXITED(status):
-          status = os.WEXITSTATUS(status)
-          if status != 0:
-            sys.exit(status)
-          elif os.WIFSIGNALED(status):
-            log.error("ctypesgen.py killed with signal %d" % os.WTERMSIG(status))
-            sys.exit(2)
-          elif os.WIFSTOPPED(status):
-            log.error("ctypesgen.py stopped with signal %d" % os.WSTOPSIG(status))
-            sys.exit(2)
-          else:
-            log.error("ctypesgen.py exited with invalid status %d", status)
-            sys.exit(2)
+    os.chdir(cwd)
 
-      if not self.dry_run:
-        out = file("%s/svn_all2.py" % tempdir, "w")
-        for line in file("%s/svn_all.py" % tempdir):
-          line = line.replace("restype = POINTER(svn_error_t)",
-                              "restype = SVN_ERR")
+    if os.name == "posix" and status and status != 0:
+      if os.WIFEXITED(status):
+        status = os.WEXITSTATUS(status)
+        if status != 0:
+          sys.exit(status)
+        elif os.WIFSIGNALED(status):
+          log.error("ctypesgen.py killed with signal %d" % os.WTERMSIG(status))
+          sys.exit(2)
+        elif os.WIFSTOPPED(status):
+          log.error("ctypesgen.py stopped with signal %d" % os.WSTOPSIG(status))
+          sys.exit(2)
+        else:
+          log.error("ctypesgen.py exited with invalid status %d", status)
+          sys.exit(2)
 
-          if not line.startswith("FILE ="):
-            out.write(line)
-        out.close()
+    if not self.dry_run:
+      out = file("svn_all2.py", "w")
+      for line in file("svn_all.py"):
+        line = line.replace("restype = POINTER(svn_error_t)",
+                            "restype = SVN_ERR")
 
-      cmd = ("cat csvn/core/functions.py.in %s/svn_all2.py "
-             "> csvn/core/functions.py" % tempdir)
-      self.execute(os.system, (cmd,), cmd)
+        if not line.startswith("FILE ="):
+          out.write(line)
+      out.close()
 
-      log.info("Generated csvn/core/functions.py successfully")
+    cmd = "cat csvn/core/functions.py.in svn_all2.py > csvn/core/functions.py"
+    self.execute(os.system, (cmd,), cmd)
 
-    finally:
-      # Remove temporary directory
-      remove_tree(tempdir)
+    log.info("Generated csvn/core/functions.py successfully")
 
   # build_functions_py()
 

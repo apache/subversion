@@ -1030,7 +1030,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"### " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                            NL
+"### " CONFIG_OPTION_ENABLE_REP_SHARING " = false"                           NL
 
 ;
 #undef NL
@@ -1806,13 +1806,13 @@ read_rep_offsets(representation_t **rep_p,
   SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum, svn_checksum_sha1, str,
                                  pool));
 
-  /* Read the original txn id. */
+  /* Read the uniquifier. */
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  rep->orig_txn_id = apr_pstrdup(pool, str);
+  rep->uniquifier = apr_pstrdup(pool, str);
 
   return SVN_NO_ERROR;
 }
@@ -2048,7 +2048,7 @@ representation_string(representation_t *rep,
                           svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                           pool) :
                           "0000000000000000000000000000000000000000",
-                      rep->orig_txn_id);
+                      rep->uniquifier);
 }
 
 
@@ -2413,6 +2413,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
                                  apr_hash_t *proplist,
                                  apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
   svn_stream_t *stream;
@@ -2422,7 +2423,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   /* ### do we have a directory sitting around already? we really shouldn't
      ### have to get the dirname here. */
   SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_path_dirname(final_path, pool  ),
+                                 svn_path_dirname(final_path, pool),
                                  svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
@@ -2432,7 +2433,9 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
   return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    svn_fs_fs__path_rev(fs, rev, pool),
+                                    rev < ffd->min_unpacked_rev
+                                      ? path_rev_packed(fs, rev, "pack", pool)
+                                      : svn_fs_fs__path_rev(fs, rev, pool),
                                     pool);
 }
 
@@ -3420,10 +3423,7 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a == b)
     return TRUE;
 
-  if (a && (! b))
-    return FALSE;
-
-  if (b && (! a))
+  if (a == NULL || b == NULL)
     return FALSE;
 
   if (a->offset != b->offset)
@@ -3432,7 +3432,10 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a->revision != b->revision)
     return FALSE;
 
-  return strcmp(a->orig_txn_id, b->orig_txn_id) == 0;
+  if (a->uniquifier == NULL || b->uniquifier == NULL)
+    return FALSE;
+
+  return strcmp(a->uniquifier, b->uniquifier) == 0;
 }
 
 svn_error_t *
@@ -3477,7 +3480,7 @@ svn_fs_fs__rep_copy(representation_t *rep,
   memcpy(rep_new, rep, sizeof(*rep_new));
   rep_new->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
   rep_new->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, pool);
-  rep_new->orig_txn_id = apr_pstrdup(pool, rep->orig_txn_id);
+  rep_new->uniquifier = apr_pstrdup(pool, rep->uniquifier);
 
   return rep_new;
 }
@@ -4447,6 +4450,8 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
   if (!rep || !rep->txn_id)
     {
+      const char *unique_suffix;
+
       {
         apr_hash_t *entries;
         apr_pool_t *subpool = svn_pool_create(pool);
@@ -4469,7 +4474,8 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
       rep->txn_id = txn_id;
-      rep->orig_txn_id = txn_id;
+      SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, txn_id, pool));
+      rep->uniquifier = apr_psprintf(pool, "%s/%s", txn_id, unique_suffix);
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
                                            parent_noderev, FALSE, pool));
@@ -4779,6 +4785,7 @@ rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
   fs_fs_data_t *ffd = b->fs->fsap_data;
+  const char *unique_suffix;
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
@@ -4798,7 +4805,9 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
-  rep->orig_txn_id = rep->txn_id;
+  SVN_ERR(get_new_txn_node_id(&unique_suffix, b->fs, rep->txn_id, b->pool));
+  rep->uniquifier = apr_psprintf(b->parent_pool, "%s/%s", rep->txn_id,
+                                 unique_suffix);
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
@@ -4822,7 +4831,7 @@ rep_write_contents_close(void *baton)
 
       /* Use the old rep for this content. */
       old_rep->md5_checksum = rep->md5_checksum;
-      old_rep->orig_txn_id = rep->orig_txn_id;
+      old_rep->uniquifier = rep->uniquifier;
       b->noderev->data_rep = old_rep;
     }
   else

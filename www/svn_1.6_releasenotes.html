@@ -22,11 +22,6 @@ of this page will become the release notes.  Until then, this page
 describes what is planned for the release.</p>
 </div>
 
-<div class="warningmessage">
-<p>[BRANCH] means that given feature probably will be included in Subversion
-1.6, but currently is still on a separate branch.</p>
-</div>
-
 <h1 style="text-align: center">Subversion 1.6 Release Notes</h1>
 
 <div class="h2" id="news" title="news">
@@ -115,18 +110,18 @@ cannot necessarily compile or run against older libraries.</p>
 
 </div>  <!-- new-feature-compatibility-table -->
 
-<div class="h3" id="wc-and-repos-format-change"
-             title="wc-and-repos-format-change">
-<h3>Working Copy and Repository Format Changes</h3>
+<div class="h3" id="wc-and-fs-format-change"
+             title="wc-and-fs-format-change">
+<h3>Working Copy and Repository Filesystem Format Changes</h3>
 
 <p>The working copy format has been upgraded.  This means that 1.5 and
 older Subversion clients will <em>not</em> be able to work with
 working copies produced by Subversion 1.6.  Working copies are <a
 href="#wc-upgrades" >upgraded automatically</a>.</p>
 
-<p>XXX(Only BDB repositories) Similarly, the repository format has changed, meaning that 1.5 and
-older versions of Subversion tools that normally access a repository
-directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
+<p>Similarly, the repository filesystem formats have changed, meaning
+that 1.5 and older versions of Subversion tools that normally access
+a repository directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
 <tt>svnadmin</tt>) won't be able to read a repository created by
 Subversion 1.6.  But, repositories are <a href="#repos-upgrades"
 ><strong>not</strong> upgraded automatically</a>.</p>
@@ -165,12 +160,12 @@ that some of the new 1.6 features will not become available simply by
 upgrading your server: you will also have to upgrade your
 repositories.  (We decided not to auto-upgrade repositories because we
 didn't want 1.6 to silently make repositories unusable by
-1.4&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
+1.5&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
 part of the repository admin.)</p>
 
 </div>  <!-- repos-upgrades -->
 
-</div>  <!-- wc-and-repos-format-change -->
+</div>  <!-- wc-and-fs-format-change -->
 
 <div class="h3" id="output-changes" title="output-changes">
 <h3>Command Line Output Changes</h3>
@@ -178,9 +173,7 @@ part of the repository admin.)</p>
 <p>Although we try hard to keep output from the command line programs
 compatible between releases, new information sometimes has to be
 added.  This can break scripts that rely on the exact format of the
-output.  Unfortunately, we are not able to enumerate all of the output
-changes in 1.6, but one of them is that the output of <code>svn proplist
---verbose</code> was improved.</p>
+output.</p>
 
 <div class="h4" id="proplist-verbose" title="proplist-verbose">
 <h4>Improved output of <code>svn proplist --verbose</code></h4>
@@ -205,7 +198,24 @@ improved.</p>
 <div class="h4" id="svn-status" title="svn-status">
 <h4>Changed output of <code>svn status</code></h4>
 
-<p>XXX(r33247, r33288)</p>
+<p>The output of <code>svn status</code> contains the additional seventh
+column which informs whether the item is the victim of a tree conflict.
+An additional line with more detailed description of a tree conflict is
+displayed after each item remaining in tree conflict.</p>
+
+<pre>
+   $ svn status
+   M       Makefile.in
+   A     C src/error.c
+         >   local add, incoming add upon update
+   M       src/log.c
+   M     C src/path.c
+         >   local edit, incoming delete upon update
+   D     C src/properties.c
+         >   local delete, incoming edit upon merge
+   M     C src/time.c
+   $ 
+</pre>
 
 </div>  <!-- svn-status -->
 
@@ -559,65 +569,14 @@ security or data-loss bugs.</p>
 
 </div>  <!-- svn-1.4-deprecation -->
 
-<div class="h2" id="sqlite" title="deps-now">
+<div class="h2" id="sqlite" title="sqlite">
 <h2>New Dependency: SQLite</h2>
 
 <p>XXX: We now require <a href="http://www.sqlite.org/">SQLite</a> for both
 the server and client.  We recommend 3.5.9 or greater, but work with anything
 better than 3.4.0.</p>
 
-</div>  <!-- deps-sqlite -->
-
-
-<div class="h2" id="deps" title="deps">
-<h2>Subversion Dependencies Distribution: Binary Compatibility Issues</h2>
-
-<div class="h3" id="deps-background" title="deps-background">
-<h3>Background</h3>
-
-<p>APR 0.9.x and 1.x are binary-incompatible.  This means if you are
-already using Subversion with APR 0.9.x, and then upgrade your libapr
-to 1.X <em>without rebuilding Subversion</em>, things will break.
-Things will also break if your Subversion server libraries are linked
-to one version of APR but your Apache HTTPD server is linked to a
-different version.</p>
-
-<p>For a long time, Subversion's main source distribution included APR
-0.9.x, which was the latest available at the time, along with a few
-other things (e.g., Neon, zlib) that weren't yet widespread on
-installation systems.</p>
-
-</div> <!-- deps-background -->
-
-<div class="h3" id="deps-now" title="deps-now">
-<h3>Subversion 1.6.0 Dependencies Distribution</h3>
-
-<p>Today, these dependencies are no longer exotic, so our source
-distribution contains just Subversion itself.  Those building
-Subversion are expected to have the necessary libraries already
-installed, or to be able to fetch them easily.  But for convenience,
-we still offer a "deps" distribution: it doesn't contain Subversion,
-it just has source code for those third-party libraries.</p>
-
-<p>Until Subversion 1.5.0, the deps distribution contained APR 0.9.x,
-but as of 1.5.0, we're finally upgrading it to APR 1.x.  This is
-because by now there are very few systems that will have binary
-compatibility issues, and of those, few are likely to build using the
-"deps" dist.</p>
-
-<p>If you already have a Subversion installation using APR 0.9.x, it's
-still possible to move to APR 1.x safely (although you are not
-required to, unless you use the deps dist).  Just be sure to recompile
-Subversion, and Apache httpd if necessary, after upgrading APR.</p>
-
-<p>Note that it's perfectly safe to use APR 1.x from the beginning.
-In fact, we recommend it.  If you're building Subversion for the first
-time, there's no compatibility issue to worry about, so just grab the
-latest version of APR (or use our deps dist).</p>
-
-</div> <!-- deps-now -->
-
-</div>  <!-- deps -->
+</div>  <!-- sqlite -->
 
 </div>  <!-- app -->
 </body>

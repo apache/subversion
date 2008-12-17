@@ -722,11 +722,10 @@ close_file(void *file_baton,
 
   if (text_checksum)
     {
-      const char *actual_checksum;
-      svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
-      checksum->digest = fb->text_digest;
-
-      actual_checksum = svn_checksum_to_cstring(checksum, pool);
+      const char *actual_checksum =
+        svn_checksum_to_cstring(svn_checksum__from_digest(fb->text_digest,
+                                                          svn_checksum_md5,
+                                                          pool), pool);
 
       if (actual_checksum && (strcmp(text_checksum, actual_checksum) != 0))
         {

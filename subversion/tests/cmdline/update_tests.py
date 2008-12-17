@@ -667,7 +667,8 @@ def update_delete_modified_files(sbox):
                       "This is the file 'pi'.\nappended pi text\n")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E/alpha', status ='M ', wc_rev=1,
+  # The expectation on 'alpha' reflects partial progress on issue #3334.
+  expected_status.tweak('A/B/E/alpha', status='A ', copied='+', wc_rev='-',
                         treeconflict='C')
   expected_status.tweak('A/D/G/pi', status='M ')
   expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', wc_rev=1)
@@ -4002,6 +4003,15 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  expected_status.tweak(
+    #'D/D1',
+    # The expectation on 'alpha' reflects partial progress on issue #3334.
+    'F/alpha',
+    #'DD/D1',
+    #'DF/D1',
+    #'DDD/D1',
+    #'DDF/D1',
+    status='A ', copied='+', wc_rev='-')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
@@ -4075,6 +4085,15 @@ def tree_conflicts_on_update_2_3(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  expected_status.tweak(
+    #'D/D1',
+    # The expectation on 'alpha' reflects partial progress on issue #3334.
+    'F/alpha',
+    #'DD/D1',
+    #'DF/D1',
+    #'DDD/D1',
+    #'DDF/D1',
+    status='A ', copied='+', wc_rev='-')
 
   # Paths where output should be a single 'Skipped' message.
   skip_paths = [
@@ -4186,7 +4205,7 @@ test_list = [ None,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
               tree_conflicts_on_update_2_2,
-              tree_conflicts_on_update_2_3,
+              XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
              ]
 

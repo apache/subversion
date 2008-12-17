@@ -44,6 +44,7 @@
 #include "bdb/strings-table.h"
 #include "bdb/checksum-reps-table.h"
 
+#include "private/svn_skel.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -288,8 +289,7 @@ get_dir_entries(apr_hash_t **entries_p,
       /* Now we have a rep, follow through to get the entries. */
       SVN_ERR(svn_fs_base__rep_contents(&entries_raw, fs, noderev->data_key,
                                         trail, pool));
-      entries_skel = svn_fs_base__parse_skel(entries_raw.data,
-                                             entries_raw.len, pool);
+      entries_skel = svn_skel__parse(entries_raw.data, entries_raw.len, pool);
 
       /* Were there entries?  Make a hash from them. */
       if (entries_skel)
@@ -400,8 +400,7 @@ set_entry(dag_node_t *parent,
     {
       SVN_ERR(svn_fs_base__rep_contents(&raw_entries, fs, rep_key,
                                         trail, pool));
-      entries_skel = svn_fs_base__parse_skel(raw_entries.data,
-                                             raw_entries.len, pool);
+      entries_skel = svn_skel__parse(raw_entries.data, raw_entries.len, pool);
       if (entries_skel)
         SVN_ERR(svn_fs_base__parse_entries_skel(&entries, entries_skel,
                                                 pool));
@@ -417,7 +416,7 @@ set_entry(dag_node_t *parent,
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR(svn_fs_base__unparse_entries_skel(&entries_skel, entries,
                                             pool));
-  raw_entries_buf = svn_fs_base__unparse_skel(entries_skel, pool);
+  raw_entries_buf = svn_skel__unparse(entries_skel, pool);
   SVN_ERR(svn_fs_base__rep_contents_write_stream(&wstream, fs,
                                                  mutable_rep_key, txn_id,
                                                  TRUE, trail, pool));
@@ -559,8 +558,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
   SVN_ERR(svn_fs_base__rep_contents(&raw_proplist,
                                     svn_fs_base__dag_get_fs(node),
                                     noderev->prop_key, trail, pool));
-  proplist_skel = svn_fs_base__parse_skel(raw_proplist.data,
-                                          raw_proplist.len, pool);
+  proplist_skel = svn_skel__parse(raw_proplist.data, raw_proplist.len, pool);
   if (proplist_skel)
     SVN_ERR(svn_fs_base__parse_proplist_skel(&proplist,
                                              proplist_skel, pool));
@@ -604,7 +602,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   /* Flatten the proplist into a string. */
   SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
                                              proplist, pool));
-  raw_proplist_buf = svn_fs_base__unparse_skel(proplist_skel, pool);
+  raw_proplist_buf = svn_skel__unparse(proplist_skel, pool);
 
   /* If this repository supports representation sharing, and the
      resulting property list is exactly the same as another string in
@@ -905,7 +903,7 @@ svn_fs_base__dag_delete(dag_node_t *parent,
      into a hash. */
 
   SVN_ERR(svn_fs_base__rep_contents(&str, fs, rep_key, trail, pool));
-  entries_skel = svn_fs_base__parse_skel(str.data, str.len, pool);
+  entries_skel = svn_skel__parse(str.data, str.len, pool);
   if (entries_skel)
     SVN_ERR(svn_fs_base__parse_entries_skel(&entries, entries_skel, pool));
 
@@ -939,7 +937,7 @@ svn_fs_base__dag_delete(dag_node_t *parent,
     apr_size_t len;
 
     SVN_ERR(svn_fs_base__unparse_entries_skel(&entries_skel, entries, pool));
-    unparsed_entries = svn_fs_base__unparse_skel(entries_skel, pool);
+    unparsed_entries = svn_skel__unparse(entries_skel, pool);
     SVN_ERR(svn_fs_base__rep_contents_write_stream(&ws, fs, mutable_rep_key,
                                                    txn_id, TRUE, trail,
                                                    pool));

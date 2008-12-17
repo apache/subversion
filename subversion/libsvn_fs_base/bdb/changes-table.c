@@ -272,8 +272,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
-      result_skel = svn_fs_base__parse_skel(result.data, result.size,
-                                            subpool);
+      result_skel = svn_skel__parse(result.data, result.size, subpool);
       if (! result_skel)
         {
           err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -392,7 +391,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
-      result_skel = svn_fs_base__parse_skel(result.data, result.size, pool);
+      result_skel = svn_skel__parse(result.data, result.size, pool);
       if (! result_skel)
         {
           err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,

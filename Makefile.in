@@ -766,7 +766,7 @@ install-swig-rb-doc:
 CTYPESGEN = @CTYPESGEN@
 CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 
-ctypes-python:
+ctypes-python: local-all
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(LT_EXECUTE) $(PYTHON) setup.py build --subversion="$(prefix)" \
 	  --apr="$(SVN_APR_PREFIX)" --apr-util="$(SVN_APRUTIL_PREFIX)" \

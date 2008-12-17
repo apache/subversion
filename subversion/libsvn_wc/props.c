@@ -62,63 +62,94 @@
 
 /*** Reading/writing property hashes from disk ***/
 
+/* ### HKW/WC-NG: This is a summary of the my efforts to localize accesses to
+   svn_wc__prop_path(), in preparation to moving to the wc_db API.  The
+   general idea here is to combine all calls to svn_wc__prop_path() into a 
+   single one, which will make conversion to the new db API easier.  The catch
+   is our currently loggy implementation, which uses the properties file path
+   all over the place.  Rather than attempt to refactor all of those right
+   now, I'm going to punt and leave properties loggy-ness to the SQLite
+   transaction mechanism.
+   
+   Also, several of these could be funnelled through the load_props()
+   interface, but for the fact that it may complicate handling of propcaching.
+   I'm happy to do that, but I'm wary of killing performance right before
+   branching 1.6, so those will happen after we branch, and trunk is once
+   again a free-for-all.
+
+   The following functions currently call this API:
+     load_props(): The current "gateway" function through we all access to 
+       properties should be funneled.
+     svn_wc__working_props_committed(): Moves WORKING props to BASE props,
+       sync'ing to disk and clearing appropriate caches.
+     empty_props_p(): Used to determine if a path has properties or not.
+     svn_wc__props_last_modified(): Reads mtime of the props file.  Used
+       externally to answer the question about when a node changed.  We can
+       answer this question other ways in the SQLite schema, so this function
+       may disappear.
+     svn_wc_props_modified_p(): Used to shortcut property differences by
+       checking property filesize differences.
+     install_props_file(): Used with loggy.
+     svn_wc__install_props(): Used with loggy.
+     svn_wc__loggy_props_delete(): Used with loggy.
+     svn_wc__loggy_revert_props_create(): Used with loggy.
+     svn_wc__loggy_revert_props_restore(): Used with loggy.
+ */
+
 /* The real functionality here is part of libsvn_subr, in hashdump.c.
    But these are convenience routines for use in libsvn_wc. */
 
+/* Get PATH's properies of PROPS_KIND, and put them into *HASH.
+   PATH should be of kind NODE_KIND. */
 static svn_error_t *
-get_prop_path(const char **ppath,
-          const char *path,
-          svn_wc__props_kind_t props_kind,
-          svn_wc_adm_access_t *adm_access,
-          apr_pool_t *pool)
-{
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  return svn_wc__prop_path(ppath, path, entry->kind,
-                           props_kind, FALSE, pool);
-}
-
-/* If PROPFILE_PATH exists (and is a file), assume it's full of
-   properties and load this file into HASH.  Otherwise, leave HASH
-   untouched.  */
-static svn_error_t *
-load_prop_file(const char *propfile_path,
-               apr_hash_t *hash,
-               apr_pool_t *pool)
+load_props(apr_hash_t **hash,
+           const char *path,
+           svn_node_kind_t node_kind,
+           svn_wc__props_kind_t props_kind,
+           apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stream_t *stream;
   apr_finfo_t finfo;
+  const char *prop_path;
 
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, FALSE,
+                            pool));
+
+  *hash = apr_hash_make(pool);
   /* We shouldn't be calling load_prop_file() with an empty file, but
      we do.  This check makes sure that we don't call svn_hash_read2()
      on an empty stream.  Ugly, hacky and crude. */
-  err = svn_io_stat(&finfo, propfile_path, APR_FINFO_SIZE, pool);
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+  err = svn_io_stat(&finfo, prop_path, APR_FINFO_SIZE, pool);
+  if (err)
     {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      if (APR_STATUS_IS_ENOENT(err->apr_err)
+            || APR_STATUS_IS_ENOTDIR(err->apr_err))
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
     }
-  SVN_ERR(err);
   if (finfo.size == 0)
     return SVN_NO_ERROR;
 
-  err = svn_stream_open_readonly(&stream, propfile_path, pool, pool);
+  err = svn_stream_open_readonly(&stream, prop_path, pool, pool);
 
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+  if (err)
     {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      if ((APR_STATUS_IS_ENOENT(err->apr_err)
+            || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+        {
+           svn_error_clear(err);
+           return SVN_NO_ERROR;
+        }
+      else
+        return err;
     }
 
-  SVN_ERR(err);
-
-  SVN_ERR_W(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool),
-            apr_psprintf(pool, _("Can't parse '%s'"),
-                         svn_path_local_style(propfile_path, pool)));
+  SVN_ERR(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool));
 
   return svn_stream_close(stream);
 }
@@ -131,25 +162,19 @@ load_prop_file(const char *propfile_path,
    file on disk, otherwise an empty hash will result in no file
    being written at all. */
 static svn_error_t *
-save_prop_file(const char *propfile_path,
-               apr_hash_t *hash,
-               svn_boolean_t write_empty,
-               apr_pool_t *pool)
+save_prop_tmp_file(const char **tmp_file_path,
+                   apr_hash_t *hash,
+                   const char *tmp_base_dir,
+                   svn_boolean_t write_empty,
+                   apr_pool_t *pool)
 {
-  apr_file_t *prop_tmp;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_io_file_open(&prop_tmp, propfile_path,
-                           (APR_WRITE | APR_CREATE | APR_TRUNCATE
-                            | APR_BUFFERED),
-                           APR_OS_DEFAULT, pool));
-  stream = svn_stream_from_aprfile2(prop_tmp, FALSE, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, tmp_file_path, tmp_base_dir,
+                                 svn_io_file_del_none, pool, pool));
 
   if (apr_hash_count(hash) != 0 || write_empty)
-    SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
-              apr_psprintf(pool,
-                           _("Can't write property hash to '%s'"),
-                           svn_path_local_style(propfile_path, pool)));
+    SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   return svn_stream_close(stream);
 }
@@ -159,51 +184,43 @@ save_prop_file(const char *propfile_path,
 
 /*** Misc ***/
 
-/* Opens reject temporary file for FULL_PATH. */
+/* Opens reject temporary stream for FULL_PATH in the appropriate tmp space. */
 static svn_error_t *
-open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
-                     const char *full_path,
-                     svn_wc_adm_access_t *adm_access,
-                     svn_boolean_t is_dir, apr_pool_t *pool)
+open_reject_tmp_stream(svn_stream_t **stream, const char **reject_tmp_path,
+                       const char *full_path,
+                       svn_boolean_t is_dir, apr_pool_t *pool)
 {
-  const char *tmp_path;
-  const char *tmp_dirpath;
-  const char *tmp_filename;
+  const char *tmp_base_path;
 
-  /* Get path to /temporary/ local prop file */
-  SVN_ERR(svn_wc__prop_path(&tmp_path, full_path,
-                            is_dir ? svn_node_dir : svn_node_file,
-                            svn_wc__props_working, TRUE, pool));
+  if (is_dir)
+    tmp_base_path = svn_wc__adm_child(full_path, SVN_WC__ADM_TMP, pool);
+  else
+    tmp_base_path = svn_wc__adm_child(svn_path_dirname(full_path, pool),
+                                      SVN_WC__ADM_TMP, pool);
 
-  svn_path_split(tmp_path, &tmp_dirpath, &tmp_filename, pool);
-
-  /* Reserve a .prej file based on it.  */
-  return svn_io_open_uniquely_named(fp, reject_tmp_path,
-                                    tmp_dirpath,
-                                    tmp_filename,
-                                    SVN_WC__PROP_REJ_EXT,
-                                    svn_io_file_del_none, pool, pool);
+  return svn_stream_open_unique(stream, reject_tmp_path, tmp_base_path,
+                                svn_io_file_del_none, pool, pool);
 }
 
 
-/* Assuming FP is a filehandle already open for appending, write
-   CONFLICT_DESCRIPTION to file, plus a trailing EOL sequence. */
+/* Write CONFLICT_DESCRIPTION to STREAM, plus a trailing EOL sequence. */
 static svn_error_t *
-append_prop_conflict(apr_file_t *fp,
+append_prop_conflict(svn_stream_t *stream,
                      const svn_string_t *conflict_description,
                      apr_pool_t *pool)
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
-  apr_size_t written;
+  apr_size_t len;
   const char *native_text =
     svn_utf_cstring_from_utf8_fuzzy(conflict_description->data, pool);
-  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
-                                 &written, pool));
+
+  len = strlen(native_text);
+  SVN_ERR(svn_stream_write(stream, native_text, &len));
 
   native_text = svn_utf_cstring_from_utf8_fuzzy(APR_EOL_STR, pool);
-  return svn_io_file_write_full(fp, native_text, strlen(native_text),
-                                &written, pool);
+  len = strlen(native_text);
+  return svn_stream_write(stream, native_text, &len);
 }
 
 
@@ -297,12 +314,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
   if (base_props_p
       || (has_propcaching && ! entry->has_prop_mods && entry->has_props))
     {
-      const char *prop_base_path;
-
-      SVN_ERR(svn_wc__prop_path(&prop_base_path,
-                                path, kind, svn_wc__props_base, FALSE, pool));
-      base_props = apr_hash_make(pool);
-      SVN_ERR(load_prop_file(prop_base_path, base_props, pool));
+      SVN_ERR(load_props(&base_props, path, kind, svn_wc__props_base, pool));
 
       if (base_props_p)
         *base_props_p = base_props;
@@ -313,30 +325,19 @@ svn_wc__load_props(apr_hash_t **base_props_p,
       if (has_propcaching && ! entry->has_prop_mods && entry->has_props)
         *props_p = apr_hash_copy(pool, base_props);
       else if (! has_propcaching || entry->has_props)
-        {
-          const char *prop_path;
-
-          SVN_ERR(svn_wc__prop_path(&prop_path, path, kind,
-                                    svn_wc__props_working, FALSE, pool));
-          *props_p = apr_hash_make(pool);
-          SVN_ERR(load_prop_file(prop_path, *props_p, pool));
-        }
+        SVN_ERR(load_props(props_p, path, kind, svn_wc__props_working, pool));
       else
         *props_p = apr_hash_make(pool);
     }
 
   if (revert_props_p)
     {
-      *revert_props_p = apr_hash_make(pool);
-
       if (entry->schedule == svn_wc_schedule_replace)
-        {
-          const char *revert_prop_path;
+        SVN_ERR(load_props(revert_props_p, path, kind, svn_wc__props_revert,
+                           pool));
+      else
+        *revert_props_p = apr_hash_make(pool);
 
-          SVN_ERR(svn_wc__prop_path(&revert_prop_path, path, kind,
-                                    svn_wc__props_revert, FALSE, pool));
-          SVN_ERR(load_prop_file(revert_prop_path, *revert_props_p, pool));
-        }
     }
 
   return SVN_NO_ERROR;
@@ -371,10 +372,9 @@ install_props_file(svn_stringbuf_t **log_accum,
                             node_kind, wc_prop_kind, FALSE, pool));
 
   /* Write the property hash into a temporary file. */
-  SVN_ERR(svn_wc__prop_path(&propfile_tmp_path, path,
-                            node_kind, wc_prop_kind, TRUE, pool));
-  SVN_ERR(save_prop_file(propfile_tmp_path, props,
-                         FALSE, pool));
+  SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props, 
+                             svn_path_dirname(propfile_path, pool),
+                             FALSE, pool));
 
   /* Write a log entry to move tmp file to real file. */
   SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
@@ -517,8 +517,11 @@ svn_wc__props_last_modified(apr_time_t *mod_time,
 {
   svn_error_t *err;
   const char *props_file;
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR(get_prop_path(&props_file, path, props_kind, adm_access, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
+                            FALSE, pool));
 
   err = svn_io_file_affected_time(mod_time, props_file, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -747,7 +750,11 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
     }
   else
     {
-      SVN_ERR(get_prop_path(&props_file, path, props_kind, adm_access, pool));
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
+                                FALSE, pool));
       SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
     }
 
@@ -820,7 +827,11 @@ svn_wc__props_delete(const char *path,
     }
   else
     {
-      SVN_ERR(get_prop_path(&props_file, path, props_kind, adm_access, pool));
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
+                                FALSE, pool));
       SVN_ERR(remove_file_if_present(props_file, pool));
     }
 
@@ -873,10 +884,9 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
          props needs to be made (it'll just see no file, and do nothing).
          So manufacture an empty propfile and force it to be written out. */
 
-      SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind,
-                                svn_wc__props_revert, TRUE, pool));
-
-      SVN_ERR(save_prop_file(dst_bprop, apr_hash_make(pool), TRUE, pool));
+      SVN_ERR(save_prop_tmp_file(&dst_bprop, apr_hash_make(pool),
+                                 svn_path_dirname(dst_bprop, pool),
+                                 TRUE, pool));
 
       SVN_ERR(svn_wc__loggy_move(log_accum,
                                  adm_access, dst_bprop, dst_rprop,
@@ -1891,7 +1901,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   svn_boolean_t is_dir;
 
   const char *reject_path = NULL;
-  apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
+  svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
 
   if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
@@ -1978,14 +1988,13 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
           if (dry_run)
             continue;   /* skip to next incoming change */
 
-          if (! reject_tmp_fp)
+          if (! reject_tmp_stream)
             /* This is the very first prop conflict found on this item. */
-            SVN_ERR(open_reject_tmp_file(&reject_tmp_fp, &reject_tmp_path,
-                                         path, adm_access, is_dir,
-                                         pool));
+            SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream, &reject_tmp_path,
+                                           path, is_dir, pool));
 
           /* Append the conflict to the open tmp/PROPS/---.prej file */
-          SVN_ERR(append_prop_conflict(reject_tmp_fp, conflict, pool));
+          SVN_ERR(append_prop_conflict(reject_tmp_stream, conflict, pool));
         }
 
     }  /* foreach propchange ... */
@@ -1999,14 +2008,14 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                 base_props, working_props, base_merge,
                                 pool));
 
-  if (reject_tmp_fp)
+  if (reject_tmp_stream)
     {
-      /* There's a .prej file sitting in .svn/tmp/ somewhere.  Deal
+      /* There's a temporary reject file sitting in .svn/tmp/ somewhere.  Deal
          with the conflicts.  */
 
       /* First, _close_ this temporary conflicts file.  We've been
          appending to it all along. */
-      SVN_ERR(svn_io_file_close(reject_tmp_fp, pool));
+      SVN_ERR(svn_stream_close(reject_tmp_stream));
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
@@ -2100,7 +2109,6 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
                     svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
-  const char *prop_path;
   const svn_wc_entry_t *entry;
   apr_hash_t *all_wcprops;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
@@ -2137,12 +2145,7 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
     }
 
   /* Fall back on individual files for backwards compatibility. */
-
-  /* Construct a path to the relevant property file */
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                            svn_wc__props_wcprop, FALSE, pool));
-  *wcprops = apr_hash_make(pool);
-  return load_prop_file(prop_path, *wcprops, pool);
+  return load_props(wcprops, path, entry->kind, svn_wc__props_wcprop, pool);
 }
 
 
@@ -2725,14 +2728,19 @@ svn_wc_is_entry_prop(const char *name)
    which means that the file must contain real properties.  */
 static svn_error_t *
 empty_props_p(svn_boolean_t *empty_p,
-              const char *path_to_prop_file,
+              const char *path,
+              svn_node_kind_t node_kind,
+              svn_wc__props_kind_t props_kind,
               apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_finfo_t finfo;
+  const char *prop_path;
 
-  err = svn_io_stat(&finfo, path_to_prop_file, APR_FINFO_MIN | APR_FINFO_TYPE,
-                    pool);
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, FALSE,
+                            pool));
+
+  err = svn_io_stat(&finfo, prop_path, APR_FINFO_MIN | APR_FINFO_TYPE, pool);
   if (err)
     {
       if (! APR_STATUS_IS_ENOENT(err->apr_err)
@@ -2742,26 +2750,23 @@ empty_props_p(svn_boolean_t *empty_p,
       /* nonexistent */
       svn_error_clear(err);
       *empty_p = TRUE;
+      return SVN_NO_ERROR;
     }
+
+  /* If we remove props from a propfile, eventually the file will
+     be empty, or, for working copies written by pre-1.3 libraries, will
+     contain nothing but "END\n" */
+  if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
+    *empty_p = TRUE;
   else
-    {
+    *empty_p = FALSE;
 
-
-      /* If we remove props from a propfile, eventually the file will
-         be empty, or, for working copies written by pre-1.3 libraries, will
-         contain nothing but "END\n" */
-      if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
-        *empty_p = TRUE;
-      else
-        *empty_p = FALSE;
-
-      /* If the size is between 1 and 4, then something is corrupt.
-         If the size is between 4 and 16, then something is corrupt,
-         because 16 is the -smallest- the file can possibly be if it
-         contained only one property.  So long as we say it is "not
-         empty", we will discover such corruption later when we try
-         to read the properties from the file. */
-    }
+  /* If the size is between 1 and 4, then something is corrupt.
+     If the size is between 4 and 16, then something is corrupt,
+     because 16 is the -smallest- the file can possibly be if it
+     contained only one property.  So long as we say it is "not
+     empty", we will discover such corruption later when we try
+     to read the properties from the file. */
 
   return SVN_NO_ERROR;
 }
@@ -2775,7 +2780,6 @@ svn_wc__has_props(svn_boolean_t *has_props,
                   apr_pool_t *pool)
 {
   svn_boolean_t is_empty;
-  const char *prop_path;
   const svn_wc_entry_t *entry;
   svn_boolean_t has_propcaching =
     svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
@@ -2799,45 +2803,24 @@ svn_wc__has_props(svn_boolean_t *has_props,
 
   /* The rest is for compatibility with WCs that don't have propcaching. */
 
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                            svn_wc__props_working, FALSE, pool));
-  SVN_ERR(empty_props_p(&is_empty, prop_path, pool));
+  SVN_ERR(empty_props_p(&is_empty, path, entry->kind, svn_wc__props_working,
+                        pool));
 
-  if (is_empty)
-    *has_props = FALSE;
-  else
-    *has_props = TRUE;
+  *has_props = !is_empty;
 
   return SVN_NO_ERROR;
 }
 
 
-/* Common implementation for svn_wc_props_modified_p()
-   and svn_wc__has_prop_mods().
-
-   Set *MODIFIED_P to true if PATH's properties are modified
-   with regard to the base revision, else set MODIFIED_P to false.
-
-   If WHICH_PROPS is non-null and there are prop mods then set
-   *WHICH_PROPS to a (const char *propname) ->
-   (const svn_string_t *propvalue) key:value mapping of only
-   the modified properties. */
-static svn_error_t *
-modified_props(svn_boolean_t *modified_p,
-               const char *path,
-               apr_hash_t **which_props,
-               svn_wc_adm_access_t *adm_access,
-               apr_pool_t *pool)
+svn_error_t *
+svn_wc_props_modified_p(svn_boolean_t *modified_p,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool)
 {
-  const char *prop_path;
-  const char *prop_base_path;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create(pool);
   int wc_format = svn_wc__adm_wc_format(adm_access);
-  svn_boolean_t want_props = which_props ? TRUE : FALSE;
-
-  if (want_props)
-    *which_props = apr_hash_make(pool);
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
 
@@ -2852,118 +2835,81 @@ modified_props(svn_boolean_t *modified_p,
    * and nice way to retrieve the information from the entry. */
   if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
     {
-      /* Only continue if there are prop mods
-         and we want to know the details. */
       *modified_p = entry->has_prop_mods;
-      if (!*modified_p || !want_props)
-        goto cleanup;
+      goto cleanup;
     }
 
-  /* So, we have a WC in an older format or we have propcaching
-     but need to find the specific prop changes.  Either way we
-     have some work to do... */
-
-  /* First, get the paths of the working and 'base' prop files. */
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                            svn_wc__props_working, FALSE, subpool));
-  SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
-                            svn_wc__props_base, FALSE, subpool));
+  /* So, we have a WC in an older format, we have some work to do... */
 
   /* Check for numerous easy outs on older WC formats before we
      resort to svn_prop_diffs(). */
   if (wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
     {
       svn_boolean_t bempty, wempty;
+      svn_boolean_t different_filesizes;
+      svn_boolean_t equal_timestamps;
+      const char *prop_path;
+      const char *prop_base_path;
+
       /* Decide if either path is "empty" of properties. */
-      SVN_ERR(empty_props_p(&wempty, prop_path, subpool));
-      SVN_ERR(empty_props_p(&bempty, prop_base_path, subpool));
+      SVN_ERR(empty_props_p(&wempty, path, entry->kind, svn_wc__props_working,
+                            subpool));
+      SVN_ERR(empty_props_p(&bempty, path, entry->kind, svn_wc__props_base,
+                            subpool));
 
       /* If something is scheduled for replacement, we do *not* want to
          pay attention to any base-props;  they might be residual from the
-         old deleted file. */
-      if (entry->schedule == svn_wc_schedule_replace)
-        {
-          *modified_p = wempty ? FALSE : TRUE;
-
-          /* Only continue if there are prop mods
-             and we want to know the details. */
-          if (!*modified_p || !want_props)
-            goto cleanup;
-        }
-
-      /* Easy out:  if the base file is empty, we know the answer
+         old deleted file.  Or, if the base file is empty, we know the answer
          immediately. */
-      if (bempty)
+      if (entry->schedule == svn_wc_schedule_replace || bempty)
         {
-          if (! wempty)
-            {
-              /* base is empty, but working is not */
-              *modified_p = TRUE;
-
-              /* Only continue if we want to know the details. */
-              if (!want_props)
-                goto cleanup;
-            }
-          else
-            {
-              /* base and working are both empty */
-              *modified_p = FALSE;
-              goto cleanup;
-            }
+          *modified_p = !wempty;
+          goto cleanup;
         }
+
       /* OK, so the base file is non-empty.  One more easy out: */
-      else if (wempty)
+      if (wempty)
         {
           /* base exists, working is empty */
           *modified_p = TRUE;
-
-          /* Only continue if we want to know the details. */
-          if (!want_props)
-            goto cleanup;
+          goto cleanup;
         }
-      else
+
+      /* At this point, we know both files exists.  Therefore we have no
+         choice but to start checking their contents. */
+
+      /* There are at least three tests we can try in succession. */
+
+      /* Easy-answer attempt #1:  (### this stat's the files again) */
+
+      /* Get the paths of the working and 'base' prop files. */
+      SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
+                                svn_wc__props_working, FALSE, subpool));
+      SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
+                                svn_wc__props_base, FALSE, subpool));
+
+      /* Check if the local and prop-base file have *definitely*
+         different filesizes. */
+      SVN_ERR(svn_io_filesizes_different_p(&different_filesizes,
+                                           prop_path,
+                                           prop_base_path,
+                                           subpool));
+      if (different_filesizes)
         {
-          svn_boolean_t different_filesizes;
+          *modified_p = TRUE;
+          goto cleanup;
+        }
 
-          /* At this point, we know both files exists.  Therefore we have no
-             choice but to start checking their contents. */
+      /* Easy-answer attempt #2: (### this stat's the files again) */
 
-          /* There are at least three tests we can try in succession. */
-
-          /* Easy-answer attempt #1:  (### this stat's the files again) */
-
-          /* Check if the local and prop-base file have *definitely*
-             different filesizes. */
-          SVN_ERR(svn_io_filesizes_different_p(&different_filesizes,
-                                               prop_path,
-                                               prop_base_path,
-                                               subpool));
-          if (different_filesizes)
-            {
-              *modified_p = TRUE;
-
-              /* Only continue if we want to know the details. */
-              if (!want_props)
-                goto cleanup;
-            }
-          else
-            {
-              svn_boolean_t equal_timestamps;
-
-              /* Easy-answer attempt #2: (### this stat's the files again) */
-
-              /* See if the local file's prop timestamp is the same as the
-                 one recorded in the administrative directory.  */
-              SVN_ERR(svn_wc__timestamps_equal_p(&equal_timestamps, path,
-                                                 adm_access,
-                                                 svn_wc__prop_time,
-                                                 subpool));
-              if (equal_timestamps)
-                {
-                  *modified_p = FALSE;
-                  goto cleanup;
-                }
-            }
+      /* See if the local file's prop timestamp is the same as the
+         one recorded in the administrative directory.  */
+      SVN_ERR(svn_wc__timestamps_equal_p(&equal_timestamps, path, adm_access,
+                                         svn_wc__prop_time, subpool));
+      if (equal_timestamps)
+        {
+          *modified_p = FALSE;
+          goto cleanup;
         }
     } /* wc_format <= SVN_WC__NO_PROPCACHING_VERSION */
 
@@ -2988,65 +2934,24 @@ modified_props(svn_boolean_t *modified_p,
        svn_prop_diffs(). */
   {
     apr_array_header_t *local_propchanges;
-    apr_hash_t *localprops = apr_hash_make(subpool);
-    apr_hash_t *baseprops = apr_hash_make(subpool);
+    apr_hash_t *localprops, *baseprops;
 
     /* ### Amazingly, this stats the files again! */
-    SVN_ERR(load_prop_file(prop_path, localprops, subpool));
-    SVN_ERR(load_prop_file(prop_base_path, baseprops, subpool));
+    SVN_ERR(load_props(&localprops, path, entry->kind, svn_wc__props_working,
+                       subpool));
+    SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
+                       subpool));
 
-    /* Don't use the subpool is we are hanging on to the changed props. */
-    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops,
-                           baseprops,
-                           want_props ? pool : subpool));
+    /* Don't use the subpool if we are hanging on to the changed props. */
+    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, subpool));
 
-    if (local_propchanges->nelts == 0)
-      {
-        *modified_p = FALSE;
-      }
-    else
-      {
-        *modified_p = TRUE;
-
-        /* Record the changed props if that's what we want. */
-        if (want_props)
-          {
-            int i;
-            for (i = 0; i < local_propchanges->nelts; i++)
-              {
-                svn_prop_t *propt = &APR_ARRAY_IDX(local_propchanges, i,
-                                                   svn_prop_t);
-                apr_hash_set(*which_props, propt->name,
-                             APR_HASH_KEY_STRING, propt->value);
-              }
-           }
-      }
+    *modified_p = (local_propchanges->nelts > 0);
   }
 
  cleanup:
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_props_modified_p(svn_boolean_t *modified_p,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *pool)
-{
-  return modified_props(modified_p, path, NULL, adm_access, pool);
-}
-
-
-svn_error_t *
-svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
-                      const char *path,
-                      svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *pool)
-{
-  return modified_props(prop_mods, path, NULL, adm_access, pool);
 }
 
 

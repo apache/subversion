@@ -8,20 +8,28 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Other items
-
-   - implement or back out svn_wc_queue_committed2()
-
-   - back out svn_wc__adm_{save,get}_pristine_path, since gstein has
-     found another way to access the necessary data. (leave the new
-     shared state stuff in there, however)
-
  * Actually document how to build with SQLite (ie, make the part in
    INSTALL not blank, explain how to build against a newer version
    of SQLite than what may be installed in your system, figure out
    if the text in sqlite.m4 about being able to use a sqlite/
    subdirectory is in any way true, etc etc)
 
+ * Tree conflicts - essential issues:
+
+   - #3334: "Merry-go-round" about update updating the base.
+     Julian Foad has this under way in branch "tc-issue-3334".
+
+ * Switch to skel for TC information, rather than using another
+   serialization format.
+
+ * Test failures in tree conflicts tests on RA-Serf:
+   <http://www.mobsol.be/buildbot/x86-macosx-gnu%2520shared%2520daily%2520ra_serf/builds/96>
+
+ * Test failures in Ruby bindings.
+
+ * Test failures in JavaHL bindings. Mark Phippard said "There is an error in
+   JavaHL but the test was specifically added to show a bug that was recently
+   discovered."
 
 Optional:
 
@@ -32,8 +40,6 @@ Optional:
 
    - #3209: Tests XFAIL due to changed tree-conflicts behaviour
 
-   - #3334: "Merry-go-round" about update updating the base.
-
  * Tree conflicts - non-essential issues:
 
    - #3329: Update/switch fails if the target itself is a tree conflict victim.
@@ -41,8 +47,8 @@ Optional:
      inside a tree conflict, and that no longer exists in the repo, does
      nothing.  Should print a 'Skipped' message instead.
 
-   - Making use of skels to store tree conflict data in entries file
-     
+   - #3343: Making use of skels to store tree conflict data in entries file
+
      Mailing list thread:
      http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145582
 

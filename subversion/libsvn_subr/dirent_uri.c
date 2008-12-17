@@ -881,8 +881,8 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
                                 apr_pool_t *pool)
 {
   return apr_pstrndup(pool, dirent1,
-                      get_longest_ancestor_length(type_dirent, dirent1, dirent2,
-                                                  pool));
+                      get_longest_ancestor_length(type_dirent, dirent1, 
+                                                  dirent2, pool));
 }
 
 char *
@@ -918,8 +918,8 @@ svn_uri_get_longest_ancestor(const char *uri1,
 
       i += 3;  /* Advance past '://' */
 
-      uri_ancestor_len = get_longest_ancestor_length(type_uri, uri1 + i, uri2 + i,
-                                                     pool);
+      uri_ancestor_len = get_longest_ancestor_length(type_uri, uri1 + i, 
+                                                     uri2 + i, pool);
 
       if (uri_ancestor_len == 0 ||
           (uri_ancestor_len == 1 && (uri1 + i)[0] == '/'))
