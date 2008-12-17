@@ -69,17 +69,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34560, r34562
-   Fix a bug which occurs when a merge adds a subtree as an immediate child
-   of the merge target when the merge target has non-inheritable mergeinfo
-   and is also the current working directory.  If all these planets align
-   properly then invalid mergeinfo is created on the added subtree.
-   Notes:
-     The SVN_ERR_ASSERT() in r34562 needs to be changed to an assert()
-     as the former doesn't exist on 1.5.x.
-   Justification:
-     Rare bug, but it results in incorrect mergeinfo.
-   Votes:
-     +1: pburba, kameshj, jerenkrantz
-
