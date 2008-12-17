@@ -248,7 +248,7 @@ typedef struct merge_cmd_baton_t {
      got explicit mergeinfo added by the merge.  This is populated by
      merge_change_props() and is allocated in POOL so it is subject to the
      lifetime limitations of POOL.  Is NULL if no paths are found which
-     meet the criteria. */
+     meet the criteria or DRY_RUN is true. */
   apr_hash_t *paths_with_new_mergeinfo;
 
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
@@ -755,30 +755,35 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                 FALSE, merge_b->dry_run, ctx->conflict_func,
                                 ctx->conflict_baton, subpool);
 
-      /* Make a record in BATON if we find a PATH where mergeinfo is
-         added where none existed previously. */
-      for (i = 0; i < props->nelts; ++i)
+      /* If this is not a dry run then make a record in BATON if we find a
+         PATH where mergeinfo is added where none existed previously. */
+      if (!merge_b->dry_run)
         {
-          svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
-
-          /* Is this prop change the addition of mergeinfo to PATH? */
-          if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
-              && prop->value) /* No value if a prop delete. */
+          for (i = 0; i < props->nelts; ++i)
             {
-              /* Does PATH have any working mergeinfo? */
-              svn_prop_t *mergeinfo_prop = apr_hash_get(original_props,
-                                                        SVN_PROP_MERGEINFO,
-                                                        APR_HASH_KEY_STRING);
-              if (!mergeinfo_prop)
+              svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+              /* Is this prop change the addition of mergeinfo to PATH? */
+              if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
+                  && prop->value) /* No value if a prop delete. */
                 {
-                  /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be allocated
-                     do so in BATON->POOL so it has a sufficient lifetime. */
-                  if (!merge_b->paths_with_new_mergeinfo)
-                    merge_b->paths_with_new_mergeinfo =
-                      apr_hash_make(merge_b->pool);
-                    apr_hash_set(merge_b->paths_with_new_mergeinfo,
-                                 apr_pstrdup(merge_b->pool, path),
-                                 APR_HASH_KEY_STRING, path);
+                  /* Does PATH have any working mergeinfo? */
+                  svn_prop_t *mergeinfo_prop =
+                    apr_hash_get(original_props,
+                                 SVN_PROP_MERGEINFO,
+                                 APR_HASH_KEY_STRING);
+                  if (!mergeinfo_prop)
+                    {
+                      /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
+                         allocated do so in BATON->POOL so it has a
+                         sufficient lifetime. */
+                      if (!merge_b->paths_with_new_mergeinfo)
+                        merge_b->paths_with_new_mergeinfo =
+                          apr_hash_make(merge_b->pool);
+                      apr_hash_set(merge_b->paths_with_new_mergeinfo,
+                                   apr_pstrdup(merge_b->pool, path),
+                                   APR_HASH_KEY_STRING, path);
+                    }
                 }
             }
         }
@@ -5062,7 +5067,8 @@ do_file_merge(const char *url1,
    NOTIFY_B->CHILDREN_WITH_MERGEINFO (i.e. the remaining_ranges fields can be
    empty but never NULL).
 
-   For each path (if any) in MERGE_B->PATHS_WITH_NEW_MERGEINFO merge that
+   If MERGE_B->DRY_RUN is true do nothing, if it is false then
+   for each path (if any) in MERGE_B->PATHS_WITH_NEW_MERGEINFO merge that
    path's inherited mergeinfo (if any) with its working explicit mergeinfo
    and set that as the path's new explicit mergeinfo.  Then add an
    svn_client__merge_path_t * element representing the path to   
@@ -5082,7 +5088,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                     svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
 {
-  if (merge_b->paths_with_new_mergeinfo)
+  if (merge_b->paths_with_new_mergeinfo && !merge_b->dry_run)
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
       apr_hash_index_t *hi;

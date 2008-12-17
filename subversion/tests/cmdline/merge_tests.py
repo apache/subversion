@@ -13310,6 +13310,7 @@ def merge_adds_mergeinfo_correctly(sbox):
 
   # Some paths we'll care about
   A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
   A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
   D_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D")
 
@@ -13487,6 +13488,28 @@ def merge_adds_mergeinfo_correctly(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, '8', '9',
+                                       sbox.repo_url + '/A_COPY_2',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  # Revert and repeat the above merge, but this time create some
+  # uncommitted mergeinfo on A_COPY/D, this should not cause a write
+  # lock error as was seen in http://subversion.tigris.org/
+  # ds/viewMessage.do?dsForumId=462&dsMessageId=103945
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', SVN_PROP_MERGEINFO, '',
+                                     D_COPY_path)
+  expected_output = wc.State(A_COPY_path, {
+    'D'        : Item(status=' G'), # Merged with local svn:mergeinfo
+    'D/H/omega': Item(status='U '),
+    })
   svntest.actions.run_and_verify_merge(A_COPY_path, '8', '9',
                                        sbox.repo_url + '/A_COPY_2',
                                        expected_output,
