@@ -7341,7 +7341,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       apr_hash_set(new_catalog,
                    apr_pstrdup(subpool, source_path),
                    APR_HASH_KEY_STRING,
-                    filtered_mergeinfo);
+                   filtered_mergeinfo);
     }
 
   /* Are there any subtrees with explicit mergeinfo still left in the merge
