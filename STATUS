@@ -29,7 +29,7 @@ Candidate changes for 1.5.5:
      These changes also improve the notoriously vague error message which
      occurred when reintegrate was thwarted by subtree mergeinfo.
    Votes:
-     +1: pburba
+     +1: pburba, jerenkrantz
      +0: stsp (With my limited understanding of merge tracking it takes
                ages for me to review this properly.
                The change is fairly large. I've read all log messages and
