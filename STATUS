@@ -14,6 +14,23 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
+ * r30756
+   Allow 'svn merge' to merge diffs which add 'svn:eol-style' properties
+   to files that used to have inconsistent newlines.
+   Justification:
+     Prevents you from doing merges in some situations involving
+     svn:eol-style; the fix appears to allow them. Fix has been available
+     for a long time and accepted by users and just needs review.
+     See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985219>.
+   Notes:
+     Specifically, if the diff being applied adds an 'svn:eol-style'
+     property to a file, then the left file gets converted to the new EOL
+     style before running diff3.  If that left file (ie, an old repository
+     file) had inconsistent newlines, then svn errored out with a useless
+     "svn: File '/tmp/tmp' has inconsistent newlines", and there was
+     basically no recourse.  So let it repair newlines.
+   Votes:
+
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
    Branch:
