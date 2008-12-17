@@ -1209,14 +1209,11 @@ svn_rangelist_to_string(svn_string_t **output,
   return SVN_NO_ERROR;
 }
 
-/* Converts a mergeinfo INPUT to an unparsed mergeinfo in OUTPUT.  If PREFIX
-   is not NULL then prepend PREFIX to each line in OUTPUT.  If INPUT contains
-   no elements, return the empty string.
+/* Converts a mergeinfo @a input to an unparsed mergeinfo in @a
+ * output.  If @a input contains no elements, return the empty string.
  */
 static svn_error_t *
-mergeinfo_to_stringbuf(svn_stringbuf_t **output,
-                       svn_mergeinfo_t input,
-                       const char *prefix,
+mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
                        apr_pool_t *pool)
 {
   *output = svn_stringbuf_create("", pool);
@@ -1234,8 +1231,7 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output,
 
           SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
           svn_stringbuf_appendcstr(*output,
-                                   apr_psprintf(pool, "%s%s:%s",
-                                                prefix ? prefix : "",
+                                   apr_psprintf(pool, "%s:%s",
                                                 (char *) elt.key,
                                                 revlist->data));
           if (i < sorted->nelts - 1)
@@ -1253,7 +1249,7 @@ svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
   if (apr_hash_count(input) > 0)
     {
       svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
+      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
       *output = svn_string_create_from_buf(mergeinfo_buf, pool);
     }
   else
