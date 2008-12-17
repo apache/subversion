@@ -68,17 +68,12 @@ Candidate changes for 1.5.5:
      can disappear.
      This is currently a test failure on the branch, but I think that it's
      also on 1.5.x, and a result of the r34393 merge.
+     See email thread <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985193>.
    Branch:
-     ^/branches/1.5.x-build-fixes
+     ^/branches/1.5.x-build-fixes@34764
    Votes:
-     +1: hwright, pburba, jerenkrantz
-     -1: julianfoad (because the fix contains redundant functions, and they
-           are without prototypes, causing compiler warnings, and when a bad
-           back-port is made we should revert (which is quick & safe) rather
-           than try hastily to fix it, and I haven't checked whether the
-           original reviews of the broken back-port were faulty or just the
-           merge: it looks like not enough care is being taken: see email
-           thread <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985193>.)
+     +1: hwright (@r?????), pburba (@r?????), jerenkrantz (@r?????)
+     +0: julianfoad (@r34764)
 
 Approved changes:
 =================
