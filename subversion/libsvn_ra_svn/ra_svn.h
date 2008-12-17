@@ -185,6 +185,10 @@ svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const char *mech, const char *mech_arg);
 
+/* Looks for MECH as a word in MECHLIST (an array of svn_ra_svn_item_t). */
+svn_boolean_t svn_ra_svn__find_mech(apr_array_header_t *mechlist,
+                                    const char *mech);
+
 /* Initialize the SASL library. */
 svn_error_t *svn_ra_svn__sasl_init(void);
 

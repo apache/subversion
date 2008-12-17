@@ -23,7 +23,9 @@ Candidate changes for 1.5.5:
      include more information in the merge command baton, it results in no
      functional change itself but r33026 relies on this new information.
      There's a single trailing whitespace conflict during merge of r33024.
-     r33026 is the core change.
+     r33026 is the core change.  To solve the specific problem noted in
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777,
+     this group relies upon the r34547 group.
    Justification:
      A reverse merge should simply return mergeinfo to a previous
      representation -- see
@@ -33,18 +35,7 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
- * r33866
-   Make ra_svn's Cyrus auth implementation (like the internal auth
-   implementation) always prefer EXTERNAL to ANONYMOUS.  This prevents
-   a weird regression vs 1.4 where svn+ssh:// would be treated as
-   anonymous in some cases.
-   Justification:
-     Regression against 1.4 which can prevent users from even checking
-     out repositories that they could check out with a 1.4 client.
-   Votes:
-     +1: glasser
-
- * r34082, r34096
+ * r34082, r34096, r34545
    Fix issue #3275 by making WebDAV proxy slave servers pass through
    any GET or PROPFIND requests aimed at working resource URLs, even
    though those requests are read-only.  Why?  It does no good for the
@@ -53,18 +44,6 @@ Candidate changes for 1.5.5:
    on the master server.
    Votes:
      +1: cmpilato
-
- * r31311, r31314
-   Fix bug whereby 'svn cp --parents URL/TO/EXISTING/FILE URL/TO/EXISTING/DIR'
-   would seg fault.
-   Notes:
-     r31311 is the testcase and r31314 the fix. 
-     Backport branch available as ^/branches/1.5.x-r31314.
-   Justification:
-     I just lost a night tracking this issue for an AnkhSVN user and I saw a
-     few similar error reports earlier of users that couldn't reproduce.
-   Votes:
-     +1: rhuijben, hwright
 
  * r34385, r34393
    Fix broken merge when the merge target's natural history includes
@@ -78,17 +57,6 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
- * r34423
-   Fix issue #3312 "Mergeinfo for '...' maps to an empty revision range"
-   due to sparse merging.
-   Justification:
-     Some people do merge into sparse directories or targets with switched
-     subtrees; this produces non-inheritable mergeinfo.  This non-inheritable
-     mergeinfo can cause an error during merging or log -g.  See issue #3312
-     and http://svn.haxx.se/dev/archive-2008-10/1170.shtml.
-   Votes:
-     +1: pburba, rhuijben
-
  * r34432
    Follow-up to r32975, which is already backported and had a bug, see
    http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145757.
@@ -101,6 +69,83 @@ Candidate changes for 1.5.5:
      --dry-run merge, r34432 fixes this.
    Votes:
      +1: pburba
+
+ * r34091, r34094, r34244, r34256, r34306
+   Various svn merge --reintegrate improvements.
+   Notes:
+     There is a backport branch for these changes at
+     http://svn.collab.net/repos/svn/branches/1.5.x-reintegrate-improvements.
+   Justification:
+     Prior to these changes reintegrate would not work if the merge source
+     had any subtree mergeinfo.  Since subtree mergeinfo is quite common,
+     this meant reintegrate was largely unuseable.  With these changes
+     reintegrate will work as long as the source's subtree mergeinfo and
+     implicit mergeinfo reflect the fact that the reintegrate target was
+     previously merged uniformly to the source for some contiguous revision
+     range starting at the revision the source was branched from the target.
+     These changes also improve the notoriously vague error message which
+     occurred when reintegrate was thwarted by subtree mergeinfo.
+   Votes:
+     +1: pburba
+
+ * r34506
+   Fix a pair of bugs in the BDB backend's node-origins cache-miss fallback
+   logic, one of which can cause a SEGFAULT, the other of which can result
+   in an incorrect return value.
+   Votes:
+     +1: cmpilato, glasser
+
+ * r34560, r34562
+   Fix a bug which occurs when a merge adds a subtree as an immediate child
+   of the merge target when the merge target has non-inheritable mergeinfo
+   and is also the current working directory.  If all these planets align
+   properly then invalid mergeinfo is created on the added subtree.
+   Notes:
+     The SVN_ERR_ASSERT() in r34562 needs to be changed to an assert()
+     as the former doesn't exist on 1.5.x.
+   Justification:
+     Rare bug, but it results in incorrect mergeinfo.
+   Votes:
+     +1: pburba
      
+ * r34547
+   Fix issue #3323 'Mergeinfo deleted by a merge should disappear'
+   Notes:
+     Will conflict if r34432 is not applied first.  Note that r34547 does
+     not depend on r34432 to function properly, so can be backported by
+     itself if necessary.
+   Justification:
+   Votes:
+     +1: pburba
+
+ * r34653, r34656
+   Don't autoupgrade ancient BDB filesystems to 1.5 or 1.4 format.
+   Justification:
+     Small fix, but avoids confusing/surprising users.
+   Votes:
+     +1: hwright, cmpilato
+
 Approved changes:
 =================
+
+ * r34184, r34585
+   Don't create explicit mergeinfo on a WC-to-WC move/copy destination
+   unless the source already had some.
+   Notes:
+     r34184 is the main fix, r34585 is a minor follow-up that tweaks a
+     test that is failing on trunk for unlreated reasons, but not on
+     1.5.x.  There were some minor conflicts on libsvn_client\copy.c,
+     copy_tests.py, and merge_tests.py.  Mostly due to whitespace differences
+     and some changes to the tests that have not been backported yet.
+     A backport branch can be found at:
+     http://svn.collab.net/repos/svn/branches/1.5.x-34184
+   Justification:
+     WC-to-WC copy/move's creation of explicit, usually empty, mergeinfo on
+     the destination path isn't technically a bug, but it is arguably the
+     primary cause of excessive subtree mergeinfo, which has caused a lot of
+     user frustration and confusion, makes merges slower, and has been a
+     factor in a number of serious bugs (see issue #3067 for example).
+     See this thread for more:
+     subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=98145.
+   Votes:
+     +1: pburba, cmpilato, zhakov
