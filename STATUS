@@ -32,8 +32,7 @@ Candidate changes for 1.5.5:
      when created, #108 in trunk).
      Parts of r32405 are adding some helper functions in to the test suite.
    Votes:
-     +1: stsp (r30756, r32907, r32913, small parts of r32405)
-     +1: julianfoad
+     +1: stsp, julianfoad
 
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
