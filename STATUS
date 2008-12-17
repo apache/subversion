@@ -30,6 +30,7 @@ Candidate changes for 1.5.5:
      "svn: File '/tmp/tmp' has inconsistent newlines", and there was
      basically no recourse.  So let it repair newlines.
    Votes:
+     +1: stsp
 
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
@@ -56,38 +57,18 @@ Candidate changes for 1.5.5:
                and from that point of view I can say that it actually
                does improve things a lot.)
 
- * ^/branches/1.5.x-build-fixes
-   Fix the build, which resulted from the merge in r34393.  For full analysis,
-   see:  http://svn.haxx.se/dev/archive-2008-12/0445.shtml
-   Justification:
-     The build shouldn't be broken.  Ever.
-   Notes:
-     The merge in r34393 was dependent on additional APIs.  The fixes branch
-     includes code which will (probably) be merged as part of the
-     reintegrate-improvements branch.  If that branch gets merged, this item
-     can disappear.
-     This is currently a test failure on the branch, but I think that it's
-     also on 1.5.x, and a result of the r34393 merge.
-     See email thread <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985193>.
-   Branch:
-     ^/branches/1.5.x-build-fixes@34764
+ * r34774
+   Disallow (at the API and UI levels) attempts to set empty-string
+   changelists.  (Issue #3344)
+   Justifications:
+     The code was never intended to allow this, so if it did, it was a bug.
+     But while the current code does not, in fact, really allow this, the
+     client notifications claim that it *does*.  A(nother?) bug.
    Votes:
-     +1: hwright (@r?????), pburba (@r?????), jerenkrantz (@r?????)
-     +0: julianfoad (@r34764)
+     +1: cmpilato
 
 Approved changes:
 =================
-
- * r34082, r34096, r34545
-   Fix issue #3275 by making WebDAV proxy slave servers pass through
-   any GET or PROPFIND requests aimed at working resource URLs, even
-   though those requests are read-only.  Why?  It does no good for the
-   slave server to try to answer a read request aimed at an
-   uncommitted transaction when said transaction's data lives solely
-   on the master server.
-   Votes:
-     +1: cmpilato, hwright, jerenkrantz
-     +0: rhuijben (Looks OK, does no harm. No time to setup test environment)
 
  * r34560, r34562
    Fix a bug which occurs when a merge adds a subtree as an immediate child
