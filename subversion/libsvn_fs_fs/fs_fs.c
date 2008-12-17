@@ -3432,6 +3432,9 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a->revision != b->revision)
     return FALSE;
 
+  if (a->uniquifier == NULL || b->uniquifier == NULL)
+    return FALSE;
+
   return strcmp(a->uniquifier, b->uniquifier) == 0;
 }
 
