@@ -6369,11 +6369,15 @@ do_directory_merge(const char *url1,
                   SVN_ERR(svn_path_get_absolute(&abs_added_path,
                                                 added_path,
                                                 iterpool));
+                  /* abs_added_path had better be a child of abs_target_path
+                     or something is *really* wrong. */
+                  SVN_ERR_ASSERT(svn_path_is_child(abs_target_path,
+                                                   abs_added_path,
+                                                   iterpool));
                   common_ancestor_path =
                     svn_path_get_longest_ancestor(abs_added_path,
                                                   abs_target_path,
                                                   iterpool);
-                  SVN_ERR_ASSERT(*common_ancestor_path);
                   /* Need to +1 to avoid a leading '/'. */
                   rel_added_path =
                     abs_added_path + strlen(common_ancestor_path) + 1;
