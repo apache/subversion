@@ -115,6 +115,14 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *issuer, *subject, *serf_cert;
   void *creds;
 
+#if SERF_VERSION_AT_LEAST(0, 3, 0)
+  /* Implicitly approve any non-server certs. */
+  if (serf_ssl_cert_depth(cert) > 0)
+    {
+      return APR_SUCCESS;
+    }
+#endif
+
   apr_pool_create(&subpool, conn->session->pool);
 
   /* Extract the info from the certificate */
@@ -161,23 +169,9 @@ ssl_server_cert(void *baton, int failures,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
 
-  /* OpenSSL/Serf will ask for validation of the entire chain (ie both
-   * server and CA).  This is generally a good thing - however, we need to
-   * then make SVN's cert storage keyed off the certificate info so as
-   * not to stomp on the entire chain on each request.
-   *
-   * If no hostname is provided in the cert, we'll construct the realmstring,
-   * e.g. https://svn.collab.net:443
-   */
-  if (cert_info.hostname)
-    {
-      realmstring = cert_info.hostname;
-    }
-  else
-    {
-      realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
-                                    APR_URI_UNP_OMITPATHINFO);
-    }
+  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
+  realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
+                                APR_URI_UNP_OMITPATHINFO);
 
   err = svn_auth_first_credentials(&creds, &state,
                                    SVN_AUTH_CRED_SSL_SERVER_TRUST,
