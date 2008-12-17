@@ -705,6 +705,11 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
               SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
                                         &kind, iterpool));
             }
+
+          if (kind != svn_node_dir)
+            return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                        _("Path '%s' already exists, but is not a directory"),
+                        dir);
         }
     }
 
@@ -1012,6 +1017,11 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
           SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
                                     pool));
         }
+
+      if (kind != svn_node_dir)
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                    _("Path '%s' already exists, but is not a directory"),
+                    root_url);
 
       top_dst_url = root_url;
     }
