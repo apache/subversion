@@ -14,24 +14,6 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
- * r30756
-   Allow 'svn merge' to merge diffs which add 'svn:eol-style' properties
-   to files that used to have inconsistent newlines.
-   Justification:
-     Prevents you from doing merges in some situations involving
-     svn:eol-style; the fix appears to allow them. Fix has been available
-     for a long time and accepted by users and just needs review.
-     See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985219>.
-   Notes:
-     Specifically, if the diff being applied adds an 'svn:eol-style'
-     property to a file, then the left file gets converted to the new EOL
-     style before running diff3.  If that left file (ie, an old repository
-     file) had inconsistent newlines, then svn errored out with a useless
-     "svn: File '/tmp/tmp' has inconsistent newlines", and there was
-     basically no recourse.  So let it repair newlines.
-   Votes:
-     +1: stsp
-
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
    Branch:
@@ -65,21 +47,28 @@ Candidate changes for 1.5.5:
      But while the current code does not, in fact, really allow this, the
      client notifications claim that it *does*.  A(nother?) bug.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
 Approved changes:
 =================
 
- * r34560, r34562
-   Fix a bug which occurs when a merge adds a subtree as an immediate child
-   of the merge target when the merge target has non-inheritable mergeinfo
-   and is also the current working directory.  If all these planets align
-   properly then invalid mergeinfo is created on the added subtree.
-   Notes:
-     The SVN_ERR_ASSERT() in r34562 needs to be changed to an assert()
-     as the former doesn't exist on 1.5.x.
+ * r30756, r32907, r32913, small parts of r32405, r32930, r34794
+   Issue #3262: Allow 'svn merge' to merge diffs which add 'svn:eol-style'
+   properties to files that used to have inconsistent newlines.
+   Backport branch:
+     https://svn.collab.net/repos/svn/branches/1.5.x-r30756
    Justification:
-     Rare bug, but it results in incorrect mergeinfo.
+     Fixes the merging of certain changes involving EOL-style changes, that
+     otherwise fail with a poor error message and little recourse. Fix has
+     been available for a long time and accepted by users and just needs
+     review.
+     See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=985219>.
+   Notes:
+     r30756, r32913 are two similar fixes for two instances of this problem.
+     r32907, r32930 add a test for the second instance of this problem,
+     merge_tests.py "merge an EOL unification and set svn:eol-style" (#107
+     when created, #108 in trunk).
+     Parts of r32405 are adding some helper functions in to the test suite.
    Votes:
-     +1: pburba, kameshj, jerenkrantz
+     +1: stsp, julianfoad, cmpilato
 
