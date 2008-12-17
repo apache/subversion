@@ -6340,7 +6340,7 @@ do_directory_merge(const char *url1,
                   svn_mergeinfo_t merge_mergeinfo, added_path_mergeinfo;
                   apr_array_header_t *rangelist;
                   const svn_wc_entry_t *entry;
-                  const char *rel_added_path, *common_ancestor_path,
+                  const char *rel_added_path,
                     *abs_added_path, *abs_target_path,
                     *added_path_mergeinfo_path;
 
@@ -6369,15 +6369,14 @@ do_directory_merge(const char *url1,
                   SVN_ERR(svn_path_get_absolute(&abs_added_path,
                                                 added_path,
                                                 iterpool));
+
                   /* abs_added_path had better be a child of abs_target_path
                      or something is *really* wrong. */
-                  SVN_ERR_ASSERT(svn_path_is_child(abs_target_path,
-                                                   abs_added_path,
-                                                   iterpool));
-                  common_ancestor_path = abs_target_path;
-                  /* Need to +1 to avoid a leading '/'. */
-                  rel_added_path =
-                    abs_added_path + strlen(common_ancestor_path) + 1;
+
+                  rel_added_path = svn_path_is_child(abs_target_path,
+                                                     abs_added_path,
+                                                     iterpool);
+                  SVN_ERR_ASSERT(rel_added_path);
                   added_path_mergeinfo_path = svn_path_join(mergeinfo_path,
                                                             rel_added_path,
                                                             iterpool);
