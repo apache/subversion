@@ -3125,6 +3125,9 @@ svn_wc_set_changelist(const char *path,
   svn_wc_entry_t newentry;
   svn_wc_notify_t *notify;
 
+  /* Assert that we aren't being asked to set an empty changelist. */
+  SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
+
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
