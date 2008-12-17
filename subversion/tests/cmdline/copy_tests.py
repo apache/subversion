@@ -146,8 +146,7 @@ def copy_replace_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   if wc_copy:
-    props = { SVN_PROP_MERGEINFO : '',
-              'phony-prop' : '*'}
+    props = { 'phony-prop' : '*'}
   else:
     props = { 'phony-prop' : '*'}
     
@@ -2604,9 +2603,9 @@ def copy_added_paths_with_props(sbox):
 
   # Tweak expected disk tree
   expected_disk.add({
-    'A/C/upsilon' : Item(props={'foo' : 'bar'},
+    'A/C/upsilon' : Item(props={ 'foo' : 'bar'},
                          contents="This is the file 'upsilon'\n"),
-    'A/C/I'       : Item(props={'foo' : 'bar'}),
+    'A/C/I'       : Item(props={ 'foo' : 'bar'}),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -3229,8 +3228,8 @@ def copy_peg_rev_local_files(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGEINFO : ''}),
-    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGEINFO : ''}),
+    'iota'      : Item(contents=psi_text),
+    'A/D/H/psi' : Item(contents=iota_text),
     'sigma'     : Item(contents=psi_text, props={}),
     })
 
@@ -3305,13 +3304,13 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
-    'A/B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
+    'A/B/E'       : Item(),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
-    'A/D/G'       : Item(props={SVN_PROP_MERGEINFO : ''}),
+    'A/D/G'       : Item(),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
-    'A/J'         : Item(props={}),
+    'A/J'         : Item(),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })

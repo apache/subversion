@@ -162,72 +162,6 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
                                          adm_access, pool);
 }
 
-/* Propagate implied and explicit mergeinfo for WC-local copy/move
-   operations.  Otherwise, either propagate PAIR->dst's explicit (only)
-   mergeinfo, or set empty mergeinfo on PAIR->dst.  Use POOL for
-   temporary allocations. */
-static svn_error_t *
-propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
-                              svn_wc_adm_access_t *src_access,
-                              svn_wc_adm_access_t *dst_access,
-                              svn_client_ctx_t *ctx, apr_pool_t *pool)
-{
-  apr_hash_t *mergeinfo;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, src_access, FALSE, pool));
-
-  /* Don't attempt to figure out implied mergeinfo for a locally
-     added/replaced PAIR->src without histroy (if its deleted we
-     should never even get this far). */
-  if (entry->schedule == svn_wc_schedule_normal
-      || (entry->schedule == svn_wc_schedule_add && entry->copied))
-    {
-      pair->src_revnum = entry->revision;
-      
-      /* ASSUMPTION: Non-numeric operative and peg revisions --
-         other than working or unspecified -- won't be encountered
-         here.  For those cases, WC paths will have already been
-         transformed into repository URLs (as done towards the end
-         of the setup_copy() routine), and be handled by a
-         different code path. */
-      SVN_ERR(calculate_target_mergeinfo(NULL, &mergeinfo, 
-                                         src_access, pair->src, 
-                                         pair->src_revnum, TRUE, 
-                                         ctx, pool));
-      
-      /* NULL mergeinfo could be due to there being no mergeinfo.  But
-         it could also be due to us not being able to query the server
-         about mergeinfo on some parent directory of ours.  We need to
-         turn "no mergeinfo" into "empty mergeinfo", just in case. */
-      if (! mergeinfo)
-        mergeinfo = apr_hash_make(pool);
-
-      /* Because any local mergeinfo from the copy source will have
-         already been propagated to the destination, we can avoid
-         looking at WC-local mergeinfo for the source. */
-      SVN_ERR(svn_wc__entry_versioned(&entry, pair->dst, dst_access, FALSE,
-                                      pool));
-      
-      return extend_wc_mergeinfo(pair->dst, entry, mergeinfo, dst_access,
-                                 ctx, pool);
-    }
-
-  /* If the source had no explicit mergeinfo, set empty explicit
-     mergeinfo for PAIR->dst, as it almost certainly won't be correct
-     for that path to inherit the mergeinfo of its parent. */
-  SVN_ERR(svn_client__parse_mergeinfo(&mergeinfo, entry, pair->src, FALSE,
-                                      src_access, ctx, pool));
-  if (mergeinfo == NULL)
-    {
-      mergeinfo = apr_hash_make(pool);
-      return svn_client__record_wc_mergeinfo(pair->dst, mergeinfo, dst_access,
-                                             pool);
-    }
-  else
-    return SVN_NO_ERROR;
-}
-
 /* Find the longest common ancestor for all the SRCs and DSTs in COPY_PAIRS.
    If SRC_ANCESTOR or DST_ANCESTOR is NULL, nothing will be returned in it.
    COMMON_ANCESTOR will be the common ancestor of both the SRC_ANCESTOR and
@@ -315,8 +249,6 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_wc_adm_access_t *src_access;
-      const char *src_parent;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
@@ -324,37 +256,6 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       /* Check for cancellation */
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-      svn_path_split(pair->src, &src_parent, NULL, pool);
-
-      /* Need to avoid attempting to open the same dir twice when source
-         and destination overlap. */
-      if (strcmp(src_parent, pair->dst_parent) == 0)
-        {
-          /* For directories, extend our lock depth so that we can
-             access the source's entry fields. */
-          if (pair->src_kind == svn_node_dir)
-            SVN_ERR(svn_wc_adm_open3(&src_access, NULL, pair->src, FALSE,
-                                     -1, ctx->cancel_func, ctx->cancel_baton,
-                                     iterpool));
-          else
-            src_access = dst_access;
-        }
-      else
-        {
-          err = svn_wc_adm_open3(&src_access, NULL, src_parent, FALSE,
-                                 pair->src_kind == svn_node_dir ? -1 : 0,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 iterpool);
-          /* The parent of a copy src might not be versioned at all. */
-          if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-            {
-              src_access = NULL;
-              svn_error_clear(err);
-              err = NULL;
-            }
-          SVN_ERR(err);
-        }
 
       /* Perform the copy */
 
@@ -367,17 +268,6 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
       if (err)
         break;
-
-      if (src_access)
-        {
-          err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                              ctx, iterpool);
-          if (err)
-            break;
-          
-          if (src_access != dst_access)
-            SVN_ERR(svn_wc_adm_close(src_access));
-        }
     }
 
   svn_sleep_for_timestamps();
@@ -451,19 +341,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
             }
         }
 
-      /* ### Ideally, we'd lookup the mergeinfo here, before
-         ### performing the copy.  However, as an implementation
-         ### shortcut, we perform the lookup after the copy. */
-
-      /* Perform the copy with mergeinfo, and then the delete. */
+      /* Perform the copy and then the delete. */
       err = svn_wc_copy2(pair->src, dst_access, pair->base_name,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
-      if (err)
-        break;
-
-      err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                          ctx, iterpool);
       if (err)
         break;
 
