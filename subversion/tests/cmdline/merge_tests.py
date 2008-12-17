@@ -14111,24 +14111,24 @@ def dont_merge_gaps_in_history(sbox):
   gamma_path  = os.path.join(wc_dir, "A", "D", "gamma")
 
   # r6: Delete 'A'
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
+  out, err = svntest.actions.run_and_verify_svn(
     None, "(Committed revision 6.)|(\n)", [],
     'delete', sbox.repo_url + '/A', '-m', 'Delete A')
 
   # r7: Resurrect 'A' by copying 'A@2' to 'A'.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
+  out, err = svntest.actions.run_and_verify_svn(
     None, "(Committed revision 7.)|(\n)", [],
     'copy', sbox.repo_url + '/A@2', sbox.repo_url + '/A',
     '-m', 'Resurrect A from A@2')
   
   # r8: Branch the resurrected 'A' to 'A_COPY'.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
+  out, err = svntest.actions.run_and_verify_svn(
     None, "(Committed revision 8.)|(\n)", [],
     'copy', sbox.repo_url + '/A', sbox.repo_url + '/A_COPY',
     '-m', 'Copy A to A_COPY')
  
   # Update to bring all the repos side changes down.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'up', wc_dir)
   wc_status.add({
       "A_COPY/B"         : Item(status='  '),
