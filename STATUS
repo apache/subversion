@@ -30,6 +30,7 @@ Candidate changes for 1.5.5:
      "svn: File '/tmp/tmp' has inconsistent newlines", and there was
      basically no recourse.  So let it repair newlines.
    Votes:
+     +1: stsp
 
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
