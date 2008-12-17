@@ -14,17 +14,6 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
- * r34082, r34096, r34545
-   Fix issue #3275 by making WebDAV proxy slave servers pass through
-   any GET or PROPFIND requests aimed at working resource URLs, even
-   though those requests are read-only.  Why?  It does no good for the
-   slave server to try to answer a read request aimed at an
-   uncommitted transaction when said transaction's data lives solely
-   on the master server.
-   Votes:
-     +1: cmpilato, hwright
-     +0: rhuijben (Looks OK, does no harm. No time to setup test environment)
-
  * r34091, r34094, r34244, r34256, r34306
    Various svn merge --reintegrate improvements.
    Branch:
@@ -50,19 +39,6 @@ Candidate changes for 1.5.5:
                and from that point of view I can say that it actually
                does improve things a lot.)
 
- * r34560, r34562
-   Fix a bug which occurs when a merge adds a subtree as an immediate child
-   of the merge target when the merge target has non-inheritable mergeinfo
-   and is also the current working directory.  If all these planets align
-   properly then invalid mergeinfo is created on the added subtree.
-   Notes:
-     The SVN_ERR_ASSERT() in r34562 needs to be changed to an assert()
-     as the former doesn't exist on 1.5.x.
-   Justification:
-     Rare bug, but it results in incorrect mergeinfo.
-   Votes:
-     +1: pburba, kameshj
-
  * ^/branches/1.5.x-build-fixes
    Fix the build, which resulted from the merge in r34393.  For full analysis,
    see:  http://svn.haxx.se/dev/archive-2008-12/0445.shtml
@@ -78,7 +54,7 @@ Candidate changes for 1.5.5:
    Branch:
      ^/branches/1.5.x-build-fixes
    Votes:
-     +1: hwright, pburba
+     +1: hwright, pburba, jerenkrantz
 
 Approved changes:
 =================
@@ -119,3 +95,28 @@ Approved changes:
      is a good thing.
    Votes:
      +1: pburba, kameshj, cmpilato
+
+ * r34082, r34096, r34545
+   Fix issue #3275 by making WebDAV proxy slave servers pass through
+   any GET or PROPFIND requests aimed at working resource URLs, even
+   though those requests are read-only.  Why?  It does no good for the
+   slave server to try to answer a read request aimed at an
+   uncommitted transaction when said transaction's data lives solely
+   on the master server.
+   Votes:
+     +1: cmpilato, hwright, jerenkrantz
+     +0: rhuijben (Looks OK, does no harm. No time to setup test environment)
+
+ * r34560, r34562
+   Fix a bug which occurs when a merge adds a subtree as an immediate child
+   of the merge target when the merge target has non-inheritable mergeinfo
+   and is also the current working directory.  If all these planets align
+   properly then invalid mergeinfo is created on the added subtree.
+   Notes:
+     The SVN_ERR_ASSERT() in r34562 needs to be changed to an assert()
+     as the former doesn't exist on 1.5.x.
+   Justification:
+     Rare bug, but it results in incorrect mergeinfo.
+   Votes:
+     +1: pburba, kameshj, jerenkrantz
+
