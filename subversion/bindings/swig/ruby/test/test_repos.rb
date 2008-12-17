@@ -187,9 +187,9 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(info3.date, date)
     assert_equal(info3.author, author)
   ensure
-    ctx3.close unless ctx3.nil?
-    ctx2.close unless ctx2.nil?
-    ctx1.close unless ctx1.nil?
+    ctx3.destroy unless ctx3.nil?
+    ctx2.destroy unless ctx2.nil?
+    ctx1.destroy unless ctx1.nil?
   end
 
   def test_hotcopy
