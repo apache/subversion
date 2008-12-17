@@ -456,11 +456,57 @@ check_apr_status(apr_status_t status, VALUE exception_class, const char *format)
     }
 }
 
+static VALUE swig_type_re = Qnil;
+
+static VALUE
+swig_type_regex(void)
+{
+  if (NIL_P(swig_type_re)) {
+    char reg_str[] = "\\A(?:SWIG|Svn::Ext)::";
+    swig_type_re = rb_reg_new(reg_str, strlen(reg_str), 0);
+    rb_ivar_set(rb_svn(), id_swig_type_regex, swig_type_re);
+  }
+  return swig_type_re;
+}
+
+static VALUE
+find_swig_type_object(int num, VALUE *objects)
+{
+  VALUE re;
+  int i;
+
+  re = swig_type_regex();
+  for (i = 0; i < num; i++) {
+    if (RTEST(rb_reg_match(re,
+                           rb_funcall(rb_obj_class(objects[i]),
+                                      id_name,
+                                      0)))) {
+      return objects[i];
+    }
+  }
+
+  return Qnil;
+}
+
+static VALUE
+svn_swig_rb_destroyer_destroy(VALUE self, VALUE target)
+{
+    VALUE objects[1];
+
+    objects[0] = target;
+    if (find_swig_type_object(1, objects) && DATA_PTR(target)) {
+	svn_swig_rb_destroy_internal_pool(target);
+	DATA_PTR(target) = NULL;
+    }
+
+    return Qnil;
+}
+
 void
 svn_swig_rb_initialize(void)
 {
   apr_pool_t *pool;
-  VALUE mSvnConverter, mSvnLocale, mSvnGetText;
+  VALUE mSvnConverter, mSvnLocale, mSvnGetText, mSvnDestroyer;
 
   check_apr_status(apr_initialize(), rb_eLoadError, "cannot initialize APR: %s");
 
@@ -511,6 +557,10 @@ svn_swig_rb_initialize(void)
   rb_define_module_function(mSvnGetText, "bindtextdomain",
                             svn_swig_rb_gettext_bindtextdomain, 1);
   rb_define_module_function(mSvnGetText, "_", svn_swig_rb_gettext__, 1);
+
+  mSvnDestroyer = rb_define_module_under(rb_svn(), "Destroyer");
+  rb_define_module_function(mSvnDestroyer, "destroy",
+			    svn_swig_rb_destroyer_destroy, 1);
 }
 
 apr_pool_t *
@@ -619,37 +669,6 @@ static VALUE
 rb_pool_new(VALUE parent)
 {
   return rb_funcall(rb_svn_core_pool(), id_new, 1, parent);
-}
-
-static VALUE swig_type_re = Qnil;
-
-static VALUE
-swig_type_regex(void)
-{
-  if (NIL_P(swig_type_re)) {
-    char reg_str[] = "\\A(?:SWIG|Svn::Ext)::";
-    swig_type_re = rb_reg_new(reg_str, strlen(reg_str), 0);
-    rb_ivar_set(rb_svn(), id_swig_type_regex, swig_type_re);
-  }
-  return swig_type_re;
-}
-
-static VALUE
-find_swig_type_object(int num, VALUE *objects)
-{
-  VALUE re = swig_type_regex();
-  int i;
-
-  for (i = 0; i < num; i++) {
-    if (RTEST(rb_reg_match(re,
-                           rb_funcall(rb_obj_class(objects[i]),
-                                      id_name,
-                                      0)))) {
-      return objects[i];
-    }
-  }
-
-  return Qnil;
 }
 
 void
