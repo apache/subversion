@@ -729,38 +729,35 @@ def nonrecursive_switching(sbox):
 
 #----------------------------------------------------------------------
 def failed_anchor_is_target(sbox):
-  "anchor=target that fails due to local mods"
+  "anchor=target, try to replace a local-mod file"
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  # Set up a switch from dir H, containing locally-modified file 'psi',
+  # to dir G, containing a directory 'psi'. Expect a tree conflict.
+
+  # Make a directory 'G/psi' in the repository.
   G_url = sbox.repo_url + '/A/D/G'
   G_psi_url = G_url + '/psi'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg', G_psi_url)
 
+  # Modify the file 'H/psi' locally.
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   psi_path = os.path.join(H_path, 'psi')
   svntest.main.file_append(psi_path, "more text")
 
-  # This switch leaves psi unversioned, because of the local mods,
-  # then fails because it tries to add a directory of the same name.
-  exit_code, out, err = svntest.main.run_svn(1, 'switch',
-                                             G_url, H_path)
-  if not err:
-    raise svntest.Failure
+  # This switch raises a tree conflict on 'psi', because of the local mods.
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'switch', G_url, H_path)
 
-  # Some items under H show up as switched because, while H itself was
-  # switched, the switch command failed before it reached all items
-  #
-  # NOTE: I suspect this whole test is dependent on the order in
-  # which changes are received, but since the new psi is a dir, it
-  # appears we can count on it being received last.  But if this test
-  # ever starts failing, you read it here first :-).
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
-  expected_status.tweak('A/D/H/psi', status='M ', switched='S', wc_rev=1,
-                        treeconflict='C')
+  expected_status.tweak('A/D/H', switched='S', wc_rev=2)
+  # The expectation on 'psi' reflects partial progress on issue #3334.
+  # ### I don't think it should show as 'switched'.
+  expected_status.tweak('A/D/H/psi', status='A ', copied='+', switched='S',
+                        wc_rev='-', treeconflict='C')
   expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
     'A/D/H/pi'      : Item(status='  ', wc_rev=2),
@@ -774,7 +771,7 @@ def failed_anchor_is_target(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'info', H_path)
   for line in out:
-    if line.find('URL: ' + G_url) != -1:
+    if line == 'URL: ' + G_url + '\n':
       break
   else:
     raise svntest.Failure
@@ -783,15 +780,10 @@ def failed_anchor_is_target(sbox):
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'resolved', psi_path)
 
-  # Remove the now-unversioned psi, and repeat the switch.  This
-  # should complete the switch.
-  os.remove(psi_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     G_url, H_path)
-  expected_status.tweak('A/D/H', status='  ', switched='S', wc_rev=2)
-  expected_status.add({
-    'A/D/H/psi'    : Item(status='  ', wc_rev=2)
-    })
+  # The switch should now be complete.
+  # ### Instead of "treeconflict=None" which means "don't check", we should
+  # check "treeconflict=' '" but the test suite doesn't do the right thing.
+  expected_status.tweak('A/D/H/psi', treeconflict=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -2287,7 +2279,9 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_status = deep_trees_status_local_leaf_edit
   expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
- 
+  # The expectation on 'alpha' reflects partial progress on issue #3334.
+  expected_status.tweak('F/alpha', status='A ', copied='+', wc_rev='-')
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,

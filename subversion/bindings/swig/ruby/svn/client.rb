@@ -100,6 +100,16 @@ module Svn
         _initialize
         self.auth_baton = Core::AuthBaton.new
         init_callbacks
+        return unless block_given?
+        begin
+          yield(self)
+        ensure
+          destroy
+        end
+      end
+
+      def destroy
+        Svn::Destroyer.destroy(self)
       end
 
       def auth_baton=(baton)

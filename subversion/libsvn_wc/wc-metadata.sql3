@@ -98,7 +98,12 @@ CREATE TABLE NODE (
   lock_token  TEXT,
   lock_owner  TEXT,
   lock_comment  TEXT,
-  lock_date  INTEGER  /* an APR date/time (usec since 1970) */
+  lock_date  INTEGER,  /* an APR date/time (usec since 1970) */
+
+  /* ### Do we need this?  We've currently got various mod time APIs
+     ### internal to libsvn_wc, but those might be used in answering some
+     ### question which is better answered some other way. */
+  last_mod_time  INTEGER  /* an APR date/time (usec since 1970) */
   );
 
 CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);

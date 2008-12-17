@@ -911,6 +911,11 @@ log_do_delete_changelist(struct log_runner *loggy,
 
 /* Ben sez:  this log command is (at the moment) only executed by the
    update editor.  It attempts to forcefully remove working data. */
+/* Delete a node from version control, and from disk if unmodified.
+ * NAME is the name of the file or directory to be deleted, which is a child
+ * of the directory represented by LOGGY->adm_access. If it is unversioned,
+ * do nothing and return no error. Otherwise, delete its WC entry and, if
+ * the working version is unmodified, delete it from disk. */
 static svn_error_t *
 log_do_delete_entry(struct log_runner *loggy, const char *name)
 {
@@ -934,7 +939,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
 
   /* Remove the object from revision control -- whether it's a
      single file or recursive directory removal.  Attempt
-     attempt to destroy all working files & dirs too.
+     to destroy all working files & dirs too.
 
      ### We pass NULL, NULL for cancel_func and cancel_baton below.
      ### If they were available, it would be nice to use them. */
@@ -1221,8 +1226,8 @@ log_do_committed(struct log_runner *loggy,
                                 remove_deleted_entry, loggy, pool));
     }
 
-  SVN_ERR(svn_wc__has_prop_mods(&prop_mods,
-                                full_path, loggy->adm_access, pool));
+  SVN_ERR(svn_wc_props_modified_p(&prop_mods, full_path, loggy->adm_access,
+                                  pool));
   if (prop_mods)
     {
       if (entry->kind == svn_node_file)

@@ -1159,12 +1159,20 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     svn_client_ctx_t *ctx;
     SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
+    const char *configDir = m_configDir.c_str();
+    if (m_configDir.length() == 0)
+        configDir = NULL;
+    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
+    svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
+                                                         SVN_CONFIG_CATEGORY_CONFIG,
+                                                         APR_HASH_KEY_STRING);
+
     /* The whole list of registered providers */
     apr_array_header_t *providers;
 
     /* Populate the registered providers with the platform-specific providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
-                                                                NULL,
+                                                                config,
                                                                 pool),
                 NULL);
 
@@ -1236,10 +1244,6 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
-    const char *configDir = m_configDir.c_str();
-    if (m_configDir.length() == 0)
-        configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
     ctx->notify_func2= Notify2::notify;
     ctx->notify_baton2 = m_notify2;
 
