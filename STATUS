@@ -38,6 +38,13 @@ Candidate changes for 1.5.5:
                I understand what the change is supposed to be doing,
                and from that point of view I can say that it actually
                does improve things a lot.)
+     -1: julianfoad (Don't panic, we just need to check what's wrong with the
+           error reporting. In some merge attempts it throws the "error"
+           "200 OK" with no further explanation. See email thread
+           <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=986670>.)
+
+Approved changes:
+=================
 
  * r34774
    Disallow (at the API and UI levels) attempts to set empty-string
@@ -48,6 +55,3 @@ Candidate changes for 1.5.5:
      client notifications claim that it *does*.  A(nother?) bug.
    Votes:
      +1: cmpilato, hwright, stylesen
-
-Approved changes:
-=================
