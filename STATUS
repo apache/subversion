@@ -21,6 +21,9 @@ Candidate changes for 1.5.5:
      (generally missing their first chunk of bytes) which can result
      in such confusing user scenarios as seeing errors with successful
      (200) status codes.
+   Notes:
+     Simple conflict: use of "SVN_ERR_ASSERT(...)" needs to be replaced
+     with "#include <assert.h>" and "assert(...)".
    Votes:
      +1: cmpilato
 
@@ -56,10 +59,7 @@ Candidate changes for 1.5.5:
                I understand what the change is supposed to be doing,
                and from that point of view I can say that it actually
                does improve things a lot.)
-     -1: julianfoad (Don't panic, we just need to check what's wrong with the
-           error reporting. In some merge attempts it throws the "error"
-           "200 OK" with no further explanation. See email thread
-           <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=986670>.)
+     PREREQUISITE: r34822. Don't merge without that.
 
 Approved changes:
 =================
