@@ -14,6 +14,17 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
+ * r34822
+   Fix a bogus assumption in the ra-neon mergeinfo REPORT parsing logic.
+   Justification:
+     This bug results in mergeinfo catalogs with incorrect path keys
+     (generally missing their first chunk of bytes) which can result
+     in such confusing user scenarios as seeing errors with successful
+     (200) status codes.
+   Votes:
+     +1: cmpilato
+
+
  * r34091, r34094, r34244, r34256, r34306, r34331, r34742, r34814
    Various svn merge --reintegrate improvements.
    Branch:
@@ -28,6 +39,11 @@ Candidate changes for 1.5.5:
      range starting at the revision the source was branched from the target.
      These changes also improve the notoriously vague error message which
      occurred when reintegrate was thwarted by subtree mergeinfo.
+   Notes:
+     This code reintroduces a use of svn_ra_get_mergeinfo with
+     include_descendants=TRUE, which can trigger the bug fixed by
+     r34822 due to the size of the request response.  Consider r34822
+     a prerequisite for this change group.
    Votes:
      +1: pburba
      +1: cmpilato (r34331, r34742, r34814 only)
