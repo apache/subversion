@@ -47,7 +47,7 @@ Candidate changes for 1.5.5:
      But while the current code does not, in fact, really allow this, the
      client notifications claim that it *does*.  A(nother?) bug.
    Votes:
-     +1: cmpilato, hwright
+     +1: cmpilato, hwright, stylesen
 
 Approved changes:
 =================
