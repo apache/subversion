@@ -114,7 +114,7 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
    then filter that path as well.  If all paths are filtered or MERGEINFO is 
    empty or NULL then *FILTERED_MERGEINFO is set to an empty hash. */
 svn_error_t *
-svn_mergeinfo__filter_mergefino_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
+svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           svn_mergeinfo_t mergeinfo,
                                           svn_revnum_t youngest_rev,
                                           svn_revnum_t oldest_rev,

@@ -1679,7 +1679,7 @@ svn_mergeinfo__filter_catalog_by_ranges(svn_mergeinfo_catalog_t *filtered_cat,
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
       mergeinfo = val;
-      SVN_ERR(svn_mergeinfo__filter_mergefino_by_ranges(&filtered_mergeinfo,
+      SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(&filtered_mergeinfo,
                                                         mergeinfo,
                                                         youngest_rev,
                                                         oldest_rev,
@@ -1695,7 +1695,7 @@ svn_mergeinfo__filter_catalog_by_ranges(svn_mergeinfo_catalog_t *filtered_cat,
 }
 
 svn_error_t *
-svn_mergeinfo__filter_mergefino_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
+svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           svn_mergeinfo_t mergeinfo,
                                           svn_revnum_t youngest_rev,
                                           svn_revnum_t oldest_rev,
