@@ -24,6 +24,7 @@
 
 
 #include <string.h>
+#include <assert.h>
 
 #include <apr_pools.h>
 #include <apr_tables.h>
@@ -2953,6 +2954,9 @@ svn_wc_set_changelist(const char *path,
   const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
   svn_wc_notify_t *notify;
+
+  /* Assert that we aren't being asked to set an empty changelist. */
+  assert(! (changelist && changelist[0] == '\0'));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (! entry)

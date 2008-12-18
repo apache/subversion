@@ -45,13 +45,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34774
-   Disallow (at the API and UI levels) attempts to set empty-string
-   changelists.  (Issue #3344)
-   Justifications:
-     The code was never intended to allow this, so if it did, it was a bug.
-     But while the current code does not, in fact, really allow this, the
-     client notifications claim that it *does*.  A(nother?) bug.
-   Votes:
-     +1: cmpilato, hwright, stylesen
