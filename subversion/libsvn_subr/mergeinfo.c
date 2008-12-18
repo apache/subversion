@@ -1307,17 +1307,11 @@ svn_mergeinfo_catalog_dup(svn_mergeinfo_catalog_t mergeinfo_catalog,
     {
       const void *key;
       void *val;
-      const char *path;
-
-      svn_mergeinfo_t mergeinfo, mergeinfo_copy;
       apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      mergeinfo = val;
-      mergeinfo_copy = svn_mergeinfo_dup(mergeinfo, pool);
       apr_hash_set(new_mergeinfo_catalog,
-                   apr_pstrdup(pool, path),
+                   apr_pstrdup(pool, key),
                    APR_HASH_KEY_STRING,
-                   mergeinfo_copy);
+                   svn_mergeinfo_dup(val, pool));
     }
 
   return new_mergeinfo_catalog;
