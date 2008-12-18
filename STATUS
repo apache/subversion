@@ -30,6 +30,7 @@ Candidate changes for 1.5.5:
      occurred when reintegrate was thwarted by subtree mergeinfo.
    Votes:
      +1: pburba
+     +1: cmpilato (r34331, r34742, r34814 only)
      +1: jerenkrantz (!r34331, !r34742, !r34814)
      +0: stsp (With my limited understanding of merge tracking it takes
                ages for me to review this properly.
