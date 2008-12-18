@@ -7139,7 +7139,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
    merged to the reintegrate source.
 
    SOURCE_CATALOG is the collection of explicit mergeinfo on
-   SOURCE_REPOS_REL_PATH@SORUCE_REV and all its children, i.e. the mergeinfo
+   SOURCE_REPOS_REL_PATH@SOURCE_REV and all its children, i.e. the mergeinfo
    catalog for the reintegrate source.
 
    TARGET_SEGMENTS_HASH is a hash of (const char *) paths mapped to
