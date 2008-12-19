@@ -1152,7 +1152,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
      ### only used above (so should really be in this source file). */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_prop_t *mergeinfo_prop;
       apr_hash_t *mergeinfo, *wc_mergeinfo;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -1163,9 +1162,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
          info known to the WC and the repository. */
       item->outgoing_prop_changes = apr_array_make(pool, 1,
                                                    sizeof(svn_prop_t *));
-      mergeinfo_prop = apr_palloc(item->outgoing_prop_changes->pool,
-                                  sizeof(svn_prop_t));
-      mergeinfo_prop->name = SVN_PROP_MERGEINFO;
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
                                          pair->src, pair->src_revnum,
                                          FALSE, ctx, pool));
@@ -1179,11 +1175,20 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
         mergeinfo = wc_mergeinfo;
       if (mergeinfo)
         {
-          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)
-                                           &mergeinfo_prop->value,
-                                           mergeinfo, pool));
-          APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
-            mergeinfo_prop;
+          /* Push a mergeinfo prop representing MERGEINFO onto the
+           * OUTGOING_PROP_CHANGES array. */
+
+          svn_prop_t *mergeinfo_prop
+            = apr_palloc(item->outgoing_prop_changes->pool,
+                         sizeof(svn_prop_t));
+          svn_string_t *prop_value;
+
+          SVN_ERR(svn_mergeinfo_to_string(&prop_value, mergeinfo, pool));
+
+          mergeinfo_prop->name = SVN_PROP_MERGEINFO;
+          mergeinfo_prop->value = prop_value;
+          APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *)
+            = mergeinfo_prop;
         }
     }
 
