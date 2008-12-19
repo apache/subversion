@@ -235,7 +235,22 @@ svn_wc__db_close(svn_wc__db_t *db,
 /** @} */
 
 /**
+ * Different kind of trees
+ *
+ * The design doc mentions three different kinds of trees, BASE, WORKING and
+ * ACTUAL: http://svn.collab.net/repos/svn/trunk/notes/wc-ng-design
+ * We have different APIs to handle each tree, enumerated below, along with
+ * a blurb to explain what that tree represents.
+ */
+
+/**
  * @defgroup svn_wc__db_base  BASE tree management
+ *
+ * BASE should be what we get from the server. The *absolute* pristine copy.
+ * Nothing can change it -- it is always a reflection of the repository.
+ * You need to use checkout, update, switch, or commit to alter your view of
+ * the repository.
+ * 
  * @{
  */
 
