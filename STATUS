@@ -14,7 +14,7 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
- * r34091, r34094, r34244, r34256, r34306, r34814
+ * r34091, r34094, r34244, r34256, r34306, r34331, r34742, r34814
    Various svn merge --reintegrate improvements.
    Branch:
      ^/branches/1.5.x-reintegrate-improvements
@@ -28,8 +28,15 @@ Candidate changes for 1.5.5:
      range starting at the revision the source was branched from the target.
      These changes also improve the notoriously vague error message which
      occurred when reintegrate was thwarted by subtree mergeinfo.
+   Notes:
+     This code reintroduces a use of svn_ra_get_mergeinfo with
+     include_descendants=TRUE, which can trigger the bug fixed by
+     r34822 due to the size of the request response.  Consider r34822
+     a prerequisite for this change group.
    Votes:
-     +1: pburba, jerenkrantz (!r34814)
+     +1: pburba, kameshj
+     +1: cmpilato (r34331, r34742, r34814 only)
+     +1: jerenkrantz (!r34331, !r34742, !r34814)
      +0: stsp (With my limited understanding of merge tracking it takes
                ages for me to review this properly.
                The change is fairly large. I've read all log messages and
@@ -38,10 +45,6 @@ Candidate changes for 1.5.5:
                I understand what the change is supposed to be doing,
                and from that point of view I can say that it actually
                does improve things a lot.)
-     -1: julianfoad (Don't panic, we just need to check what's wrong with the
-           error reporting. In some merge attempts it throws the "error"
-           "200 OK" with no further explanation. See email thread
-           <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=986670>.)
 
 Approved changes:
 =================

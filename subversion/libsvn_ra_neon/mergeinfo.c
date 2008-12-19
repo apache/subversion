@@ -22,6 +22,7 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
+#include <assert.h>
 
 #include <ne_socket.h>
 
@@ -43,7 +44,7 @@
 struct mergeinfo_baton
 {
   apr_pool_t *pool;
-  const char *curr_path;
+  svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
   svn_mergeinfo_catalog_t catalog;
   svn_error_t *err;
@@ -86,7 +87,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
   if (elm->id == ELEM_mergeinfo_item)
     {
       svn_stringbuf_setempty(mb->curr_info);
-      mb->curr_path = NULL;
+      svn_stringbuf_setempty(mb->curr_path);
     }
 
   SVN_ERR(mb->err);
@@ -112,12 +113,12 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
         {
           svn_mergeinfo_t path_mergeinfo;
 
-          mb->err = svn_mergeinfo_parse(&path_mergeinfo, mb->curr_info->data,
-                                        mb->pool);
-          SVN_ERR(mb->err);
-
-          apr_hash_set(mb->catalog, mb->curr_path,  APR_HASH_KEY_STRING,
-                       path_mergeinfo);
+          assert(mb->curr_path->data);
+          SVN_ERR((mb->err = svn_mergeinfo_parse(&path_mergeinfo, 
+                                                 mb->curr_info->data,
+                                                 mb->pool)));
+          apr_hash_set(mb->catalog, apr_pstrdup(mb->pool, mb->curr_path->data),
+                       APR_HASH_KEY_STRING, path_mergeinfo);
         }
     }
 
@@ -133,7 +134,8 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   switch (state)
     {
     case ELEM_mergeinfo_path:
-      mb->curr_path = apr_pstrndup(mb->pool, cdata, nlen);
+      if (mb->curr_path)
+        svn_stringbuf_appendbytes(mb->curr_path, cdata, nlen);
       break;
 
     case ELEM_mergeinfo_info:
@@ -211,7 +213,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   svn_stringbuf_appendcstr(request_body, minfo_report_tail);
 
   mb.pool = pool;
-  mb.curr_path = NULL;
+  mb.curr_path = svn_stringbuf_create("", pool);
   mb.curr_info = svn_stringbuf_create("", pool);
   mb.catalog = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
