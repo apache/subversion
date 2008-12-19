@@ -14,6 +14,16 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
+ * r34838
+   Fix a test expection for the swig ruby tests.
+   Justification:
+     We want the tests to pass.  Joe looked at something similar to this
+     on trunk: http://svn.haxx.se/dev/archive-2008-12/0557.shtml
+   Branch:
+     ^/branches/1.5.x-rb-test-fix
+   Votes:
+     +1: hwright
+
  * r34091, r34094, r34244, r34256, r34306, r34331, r34742, r34814
    Various svn merge --reintegrate improvements.
    Branch:
