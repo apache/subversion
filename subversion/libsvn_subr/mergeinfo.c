@@ -1599,7 +1599,6 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
 
   if (mergeinfo && apr_hash_count(mergeinfo))
     {
-      output_buf = svn_stringbuf_create("", pool);
       SVN_ERR(mergeinfo_to_stringbuf(&output_buf, mergeinfo,
                                      prefix ? prefix : "", pool));
       svn_stringbuf_appendcstr(output_buf, "\n");
