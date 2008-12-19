@@ -46,6 +46,8 @@ Candidate changes for 1.5.5:
                and from that point of view I can say that it actually
                does improve things a lot.)
 
+Approved changes:
+=================
 
  * r34196
    JavaHL: Update tests to adjust move expectations of creating mergeinfo.
@@ -54,7 +56,4 @@ Candidate changes for 1.5.5:
      updated.  This was done on trunk and was just not included in backport
      recommendation.
    Votes:
-     +1: markphip
-
-Approved changes:
-=================
+     +1: markphip, hwright
