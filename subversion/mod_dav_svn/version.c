@@ -183,11 +183,11 @@ get_option(const dav_resource *resource,
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
      DeltaV-free! */
   apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_STUB_HEADER,
-                DAV_SVN__ROOT_STUB);
+                dav_svn__get_root_stub(resource->info->r));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
-                DAV_SVN__PEGREV_STUB);
+                dav_svn__get_pegrev_stub(resource->info->r));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,
-                DAV_SVN__REV_STUB);
+                dav_svn__get_rev_stub(resource->info->r));
 
   if (resource->info->repos && resource->info->repos->fs)
     {
@@ -197,18 +197,13 @@ get_option(const dav_resource *resource,
                                               resource->pool);
       if ((serr == NULL)
           && SVN_IS_VALID_REVNUM(youngest))
-        {
-          const char *yrtext = 
-            apr_psprintf(resource->pool, "%"SVN_REVNUM_T_FMT, youngest);
           apr_table_set(resource->info->r->headers_out,
-                        SVN_DAV_YOUNGEST_REV_HEADER, yrtext);
-        }
+                        SVN_DAV_YOUNGEST_REV_HEADER,
+                        apr_psprintf(resource->pool, "%ld", youngest));
       else
-        {
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Error fetching youngest rev from repos",
                                       resource->pool);
-        }
     }
   
   return NULL;

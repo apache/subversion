@@ -38,17 +38,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/* HTTP Protocol version 2 -- with no DeltaV.  We define these 'stubs'
-   as opaque fixtures to return to the client, and the client freely
-   appends paths to them. */
-
-#define DAV_SVN__ROOT_STUB      "!svn/me"   /* where REPORTS are sent */
-#define DAV_SVN__PEGREV_STUB    "!svn/bc"   /* for accessing REV/PATH pairs */
-#define DAV_SVN__REV_STUB       "!svn/rev"  /* revision resources */
-#define DAV_SVN__TXN_STUB       "!svn/txn"  /* transaction resouces */
-#define DAV_SVN__TXNPROP_STUB   "!svn/txp"  /* for accessing txn props */
-
 
 
 /* what the one VCC is called */
@@ -342,6 +331,27 @@ const char * dav_svn__get_activities_db(request_rec *r);
 
 /* Return the root directory */
 const char * dav_svn__get_root_dir(request_rec *r);
+
+
+/** For HTTP protocol v2, these are the new URI stubs returned to the
+    client in our OPTIONS response.  They all depend on the 'special
+    uri', which is configurable in httpd.conf.  **/
+
+/* Where REPORT requests are sent (typically "!svn/me") */
+const char *dav_svn__get_root_stub(request_rec *r);
+
+/* For accessing REV/PATH pairs (typically "!svn/bc") */
+const char *dav_svn__get_pegrev_stub(request_rec *r);
+
+/* For accessing revision resources (typically "!svn/rev") */
+const char *dav_svn__get_rev_stub(request_rec *r);
+
+/* For accessing transaction resources (typically "!svn/txn") */
+const char *dav_svn__get_txn_stub(request_rec *r);
+
+/* For accessing transaction properties (typically "!svn/txp") */
+const char *dav_svn__get_txnprop_stub(request_rec *r);
+
 
 /*** activity.c ***/
 
