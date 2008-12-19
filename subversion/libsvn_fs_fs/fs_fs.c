@@ -4262,8 +4262,10 @@ svn_fs_fs__get_txn(transaction_t **txn_p,
 }
 
 /* Write out the currently available next node_id NODE_ID and copy_id
-   COPY_ID for transaction TXN_ID in filesystem FS.  Perform temporary
-   allocations in POOL. */
+   COPY_ID for transaction TXN_ID in filesystem FS.  The next node-id is
+   used both for creating new unique nodes for the given transaction, as
+   well as uniquifying representations.  Perform temporary allocations in
+   POOL. */
 static svn_error_t *
 write_next_ids(svn_fs_t *fs,
                const char *txn_id,
@@ -4288,7 +4290,9 @@ write_next_ids(svn_fs_t *fs,
 
 /* Find out what the next unique node-id and copy-id are for
    transaction TXN_ID in filesystem FS.  Store the results in *NODE_ID
-   and *COPY_ID.  Perform all allocations in POOL. */
+   and *COPY_ID.  The next node-id is used both for creating new unique
+   nodes for the given transaction, as well as uniquifying representations.
+   Perform all allocations in POOL. */
 static svn_error_t *
 read_next_ids(const char **node_id,
               const char **copy_id,
@@ -4330,7 +4334,8 @@ read_next_ids(const char **node_id,
 
 /* Get a new and unique to this transaction node-id for transaction
    TXN_ID in filesystem FS.  Store the new node-id in *NODE_ID_P.
-   Perform all allocations in POOL. */
+   Node-ids are guaranteed to be unique to this transction, but may
+   not necessarily be sequential.  Perform all allocations in POOL. */
 static svn_error_t *
 get_new_txn_node_id(const char **node_id_p,
                     svn_fs_t *fs,
