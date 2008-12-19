@@ -119,6 +119,11 @@ typedef enum {
 /* ### some kind of _create() call to set things up? */
 
 /**
+ * @defgroup svn_wc__db_admin  General administractive functions
+ * @{
+ */
+
+/**
  * Open the administrative database for the working copy identified by the
  * (absolute) @a path. The (opaque) handle for interacting with the database
  * will be returned in @a *db. Note that the database MAY NOT be specific
@@ -179,6 +184,55 @@ svn_wc__db_open_many(svn_wc__db_t **db,
                      svn_config_t *config,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
+
+/**
+ * Start a transaction for the database(s) which are part of @a db.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_txn_begin(svn_wc__db_t *db,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Rollback any changes to @a db which have happened since the last
+ * call to svn_wc__db_txn_begin().  If a transaction is not currently in
+ * progress, nothing occurs.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_txn_rollback(svn_wc__db_t *db,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Commit the currently active transaction for @a db.  If a transaction is not
+ * currently in progress, nothing occurs.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_txn_commit(svn_wc__db_t *db,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Close @a db, and rollback any pending transaction associated with it.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_close(svn_wc__db_t *db,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
+/** @} */
 
 /**
  * @defgroup svn_wc__db_base  BASE tree management
