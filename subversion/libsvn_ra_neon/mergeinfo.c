@@ -133,12 +133,10 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   switch (state)
     {
     case ELEM_mergeinfo_path:
-      SVN_ERR_ASSERT(mb->curr_path);
       svn_stringbuf_appendbytes(mb->curr_path, cdata, nlen);
       break;
 
     case ELEM_mergeinfo_info:
-      SVN_ERR_ASSERT(mb->curr_info);
       svn_stringbuf_appendbytes(mb->curr_info, cdata, nlen);
       break;
 
