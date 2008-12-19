@@ -2320,8 +2320,7 @@ revert_internal(const char *path,
       /* Visit any unversioned children that are tree conflict victims. */
       {
         int i;
-        apr_array_header_t *conflicts
-          = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
+        apr_array_header_t *conflicts;
 
         /* Loop through all the tree conflict victims */
         SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,

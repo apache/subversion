@@ -1508,8 +1508,6 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   const char *dir_path = svn_wc_adm_access_path(loggy->adm_access);
 
   /* Convert the text data to a conflict. */
-  new_conflicts = apr_array_make(loggy->pool, 1,
-                                 sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&new_conflicts,
                             svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts),
                                       dir_path, loggy->pool));
@@ -1802,8 +1800,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
   loggy->tree_conflicts_added = FALSE;
-  loggy->tree_conflicts = apr_array_make(pool, 0,
-                                      sizeof(svn_wc_conflict_description_t *));
 
   /* Populate the tree conflict array with the existing tree conflicts. */
   SVN_ERR(svn_wc_entry(&entry, svn_wc_adm_access_path(adm_access), adm_access,

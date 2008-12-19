@@ -340,10 +340,11 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
 {
   const char *start, *end;
 
+  *conflicts = apr_array_make(pool, 0,
+                              sizeof(svn_wc_conflict_description_t *));
+
   if (conflict_data == NULL)
     return SVN_NO_ERROR;
-
-  SVN_ERR_ASSERT(*conflicts);
 
   start = conflict_data;
   end = start + strlen(start);
@@ -615,8 +616,6 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
    * Anything else is a bug. */
   SVN_ERR_ASSERT(strcmp(dir_path, svn_path_dirname(victim_path, pool)) == 0);
 
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
                                       dir_path, pool));
 
@@ -695,8 +694,6 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
     }
   SVN_ERR(err);
 
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc_entry(&entry, parent_path, parent_adm_access, TRUE, pool));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
                                       parent_path, pool));
