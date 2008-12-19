@@ -3377,8 +3377,7 @@ visit_tc_too_found_entry(const char *path,
        * in case of svn_depth_files, don't visit directories. */
 
       svn_wc_adm_access_t *adm_access = NULL;
-      apr_array_header_t *conflicts
-        = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
+      apr_array_header_t *conflicts;
       int i;
 
       /* Loop through all the tree conflict victims */
