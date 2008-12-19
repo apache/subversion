@@ -1226,8 +1226,8 @@ log_do_committed(struct log_runner *loggy,
                                 remove_deleted_entry, loggy, pool));
     }
 
-  SVN_ERR(svn_wc__has_prop_mods(&prop_mods,
-                                full_path, loggy->adm_access, pool));
+  SVN_ERR(svn_wc_props_modified_p(&prop_mods, full_path, loggy->adm_access,
+                                  pool));
   if (prop_mods)
     {
       if (entry->kind == svn_node_file)

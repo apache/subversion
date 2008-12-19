@@ -191,17 +191,6 @@ svn_wc__props_last_modified(apr_time_t *mod_time,
                             svn_wc_adm_access_t *adm_access,
                             apr_pool_t *pool);
 
-/* Check PATH for prop mods, returning the result in *PROP_MODS.
-
-   This function takes into account that some working copy versions
-   don't have a has_prop_mods cache laying around */
-svn_error_t *
-svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
-                      const char *path,
-                      svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *pool);
-
-
 /* Load the base, working and revert props for PATH in ADM_ACCESS returning
    them in *BASE_PROPS_P, *PROPS_P and *REVERT_PROPS_P respectively.
    Any of BASE_PROPS, PROPS and REVERT_PROPS may be null.

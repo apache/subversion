@@ -5407,8 +5407,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 /**
  * Set @a path's entry's 'changelist' attribute to @a changelist iff
  * @a changelist is not @c NULL; otherwise, remove any current
- * changelist assignment from @a path.  @a adm_access is an access
- * baton set that contains @a path.
+ * changelist assignment from @a path.  @a changelist may not be the
+ * empty string.  @a adm_access is an access baton set that contains
+ * @a path.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
  * determine if the client has cancelled the operation.

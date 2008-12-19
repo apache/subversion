@@ -401,10 +401,12 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             /* For anything else, delete the mech from the list
                and try again. */
             {
-              char *dst = strstr(mechstring, mech);
-              char *src = dst + strlen(mech);
-              while ((*dst++ = *src++) != '\0')
-                ;
+              const char *pmech = strstr(mechstring, mech);
+              const char *head = apr_pstrndup(pool, mechstring,
+                                              pmech - mechstring);
+              const char *tail = pmech + strlen(mech);
+
+              mechstring = apr_pstrcat(pool, head, tail, NULL);
               again = TRUE;
             }
         }
