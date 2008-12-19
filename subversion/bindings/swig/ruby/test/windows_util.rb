@@ -129,7 +129,7 @@ exit 1
     module SetupEnvironment
       def setup_test_environment(top_dir, base_dir, ext_dir)
 
-        build_type = ENV["BUILD_TYPE"] || "Debug"
+        build_type = ENV["BUILD_TYPE"] || "Release"
 
         FileUtils.mkdir_p(ext_dir)
 

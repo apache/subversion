@@ -1747,7 +1747,7 @@ deltify_mutable(svn_fs_t *fs,
        not as blindingly so.)
 
        For 1.6 and beyond, we just deltify the current node against its
-       predecessors, using skip deltas similar to the was FSFS does.*/
+       predecessors, using skip deltas similar to the way FSFS does.  */
 
     int pred_count, nlevels, lev, count;
     const svn_fs_id_t *pred_id;

@@ -180,7 +180,7 @@ realm = #{@realm}
     begin
       yield ctx
     ensure
-      ctx.close
+      ctx.destroy
     end
   end
 

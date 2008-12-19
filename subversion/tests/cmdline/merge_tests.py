@@ -14467,7 +14467,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_disk.tweak('A_COPY_3/D/gamma', contents="New content")
 
   # r10 - Merge r9 from A_COPY_3/D to A/D, creating explicit subtree
-  # mergeinfo under A.  For this an every subsequent merge we update the WC
+  # mergeinfo under A.  For this and every subsequent merge we update the WC
   # first to allow full inheritance and elision.
   svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
                                      wc_dir)
@@ -14786,8 +14786,8 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Reintegrate A_COPY to A, this should work A_COPY/D/gamma_moved's natural
-  # history,
+  # Reintegrate A_COPY to A, this should work since
+  # A_COPY/D/gamma_moved's natural history,
   #
   #   /A/D/gamma:1-15
   #   /A/D/gamma_moved:16

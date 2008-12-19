@@ -1988,38 +1988,36 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
     end
 
-    ctx = Svn::Client::Context.new
+    Svn::Client::Context.new do |ctx|
+      assert_raises(Svn::Error::AuthnNoProvider) do
+        ctx.cat(svnserve_uri)
+      end
 
-    assert_raises(Svn::Error::AuthnNoProvider) do
-      ctx.cat(svnserve_uri)
-    end
+      ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+        cred.username = "wrong-#{@author}"
+        cred.password = @password
+        cred.may_save = false
+      end
+      assert_raises(Svn::Error::RaNotAuthorized) do
+        ctx.cat(svnserve_uri)
+      end
 
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = "wrong-#{@author}"
-      cred.password = @password
-      cred.may_save = false
-    end
-    assert_raises(Svn::Error::RaNotAuthorized) do
-      ctx.cat(svnserve_uri)
-    end
+      ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+        cred.username = @author
+        cred.password = "wrong-#{@password}"
+        cred.may_save = false
+      end
+      assert_raises(Svn::Error::RaNotAuthorized) do
+        ctx.cat(svnserve_uri)
+      end
 
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = @author
-      cred.password = "wrong-#{@password}"
-      cred.may_save = false
+      ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+        cred.username = @author
+        cred.password = @password
+        cred.may_save = false
+      end
+      assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
     end
-    assert_raises(Svn::Error::RaNotAuthorized) do
-      ctx.cat(svnserve_uri)
-    end
-
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = @author
-      cred.password = @password
-      cred.may_save = false
-    end
-    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
-  ensure
-    ctx.close
   end
 
   def assert_simple_provider(method)
@@ -2126,17 +2124,16 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_add_providers
-    ctx = Svn::Client::Context.new
-    assert_nothing_raised do
-      ctx.add_ssl_client_cert_file_provider
-      ctx.add_ssl_client_cert_pw_file_provider
-      ctx.add_ssl_server_trust_file_provider
-      if Svn::Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
-        ctx.add_windows_ssl_server_trust_provider
+    Svn::Client::Context.new do |ctx|
+      assert_nothing_raised do
+        ctx.add_ssl_client_cert_file_provider
+        ctx.add_ssl_client_cert_pw_file_provider
+        ctx.add_ssl_server_trust_file_provider
+        if Svn::Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
+          ctx.add_windows_ssl_server_trust_provider
+        end
       end
     end
-  ensure
-    ctx.close
   end
 
   def test_commit_item
@@ -2233,12 +2230,11 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_context_mimetypes_map
-    context = Svn::Client::Context.new
-    assert_nil(context.mimetypes_map)
-    context.mimetypes_map = {"txt" => "text/plain"}
-    assert_equal({"txt" => "text/plain"}, context.mimetypes_map)
-  ensure
-    context.close
+    Svn::Client::Context.new do |context|
+      assert_nil(context.mimetypes_map)
+      context.mimetypes_map = {"txt" => "text/plain"}
+      assert_equal({"txt" => "text/plain"}, context.mimetypes_map)
+    end
   end
 
   def assert_changelists
