@@ -17,35 +17,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34091, r34094, r34244, r34256, r34306, r34331, r34742, r34814
-   Various svn merge --reintegrate improvements.
-   Branch:
-     ^/branches/1.5.x-reintegrate-improvements
-   Justification:
-     Prior to these changes reintegrate would not work if the merge source
-     had any subtree mergeinfo.  Since subtree mergeinfo is quite common,
-     this meant reintegrate was largely unuseable.  With these changes
-     reintegrate will work as long as the source's subtree mergeinfo and
-     implicit mergeinfo reflect the fact that the reintegrate target was
-     previously merged uniformly to the source for some contiguous revision
-     range starting at the revision the source was branched from the target.
-     These changes also improve the notoriously vague error message which
-     occurred when reintegrate was thwarted by subtree mergeinfo.
-   Notes:
-     This code reintroduces a use of svn_ra_get_mergeinfo with
-     include_descendants=TRUE, which can trigger the bug fixed by
-     r34822 due to the size of the request response.  Consider r34822
-     a prerequisite for this change group.
-   Votes:
-     +1: pburba, kameshj
-     +1: cmpilato (r34331, r34742, r34814 only)
-     +1: jerenkrantz (!r34331, !r34742, !r34814)
-     +0: stsp (With my limited understanding of merge tracking it takes
-               ages for me to review this properly.
-               The change is fairly large. I've read all log messages and
-               most of the diffs, including the history of the branch
-               merged to trunk in r34091.
-               I understand what the change is supposed to be doing,
-               and from that point of view I can say that it actually
-               does improve things a lot.)
