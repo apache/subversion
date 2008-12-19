@@ -14,19 +14,6 @@ delay a release, etc.
 Candidate changes for 1.5.5:
 ============================
 
- * r34822
-   Fix a bogus assumption in the ra-neon mergeinfo REPORT parsing logic.
-   Justification:
-     This bug results in mergeinfo catalogs with incorrect path keys
-     (generally missing their first chunk of bytes) which can result
-     in such confusing user scenarios as seeing errors with successful
-     (200) status codes.
-   Notes:
-     Simple conflict: use of "SVN_ERR_ASSERT(...)" needs to be replaced
-     with "#include <assert.h>" and "assert(...)".
-   Votes:
-     +1: cmpilato, julianfoad
-
 
  * r34091, r34094, r34244, r34256, r34306, r34331, r34742, r34814
    Various svn merge --reintegrate improvements.
@@ -63,3 +50,16 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
+ * r34822
+   Fix a bogus assumption in the ra-neon mergeinfo REPORT parsing logic.
+   Justification:
+     This bug results in mergeinfo catalogs with incorrect path keys
+     (generally missing their first chunk of bytes) which can result
+     in such confusing user scenarios as seeing errors with successful
+     (200) status codes.
+   Notes:
+     Simple conflict: use of "SVN_ERR_ASSERT(...)" needs to be replaced
+     with "#include <assert.h>" and "assert(...)".
+   Votes:
+     +1: cmpilato, julianfoad, kameshj
+
