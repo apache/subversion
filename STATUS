@@ -22,7 +22,7 @@ Candidate changes for 1.5.5:
    Branch:
      ^/branches/1.5.x-rb-test-fix
    Votes:
-     +1: hwright
+     +1: hwright, jerenkrantz
 
  * r34091, r34094, r34244, r34256, r34306, r34331, r34742, r34814
    Various svn merge --reintegrate improvements.
