@@ -46,5 +46,15 @@ Candidate changes for 1.5.5:
                and from that point of view I can say that it actually
                does improve things a lot.)
 
+
+ * r34196
+   JavaHL: Update tests to adjust move expectations of creating mergeinfo.
+   Justification:
+     Backport of r34184 changed move/copy behavior and tests needed to be
+     updated.  This was done on trunk and was just not included in backport
+     recommendation.
+   Votes:
+     +1: markphip
+
 Approved changes:
 =================
