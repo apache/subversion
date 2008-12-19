@@ -485,6 +485,34 @@ dav_svn__get_special_uri(request_rec *r)
 }
 
 
+const char *
+dav_svn__get_pegrev_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/bc", NULL);
+}
+
+
+const char *
+dav_svn__get_rev_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rev", NULL);
+}
+
+
+const char *
+dav_svn__get_txn_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txn", NULL);
+}
+
+
+const char *
+dav_svn__get_txnprop_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txp", NULL);
+}
+
+
 svn_boolean_t
 dav_svn__get_autoversioning_flag(request_rec *r)
 {

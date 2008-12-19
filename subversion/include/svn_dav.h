@@ -85,26 +85,26 @@ extern "C" {
  * that the server speaks HTTP protocol v2.  This header provides an
  * opaque URI that the client should send all custom REPORT requests
  * against. */
-#define SVN_DAV_ROOT_STUB_HEADER "X-SVN-Root-Stub"
+#define SVN_DAV_ROOT_STUB_HEADER "SVN-Root-Stub"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the server speaks HTTP protocol v2.  This header provides an
  * opaque URI that the client can append PEGREV/PATH to, in order to
  * construct URIs of pegged objects in the repository. */
-#define SVN_DAV_PEGREV_STUB_HEADER "X-SVN-Pegrev-Stub"
+#define SVN_DAV_PEGREV_STUB_HEADER "SVN-Pegrev-Stub"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the server speaks HTTP protocol v2.  This header provides an
  * opaque URI that the client can append a revision to, to construct a
  * 'revision URL'.  This allows direct read/write access to revprops
  * via PROPFIND or PROPPATCH. */
-#define SVN_DAV_REV_STUB_HEADER "X-SVN-Rev-Stub"
+#define SVN_DAV_REV_STUB_HEADER "SVN-Rev-Stub"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the server speaks HTTP protocol v2.  Assuming the OPTIONS was
  * performed againts a resource within an svn repository, then this
  * header indicates the youngest revision in the repository. */
-#define SVN_DAV_YOUNGEST_REV_HEADER "X-SVN-Youngest-Rev"
+#define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
 
 
 /**
