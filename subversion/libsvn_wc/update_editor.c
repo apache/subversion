@@ -861,8 +861,8 @@ struct file_baton
 
 
 /* Make a new file baton in the provided POOL, with PB as the parent baton.
-   PATH is relative to the root of the edit. */
-
+ * PATH is relative to the root of the edit. ADDING tells whether this file
+ * is being added. */
 static svn_error_t *
 make_file_baton(struct file_baton **f_p,
                 struct dir_baton *pb,
