@@ -48,13 +48,3 @@ Candidate changes for 1.5.5:
 
 Approved changes:
 =================
-
- * r34835
-   Fix a crash in Cyrus SASL auth support, introduced by r33866 which was
-   back-ported here in r34610.
-   Justification:
-     Crash. Regression.
-     See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=987356>.
-   Votes:
-     +1: julianfoad, hwright, cmpilato
-
