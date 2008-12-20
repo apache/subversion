@@ -1250,7 +1250,7 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output,
           svn_stringbuf_appendcstr(*output,
                                    apr_psprintf(pool, "%s%s:%s",
                                                 prefix ? prefix : "",
-                                                (char *) elt.key,
+                                                (const char *) elt.key,
                                                 revlist->data));
           if (i < sorted->nelts - 1)
             svn_stringbuf_appendcstr(*output, "\n");
