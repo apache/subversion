@@ -555,6 +555,85 @@ path_driver_cb_func(void **dir_baton,
 }
 
 
+/* Starting with the path DIR relative to the root of RA_SESSION, work up
+ * through DIR's parents until an existing node is found. Push each
+ * nonexistent path onto the array NEW_DIRS, allocating in POOL.
+ * Raise an error if the existing node is not a directory.
+ *
+ * ### The multiple requests for HEAD revision (SVN_INVALID_REVNUM) make
+ * this implementation susceptible to race conditions. */
+static svn_error_t *
+find_absent_parents1(svn_ra_session_t *ra_session,
+                     const char *dir,
+                     apr_array_header_t *new_dirs,
+                     apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
+                            iterpool));
+
+  while (kind == svn_node_none)
+    {
+      svn_pool_clear(iterpool);
+
+      APR_ARRAY_PUSH(new_dirs, const char *) = dir;
+      svn_path_split(dir, &dir, NULL, pool);
+
+      SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
+                                &kind, iterpool));
+    }
+
+  if (kind != svn_node_dir)
+    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                _("Path '%s' already exists, but is not a directory"),
+                dir);
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+/* Starting with the URL *TOP_DST_URL which is also the root of RA_SESSION,
+ * work up through its parents until an existing node is found. Push each
+ * nonexistent URL onto the array NEW_DIRS, allocating in POOL.
+ * Raise an error if the existing node is not a directory.
+ *
+ * Set *TOP_DST_URL and the RA session's root to the existing node's URL.
+ *
+ * ### The multiple requests for HEAD revision (SVN_INVALID_REVNUM) make
+ * this implementation susceptible to race conditions. */
+static svn_error_t *
+find_absent_parents2(svn_ra_session_t *ra_session,
+                     const char **top_dst_url,
+                     apr_array_header_t *new_dirs,
+                     apr_pool_t *pool)
+{
+  const char *root_url = *top_dst_url;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
+                            pool));
+
+  while (kind == svn_node_none)
+    {
+      APR_ARRAY_PUSH(new_dirs, const char *) = root_url;
+      svn_path_split(root_url, &root_url, NULL, pool);
+
+      SVN_ERR(svn_ra_reparent(ra_session, root_url, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
+                                pool));
+    }
+
+  if (kind != svn_node_dir)
+    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                _("Path '%s' already exists, but is not a directory"),
+                root_url);
+
+  *top_dst_url = root_url;
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *copy_pairs,
@@ -577,7 +656,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   struct path_driver_cb_baton cb_baton;
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
-  apr_pool_t *iterpool;
   int i;
   svn_error_t *err;
 
@@ -662,10 +740,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
         return err;
     }
 
-  iterpool = svn_pool_create(pool);
-
-  /* Iterate over the parents of the destination directory, and make a list
-     of the ones that don't yet exist.  We do not have to worry about
+  /* Make a list in NEW_DIRS of the parent directories of the destination
+     that don't yet exist.  We do not have to worry about
      reparenting the ra session because top_url is a common ancestor of the
      destination and sources.  The sources exist, so therefore top_url must
      also exist. */
@@ -673,7 +749,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, 0,
                                                     svn_client__copy_pair_t *);
-      svn_node_kind_t kind;
       const char *dir;
 
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
@@ -692,28 +767,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
          array later in this function. */
 
       if (dir)
-        {
-          SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
-                                    iterpool));
-
-          while (kind == svn_node_none)
-            {
-              svn_pool_clear(iterpool);
-              APR_ARRAY_PUSH(new_dirs, const char *) = dir;
-
-              svn_path_split(dir, &dir, NULL, pool);
-              SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
-                                        &kind, iterpool));
-            }
-
-          if (kind != svn_node_dir)
-            return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                        _("Path '%s' already exists, but is not a directory"),
-                        dir);
-        }
+        SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
     }
-
-  svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
@@ -937,7 +992,12 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 }
 
 
-
+/* ### Copy ...
+ * COMMIT_INFO_P is ...
+ * COPY_PAIRS is ...
+ * MAKE_PARENTS is ...
+ * REVPROP_TABLE is ...
+ * CTX is ... */
 static svn_error_t *
 wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *copy_pairs,
@@ -972,14 +1032,15 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
     }
 
-  /*Find the common root of all the source paths, and probe the wc. */
+  /* Find the common root of all the source paths, and probe the wc. */
   get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_src_path,
                                  FALSE, -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
 
-  /* Determine the least common ancesor for the destinations, and open an RA
+  /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
+  /* ### But why start by getting the _parent_ of the first one? */
   svn_path_split(APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst,
                  &top_dst_url,
                  NULL, pool);
@@ -1001,29 +1062,14 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
      and reparent the ra session there. */
   if (make_parents)
     {
-      const char *root_url = top_dst_url;
-      svn_node_kind_t kind;
-
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
-      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
-                                pool));
 
-      while (kind == svn_node_none)
-        {
-          APR_ARRAY_PUSH(new_dirs, const char *) = root_url;
-          svn_path_split(root_url, &root_url, NULL, pool);
-
-          SVN_ERR(svn_ra_reparent(ra_session, root_url, pool));
-          SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
-                                    pool));
-        }
-
-      if (kind != svn_node_dir)
-        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                    _("Path '%s' already exists, but is not a directory"),
-                    root_url);
-
-      top_dst_url = root_url;
+      /* Starting at TOP_DST_URL which is also the session root, work up the
+       * directory hierarchy until an existing node is found. Push each
+       * nonexistent URL onto the array NEW_DIRS.  Leave TOP_DST_URL and the
+       * RA session parented at the existing node; error if it isn't a dir. */
+      SVN_ERR(find_absent_parents2(ra_session, &top_dst_url, new_dirs, pool));
+      /* ### SVN_ERR(svn_ra_reparent(ra_session, top_dst_url, pool)); */
     }
 
   /* Figure out the basename that will result from each copy and check to make
