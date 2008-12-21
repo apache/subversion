@@ -5,7 +5,7 @@
    svn2cl.xsl - xslt stylesheet for converting svn log to a normal
                 changelog
 
-   version 0.10
+   version 0.11
 
    Usage (replace ++ with two minus signs which aren't allowed
    inside xml comments):
