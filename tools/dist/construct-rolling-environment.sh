@@ -3,7 +3,7 @@ set -e
 
 AUTOCONF=autoconf-2.63
 LIBTOOL=libtool-1.5.26
-SWIG=swig-1.3.31
+SWIG=swig-1.3.36
 
 APR=apr-1.3.3
 APR_UTIL=apr-util-1.3.4
