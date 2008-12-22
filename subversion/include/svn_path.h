@@ -66,15 +66,16 @@ const char *
 svn_path_local_style(const char *path, apr_pool_t *pool);
 
 
-/** Join a base path (@a base) with a component (@a component), allocated in
- * @a pool.
+/** Join a base path (@a base) with a component (@a component), allocating
+ * the result in @a pool. @a component need not be a single component: it
+ * can be any path, absolute or relative to @a base.
  *
  * If either @a base or @a component is the empty path, then the other
  * argument will be copied and returned.  If both are the empty path the
  * empty path is returned.
  *
  * If the @a component is an absolute path, then it is copied and returned.
- * Exactly one slash character ('/') is used to joined the components,
+ * Exactly one slash character ('/') is used to join the components,
  * accounting for any trailing slash in @a base.
  *
  * Note that the contents of @a base are not examined, so it is possible to
