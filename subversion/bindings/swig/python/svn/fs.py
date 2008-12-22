@@ -113,8 +113,8 @@ class FileDiff:
       # Python >=2.4
 
       # open the pipe, and return the file object for reading from the child.
-      p = _subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            close_fds=sys.platform != "win32")
+      p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE,
+                            close_fds=_sys.platform != "win32")
       return p.stdout
     else:
       # Python <2.4
