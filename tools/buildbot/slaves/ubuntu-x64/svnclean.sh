@@ -7,6 +7,7 @@ echo "========= unmount RAM disc"
 test -e ../unmount-ramdrive && ../unmount-ramdrive
 
 echo "========= make extraclean"
+cd build
 test -e Makefile && (make extraclean || exit $?)
 
 exit 0
