@@ -2360,57 +2360,45 @@ def tree_conflicts_resolved_depth_empty(sbox):
   "tree conflicts resolved depth-empty"
 
   make_depth_tree_conflicts(sbox)
-  
+
   wc = sbox.wc_dir
   A = os.path.join(wc, 'A')
 
-  svntest.actions.run_and_verify_svn(None, 
-    [],
-    [],
-    'resolved', '--depth=empty', A)
+  svntest.actions.run_and_verify_resolved([], '--depth=empty', A)
 
 
 def tree_conflicts_resolved_depth_files(sbox):
   "tree conflicts resolved depth-files"
 
   make_depth_tree_conflicts(sbox)
-  
+
   wc = sbox.wc_dir
   j = os.path.join
   A = j(wc, 'A')
   m =    j(A, 'mu')
 
-
-  svntest.actions.run_and_verify_svn(None, 
-    ["Resolved conflicted state of '%s'\n" % m],
-    [],
-    'resolved', '--depth=files', A)
+  svntest.actions.run_and_verify_resolved([m], '--depth=files', A)
 
 
 def tree_conflicts_resolved_depth_immediates(sbox):
   "tree conflicts resolved depth-immediates"
 
   make_depth_tree_conflicts(sbox)
-  
+
   wc = sbox.wc_dir
   j = os.path.join
   A = j(wc, 'A')
   m =    j(A, 'mu')
   B =    j(A, 'B')
 
-  svntest.actions.run_and_verify_svn(None, 
-    svntest.verify.UnorderedOutput(
-      ["Resolved conflicted state of '%s'\n" % m,
-       "Resolved conflicted state of '%s'\n" % B]),
-    [],
-    'resolved', '--depth=immediates', A)
+  svntest.actions.run_and_verify_resolved([m, B], '--depth=immediates', A)
 
 
 def tree_conflicts_resolved_depth_infinity(sbox):
   "tree conflicts resolved depth-infinity"
 
   make_depth_tree_conflicts(sbox)
-  
+
   wc = sbox.wc_dir
   j = os.path.join
   A = j(wc, 'A')
@@ -2418,14 +2406,7 @@ def tree_conflicts_resolved_depth_infinity(sbox):
   B =    j(A, 'B')
   g =    j(A, 'D', 'gamma')
 
-
-  svntest.actions.run_and_verify_svn(None, 
-    svntest.verify.UnorderedOutput(
-      ["Resolved conflicted state of '%s'\n" % m,
-       "Resolved conflicted state of '%s'\n" % B,
-       "Resolved conflicted state of '%s'\n" % g]),
-    [],
-    'resolved', '--depth=infinity', A)
+  svntest.actions.run_and_verify_resolved([m, B, g], '--depth=infinity', A)
 
 
 #----------------------------------------------------------------------
