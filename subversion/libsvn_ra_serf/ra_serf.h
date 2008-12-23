@@ -201,6 +201,19 @@ struct svn_ra_serf__session_t {
 
   /* Repository UUID */
   const char *uuid;
+
+  /* Opaque URL "stubs".  If the OPTIONS response returns these, then
+     we know we're using HTTP protocol v2. */
+  const char *root_stub;        /* where to send REPORT requests */
+  const char *pegrev_stub;      /* for accessing REV/PATH pairs */
+  const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
+
+  /* More HTTP protocol v2 stubs.  These are set only during a
+     commit, returned by the server after we send a POST against a
+     particular revision URL.  */
+  const char *txn_stub;         /* for accessing commit transactions */
+  const char *txnprop_stub;     /* for accessing transaction props */
+
 };
 
 /*
@@ -1005,7 +1018,10 @@ svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
 svn_error_t *
 svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx);
 
-/* Create an OPTIONS request */
+/* Create an OPTIONS request.  When run, ask for an
+   activity-collection-set in the request body (retrievable via
+   accessor above) and also parse the server's capability headers into
+   the SESSION->capabilites hash. */
 svn_error_t *
 svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 svn_ra_serf__session_t *session,

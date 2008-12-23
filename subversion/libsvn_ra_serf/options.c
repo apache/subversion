@@ -245,6 +245,34 @@ svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx)
   return ctx->parser_ctx->error;
 }
 
+
+struct options_response_ctx_t {
+ /* baton for __handle_xml_parser() */
+  svn_ra_serf__xml_parser_t *parser_ctx;
+
+ /* session into which we'll store server capabilities */
+  svn_ra_serf__session_t *session;      
+
+};
+
+
+/* A custom serf_response_handler_t which is mostly a wrapper around
+   svn_ra_serf__handle_xml_parser -- it just notices OPTIONS response
+   headers first, before handing off to the xml parser.  */
+static apr_status_t
+options_response_handler(serf_request_t *request,
+                         serf_bucket_t *response,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  struct options_response_ctx_t *orc = baton;
+
+  /* ### Parse the response headers here into orc->session->capabilities */
+
+  return svn_ra_serf__handle_xml_parser(request, response, orc->parser_ctx, pool);
+}
+
+
 svn_error_t *
 svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 svn_ra_serf__session_t *session,
@@ -255,6 +283,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   svn_ra_serf__options_context_t *new_ctx;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
+  struct options_response_ctx_t *options_response_ctx;
 
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
 
@@ -284,8 +313,12 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   parser_ctx->done = &new_ctx->done;
   parser_ctx->status_code = &new_ctx->status_code;
 
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
-  handler->response_baton = parser_ctx;
+  options_response_ctx = apr_pcalloc(pool, sizeof(*options_response_ctx));
+  options_response_ctx->parser_ctx = parser_ctx;
+  options_response_ctx->session = session;
+
+  handler->response_handler = options_response_handler;
+  handler->response_baton = options_response_ctx;
 
   svn_ra_serf__request_create(handler);
 
