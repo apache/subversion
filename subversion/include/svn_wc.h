@@ -2021,16 +2021,20 @@ typedef struct svn_wc_entry_t
   /** copyfrom revision */
   svn_revnum_t copyfrom_rev;
 
-  /** old version of conflicted file */
+  /** old version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_old;
 
-  /** new version of conflicted file */
+  /** new version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_new;
 
-  /** working version of conflicted file */
+  /** working version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_wrk;
 
-  /** property reject file */
+  /** property reject file. A file basename, relative to the user's
+   * directory that the THIS_DIR entry refers to. */
   const char *prejfile;
 
   /** last up-to-date time for text contents (0 means no information available)
