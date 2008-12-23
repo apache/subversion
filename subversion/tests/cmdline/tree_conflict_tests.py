@@ -436,9 +436,9 @@ def ensure_tree_conflict(sbox, operation,
       if 'action' in test_what:
         # Determine what notification to expect
         if 'notify' in test_what:
-          expected_stdout = svntest.verify.RegexOutput("   C " +
-                                                       re.escape(victim) + "$",
-                                                       match_all=False)
+          expected_stdout = svntest.verify.ExpectedOutput("   C " + victim
+                                                          + "\n",
+                                                          match_all=False)
         else:
           expected_stdout = svntest.verify.AnyOutput
         # Do the main action
