@@ -22,7 +22,7 @@ echo "========= make"
 make || exit $?
 
 echo "========= make javahl"
-make javahl || exit $?
+make javahl -j1 || exit $?
 
 echo "========= make swig-py"
 make swig-py || exit $?
@@ -31,6 +31,6 @@ echo "========= make swig-pl"
 make swig-pl || exit $?
 
 echo "========= make swig-rb"
-make swig-rb || exit $?
+make swig-rb -j1 || exit $?
 
 exit 0
