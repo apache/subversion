@@ -1538,6 +1538,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(canonicalize_abspath),
     SVN_TEST_PASS(skip_deltas),
     SVN_TEST_PASS(redundant_copy),
-    SVN_TEST_XFAIL(orphaned_textmod_change),
+    SVN_TEST_PASS(orphaned_textmod_change),
     SVN_TEST_NULL
   };
