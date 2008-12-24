@@ -923,8 +923,13 @@ svn_error_t *svn_ra_neon__set_neon_body_provider(svn_ra_neon__request_t *req,
   b->body_file = body_file;
   b->req = req;
 
+#ifdef NE_LFS
+  ne_set_request_body_provider64(req->ne_req, (off64_t) finfo.size,
+                                 ra_neon_body_provider, b);
+#else
   ne_set_request_body_provider(req->ne_req, (size_t) finfo.size,
                                ra_neon_body_provider, b);
+#endif
   return SVN_NO_ERROR;
 }
 
