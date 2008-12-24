@@ -923,7 +923,7 @@ svn_error_t *svn_ra_neon__set_neon_body_provider(svn_ra_neon__request_t *req,
   b->body_file = body_file;
   b->req = req;
 
-#if defined(SVN_NEON_0_28)
+#if defined(SVN_NEON_0_27)
   ne_set_request_body_provider(req->ne_req, (ne_off_t)finfo.size,
                                ra_neon_body_provider, b);
 #elif defined(NE_LFS)
