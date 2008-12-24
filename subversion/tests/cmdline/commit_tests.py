@@ -2647,10 +2647,8 @@ def tree_conflicts_resolved(sbox):
 
   # Mark the tree conflict victims as resolved
   G = os.path.join(wc_dir, 'A', 'D', 'G')
-  pi = os.path.join(G, 'pi')
-  rho = os.path.join(G, 'rho')
-  tau = os.path.join(G, 'tau')
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', pi, rho, tau)
+  victims = [ os.path.join(G, v) for v in ['pi', 'rho', 'tau'] ]
+  svntest.actions.run_and_verify_resolved(victims)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
@@ -2662,7 +2660,8 @@ def tree_conflicts_resolved(sbox):
 
   # Recursively resolved in parent directory -- expect same result
   G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G2, '-R')
+  victims = [ os.path.join(G2, v) for v in ['pi', 'rho', 'tau'] ]
+  svntest.actions.run_and_verify_resolved(victims, G2, '-R')
 
   expected_status.wc_dir = wc_dir_2
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)

@@ -117,7 +117,7 @@ def main():
     global ann_html
     version = sys.argv[1]
     if not re.compile(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$').match(version):
-        print "Did you really mean to use version '%s'?" % version
+        print("Did you really mean to use version '%s'?" % version)
         return
 
     md5sums = []

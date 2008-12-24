@@ -97,7 +97,7 @@ def add_items(opener, folderId, release_name):
 
 def main():
     if len(sys.argv) < 5:
-        print usage
+        print(usage)
         sys.exit(-1)
 
     folderId = int(sys.argv[3])

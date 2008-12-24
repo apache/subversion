@@ -23,11 +23,11 @@ import sys, os
 try:
   from svn import core
 except ImportError, e:
-  print >> sys.stderr, \
-        "ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
-        "Hint: Set your PYTHONPATH environment variable, or adjust your " \
-        "PYTHONSTARTUP\nfile to point to your Subversion install " \
-        "location's svn-python directory." % e
+  sys.stderr.write("ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
+                   "Hint: Set your PYTHONPATH environment variable, or adjust your " \
+                   "PYTHONSTARTUP\nfile to point to your Subversion install " \
+                   "location's svn-python directory.\n" % e)
+  sys.stderr.flush()
   sys.exit(1)
 
 def get_errors():

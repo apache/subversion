@@ -78,11 +78,14 @@ def createExpectedOutput(expected, match_all=True):
   return expected
 
 class ExpectedOutput:
-  """Contains expected output, and performs comparisions."""
+  """Contains expected output, and performs comparisons."""
   def __init__(self, output, match_all=True):
-    """Set SELF.output (which may be None).  If MATCH_ALL is True,
-    require that all lines from OUTPUT match when performing
-    comparsisons.  If False, allow any lines to match."""
+    """Initialize the expected output to OUTPUT which is a string, or a list
+    of strings, or None meaning an empty list. If MATCH_ALL is True, the
+    expected strings will be matched with the actual strings, one-to-one, in
+    the same order. If False, they will be matched with a subset of the
+    actual strings, one-to-one, in the same order, ignoring any other actual
+    strings among the matching ones."""
     self.output = output
     self.match_all = match_all
     self.is_reg_exp = False
@@ -120,12 +123,26 @@ class ExpectedOutput:
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
     if not self.is_reg_exp:
-      if len(expected) != len(actual):
-        return False
-      for i in range(0, len(actual)):
-        if not self.is_equivalent_line(expected[i], actual[i]):
+      if self.match_all:
+        # The EXPECTED lines must match the ACTUAL lines, one-to-one, in
+        # the same order.
+        if len(expected) != len(actual):
           return False
-      return True
+        for i in range(0, len(actual)):
+          if not self.is_equivalent_line(expected[i], actual[i]):
+            return False
+        return True
+      else:
+        # The EXPECTED lines must match a subset of the ACTUAL lines,
+        # one-to-one, in the same order, with zero or more other ACTUAL
+        # lines interspersed among the matching ACTUAL lines.
+        i_expected = 0
+        for actual_line in actual:
+          if self.is_equivalent_line(expected[i_expected], actual_line):
+            i_expected += 1
+            if i_expected == len(expected):
+              return True
+        return False
     else:
       expected_re = expected[0]
       # If we want to check that every line matches the regexp
@@ -138,7 +155,7 @@ class ExpectedOutput:
         all_lines_match_re = False
 
       # If a regex was provided assume that we actually require
-      # some output. Fail if we don't.
+      # some output. Fail if we don't have any.
       if len(actual) == 0:
         return False
 

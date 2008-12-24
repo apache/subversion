@@ -76,17 +76,17 @@ def check_file(fname, old_re, new_lic):
   s = open(fname).read()
   if (not old_re.search(s)
       and not re_EXCLUDE.search(s)):
-    print fname
+    print(fname)
 
 def change_license(fname, old_re, new_lic):
   s = open(fname).read()
   m = old_re.search(s)
   if not m:
-    print 'ERROR: missing old license:', fname
+    print('ERROR: missing old license: %s' % fname)
   else:
     s = s[:m.start()] + new_lic + s[m.end():]
     open(fname, 'w').write(s)
-    print 'Changed:', fname
+    print('Changed: %s' % fname)
 
 def visit(baton, dirname, dircontents):
   file_func = baton
@@ -110,7 +110,7 @@ def visit(baton, dirname, dircontents):
 def main():
   file_func = check_file
   if sys.argv[1] == '-C':
-    print 'Changing license text...'
+    print('Changing license text...')
     del sys.argv[1]
     file_func = change_license
 
