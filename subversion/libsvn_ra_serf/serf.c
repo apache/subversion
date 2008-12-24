@@ -385,6 +385,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
 
+  serf_sess->youngest_rev = SVN_INVALID_REVNUM;
+
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
 
@@ -520,6 +522,14 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
 
+  /* Using HTTP protocol v2;  already got it in the initial OPTIONS response. */
+  if (SVN_IS_VALID_REVNUM(session->youngest_rev))
+    {
+      *latest_revnum = session->youngest_rev;
+      return SVN_NO_ERROR;
+    }
+
+  /* Fall back to old-fashioned way of getting it. */
   return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                         session, session->repos_url.path,
                                         SVN_INVALID_REVNUM, latest_revnum,

@@ -310,6 +310,22 @@ capabilities_headers_iterator_callback(void *baton,
         }
     }
 
+  /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
+  if (svn_cstring_casecmp(key, "svn") == 0)
+    {
+      if (svn_cstring_casecmp(key, SVN_DAV_ROOT_STUB_HEADER) == 0)
+        orc->session->root_stub = apr_pstrdup(orc->session->pool, val);
+
+      if (svn_cstring_casecmp(key, SVN_DAV_PEGREV_STUB_HEADER) == 0)
+        orc->session->pegrev_stub = apr_pstrdup(orc->session->pool, val);
+
+      if (svn_cstring_casecmp(key, SVN_DAV_REV_STUB_HEADER) == 0)
+        orc->session->rev_stub = apr_pstrdup(orc->session->pool, val);
+
+      if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
+        orc->session->youngest_rev = SVN_STR_TO_REV(val);
+    }
+
   return 0;
 }
 
