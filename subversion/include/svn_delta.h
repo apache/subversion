@@ -750,6 +750,11 @@ typedef struct svn_delta_editor_t
 {
   /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.
+   *
+   * @note This is typically used only for server->client update-type
+   * operations.  It doesn't really make much sense for commit-type
+   * operations, because the revision of a commit isn't known until
+   * the commit is finalized.
    */
   svn_error_t *(*set_target_revision)(void *edit_baton,
                                       svn_revnum_t target_revision,
@@ -779,6 +784,14 @@ typedef struct svn_delta_editor_t
    * are really removing the revision of @a path that you think you are.
    *
    * All allocations should be performed in @a pool.
+   *
+   * @note The @a revision parameter is typically used only for
+   * client->server commit-type operations, allowing the server to
+   * verify that it is deleting what the client thinks it should be
+   * deleting.  It only really makes sense in the opposite direction
+   * (during server->client update-type operations) when the trees
+   * whose delta is being described are ancestrally related (that is,
+   * one tree is an ancestor of the other).
    */
   svn_error_t *(*delete_entry)(const char *path,
                                svn_revnum_t revision,

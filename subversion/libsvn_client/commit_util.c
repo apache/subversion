@@ -234,8 +234,6 @@ bail_on_tree_conflicted_children(const char *path,
     /* There can't possibly be tree-conflicts information here. */
     return SVN_NO_ERROR;
 
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
                                       path, pool));
 

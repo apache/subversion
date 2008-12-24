@@ -42,7 +42,7 @@ def am_uuid(ctx):
   ok(list(db.keys()) == [1], 'uuid Table Structure')
   ok(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
     db[1]), 'UUID format')
-  print "Repos UUID: %s" % db[1]
+  print("Repos UUID: %s" % db[1])
 
 def am_revisions(ctx):
   "revisions"
@@ -54,8 +54,8 @@ def am_revisions(ctx):
     while rec:
       rev = skel.Rev(rec[1])
       revnum = rec[0] - 1
-      print "r%d: txn %s%s" % (revnum, rev.txn,
-          (rev.txn not in ctx.txns_db) and "*** MISSING TXN ***" or "")
+      print("r%d: txn %s%s" % (revnum, rev.txn,
+          (rev.txn not in ctx.txns_db) and "*** MISSING TXN ***" or ""))
       ok(rev.txn not in txn2rev, 'Multiple revs bound to same txn')
       txn2rev[rev.txn] = revnum
       rec = cur.next()
@@ -80,10 +80,10 @@ def am_changes(ctx):
         lead = "txn %s:" % rec[0]
         if prevtxn == rec[0]:
           lead = " " * len(lead)
-        print "%s %s %s %s %s %s%s" % (lead, opmap[ch.kind], ch.path, ch.node,
+        print("%s %s %s %s %s %s%s" % (lead, opmap[ch.kind], ch.path, ch.node,
             ch.textmod and "T" or "-", ch.propmod and "P" or "-",
             (ch.node not in ctx.nodes_db) \
-                and "*** MISSING NODE ***" or "")
+                and "*** MISSING NODE ***" or ""))
         prevtxn = rec[0]
         if len(rec[0]) > maximum_txnid_len:
           maximum_txnid_len = len(rec[0])
@@ -95,7 +95,7 @@ def am_copies(ctx):
   "copies"
   cur = ctx.copies_db.cursor()
   try:
-    print "next-key: %s" % ctx.copies_db['next-key']
+    print("next-key: %s" % ctx.copies_db['next-key'])
     rec = cur.first()
     while rec:
       if rec[0] != 'next-key':
@@ -105,9 +105,9 @@ def am_copies(ctx):
           destpath = "*** MISSING NODE ***"
         else:
           destpath = skel.Node(destnode).createpath
-        print "cpy %s: %s %s @txn %s to %s (%s)" % (rec[0],
+        print("cpy %s: %s %s @txn %s to %s (%s)" % (rec[0],
             {'copy':'C','soft-copy':'S'}[cp.kind], cp.srcpath or "-",
-            cp.srctxn or "-", cp.destnode, destpath)
+            cp.srctxn or "-", cp.destnode, destpath))
       rec = cur.next()
   finally:
     cur.close()
@@ -116,7 +116,7 @@ def am_txns(ctx):
   "transactions"
   cur = ctx.txns_db.cursor()
   try:
-    print "next-key: %s" % ctx.txns_db['next-key']
+    print("next-key: %s" % ctx.txns_db['next-key'])
     length = 1
     found_some = True
     while found_some:
@@ -131,8 +131,8 @@ def am_txns(ctx):
             ok(ctx.txn2rev[rec[0]] == int(txn.rev), 'Txn->rev not <-txn')
           else:
             label = "%s based-on %s" % (txn.kind, txn.basenode)
-          print "txn %s: %s root-node %s props %d copies %s" % (rec[0],
-              label, txn.rootnode, len(txn.proplist) / 2, ",".join(txn.copies))
+          print("txn %s: %s root-node %s props %d copies %s" % (rec[0],
+              label, txn.rootnode, len(txn.proplist) / 2, ",".join(txn.copies)))
         rec = cur.next()
       length += 1
   finally:
@@ -142,7 +142,7 @@ def am_nodes(ctx):
   "nodes"
   cur = ctx.nodes_db.cursor()
   try:
-    print "next-key: %s" % ctx.txns_db['next-key']
+    print("next-key: %s" % ctx.txns_db['next-key'])
     rec = cur.first()
     data = {}
     while rec:
@@ -180,8 +180,8 @@ def am_nodes(ctx):
           nd.prednode or "-", nd.predcount, prkind, nd.proprep or "-",
           drkind, nd.datarep or "-", nd.editrep or "-")
       if nd.createpath == "/":
-        print
-      print stringdata
+        print("")
+      print(stringdata)
   finally:
     cur.close()
 
@@ -196,7 +196,7 @@ def am_reps(ctx):
   ctx.bad_reps = {}
   cur = ctx.reps_db.cursor()
   try:
-    print "next-key: %s" % ctx.txns_db['next-key']
+    print("next-key: %s" % ctx.txns_db['next-key'])
     rec = cur.first()
     while rec:
       if rec[0] != 'next-key':
@@ -208,13 +208,13 @@ def am_reps(ctx):
           if rep.str not in ctx.strings_db:
             note = " *MISS*"
             ctx.bad_reps[rec[0]] = None
-          print lead+("fulltext str %s%s" % (rep.str, note))
+          print(lead+("fulltext str %s%s" % (rep.str, note)))
           if ctx.verbose:
-            print textwrap.fill(get_string(ctx, rep.str), initial_indent="  ",
-                subsequent_indent="  ", width=78)
+            print(textwrap.fill(get_string(ctx, rep.str), initial_indent="  ",
+                subsequent_indent="  ", width=78))
         elif rep.kind == "delta":
-          print lead+("delta of %s window%s" % (len(rep.windows),
-            len(rep.windows) != 1 and "s" or ""))
+          print(lead+("delta of %s window%s" % (len(rep.windows),
+            len(rep.windows) != 1 and "s" or "")))
           for window in rep.windows:
             noterep = notestr = ""
             if window.vs_rep not in ctx.reps_db:
@@ -223,10 +223,10 @@ def am_reps(ctx):
             if window.str not in ctx.strings_db:
               notestr = " *MISS*"
               ctx.bad_reps[rec[0]] = None
-            print "\toff %s len %s vs-rep %s%s str %s%s" % (window.offset,
-                window.size, window.vs_rep, noterep, window.str, notestr)
+            print("\toff %s len %s vs-rep %s%s str %s%s" % (window.offset,
+                window.size, window.vs_rep, noterep, window.str, notestr))
         else:
-          print lead+"*** UNKNOWN REPRESENTATION TYPE ***"
+          print(lead+"*** UNKNOWN REPRESENTATION TYPE ***")
       rec = cur.next()
   finally:
     cur.close()
@@ -243,7 +243,7 @@ def am_stringsize(ctx):
     while rec:
       size = size + len(rec[1] or "")
       rec = cur.next()
-    print size, size/1024.0, size/1024.0/1024.0
+    print("%s %s %s" % (size, size/1024.0, size/1024.0/1024.0))
   finally:
     cur.close()
 
@@ -259,16 +259,16 @@ modules = (
     )
 
 def main():
-  print "Repository View for '%s'" % dbhome
-  print
+  print("Repository View for '%s'" % dbhome)
+  print("")
   ctx = svnfs.Ctx(dbhome, readonly=1)
   # Stash process state in a library data structure. Yuck!
   ctx.verbose = 0
   try:
     for am in modules:
-      print "MODULE: %s" % am.__doc__
+      print("MODULE: %s" % am.__doc__)
       am(ctx)
-      print
+      print("")
   finally:
     ctx.close()
 

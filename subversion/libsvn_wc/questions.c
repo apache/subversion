@@ -616,6 +616,9 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
   svn_node_kind_t kind;
   const char *path;
 
+  *text_conflicted_p = FALSE;
+  *prop_conflicted_p = FALSE;
+
   if (entry->conflict_old)
     {
       path = svn_path_join(dir_path, entry->conflict_old, pool);

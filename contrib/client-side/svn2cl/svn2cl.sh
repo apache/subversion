@@ -36,7 +36,7 @@ set -e
 set -u
 
 # svn2cl version
-VERSION="0.10"
+VERSION="0.11"
 
 # set default parameters
 PWD=`pwd`
@@ -57,6 +57,7 @@ IGNORE_MESSAGE_STARTING=""
 TITLE="ChangeLog"
 REVISION_LINK="#r"
 TMPFILES=""
+AWK="awk"
 
 # do command line checking
 prog=`basename $0`
@@ -288,13 +289,16 @@ AUTHORSFILE=`echo "$AUTHORSFILE" | sed "/^[^/]/s|^|$pwd/|"`
 if [ -z "$CHANGELOG" ]
 then
   CHANGELOG="ChangeLog"
-  [ "$OUTSTYLE" != "cl" ] && CHANGELOG="$CHANGELOG.$OUTSTYLE"
+  if [ "$OUTSTYLE" != "cl" ]
+  then
+    CHANGELOG="$CHANGELOG.$OUTSTYLE"
+  fi
 fi
 
 # try to determin a prefix to strip from all paths
 if [ "$STRIPPREFIX" = "AUTOMATICALLY-DETERMINED" ]
 then
-  STRIPPREFIX=`LANG=C eval "$SVNINFOCMD" 2> /dev/null | awk '/^URL:/{url=$2} /^Repository Root:/{root=$3} END{if(root){print substr(url,length(root)+2)}else{gsub("^.*/","",url);print url}}'`
+  STRIPPREFIX=`LANG=C eval "$SVNINFOCMD" 2> /dev/null | $AWK '/^URL:/{url=$2} /^Repository Root:/{root=$3} END{if(root){print substr(url,length(root)+2)}else{n=split(url,u,"/");print u[n]}}'`
   STRIPPREFIX=`echo "$STRIPPREFIX" | sed 's/%20/ /g'`
 fi
 

@@ -789,10 +789,11 @@ II.   INSTALLATION
       * Visual Studio 6 and service pack. It can be built with later versions
         of Visual Studio (Visual Studio.NET 2002, 2003, 2005 and Visual C++
         Express 2005) but these instructions assume VS6.
-      * A recent Windows SDK if you are using Visual Studio 6.
-        You can get it from MSDN if you have it or from
-        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/ if you
-        don't.
+      * A recent Windows SDK.
+        If you are using Visual Studio 6, you need the latest SDK which
+        is compatible with VC6, which is the one from february 2003.
+        You can get it from MSDN:
+        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
       * Python 2.2 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/

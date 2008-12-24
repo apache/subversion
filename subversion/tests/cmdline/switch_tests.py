@@ -777,8 +777,7 @@ def failed_anchor_is_target(sbox):
     raise svntest.Failure
 
   # Resolve tree conflict at psi.
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'resolved', psi_path)
+  svntest.actions.run_and_verify_resolved([psi_path])
 
   # The switch should now be complete.
   # ### Instead of "treeconflict=None" which means "don't check", we should

@@ -418,7 +418,9 @@ only be present if the node-rev properties have been changed.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID
-assignments (without the leading underscores).
+assignments (without the leading underscores).  The next node-ID is
+also used as a uniquifier for representations which may share the same
+underlying rep.
 
 The "children" file for a node-revision begins with a copy of the hash
 dump representation of the directory entries from the old node-rev (or

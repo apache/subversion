@@ -2021,16 +2021,20 @@ typedef struct svn_wc_entry_t
   /** copyfrom revision */
   svn_revnum_t copyfrom_rev;
 
-  /** old version of conflicted file */
+  /** old version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_old;
 
-  /** new version of conflicted file */
+  /** new version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_new;
 
-  /** working version of conflicted file */
+  /** working version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_wrk;
 
-  /** property reject file */
+  /** property reject file. A file basename, relative to the user's
+   * directory that the THIS_DIR entry refers to. */
   const char *prejfile;
 
   /** last up-to-date time for text contents (0 means no information available)
@@ -2271,23 +2275,22 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a path in a dir under version control, decide if it is in
+/** Given a @a path in a dir under version control, decide if it is in a
  * state of conflict; return the answers in @a *text_conflicted_p, @a
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
- * answers are uninteresting, simply pass @c NULL pointers.
+ * answers are uninteresting, simply pass @c NULL pointers for those.
  *
  * If @a path is unversioned or does not exist, @a *text_conflicted_p and
  * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
  * @a adm_access is the admin access baton of the parent directory.
  *
- * If the @a path has a corresponding text conflict file (with suffix
- * .mine, .theirs, etc.) that cannot be found, assume that the text
- * conflict has been resolved by the user and return @c FALSE in @a
- * *text_conflicted_p.
+ * If the @a path has corresponding text conflict files (with suffix .mine,
+ * .theirs, etc.) that cannot be found, assume that the text conflict has
+ * been resolved by the user and return @c FALSE in @a *text_conflicted_p.
  *
- * Similarly, if a property conflicts file (.prej suffix) exists, but
- * it cannot be found, assume that the property conflicts have been
+ * Similarly, if a property conflicts file (.prej suffix) is said to exist,
+ * but it cannot be found, assume that the property conflicts have been
  * resolved by the user and return @c FALSE in @a *prop_conflicted_p.
  *
  * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
@@ -2303,8 +2306,20 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
-/** Like svn_wc_conflicted_p2, but without the capability to
- * detect tree conflicts.
+/** Given a @a dir_path under version control, decide if one of its entries
+ * (@a entry) is in a state of conflict; return the answers in @a
+ * text_conflicted_p and @a prop_conflicted_p. These pointers must not be
+ * null.
+ *
+ * If the @a entry mentions that text conflict files (with suffix .mine,
+ * .theirs, etc.) exist, but they cannot be found, assume the text conflict
+ * has been resolved by the user and return FALSE in @a *text_conflicted_p.
+ *
+ * Similarly, if the @a entry mentions that a property conflicts file (.prej
+ * suffix) exists, but it cannot be found, assume the property conflicts
+ * have been resolved by the user and return FALSE in @a *prop_conflicted_p.
+ *
+ * The @a entry is not updated.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */

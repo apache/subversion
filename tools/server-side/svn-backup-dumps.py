@@ -3,7 +3,7 @@
 # svn-backup-dumps.py -- Create dumpfiles to backup a subversion repository.
 #
 # ====================================================================
-# Copyright (c) 2006 CollabNet.  All rights reserved.
+# Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -448,7 +448,7 @@ class SvnBackup:
                         bufout += buf
                 else:
                     if printerr:
-                        print buf,
+                        sys.stdout.write("%s " % buf)
                     else:
                         buferr += buf
             if len(readfds) == 0:
@@ -456,7 +456,7 @@ class SvnBackup:
             selres = select.select(readfds, [], [])
         rc = proc.wait()
         if printerr:
-            print ""
+            print("")
         return (rc, bufout, buferr)
 
     def exec_cmd_nt(self, cmd, output=None, printerr=False):
@@ -484,7 +484,7 @@ class SvnBackup:
         if r[0] == 0 and len(r[2]) == 0:
             return int(r[1].strip())
         else:
-            print r[2]
+            print(r[2])
         return -1
 
     def transfer_ftp(self, absfilename, filename):
@@ -518,7 +518,7 @@ class SvnBackup:
         r = self.exec_cmd(cmd)
         rc = r[0] == 0
         if not rc:
-            print r[2]
+            print(r[2])
         return rc
 
     def transfer(self, absfilename, filename):
@@ -529,7 +529,7 @@ class SvnBackup:
         elif self.__transfer[0] == "smb":
             self.transfer_smb(absfilename, filename)
         else:
-            print "unknown transfer method '%s'." % self.__transfer[0]
+            print("unknown transfer method '%s'." % self.__transfer[0])
 
     def create_dump(self, checkonly, overwrite, fromrev, torev=None):
         revparam = "%d" % fromrev
@@ -552,12 +552,12 @@ class SvnBackup:
             return os.path.exists(absfilename)
         elif os.path.exists(absfilename):
             if overwrite:
-                print "overwriting " + absfilename
+                print("overwriting " + absfilename)
             else:
-                print "%s already exists." % absfilename
+                print("%s already exists." % absfilename)
                 return True
         else:
-            print "writing " + absfilename
+            print("writing " + absfilename)
         cmd = [ "svnadmin", "dump",
                 "--incremental", "-r", revparam, self.__repospath ]
         if self.__quiet:
@@ -653,26 +653,26 @@ if __name__ == "__main__":
                        help="shows detailed help for the transfer option.")
     (options, args) = parser.parse_args(sys.argv)
     if options.help_transfer:
-        print "Transfer help:"
-        print ""
-        print "  FTP:"
-        print "    -t ftp:<host>:<user>:<password>:<dest-path>"
-        print ""
-        print "  SMB (using smbclient):"
-        print "    -t smb:<share>:<user>:<password>:<dest-path>"
-        print ""
+        print("Transfer help:")
+        print("")
+        print("  FTP:")
+        print("    -t ftp:<host>:<user>:<password>:<dest-path>")
+        print("")
+        print("  SMB (using smbclient):")
+        print("    -t smb:<share>:<user>:<password>:<dest-path>")
+        print("")
         sys.exit(0)
     rc = False
     try:
         backup = SvnBackup(options, args)
         rc = backup.execute()
     except SvnBackupException, e:
-        print "svn-backup-dumps.py:", e
+        print("svn-backup-dumps.py: %s" % e)
     if rc:
-        print "Everything OK."
+        print("Everything OK.")
         sys.exit(0)
     else:
-        print "An error occured!"
+        print("An error occured!")
         sys.exit(1)
 
 # vim:et:ts=4:sw=4
