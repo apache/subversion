@@ -202,6 +202,10 @@ struct svn_ra_serf__session_t {
   /* Repository UUID */
   const char *uuid;
 
+  /* Cached HEAD revnum of the repository: for v2 protocol, usually
+     returned by initial OPTIONS response. */
+  svn_revnum_t youngest_rev;
+
   /* Opaque URL "stubs".  If the OPTIONS response returns these, then
      we know we're using HTTP protocol v2. */
   const char *root_stub;        /* where to send REPORT requests */
