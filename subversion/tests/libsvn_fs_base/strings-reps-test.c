@@ -41,7 +41,7 @@ struct rep_args
 {
   const char *key;
   svn_fs_t *fs;
-  skel_t *skel;
+  svn_skel_t *skel;
 };
 
 
