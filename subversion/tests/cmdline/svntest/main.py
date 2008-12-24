@@ -527,6 +527,9 @@ def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   if config_contents is None:
     config_contents = """
 #
+[auth]
+password-stores =
+
 [miscellany]
 interactive-conflicts = false
 """
