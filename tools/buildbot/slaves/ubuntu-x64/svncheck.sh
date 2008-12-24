@@ -16,10 +16,16 @@ test -e ../mount-ramdrive && ../mount-ramdrive
 echo "========= make check"
 make check FS_TYPE=$1 CLEANUP=1 || exit $?
 
-# echo "========= make check-swig-pl"
-# make check-swig-pl || exit $?
+echo "========= make check-javahl"
+make check-javahl || exit $?
 
-#echo "========= make check-swig-rb"
-#make check-swig-rb || exit $?
+echo "========= make check-swig-pl"
+make check-swig-pl || exit $?
+
+echo "========= make check-swig-py"
+make check-swig-py || exit $?
+
+echo "========= make check-swig-rb"
+make check-swig-rb || exit $?
 
 exit 0
