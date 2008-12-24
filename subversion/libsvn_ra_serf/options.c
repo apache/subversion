@@ -246,6 +246,7 @@ svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx)
 }
 
 
+/* Context for both options_response_handler() and capabilities callback. */
 struct options_response_ctx_t {
  /* baton for __handle_xml_parser() */
   svn_ra_serf__xml_parser_t *parser_ctx;
@@ -253,7 +254,64 @@ struct options_response_ctx_t {
  /* session into which we'll store server capabilities */
   svn_ra_serf__session_t *session;      
 
+  /* For temporary work only. */
+  apr_pool_t *pool;
 };
+
+
+/* This implements serf_bucket_headers_do_callback_fn_t.
+ */
+static int
+capabilities_headers_iterator_callback(void *baton,
+                                       const char *key,
+                                       const char *val)
+{
+  struct options_response_ctx_t *orc = baton;
+
+  if (svn_cstring_casecmp(key, "dav") == 0)
+    {
+      /* Each header may contain multiple values, separated by commas, e.g.:
+           DAV: version-control,checkout,working-resource
+           DAV: merge,baseline,activity,version-controlled-collection
+           DAV: http://subversion.tigris.org/xmlns/dav/svn/depth */
+      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE, orc->pool);
+
+      /* Right now we only have a few capabilities to detect, so just
+         seek for them directly.  This could be written slightly more
+         efficiently, but that wouldn't be worth it until we have many
+         more capabilities. */
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+        {
+          apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                       APR_HASH_KEY_STRING, SERF_CAPABILITY_YES);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+        {
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say SERF_CAPABILITY_YES. */
+          apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                       APR_HASH_KEY_STRING, SERF_CAPABILITY_SERVER_YES);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+        {
+          apr_hash_set(orc->session->capabilities,
+                       SVN_RA_CAPABILITY_LOG_REVPROPS,
+                       APR_HASH_KEY_STRING, SERF_CAPABILITY_YES);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
+        {
+          apr_hash_set(orc->session->capabilities,
+                       SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                       APR_HASH_KEY_STRING, SERF_CAPABILITY_YES);
+        }
+    }
+
+  return 0;
+}
 
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
@@ -266,9 +324,20 @@ options_response_handler(serf_request_t *request,
                          apr_pool_t *pool)
 {
   struct options_response_ctx_t *orc = baton;
+  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
 
-  /* ### Parse the response headers here into orc->session->capabilities */
+  /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
+               APR_HASH_KEY_STRING, SERF_CAPABILITY_NO);
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, SERF_CAPABILITY_NO);
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, SERF_CAPABILITY_NO);
 
+  /* Then see which ones we can discover. */
+  serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
+
+  /* Execute the 'real' response handler to XML-parse the repsonse body. */
   return svn_ra_serf__handle_xml_parser(request, response, orc->parser_ctx, pool);
 }
 
@@ -316,6 +385,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   options_response_ctx = apr_pcalloc(pool, sizeof(*options_response_ctx));
   options_response_ctx->parser_ctx = parser_ctx;
   options_response_ctx->session = session;
+  options_response_ctx->pool = pool;
 
   handler->response_handler = options_response_handler;
   handler->response_baton = options_response_ctx;

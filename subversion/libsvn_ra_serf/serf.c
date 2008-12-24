@@ -47,111 +47,6 @@
 
 /** Capabilities exchange. */
 
-/* Both server and repository support the capability. */
-static const char *capability_yes = "yes";
-/* Either server or repository does not support the capability. */
-static const char *capability_no = "no";
-/* Server supports the capability, but don't yet know if repository does. */
-static const char *capability_server_yes = "server-yes";
-
-/* Baton type for parsing capabilities out of "OPTIONS" response headers. */
-struct capabilities_response_baton
-{
-  /* This session's capabilities table. */
-  apr_hash_t *capabilities;
-
-  /* Signaler for svn_ra_serf__context_run_wait(). */
-  svn_boolean_t done;
-
-  /* For temporary work only. */
-  apr_pool_t *pool;
-};
-
-
-/* This implements serf_bucket_headers_do_callback_fn_t.
- * BATON is a 'struct capabilities_response_baton *'.
- */
-static int
-capabilities_headers_iterator_callback(void *baton,
-                                       const char *key,
-                                       const char *val)
-{
-  struct capabilities_response_baton *crb = baton;
-
-  if (svn_cstring_casecmp(key, "dav") == 0)
-    {
-      /* Each header may contain multiple values, separated by commas, e.g.:
-           DAV: version-control,checkout,working-resource
-           DAV: merge,baseline,activity,version-controlled-collection
-           DAV: http://subversion.tigris.org/xmlns/dav/svn/depth */
-      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE, crb->pool);
-
-      /* Right now we only have a few capabilities to detect, so just
-         seek for them directly.  This could be written slightly more
-         efficiently, but that wouldn't be worth it until we have many
-         more capabilities. */
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
-        {
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
-        }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
-        {
-          /* The server doesn't know what repository we're referring
-             to, so it can't just say capability_yes. */
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_server_yes);
-        }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
-        {
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
-        }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
-        {
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-                       APR_HASH_KEY_STRING, capability_yes);
-        }
-    }
-
-  return 0;
-}
-
-
-/* This implements serf_response_handler_t.
- * HANDLER_BATON is a 'struct capabilities_response_baton *'.
- */
-static apr_status_t
-capabilities_response_handler(serf_request_t *request,
-                              serf_bucket_t *response,
-                              void *handler_baton,
-                              apr_pool_t *pool)
-{
-  struct capabilities_response_baton *crb = handler_baton;
-  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
-
-  /* Start out assuming all capabilities are unsupported. */
-  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-               APR_HASH_KEY_STRING, capability_no);
-
-  /* Then see which ones we can discover. */
-  serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, crb);
-
-  /* Bunch of exit conditions to set before we go. */
-  crb->done = TRUE;
-  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
-  return APR_SUCCESS;
-}
-
-
 /* Exchange capabilities with the server, by sending an OPTIONS
    request announcing the client's capabilities, and by filling
    SERF_SESS->capabilities with the server's capabilities as read
@@ -159,29 +54,15 @@ capabilities_response_handler(serf_request_t *request,
 static svn_error_t *
 exchange_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *handler;
-  struct capabilities_response_baton crb;
+  svn_ra_serf__options_context_t *opt_ctx;
 
-  crb.pool = pool;
-  crb.done = FALSE;
-  crb.capabilities = serf_sess->capabilities;
+  /* This routine automatically fills in serf_sess->capabilities */
+  svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
+                                  serf_sess->repos_url_str, pool);
 
-  /* No obvious advantage to using svn_ra_serf__create_options_req() here. */
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->method = "OPTIONS";
-  handler->path = serf_sess->repos_url_str;
-  handler->body_buckets = NULL;
-  handler->response_handler = capabilities_response_handler;
-  handler->response_baton = &crb;
-  handler->session = serf_sess;
-  handler->conn = serf_sess->conns[0];
-
-  /* Client capabilities are sent automagically with every request;
-     that's why we don't set up a handler->header_delegate above.
-     See issue #3255 for more. */
-  svn_ra_serf__request_create(handler);
-
-  return svn_ra_serf__context_run_wait(&(crb.done), serf_sess, pool);
+  return svn_ra_serf__context_run_wait(
+                                   svn_ra_serf__get_options_done_ptr(opt_ctx),
+                                   serf_sess, pool);
 }
 
 
@@ -217,7 +98,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
      NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
      has a very similar code block.  If you change something here,
      check there as well. */
-  if (cap_result == capability_server_yes)
+  if (cap_result == SERF_CAPABILITY_SERVER_YES)
     {
       if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
         {
@@ -244,7 +125,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
               if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
                 {
                   svn_error_clear(err);
-                  cap_result = capability_no;
+                  cap_result = SERF_CAPABILITY_NO;
                 }
               else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                 {
@@ -252,13 +133,13 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                      anyway we're in r0, so this is a likely error,
                      but it means the repository supports mergeinfo! */
                   svn_error_clear(err);
-                  cap_result = capability_yes;
+                  cap_result = SERF_CAPABILITY_YES;
                 }
               else
                 return err;
             }
           else
-            cap_result = capability_yes;
+            cap_result = SERF_CAPABILITY_YES;
 
           apr_hash_set(serf_sess->capabilities,
                        SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
@@ -269,15 +150,15 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
           return svn_error_createf
             (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
              _("Don't know how to handle '%s' for capability '%s'"),
-             capability_server_yes, capability);
+             SERF_CAPABILITY_SERVER_YES, capability);
         }
     }
 
-  if (cap_result == capability_yes)
+  if (cap_result == SERF_CAPABILITY_YES)
     {
       *has = TRUE;
     }
-  else if (cap_result == capability_no)
+  else if (cap_result == SERF_CAPABILITY_NO)
     {
       *has = FALSE;
     }
