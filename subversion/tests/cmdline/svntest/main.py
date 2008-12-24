@@ -386,7 +386,7 @@ def open_pipe(command, mode):
     command = [str(x) for x in command]
     p = subprocess.Popen(command, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         close_fds=not windows)
+                         close_fds=not windows, universal_newlines=windows)
     return p.stdin, p.stdout, p.stderr, (p, command)
   else:
     # Python <2.4
