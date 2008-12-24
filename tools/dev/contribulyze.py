@@ -714,26 +714,26 @@ def process_committers(committers):
 
 
 def usage():
-  print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
-        % os.path.basename(sys.argv[0])
-  print ''
-  print 'Create HTML files in the current directory, rooted at index.html,'
-  print 'in which you can browse to see who contributed what.'
-  print ''
-  print 'The log input should use the contribution-tracking format defined'
-  print 'in http://subversion.tigris.org/hacking.html#crediting.'
-  print ''
-  print 'Options:'
-  print ''
-  print '  -h, -H, -?, --help   Print this usage message and exit'
-  print '  -C FILE              Use FILE as the COMMITTERS file'
-  print '  -U URL               Use URL as a Python interpolation pattern to'
-  print '                       generate URLs to link revisions to some kind'
-  print '                       of web-based viewer (e.g. ViewCVS).  The'
-  print '                       interpolation pattern should contain exactly'
-  print '                       one format specifier, \'%s\', which will be'
-  print '                       replaced with the revision number.'
-  print ''
+  print('USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
+        % os.path.basename(sys.argv[0]))
+  print('')
+  print('Create HTML files in the current directory, rooted at index.html,')
+  print('in which you can browse to see who contributed what.')
+  print('')
+  print('The log input should use the contribution-tracking format defined')
+  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('')
+  print('Options:')
+  print('')
+  print('  -h, -H, -?, --help   Print this usage message and exit')
+  print('  -C FILE              Use FILE as the COMMITTERS file')
+  print('  -U URL               Use URL as a Python interpolation pattern to')
+  print('                       generate URLs to link revisions to some kind')
+  print('                       of web-based viewer (e.g. ViewCVS).  The')
+  print('                       interpolation pattern should contain exactly')
+  print('                       one format specifier, \'%s\', which will be')
+  print('                       replaced with the revision number.')
+  print('')
 
 
 def main():

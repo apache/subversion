@@ -42,7 +42,7 @@ class SVNShell(Cmd):
     if line == "EOF":
       # Ctrl-D is a command without a newline.  Print a newline, so the next
       # shell prompt is not on the same line as the last svnshell prompt.
-      print
+      print("")
       return "exit"
     return line
 
@@ -56,20 +56,20 @@ class SVNShell(Cmd):
              "Ehh...I don't think so, chief."]
 
   def default(self, line):
-    print self._errors[randint(0, len(self._errors) - 1)]
+    print(self._errors[randint(0, len(self._errors) - 1)])
 
   def do_cat(self, arg):
     """dump the contents of a file"""
     if not len(arg):
-      print "You must supply a file path."
+      print("You must supply a file path.")
       return
     catpath = self._parse_path(arg)
     kind = fs.check_path(self.root, catpath)
     if kind == core.svn_node_none:
-      print "Path '%s' does not exist." % catpath
+      print("Path '%s' does not exist." % catpath)
       return
     if kind == core.svn_node_dir:
-      print "Path '%s' is not a file." % catpath
+      print("Path '%s' is not a file." % catpath)
       return
     ### be nice to get some paging in here.
     stream = fs.file_contents(self.root, catpath)
@@ -86,7 +86,7 @@ class SVNShell(Cmd):
     # make sure that path actually exists in the filesystem as a directory
     kind = fs.check_path(self.root, newpath)
     if kind != core.svn_node_dir:
-      print "Path '%s' is not a valid filesystem directory." % newpath
+      print("Path '%s' is not a valid filesystem directory." % newpath)
       return
     self.path = newpath
 
@@ -107,21 +107,21 @@ class SVNShell(Cmd):
         parts = self._path_to_parts(newpath)
         name = parts.pop(-1)
         parent = self._parts_to_path(parts)
-        print parent + ':' + name
+        print(parent + ':' + name)
         tmpentries = fs.dir_entries(self.root, parent)
         if not tmpentries.get(name, None):
           return
         entries = {}
         entries[name] = tmpentries[name]
       else:
-        print "Path '%s' not found." % newpath
+        print("Path '%s' not found." % newpath)
         return
 
     keys = list(entries.keys())
     keys.sort()
 
-    print "   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
-    print "----------------------------------------------------------------------------"
+    print("   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME")
+    print("----------------------------------------------------------------------------")
 
     for entry in keys:
       fullpath = parent + '/' + entry
@@ -145,8 +145,8 @@ class SVNShell(Cmd):
       else:
         date = self._format_date(date)
 
-      print "%6s %8s %12s %8s %12s %s" % (created_rev, author[:8],
-                                          node_id, size, date, name)
+      print("%6s %8s %12s %8s %12s %s" % (created_rev, author[:8],
+                                          node_id, size, date, name))
 
   def do_lstxns(self, arg):
     """list the transactions available for browsing"""
@@ -155,11 +155,11 @@ class SVNShell(Cmd):
     counter = 0
     for txn in txns:
       counter = counter + 1
-      print "%8s  " % txn,
+      sys.stdout.write("%8s   " % txn)
       if counter == 6:
-        print ""
+        print("")
         counter = 0
-    print ""
+    print("")
 
   def do_pcat(self, arg):
     """list the properties of a path"""
@@ -168,17 +168,17 @@ class SVNShell(Cmd):
       catpath = self._parse_path(arg)
     kind = fs.check_path(self.root, catpath)
     if kind == core.svn_node_none:
-      print "Path '%s' does not exist." % catpath
+      print("Path '%s' does not exist." % catpath)
       return
     plist = fs.node_proplist(self.root, catpath)
     if not plist:
       return
     for pkey, pval in plist.items():
-      print 'K ' + str(len(pkey))
-      print pkey
-      print 'P ' + str(len(pval))
-      print pval
-    print 'PROPS-END'
+      print('K ' + str(len(pkey)))
+      print(pkey)
+      print('P ' + str(len(pval)))
+      print(pval)
+    print('PROPS-END')
 
   def do_setrev(self, arg):
     """set the current revision to view"""
@@ -189,7 +189,7 @@ class SVNShell(Cmd):
         rev = int(arg)
       newroot = fs.revision_root(self.fs_ptr, rev)
     except:
-      print "Error setting the revision to '" + arg + "'."
+      print("Error setting the revision to '" + arg + "'.")
       return
     fs.close_root(self.root)
     self.root = newroot
@@ -203,7 +203,7 @@ class SVNShell(Cmd):
       txnobj = fs.open_txn(self.fs_ptr, arg)
       newroot = fs.txn_root(txnobj)
     except:
-      print "Error setting the transaction to '" + arg + "'."
+      print("Error setting the transaction to '" + arg + "'.")
       return
     fs.close_root(self.root)
     self.root = newroot
@@ -214,7 +214,7 @@ class SVNShell(Cmd):
   def do_youngest(self, arg):
     """list the youngest revision available for browsing"""
     rev = fs.youngest_rev(self.fs_ptr)
-    print rev
+    print(rev)
 
   def do_exit(self, arg):
     sys.exit(0)
