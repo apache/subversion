@@ -25,13 +25,5 @@ Candidate changes for 1.5.6:
    Votes:
      +1: rhuijben
 
- * r34915
-   Support commit of a new file of size(post-compression) >2G.
-   Justification:
-     Neon has this capability atleast since 0.25 so we should use it if
-     such a support is available.
-   Votes:
-     +1: kameshj
-
 Approved changes:
 =================
