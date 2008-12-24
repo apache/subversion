@@ -47,4 +47,4 @@ can find the files <a href="dist/">here</a>.</p>
 
 import sys
 rev = int(sys.argv[1])
-print webpagetext % (rev, rev)
+print(webpagetext % (rev, rev))

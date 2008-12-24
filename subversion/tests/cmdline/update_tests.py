@@ -2120,7 +2120,13 @@ def update_wc_on_windows_drive(sbox):
   if drive is None:
     raise svntest.Skip
 
-  os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
+  try:
+    # Python >=2.4
+    import subprocess
+    subprocess.call(['subst', drive +':', sbox.wc_dir])
+  except ImportError:
+    # Python <2.4
+    os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
   wc_dir = drive + ':/'
   was_cwd = os.getcwd()
 
@@ -2219,7 +2225,13 @@ def update_wc_on_windows_drive(sbox):
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive
-    os.popen3('subst /D ' + drive +': ', 't')
+    try:
+      # Python >=2.4
+      import subprocess
+      subprocess.call(['subst', '/D', drive +':'])
+    except ImportError:
+      # Python <2.4
+      os.popen3('subst /D ' + drive +': ', 't')
 
 # Issue #2618: update a working copy with a replaced file.
 def update_wc_with_replaced_file(sbox):

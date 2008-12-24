@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # ====================================================================
 # Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
@@ -74,6 +75,7 @@ import sys
 # Python 2.3 is required for datetime
 if sys.version_info < (2, 3):
     sys.stderr.write("Error: Python 2.3 or higher required.\n")
+    sys.stderr.flush()
     sys.exit(1)
 
 import getopt
@@ -93,9 +95,11 @@ def usage_and_exit(errmsg=None):
         stream = sys.stdout
     else:
         stream = sys.stderr
-    print >> stream, __doc__
+    stream.write("%s\n" % __doc__)
+    stream.flush()
     if errmsg:
-        print >> stream, "\nError: %s" % (errmsg)
+        stream.write("\nError: %s\n" % errmsg)
+	stream.flush()
         sys.exit(2)
     sys.exit(0)
 

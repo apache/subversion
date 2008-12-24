@@ -48,7 +48,7 @@ svn_client__derive_location(const char **url,
                             svn_revnum_t *peg_revnum,
                             const char *path_or_url,
                             const svn_opt_revision_t *peg_revision,
-                            const svn_ra_session_t *ra_session,
+                            svn_ra_session_t *ra_session,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);

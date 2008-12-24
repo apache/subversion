@@ -352,6 +352,7 @@ svn_ra_serf__cleanup_serf_session(void *data)
   svn_ra_serf__session_t *serf_sess = data;
   int i;
 
+#if !SERF_VERSION_AT_LEAST(0,3,0)
   /* If we are cleaning up due to an error, don't call connection_close
    * as we're already on our way out of here and we'll defer to serf's
    * cleanups.
@@ -361,6 +362,7 @@ svn_ra_serf__cleanup_serf_session(void *data)
       return APR_SUCCESS;
     }
 
+  /* serf 0.3.0+ will close connections on pool cleanup */
   for (i = 0; i < serf_sess->num_conns; i++)
     {
       if (serf_sess->conns[i])
@@ -369,6 +371,8 @@ svn_ra_serf__cleanup_serf_session(void *data)
           serf_sess->conns[i] = NULL;
         }
     }
+#endif
+
   return APR_SUCCESS;
 }
 

@@ -203,9 +203,9 @@ svn_wc__del_tree_conflict(const char *victim_path,
                           apr_pool_t *pool);
 
 /*
- * Read tree conflict descriptions from @a conflict_data.  Append
- * pointers to newly allocated svn_wc_conflict_description_t objects to
- * the array pointed to by @a conflicts.  @a dir_path is the path to the
+ * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
+ * to an array of pointers to svn_wc_conflict_description_t objects, all
+ * newly allocated in @a pool.  @a dir_path is the path to the
  * working copy directory whose conflicts are being read.  The conflicts
  * read are the tree conflicts on the immediate child nodes of @a
  * dir_path.  Do all allocations in @a pool.
@@ -217,7 +217,7 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
                             const char *conflict_data,
                             const char *dir_path,
                             apr_pool_t *pool);
- 
+
 /** Return a duplicate of @a conflict, allocated in @a pool.
  * A deep copy of all members, except the adm_access member, will be made.
  *
@@ -229,7 +229,7 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
 
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
- * 
+ *
  * @since New in 1.6.*/
 svn_error_t *
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,

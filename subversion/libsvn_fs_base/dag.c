@@ -275,7 +275,7 @@ get_dir_entries(apr_hash_t **entries_p,
   apr_hash_t *entries = apr_hash_make(pool);
   apr_hash_index_t *hi;
   svn_string_t entries_raw;
-  skel_t *entries_skel;
+  svn_skel_t *entries_skel;
 
   /* Error if this is not a directory. */
   if (noderev->kind != svn_node_dir)
@@ -372,7 +372,7 @@ set_entry(dag_node_t *parent,
   apr_size_t len;
   svn_string_t raw_entries;
   svn_stringbuf_t *raw_entries_buf;
-  skel_t *entries_skel;
+  svn_skel_t *entries_skel;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(parent);
 
   /* Get the parent's node-revision. */
@@ -540,7 +540,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
   node_revision_t *noderev;
   apr_hash_t *proplist = NULL;
   svn_string_t raw_proplist;
-  skel_t *proplist_skel;
+  svn_skel_t *proplist_skel;
 
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev, node->fs, node->id,
@@ -580,7 +580,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
   svn_stream_t *wstream;
   apr_size_t len;
-  skel_t *proplist_skel;
+  svn_skel_t *proplist_skel;
   svn_stringbuf_t *raw_proplist_buf;
   base_fs_data_t *bfd = fs->fsap_data;
 
@@ -846,7 +846,7 @@ svn_fs_base__dag_delete(dag_node_t *parent,
   node_revision_t *parent_noderev;
   const char *rep_key, *mutable_rep_key;
   apr_hash_t *entries = NULL;
-  skel_t *entries_skel;
+  svn_skel_t *entries_skel;
   svn_fs_t *fs = parent->fs;
   svn_string_t str;
   svn_fs_id_t *id = NULL;

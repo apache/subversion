@@ -30,6 +30,7 @@
 #endif
 
 #include <locale.h>
+#include <math.h>
 
 #include "svn_nls.h"
 #include "svn_pools.h"
@@ -3224,11 +3225,15 @@ svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value)
   default:
     if (rb_obj_is_kind_of(value,
                           rb_const_get(rb_cObject, rb_intern("Time")))) {
-	long sec;
+      double sec;
+      double whole_sec;
+      double frac_sec;
 
-	sec = NUM2LONG(rb_funcall(value, rb_intern("to_i"), 0));
-	rev->kind = svn_opt_revision_date;
-	rev->value.date = apr_time_from_sec(sec);
+      sec = NUM2DBL(rb_funcall(value, rb_intern("to_f"), 0));
+      frac_sec = modf(sec, &whole_sec);
+
+      rev->kind = svn_opt_revision_date;
+      rev->value.date = apr_time_make(whole_sec, frac_sec*APR_USEC_PER_SEC);
     } else {
       rb_raise(rb_eArgError,
                "invalid type: %s",

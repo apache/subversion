@@ -1474,6 +1474,20 @@ def run_and_validate_lock(path, username):
             comment_re.match(output))):
     raise Failure
 
+def run_and_verify_resolved(expected_paths, *args):
+  """Run "svn resolved" with arguments ARGS, and verify that it resolves the
+  paths in EXPECTED_PATHS and no others. If no ARGS are specified, use the
+  elements of EXPECTED_PATHS as the arguments."""
+  # TODO: verify that the status of PATHS changes accordingly.
+  if len(args) == 0:
+    args = expected_paths
+  expected_output = verify.UnorderedOutput([
+    "Resolved conflicted state of '" + path + "'\n" for path in
+    expected_paths])
+  run_and_verify_svn(None, expected_output, [],
+                     'resolved', *args)
+
+
 ######################################################################
 # Other general utilities
 

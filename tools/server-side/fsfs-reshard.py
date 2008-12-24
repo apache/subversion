@@ -52,7 +52,7 @@ from errno import EEXIST
 
 def usage():
   """Print a usage message and exit."""
-  print """usage: %s REPOS_PATH MAX_FILES_PER_SHARD [START END]
+  print("""usage: %s REPOS_PATH MAX_FILES_PER_SHARD [START END]
 
 Perform an offline conversion of an FSFS repository between linear
 (readable by Subversion 1.4 or later) and sharded (readable by
@@ -65,56 +65,64 @@ specify a linear layout.  Subversion 1.5 uses a default value of
 
 Convert revisions START through END inclusive if specified, or all
 revisions if unspecified.
-""" % sys.argv[0]
+""" % sys.argv[0])
   sys.exit(1)
 
 def incompatible_repos_format(repos_path, format):
   """Print an error saying that REPOS_PATH is a repository with an
   incompatible repository format FORMAT, then exit."""
-  print >> sys.stderr, """error: unable to convert repository '%s'.
+  sys.stderr.write("""error: unable to convert repository '%s'.
 
 This repository is not compatible with this tool.  Valid
 repository formats are '3' or '5'; this repository is
 format '%s'.
-""" % (repos_path, format)
+
+""" % (repos_path, format))
+  sys.stderr.flush()
   sys.exit(1)
 
 def incompatible_fs_format(repos_path, format):
   """Print an error saying that REPOS_PATH is a repository with an
   incompatible filesystem format FORMAT, then exit."""
-  print >> sys.stderr, """error: unable to convert repository '%s'.
+  sys.stderr.write("""error: unable to convert repository '%s'.
 
 This repository contains a filesystem that is not compatible with
 this tool.  Valid filesystem formats are '1', '2', or '3'; this
 repository contains a filesystem with format '%s'.
-""" % (repos_path, format)
+
+""" % (repos_path, format))
+  sys.stderr.flush()
   sys.exit(1)
 
 def unexpected_fs_format_options(repos_path):
   """Print an error saying that REPOS_PATH is a repository with
   unexpected filesystem format options, then exit."""
-  print >> sys.stderr, """error: unable to convert repository '%s'.
+  sys.stderr.write("""error: unable to convert repository '%s'.
 
 This repository contains a filesystem that appears to be invalid -
 there is unexpected data after the filesystem format number.
-""" % repos_path
+
+""" % repos_path)
+  sys.stderr.flush()
   sys.exit(1)
 
 def incompatible_fs_format_option(repos_path, option):
   """Print an error saying that REPOS_PATH is a repository with an
   incompatible filesystem format option OPTION, then exit."""
-  print >> sys.stderr, """error: unable to convert repository '%s'.
+  sys.stderr.write("""error: unable to convert repository '%s'.
 
 This repository contains a filesystem that is not compatible with
 this tool.  This tool recognises the 'layout' option but the
 filesystem uses the '%s' option.
-""" % (repos_path, option)
+
+""" % (repos_path, option))
+  sys.stderr.flush()
   sys.exit(1)
 
 def warn_about_fs_format_1(repos_path, format_path):
   """Print a warning saying that REPOS_PATH contains a format 1 FSFS
   filesystem that we can't reconstruct, then exit."""
-  print >> sys.stderr, """warning: conversion of '%s' will be one-way.
+  sys.stderr.write("""warning: conversion of '%s' will be one-way.
 
 This repository is currently readable by Subversion 1.1 or later.
 This tool can convert this repository to one that is readable by
@@ -124,7 +132,9 @@ separate dump/load step would be required.
 
 If you would like to upgrade this repository anyway, delete the
 file '%s' and re-run this tool.
-""" % (repos_path, format_path)
+
+""" % (repos_path, format_path))
+  sys.stderr.flush()
   sys.exit(1)
 
 def check_repos_format(repos_path):
@@ -243,9 +253,9 @@ def linearise(path):
     if root_path == path:
       continue
     if len(dirnames) > 0:
-      print >> sys.stderr, \
-        "error: directory '%s' contains other unexpected directories." \
-        % root_path
+      sys.stderr.write("error: directory '%s' contains other unexpected directories.\n" \
+        % root_path)
+      sys.stderr.flush()
       sys.exit(1)
     for name in filenames:
       from_path = os.path.join(root_path, name)
@@ -286,8 +296,9 @@ def shard(path, max_files_per_shard, start, end):
   skipped = 0
   for name in os.listdir(tmp):
     if not name.endswith('.shard'):
-      print >> sys.stderr, "warning: ignoring unexpected subdirectory '%s'." \
-        % os.path.join(tmp, name)
+      sys.stderr.write("warning: ignoring unexpected subdirectory '%s'.\n" \
+        % os.path.join(tmp, name))
+      sys.stderr.flush()
       skipped += 1
       continue
     from_path = os.path.join(tmp, name)
@@ -312,23 +323,23 @@ def main():
   db_path = os.path.join(repos_path, 'db')
   current_path = os.path.join(db_path, 'current')
   if not os.path.exists(current_path):
-    print >> sys.stderr, \
-      "error: '%s' doesn't appear to be a Subversion FSFS repository." \
-      % repos_path
+    sys.stderr.write("error: '%s' doesn't appear to be a Subversion FSFS repository.\n" \
+      % repos_path)
+    sys.stderr.flush()
     sys.exit(1)
 
   try:
     max_files_per_shard = int(max_files_per_shard)
   except ValueError, OverflowError:
-    print >> sys.stderr, \
-      "error: maximum files per shard ('%s') is not a valid number." \
-      % max_files_per_shard
+    sys.stderr.write("error: maximum files per shard ('%s') is not a valid number.\n" \
+      % max_files_per_shard)
+    sys.stderr.flush()
     sys.exit(1)
 
   if max_files_per_shard < 0:
-    print >> sys.stderr, \
-      "error: maximum files per shard ('%d') must not be negative." \
-      % max_files_per_shard
+    sys.stderr.write("error: maximum files per shard ('%d') must not be negative.\n" \
+      % max_files_per_shard)
+    sys.stderr.flush()
     sys.exit(1)
 
   # Check the format of the repository.
@@ -337,44 +348,44 @@ def main():
 
   # Let the user know what's going on.
   if max_files_per_shard > 0:
-    print "Converting '%s' to a sharded structure with %d files per directory" \
-      % (repos_path, max_files_per_shard)
+    print("Converting '%s' to a sharded structure with %d files per directory" \
+      % (repos_path, max_files_per_shard))
     if sharded:
-      print '(will convert to a linear structure first)'
+      print('(will convert to a linear structure first)')
   else:
-    print "Converting '%s' to a linear structure" % repos_path
+    print("Converting '%s' to a linear structure" % repos_path)
 
   # Prevent access to the repository for the duration of the conversion.
   # There's no clean way to do this, but since the format of the repository
   # is indeterminate, let's remove the format file while we're converting.
-  print '- marking the repository as invalid'
+  print('- marking the repository as invalid')
   remove_fs_format(repos_path)
 
   # First, convert to a linear scheme (this makes recovery easier because
   # it's easier to reason about the behaviour on restart).
   if sharded:
-    print '- linearising db/revs'
+    print('- linearising db/revs')
     linearise(os.path.join(repos_path, 'db', 'revs'))
-    print '- linearising db/revprops'
+    print('- linearising db/revprops')
     linearise(os.path.join(repos_path, 'db', 'revprops'))
 
   if max_files_per_shard == 0:
     # We're done.  Stamp the filesystem with a format 2 db/format file.
-    print '- marking the repository as a valid linear repository'
+    print('- marking the repository as a valid linear repository')
     write_fs_format(repos_path, '2\n')
   else:
-    print '- sharding db/revs'
+    print('- sharding db/revs')
     shard(os.path.join(repos_path, 'db', 'revs'), max_files_per_shard,
           start, end)
-    print '- sharding db/revprops'
+    print('- sharding db/revprops')
     shard(os.path.join(repos_path, 'db', 'revprops'), max_files_per_shard,
           start, end)
 
     # We're done.  Stamp the filesystem with a format 3 db/format file.
-    print '- marking the repository as a valid sharded repository'
+    print('- marking the repository as a valid sharded repository')
     write_fs_format(repos_path, '3\nlayout sharded %d\n' % max_files_per_shard)
 
-  print '- done.'
+  print('- done.')
   sys.exit(0)
 
 if __name__ == '__main__':

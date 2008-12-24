@@ -14,22 +14,17 @@ Blocker:
    if the text in sqlite.m4 about being able to use a sqlite/
    subdirectory is in any way true, etc etc)
 
- * Tree conflicts - essential issues:
+ * #3334: Tree conflicts "merry-go-round" about update updating the base.
+   Julian Foad is working on this. Done for when victim is a file, still
+   doing for when victim is a directory.
 
-   - #3334: "Merry-go-round" about update updating the base.
-     Julian Foad has this under way in branch "tc-issue-3334".
-
- * Switch to skel for TC information, rather than using another
-   serialization format.
+ * #3343: Switch to skel for TC information, rather than using another
+   serialization format. (Also listed under "Optional". Not really a blocker?)
 
  * Test failures in tree conflicts tests on RA-Serf:
    <http://www.mobsol.be/buildbot/x86-macosx-gnu%2520shared%2520daily%2520ra_serf/builds/96>
 
  * Test failures in Ruby bindings.
-
- * Test failures in JavaHL bindings. Mark Phippard said "There is an error in
-   JavaHL but the test was specifically added to show a bug that was recently
-   discovered."
 
 Optional:
 

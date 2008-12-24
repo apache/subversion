@@ -98,10 +98,20 @@ else:
   _bat = ''
 
 try:
-  from popen2 import Popen3
-  platform_with_popen3_class = True
+  # Python >=2.4
+  import subprocess
+  platform_with_subprocess = True
 except ImportError:
-  platform_with_popen3_class = False
+  # Python <2.4
+  platform_with_subprocess = False
+
+if not platform_with_subprocess:
+  # Python <2.4
+  try:
+    from popen2 import Popen3
+    platform_with_popen3_class = True
+  except ImportError:
+    platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
 if sys.platform == 'win32':
@@ -371,12 +381,22 @@ def open_pipe(command, mode):
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
-  if platform_with_popen3_class:
-    kid = Popen3(command, True)
-    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+  if platform_with_subprocess:
+    # Python >=2.4
+    command = [str(x) for x in command]
+    p = subprocess.Popen(command, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         close_fds=not windows, universal_newlines=windows)
+    return p.stdin, p.stdout, p.stderr, (p, command)
   else:
-    inf, outf, errf = os.popen3(command, mode)
-    return inf, outf, errf, None
+    # Python <2.4
+    command = ' '.join([_quote_arg(x) for x in command])
+    if platform_with_popen3_class:
+      kid = Popen3(command, True)
+      return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+    else:
+      inf, outf, errf = os.popen3(command, mode)
+      return inf, outf, errf, None
 
 def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   """Waits for KID (opened with open_pipe) to finish, dying
@@ -387,32 +407,52 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
 
   kid, command = waiter
 
-  wait_code = kid.wait()
+  if platform_with_subprocess:
+    # Python >=2.4
+    exit_code = kid.wait()
 
-  if os.WIFSIGNALED(wait_code):
-    exit_signal = os.WTERMSIG(wait_code)
-    if stdout_lines is not None:
-      sys.stdout.write("".join(stdout_lines))
-    if stderr_lines is not None:
-      sys.stderr.write("".join(stderr_lines))
-    if verbose_mode:
-      # show the whole path to make it easier to start a debugger
-      sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (command, exit_signal))
-    raise SVNProcessTerminatedBySignal
+    if exit_code < 0:
+      exit_signal = os.WTERMSIG(-exit_code)
+      if stdout_lines is not None:
+        sys.stdout.write("".join(stdout_lines))
+      if stderr_lines is not None:
+        sys.stderr.write("".join(stderr_lines))
+      if verbose_mode:
+        # show the whole path to make it easier to start a debugger
+        sys.stderr.write("CMD: %s terminated by signal %d\n"
+                         % (command, exit_signal))
+      raise SVNProcessTerminatedBySignal
+    else:
+      if exit_code and verbose_mode:
+        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+      return exit_code
   else:
-    exit_code = os.WEXITSTATUS(wait_code)
-    if exit_code and verbose_mode:
-      sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
-    return exit_code
+    # Python <2.4
+    wait_code = kid.wait()
+
+    if os.WIFSIGNALED(wait_code):
+      exit_signal = os.WTERMSIG(wait_code)
+      if stdout_lines is not None:
+        sys.stdout.write("".join(stdout_lines))
+      if stderr_lines is not None:
+        sys.stderr.write("".join(stderr_lines))
+      if verbose_mode:
+        # show the whole path to make it easier to start a debugger
+        sys.stderr.write("CMD: %s terminated by signal %d\n"
+                         % (command, exit_signal))
+      raise SVNProcessTerminatedBySignal
+    else:
+      exit_code = os.WEXITSTATUS(wait_code)
+      if exit_code and verbose_mode:
+        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+      return exit_code
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
-  args = ' '.join(map(_quote_arg, varargs))
-
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command), args))
+    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
+                                      ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
   if binary_mode:
@@ -420,7 +460,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   else:
     mode = 't'
 
-  infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
+  infile, outfile, errfile, kid = open_pipe([command] + list(varargs), mode)
 
   if stdin_lines:
     for x in stdin_lines:
@@ -487,6 +527,9 @@ def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   if config_contents is None:
     config_contents = """
 #
+[auth]
+password-stores =
+
 [miscellany]
 interactive-conflicts = false
 """
@@ -674,22 +717,22 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
   create_repos(dst_path)
-  dump_args = ' dump "' + src_path + '"'
-  load_args = ' load "' + dst_path + '"'
+  dump_args = ['dump', src_path]
+  load_args = ['load', dst_path]
 
   if ignore_uuid:
-    load_args = load_args + " --ignore-uuid"
+    load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
     sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary), \
-                     dump_args, os.path.basename(svnadmin_binary), load_args))
+                     ' '.join(dump_args), os.path.basename(svnadmin_binary), ' '.join(load_args)))
     sys.stdout.flush()
   start = time.time()
 
   dump_in, dump_out, dump_err, dump_kid = \
-           open_pipe(svnadmin_binary + dump_args, 'b')
+           open_pipe([svnadmin_binary] + dump_args, 'b')
   dump_in.close()
   load_in, load_out, load_err, load_kid = \
-           open_pipe(svnadmin_binary + load_args, 'b')
+           open_pipe([svnadmin_binary] + load_args, 'b')
   stop = time.time()
   if verbose_mode:
     print('<TIME = %.6f>' % (stop - start))

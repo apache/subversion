@@ -162,10 +162,10 @@ def main(argv):
                 untranslated += 1
 
     # We're done.  Tell the user what we did.
-    print('%d strings updated. '
+    print(('%d strings updated. '
           '%d of %d strings are still untranslated (%.0f%%).' %
           (update_count, untranslated, string_count,
-           100.0 * untranslated / string_count))
+           100.0 * untranslated / string_count)))
 
 if __name__ == '__main__':
     main(sys.argv)

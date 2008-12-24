@@ -11,16 +11,16 @@ class NodePath:
         self.headers = headers
 
     def dump(self):
-        print (' ' * 3) + self.path
+        print((' ' * 3) + self.path)
         headers = list(self.headers.keys())
         headers.sort()
         for header in headers:
-            print (' ' * 6) + header + ': ' + self.headers[header]
+            print((' ' * 6) + header + ': ' + self.headers[header])
 
 
 def dump_revision(rev, nodepaths):
     sys.stderr.write('* Normalizing revision ' + rev + '...')
-    print 'Revision ' + rev
+    print('Revision ' + rev)
     paths = list(nodepaths.keys())
     paths.sort()
     for path in paths:
@@ -93,12 +93,12 @@ def parse_file(fp):
             break
 
 def usage():
-    print 'Usage: ' + sys.argv[0] + ' [DUMPFILE]'
-    print ''
-    print 'Reads a Subversion dumpfile from DUMPFILE (or, if not provided,'
-    print 'from stdin) and normalizes the metadata contained therein,'
-    print 'printing summarized and sorted information.  This is useful for'
-    print 'generating data about dumpfiles in a diffable fashion.'
+    print('Usage: ' + sys.argv[0] + ' [DUMPFILE]')
+    print('')
+    print('Reads a Subversion dumpfile from DUMPFILE (or, if not provided,')
+    print('from stdin) and normalizes the metadata contained therein,')
+    print('printing summarized and sorted information.  This is useful for')
+    print('generating data about dumpfiles in a diffable fashion.')
     sys.exit(0)
 
 def main():
