@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # ====================================================================
 # Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
