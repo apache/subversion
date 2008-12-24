@@ -24,7 +24,7 @@ def getfile(path, filename, rev=None):
 
   if rev is None:
     rev = fs.youngest_rev(fsob)
-    print "Using youngest revision ", rev
+    print("Using youngest revision %s" % rev)
 
   root = fs.revision_root(fsob, rev)
   file = fs.file_contents(root, filename)
@@ -35,7 +35,7 @@ def getfile(path, filename, rev=None):
     sys.stdout.write(data)
 
 def usage():
-  print "USAGE: getfile.py [-r REV] repos-path file"
+  print("USAGE: getfile.py [-r REV] repos-path file")
   sys.exit(1)
 
 def main():

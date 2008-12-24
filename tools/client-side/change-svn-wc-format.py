@@ -49,8 +49,8 @@ def usage_and_exit(error_msg=None):
 
   stream = error_msg and sys.stderr or sys.stdout
   if error_msg:
-    print >> stream, "ERROR: %s\n" % error_msg
-  print >> stream, """\
+    stream.write("ERROR: %s\n\n" % error_msg)
+  stream.write("""\
 usage: %s WC_PATH SVN_VERSION [--verbose] [--force] [--skip-unknown-format]
        %s --help
 
@@ -58,7 +58,9 @@ Change the format of a Subversion working copy to that of SVN_VERSION.
 
   --skip-unknown-format    : skip directories with unknown working copy
                              format and continue the update
-""" % (progname, progname)
+
+""" % (progname, progname))
+  stream.flush()
   sys.exit(error_msg and 1 or 0)
 
 def get_adm_dir():
@@ -87,32 +89,33 @@ class WCFormatConverter:
 
     # Process the entries file for this versioned directory.
     if self.verbosity:
-      print "Processing directory '%s'" % dirname
+      print("Processing directory '%s'" % dirname)
     entries = Entries(os.path.join(dirname, get_adm_dir(), "entries"))
 
     if self.verbosity:
-      print "Parsing file '%s'" % entries.path
+      print("Parsing file '%s'" % entries.path)
     try:
       entries.parse(self.verbosity)
     except UnrecognizedWCFormatException, e:
       if self.error_on_unrecognized:
         raise
-      print >>sys.stderr, "%s, skipping" % (e,)
+      sys.stderr.write("%s, skipping\n" % e)
+      sys.stderr.flush()
 
     if self.verbosity:
-      print "Checking whether WC format can be converted"
+      print("Checking whether WC format can be converted")
     try:
       entries.assert_valid_format(format_nbr, self.verbosity)
     except LossyConversionException, e:
       # In --force mode, ignore complaints about lossy conversion.
       if self.force:
-        print "WARNING: WC format conversion will be lossy. Dropping "\
-              "field(s) %s " % ", ".join(e.lossy_fields)
+        print("WARNING: WC format conversion will be lossy. Dropping "\
+              "field(s) %s " % ", ".join(e.lossy_fields))
       else:
         raise
 
     if self.verbosity:
-      print "Writing WC format"
+      print("Writing WC format")
     entries.write_format(format_nbr)
 
   def change_wc_format(self, format_nbr):
@@ -210,16 +213,16 @@ class Entries:
 
   def assert_valid_format(self, format_nbr, verbosity=0):
     if verbosity >= 2:
-      print "Validating format for entries file '%s'" % self.path
+      print("Validating format for entries file '%s'" % self.path)
     for entry in self.entries:
       if verbosity >= 3:
-        print "Validating format for entry '%s'" % entry.get_name()
+        print("Validating format for entry '%s'" % entry.get_name())
       try:
         entry.assert_valid_format(format_nbr)
       except LossyConversionException:
         if verbosity >= 3:
-          print >> sys.stderr, "Offending entry:"
-          print >> sys.stderr, str(entry)
+          sys.stderr.write("Offending entry:\n%s\n" % entry)
+          sys.stderr.flush()
         raise
 
   def parse_entry(self, input, verbosity=0):
@@ -240,7 +243,7 @@ class Entries:
 
     if entry is not None and verbosity >= 3:
       sys.stdout.write(str(entry))
-      print "-" * 76
+      print("-" * 76)
     return entry
 
   def write_format(self, format_nbr):
@@ -365,11 +368,12 @@ def main():
   except LocalException, e:
     if debug:
       raise
-    print >> sys.stderr, str(e)
+    sys.stderr.write("%s\n" % e)
+    sys.stderr.flush()
     sys.exit(1)
 
-  print "Converted WC at '%s' into format %d for Subversion %s" % \
-        (converter.root_path, new_format_nbr, svn_version)
+  print("Converted WC at '%s' into format %d for Subversion %s" % \
+        (converter.root_path, new_format_nbr, svn_version))
 
 if __name__ == "__main__":
   main()

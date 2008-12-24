@@ -38,7 +38,7 @@ def grab_sig_ids():
             output = gpg.stdout.read()
             if rc:
                 # gpg choked, die with an error
-                print output
+                print(output)
                 sys.stderr.write("BAD SIGNATURE in %s\n" % filename)
                 shutil.move('%s.bak' % filename, filename)
                 sys.exit(1)
@@ -61,18 +61,18 @@ def generate_output(good_sigs):
         rc = gpg.wait()
         gpg_output = gpg.stdout.read()
         if rc:
-            print gpg_output
+            print(gpg_output)
             sys.stderr.write("UNABLE TO GET FINGERPRINT FOR %s" % id)
             sys.exit(1)
 
         fp = fp_pattern.match(gpg_output).groups()
-        print "   %s [%s] with fingerprint:" % (fp[3], fp[0])
-        print "   %s" % fp[1]
+        print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
+        print("   %s" % fp[1])
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print "Give me a version number!"
+        print("Give me a version number!")
         sys.exit(1)
 
     generate_output(grab_sig_ids())
