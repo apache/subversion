@@ -1258,6 +1258,16 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             const char *capability,
                             apr_pool_t *pool);
 
+/* Used by serf.c and options.c to track capabilities: */
+
+/* Both server and repository support the capability. */
+#define SERF_CAPABILITY_YES "yes"
+/* Either server or repository does not support the capability. */
+#define SERF_CAPABILITY_NO "no"
+/* Server supports the capability, but don't yet know if repository does. */
+#define SERF_CAPABILITY_SERVER_YES "server-yes"
+
+
 /* Implements the get_deleted_rev RA layer function. */
 svn_error_t *
 svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
