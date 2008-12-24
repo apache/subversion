@@ -66,7 +66,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT key, value;
-  skel_t *skel;
+  svn_skel_t *skel;
   revision_t *revision;
 
   /* Turn the revision number into a Berkeley DB record number.
@@ -116,7 +116,7 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   db_recno_t recno = 0;
-  skel_t *skel;
+  svn_skel_t *skel;
   DBT key, value;
 
   /* Convert native type to skel. */

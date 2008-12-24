@@ -165,17 +165,17 @@ putsize(char *data, apr_size_t len, apr_size_t value)
 
 
 
-static skel_t *parse(const char *data, apr_size_t len,
-                     apr_pool_t *pool);
-static skel_t *list(const char *data, apr_size_t len,
-                    apr_pool_t *pool);
-static skel_t *implicit_atom(const char *data, apr_size_t len,
-                             apr_pool_t *pool);
-static skel_t *explicit_atom(const char *data, apr_size_t len,
-                             apr_pool_t *pool);
+static svn_skel_t *parse(const char *data, apr_size_t len,
+                         apr_pool_t *pool);
+static svn_skel_t *list(const char *data, apr_size_t len,
+                        apr_pool_t *pool);
+static svn_skel_t *implicit_atom(const char *data, apr_size_t len,
+                                 apr_pool_t *pool);
+static svn_skel_t *explicit_atom(const char *data, apr_size_t len,
+                                 apr_pool_t *pool);
 
 
-skel_t *
+svn_skel_t *
 svn_skel__parse(const char *data,
                 apr_size_t len,
                 apr_pool_t *pool)
@@ -185,7 +185,7 @@ svn_skel__parse(const char *data,
 
 
 /* Parse any kind of skel object --- atom, or list.  */
-static skel_t *
+static svn_skel_t *
 parse(const char *data,
       apr_size_t len,
       apr_pool_t *pool)
@@ -213,7 +213,7 @@ parse(const char *data,
 }
 
 
-static skel_t *
+static svn_skel_t *
 list(const char *data,
      apr_size_t len,
      apr_pool_t *pool)
@@ -235,12 +235,12 @@ list(const char *data,
 
   /* Parse the children.  */
   {
-    skel_t *children = NULL;
-    skel_t **tail = &children;
+    svn_skel_t *children = NULL;
+    svn_skel_t **tail = &children;
 
     for (;;)
       {
-        skel_t *element;
+        svn_skel_t *element;
 
         /* Skip any whitespace.  */
         while (data < end
@@ -274,7 +274,7 @@ list(const char *data,
 
     /* Construct the return value.  */
     {
-      skel_t *s = apr_pcalloc(pool, sizeof(*s));
+      svn_skel_t *s = apr_pcalloc(pool, sizeof(*s));
 
       s->is_atom = FALSE;
       s->data = list_start;
@@ -289,14 +289,14 @@ list(const char *data,
 
 /* Parse an atom with implicit length --- one that starts with a name
    character, terminated by whitespace, '(', ')', or end-of-data.  */
-static skel_t *
+static svn_skel_t *
 implicit_atom(const char *data,
               apr_size_t len,
               apr_pool_t *pool)
 {
   const char *start = data;
   const char *end = data + len;
-  skel_t *s;
+  svn_skel_t *s;
 
   /* Verify that the atom starts with a name character.  At the
      moment, all callers have checked this already, but it's more
@@ -322,7 +322,7 @@ implicit_atom(const char *data,
 
 /* Parse an atom with explicit length --- one that starts with a byte
    length, as a decimal ASCII number.  */
-static skel_t *
+static svn_skel_t *
 explicit_atom(const char *data,
               apr_size_t len,
               apr_pool_t *pool)
@@ -330,7 +330,7 @@ explicit_atom(const char *data,
   const char *end = data + len;
   const char *next;
   apr_size_t size;
-  skel_t *s;
+  svn_skel_t *s;
 
   /* Parse the length.  */
   size = getsize(data, end - data, &next, end - data);
@@ -362,14 +362,14 @@ explicit_atom(const char *data,
 
 /* Unparsing skeletons.  */
 
-static apr_size_t estimate_unparsed_size(const skel_t *skel);
-static svn_stringbuf_t *unparse(const skel_t *skel,
+static apr_size_t estimate_unparsed_size(const svn_skel_t *skel);
+static svn_stringbuf_t *unparse(const svn_skel_t *skel,
                                 svn_stringbuf_t *str,
                                 apr_pool_t *pool);
 
 
 svn_stringbuf_t *
-svn_skel__unparse(const skel_t *skel, apr_pool_t *pool)
+svn_skel__unparse(const svn_skel_t *skel, apr_pool_t *pool)
 {
   svn_stringbuf_t *str;
 
@@ -389,7 +389,7 @@ svn_skel__unparse(const skel_t *skel, apr_pool_t *pool)
    in pools, it's worth trying to get the buffer size right the first
    time.  */
 static apr_size_t
-estimate_unparsed_size(const skel_t *skel)
+estimate_unparsed_size(const svn_skel_t *skel)
 {
   if (skel->is_atom)
     {
@@ -404,7 +404,7 @@ estimate_unparsed_size(const skel_t *skel)
   else
     {
       int total_len;
-      skel_t *child;
+      svn_skel_t *child;
 
       /* Allow space for opening and closing parens, and a space
          between each pair of elements.  */
@@ -420,7 +420,7 @@ estimate_unparsed_size(const skel_t *skel)
 /* Return non-zero iff we should use the implicit-length form for SKEL.
    Assume that SKEL is an atom.  */
 static svn_boolean_t
-use_implicit(const skel_t *skel)
+use_implicit(const svn_skel_t *skel)
 {
   /* If it's null, or long, we should use explicit-length form.  */
   if (skel->len == 0
@@ -452,7 +452,7 @@ use_implicit(const skel_t *skel)
 /* Append the concrete representation of SKEL to the string STR.
    Grow S with new space from POOL as necessary.  */
 static svn_stringbuf_t *
-unparse(const skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
+unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 {
   if (skel->is_atom)
     {
@@ -480,7 +480,7 @@ unparse(const skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
   else
     {
       /* Append a list to STR.  */
-      skel_t *child;
+      svn_skel_t *child;
 
       /* Emit an opening parenthesis.  */
       svn_stringbuf_ensure(str, str->len + 1);
@@ -509,10 +509,10 @@ unparse(const skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 /* Building skels.  */
 
 
-skel_t *
+svn_skel_t *
 svn_skel__str_atom(const char *str, apr_pool_t *pool)
 {
-  skel_t *skel = apr_pcalloc(pool, sizeof(*skel));
+  svn_skel_t *skel = apr_pcalloc(pool, sizeof(*skel));
   skel->is_atom = TRUE;
   skel->data = str;
   skel->len = strlen(str);
@@ -521,12 +521,12 @@ svn_skel__str_atom(const char *str, apr_pool_t *pool)
 }
 
 
-skel_t *
+svn_skel_t *
 svn_skel__mem_atom(const void *addr,
                    apr_size_t len,
                    apr_pool_t *pool)
 {
-  skel_t *skel = apr_pcalloc(pool, sizeof(*skel));
+  svn_skel_t *skel = apr_pcalloc(pool, sizeof(*skel));
   skel->is_atom = TRUE;
   skel->data = addr;
   skel->len = len;
@@ -535,16 +535,16 @@ svn_skel__mem_atom(const void *addr,
 }
 
 
-skel_t *
+svn_skel_t *
 svn_skel__make_empty_list(apr_pool_t *pool)
 {
-  skel_t *skel = apr_pcalloc(pool, sizeof(*skel));
+  svn_skel_t *skel = apr_pcalloc(pool, sizeof(*skel));
   return skel;
 }
 
 
 void
-svn_skel__prepend(skel_t *skel, skel_t *list_skel)
+svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list_skel)
 {
   /* If list_skel isn't even a list, somebody's not using this
      function properly. */
@@ -560,7 +560,7 @@ svn_skel__prepend(skel_t *skel, skel_t *list_skel)
 
 
 svn_boolean_t
-svn_skel__matches_atom(const skel_t *skel, const char *str)
+svn_skel__matches_atom(const svn_skel_t *skel, const char *str)
 {
   if (skel && skel->is_atom)
     {
@@ -574,10 +574,10 @@ svn_skel__matches_atom(const skel_t *skel, const char *str)
 
 
 int
-svn_skel__list_length(const skel_t *skel)
+svn_skel__list_length(const svn_skel_t *skel)
 {
   int len = 0;
-  const skel_t *child;
+  const svn_skel_t *child;
 
   if ((! skel) || skel->is_atom)
     return -1;
