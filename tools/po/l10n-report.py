@@ -29,9 +29,11 @@ def usage_and_exit(errmsg=None):
         stream = sys.stdout
     else:
         stream = sys.stderr
-    print >> stream, __doc__
+    stream.write("%s\n" % __doc__)
+    stream.flush()
     if errmsg:
-        print >> stream, "\nError: %s" % (errmsg)
+        stream.write("\nError: %s\n" % errmsg)
+        stream.flush()
         sys.exit(2)
     sys.exit(0)
 
@@ -82,14 +84,16 @@ class l10nReport:
         cmd = ['svn', 'revert', '--recursive', 'subversion/po']
         stderr = self.safe_command(cmd)[1]
         if stderr:
-          print >> sys.stderr, "\nError: %s" % (stderr)
+          sys.stderr.write("\nError: %s\n" % stderr)
+          sys.stderr.flush()
           sys.exit(0)
 
         # svn update
         cmd = ['svn', 'update']
         stderr = self.safe_command(cmd)[1]
         if stderr:
-          print >> sys.stderr, "\nError: %s" % (stderr)
+          sys.stderr.write("\nError: %s\n" % stderr)
+          sys.stderr.flush()
           sys.exit(0)
 
         # tools/po/po-update.sh
@@ -119,14 +123,16 @@ def main():
     l10n.pre_l10n_report()
     [info_out, info_err] = l10n.safe_command(['svn', 'info'])
     if info_err:
-        print >> sys.stderr, "\nError: %s" % (info_err)
+        sys.stderr.write("\nError: %s\n" % info_err)
+        sys.stderr.flush()
         sys.exit(0)
 
     po_dir = 'subversion/po'
     branch_name = l10n.match('URL:.*/svn/(\S+)', info_out)
     [info_out, info_err] = l10n.safe_command(['svnversion', po_dir])
     if info_err:
-        print >> sys.stderr, "\nError: %s" % (info_err)
+        sys.stderr.write("\nError: %s\n" % info_err)
+        sys.stderr.flush()
         sys.exit(0)
 
     wc_version = re.sub('[MS]', '', info_out)
@@ -139,7 +145,7 @@ def main():
     format_head = "%6s %7s %7s %7s %7s" % ("lang", "trans", "untrans",
                    "fuzzy", "obs")
     format_line = "--------------------------------------"
-    print "\n%s\n%s\n%s" % (title, format_head, format_line)
+    print("\n%s\n%s\n%s" % (title, format_head, format_line))
 
     body = ""
     for file in files:
@@ -150,7 +156,7 @@ def main():
         po_format = "%6s %7d %7d %7d %7d" %\
                     (lang, trans, untrans, fuzzy, obsolete)
         body += "%s\n" % po_format
-        print po_format
+        print(po_format)
 
     if to_email_id:
         email_from = "From: SVN DEV <noreply@subversion.tigris.org>"
@@ -163,9 +169,9 @@ def main():
 
         cmd = ['sendmail', '-t']
         l10n.safe_command(cmd, msg)
-        print "The report is sent to '%s' email id." % to_email_id
+        print("The report is sent to '%s' email id." % to_email_id)
     else:
-        print "\nYou have not passed '-m' option, so email is not sent."
+        print("\nYou have not passed '-m' option, so email is not sent.")
 
 if __name__ == "__main__":
     main()

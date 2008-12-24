@@ -176,7 +176,8 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 # special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
-COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(CFLAGS) $(SWIG_RB_INCLUDES) $(INCLUDES) -o $@ -c
+# Ruby doesn't like '-ansi', so strip that out of CFLAGS
+COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) `echo "$(CFLAGS)" | sed -e "s/-ansi//"` $(SWIG_RB_INCLUDES) $(INCLUDES) -o $@ -c
 
 # special compilation for files destined for javahl (i.e. C++)
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(JAVAHL_INCLUDES) -o $@ -c

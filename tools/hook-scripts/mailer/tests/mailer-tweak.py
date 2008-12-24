@@ -37,7 +37,7 @@ def tweak_dates(pool, home='.'):
 
 def main():
   if len(sys.argv) != 2:
-    print 'USAGE: %s REPOS' % sys.argv[0]
+    print('USAGE: %s REPOS' % sys.argv[0])
     sys.exit(1)
 
   core.run_app(tweak_dates, sys.argv[1])

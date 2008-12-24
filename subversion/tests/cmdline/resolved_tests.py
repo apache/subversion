@@ -120,13 +120,7 @@ def resolved_on_wc_root(sbox):
   svntest.actions.run_and_verify_unquiet_status(wc, expected_status)
 
   # Resolve recursively
-  svntest.actions.run_and_verify_svn(None,
-       svntest.verify.UnorderedOutput(
-         ["Resolved conflicted state of '%s'\n" % i,
-          "Resolved conflicted state of '%s'\n" % B,
-          "Resolved conflicted state of '%s'\n" % g]),
-       [],
-       'resolved', '--depth=infinity', wc)
+  svntest.actions.run_and_verify_resolved([i, B, g], '--depth=infinity', wc)
 
   expected_status.tweak('iota', 'A/B', 'A/D/gamma', treeconflict=None)
   svntest.actions.run_and_verify_unquiet_status(wc, expected_status)
@@ -318,12 +312,7 @@ def resolved_on_deleted_item(sbox):
 
 
   # Now resolve by recursing on the working copy root.
-  svntest.actions.run_and_verify_svn(None,
-       svntest.verify.UnorderedOutput(
-         ["Resolved conflicted state of '%s'\n" % B2,
-          "Resolved conflicted state of '%s'\n" % g2]),
-       [],
-       'resolved', '--depth=infinity', wc)
+  svntest.actions.run_and_verify_resolved([B2, g2], '--depth=infinity', wc)
 
   expected_status.remove('B', 'D/gamma')
   svntest.actions.run_and_verify_unquiet_status(A2, expected_status)

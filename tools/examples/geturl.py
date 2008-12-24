@@ -19,7 +19,7 @@ def main(files):
     adm_baton = svn.wc.adm_open(None, dirpath, 1, 1)
     try:
       entry = svn.wc.entry(fullpath, adm_baton, 0)
-      print entry.url
+      print(entry.url)
     finally:
       svn.wc.adm_close(adm_baton)
 

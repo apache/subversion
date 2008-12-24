@@ -197,31 +197,44 @@ class SvnReposTest < Test::Unit::TestCase
     file = "hello.txt"
     path = File.join(@wc_path, file)
     FileUtils.touch(path)
+    
+    # So we can later rename files when running the tests on
+    # Windows, close access to the repos created by the test setup.
+    test_repos_path = @repos.path
+    @repos.close
+    @repos = nil
+    @fs.close
+    @fs = nil
 
-    make_context(log) do |ctx|
+    rev = make_context(log) do |ctx|
       ctx.add(path)
       commit_info = ctx.commit(@wc_path)
       rev = commit_info.revision
 
       assert_equal(log, ctx.log_message(path, rev))
+      rev
+    end
 
-      dest_path = File.join(@tmp_path, "dest")
-      backup_path = File.join(@tmp_path, "back")
-      config = {}
-      fs_config = {}
+    dest_path = File.join(@tmp_path, "dest")
+    backup_path = File.join(@tmp_path, "back")
+    config = {}
+    fs_config = {}
 
-      repos = Svn::Repos.create(dest_path, config, fs_config)
-      repos.fs.set_warning_func(&warning_func)
+    dest_repos = Svn::Repos.create(dest_path, config, fs_config)
+    dest_repos.fs.set_warning_func(&warning_func)
+    dest_repos_path = dest_repos.path
+    dest_repos.close
 
-      FileUtils.mv(@repos.path, backup_path)
-      FileUtils.mv(repos.path, @repos.path)
+    FileUtils.mv(test_repos_path, backup_path)
+    FileUtils.mv(dest_repos_path, test_repos_path)
 
+    make_context(log) do |ctx|
       assert_raises(Svn::Error::FsNoSuchRevision) do
         assert_equal(log, ctx.log_message(path, rev))
       end
 
-      FileUtils.rm_r(@repos.path)
-      Svn::Repos.hotcopy(backup_path, @repos.path)
+      FileUtils.rm_r(test_repos_path)
+      Svn::Repos.hotcopy(backup_path, test_repos_path)
       assert_equal(log, ctx.log_message(path, rev))
     end
   end

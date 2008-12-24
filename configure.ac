@@ -715,28 +715,32 @@ AS_HELP_STRING([--enable-maintainer-mode],
       enable_debugging=yes
       if test "$GCC" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
-        CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        dnl Enable some extra warnings. Put these before the user's flags
+        dnl so the user can specify flags that override these.
+        CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl CFLAGS="$CFLAGS -Wswitch-enum -Wswitch-default"
+        dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
+
+        dnl Add each of the following flags only if the compiler accepts it.
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
 
-        CFLAGS="$CFLAGS_KEEP -Wextra-tokens"
+        CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wnewline-eof"
+        CFLAGS="-Wnewline-eof $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wshorten-64-to-32"
+        CFLAGS="-Wshorten-64-to-32 $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wold-style-definition"
+        CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         AC_LANG_POP([C])

@@ -2078,48 +2078,53 @@ class SvnClientTest < Test::Unit::TestCase
 
     File.open(path, "w") {|f| f.print(src)}
 
-    info = make_context(log) do |ctx|
+    info_revision = make_context(log) do |ctx|
       ctx.add(path)
       info = ctx.commit(@wc_path)
+      info.revision
     end
 
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
-    ctx.add_username_provider
-    assert_nothing_raised do
-      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
-                      repos_uri, info.revision)
+    Svn::Client::Context.new do |ctx|
+      setup_auth_baton(ctx.auth_baton)
+      ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
+      ctx.add_username_provider
+      assert_nothing_raised do
+        ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                        repos_uri, info_revision)
+      end
     end
 
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = "#{@author}-NG"
-    ctx.add_username_provider
-    assert_raise(Svn::Error::REPOS_HOOK_FAILURE) do
-      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
-                      repos_uri, info.revision)
+    Svn::Client::Context.new do |ctx|
+      setup_auth_baton(ctx.auth_baton)
+      ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = "#{@author}-NG"
+      ctx.add_username_provider
+      assert_raise(Svn::Error::REPOS_HOOK_FAILURE) do
+        ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                        repos_uri, info_revision)
+      end
     end
 
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
-    ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
+    Svn::Client::Context.new do |ctx|
+      setup_auth_baton(ctx.auth_baton)
+      ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
+      ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
+      end
+      assert_raise(Svn::Error::REPOS_HOOK_FAILURE) do
+        ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                        repos_uri, info_revision)
+      end
     end
-    assert_raise(Svn::Error::REPOS_HOOK_FAILURE) do
-      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
-                      repos_uri, info.revision)
-    end
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
-    ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
-      cred.username = @author
-    end
-    assert_nothing_raised do
-      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
-                      repos_uri, info.revision)
+    
+    Svn::Client::Context.new do |ctx|
+      setup_auth_baton(ctx.auth_baton)
+      ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
+      ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
+        cred.username = @author
+      end
+      assert_nothing_raised do
+        ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                        repos_uri, info_revision)
+      end
     end
   end
 

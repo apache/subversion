@@ -637,10 +637,7 @@ def basic_conflict(sbox):
   # So now mu and rho are both in a "conflicted" state.  Run 'svn
   # resolved' on them.
 
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
-                                     mu_path_backup,
-                                     rho_path_backup)
+  svntest.actions.run_and_verify_resolved([mu_path_backup, rho_path_backup])
 
   # See if they've changed back to plain old 'M' state.
   expected_status.tweak('A/mu', 'A/D/G/rho', status='M ')
