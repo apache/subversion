@@ -148,10 +148,9 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
                        const char *hex,
                        apr_pool_t *pool)
 {
-  static const unsigned char sha1_zeros_digest[APR_SHA1_DIGESTSIZE] = { 0 };
-  static const unsigned char md5_zeros_digest[APR_MD5_DIGESTSIZE] = { 0 };
   int len;
   int i;
+  unsigned char is_zeros = '\0';
 
   if (hex == NULL)
     {
@@ -172,19 +171,11 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
       ((unsigned char *)(*checksum)->digest)[i] =
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+      is_zeros |= (*checksum)->digest[i];
     }
 
-  switch (kind)
-    {
-      case svn_checksum_md5:
-        if (memcmp((*checksum)->digest, md5_zeros_digest, DIGESTSIZE(kind)) == 0)
-          *checksum = NULL;
-        break;
-      case svn_checksum_sha1:
-        if (memcmp((*checksum)->digest, sha1_zeros_digest, DIGESTSIZE(kind)) == 0)
-          *checksum = NULL;
-        break;
-    }
+  if (is_zeros == '\0')
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
