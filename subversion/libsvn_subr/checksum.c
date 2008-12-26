@@ -178,11 +178,11 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
     {
       case svn_checksum_md5:
         if (memcmp((*checksum)->digest, md5_zeros_digest, DIGESTSIZE(kind)) == 0)
-          return NULL;
+          *checksum = NULL;
         break;
       case svn_checksum_sha1:
         if (memcmp((*checksum)->digest, sha1_zeros_digest, DIGESTSIZE(kind)) == 0)
-          return NULL;
+          *checksum = NULL;
         break;
     }
 
