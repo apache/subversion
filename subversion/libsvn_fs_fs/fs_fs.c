@@ -2030,7 +2030,7 @@ representation_string(representation_t *rep,
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
 
-  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || rep->sha1_checksum == NULL)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                         " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
@@ -2044,10 +2044,8 @@ representation_string(representation_t *rep,
                       rep->expanded_size,
                       svn_checksum_to_cstring_display(rep->md5_checksum,
                                                       pool),
-                      rep->sha1_checksum ?
-                          svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                          pool) :
-                          "0000000000000000000000000000000000000000",
+                      svn_checksum_to_cstring_display(rep->sha1_checksum,
+                                                      pool),
                       rep->uniquifier);
 }
 
