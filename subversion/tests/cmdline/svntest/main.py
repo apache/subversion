@@ -386,7 +386,7 @@ def open_pipe(command, mode):
     command = [str(x) for x in command]
     p = subprocess.Popen(command, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         close_fds=not windows, universal_newlines=windows)
+                         close_fds=not windows)
     return p.stdin, p.stdout, p.stderr, (p, command)
   else:
     # Python <2.4
@@ -447,6 +447,14 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
         sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
       return exit_code
 
+# Convert Windows line ending ('\r\n') to universal line ending ('\n')
+if platform_with_subprocess and windows:
+  def _convert_windows_line_ending(line):
+    if line.endswith('\r\n'):
+      return line[:-2] + '\n'
+    else:
+      return line
+
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   # Log the command line
@@ -470,6 +478,10 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
+
+  if platform_with_subprocess and windows and not binary_mode:
+    stdout_lines = [_convert_windows_line_ending(x) for x in stdout_lines]
+    stderr_lines = [_convert_windows_line_ending(x) for x in stderr_lines]
 
   outfile.close()
   errfile.close()
