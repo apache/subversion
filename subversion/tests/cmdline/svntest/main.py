@@ -24,7 +24,12 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
-import Queue
+try:
+  # Python >=3.0
+  import queue
+except ImportError:
+  # Python <3.0
+  import Queue as queue
 import urllib
 
 import getopt
@@ -1099,7 +1104,7 @@ class TestSpawningThread(threading.Thread):
     while True:
       try:
         next_index = self.queue.get_nowait()
-      except Queue.Empty:
+      except queue.Empty:
         return
 
       self.run_one(next_index)
@@ -1279,7 +1284,7 @@ def _internal_run_tests(test_list, testnums, parallel):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
   else:
-    number_queue = Queue.Queue()
+    number_queue = queue.Queue()
     for num in testnums:
       number_queue.put(num)
 
