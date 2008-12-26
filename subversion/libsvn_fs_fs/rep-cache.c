@@ -159,8 +159,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* We only allow SHA1 checksums in this table. */
-  if (rep->sha1_checksum == NULL
-        || svn_checksum_to_cstring(rep->sha1_checksum, pool) == NULL)
+  if (rep->sha1_checksum == NULL)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
