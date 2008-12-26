@@ -25,5 +25,9 @@ Candidate changes for 1.5.6:
    Votes:
      +1: rhuijben
 
+ * r34919, r34924
+   Make svn client to use the 'LFS' capability of 'neon' to allow commits 
+   of new file(post-compression) beyond > 2G in size.
+
 Approved changes:
 =================
