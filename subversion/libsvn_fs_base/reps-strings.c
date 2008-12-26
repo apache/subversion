@@ -900,7 +900,6 @@ txn_body_read_rep(void *baton, trail_t *trail)
           if (args->rb->offset == args->rb->size)
             {
               representation_t *rep;
-              svn_checksum_t *checked_checksum;
 
               svn_checksum_final(&args->rb->md5_checksum,
                                  args->rb->md5_checksum_ctx, trail->pool);
@@ -922,7 +921,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
                      "     actual:  %s\n"), args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->md5_checksum,
                                                    trail->pool),
-                   svn_checksum_to_cstring_display(checked_checksum,
+                   svn_checksum_to_cstring_display(args->rb->md5_checksum,
                                                    trail->pool));
 
               if (rep->sha1_checksum
@@ -935,7 +934,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
                      "     actual:  %s\n"), args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                    trail->pool),
-                   svn_checksum_to_cstring_display(checked_checksum,
+                   svn_checksum_to_cstring_display(args->rb->sha1_checksum,
                                                    trail->pool));
             }
         }
