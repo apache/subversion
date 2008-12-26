@@ -978,7 +978,7 @@ class IncludeDependencyInfo:
     HDRS is of the form { 'path/to/header.h': TYPECODE, }
 
     Return a boolean indicating whether any changes were made."""
-    items = hdrs.items()
+    items = list(hdrs.items())
     for this_hdr, this_type in items:
       for dependency_hdr, dependency_type in self._deps[this_hdr].items():
         self._upd_dep_hash(hdrs, dependency_hdr, dependency_type)
