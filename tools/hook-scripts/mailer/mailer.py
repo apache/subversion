@@ -35,7 +35,12 @@ except ImportError:
   import ConfigParser as configparser
 import time
 import popen2
-import cStringIO
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 import smtplib
 import re
 import tempfile
@@ -261,7 +266,7 @@ class SMTPOutput(MailedOutput):
   def start(self, group, params):
     MailedOutput.start(self, group, params)
 
-    self.buffer = cStringIO.StringIO()
+    self.buffer = StringIO()
     self.write = self.buffer.write
 
     self.write(self.mail_headers(group, params))

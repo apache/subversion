@@ -1,7 +1,13 @@
 import unittest, os, setup_path
 
 from svn import core, repos, fs, delta, client, ra
-from StringIO import StringIO
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
