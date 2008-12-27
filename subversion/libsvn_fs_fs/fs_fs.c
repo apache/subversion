@@ -172,9 +172,9 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
 
   assert(ffd->max_files_per_dir);
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
-                            apr_psprintf(pool, "%ld.%s",
-                                         rev / ffd->max_files_per_dir, kind),
-                            NULL);
+                            apr_psprintf(pool, "%ld.pack",
+                                         rev / ffd->max_files_per_dir),
+                            kind, NULL);
 }
 
 static const char *
@@ -6715,37 +6715,29 @@ pack_shard(const char *revs_dir,
 {
   const char *tmp_path, *final_path;
   const char *pack_file_path, *manifest_file_path, *shard_path;
+  const char *pack_file_dir;
   svn_stream_t *pack_stream, *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
   svn_stream_t *tmp_stream;
-  svn_error_t *err;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
 
   /* Some useful paths. */
-  pack_file_path = svn_path_join(revs_dir,
-                                 apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack",
-                                              shard), pool);
-  manifest_file_path = svn_path_join(revs_dir,
-                             apr_psprintf(pool, "%" APR_INT64_T_FMT ".manifest",
-                                          shard), pool);
+  pack_file_dir = svn_path_join(revs_dir,
+                        apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
+                        pool);
+  pack_file_path = svn_path_join(pack_file_dir, "pack", pool);
+  manifest_file_path = svn_path_join(pack_file_dir, "manifest", pool);
   shard_path = svn_path_join(revs_dir,
                              apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
                              pool);
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
-  err = svn_io_remove_file(pack_file_path, pool);
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        svn_error_clear(err);
-      else
-        return err;
-    }
-  else
-    SVN_ERR(svn_io_remove_file(manifest_file_path, pool));
+  SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
+                             pool));
 
-  /* Create the new pack and manifest files. */
+  /* Create the new directory and pack and manifest files. */
+  SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, pool));
   SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
                                     pool));
   SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
@@ -6784,6 +6776,7 @@ pack_shard(const char *revs_dir,
   
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
+  SVN_ERR(svn_fs_fs__dup_perms(pack_file_dir, shard_path, pool));
 
   /* Update the max-pack-rev file to reflect our newly packed shard. */
   final_path = svn_path_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);

@@ -184,7 +184,7 @@ pack_filesystem(const char **msg,
   for (i = 0; i < (MAX_REV + 1) / SHARD_SIZE; i++)
     {
       path = svn_path_join_many(pool, REPO_NAME, "revs",
-            apr_psprintf(pool, "%d.pack", i / SHARD_SIZE), NULL);
+            apr_psprintf(pool, "%d.pack", i / SHARD_SIZE), "pack", NULL);
 
       /* These files should exist. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -193,7 +193,7 @@ pack_filesystem(const char **msg,
                                  "Expected pack file '%s' not found", path);
 
       path = svn_path_join_many(pool, REPO_NAME, "revs",
-            apr_psprintf(pool, "%d.manifest", i / SHARD_SIZE), NULL);
+            apr_psprintf(pool, "%d.pack", i / SHARD_SIZE), "manifest", NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_file)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
