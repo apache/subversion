@@ -2239,14 +2239,6 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
   apr_hash_t *headers;
   const char *node_id_str;
 
-  if (rev < ffd->min_unpacked_rev)
-    {
-      apr_off_t rev_offset;
-
-      SVN_ERR(get_packed_offset(&rev_offset, fs, rev, pool));
-      offset += rev_offset;
-    }
-
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   SVN_ERR(read_header_block(&headers,
@@ -2287,6 +2279,7 @@ get_root_changes_offset(apr_off_t *root_offset,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t offset;
+  apr_off_t rev_offset;
   char buf[64];
   int i, num_bytes;
   apr_size_t len;
@@ -2311,6 +2304,12 @@ get_root_changes_offset(apr_off_t *root_offset,
       seek_relative = APR_END;
       offset = 0;
     }
+
+  /* Offset of the revision from the start of the pack file, if applicable. */
+  if (rev < ffd->min_unpacked_rev)
+    SVN_ERR(get_packed_offset(&rev_offset, fs, rev, pool));
+  else
+    rev_offset = 0;
 
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
@@ -2350,7 +2349,7 @@ get_root_changes_offset(apr_off_t *root_offset,
   i++;
 
   if (root_offset)
-    *root_offset = apr_atoi64(&buf[i]);
+    *root_offset = rev_offset + apr_atoi64(&buf[i]);
 
   /* find the next space */
   for ( ; i < (num_bytes - 2) ; i++)
@@ -2365,7 +2364,7 @@ get_root_changes_offset(apr_off_t *root_offset,
   /* note that apr_atoi64() will stop reading as soon as it encounters
      the final newline. */
   if (changes_offset)
-    *changes_offset = apr_atoi64(&buf[i]);
+    *changes_offset = rev_offset + apr_atoi64(&buf[i]);
 
   return SVN_NO_ERROR;
 }
