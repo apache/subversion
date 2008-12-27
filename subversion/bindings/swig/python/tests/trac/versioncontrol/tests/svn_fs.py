@@ -19,9 +19,14 @@ import tempfile
 import unittest
 from urllib import pathname2url
 
-try:
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  try:
     from cStringIO import StringIO
-except ImportError:
+  except ImportError:
     from StringIO import StringIO
 
 from svn import core, repos

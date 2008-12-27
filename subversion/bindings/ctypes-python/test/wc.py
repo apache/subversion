@@ -6,7 +6,13 @@ import locale
 import os
 import shutil
 import tempfile
-import StringIO
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 from csvn.core import *
 from urllib import pathname2url
 from csvn.wc import WC
@@ -130,7 +136,7 @@ class WCTestCase(unittest.TestCase):
         f = open(path, "w")
         f.truncate(0)
         f.close()
-        difffile = StringIO.StringIO()
+        difffile = StringIO()
         self.wc.diff("trunk", outfile=difffile)
         difffile.seek(0)
         diffresult = difffile.read().replace("\r","")
