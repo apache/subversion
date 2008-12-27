@@ -34,7 +34,14 @@ except ImportError:
   # Python <3.0
   import ConfigParser as configparser
 import time
-import popen2
+try:
+  # Python >=2.4
+  import subprocess
+  platform_with_subprocess = True
+except ImportError:
+  # Python <2.4
+  import popen2
+  platform_with_subprocess = False
 if sys.version_info[0] >= 3:
   # Python >=3.0
   from io import StringIO
@@ -104,40 +111,41 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   messenger.generate()
 
 
-# Minimal, incomplete, versions of popen2.Popen[34] for those platforms
-# for which popen2 does not provide them.
-try:
-  Popen3 = popen2.Popen3
-  Popen4 = popen2.Popen4
-except AttributeError:
-  class Popen3:
-    def __init__(self, cmd, capturestderr = False):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      if capturestderr:
-        self.fromchild, self.tochild, self.childerr \
-            = popen2.popen3(cmd, mode='b')
-      else:
-        self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
-        self.childerr = None
+if not platform_with_subprocess:
+  # Minimal, incomplete, versions of popen2.Popen[34] for those platforms
+  # for which popen2 does not provide them.
+  try:
+    Popen3 = popen2.Popen3
+    Popen4 = popen2.Popen4
+  except AttributeError:
+    class Popen3:
+      def __init__(self, cmd, capturestderr = False):
+        if type(cmd) != types.StringType:
+          cmd = svn.core.argv_to_command_string(cmd)
+        if capturestderr:
+          self.fromchild, self.tochild, self.childerr \
+              = popen2.popen3(cmd, mode='b')
+        else:
+          self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
+          self.childerr = None
 
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      if self.childerr is not None:
-        rv = self.childerr.close() or rv
-      return rv
+      def wait(self):
+        rv = self.fromchild.close()
+        rv = self.tochild.close() or rv
+        if self.childerr is not None:
+          rv = self.childerr.close() or rv
+        return rv
 
-  class Popen4:
-    def __init__(self, cmd):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
+    class Popen4:
+      def __init__(self, cmd):
+        if type(cmd) != types.StringType:
+          cmd = svn.core.argv_to_command_string(cmd)
+        self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
 
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      return rv
+      def wait(self):
+        rv = self.fromchild.close()
+        rv = self.tochild.close() or rv
+        return rv
 
 def remove_leading_slashes(path):
   while path and path[0] == '/':
@@ -312,18 +320,26 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = Popen3(cmd)
-    self.write = self.pipe.tochild.write
+    if platform_with_subprocess:
+      self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                   close_fds=sys.platform != "win32")
+      self.write = self.pipe.stdin.write
+    else:
+      self.pipe = Popen3(cmd)
+      self.write = self.pipe.tochild.write
 
-    # we don't need the read-from-mailer descriptor, so close it
-    self.pipe.fromchild.close()
+      # we don't need the read-from-mailer descriptor, so close it
+      self.pipe.fromchild.close()
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
 
   def finish(self):
     # signal that we're done sending content
-    self.pipe.tochild.close()
+    if platform_with_subprocess:
+      self.pipe.stdin.close()
+    else:
+      self.pipe.tochild.close()
 
     # wait to avoid zombies
     self.pipe.wait()
@@ -927,7 +943,12 @@ class DiffContent:
     self.seen_change = False
 
     # By default we choose to incorporate child stderr into the output
-    self.pipe = Popen4(cmd)
+    if platform_with_subprocess:
+      self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT,
+                                   close_fds=sys.platform != "win32")
+    else:
+      self.pipe = Popen4(cmd)
 
   def __nonzero__(self):
     # we always have some items
@@ -937,7 +958,10 @@ class DiffContent:
     if self.pipe is None:
       raise IndexError
 
-    line = self.pipe.fromchild.readline()
+    if platform_with_subprocess:
+      line = self.pipe.stdout.readline()
+    else:
+      line = self.pipe.fromchild.readline()
     if not line:
       # wait on the child so we don't end up with a billion zombies
       self.pipe.wait()
