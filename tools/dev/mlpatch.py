@@ -4,7 +4,12 @@
 
 import sys, os
 import sgmllib
-from htmlentitydefs import entitydefs
+try:
+  # Python >=3.0
+  from html.entities import entitydefs
+except ImportError:
+  # Python <3.0
+  from htmlentitydefs import entitydefs
 import fileinput
 from urllib2 import urlopen
 
