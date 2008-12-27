@@ -34,7 +34,7 @@ Candidate changes for 1.5.6:
      A simple cast limits our maximum upload file size on systems where neon 
      supports larger uploads.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, kameshj
 
 Approved changes:
 =================
