@@ -17,6 +17,10 @@ Blocker:
 
  * Test failures in Ruby bindings.
 
+ * Revert r33767. Environment variables should be used in only the
+   most extreme cases. It appears a config variable could easily be
+   used for this need.
+
 Optional:
 
  * Merge the sparse-directories deselection branch, as noted by kfogel:
