@@ -1140,6 +1140,9 @@ svn_uri_is_canonical(const char *uri)
             ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
             *(ptr+2) == ':')
           return FALSE;
+      /* if this is an UNC path, we have two '/' here */
+        if (*(ptr+1) == '/')
+          ptr++;
     }
 #endif /* WIN32 or Cygwin */
 
