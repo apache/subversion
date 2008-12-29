@@ -1038,7 +1038,7 @@ typedef struct config_option_t
 } config_option_t;
 
 /* Parse argument of '--config-option'. */
-svn_error_t *
+static svn_error_t *
 parse_config_option(apr_array_header_t *config_options,
                     const char *opt_arg,
                     apr_pool_t *pool)
