@@ -1964,19 +1964,22 @@ main(int argc, const char *argv[])
                              APR_HASH_KEY_STRING);
 
   /* Update the options in the config */
-  for (i = 0; i < opt_state.config_options->nelts; i++)
+  if (opt_state.config_options)
     {
-      config_option_t *config_option = APR_ARRAY_IDX(opt_state.config_options,
-                                                     i, config_option_t *);
-      if (strcmp(config_option->file, "config") == 0)
+      for (i = 0; i < opt_state.config_options->nelts; i++)
         {
-          svn_config_set(cfg_config, config_option->section,
-                         config_option->option, config_option->value);
-        }
-      else if(strcmp(config_option->file, "servers") == 0)
-        {
-          svn_config_set(cfg_servers, config_option->section,
-                         config_option->option, config_option->value);
+          config_option_t *config_option = APR_ARRAY_IDX(opt_state.config_options,
+                                                         i, config_option_t *);
+          if (strcmp(config_option->file, "config") == 0)
+            {
+              svn_config_set(cfg_config, config_option->section,
+                             config_option->option, config_option->value);
+            }
+          else if (strcmp(config_option->file, "servers") == 0)
+            {
+              svn_config_set(cfg_servers, config_option->section,
+                             config_option->option, config_option->value);
+            }
         }
     }
 
