@@ -654,10 +654,14 @@ test_uri_canonicalize(const char **msg,
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file://SRV/shr/repos",  "file://srv/shr/repos" },
+    { "file://SRV/SHR/REPOS",  "file://srv/SHR/REPOS" },
 #else /* WIN32 or Cygwin */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file://SRV/SHR/repos",  "file:///SRV/SHR/repos" },
+    { "file://SRV/SHR/REPOS",  "file:///SRV/SHR/REPOS" },
 #endif /* non-WIN32 */
     { NULL, NULL }
   };
@@ -840,14 +844,19 @@ test_uri_is_canonical(const char **msg,
     { ":", TRUE },
     { ".:", TRUE },
     { "foo/.:", TRUE },
+    { "file://SRV/share/repos", FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
     { "file:///C:/temp/REPOS", TRUE },
+    { "file://srv/SHARE/repos", TRUE },
+    { "file://srv/share/repos", TRUE },
 #else /* WIN32 or Cygwin */
     { "file:///c:/temp/repos", TRUE },
     { "file:///c:/temp/REPOS", TRUE },
     { "file:///C:/temp/REPOS", TRUE },
+    { "file://srv/SHARE/repos", FALSE },
+    { "file://srv/share/repos", FALSE },
 #endif /* non-WIN32 */
     { NULL, FALSE },
   };
