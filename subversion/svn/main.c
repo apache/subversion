@@ -1031,6 +1031,106 @@ typedef struct config_option_t
   char *value;
 } config_option_t;
 
+/* Parse argument of '--config-option'. */
+svn_error_t *
+parse_config_option(apr_array_header_t *config_options,
+                    const char *opt_arg,
+                    apr_pool_t *pool)
+{
+  config_option_t *config_option;
+  int i, e;
+  svn_boolean_t v = FALSE;
+  apr_size_t len = strlen(opt_arg);
+  /* 6 is the length of "x:x:x=". */
+  if (len < 6)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Invalid syntax of argument of --config-option"));
+    }
+  config_option = apr_pcalloc(pool, sizeof(config_option_t));
+  e = 0;
+  for (i = 0; i < len; i++)
+    {
+      if (opt_arg[i] == ':')
+        {
+          break;
+        }
+    }
+  if (i == e)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Invalid syntax of argument of --config-option"));
+    }
+  config_option->file = apr_pcalloc(pool, i - e + 1);
+  memcpy(config_option->file, opt_arg + e, i -e);
+  if (i < len -1)
+    {
+      i++;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Invalid syntax of argument of --config-option"));
+    }
+  e = i;
+  for (; i < len; i++)
+    {
+      if (opt_arg[i] == ':')
+        {
+          break;
+        }
+    }
+  if (i == e)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Invalid syntax of argument of --config-option"));
+    }
+  config_option->section = apr_pcalloc(pool, i - e + 1);
+  memcpy(config_option->section, opt_arg + e, i - e);
+  if (i < len -1)
+    {
+      i++;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Invalid syntax of argument of --config-option"));
+    }
+  e = i;
+  for (; i < len; i++)
+    {
+      if (opt_arg[i] == '=')
+        {
+          v = TRUE;
+          break;
+        }
+      else if (opt_arg[i] == ':')
+        {
+          break;
+        }
+    }
+  if ((i == e) || (v == FALSE))
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Invalid syntax of argument of --config-option"));
+    }
+  config_option->option = apr_pcalloc(pool, i - e + 1);
+  memcpy(config_option->option, opt_arg + e, i - e);
+  if (i < len)
+    {
+      i++;
+    }
+  e = i;
+  config_option->value = apr_pcalloc(pool, len - e + 1);
+  memcpy(config_option->value, opt_arg + e, len - e);
+  if (! config_options)
+    {
+      config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
+    }
+  APR_ARRAY_PUSH(config_options, config_option_t *) = config_option;
+  return SVN_NO_ERROR;
+}
+
 
 /*** Main. ***/
 
@@ -1436,109 +1536,11 @@ main(int argc, const char *argv[])
         break;
       case opt_config_options:
         {
-          config_option_t *config_option;
-          int i, e;
-          svn_boolean_t v = FALSE;
-          apr_size_t len = strlen(opt_arg);
-          /* 6 is the length of "x:x:x=". */
-          if (len < 6)
+          err = parse_config_option(opt_state.config_options, opt_arg, pool);
+          if (err)
             {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Invalid syntax of argument of --config-option"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          config_option = apr_pcalloc(pool, sizeof(config_option_t));
-          e = 0;
-          for (i = 0; i < len; i++)
-            {
-              if (opt_arg[i] == ':')
-                {
-                  break;
-                }
-            }
-          if (i == e)
-            {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Invalid syntax of argument of --config-option"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          config_option->file = apr_pcalloc(pool, i - e + 1);
-          memcpy(config_option->file, opt_arg + e, i -e);
-          if (i < len -1)
-            {
-              i++;
-            }
-          else
-            {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Invalid syntax of argument of --config-option"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          e = i;
-          for (; i < len; i++)
-            {
-              if (opt_arg[i] == ':')
-                {
-                  break;
-                }
-            }
-          if (i == e)
-            {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Invalid syntax of argument of --config-option"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          config_option->section = apr_pcalloc(pool, i - e + 1);
-          memcpy(config_option->section, opt_arg + e, i - e);
-          if (i < len -1)
-            {
-              i++;
-            }
-          else
-            {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Invalid syntax of argument of --config-option"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          e = i;
-          for (; i < len; i++)
-            {
-              if (opt_arg[i] == '=')
-                {
-                  v = TRUE;
-                  break;
-                }
-              else if (opt_arg[i] == ':')
-                {
-                  break;
-                }
-            }
-          if ((i == e) || (v == FALSE))
-            {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Invalid syntax of argument of --config-option"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          config_option->option = apr_pcalloc(pool, i - e + 1);
-          memcpy(config_option->option, opt_arg + e, i - e);
-          if (i < len)
-            {
-              i++;
-            }
-          e = i;
-          config_option->value = apr_pcalloc(pool, len - e + 1);
-          memcpy(config_option->value, opt_arg + e, len - e);
-          if (! opt_state.config_options)
-            {
-              opt_state.config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
-            }
-          APR_ARRAY_PUSH(opt_state.config_options, config_option_t *) = config_option;
         }
         break;
       case opt_autoprops:
