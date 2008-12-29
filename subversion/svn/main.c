@@ -226,7 +226,13 @@ const apr_getopt_option_t svn_cl__options[] =
   {"config-dir",    opt_config_dir, 1,
                     N_("read user configuration files from directory ARG")},
   {"config-option", opt_config_options, 1,
-                    N_("set user configuration option in the FILE:SECTION:OPTION=[VALUE] format")},
+                    N_("set user configuration option in the format:\n"
+                       "                             "
+                       "    FILE:SECTION:OPTION=[VALUE]\n"
+                       "                             "
+                       "For example:\n"
+                       "                             "
+                       "    servers:global:http-library=serf\n")},
   {"auto-props",    opt_autoprops, 0, N_("enable automatic properties")},
   {"no-auto-props", opt_no_autoprops, 0, N_("disable automatic properties")},
   {"native-eol",    opt_native_eol, 1,
