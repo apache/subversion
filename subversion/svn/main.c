@@ -1449,8 +1449,6 @@ main(int argc, const char *argv[])
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           config_option = apr_pcalloc(pool, sizeof(config_option_t));
-          config_option->option = apr_pcalloc(pool, len);
-          config_option->value = apr_pcalloc(pool, len);
           e = 0;
           for (i = 0; i < len; i++)
             {
