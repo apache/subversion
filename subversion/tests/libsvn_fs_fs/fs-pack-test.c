@@ -237,6 +237,43 @@ pack_filesystem(const char **msg,
 #undef SHARD_SIZE
 #undef MAX_REV
 
+/* Pack a filesystem.  */
+#define REPO_NAME "test-repo-fsfs-pack-even"
+#define SHARD_SIZE 4
+#define MAX_REV 10 
+static svn_error_t *
+pack_even_filesystem(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const char *path;
+
+  *msg = "pack FSFS where revs % shard = 0";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
+                                   pool));
+
+  path = svn_path_join_many(pool, REPO_NAME, "revs", "2.pack", NULL);
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  if (kind != svn_node_dir)
+    return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                             "Packing did not complete as expected");
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef SHARD_SIZE
+#undef MAX_REV
 
 /* Check reading from a packed filesystem. */
 #define REPO_NAME "test-repo-read-packed-fs"
@@ -335,6 +372,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(pack_filesystem),
+    SVN_TEST_XFAIL(pack_even_filesystem),
     SVN_TEST_PASS(read_packed_fs),
     SVN_TEST_PASS(commit_packed_fs),
     SVN_TEST_NULL
