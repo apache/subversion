@@ -1566,6 +1566,15 @@ ensure_revision_exists(svn_fs_t *fs,
                            _("No such revision %ld"), rev);
 }
 
+/* Return TRUE is REV is packed in FS, FALSE otherwise. */
+static svn_boolean_t
+is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return (rev < ffd->min_unpacked_rev);
+}
+
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Use POOL for allocations. */
@@ -1575,11 +1584,10 @@ open_pack_or_rev_file(apr_file_t **file,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
 
    err = svn_io_file_open(file,
-                          rev < ffd->min_unpacked_rev
+                          is_packed_rev(fs, rev)
                               ? path_rev_packed(fs, rev, "pack", pool)
                               : svn_fs_fs__path_rev(fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -1665,14 +1673,13 @@ open_and_seek_revision(apr_file_t **file,
                        apr_off_t offset,
                        apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *rev_file;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, pool));
 
-  if (rev < ffd->min_unpacked_rev)
+  if (is_packed_rev(fs, rev))
     {
       apr_off_t rev_offset;
 
@@ -2293,7 +2300,7 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if ((rev < ffd->min_unpacked_rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if (is_packed_rev(fs, rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -2305,7 +2312,7 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   /* Offset of the revision from the start of the pack file, if applicable. */
-  if (rev < ffd->min_unpacked_rev)
+  if (is_packed_rev(fs, rev))
     SVN_ERR(get_packed_offset(&rev_offset, fs, rev, pool));
   else
     rev_offset = 0;
@@ -2409,7 +2416,6 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
                                  apr_hash_t *proplist,
                                  apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
   svn_stream_t *stream;
@@ -2429,7 +2435,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
   return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    rev < ffd->min_unpacked_rev
+                                    is_packed_rev(fs, rev)
                                       ? path_rev_packed(fs, rev, "pack", pool)
                                       : svn_fs_fs__path_rev(fs, rev, pool),
                                     pool);
