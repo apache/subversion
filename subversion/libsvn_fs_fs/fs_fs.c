@@ -2234,7 +2234,6 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
                     apr_off_t offset,
                     apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_id_t *id;
   apr_hash_t *headers;
   const char *node_id_str;
