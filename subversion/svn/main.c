@@ -1062,7 +1062,7 @@ parse_config_option(apr_array_header_t **config_options,
               config_option->option = apr_pstrndup(pool, second_colon + 1, equals_sign - second_colon - 1);
               if (! (strchr(config_option->option, ':')))
                 {
-                  config_option->value = apr_pstrndup(pool, equals_sign + 1, opt_arg + len - equals_sign);
+                  config_option->value = apr_pstrndup(pool, equals_sign + 1, opt_arg + len - equals_sign - 1);
                   if (! *config_options)
                     {
                       *config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
