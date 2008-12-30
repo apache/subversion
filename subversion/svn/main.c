@@ -1039,7 +1039,7 @@ typedef struct config_option_t
 
 /* Parse argument of '--config-option'. */
 static svn_error_t *
-parse_config_option(apr_array_header_t *config_options,
+parse_config_option(apr_array_header_t **config_options,
                     const char *opt_arg,
                     apr_pool_t *pool)
 {
@@ -1129,11 +1129,11 @@ parse_config_option(apr_array_header_t *config_options,
   e = i;
   config_option->value = apr_pcalloc(pool, len - e + 1);
   memcpy(config_option->value, opt_arg + e, len - e);
-  if (! config_options)
+  if (! *config_options)
     {
-      config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
+      *config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
     }
-  APR_ARRAY_PUSH(config_options, config_option_t *) = config_option;
+  APR_ARRAY_PUSH(*config_options, config_option_t *) = config_option;
   return SVN_NO_ERROR;
 }
 
@@ -1542,7 +1542,7 @@ main(int argc, const char *argv[])
         break;
       case opt_config_options:
         {
-          err = parse_config_option(opt_state.config_options, opt_arg, pool);
+          err = parse_config_option(&opt_state.config_options, opt_arg, pool);
           if (err)
             {
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
