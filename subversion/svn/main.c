@@ -1053,10 +1053,6 @@ parse_config_option(apr_array_header_t **config_options,
           if ((equals_sign = strchr(second_colon + 1, '=')) && (equals_sign != second_colon + 1))
             {
               config_option = apr_pcalloc(pool, sizeof(config_option_t));
-              config_option->file = apr_pcalloc(pool, first_colon - opt_arg);
-              config_option->section = apr_pcalloc(pool, second_colon - first_colon + 1);
-              config_option->option = apr_pcalloc(pool, equals_sign - second_colon + 1);
-              config_option->value = apr_pcalloc(pool, opt_arg + len - equals_sign + 1);
               config_option->file = apr_pstrndup(pool, opt_arg, first_colon - opt_arg);
               config_option->section = apr_pstrndup(pool, first_colon + 1, second_colon - first_colon - 1);
               config_option->option = apr_pstrndup(pool, second_colon + 1, equals_sign - second_colon - 1);
@@ -1933,6 +1929,7 @@ main(int argc, const char *argv[])
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                      _("Unrecognized file in argument of --config-option"));
               svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(err);
             }
         }
     }
