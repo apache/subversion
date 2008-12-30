@@ -6832,7 +6832,7 @@ svn_fs_fs__pack(const char *fs_path,
                                 pool));
 
   SVN_ERR(get_youngest(&youngest, fs_path, pool));
-  completed_shards = youngest / max_files_per_dir;
+  completed_shards = (youngest + 1) / max_files_per_dir;
 
   /* See if we've already completed all possible shards thus far. */
   if (min_unpacked_rev == (completed_shards * max_files_per_dir))
