@@ -1928,6 +1928,12 @@ main(int argc, const char *argv[])
               svn_config_set(cfg_servers, config_option->section,
                              config_option->option, config_option->value);
             }
+          else
+            {
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Unrecognized file in argument of --config-option"));
+              svn_handle_warning2(stderr, err, "svn: ");
+            }
         }
     }
 
