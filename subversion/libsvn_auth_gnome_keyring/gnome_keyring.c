@@ -26,6 +26,8 @@
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
+#include "svn_pools.h"
+#include "svn_cmdline.h"
 
 #include "private/svn_auth_private.h"
 
@@ -40,6 +42,167 @@
 /* GNOME Keyring simple provider, puts passwords in GNOME Keyring        */
 /*-----------------------------------------------------------------------*/
 
+struct gnome_keyring_baton
+{
+  const char *keyring_name;
+  GnomeKeyringInfo *info;
+  GMainLoop *loop;
+};
+
+
+/* Callback function to destroy gnome_keyring_baton. */
+static void
+callback_destroy_data_keyring(void *data)
+{
+  struct gnome_keyring_baton *key_info =
+                                  (struct gnome_keyring_baton*) data;
+
+  if (data == NULL)
+    return;
+
+  if (key_info->keyring_name)
+    {
+      free((void*)key_info->keyring_name);
+      key_info->keyring_name = NULL;
+    }
+
+  if (key_info->info)
+    {
+      gnome_keyring_info_free(key_info->info);
+      key_info->info = NULL;
+    }
+
+  return;
+}
+
+
+/* Callback function to complete the keyring operation. */
+static void
+callback_done (GnomeKeyringResult result,
+               gpointer data)
+{
+  struct gnome_keyring_baton *key_info =
+                                (struct gnome_keyring_baton*) data;
+
+  g_main_loop_quit(key_info->loop);
+  return;
+}
+
+
+/* Callback function to get the keyring info. */
+static void
+callback_get_info_keyring(GnomeKeyringResult result,
+                          GnomeKeyringInfo *info,
+                          void *data)
+{
+  struct gnome_keyring_baton *key_info =
+                                  (struct gnome_keyring_baton*) data;
+
+  if (result == GNOME_KEYRING_RESULT_OK && info != NULL)
+    {
+      key_info->info = gnome_keyring_info_copy(info);
+    }
+  else
+    {
+      if (key_info->info != NULL)
+        gnome_keyring_info_free(key_info->info);
+
+      key_info->info = NULL;
+    }
+
+  g_main_loop_quit(key_info->loop);
+
+  return;
+}
+
+
+/* Callback function to get the default keyring string name. */
+static void
+callback_default_keyring(GnomeKeyringResult result,
+                         const char *string,
+                         void *data)
+{
+  struct gnome_keyring_baton *key_info =
+                                  (struct gnome_keyring_baton*) data;
+
+  if (result == GNOME_KEYRING_RESULT_OK && string != NULL)
+    {
+      key_info->keyring_name = strdup(string);
+    }
+  else
+    {
+      if (key_info->keyring_name != NULL)
+        free((void*)key_info->keyring_name);
+      key_info->keyring_name = NULL;
+    }
+
+  g_main_loop_quit(key_info->loop);
+
+  return;
+}
+
+/* If the default keyring is locked, prompts for keyring password and
+ * unlocks the keyring. Returns default keyring name if successfully
+ * unlocked, else NULL. */
+static char*
+gnome_keyring_unlock_keyring(apr_pool_t *pool)
+{
+  char *def = NULL;
+  struct gnome_keyring_baton key_info;
+
+  key_info.info = NULL;
+  key_info.keyring_name = NULL;
+
+  /* Finds default keyring. */
+  key_info.loop = g_main_loop_new(NULL, FALSE);
+  gnome_keyring_get_default_keyring(
+   (GnomeKeyringOperationGetStringCallback)callback_default_keyring,
+   (void*)&key_info, NULL);
+  g_main_loop_run(key_info.loop);
+
+  if (key_info.keyring_name == NULL)
+    {
+      callback_destroy_data_keyring((void*)&key_info);
+      return NULL;
+    }
+
+  /* Get details about the default keyring. */
+  key_info.loop = g_main_loop_new(NULL, FALSE);
+  gnome_keyring_get_info(key_info.keyring_name,
+        (GnomeKeyringOperationGetKeyringInfoCallback)callback_get_info_keyring,
+        (void*)&key_info, NULL);
+  g_main_loop_run(key_info.loop);
+
+  if (key_info.info == NULL)
+    {
+      callback_destroy_data_keyring((void*)&key_info);
+      return NULL;
+    }
+
+  /* Check if default keyring is locked. */
+  if (gnome_keyring_info_get_is_locked(key_info.info))
+    {
+      char *prompt;
+      svn_auth_cred_simple_t *cred;
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      prompt = apr_psprintf(subpool, "[%s] keyring", key_info.keyring_name);
+      svn_cmdline_auth_simple_prompt(&cred, NULL, NULL, prompt, TRUE, subpool);
+      svn_pool_destroy(subpool);
+
+      key_info.loop = g_main_loop_new(NULL, FALSE);
+      gnome_keyring_unlock(key_info.keyring_name, cred->password,
+                 (GnomeKeyringOperationDoneCallback)callback_done,
+                 (void*)&key_info, NULL);
+      g_main_loop_run(key_info.loop);
+    }
+
+  def = strdup(key_info.keyring_name);
+  callback_destroy_data_keyring((void*)&key_info);
+
+  return (def);
+}
+
 /* Implementation of password_get_t that retrieves the password
    from GNOME Keyring. */
 static svn_boolean_t
@@ -51,6 +214,8 @@ gnome_keyring_password_get(const char **password,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
+  char *default_keyring = NULL;
+
   if (non_interactive)
     {
       return FALSE;
@@ -65,6 +230,8 @@ gnome_keyring_password_get(const char **password,
     {
       return FALSE;
     }
+
+  default_keyring = gnome_keyring_unlock_keyring(pool);
 
   GnomeKeyringResult result;
   GList *items;
@@ -109,6 +276,9 @@ gnome_keyring_password_get(const char **password,
                    "");
     }
 
+  if (default_keyring)
+    free(default_keyring);
+
   return ret;
 }
 
@@ -123,6 +293,8 @@ gnome_keyring_password_set(apr_hash_t *creds,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
+  char *default_keyring = NULL;
+
   if (non_interactive)
     {
       return FALSE;
@@ -137,6 +309,8 @@ gnome_keyring_password_set(apr_hash_t *creds,
     {
       return FALSE;
     }
+
+  default_keyring = gnome_keyring_unlock_keyring(pool);
 
   GnomeKeyringResult result;
   guint32 item_id;
@@ -162,6 +336,9 @@ gnome_keyring_password_set(apr_hash_t *creds,
                    APR_HASH_KEY_STRING,
                    "");
     }
+
+  if (default_keyring)
+    free(default_keyring);
 
   return result == GNOME_KEYRING_RESULT_OK;
 }
