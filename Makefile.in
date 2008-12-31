@@ -455,9 +455,10 @@ bdbcheck:
 	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
-	rm -rf subversion/tests/cmdline/svn-test-work              \
+	rm -rf subversion/tests/cmdline/svn-test-work          \
                subversion/tests/libsvn_fs/test-repo-*          \
                subversion/tests/libsvn_fs_base/test-repo-*     \
+               subversion/tests/libsvn_fs_fs/test-repo-*       \
                subversion/tests/libsvn_ra_local/test-repo-*    \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \
