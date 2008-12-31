@@ -2429,7 +2429,7 @@ close_file(void *file_baton,
 
           if (binary_file)
             {
-              unsigned char tmp_digest[APR_MD5_DIGESTSIZE];
+              svn_checksum_t *tmp_checksum;
               const char *the_right_path = eb->reverse_order ?
                                            temp_file_path : localfile;
 
@@ -2439,9 +2439,10 @@ close_file(void *file_baton,
 
               /* Calculate the file's checksum since the one above might
                * be wrong. */
-              SVN_ERR (svn_io_file_checksum (tmp_digest, the_right_path, pool));
-              text_checksum = (const char*)svn_md5_digest_to_cstring_display
-                                            (tmp_digest, pool);
+              SVN_ERR(svn_io_file_checksum2(&tmp_checksum, the_right_path,
+                                            svn_checksum_md5, pool));
+              text_checksum = svn_checksum_to_cstring_display(tmp_checksum,
+                                                              pool);
             }
         }
 
