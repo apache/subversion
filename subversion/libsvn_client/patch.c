@@ -408,7 +408,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  * following calls if this is a binary file or with
                  * unidiff for text files. */
                 SVN_ERR(svn_io_copy_file(yours, mine, TRUE, subpool));
-                SVN_ERR(svn_wc_add2(mine, adm_access, NULL, SVN_IGNORED_REVNUM,
+                SVN_ERR(svn_wc_add3(mine, adm_access, svn_depth_infinity,
+                                    NULL, SVN_IGNORED_REVNUM,
                                     patch_b->ctx->cancel_func,
                                     patch_b->ctx->cancel_baton,
                                     NULL, NULL, /* no notification */
@@ -624,7 +625,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       if (! patch_b->dry_run)
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
-          SVN_ERR(svn_wc_add2(path, adm_access,
+          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
                               NULL, SVN_IGNORED_REVNUM,
                               patch_b->ctx->cancel_func,
                               patch_b->ctx->cancel_baton,
@@ -643,7 +644,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       if (! entry || entry->schedule == svn_wc_schedule_delete)
         {
           if (!patch_b->dry_run)
-            SVN_ERR(svn_wc_add2(path, adm_access,
+            SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
                                 copyfrom_url, rev,
                                 patch_b->ctx->cancel_func,
                                 patch_b->ctx->cancel_baton,
