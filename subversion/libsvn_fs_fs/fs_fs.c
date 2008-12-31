@@ -1577,7 +1577,8 @@ is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
-   to the revision file for REV.  Use POOL for allocations. */
+   to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
+   file doesn't exist.  Use POOL for allocations. */
 static svn_error_t *
 open_pack_or_rev_file(apr_file_t **file,
                       svn_fs_t *fs,
@@ -5883,13 +5884,19 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   /* Keep doubling right, until we find a revision that doesn't exist. */
   while (1)
     {
-      svn_node_kind_t kind;
-      SVN_ERR(svn_io_check_path(svn_fs_fs__path_rev(fs, right, iterpool),
-                                &kind, iterpool));
+      svn_error_t *err;
+      apr_file_t *file;
+
+      err = open_pack_or_rev_file(&file, fs, right, iterpool);
       svn_pool_clear(iterpool);
 
-      if (kind == svn_node_none)
-        break;
+      if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
+        {
+          svn_error_clear(err);
+          break;
+        }
+      else
+        SVN_ERR(err);
 
       right <<= 1;
     }
@@ -5901,16 +5908,22 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   while (left + 1 < right)
     {
       svn_revnum_t probe = left + ((right - left) / 2);
-      svn_node_kind_t kind;
+      svn_error_t *err;
+      apr_file_t *file;
 
-      SVN_ERR(svn_io_check_path(svn_fs_fs__path_rev(fs, probe, iterpool),
-                                &kind, iterpool));
+      err = open_pack_or_rev_file(&file, fs, probe, iterpool);
       svn_pool_clear(iterpool);
 
-      if (kind == svn_node_none)
-        right = probe;
+      if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
+        {
+          svn_error_clear(err);
+          right = probe;
+        }
       else
-        left = probe;
+        {
+          SVN_ERR(err);
+          left = probe;
+        }
     }
 
   svn_pool_destroy(iterpool);
