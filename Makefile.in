@@ -407,6 +407,12 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(ENABLE_SASL)" != ""; then                               \
 	    flags="--enable-sasl $$flags";                                   \
 	  fi;                                                                \
+	  if test "$(FSFS_SHARDING)" != ""; then                             \
+	    flags="--fsfs-sharding $(FSFS_SHARDING) $$flags";                \
+	  fi;                                                                \
+	  if test "$(FSFS_PACKING)" != ""; then                              \
+	    flags="--fsfs-packing $$flags";                                  \
+	  fi;                                                                \
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
