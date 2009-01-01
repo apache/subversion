@@ -189,6 +189,13 @@ use_jsvn = False
 # ('neon', 'serf')
 http_library = None
 
+# Global variable: Number of shards to use in FSFS
+# 'None' means "use FSFS's default"
+fsfs_sharding = None
+
+# Global variable: automatically pack FSFS repositories after every commit
+fsfs_packing = None
+
 # Configuration file (copied into FSFS fsfs.conf).
 config_file = None
 
@@ -345,6 +352,11 @@ def get_fsfs_conf_file_path(repo_dir):
   "Return the path of the fsfs.conf file in REPO_DIR."
 
   return os.path.join(repo_dir, "db", "fsfs.conf")
+
+def get_fsfs_format_file_path(repo_dir):
+  "Return the path of the format file in REPO_DIR."
+
+  return os.path.join(repo_dir, "db", "format")
 
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
@@ -721,8 +733,46 @@ def create_repos(path):
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
-  if config_file is not None and (fs_type is None or fs_type == 'fsfs'):
-    shutil.copy(config_file, get_fsfs_conf_file_path(path))
+  if fs_type is None or fs_type == 'fsfs':
+    # fsfs.conf file
+    if config_file is not None:
+      shutil.copy(config_file, get_fsfs_conf_file_path(path))
+
+    # format file
+    if fsfs_sharding is not None:
+      def transform_line(line):
+        if line.startswith('layout '):
+          if fsfs_sharding > 0:
+            line = 'layout sharded %d' % fsfs_sharding
+          else:
+            line = 'layout linear'
+        return line
+
+      # read it
+      format_file_path = get_fsfs_format_file_path(path)
+      contents = file_read(format_file_path, 'rb')
+
+      # tweak it
+      new_contents = "".join([transform_line(line) + "\n"
+                              for line in contents.split("\n")])
+      if new_contents[-1] == "\n":
+        # we don't currently allow empty lines (\n\n) in the format file.
+        new_contents = new_contents[:-1]
+
+      # replace it
+      os.chmod(format_file_path, 0666)
+      file_write(format_file_path, new_contents, 'wb')
+
+    # post-commit
+    # Note that some tests (currently only commit_tests) create their own
+    # post-commit hooks, which would override this one. :-(
+    if fsfs_packing:
+      create_python_hook_script(get_post_commit_hook_path(path), 
+          "import subprocess\n"
+          "import sys\n"
+          "command = %s\n"
+          "sys.exit(subprocess.Popen(command).wait())\n"
+          % repr([svnadmin_binary, 'pack', path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
@@ -1350,6 +1400,8 @@ def usage():
         "                 useful during test development!")
   print(" --server-minor-version  Set the minor version for the server.\n"
         "                 Supports version 4 or 5.")
+  print(" --fsfs-sharding Default shard size (for fsfs)\n"
+        " --fsfs-packing  Run 'svnadmin pack' automatically")
   print(" --config-file   Configuration file for tests.")
   print(" --help          This information")
 
@@ -1381,6 +1433,8 @@ def run_tests(test_list, serial_only = False):
   global svnversion_binary
   global command_line_parsed
   global http_library
+  global fsfs_sharding
+  global fsfs_packing
   global config_file
   global server_minor_version
   global use_jsvn
@@ -1399,6 +1453,7 @@ def run_tests(test_list, serial_only = False):
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=',
+                            'fsfs-packing', 'fsfs-sharding=',
                             'use-jsvn', 'development', 'config-file='])
   except getopt.GetoptError, e:
     print("ERROR: %s\n" % e)
@@ -1483,6 +1538,11 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--http-library':
       http_library = val
 
+    elif opt == '--fsfs-sharding':
+      fsfs_sharding = int(val)
+    elif opt == '--fsfs-packing':
+      fsfs_packing = 1
+
     elif opt == '--server-minor-version':
       server_minor_version = int(val)
       if server_minor_version < 4 or server_minor_version > 6:
@@ -1497,6 +1557,9 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == '--config-file':
       config_file = val
+
+  if fsfs_packing is not None and fsfs_sharding is None:
+    raise Exception('--fsfs-packing requires --fsfs-sharding')
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
