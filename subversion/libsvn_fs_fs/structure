@@ -34,8 +34,9 @@ repository) is:
   revs/               Subdirectory containing revs
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev <revnum>
-    <shard>.pack      Pack file, if the repository has been packed (see below)
-    <shard>.manifest  Pack manifest file, if a pack file exists (see below)
+    <shard>.pack      Pack directory, if the repo has been packed (see below)
+      pack            Pack file, if the repository has been packed (see below)
+      manifest        Pack manifest file, if a pack file exists (see below)
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>

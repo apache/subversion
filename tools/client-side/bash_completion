@@ -151,8 +151,9 @@ _svn()
 	optsParam="-r|--revision|--username|--password|--targets"
 	optsParam="$optsParam|-x|--extensions|-m|--message|-F|--file"
 	optsParam="$optsParam|--encoding|--diff-cmd|--diff3-cmd|--editor-cmd"
-	optsParam="$optsParam|--old|--new|--config-dir|--native-eol|-l|--limit"
-	optsParam="$optsParam|-c|--change|--depth|--set-depth|--with-revprop"
+	optsParam="$optsParam|--old|--new|--config-dir|--config-option"
+	optsParam="$optsParam|--native-eol|-l|--limit|-c|--change"
+	optsParam="$optsParam|--depth|--set-depth|--with-revprop"
 	optsParam="$optsParam|--changelist|--accept|--show-revs"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
@@ -809,7 +810,7 @@ _svn()
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
 	propget|pget|pg)
-	        cmdOpts="-R --recursive $rOpts --strict $pOpts --changelist \
+	        cmdOpts="-v --verbose -R --recursive $rOpts --strict $pOpts --changelist \
                          --depth --xml"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
@@ -858,7 +859,7 @@ _svn()
 
 	# add options that are nearly always available
 	[[ "$cmd" != "--version" ]] && cmdOpts="$cmdOpts $helpOpts"
-	cmdOpts="$cmdOpts --config-dir"
+	cmdOpts="$cmdOpts --config-dir --config-option"
 
         # --accept (edit|launch) incompatible with --non-interactive
 	if [[ $acceptOpt == @(edit|launch) ]] ;
@@ -935,7 +936,7 @@ _svnadmin ()
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
 	cmds='crashtest create deltify dump help hotcopy list-dblogs \
-	      list-unused-dblogs load lslocks lstxns recover rmlocks \
+	      list-unused-dblogs load lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
