@@ -119,7 +119,7 @@ if not platform_with_subprocess:
     platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
-if sys.platform == 'win32':
+if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
@@ -814,7 +814,7 @@ def create_python_hook_script (hook_path, hook_script_code):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
-  if sys.platform == 'win32':
+  if windows:
     # Use an absolute path since the working directory is not guaranteed
     hook_path = os.path.abspath(hook_path)
     # Fill the python file.
