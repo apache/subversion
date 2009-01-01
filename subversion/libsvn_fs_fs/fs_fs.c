@@ -1078,6 +1078,16 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 }
 
 static svn_error_t *
+update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                               path_min_unpacked_rev(fs, pool),
+                               pool);
+}
+
+static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
 svn_error_t *
@@ -1113,8 +1123,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the min unpacked revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                                  path_min_unpacked_rev(fs, pool), pool));
+    SVN_ERR(update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
@@ -1598,14 +1607,41 @@ open_pack_or_rev_file(apr_file_t **file,
 {
   svn_error_t *err;
 
-   err = svn_io_file_open(file, svn_fs_fs__path_rev_absolute(fs, rev, pool),
+  err = svn_io_file_open(file, svn_fs_fs__path_rev_absolute(fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
+      svn_boolean_t before, after;
+
       svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                               _("No such revision %ld"), rev);
+
+      /* Did someone run 'svnadmin pack' under our feet? */
+      /* TODO: this logic is needed by all callers of __path_rev_absolute();
+       * find a more general solution.
+       */
+      before = is_packed_rev(fs, rev);
+      SVN_ERR(update_min_unpacked_rev(fs, pool));
+      after = is_packed_rev(fs, rev);
+
+      if (before != after)
+        {
+          /* Yes. */
+          SVN_ERR_ASSERT(after);
+
+          /* Recursive call!
+           *
+           * However, by now REV is packed, so in the recursive call we will
+           * have 'before = TRUE' and won't get into an infinite loop.
+           */
+          return open_pack_or_rev_file(file, fs, rev, pool);
+        }
+      else
+        {
+          /* No. */
+          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                   _("No such revision %ld"), rev);
+        }
     }
 
   return err;
@@ -6803,7 +6839,9 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_fs_fs__dup_perms(pack_file_dir, shard_path, pool));
 
-  /* Update the max-pack-rev file to reflect our newly packed shard. */
+  /* Update the min-unpacked-rev file to reflect our newly packed shard.
+   * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
+   */
   final_path = svn_path_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, iterpool, iterpool));
