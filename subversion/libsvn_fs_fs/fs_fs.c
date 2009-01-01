@@ -4076,8 +4076,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
       break;
     }
-  if (err)
-    return err;
+  SVN_ERR(err);
 
   svn_pool_destroy(iterpool);
 
@@ -4094,7 +4093,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
                           txn_current_filename, pool));
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* Create a unique directory for a transaction in FS based on revision
