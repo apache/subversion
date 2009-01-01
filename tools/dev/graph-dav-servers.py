@@ -159,7 +159,7 @@ def draw_graph(dates, counts):
     im = im.resize((width, height), Image.ANTIALIAS)
     im.save(OUTPUT_FILE, im.format)
     os.unlink(OUTPUT_FILE + ".tmp.png")
-  except Exception, e:
+  except Exception as e:
     sys.stderr.write("Error attempting to resize the graphic: %s\n" % (str(e)))
     os.rename(OUTPUT_FILE + ".tmp.png", OUTPUT_FILE)
     raise

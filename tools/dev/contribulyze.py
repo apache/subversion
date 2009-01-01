@@ -739,7 +739,7 @@ def usage():
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
-  except getopt.GetoptError, e:
+  except getopt.GetoptError as e:
     complain(str(e) + '\n\n')
     usage()
     sys.exit(1)

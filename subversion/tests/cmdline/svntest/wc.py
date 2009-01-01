@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -88,7 +88,7 @@ class State:
           if sys.platform == 'win32':
             path = path.replace('\\', '/')
           path_ref = self.desc[path]
-        except KeyError, e:
+        except KeyError as e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
         path_ref.tweak(**kw)

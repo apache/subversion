@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -274,7 +274,7 @@ def wrap_ex(func):
   def w(*args, **kwds):
     try:
       return func(*args, **kwds)
-    except Failure, ex:
+    except Failure as ex:
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
@@ -1197,9 +1197,9 @@ class TestRunner:
         print('Test driver returned a status code.')
         sys.exit(255)
       result = 0
-    except Skip, ex:
+    except Skip as ex:
       result = 2
-    except Failure, ex:
+    except Failure as ex:
       result = 1
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
@@ -1215,7 +1215,7 @@ class TestRunner:
     except KeyboardInterrupt:
       print('Interrupted')
       sys.exit(0)
-    except SystemExit, ex:
+    except SystemExit as ex:
       print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       sys.stdout.write(ex.code and 'FAIL:  ' or 'PASS:  ')
       sys.stdout.flush()
@@ -1400,7 +1400,7 @@ def run_tests(test_list, serial_only = False):
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=',
                             'use-jsvn', 'development', 'config-file='])
-  except getopt.GetoptError, e:
+  except getopt.GetoptError as e:
     print("ERROR: %s\n" % e)
     usage()
     sys.exit(1)

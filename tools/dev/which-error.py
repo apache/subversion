@@ -5,7 +5,7 @@
 #                 their numeric error code values
 #
 # ====================================================================
-# Copyright (c) 2005, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2005, 2008-2009 CollabNet.  All rights reserved.
 #
 # * This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -30,7 +30,7 @@ import re
 
 try:
   from svn import core
-except ImportError, e:
+except ImportError as e:
   sys.stderr.write("ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
                    "Hint: Set your PYTHONPATH environment variable, or adjust your " \
                    "PYTHONSTARTUP\nfile to point to your Subversion install " \

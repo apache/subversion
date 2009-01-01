@@ -58,6 +58,6 @@ if __name__ == '__main__':
 
   try:
     r = p.parse(include_file)
-  except IOError, e:
+  except IOError as e:
     usage_and_exit(str(e))
   sys.stdout.write("%d.%d.%d" % (r.major, r.minor, r.patch))

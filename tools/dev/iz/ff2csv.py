@@ -46,7 +46,7 @@ manager-speak pictures."""
 
     try:
         opts, args = my_getopt(sys.argv[1:], "", [x[0] for x in long_opts])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         print("Error: %s" % e.msg)
         shortusage()
         print(me + " --help for options.")

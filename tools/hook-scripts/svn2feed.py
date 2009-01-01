@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -358,7 +358,7 @@ def main():
                                         "feed-url=",
                                         "format=",
                                         ])
-    except getopt.GetoptError, msg:
+    except getopt.GetoptError as msg:
         usage_and_exit(msg)
 
     # Make sure required arguments are present.
@@ -389,7 +389,7 @@ def main():
         elif opt in ("-m", "--max-items"):
             try:
                max_items = int(arg)
-            except ValueError, msg:
+            except ValueError as msg:
                usage_and_exit("Invalid value '%s' for --max-items." % (arg))
             if max_items < 1:
                usage_and_exit("Value for --max-items must be a positive "
@@ -422,7 +422,7 @@ def main():
         cmd_out = proc.stdout.readlines()
         try:
             revisions = [int(cmd_out[0])]
-        except IndexError, msg:
+        except IndexError as msg:
             usage_and_exit("svn2feed.py: Invalid value '%s' for " \
                            "REPOS-PATH" % (repos_path))
     else:
@@ -442,7 +442,7 @@ def main():
                 revisions = list(range(start, end + 1)[-max_items:])
             else:
                 raise ValueError()
-        except ValueError, msg:
+        except ValueError as msg:
             usage_and_exit("svn2feed.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
 

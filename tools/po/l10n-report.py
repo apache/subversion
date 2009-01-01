@@ -108,7 +108,7 @@ def main():
                                        ["help",
                                         "to-email-id=",
                                         ])
-    except getopt.GetoptError, msg:
+    except getopt.GetoptError as msg:
         usage_and_exit(msg)
 
     to_email_id = None

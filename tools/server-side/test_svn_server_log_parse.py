@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # ====================================================================
-# Copyright (c) 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -597,5 +597,5 @@ if __name__ == '__main__':
     finally:
         try:
             os.unlink(tmp)
-        except Exception, e:
+        except Exception as e:
             sys.stderr.write('os.unlink(tmp): %s\n' % (e,))

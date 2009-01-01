@@ -3,7 +3,7 @@
 # svn-backup-dumps.py -- Create dumpfiles to backup a subversion repository.
 #
 # ====================================================================
-# Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -501,7 +501,7 @@ class SvnBackup:
             ftp.quit()
             rc = len(ifd.read(1)) == 0
             ifd.close()
-        except Exception, e:
+        except Exception as e:
             raise SvnBackupException("ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
                     (absfilename, str(e)))
         return rc
@@ -666,7 +666,7 @@ if __name__ == "__main__":
     try:
         backup = SvnBackup(options, args)
         rc = backup.execute()
-    except SvnBackupException, e:
+    except SvnBackupException as e:
         print("svn-backup-dumps.py: %s" % e)
     if rc:
         print("Everything OK.")
