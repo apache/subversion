@@ -5633,7 +5633,10 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Move the finished rev file into place. */
-  old_rev_filename = svn_fs_fs__path_rev(cb->fs, old_rev, pool);
+  if (is_packed_rev(cb->fs, old_rev))
+    old_rev_filename = path_rev_packed(cb->fs, old_rev, "pack", pool);
+  else
+    old_rev_filename = svn_fs_fs__path_rev(cb->fs, old_rev, pool);
   rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename,
