@@ -249,11 +249,3 @@ class Generator(gen_win.WinGeneratorBase):
       self.write_with_template('subversion_vcnet.sln', 'vc2005_sln.ezt', data)
     else:
       self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
-
-
-# compatibility with older Pythons:
-try:
-  True
-except NameError:
-  True = 1
-  False = 0

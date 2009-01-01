@@ -1362,14 +1362,6 @@ class UnknownSubcommand(Exception):
   pass
 
 
-# enable True/False in older vsns of Python
-try:
-  _unused = True
-except NameError:
-  True = 1
-  False = 0
-
-
 if __name__ == '__main__':
   def usage():
     scriptname = os.path.basename(sys.argv[0])

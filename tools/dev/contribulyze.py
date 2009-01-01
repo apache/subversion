@@ -45,12 +45,6 @@ except AttributeError:
   my_getopt = getopt.getopt
 from urllib import quote as url_encode
 
-# Pretend we have true booleans on older python versions
-try:
-  True
-except:
-  True = 1
-  False = 0
 
 # Warnings and errors start with these strings.  They are typically
 # followed by a colon and a space, as in "%s: " ==> "WARNING: ".
