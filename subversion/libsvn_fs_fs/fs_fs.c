@@ -128,6 +128,15 @@ static txn_vtable_t txn_vtable = {
 
 /* Pathname helper functions */
 
+/* Return TRUE is REV is packed in FS, FALSE otherwise. */
+static svn_boolean_t
+is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return (rev < ffd->min_unpacked_rev);
+}
+
 static const char *
 path_format(svn_fs_t *fs, apr_pool_t *pool)
 {
@@ -187,6 +196,17 @@ path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                             apr_psprintf(pool, "%ld",
                                                rev / ffd->max_files_per_dir),
                             NULL);
+}
+
+/* Returns the path of REV in FS, whether in a pack file or not.
+   Allocate in POOL. */
+static const char *
+path_rev_absolute(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  if (is_packed_rev(fs, rev))
+    return path_rev_packed(fs, rev, "pack", pool);
+  else
+    return svn_fs_fs__path_rev(fs, rev, pool);
 }
 
 const char *
@@ -1566,15 +1586,6 @@ ensure_revision_exists(svn_fs_t *fs,
                            _("No such revision %ld"), rev);
 }
 
-/* Return TRUE is REV is packed in FS, FALSE otherwise. */
-static svn_boolean_t
-is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  return (rev < ffd->min_unpacked_rev);
-}
-
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
@@ -1587,10 +1598,7 @@ open_pack_or_rev_file(apr_file_t **file,
 {
   svn_error_t *err;
 
-   err = svn_io_file_open(file,
-                          is_packed_rev(fs, rev)
-                              ? path_rev_packed(fs, rev, "pack", pool)
-                              : svn_fs_fs__path_rev(fs, rev, pool),
+   err = svn_io_file_open(file, path_rev_absolute(fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -2436,10 +2444,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
   return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    is_packed_rev(fs, rev)
-                                      ? path_rev_packed(fs, rev, "pack", pool)
-                                      : svn_fs_fs__path_rev(fs, rev, pool),
-                                    pool);
+                                    path_rev_absolute(fs, rev, pool), pool);
 }
 
 svn_error_t *
@@ -5633,10 +5638,7 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Move the finished rev file into place. */
-  if (is_packed_rev(cb->fs, old_rev))
-    old_rev_filename = path_rev_packed(cb->fs, old_rev, "pack", pool);
-  else
-    old_rev_filename = svn_fs_fs__path_rev(cb->fs, old_rev, pool);
+  old_rev_filename = path_rev_absolute(cb->fs, old_rev, pool);
   rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename,
