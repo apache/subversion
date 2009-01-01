@@ -198,19 +198,8 @@ path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                             NULL);
 }
 
-/* Returns the path of REV in FS, whether in a pack file or not.
-   Allocate in POOL. */
 static const char *
-path_rev_absolute(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
-{
-  if (is_packed_rev(fs, rev))
-    return path_rev_packed(fs, rev, "pack", pool);
-  else
-    return svn_fs_fs__path_rev(fs, rev, pool);
-}
-
-const char *
-svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -223,6 +212,17 @@ svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
                             apr_psprintf(pool, "%ld", rev), NULL);
+}
+
+/* Returns the path of REV in FS, whether in a pack file or not.
+   Allocate in POOL. */
+const char *
+svn_fs_fs__path_rev_absolute(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  if (is_packed_rev(fs, rev))
+    return path_rev_packed(fs, rev, "pack", pool);
+  else
+    return path_rev(fs, rev, pool);
 }
 
 static const char *
@@ -1598,7 +1598,7 @@ open_pack_or_rev_file(apr_file_t **file,
 {
   svn_error_t *err;
 
-   err = svn_io_file_open(file, path_rev_absolute(fs, rev, pool),
+   err = svn_io_file_open(file, svn_fs_fs__path_rev_absolute(fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -2444,7 +2444,8 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
   return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    path_rev_absolute(fs, rev, pool), pool);
+                                    svn_fs_fs__path_rev_absolute(fs, rev, pool),
+                                    pool);
 }
 
 svn_error_t *
@@ -5638,8 +5639,8 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Move the finished rev file into place. */
-  old_rev_filename = path_rev_absolute(cb->fs, old_rev, pool);
-  rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
+  old_rev_filename = svn_fs_fs__path_rev_absolute(cb->fs, old_rev, pool);
+  rev_filename = path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename,
                                      old_rev_filename, pool));
@@ -5754,7 +5755,7 @@ write_revision_zero(svn_fs_t *fs)
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_rev(fs, 0, fs->pool),
+  SVN_ERR(svn_io_file_create(path_rev(fs, 0, fs->pool),
                              "PLAIN\nEND\nENDREP\n"
                              "id: 0.0.r0/17\n"
                              "type: dir\n"
