@@ -1,4 +1,11 @@
-import unittest, os, setup_path, StringIO, tempfile
+import unittest, os, setup_path, tempfile
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
 
@@ -50,8 +57,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       self.callback_calls += 1
       return None
 
-    dumpstream = StringIO.StringIO()
-    feedbackstream = StringIO.StringIO()
+    dumpstream = StringIO()
+    feedbackstream = StringIO()
     repos.dump_fs2(self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0,
                    is_cancelled)
 
@@ -74,8 +81,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertRaises(ValueError, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, None)
 
-    dumpstream = StringIO.StringIO()
-    feedbackstream = StringIO.StringIO()
+    dumpstream = StringIO()
+    feedbackstream = StringIO()
 
     # Check that we can grab the feedback stream, but not the dumpstream
     repos.dump_fs2(self.repos, None, feedbackstream, 0, self.rev, 0, 0, None)

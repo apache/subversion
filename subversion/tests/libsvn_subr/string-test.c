@@ -455,6 +455,10 @@ test12(const char **msg,
   if (status)
     return fail(pool, "closing file");
 
+  status = apr_file_remove(fname, pool);
+  if (status)
+    return fail(pool, "removing file");
+
   return SVN_NO_ERROR;
 }
 

@@ -192,6 +192,7 @@ typedef struct svn_cl__opt_state_t
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
   const char *config_dir;        /* over-riding configuration directory */
+  apr_array_header_t *config_options; /* over-riding configuration options */
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */

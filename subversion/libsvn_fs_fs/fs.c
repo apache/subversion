@@ -235,7 +235,7 @@ fs_open_for_recovery(svn_fs_t *fs,
 
 
 
-/* This implements the fs_library_vtable_t.uprade_fs() API. */
+/* This implements the fs_library_vtable_t.upgrade_fs() API. */
 static svn_error_t *
 fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
            apr_pool_t *common_pool)
