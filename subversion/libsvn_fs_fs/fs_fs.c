@@ -2384,6 +2384,61 @@ get_root_changes_offset(apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
+/* Move a file into place from OLD_FILENAME in the transactions
+   directory to its final location NEW_FILENAME in the repository.  On
+   Unix, match the permissions of the new file to the permissions of
+   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+static svn_error_t *
+move_into_place(const char *old_filename,
+                const char *new_filename,
+                const char *perms_reference,
+                apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  SVN_ERR(svn_fs_fs__dup_perms(old_filename, perms_reference, pool));
+
+  /* Move the file into place. */
+  err = svn_io_file_rename(old_filename, new_filename, pool);
+  if (err && APR_STATUS_IS_EXDEV(err->apr_err))
+    {
+      apr_file_t *file;
+
+      /* Can't rename across devices; fall back to copying. */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
+
+      /* Flush the target of the copy to disk. */
+      SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
+                               APR_OS_DEFAULT, pool));
+      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+      SVN_ERR(svn_io_file_close(file, pool));
+    }
+  if (err)
+    return err;
+
+#ifdef __linux__
+  {
+    /* Linux has the unusual feature that fsync() on a file is not
+       enough to ensure that a file's directory entries have been
+       flushed to disk; you have to fsync the directory as well.
+       On other operating systems, we'd only be asking for trouble
+       by trying to open and fsync a directory. */
+    const char *dirname;
+    apr_file_t *file;
+
+    dirname = svn_path_dirname(new_filename, pool);
+    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
+                             pool));
+    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+    SVN_ERR(svn_io_file_close(file, pool));
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_fs_t *fs,
@@ -2443,9 +2498,8 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      because when setting revprops for the first time, the revprop
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
-  return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    svn_fs_fs__path_rev_absolute(fs, rev, pool),
-                                    pool);
+  return move_into_place(tmp_path, final_path,
+                         svn_fs_fs__path_rev_absolute(fs, rev, pool), pool);
 }
 
 svn_error_t *
@@ -4037,8 +4091,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_write_unique(&tmp_filename,
                               svn_path_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
-                                     txn_current_filename, pool));
+  SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
+                          txn_current_filename, pool));
 
   return err;
 }
@@ -5320,57 +5374,6 @@ svn_fs_fs__dup_perms(const char *filename,
 }
 
 
-svn_error_t *
-svn_fs_fs__move_into_place(const char *old_filename,
-                           const char *new_filename,
-                           const char *perms_reference,
-                           apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  SVN_ERR(svn_fs_fs__dup_perms(old_filename, perms_reference, pool));
-
-  /* Move the file into place. */
-  err = svn_io_file_rename(old_filename, new_filename, pool);
-  if (err && APR_STATUS_IS_EXDEV(err->apr_err))
-    {
-      apr_file_t *file;
-
-      /* Can't rename across devices; fall back to copying. */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
-
-      /* Flush the target of the copy to disk. */
-      SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
-                               APR_OS_DEFAULT, pool));
-      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-    }
-  if (err)
-    return err;
-
-#ifdef __linux__
-  {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    const char *dirname;
-    apr_file_t *file;
-
-    dirname = svn_path_dirname(new_filename, pool);
-    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                             pool));
-    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-    SVN_ERR(svn_io_file_close(file, pool));
-  }
-#endif
-
-  return SVN_NO_ERROR;
-}
-
 /* Atomically update the current file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be NULL if the FS format does not use them.)
@@ -5395,7 +5398,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
                               buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
-  return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
+  return move_into_place(tmp_name, name, name, pool);
 }
 
 /* Update the current file to hold the correct next node and copy_ids
@@ -5642,8 +5645,8 @@ commit_body(void *baton, apr_pool_t *pool)
   old_rev_filename = svn_fs_fs__path_rev_absolute(cb->fs, old_rev, pool);
   rev_filename = path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
-  SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename,
-                                     old_rev_filename, pool));
+  SVN_ERR(move_into_place(proto_filename, rev_filename, old_rev_filename,
+                          pool));
 
   /* Now that we've moved the prototype revision file out of the way,
      we can unlock it (since further attempts to write to the file
@@ -5661,8 +5664,8 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
   final_revprop = path_revprops(cb->fs, new_rev, pool);
-  SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop,
-                                     old_rev_filename, pool));
+  SVN_ERR(move_into_place(revprop_filename, final_revprop, old_rev_filename,
+                          pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
@@ -6296,8 +6299,8 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, uuid_path,
-                                     svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(move_into_place(tmp_path, uuid_path,
+                          svn_fs_fs__path_current(fs, pool), pool));
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
@@ -6808,8 +6811,7 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
                             (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
   SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, final_path,
-                                     iterpool));
+  SVN_ERR(move_into_place(tmp_path, final_path, final_path, iterpool));
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
