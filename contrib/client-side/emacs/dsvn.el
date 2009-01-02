@@ -6,7 +6,7 @@
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.6
+;; Version: 1.7
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -227,6 +227,12 @@ Argument STR is the output string."
         (match-string 1)
       (error "Couldn't find the repository root"))))
 
+(defconst svn-noninteractive-blacklist
+  '(add revert resolved)
+  "Subversion commands that don't accept the --non-interactive option.
+This is only important for svn 1.4, as 1.5 accepts this option for all
+commands.") 
+
 (defun svn-run (command args &optional description)
   "Run subversion command COMMAND with ARGS.
 
@@ -244,6 +250,8 @@ buffer to describe what is going on."
     (when (eq command 'status-v)
       (setq command-s "status"
             args (cons "-v" args)))
+    (unless (memq command svn-noninteractive-blacklist)
+      (setq args (cons "--non-interactive" args)))
     (setq proc (apply 'start-process "svn" (current-buffer)
                       svn-program command-s args))
     (if (fboundp filter-func)

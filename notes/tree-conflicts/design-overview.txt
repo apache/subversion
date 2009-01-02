@@ -127,11 +127,15 @@ Primary APIs:
 
 To do:
 
-  (Nothing)
+  Record enough information to be able to reconstruct the "old", "mine" and
+  "theirs" versions of the item, and possibly also a complete local copy of
+  them.
 
 Notes:
 
-  Special case: The root of the WC is the victim of a tree conflict. (This can only happen with a merge, as there can be no tree change scheduled locally for an update to conflict with.)
+  Special case: The root of the WC is the victim of a tree conflict. (This can
+  only happen with a merge, as there can be no tree change scheduled locally
+  for an update to conflict with.)
   Problem: There is no parent directory in which to store the conflict info.
   Solution: Abort with an error, and don't change the WC.
 

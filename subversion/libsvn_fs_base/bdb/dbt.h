@@ -24,7 +24,7 @@
 #include <apu_want.h>
 
 #include "svn_fs.h"
-#include "../util/skel.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +96,7 @@ DBT *svn_fs_base__id_to_dbt(DBT *dbt, const svn_fs_id_t *id,
 
 /* Set DBT to the unparsed form of SKEL; allocate memory from POOL.
    Return DBT.  */
-DBT *svn_fs_base__skel_to_dbt(DBT *dbt, skel_t *skel, apr_pool_t *pool);
+DBT *svn_fs_base__skel_to_dbt(DBT *dbt, svn_skel_t *skel, apr_pool_t *pool);
 
 
 /* Set DBT to the text of the null-terminated string STR.  DBT will

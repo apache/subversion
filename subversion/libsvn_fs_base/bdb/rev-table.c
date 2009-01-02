@@ -16,10 +16,12 @@
  */
 
 #include "bdb_compat.h"
+
 #include "svn_fs.h"
+#include "private/svn_skel.h"
+
 #include "../fs.h"
 #include "../err.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
@@ -64,7 +66,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT key, value;
-  skel_t *skel;
+  svn_skel_t *skel;
   revision_t *revision;
 
   /* Turn the revision number into a Berkeley DB record number.
@@ -88,7 +90,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
   SVN_ERR(BDB_WRAP(fs, _("reading filesystem revision"), db_err));
 
   /* Parse REVISION skel.  */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_fs_revision(fs, rev);
 
@@ -114,7 +116,7 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   db_recno_t recno = 0;
-  skel_t *skel;
+  svn_skel_t *skel;
   DBT key, value;
 
   /* Convert native type to skel. */

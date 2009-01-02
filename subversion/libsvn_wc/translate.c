@@ -45,14 +45,12 @@ static svn_error_t *
 read_handler_unsupported(void *baton, char *buffer, apr_size_t *len)
 {
   SVN_ERR_MALFUNCTION();
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 write_handler_unsupported(void *baton, const char *buffer, apr_size_t *len)
 {
   SVN_ERR_MALFUNCTION();
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -140,31 +138,21 @@ svn_wc_translated_file2(const char **xlated_path,
     }
   else  /* some translation (or copying) is necessary */
     {
-      const char *tmp_vfile;
       const char *tmp_dir;
+      const char *tmp_vfile;
       svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
 
       if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
-        {
-          SVN_ERR(svn_io_temp_dir(&tmp_dir, pool));
-          tmp_vfile = svn_path_join(tmp_dir, "svndiff", pool);
-        }
+        tmp_dir = NULL;
       else
-        {
-          const char *parent_dir;
+        tmp_dir = svn_wc__adm_child(svn_path_dirname(versioned_file, pool),
+                                    SVN_WC__ADM_TMP, pool);
 
-          svn_path_split(versioned_file, &parent_dir, &tmp_vfile, pool);
-          tmp_dir = svn_wc__adm_child(parent_dir, SVN_WC__ADM_TMP, pool);
-          tmp_vfile = svn_path_join(tmp_dir, tmp_vfile, pool);
-        }
-
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &tmp_vfile,
-               tmp_vfile,
-               SVN_WC__TMP_EXT,
-               (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)
-               ? svn_io_file_del_none : svn_io_file_del_on_pool_cleanup,
-               pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_vfile, tmp_dir,
+                (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)
+                  ? svn_io_file_del_none
+                  : svn_io_file_del_on_pool_cleanup,
+                pool, pool));
 
       if (flags & SVN_WC_TRANSLATE_TO_NF)
         /* to normal form */

@@ -234,7 +234,7 @@ class DependencyGraph:
     return sources
 
   def get_deps(self, type):
-    return self.deps[type].items()
+    return list(self.deps[type].items())
 
 # dependency types
 dep_types = [
@@ -581,7 +581,7 @@ class TargetSWIG(TargetLib):
         self.targets[lang] = target
 
     def get_targets(self):
-      return self.targets.values()
+      return list(self.targets.values())
 
     def get_dep_targets(self, target):
       target = self.targets.get(target.lang, None)
@@ -978,7 +978,7 @@ class IncludeDependencyInfo:
     HDRS is of the form { 'path/to/header.h': TYPECODE, }
 
     Return a boolean indicating whether any changes were made."""
-    items = hdrs.items()
+    items = list(hdrs.items())
     for this_hdr, this_type in items:
       for dependency_hdr, dependency_type in self._deps[this_hdr].items():
         self._upd_dep_hash(hdrs, dependency_hdr, dependency_type)

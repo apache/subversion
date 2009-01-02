@@ -653,24 +653,24 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'C', 'F')
 
-  external_urls = external_url_for.values()
+  external_urls = list(external_url_for.values())
 
   externals_value_1 = "../foo"         + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_2 = "foo/bar/../baz" + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_3 = "foo/.."         + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_4 = "."              + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_5 = "./"             + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_6 = ".."             + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_7 = "././/.///."     + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_8 = "/foo"           + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
   set_externals_for_path_expect_error(G_path, externals_value_2)

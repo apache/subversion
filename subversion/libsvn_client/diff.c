@@ -783,6 +783,27 @@ diff_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_diff_callbacks3_t function. */
+static svn_error_t *
+diff_dir_closed(svn_wc_adm_access_t *adm_access,
+                svn_wc_notify_state_t *contentstate,
+                svn_wc_notify_state_t *propstate,
+                svn_boolean_t *tree_conflicted,
+                const char *path,
+                void *diff_baton)
+{
+  if (contentstate)
+    *contentstate = svn_wc_notify_state_unknown;
+  if (propstate)
+    *propstate = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
+
+  return SVN_NO_ERROR;
+}
+
 
 /*-----------------------------------------------------------------*/
 
@@ -1352,9 +1373,9 @@ diff_repos_wc(const char *path1,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
                                   reporter, report_baton,
-                                  FALSE, depth, (! server_supports_depth),
+                                  FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
@@ -1619,6 +1640,7 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.dir_props_changed = diff_props_changed;
   diff_callbacks.dir_opened = diff_dir_opened;
+  diff_callbacks.dir_closed = diff_dir_closed;
 
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
@@ -1689,6 +1711,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.dir_props_changed = diff_props_changed;
   diff_callbacks.dir_opened = diff_dir_opened;
+  diff_callbacks.dir_closed = diff_dir_closed;
 
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;

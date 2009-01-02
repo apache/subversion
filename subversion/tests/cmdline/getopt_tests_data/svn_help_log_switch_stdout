@@ -57,6 +57,11 @@ Global options:
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
+  --config-option ARG      : set user configuration option in the format:
+                                 FILE:SECTION:OPTION=[VALUE]
+                             For example:
+                                 servers:global:http-library=serf
+
 
 switch (sw): Update the working copy to a different URL.
 usage: 1. switch URL[@PEGREV] [PATH]
@@ -124,4 +129,9 @@ Global options:
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
+  --config-option ARG      : set user configuration option in the format:
+                                 FILE:SECTION:OPTION=[VALUE]
+                             For example:
+                                 servers:global:http-library=serf
+
 

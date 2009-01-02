@@ -190,6 +190,7 @@ typedef struct svn_cl__opt_state_t
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
   const char *config_dir;        /* over-riding configuration directory */
+  apr_array_header_t *config_options; /* over-riding configuration options */
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
@@ -595,10 +596,32 @@ svn_cl__xml_print_header(const char *tagname, apr_pool_t *pool);
 svn_error_t *
 svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 
-/* Return a (non-localised) string representation of KIND, being "dir" or
-   "file" or, in any other case, the empty string. */
+
+/* For use in XML output, return a non-localised string representation
+ * of KIND, being "none" or "dir" or "file" or, in any other case,
+ * the empty string. */
 const char *
-svn_cl__node_kind_str(svn_node_kind_t kind);
+svn_cl__node_kind_str_xml(svn_node_kind_t kind);
+
+/* Return a (possibly localised) string representation of KIND, being "none" or
+   "dir" or "file" or, in any other case, the empty string. */
+const char *
+svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
+
+
+/** Provides an XML name for a given OPERATION.
+ * Note: POOL is currently not used.
+ */
+const char *
+svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool);
+
+/** Return a possibly localized human readable string for
+ * a given OPERATION.
+ * Note: POOL is currently not used.
+ */
+const char *
+svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
+                                     apr_pool_t *pool);
 
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
@@ -637,6 +660,13 @@ const char *
 svn_cl__indent_string(const char *str,
                       const char *indent,
                       apr_pool_t *pool);
+
+
+/* Return a string showing NODE's kind, URL and revision, to the extent that
+ * that information is available in NODE. */
+const char *
+svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -46,7 +46,7 @@ svn_client__derive_location(const char **url,
                             svn_revnum_t *peg_revnum,
                             const char *path_or_url,
                             const svn_opt_revision_t *peg_revision,
-                            const svn_ra_session_t *ra_session,
+                            svn_ra_session_t *ra_session,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
@@ -946,8 +946,8 @@ svn_client__condense_commit_items(const char **base_url,
    *TEMPFILES is the place to look.
 
    MD5 checksums, if available,  for the new text bases of committed
-   files are stored in *DIGESTS, which maps const char* paths (from the
-   items' paths) to const unsigned char* digests.  DIGESTS may be
+   files are stored in *CHECKSUMS, which maps const char* paths (from the
+   items' paths) to const svn_checksum_t * digests.  CHECKSUMS may be
    null.  */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
@@ -957,7 +957,7 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
-                      apr_hash_t **digests,
+                      apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 

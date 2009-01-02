@@ -70,6 +70,7 @@ const char *svn_wc__logfile_path(int log_number,
    human-readable non-parsed property conflict files) should be
    rewritten.  See Issue #3015.
 */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
@@ -146,7 +147,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
+/* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
    in ADM_ACCESS according to the flags specified in MODIFY_FLAGS, based on
    the values supplied in *ENTRY.
 
@@ -156,7 +157,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
-                           const char *name,
+                           const char *path,
                            svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool);

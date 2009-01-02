@@ -4,7 +4,12 @@
 
 import sys, os
 import sgmllib
-from htmlentitydefs import entitydefs
+try:
+  # Python >=3.0
+  from html.entities import entitydefs
+except ImportError:
+  # Python <3.0
+  from htmlentitydefs import entitydefs
 import fileinput
 from urllib2 import urlopen
 
@@ -74,15 +79,15 @@ class MyParser(sgmllib.SGMLParser):
 
   def handle_decl(self, data):
     if not self.inbody: return
-    print "DECL: " + data
+    print("DECL: " + data)
 
   def unknown_starttag(self, tag, attrs):
     if not self.inbody: return
-    print "UNKTAG: %s %s" % (tag, attrs)
+    print("UNKTAG: %s %s" % (tag, attrs))
 
   def unknown_endtag(self, tag):
     if not self.inbody: return
-    print "UNKTAG: /%s" % (tag)
+    print("UNKTAG: /%s" % (tag))
 
   def do_br(self, attrs):
     self.complete_line = True
@@ -127,7 +132,7 @@ def main():
     list, year, month, msgno = sys.argv[1:]
     url = "http://svn.haxx.se/" \
         + "%(list)s/archive-%(year)s-%(month)s/%(msgno)s.shtml" % locals()
-    print "MsgUrl: " + url
+    print("MsgUrl: " + url)
     msgfile = urlopen(url)
     p = MyParser()
     buffer = msgfile.read(CHUNKSIZE)

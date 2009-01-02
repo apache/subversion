@@ -214,6 +214,43 @@ svn_wc__db_open_many(svn_wc__db_t **db,
 
 
 svn_error_t *
+svn_wc__db_txn_begin(svn_wc__db_t *db,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+}
+
+
+svn_error_t *
+svn_wc__db_txn_rollback(svn_wc__db_t *db,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+}
+
+
+svn_error_t *
+svn_wc__db_txn_commit(svn_wc__db_t *db,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+}
+
+
+svn_error_t *
+svn_wc__db_close(svn_wc__db_t *db,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_txn_rollback(db, result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
                               svn_wc__db_t *db,
                               const char *dirpath,
@@ -287,7 +324,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(__FILE__, __LINE__, "Not implemented.");
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
 }
 
 
@@ -296,7 +333,7 @@ svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
                            svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(__FILE__, __LINE__, "Not implemented.");
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
 }
 
 
@@ -306,7 +343,7 @@ svn_wc__db_pristine_incref(int *new_refcount,
                            svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(__FILE__, __LINE__, "Not implemented.");
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
 }
 
 
@@ -316,5 +353,5 @@ svn_wc__db_pristine_decref(int *new_refcount,
                            svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(__FILE__, __LINE__, "Not implemented.");
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
 }

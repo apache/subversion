@@ -31,6 +31,7 @@ class TestHarness:
                base_url=None, fs_type=None, http_library=None,
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
+               fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None):
     '''Construct a TestHarness instance.
 
@@ -53,6 +54,10 @@ class TestHarness:
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
     self.parallel = parallel
+    self.fsfs_sharding = fsfs_sharding
+    self.fsfs_packing = fsfs_packing
+    if fsfs_packing is not None and fsfs_sharding is None:
+      raise Exception('--fsfs-packing requires --fsfs-sharding')
     self.config_file = None
     if config_file is not None:
       self.config_file = os.path.abspath(config_file)
@@ -71,12 +76,12 @@ class TestHarness:
     self._open_log('r')
     log_lines = self.log.readlines()
     # Print summaries from least interesting to most interesting.
-    skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
+    skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
-    xfailed = filter(lambda x: x[:6] == 'XFAIL:', log_lines)
+    xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
@@ -152,6 +157,10 @@ class TestHarness:
       cmdline.append('--list')
     if self.svn_bin is not None:
       cmdline.append(quote('--bin=' + self.svn_bin))
+    if self.fsfs_sharding is not None:
+      cmdline.append('--fsfs-sharding=%d' % self.fsfs_sharding)
+    if self.fsfs_packing is not None:
+      cmdline.append('--fsfs-packing')
 
     old_cwd = os.getcwd()
     try:
@@ -209,6 +218,7 @@ def main():
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
                             'http-library=', 'server-minor-version=',
+                            'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file='])
   except getopt.GetoptError:
     args = []
@@ -218,8 +228,9 @@ def main():
     sys.exit(2)
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
-    server_minor_version, parallel, config_file = \
-            None, None, None, None, None, None, None, None, None
+    server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
+    config_file = \
+            None, None, None, None, None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -227,6 +238,10 @@ def main():
       fs_type = val
     elif opt in ['--http-library']:
       http_library = val
+    elif opt in ['--fsfs-sharding']:
+      fsfs_sharding = int(val)
+    elif opt in ['--fsfs-packing']:
+      fsfs_packing = 1
     elif opt in ['--server-minor-version']:
       server_minor_version = val
     elif opt in ['-v', '--verbose']:
@@ -245,7 +260,8 @@ def main():
   th = TestHarness(args[0], args[1],
                    os.path.abspath('tests.log'),
                    base_url, fs_type, http_library, server_minor_version,
-                   verbose, cleanup, enable_sasl, parallel, config_file)
+                   verbose, cleanup, enable_sasl, parallel, config_file,
+                   fsfs_sharding, fsfs_packing)
 
   failed = th.run(args[2:])
   if failed:

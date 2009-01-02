@@ -68,6 +68,9 @@ APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
+dnl Search for pkg-config
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
@@ -326,11 +329,6 @@ AC_PREPROC_IFELSE([
 CPPFLAGS="$old_CPPFLAGS"
 
 
-dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
-
-AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
-
-
 dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------
 
 if test "$HAVE_PKG_CONFIG" = "yes"; then
@@ -457,10 +455,12 @@ AH_BOTTOM(
 #include <locale.h>
 #include <libintl.h>
 #define _(x) dgettext(PACKAGE_NAME, x)
+#define Q_(x1, x2, n) dngettext(PACKAGE_NAME, x1, x2, n)
 #else
 #define _(x) (x)
+#define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
 #define gettext(x) (x)
-#define dgettext(domain,x) (x)
+#define dgettext(domain, x) (x)
 #endif
 )
 
@@ -701,6 +701,7 @@ AS_HELP_STRING([--enable-debug],
     #       the CFLAGS/CXXFLAGS munging.
 ])
 
+
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
                [Turn on debugging and very strict compile-time warnings]),
@@ -711,8 +712,37 @@ AS_HELP_STRING([--enable-maintainer-mode],
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
-        CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
+        dnl Enable some extra warnings. Put these before the user's flags
+        dnl so the user can specify flags that override these.
+        CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
+
+        dnl some additional flags that can be handy for an occasional review,
+        dnl but throw too many warnings in svn code, of too little importance,
+        dnl to keep these enabled. Remove the "dnl" to do a run with these
+        dnl switches enabled.
+        dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
+
+        dnl Add each of the following flags only if the compiler accepts it.
+
+        CFLAGS_KEEP="$CFLAGS"
+        AC_LANG_PUSH([C])
+
+        CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="-Wnewline-eof $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="-Wshorten-64-to-32 $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        AC_LANG_POP([C])
+        CFLAGS="$CFLAGS_KEEP"
       fi
     fi
 ])

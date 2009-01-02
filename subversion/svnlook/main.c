@@ -239,6 +239,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"propget", subcommand_pget, {"pget", "pg"},
    N_("usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
       "                    "
+      /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n\n"
       "Print the raw value of a property on a path in the repository.\n"
       "With --revprop, print the raw value of a revision property.\n"),
@@ -247,6 +248,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"proplist", subcommand_plist, {"plist", "pl"},
    N_("usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
       "                      "
+      /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook proplist --revprop REPOS_PATH\n\n"
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
@@ -964,7 +966,7 @@ print_diff_tree(svn_fs_root_t *root,
       if (binary)
         {
           svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
-          SVN_ERR(svn_cmdline_printf(pool, header->data));
+          SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
         }
       else
         {
@@ -983,7 +985,7 @@ print_diff_tree(svn_fs_root_t *root,
               const char *orig_label, *new_label;
 
               /* Print diff header. */
-              SVN_ERR(svn_cmdline_printf(pool, header->data));
+              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
 
               /* This fflush() might seem odd, but it was added to deal
                  with this bug report:
@@ -1933,9 +1935,9 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
       SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
       SVN_ERR(svn_cmdline_printf(pool,
-                                 (comment_lines != 1)
-                                 ? _("Comment (%i lines):\n%s\n")
-                                 : _("Comment (%i line):\n%s\n"),
+                                 Q_("Comment (%i line):\n%s\n",
+                                    "Comment (%i lines):\n%s\n",
+                                    comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }

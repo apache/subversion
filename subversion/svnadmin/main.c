@@ -193,6 +193,7 @@ static svn_opt_subcommand_t
   subcommand_list_unused_dblogs,
   subcommand_lslocks,
   subcommand_lstxns,
+  subcommand_pack,
   subcommand_recover,
   subcommand_rmlocks,
   subcommand_rmtxns,
@@ -341,7 +342,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'r', 'q'} },
 
   {"dump", subcommand_dump, {0}, N_
-   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
+   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n\n"
     "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
     "portable format, sending feedback to stderr.  Dump revisions\n"
     "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
@@ -394,6 +395,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"lstxns", subcommand_lstxns, {0}, N_
    ("usage: svnadmin lstxns REPOS_PATH\n\n"
     "Print the names of all uncommitted transactions.\n"),
+   {0} },
+
+  {"pack", subcommand_pack, {0}, N_
+   ("usage: svnadmin pack REPOS_PATH\n\n"
+    "Possibly compact the repository into a more effecient storage model.\n"
+    "This may not apply to all repositories, in which case, exit.\n"),
    {0} },
 
   {"recover", subcommand_recover, {0}, N_
@@ -1115,6 +1122,19 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* This implements 'svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+
+  return svn_repos_fs_pack(repos, check_cancel, NULL, pool);
+}
+
+
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -1217,9 +1237,10 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Owner: %s\n"), lock->owner));
       SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
       SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
-      SVN_ERR(svn_cmdline_printf(pool, (comment_lines != 1)
-                                 ? _("Comment (%i lines):\n%s\n\n")
-                                 : _("Comment (%i line):\n%s\n\n"),
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 Q_("Comment (%i line):\n%s\n\n",
+                                    "Comment (%i lines):\n%s\n\n",
+                                    comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }
@@ -1741,6 +1762,4 @@ subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   abort();
-
-  return SVN_NO_ERROR;
 }

@@ -364,7 +364,7 @@ class Contributor:
                           self.big_name(html=True), True))
     unique_logs = { }
 
-    sorted_activities = self.activities.keys()
+    sorted_activities = list(self.activities.keys())
     sorted_activities.sort()
 
     out.write('<div class="h2" id="activities" title="activities">\n\n')
@@ -389,7 +389,7 @@ class Contributor:
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = unique_logs.keys()
+    sorted_logs = list(unique_logs.keys())
     sorted_logs.sort()
     for log in sorted_logs:
       out.write('<hr />\n')
@@ -658,7 +658,7 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = Contributor.all_contributors.values()
+  sorted_contributors = list(Contributor.all_contributors.values())
   sorted_contributors.sort()
   for c in sorted_contributors:
     if c not in seen_contributors:
@@ -714,26 +714,26 @@ def process_committers(committers):
 
 
 def usage():
-  print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
-        % os.path.basename(sys.argv[0])
-  print ''
-  print 'Create HTML files in the current directory, rooted at index.html,'
-  print 'in which you can browse to see who contributed what.'
-  print ''
-  print 'The log input should use the contribution-tracking format defined'
-  print 'in http://subversion.tigris.org/hacking.html#crediting.'
-  print ''
-  print 'Options:'
-  print ''
-  print '  -h, -H, -?, --help   Print this usage message and exit'
-  print '  -C FILE              Use FILE as the COMMITTERS file'
-  print '  -U URL               Use URL as a Python interpolation pattern to'
-  print '                       generate URLs to link revisions to some kind'
-  print '                       of web-based viewer (e.g. ViewCVS).  The'
-  print '                       interpolation pattern should contain exactly'
-  print '                       one format specifier, \'%s\', which will be'
-  print '                       replaced with the revision number.'
-  print ''
+  print('USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
+        % os.path.basename(sys.argv[0]))
+  print('')
+  print('Create HTML files in the current directory, rooted at index.html,')
+  print('in which you can browse to see who contributed what.')
+  print('')
+  print('The log input should use the contribution-tracking format defined')
+  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('')
+  print('Options:')
+  print('')
+  print('  -h, -H, -?, --help   Print this usage message and exit')
+  print('  -C FILE              Use FILE as the COMMITTERS file')
+  print('  -U URL               Use URL as a Python interpolation pattern to')
+  print('                       generate URLs to link revisions to some kind')
+  print('                       of web-based viewer (e.g. ViewCVS).  The')
+  print('                       interpolation pattern should contain exactly')
+  print('                       one format specifier, \'%s\', which will be')
+  print('                       replaced with the revision number.')
+  print('')
 
 
 def main():

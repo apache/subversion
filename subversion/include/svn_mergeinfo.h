@@ -212,7 +212,7 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the diff,
- * @see svn_mergeinfo_diff().
+ * as described for svn_mergeinfo_diff().
  *
  * @since New in 1.5.
  */
@@ -228,7 +228,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  *
  * When intersecting rangelists are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
- * operands, @see svn_mergeinfo_merge().
+ * operands: see svn_mergeinfo_merge().
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
@@ -338,8 +338,10 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
  * and @a start is less than or equal to @a end, then exclude only the
  * non-inheritable revisions that intersect inclusively with the range
  * defined by @a start and @a end.  If @a path is not NULL remove
- * non-inheritable ranges only for @a path.  Allocate the copy in @a
- * pool.
+ * non-inheritable ranges only for @a path.  If all ranges are removed
+ * for a given path then remove that path as well.  If all paths are
+ * removed or @a rangelist is empty then set @a *inheritable_rangelist
+ * to an empty array.  Allocate the copy in @a pool.
  *
  * @since New in 1.5.
  */
@@ -372,6 +374,14 @@ svn_mergeinfo_to_string(svn_string_t **output,
  */
 svn_error_t *
 svn_mergeinfo_sort(svn_mergeinfo_t mergeinfo, apr_pool_t *pool);
+
+/** Return a deep copy of @a mergeinfo_catalog, allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_mergeinfo_catalog_t
+svn_mergeinfo_catalog_dup(svn_mergeinfo_catalog_t mergeinfo_catalog,
+                          apr_pool_t *pool);
 
 /** Return a deep copy of @a mergeinfo, allocated in @a pool.
  *

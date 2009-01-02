@@ -225,8 +225,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
 
     default:
       /* programmer error somewhere */
-      abort();
-      return NULL;
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
   /* NOTREACHED */
@@ -437,7 +436,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
         svn_error_clear(serr);
       }
     return dav_svn__convert_err(safe_err, http_status,
-                                apr_psprintf(r->pool, safe_err->message),
+                                apr_psprintf(r->pool, "%s", safe_err->message),
                                 r->pool);
 }
 

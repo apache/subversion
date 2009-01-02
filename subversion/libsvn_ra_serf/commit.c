@@ -216,6 +216,9 @@ return_response_err(svn_ra_serf__handler_t *handler,
 {
   SVN_ERR(ctx->server_error.error);
 
+  /* Try to return one of the standard errors for 301, 404 etc. */
+  SVN_ERR(svn_ra_serf__error_on_status(ctx->status, handler->path));
+
   return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                            "%s of '%s': %d %s",
                            handler->method, handler->path,
@@ -1453,7 +1456,7 @@ absent_directory(const char *path,
   dir_context_t *ctx = parent_baton;
 #endif
 
-  abort();
+  SVN_ERR_MALFUNCTION();
 }
 
 static svn_error_t *
@@ -1609,9 +1612,10 @@ apply_textdelta(void *file_baton,
    */
   wc_callbacks = ctx->commit->session->wc_callbacks;
   wc_callback_baton = ctx->commit->session->wc_callback_baton;
-  SVN_ERR(wc_callbacks->open_tmp_file(&ctx->svndiff,
-                                      wc_callback_baton,
-                                      ctx->pool));
+
+  SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   ctx->pool, ctx->pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);
@@ -1816,7 +1820,7 @@ absent_file(const char *path,
   dir_context_t *ctx = parent_baton;
 #endif
 
-  abort();
+  SVN_ERR_MALFUNCTION();
 }
 
 static svn_error_t *
@@ -1845,7 +1849,7 @@ close_edit(void *edit_baton,
 
   if (svn_ra_serf__merge_get_status(merge_ctx) != 200)
     {
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   /* Inform the WC that we did a commit.  */
@@ -1869,10 +1873,7 @@ close_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  if (delete_ctx->status != 204)
-    {
-      abort();
-    }
+  SVN_ERR_ASSERT(delete_ctx->status == 204);
 
   return SVN_NO_ERROR;
 }
@@ -1914,7 +1915,7 @@ abort_edit(void *edit_baton,
       delete_ctx->status != 404
       )
     {
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;

@@ -1,4 +1,10 @@
-import cStringIO
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 import unittest, os, tempfile, shutil, types, setup_path, binascii
 import svn.diff
 from svn import core, repos, wc, client
@@ -188,7 +194,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
 
-      self.assertEqual(['', 'tags', 'branches', 'trunk'], entries.keys())
+      self.assertEqual(['', 'tags', 'branches', 'trunk'], list(entries.keys()))
 
   def test_get_ignores(self):
       self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
@@ -301,7 +307,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     # Save prop changes.
     got_prop_changes = []
     def props_changed(path, propchanges):
-      for (name, value) in propchanges.iteritems():
+      for (name, value) in propchanges.items():
         (kind, unused_prefix_len) = core.svn_property_kind(name)
         if kind != core.svn_prop_regular_kind:
           continue
@@ -315,7 +321,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       original_header = modified_header = ''
       encoding = 'utf8'
       relative_to_dir = None
-      sio = cStringIO.StringIO()
+      sio = StringIO()
       svn.diff.file_output_unified3(sio, diff,
                                     left, right,
                                     original_header, modified_header,

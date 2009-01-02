@@ -175,7 +175,7 @@ start_lock(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
     }
   else if (state == LOCK_SCOPE)
@@ -186,7 +186,7 @@ start_lock(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
     }
 

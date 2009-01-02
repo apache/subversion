@@ -24,7 +24,12 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
-import Queue
+try:
+  # Python >=3.0
+  import queue
+except ImportError:
+  # Python <3.0
+  import Queue as queue
 import urllib
 
 import getopt
@@ -98,13 +103,23 @@ else:
   _bat = ''
 
 try:
-  from popen2 import Popen3
-  platform_with_popen3_class = True
+  # Python >=2.4
+  import subprocess
+  platform_with_subprocess = True
 except ImportError:
-  platform_with_popen3_class = False
+  # Python <2.4
+  platform_with_subprocess = False
+
+if not platform_with_subprocess:
+  # Python <2.4
+  try:
+    from popen2 import Popen3
+    platform_with_popen3_class = True
+  except ImportError:
+    platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
-if sys.platform == 'win32':
+if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
@@ -173,6 +188,13 @@ use_jsvn = False
 # Global variable indicating which DAV library, if any, is in use
 # ('neon', 'serf')
 http_library = None
+
+# Global variable: Number of shards to use in FSFS
+# 'None' means "use FSFS's default"
+fsfs_sharding = None
+
+# Global variable: automatically pack FSFS repositories after every commit
+fsfs_packing = None
 
 # Configuration file (copied into FSFS fsfs.conf).
 config_file = None
@@ -331,6 +353,11 @@ def get_fsfs_conf_file_path(repo_dir):
 
   return os.path.join(repo_dir, "db", "fsfs.conf")
 
+def get_fsfs_format_file_path(repo_dir):
+  "Return the path of the format file in REPO_DIR."
+
+  return os.path.join(repo_dir, "db", "format")
+
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return exit code as int; stdout, stderr
@@ -371,12 +398,22 @@ def open_pipe(command, mode):
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
-  if platform_with_popen3_class:
-    kid = Popen3(command, True)
-    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+  if platform_with_subprocess:
+    # Python >=2.4
+    command = [str(x) for x in command]
+    p = subprocess.Popen(command, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         close_fds=not windows)
+    return p.stdin, p.stdout, p.stderr, (p, command)
   else:
-    inf, outf, errf = os.popen3(command, mode)
-    return inf, outf, errf, None
+    # Python <2.4
+    command = ' '.join([_quote_arg(x) for x in command])
+    if platform_with_popen3_class:
+      kid = Popen3(command, True)
+      return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+    else:
+      inf, outf, errf = os.popen3(command, mode)
+      return inf, outf, errf, None
 
 def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   """Waits for KID (opened with open_pipe) to finish, dying
@@ -387,32 +424,60 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
 
   kid, command = waiter
 
-  wait_code = kid.wait()
+  if platform_with_subprocess:
+    # Python >=2.4
+    exit_code = kid.wait()
 
-  if os.WIFSIGNALED(wait_code):
-    exit_signal = os.WTERMSIG(wait_code)
-    if stdout_lines is not None:
-      sys.stdout.write("".join(stdout_lines))
-    if stderr_lines is not None:
-      sys.stderr.write("".join(stderr_lines))
-    if verbose_mode:
-      # show the whole path to make it easier to start a debugger
-      sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (command, exit_signal))
-    raise SVNProcessTerminatedBySignal
+    if exit_code < 0:
+      exit_signal = os.WTERMSIG(-exit_code)
+      if stdout_lines is not None:
+        sys.stdout.write("".join(stdout_lines))
+      if stderr_lines is not None:
+        sys.stderr.write("".join(stderr_lines))
+      if verbose_mode:
+        # show the whole path to make it easier to start a debugger
+        sys.stderr.write("CMD: %s terminated by signal %d\n"
+                         % (command, exit_signal))
+      raise SVNProcessTerminatedBySignal
+    else:
+      if exit_code and verbose_mode:
+        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+      return exit_code
   else:
-    exit_code = os.WEXITSTATUS(wait_code)
-    if exit_code and verbose_mode:
-      sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
-    return exit_code
+    # Python <2.4
+    wait_code = kid.wait()
+
+    if os.WIFSIGNALED(wait_code):
+      exit_signal = os.WTERMSIG(wait_code)
+      if stdout_lines is not None:
+        sys.stdout.write("".join(stdout_lines))
+      if stderr_lines is not None:
+        sys.stderr.write("".join(stderr_lines))
+      if verbose_mode:
+        # show the whole path to make it easier to start a debugger
+        sys.stderr.write("CMD: %s terminated by signal %d\n"
+                         % (command, exit_signal))
+      raise SVNProcessTerminatedBySignal
+    else:
+      exit_code = os.WEXITSTATUS(wait_code)
+      if exit_code and verbose_mode:
+        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+      return exit_code
+
+# Convert Windows line ending ('\r\n') to universal line ending ('\n')
+if platform_with_subprocess and windows:
+  def _convert_windows_line_ending(line):
+    if line.endswith('\r\n'):
+      return line[:-2] + '\n'
+    else:
+      return line
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
-  args = ' '.join(map(_quote_arg, varargs))
-
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command), args))
+    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
+                                      ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
   if binary_mode:
@@ -420,7 +485,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   else:
     mode = 't'
 
-  infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
+  infile, outfile, errfile, kid = open_pipe([command] + list(varargs), mode)
 
   if stdin_lines:
     for x in stdin_lines:
@@ -430,6 +495,10 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
+
+  if platform_with_subprocess and windows and not binary_mode:
+    stdout_lines = [_convert_windows_line_ending(x) for x in stdout_lines]
+    stderr_lines = [_convert_windows_line_ending(x) for x in stderr_lines]
 
   outfile.close()
   errfile.close()
@@ -487,6 +556,9 @@ def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   if config_contents is None:
     config_contents = """
 #
+[auth]
+password-stores =
+
 [miscellany]
 interactive-conflicts = false
 """
@@ -661,8 +733,46 @@ def create_repos(path):
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
-  if config_file is not None and (fs_type is None or fs_type == 'fsfs'):
-    shutil.copy(config_file, get_fsfs_conf_file_path(path))
+  if fs_type is None or fs_type == 'fsfs':
+    # fsfs.conf file
+    if config_file is not None:
+      shutil.copy(config_file, get_fsfs_conf_file_path(path))
+
+    # format file
+    if fsfs_sharding is not None:
+      def transform_line(line):
+        if line.startswith('layout '):
+          if fsfs_sharding > 0:
+            line = 'layout sharded %d' % fsfs_sharding
+          else:
+            line = 'layout linear'
+        return line
+
+      # read it
+      format_file_path = get_fsfs_format_file_path(path)
+      contents = file_read(format_file_path, 'rb')
+
+      # tweak it
+      new_contents = "".join([transform_line(line) + "\n"
+                              for line in contents.split("\n")])
+      if new_contents[-1] == "\n":
+        # we don't currently allow empty lines (\n\n) in the format file.
+        new_contents = new_contents[:-1]
+
+      # replace it
+      os.chmod(format_file_path, 0666)
+      file_write(format_file_path, new_contents, 'wb')
+
+    # post-commit
+    # Note that some tests (currently only commit_tests) create their own
+    # post-commit hooks, which would override this one. :-(
+    if fsfs_packing:
+      create_python_hook_script(get_post_commit_hook_path(path), 
+          "import subprocess\n"
+          "import sys\n"
+          "command = %s\n"
+          "sys.exit(subprocess.Popen(command).wait())\n"
+          % repr([svnadmin_binary, 'pack', path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
@@ -674,22 +784,22 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
   create_repos(dst_path)
-  dump_args = ' dump "' + src_path + '"'
-  load_args = ' load "' + dst_path + '"'
+  dump_args = ['dump', src_path]
+  load_args = ['load', dst_path]
 
   if ignore_uuid:
-    load_args = load_args + " --ignore-uuid"
+    load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
     sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary), \
-                     dump_args, os.path.basename(svnadmin_binary), load_args))
+                     ' '.join(dump_args), os.path.basename(svnadmin_binary), ' '.join(load_args)))
     sys.stdout.flush()
   start = time.time()
 
   dump_in, dump_out, dump_err, dump_kid = \
-           open_pipe(svnadmin_binary + dump_args, 'b')
+           open_pipe([svnadmin_binary] + dump_args, 'b')
   dump_in.close()
   load_in, load_out, load_err, load_kid = \
-           open_pipe(svnadmin_binary + load_args, 'b')
+           open_pipe([svnadmin_binary] + load_args, 'b')
   stop = time.time()
   if verbose_mode:
     print('<TIME = %.6f>' % (stop - start))
@@ -754,7 +864,7 @@ def create_python_hook_script (hook_path, hook_script_code):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
-  if sys.platform == 'win32':
+  if windows:
     # Use an absolute path since the working directory is not guaranteed
     hook_path = os.path.abspath(hook_path)
     # Fill the python file.
@@ -1044,7 +1154,7 @@ class TestSpawningThread(threading.Thread):
     while True:
       try:
         next_index = self.queue.get_nowait()
-      except Queue.Empty:
+      except queue.Empty:
         return
 
       self.run_one(next_index)
@@ -1073,8 +1183,7 @@ class TestSpawningThread(threading.Thread):
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # "result" will be None on platforms without Popen3 (e.g. Windows)
-    if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '),
-              stdout_lines):
+    if [x for x in stdout_lines if x.startswith('FAIL: ') or x.startswith('XPASS: ')]:
       result = 1
     self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
@@ -1225,7 +1334,7 @@ def _internal_run_tests(test_list, testnums, parallel):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
   else:
-    number_queue = Queue.Queue()
+    number_queue = queue.Queue()
     for num in testnums:
       number_queue.put(num)
 
@@ -1291,6 +1400,8 @@ def usage():
         "                 useful during test development!")
   print(" --server-minor-version  Set the minor version for the server.\n"
         "                 Supports version 4 or 5.")
+  print(" --fsfs-sharding Default shard size (for fsfs)\n"
+        " --fsfs-packing  Run 'svnadmin pack' automatically")
   print(" --config-file   Configuration file for tests.")
   print(" --help          This information")
 
@@ -1322,6 +1433,8 @@ def run_tests(test_list, serial_only = False):
   global svnversion_binary
   global command_line_parsed
   global http_library
+  global fsfs_sharding
+  global fsfs_packing
   global config_file
   global server_minor_version
   global use_jsvn
@@ -1340,6 +1453,7 @@ def run_tests(test_list, serial_only = False):
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=',
+                            'fsfs-packing', 'fsfs-sharding=',
                             'use-jsvn', 'development', 'config-file='])
   except getopt.GetoptError, e:
     print("ERROR: %s\n" % e)
@@ -1424,6 +1538,11 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--http-library':
       http_library = val
 
+    elif opt == '--fsfs-sharding':
+      fsfs_sharding = int(val)
+    elif opt == '--fsfs-packing':
+      fsfs_packing = 1
+
     elif opt == '--server-minor-version':
       server_minor_version = int(val)
       if server_minor_version < 4 or server_minor_version > 6:
@@ -1438,6 +1557,9 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == '--config-file':
       config_file = val
+
+  if fsfs_packing is not None and fsfs_sharding is None:
+    raise Exception('--fsfs-packing requires --fsfs-sharding')
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
@@ -1478,7 +1600,7 @@ def run_tests(test_list, serial_only = False):
 
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
-    testnums = range(1, len(test_list))
+    testnums = list(range(1, len(test_list)))
 
   if list_tests:
     print("Test #  Mode   Test Description")

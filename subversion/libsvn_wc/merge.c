@@ -205,10 +205,9 @@ detranslate_wc_file(const char **detranslated_file,
                svn_wc_adm_access_path(adm_access),
                svn_io_file_del_none, pool));
 
-      /* Always 'repair' EOLs here, so that we can apply a diff that changes
-       * from inconsistent newlines and no 'svn:eol-style' to consistent
-       * newlines and 'svn:eol-style' set. */
-
+      /* Always 'repair' EOLs here, so that we can apply a diff that
+         changes from inconsistent newlines and no 'svn:eol-style' to
+         consistent newlines and 'svn:eol-style' set.  */
       SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
                                                  detranslated,
                                                  style,
@@ -249,10 +248,9 @@ maybe_update_target_eols(const char **new_target,
                                       svn_io_file_del_none,
                                       pool));
 
-      /* Always 'repair' EOLs here, so that we can apply a diff that changes
-       * from inconsistent newlines and no 'svn:eol-style' to consistent
-       * newlines and 'svn:eol-style' set. */
-
+      /* Always 'repair' EOLs here, so that we can apply a diff that
+         changes from inconsistent newlines and no 'svn:eol-style' to
+         consistent newlines and 'svn:eol-style' set.  */
       SVN_ERR(svn_subst_copy_and_translate3(old_target,
                                             tmp_new,
                                             eol, TRUE /* repair EOLs */,
@@ -271,7 +269,9 @@ svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *left,
+                       svn_wc_conflict_version_t *left_version,
                        const char *right,
+                       svn_wc_conflict_version_t *right_version,
                        const char *merge_target,
                        const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
@@ -286,6 +286,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        void *conflict_baton,
                        apr_pool_t *pool)
 {
+  const char *merge_dirpath;
+  const char *merge_filename;
   const char *tmp_target, *result_target, *working_text;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   apr_file_t *result_f;
@@ -303,6 +305,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       *merge_outcome = svn_wc_merge_no_merge;
       return SVN_NO_ERROR;
     }
+
+  svn_path_split(merge_target, &merge_dirpath, &merge_filename, pool);
 
   /* Decide if the merge target is a text or binary file. */
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
@@ -420,6 +424,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc->my_file = tmp_target;
               cdesc->merged_file = result_target;
 
+              cdesc->src_left_version = left_version;
+              cdesc->src_right_version = right_version;
+
               SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
               if (result == NULL)
                 return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
@@ -429,13 +436,15 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               if (result->save_merged)
                 {
                   const char *edited_copy;
+
                   /* ### Should use preserved-conflict-file-exts. */
-                  SVN_ERR(svn_io_open_unique_file2(NULL,
-                                                   &edited_copy,
-                                                   merge_target,
-                                                   ".edited",
-                                                   svn_io_file_del_none,
-                                                   pool));
+                  SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                                     &edited_copy,
+                                                     merge_dirpath,
+                                                     merge_filename,
+                                                     ".edited",
+                                                     svn_io_file_del_none,
+                                                     pool, pool));
                   SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
                                              /* Look for callback's own
                                                 merged-file first: */
@@ -548,33 +557,36 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
           /* I miss Lisp. */
 
-          SVN_ERR(svn_io_open_unique_file2(NULL,
-                                           &left_copy,
-                                           merge_target,
-                                           left_label,
-                                           svn_io_file_del_none,
-                                           pool));
+          SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                             &left_copy,
+                                             merge_dirpath,
+                                             merge_filename,
+                                             left_label,
+                                             svn_io_file_del_none,
+                                             pool, pool));
 
           /* Have I mentioned how much I miss Lisp? */
 
-          SVN_ERR(svn_io_open_unique_file2(NULL,
-                                           &right_copy,
-                                           merge_target,
-                                           right_label,
-                                           svn_io_file_del_none,
-                                           pool));
+          SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                             &right_copy,
+                                             merge_dirpath,
+                                             merge_filename,
+                                             right_label,
+                                             svn_io_file_del_none,
+                                             pool, pool));
 
           /* Why, how much more pleasant to be forced to unroll my loops.
              If I'd been writing in Lisp, I might have mapped an inline
              lambda form over a list, or something equally disgusting.
              Thank goodness C was here to protect me! */
 
-          SVN_ERR(svn_io_open_unique_file2(NULL,
-                                           &target_copy,
-                                           merge_target,
-                                           target_label,
-                                           svn_io_file_del_none,
-                                           pool));
+          SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                             &target_copy,
+                                             merge_dirpath,
+                                             merge_filename,
+                                             target_label,
+                                             svn_io_file_del_none,
+                                             pool, pool));
 
           /* We preserve all the files with keywords expanded and line
              endings in local (working) form. */
@@ -723,6 +735,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc->my_file = tmp_target;
           cdesc->merged_file = NULL;     /* notice there is NO merged file! */
 
+          cdesc->src_left_version = left_version;
+          cdesc->src_right_version = right_version;
+
           SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
           if (result == NULL)
             return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
@@ -792,19 +807,21 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         }
 
       /* reserve names for backups of left and right fulltexts */
-      SVN_ERR(svn_io_open_unique_file2(NULL,
-                                       &left_copy,
-                                       merge_target,
-                                       left_label,
-                                       svn_io_file_del_none,
-                                       pool));
+      SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                         &left_copy,
+                                         merge_dirpath,
+                                         merge_filename,
+                                         left_label,
+                                         svn_io_file_del_none,
+                                         pool, pool));
 
-      SVN_ERR(svn_io_open_unique_file2(NULL,
-                                       &right_copy,
-                                       merge_target,
-                                       right_label,
-                                       svn_io_file_del_none,
-                                       pool));
+      SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                         &right_copy,
+                                         merge_dirpath,
+                                         merge_filename,
+                                         right_label,
+                                         svn_io_file_del_none,
+                                         pool, pool));
 
       /* create the backup files */
       SVN_ERR(svn_io_copy_file(left,
@@ -818,12 +835,13 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           /* Create a .mine file too */
           const char *mine_copy;
 
-          SVN_ERR(svn_io_open_unique_file2(NULL,
-                                           &mine_copy,
-                                           merge_target,
-                                           target_label,
-                                           svn_io_file_del_none,
-                                           pool));
+          SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                             &mine_copy,
+                                             merge_dirpath,
+                                             merge_filename,
+                                             target_label,
+                                             svn_io_file_del_none,
+                                             pool, pool));
           SVN_ERR(svn_wc__loggy_move(log_accum,
                                      adm_access,
                                      tmp_target,
@@ -897,8 +915,11 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
 {
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
+  /* ### TODO: Pass version info here. */
   SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
-                                 left, right, merge_target,
+                                 left, NULL,
+                                 right, NULL,
+                                 merge_target,
                                  NULL,
                                  adm_access,
                                  left_label, right_label, target_label,

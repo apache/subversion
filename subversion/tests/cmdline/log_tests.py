@@ -202,7 +202,7 @@ def guarantee_repos_and_wc(sbox):
 
 def merge_history_repos(sbox):
   """Make a repos with varied and interesting merge history, similar
-to the repos found at: log_tests_data/merge_history_dump.png"""
+  to the repos found at: log_tests_data/merge_history_dump.png"""
 
   upsilon_path = os.path.join('A', 'upsilon')
   omicron_path = os.path.join('blocked', 'omicron')
@@ -390,8 +390,9 @@ to the repos found at: log_tests_data/merge_history_dump.png"""
                           "This is yet more content in 'mu'.",
                           "wb")
   # Resolve conflicts, and commit
-  svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
-  svntest.main.run_svn(None, 'resolved', 'A')
+  svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),
+                                           os.path.join('A', 'xi'),
+                                           os.path.join('A', 'upsilon')])
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",
@@ -651,7 +652,7 @@ def plain_log(sbox):
                                                               'log')
 
   log_chain = parse_log_output(output)
-  check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
+  check_log_chain(log_chain, list(range(max_revision, 1 - 1, -1)))
 
 
 #----------------------------------------------------------------------
@@ -1023,7 +1024,7 @@ def log_verbose(sbox):
 
   log_chain = parse_log_output(output)
   path_counts = [2, 2, 1, 2, 2, 2, 4, 1, 20]
-  check_log_chain(log_chain, range(max_revision, 1 - 1, -1), path_counts)
+  check_log_chain(log_chain, list(range(max_revision, 1 - 1, -1)), path_counts)
 
 
 def log_parser(sbox):

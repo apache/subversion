@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # mailer.py: send email describing a commit
 #
@@ -33,8 +34,20 @@ except ImportError:
   # Python <3.0
   import ConfigParser as configparser
 import time
-import popen2
-import cStringIO
+try:
+  # Python >=2.4
+  import subprocess
+  platform_with_subprocess = True
+except ImportError:
+  # Python <2.4
+  import popen2
+  platform_with_subprocess = False
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 import smtplib
 import re
 import tempfile
@@ -98,40 +111,41 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   messenger.generate()
 
 
-# Minimal, incomplete, versions of popen2.Popen[34] for those platforms
-# for which popen2 does not provide them.
-try:
-  Popen3 = popen2.Popen3
-  Popen4 = popen2.Popen4
-except AttributeError:
-  class Popen3:
-    def __init__(self, cmd, capturestderr = False):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      if capturestderr:
-        self.fromchild, self.tochild, self.childerr \
-            = popen2.popen3(cmd, mode='b')
-      else:
-        self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
-        self.childerr = None
+if not platform_with_subprocess:
+  # Minimal, incomplete, versions of popen2.Popen[34] for those platforms
+  # for which popen2 does not provide them.
+  try:
+    Popen3 = popen2.Popen3
+    Popen4 = popen2.Popen4
+  except AttributeError:
+    class Popen3:
+      def __init__(self, cmd, capturestderr = False):
+        if type(cmd) != types.StringType:
+          cmd = svn.core.argv_to_command_string(cmd)
+        if capturestderr:
+          self.fromchild, self.tochild, self.childerr \
+              = popen2.popen3(cmd, mode='b')
+        else:
+          self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
+          self.childerr = None
 
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      if self.childerr is not None:
-        rv = self.childerr.close() or rv
-      return rv
+      def wait(self):
+        rv = self.fromchild.close()
+        rv = self.tochild.close() or rv
+        if self.childerr is not None:
+          rv = self.childerr.close() or rv
+        return rv
 
-  class Popen4:
-    def __init__(self, cmd):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
+    class Popen4:
+      def __init__(self, cmd):
+        if type(cmd) != types.StringType:
+          cmd = svn.core.argv_to_command_string(cmd)
+        self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
 
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      return rv
+      def wait(self):
+        rv = self.fromchild.close()
+        rv = self.tochild.close() or rv
+        return rv
 
 def remove_leading_slashes(path):
   while path and path[0] == '/':
@@ -218,9 +232,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, to_addr_in[3:].split(to_addr_in[1]))
+        [_f for _f in to_addr_in[3:].split(to_addr_in[1]) if _f]
     else:
-      self.to_addrs = filter(None, to_addr_in.split())
+      self.to_addrs = [_f for _f in to_addr_in.split() if _f]
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one
@@ -260,7 +274,7 @@ class SMTPOutput(MailedOutput):
   def start(self, group, params):
     MailedOutput.start(self, group, params)
 
-    self.buffer = cStringIO.StringIO()
+    self.buffer = StringIO()
     self.write = self.buffer.write
 
     self.write(self.mail_headers(group, params))
@@ -306,18 +320,26 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = Popen3(cmd)
-    self.write = self.pipe.tochild.write
+    if platform_with_subprocess:
+      self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                   close_fds=sys.platform != "win32")
+      self.write = self.pipe.stdin.write
+    else:
+      self.pipe = Popen3(cmd)
+      self.write = self.pipe.tochild.write
 
-    # we don't need the read-from-mailer descriptor, so close it
-    self.pipe.fromchild.close()
+      # we don't need the read-from-mailer descriptor, so close it
+      self.pipe.fromchild.close()
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
 
   def finish(self):
     # signal that we're done sending content
-    self.pipe.tochild.close()
+    if platform_with_subprocess:
+      self.pipe.stdin.close()
+    else:
+      self.pipe.tochild.close()
 
     # wait to avoid zombies
     self.pipe.wait()
@@ -349,7 +371,7 @@ class Commit(Messenger):
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
-    self.changelist = editor.get_changes().items()
+    self.changelist = list(editor.get_changes().items())
     self.changelist.sort()
 
     # collect the set of groups and the unique sets of params for the options
@@ -357,7 +379,7 @@ class Commit(Messenger):
     for path, change in self.changelist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
+        param_list = list(params.items())
         param_list.sort()
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
@@ -379,7 +401,7 @@ class Commit(Messenger):
         else:
           dirs[path[:idx]] = None
 
-    dirlist = dirs.keys()
+    dirlist = list(dirs.keys())
 
     commondir, dirlist = get_commondir(dirlist)
 
@@ -446,7 +468,7 @@ class PropChange(Messenger):
     self.groups = { }
     for (group, params) in self.cfg.which_groups(''):
       # turn the params into a hashable object and stash it away
-      param_list = params.items()
+      param_list = list(params.items())
       param_list.sort()
       self.groups[group, tuple(param_list)] = params
 
@@ -537,7 +559,7 @@ class Lock(Messenger):
     for path in self.dirlist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
+        param_list = list(params.items())
         param_list.sort()
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
@@ -921,7 +943,12 @@ class DiffContent:
     self.seen_change = False
 
     # By default we choose to incorporate child stderr into the output
-    self.pipe = Popen4(cmd)
+    if platform_with_subprocess:
+      self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT,
+                                   close_fds=sys.platform != "win32")
+    else:
+      self.pipe = Popen4(cmd)
 
   def __nonzero__(self):
     # we always have some items
@@ -931,7 +958,10 @@ class DiffContent:
     if self.pipe is None:
       raise IndexError
 
-    line = self.pipe.fromchild.readline()
+    if platform_with_subprocess:
+      line = self.pipe.stdout.readline()
+    else:
+      line = self.pipe.fromchild.readline()
     if not line:
       # wait on the child so we don't end up with a billion zombies
       self.pipe.wait()

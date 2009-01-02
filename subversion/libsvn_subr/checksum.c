@@ -68,6 +68,17 @@ svn_checksum_create(svn_checksum_kind_t kind,
     }
 }
 
+svn_checksum_t *
+svn_checksum__from_digest(const unsigned char *digest,
+                          svn_checksum_kind_t kind,
+                          apr_pool_t *result_pool)
+{
+  svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
+
+  memcpy((unsigned char *)checksum->digest, digest, DIGESTSIZE(kind));
+  return checksum;
+}
+
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum)
 {
@@ -139,6 +150,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 {
   int len;
   int i;
+  unsigned char is_zeros = '\0';
 
   if (hex == NULL)
     {
@@ -154,13 +166,16 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   for (i = 0; i < len; i++)
     {
       if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
-        return svn_error_create
-          (SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
       ((unsigned char *)(*checksum)->digest)[i] =
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+      is_zeros |= (*checksum)->digest[i];
     }
+
+  if (is_zeros == '\0')
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }

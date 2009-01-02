@@ -104,8 +104,7 @@ def revert_replacement_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   if wc_copy:
-    props = { 'phony-prop' : '*',
-              'svn:mergeinfo' : '' }
+    props = { 'phony-prop' : '*' }
   else:
     props = { 'phony-prop' : '*' }
 
@@ -884,17 +883,15 @@ def revert_tree_conflicts_in_updated_files(sbox):
     "Reverted '%s'\n" % G_tau,
     ])
 
+  # The expectations on 'rho' reflect partial progress on issue #3334.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G',     status='  ')
   expected_status.tweak('A/D/G/pi',  status='  ', wc_rev='1')
-  expected_status.remove('A/D/G/rho', 'A/D/G/tau')
+  expected_status.remove('A/D/G/rho')
+  expected_status.tweak('A/D/G/tau', status='  ', wc_rev='1')
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/pi',
-                      contents="This is the file 'pi'.\n")
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'rho'.\nLocal edit.\n")
-  expected_disk.remove('A/D/G/tau')
 
   # Revert individually in wc
   svntest.actions.run_and_verify_svn(None, expected_output, [],

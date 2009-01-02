@@ -58,7 +58,8 @@ enum {
   list_opt,
   verbose_opt,
   quiet_opt,
-  config_opt
+  config_opt,
+  server_minor_version_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -73,6 +74,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("lists all the tests with their short description")},
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
+  {"server-minor-version", server_minor_version_opt, 1,
+                    N_("Set the minor version for the server ('4' or '5')")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {0,               0, 0, 0}
@@ -307,7 +310,7 @@ main(int argc, const char *argv[])
       else if (apr_err && (apr_err != APR_BADCH))
         {
           /* Ignore invalid option error to allow passing arbitary options */
-          fprintf(stderr,"apr_getopt_long failed : [%d] %s\n",
+          fprintf(stderr, "apr_getopt_long failed : [%d] %s\n",
                   apr_err, apr_strerror(apr_err, errmsg, sizeof(errmsg)));
           exit(1);
         }
@@ -331,6 +334,22 @@ main(int argc, const char *argv[])
         case quiet_opt:
           quiet_mode = 1;
           break;
+        case server_minor_version_opt:
+          {
+            char *end;
+            opts.server_minor_version = strtol(opt_arg, &end, 10);
+            if (end == opt_arg || *end != '\0')
+              {
+                fprintf(stderr, "FAIL: Non-numeric minor version given\n");
+                exit(1);
+              }
+            if ((opts.server_minor_version < 3) 
+                || (opts.server_minor_version > 5))
+              {
+                fprintf(stderr, "FAIL: Invalid minor version given\n");
+                exit(1);
+              }
+          }
       }
     }
 

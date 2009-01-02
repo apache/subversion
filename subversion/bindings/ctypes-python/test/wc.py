@@ -6,7 +6,13 @@ import locale
 import os
 import shutil
 import tempfile
-import StringIO
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 from csvn.core import *
 from urllib import pathname2url
 from csvn.wc import WC
@@ -53,11 +59,11 @@ class WCTestCase(unittest.TestCase):
             svn_repos_delete(repos_location, pool)
         self.wc = None
 
-    def _info_reciever(self, path, info):
+    def _info_receiver(self, path, info):
         self.last_info = info
 
     def test_info(self):
-        self.wc.info(path="trunk/README.txt",info_func=self._info_reciever)
+        self.wc.info(path="trunk/README.txt",info_func=self._info_receiver)
         self.assertEqual(9, self.last_info.rev)
         self.assertEqual(svn_node_file, self.last_info.kind)
         self.assertEqual(repo_url, self.last_info.repos_root_URL)
@@ -70,7 +76,7 @@ class WCTestCase(unittest.TestCase):
     def test_copy(self):
         self.wc.copy("trunk/README.txt", "trunk/DONTREADME.txt")
         self.wc.info(path="trunk/DONTREADME.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         self.assertEqual(svn_wc_schedule_add, self.last_info.schedule)
         self.wc.info(path="trunk/README.txt")
         self.assertEqual(svn_wc_schedule_normal, self.last_info.schedule)
@@ -78,7 +84,7 @@ class WCTestCase(unittest.TestCase):
     def test_move(self):
         self.wc.move("trunk/README.txt", "trunk/DONTREADMEEITHER.txt")
         self.wc.info(path="trunk/DONTREADMEEITHER.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         self.assertEqual(svn_wc_schedule_add, self.last_info.schedule)
         self.wc.info(path="trunk/README.txt")
         self.assertEqual(svn_wc_schedule_delete, self.last_info.schedule)
@@ -86,13 +92,13 @@ class WCTestCase(unittest.TestCase):
     def test_delete(self):
         self.wc.delete(["trunk/README.txt"])
         self.wc.info(path="trunk/README.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         self.assertEqual(svn_wc_schedule_delete, self.last_info.schedule)
 
     def test_mkdir(self):
         self.wc.mkdir(["trunk/plank"])
         self.wc.info(path="trunk/plank",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         self.assertEqual(svn_wc_schedule_add, self.last_info.schedule)
 
     def test_add(self):
@@ -102,13 +108,13 @@ class WCTestCase(unittest.TestCase):
 
         self.wc.add("trunk/ADDED.txt")
         self.wc.info(path="trunk/ADDED.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         self.assertEqual(svn_wc_schedule_add, self.last_info.schedule)
 
     def test_revert(self):
         self.wc.revert([""],True)
         self.wc.info(path="trunk/README.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         self.assertEqual(svn_wc_schedule_normal, self.last_info.schedule)
 
     def test_diff(self):
@@ -130,7 +136,7 @@ class WCTestCase(unittest.TestCase):
         f = open(path, "w")
         f.truncate(0)
         f.close()
-        difffile = StringIO.StringIO()
+        difffile = StringIO()
         self.wc.diff("trunk", outfile=difffile)
         difffile.seek(0)
         diffresult = difffile.read().replace("\r","")
@@ -202,7 +208,7 @@ class WCTestCase(unittest.TestCase):
         self.wc.lock(["%s/trunk/README.txt" % wc_location],
                         "Test lock")
         self.wc.info(path="trunk/README.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         if not self.last_info.lock:
             self.fail("Lock not aquired")
 
@@ -210,13 +216,13 @@ class WCTestCase(unittest.TestCase):
         path = "%s/trunk/README.txt" % wc_location
         self.wc.lock([path], "Test lock")
         self.wc.info(path=path,
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         if not self.last_info.lock:
             self.fail("Lock not aquired")
         self.wc.unlock([path])
 
         self.wc.info(path="trunk/README.txt",
-            info_func=self._info_reciever)
+            info_func=self._info_receiver)
         if self.last_info.lock:
             self.fail("Lock not released")
 

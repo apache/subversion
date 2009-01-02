@@ -18,6 +18,12 @@
 import re
 import os
 import sys
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
@@ -270,8 +276,7 @@ class SVNTreeNode:
 
 
   def __str__(self):
-    import StringIO
-    s = StringIO.StringIO()
+    s = StringIO()
     self.pprint(s)
     return s.getvalue()
 
@@ -699,7 +704,7 @@ def build_generic_tree(nodelist):
 # Parse co/up output into a tree.
 #
 #   Tree nodes will contain no contents, a 'status' att, and a
-#   'writelocked' att.
+#   'treeconflict' att.
 
 def build_tree_from_checkout(lines, include_skipped=1):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."

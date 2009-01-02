@@ -170,25 +170,26 @@ validate_prop(const char *name, const svn_string_t *value, apr_pool_t *pool)
   /* Validate "svn:" properties. */
   if (svn_prop_is_svn_prop(name) && value != NULL)
     {
-      /* Validate that log message is UTF-8 with LF line endings. */
-      if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+      /* Validate that translated props (e.g., svn:log) are UTF-8 with
+       * LF line endings. */
+      if (svn_prop_needs_translation(name))
         {
           if (svn_utf__is_valid(value->data, value->len) == FALSE)
             {
-              return svn_error_create
+              return svn_error_createf
                 (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
-                 _("Cannot accept log message because it is not encoded in "
-                   "UTF-8"));
+                 _("Cannot accept '%s' property because it is not encoded in "
+                   "UTF-8"), name);
             }
 
           /* Disallow inconsistent line ending style, by simply looking for
            * carriage return characters ('\r'). */
           if (strchr(value->data, '\r') != NULL)
             {
-              return svn_error_create
+              return svn_error_createf
                 (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
-                 _("Cannot accept non-LF line endings "
-                   "in log message"));
+                 _("Cannot accept non-LF line endings in '%s' property"),
+                   name);
             }
         }
 
@@ -630,6 +631,15 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_fs_pack(svn_repos_t *repos,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
+{
+  return svn_fs_pack(repos->db_path, cancel_func, cancel_baton, pool);
 }
 
 

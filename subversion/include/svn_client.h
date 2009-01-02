@@ -102,6 +102,7 @@ svn_client_version(void);
  * default arguments when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_simple_prompt_provider() instead.
@@ -126,6 +127,7 @@ svn_client_get_simple_prompt_provider
  * default argument when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_username_prompt_provider() instead.
@@ -284,6 +286,7 @@ svn_client_get_ssl_server_trust_prompt_provider
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
  * a server.  The prompt will be retried @a retry_limit times.
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_ssl_client_cert_prompt_provider() instead.
@@ -304,7 +307,8 @@ svn_client_get_ssl_client_cert_prompt_provider
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
  * client certificate is protected by a passphrase.  The prompt will
- * be retried @a retry_limit times.
+ * be retried @a retry_limit times. For infinite retries, set @a retry_limit
+ * to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_ssl_client_cert_pw_prompt_provider() instead.
@@ -1725,7 +1729,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
  * @a changelist_name, FALSE for @a keep_changelist, NULL for @a
  * revprop_table, and @a depth set according to @a recurse: if @a
  * recurse is TRUE, use @c svn_depth_infinity, else @c
- * svn_depth_files.
+ * svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -3007,6 +3011,8 @@ svn_client_resolved(const char *path,
  * all its immediate conflicted children (both files and directories,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if

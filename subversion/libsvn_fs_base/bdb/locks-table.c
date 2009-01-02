@@ -17,13 +17,15 @@
 
 #include <string.h>
 #include <assert.h>
+
 #include "bdb_compat.h"
 
 #include "svn_pools.h"
+#include "private/svn_skel.h"
+
 #include "dbt.h"
 #include "../err.h"
 #include "../fs.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"
@@ -72,7 +74,7 @@ svn_fs_bdb__lock_add(svn_fs_t *fs,
                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *lock_skel;
+  svn_skel_t *lock_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
@@ -119,7 +121,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
-  skel_t *skel;
+  svn_skel_t *skel;
   svn_lock_t *lock;
 
   svn_fs_base__trail_debug(trail, "lock", "get");
@@ -134,7 +136,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   SVN_ERR(BDB_WRAP(fs, "reading lock", db_err));
 
   /* Parse TRANSACTION skel */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_lock(fs, lock_token);
 

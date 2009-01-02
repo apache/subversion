@@ -115,12 +115,15 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *issuer, *subject, *serf_cert;
   void *creds;
 
-  apr_pool_create(&subpool, conn->session->pool);
+#if SERF_VERSION_AT_LEAST(0, 3, 0)
+  /* Implicitly approve any non-server certs. */
+  if (serf_ssl_cert_depth(cert) > 0)
+    {
+      return APR_SUCCESS;
+    }
+#endif
 
-  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
-  realmstring = apr_uri_unparse(subpool,
-                                &conn->session->repos_url,
-                                APR_URI_UNP_OMITPATHINFO);
+  apr_pool_create(&subpool, conn->session->pool);
 
   /* Extract the info from the certificate */
   subject = serf_ssl_cert_subject(cert, subpool);
@@ -165,6 +168,10 @@ ssl_server_cert(void *baton, int failures,
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
+
+  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
+  realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
+                                APR_URI_UNP_OMITPATHINFO);
 
   err = svn_auth_first_credentials(&creds, &state,
                                    SVN_AUTH_CRED_SSL_SERVER_TRUST,
@@ -323,7 +330,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 
   if (why)
     {
-      abort();
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
   if (our_conn->using_ssl)
@@ -342,6 +349,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data)
 {
+#if !SERF_VERSION_AT_LEAST(0,3,0)
   svn_ra_serf__session_t *serf_sess = data;
   int i;
 
@@ -354,6 +362,7 @@ svn_ra_serf__cleanup_serf_session(void *data)
       return APR_SUCCESS;
     }
 
+  /* serf 0.3.0+ will close connections on pool cleanup */
   for (i = 0; i < serf_sess->num_conns; i++)
     {
       if (serf_sess->conns[i])
@@ -362,6 +371,8 @@ svn_ra_serf__cleanup_serf_session(void *data)
           serf_sess->conns[i] = NULL;
         }
     }
+#endif
+
   return APR_SUCCESS;
 }
 
@@ -1005,10 +1016,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
       /* If our caller won't know about the 404, abort() for now. */
-      if (!ctx->status_code)
-        {
-          abort();
-        }
+      SVN_ERR_ASSERT_NO_RETURN(ctx->status_code);
+
       if (*ctx->done == FALSE)
         {
           *ctx->done = TRUE;
@@ -1048,10 +1057,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           XML_ParserFree(ctx->xmlp);
 
-          if (!ctx->status_code)
-            {
-              abort();
-            }
+          SVN_ERR_ASSERT_NO_RETURN(ctx->status_code);
+
           if (*ctx->done == FALSE)
             {
               *ctx->done = TRUE;

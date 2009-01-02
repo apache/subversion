@@ -38,6 +38,7 @@ Completed tasks
 - SSL client and server certificates
 - Proxy support
 - NTLM/SSPI integration for Windows folks
+- REPORT body buckets can now be read twice (#3212)
 
 Regression test status
 ----------------------
@@ -51,8 +52,6 @@ Things to do before the next release (1.6.x timeframe)
 ------------------------------------------------------
 
 - Digest authentication
-
-- Fix the issue where REPORT body buckets can't be read twice (#3212)
 
 - Fix the editor API violation (TBC, #2932)
 

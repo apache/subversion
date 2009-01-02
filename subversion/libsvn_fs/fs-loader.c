@@ -323,7 +323,7 @@ default_warning_func(void *baton, svn_error_t *err)
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
      processes, since those may both be equivalent to /dev/null.  */
-  abort();
+  SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
 /* Check whether PATH is valid for a filesystem, following (most of) the
@@ -485,6 +485,18 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
   SVN_ERR(get_library_vtable(&vtable, fs_type, pool));
   SVN_ERR(vtable->hotcopy(src_path, dest_path, clean, pool));
   return write_fs_type(dest_path, fs_type, pool);
+}
+
+svn_error_t *
+svn_fs_pack(const char *path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  return vtable->pack(path, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *

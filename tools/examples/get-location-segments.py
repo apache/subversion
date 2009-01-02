@@ -5,7 +5,7 @@ from svn import client, ra, core
 
 def printer(segment, pool):
   path = segment.path is not None and segment.path or "(null)"
-  print "r%d-r%d: %s" % (segment.range_start, segment.range_end, path)
+  print("r%d-r%d: %s" % (segment.range_start, segment.range_end, path))
 
 
 def parse_args(args):

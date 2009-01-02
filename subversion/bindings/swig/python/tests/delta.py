@@ -1,7 +1,13 @@
 import unittest, setup_path
 import svn.delta
 import svn.core
-from cStringIO import StringIO
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 
 # Test case for svn.delta
 class DeltaTestCase(unittest.TestCase):

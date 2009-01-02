@@ -834,7 +834,8 @@ svn_fs_txn_name(const char **name_p,
                 apr_pool_t *pool);
 
 /** Return @a txn's base revision. */
-svn_revnum_t svn_fs_txn_base_revision(svn_fs_txn_t *txn);
+svn_revnum_t
+svn_fs_txn_base_revision(svn_fs_txn_t *txn);
 
 
 
@@ -2022,6 +2023,20 @@ svn_fs_get_locks(svn_fs_t *fs,
 svn_error_t *
 svn_fs_print_modules(svn_stringbuf_t *output,
                      apr_pool_t *pool);
+
+
+/**
+ * Possibly update the filesystem located in the directory @a path
+ * to use disk space more efficiently.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_fs_pack(const char *db_path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool);
+
 
 /** @} */
 

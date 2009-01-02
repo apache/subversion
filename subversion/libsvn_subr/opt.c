@@ -2,7 +2,7 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -958,7 +958,7 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2008 CollabNet.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2009 CollabNet.\n"
                               "Subversion is open source software, see"
                               " http://subversion.tigris.org/\n"
                               "This product includes software developed by "

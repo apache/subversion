@@ -209,7 +209,7 @@ dag_node_cache_set(svn_fs_root_t *root,
          ### is.  And I don't want to spend any more time on it.  So,
          ### callers, use only revision root and don't try to update
          ### an already-cached thing.  -- cmpilato */
-      abort();
+      SVN_ERR_MALFUNCTION_NO_RETURN();
 
 #if 0
       int cache_index = cache_item->idx;
@@ -1800,7 +1800,7 @@ deltify_mutable(svn_fs_t *fs,
        not as blindingly so.)
 
        For 1.6 and beyond, we just deltify the current node against its
-       predecessors, using skip deltas similar to the was FSFS does.*/
+       predecessors, using skip deltas similar to the way FSFS does.  */
 
     int pred_count, nlevels, lev, count;
     const svn_fs_id_t *pred_id;
@@ -2948,7 +2948,7 @@ txn_body_make_dir(void *baton,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, trail->pool);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -3394,7 +3394,7 @@ txn_body_make_file(void *baton,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path, trail->pool);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -3630,10 +3630,16 @@ static svn_error_t *
 txn_body_txdelta_finalize_edits(void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  return svn_fs_base__dag_finalize_edits(tb->node,
-                                         tb->result_checksum,
-                                         tb->root->txn,
-                                         trail, trail->pool);
+  SVN_ERR(svn_fs_base__dag_finalize_edits(tb->node,
+                                          tb->result_checksum,
+                                          tb->root->txn,
+                                          trail, trail->pool));
+
+  /* Make a record of this modification in the changes table. */
+  return add_change(tb->root->fs, tb->root->txn, tb->path,
+                    svn_fs_base__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, trail,
+                    trail->pool);
 }
 
 
@@ -3784,11 +3790,7 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
                     &(tb->interpreter),
                     &(tb->interpreter_baton));
 
-  /* Make a record of this modification in the changes table. */
-  return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_base__dag_get_id(tb->node),
-                    svn_fs_path_change_modify, TRUE, FALSE, trail,
-                    trail->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3867,10 +3869,16 @@ static svn_error_t *
 txn_body_fulltext_finalize_edits(void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
-  return svn_fs_base__dag_finalize_edits(tb->node,
-                                         tb->result_checksum,
-                                         tb->root->txn,
-                                         trail, trail->pool);
+  SVN_ERR(svn_fs_base__dag_finalize_edits(tb->node,
+                                          tb->result_checksum,
+                                          tb->root->txn,
+                                          trail, trail->pool));
+
+  /* Make a record of this modification in the changes table. */
+  return add_change(tb->root->fs, tb->root->txn, tb->path,
+                    svn_fs_base__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, trail,
+                    trail->pool);
 }
 
 /* Write function for the publically returned stream. */
@@ -3934,11 +3942,7 @@ txn_body_apply_text(void *baton, trail_t *trail)
   svn_stream_set_write(tb->stream, text_stream_writer);
   svn_stream_set_close(tb->stream, text_stream_closer);
 
-  /* Make a record of this modification in the changes table. */
-  return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_base__dag_get_id(tb->node),
-                    svn_fs_path_change_modify, TRUE, FALSE, trail,
-                    trail->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -4839,29 +4843,45 @@ base_node_origin_rev(svn_revnum_t *revision,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  svn_error_t *err;
+  base_fs_data_t *bfd = fs->fsap_data;
   struct get_set_node_origin_args args;
-  const svn_fs_id_t *id, *origin_id;
+  const svn_fs_id_t *origin_id = NULL;
   struct id_created_rev_args icr_args;
 
-  /* Verify that our filesystem version supports node origins stuff. */
-  SVN_ERR(svn_fs_base__test_required_feature_format
-          (fs, "node-origins", SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT));
+  /* Canonicalize the input path so that the path-math that
+     prev_location() does below will work. */
+  path = svn_fs__canonicalize_abspath(path, pool);
 
-  SVN_ERR(base_node_id(&id, root, path, pool));
-  args.node_id = svn_fs_base__id_node_id(id);
-  err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin,
-                               &args, pool);
-
-  /* If we got a value for the origin node-revision-ID, that's great.
-     If we didn't, that's sad but non-fatal -- we'll just figure it
-     out the hard way, then record it so we don't have suffer again
-     the next time. */
-  if (! err)
+  /* If we have support for the node-origins table, we'll try to use
+     it. */
+  if (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
     {
-      origin_id = args.origin_id;
+      const svn_fs_id_t *id;
+      svn_error_t *err;
+
+      SVN_ERR(base_node_id(&id, root, path, pool));
+      args.node_id = svn_fs_base__id_node_id(id);
+      err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin,
+                                   &args, pool);
+
+      /* If we got a value for the origin node-revision-ID, that's
+         great.  If we didn't, that's sad but non-fatal -- we'll just
+         figure it out the hard way, then record it so we don't have
+         suffer again the next time. */
+      if (! err)
+        {
+          origin_id = args.origin_id;
+        }
+      else if (err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      SVN_ERR(err);
     }
-  else if (err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+
+  /* If we haven't yet found a node origin ID, we'll go spelunking for one. */
+  if (! origin_id)
     {
       svn_fs_root_t *curroot = root;
       apr_pool_t *subpool = svn_pool_create(pool);
@@ -4870,9 +4890,6 @@ base_node_origin_rev(svn_revnum_t *revision,
         svn_stringbuf_create(path, pool);
       svn_revnum_t lastrev = SVN_INVALID_REVNUM;
       const svn_fs_id_t *pred_id;
-
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
 
       /* Walk the closest-copy chain back to the first copy in our history.
 
@@ -4900,6 +4917,7 @@ base_node_origin_rev(svn_revnum_t *revision,
           /* Update our LASTPATH and LASTREV variables (which survive
              SUBPOOL). */
           svn_stringbuf_set(lastpath, curpath);
+          lastrev = currev;
         }
 
       /* Walk the predecessor links back to origin. */
@@ -4919,17 +4937,20 @@ base_node_origin_rev(svn_revnum_t *revision,
           pred_id = svn_fs_base__id_copy(pid_args.pred_id, predidpool);
         }
 
-      /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
-         this value from now on, shall we?  */
-      args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
-      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
-                                      &args, subpool));
+      /* Okay.  PRED_ID should hold our origin ID now.  */
+      origin_id = svn_fs_base__id_copy(pred_id, pool);
+
+      /* If our filesystem version supports it, let's remember this
+         value from now on.  */
+      if (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
+        {
+          args.origin_id = origin_id;
+          SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
+                                         &args, subpool));
+        }
+
       svn_pool_destroy(predidpool);
       svn_pool_destroy(subpool);
-    }
-  else
-    {
-      return err;
     }
 
   /* Okay.  We have an origin node-revision-ID.  Let's get a created

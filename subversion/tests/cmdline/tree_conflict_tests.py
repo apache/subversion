@@ -24,6 +24,7 @@ import svntest
 from svntest import main,wc
 from svntest.actions import run_and_verify_svn
 from svntest.actions import run_and_verify_commit
+from svntest.actions import run_and_verify_resolved
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -435,9 +436,9 @@ def ensure_tree_conflict(sbox, operation,
       if 'action' in test_what:
         # Determine what notification to expect
         if 'notify' in test_what:
-          expected_stdout = svntest.verify.RegexOutput("   C " +
-                                                       re.escape(victim) + "$",
-                                                       match_all=False)
+          expected_stdout = svntest.verify.ExpectedOutput("   C " + victim
+                                                          + "\n",
+                                                          match_all=False)
         else:
           expected_stdout = svntest.verify.AnyOutput
         # Do the main action
@@ -472,11 +473,10 @@ def ensure_tree_conflict(sbox, operation,
 
       if 'resolve' in test_what:
         verbose_print("--- Resolving the conflict")
-        # Resolve recursively on the parent, because per-victim resolve is
-        # not yet implemented.
-        run_and_verify_svn(None,
-                           "Resolved .* '" + re.escape(target_path) + "'", [],
-                           'resolved', '-R', target_path)
+        # Make sure resolving the parent does nothing.
+        run_and_verify_resolved([], os.path.dirname(victim))
+        # The real resolved call.
+        run_and_verify_resolved([victim])
 
       if 'status-nc' in test_what:
         verbose_print("--- Checking that 'status' does not report a conflict")
@@ -646,7 +646,7 @@ test_list = [ None,
               up_sw_file_mod_onto_del,
               up_sw_file_del_onto_mod,
               up_sw_file_del_onto_del,
-              XFail(up_sw_file_add_onto_add),
+              up_sw_file_add_onto_add,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,

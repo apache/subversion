@@ -36,7 +36,8 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
-   REP is allocated in POOL. */
+   REP is allocated in POOL.  If the rep cache database has not been
+   opened, just set *REP to NULL. */
 svn_error_t *
 svn_fs_fs__get_rep_reference(representation_t **rep,
                              svn_fs_t *fs,
@@ -46,6 +47,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 /* Set the representation REP in FS, using REP->CHECKSUM.
    Use POOL for temporary allocations.
 
+   If the rep cache database has not been opened, this may be a no op.
+   
    If REJECT_DUP is TRUE, return an error if there is an existing
    match for REP->CHECKSUM. */
 svn_error_t *
@@ -53,13 +56,6 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              representation_t *rep,
                              svn_boolean_t reject_dup,
                              apr_pool_t *pool);
-
-/* Incremenent the usage count of the reference used by REP->CHECKSUM,
-   and return the new value in REP->REUSE_COUNT. */
-svn_error_t *
-svn_fs_fs__inc_rep_reuse(svn_fs_t *fs,
-                         representation_t *rep,
-                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

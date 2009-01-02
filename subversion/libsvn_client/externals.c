@@ -112,14 +112,19 @@ relegate_dir_external(const char *path,
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
+      const char *parent_dir;
+      const char *dirname;
       const char *new_path;
 
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
+      svn_path_split(path, &parent_dir, &dirname, pool);
+
       /* Reserve the new dir name. */
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &new_path, path, ".OLD", svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
+                                         parent_dir, dirname, ".OLD",
+                                         svn_io_file_del_none, pool, pool));
 
       /* Sigh...  We must fall ever so slightly from grace.
 
@@ -139,10 +144,8 @@ relegate_dir_external(const char *path,
          in the meantime -- which would never happen in real life, so
          no big deal.
       */
-      err = svn_io_remove_file(new_path, pool);
-      svn_error_clear(err);  /* It's not clear why this is ignored, is
-                                 it because the rename will catch it? */
-      err = SVN_NO_ERROR;
+      /* Do our best, but no biggy if it fails. The rename will fail. */
+      svn_error_clear(svn_io_remove_file(new_path, pool));
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));

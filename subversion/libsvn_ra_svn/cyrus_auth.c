@@ -401,10 +401,12 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             /* For anything else, delete the mech from the list
                and try again. */
             {
-              char *dst = strstr(mechstring, mech);
-              char *src = dst + strlen(mech);
-              while ((*dst++ = *src++) != '\0')
-                ;
+              const char *pmech = strstr(mechstring, mech);
+              const char *head = apr_pstrndup(pool, mechstring,
+                                              pmech - mechstring);
+              const char *tail = pmech + strlen(mech);
+
+              mechstring = apr_pstrcat(pool, head, tail, NULL);
               again = TRUE;
             }
         }
@@ -625,10 +627,8 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
                                                 sasl_conn_t *sasl_ctx,
                                                 apr_pool_t *pool)
 {
-  sasl_baton_t *sasl_baton;
   const sasl_ssf_t *ssfp;
   int result;
-  const void *maxsize;
 
   if (! conn->encrypted)
     {
@@ -640,6 +640,9 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
 
       if (*ssfp > 0)
         {
+          sasl_baton_t *sasl_baton;
+          const void *maxsize;
+
           /* Flush the connection, as we're about to replace its stream. */
           SVN_ERR(svn_ra_svn_flush(conn, pool));
 
@@ -652,7 +655,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
           if (result != SASL_OK)
             return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                     sasl_errdetail(sasl_ctx));
-          sasl_baton->maxsize = *((unsigned int *) maxsize);
+          sasl_baton->maxsize = *((const unsigned int *) maxsize);
 
           /* If there is any data left in the read buffer at this point,
              we need to decrypt it. */

@@ -52,6 +52,8 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
+#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Youngest revision which
+                                                    has been packed. */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -70,8 +72,10 @@ extern "C" {
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 
 /* Names of sections and options in fsfs.conf. */
-#define CONFIG_SECTION_CACHES     "caches"
-#define CONFIG_OPTION_FAIL_STOP       "fail-stop"
+#define CONFIG_SECTION_CACHES            "caches"
+#define CONFIG_OPTION_FAIL_STOP          "fail-stop"
+#define CONFIG_SECTION_REP_SHARING       "rep-sharing"
+#define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -101,6 +105,9 @@ extern "C" {
 
 /* The minimum format number that allows rep sharing. */
 #define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
+
+/* The minimum format number that supports packed shards. */
+#define SVN_FS_FS__MIN_PACKED_FORMAT 4
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -216,11 +223,18 @@ typedef struct
      rep key to svn_string_t. */
   svn_cache__t *fulltext_cache;
 
+  /* Pack manifest cache; maps revision numbers to offsets in their respective
+     pack files. */
+  svn_cache__t *packed_offset_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
   /* The sqlite database used for rep caching. */
   struct rep_cache_t rep_cache;
+
+  /* The oldest revision not in a pack file. */
+  svn_revnum_t min_unpacked_rev;
 } fs_fs_data_t;
 
 
@@ -250,14 +264,20 @@ typedef struct
  * svn_fs_fs__rep_copy. */
 typedef struct
 {
-  /* Checksum for the contents produced by this representation.
+  /* Checksums for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
      If checksum is NULL, then for compatibility behave as though this
-     checksum matches the expected checksum. */
-  svn_checksum_t *checksum;
+     checksum matches the expected checksum.
+  
+     The md5 checksum is always filled, unless this is rep which was
+     retrieved from the rep-cache.  The sha1 checksum is only computed on
+     a write, for use with rep-sharing; it may be read from an existing
+     representation, but otherwise it is NULL. */
+  svn_checksum_t *md5_checksum;
+  svn_checksum_t *sha1_checksum;
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;
@@ -275,10 +295,14 @@ typedef struct
   /* Is this representation a transaction? */
   const char *txn_id;
 
-  /* Is this representation reusing another one, and how much is that rep
-     being reused? */
-  apr_int64_t reuse_count;
-
+  /* For rep-sharing, we need a way of uniquifying node-revs which share the
+     same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
+     store the original txn of the node rev (not the rep!), along with some
+     intra-node uniqification content.
+     
+     May be NULL, in which case, it is considered to match other NULL
+     values.*/
+  const char *uniquifier;
 } representation_t;
 
 

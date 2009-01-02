@@ -257,7 +257,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_boolean_t tree_conflicted_p;
+  svn_wc_conflict_description_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
@@ -293,9 +293,10 @@ assemble_status(svn_wc_status2_t **status,
     SVN_ERR(svn_io_check_special_path(path, &path_kind, &path_special,
                                       pool));
 
-  /* Find out whether it's a tree conflict victim. */
-  SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflicted_p, path, adm_access,
-                               pool));
+  /* Find out whether the path is a tree conflict victim.
+   * This function will set tree_conflict to NULL if the path
+   * is not a victim. */
+  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access, pool));
 
   if (! entry)
     {
@@ -309,7 +310,7 @@ assemble_status(svn_wc_status2_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
-      stat->tree_conflicted = tree_conflicted_p;
+      stat->tree_conflict = tree_conflict;
       stat->file_external = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
@@ -327,7 +328,7 @@ assemble_status(svn_wc_status2_t **status,
 
       /* If this path has no entry, is NOT present on disk, and IS a
          tree conflict victim, count it as missing. */
-      if ((path_kind == svn_node_none) && tree_conflicted_p)
+      if ((path_kind == svn_node_none) && tree_conflict)
         stat->text_status = svn_wc_status_missing;
 
       stat->repos_lock = repos_lock;
@@ -395,8 +396,8 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
-      SVN_ERR(svn_wc__has_prop_mods(&prop_modified_p, path, adm_access,
-                                    pool));
+      SVN_ERR(svn_wc_props_modified_p(&prop_modified_p, path, adm_access,
+                                      pool));
 
 #ifdef HAVE_SYMLINK
       if (has_props)
@@ -512,7 +513,7 @@ assemble_status(svn_wc_status2_t **status,
             || (final_prop_status == svn_wc_status_normal))
         && (! locked_p) && (! switched_p) && (! file_external_p)
         && (! entry->lock_token) && (! repos_lock) && (! entry->changelist)
-        && (! tree_conflicted_p))
+        && (! tree_conflict))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -537,7 +538,7 @@ assemble_status(svn_wc_status2_t **status,
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
-  stat->tree_conflicted = tree_conflicted_p;
+  stat->tree_conflict = tree_conflict;
 
   *status = stat;
 
@@ -939,7 +940,7 @@ get_dir_status(struct edit_baton *eb,
       else
         {
           svn_wc_conflict_description_t *tree_conflict;
-          SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict,
+          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict,
                                            svn_path_join(path, entry, subpool),
                                            adm_access, subpool));
           if (tree_conflict)
@@ -1017,10 +1018,9 @@ get_dir_status(struct edit_baton *eb,
     }
 
   /* Add empty status structures for nonexistent tree conflict victims. */
-  tree_conflicts = apr_array_make(pool, 0,
-                                  sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(tree_conflicts, dir_entry,
-                                                 path, subpool));
+  SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
+                                      dir_entry->tree_conflict_data,
+                                      path, subpool));
 
   for (j = 0; j < tree_conflicts->nelts; j++)
     {
@@ -1471,7 +1471,7 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
   if ((status->prop_status != svn_wc_status_none)
       && (status->prop_status != svn_wc_status_normal))
     return TRUE;
-  if (status->tree_conflicted)
+  if (status->tree_conflict)
     return TRUE;
 
   /* If it's locked or switched, send it. */
@@ -2338,6 +2338,10 @@ svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
   if (orig_stat->ood_last_cmt_author)
     new_stat->ood_last_cmt_author
       = apr_pstrdup(pool, orig_stat->ood_last_cmt_author);
+
+  if (orig_stat->tree_conflict)
+    new_stat->tree_conflict
+      = svn_wc__conflict_description_dup(orig_stat->tree_conflict, pool);
 
   /* Return the new hotness. */
   return new_stat;
