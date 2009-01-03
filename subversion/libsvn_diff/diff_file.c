@@ -2,7 +2,7 @@
  * diff_file.c :  routines for doing diffs on files
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1122,7 +1122,8 @@ output_unified_default_hdr(const char **header, const char *path,
   apr_time_exp_lt(&exploded_time, file_info.mtime);
 
   apr_strftime(time_buffer, &time_len, sizeof(time_buffer) - 1,
-               "%a %b %e %H:%M:%S %Y", &exploded_time);
+  /* Order of date components can be different in different languages */
+               _("%a %b %e %H:%M:%S %Y"), &exploded_time);
 
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, time_buffer, pool));
 
