@@ -2,7 +2,7 @@
 # Makefile.in:  template Makefile for Subversion
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -41,7 +41,7 @@ NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
-SVN_DB_LIBS =
+SVN_DB_LIBS = @SVN_DB_LIBS@
 SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
@@ -110,9 +110,9 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
-           @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ \
-           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@ \
-           @SVN_SQLITE_INCLUDES@
+           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ \
+           @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ \
+           @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@

@@ -267,6 +267,9 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
 
+AC_SUBST(SVN_DB_INCLUDES)
+AC_SUBST(SVN_DB_LIBS)
+
 SVN_LIB_SASL
 
 if test "$svn_lib_sasl" = "yes"; then
