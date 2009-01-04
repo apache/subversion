@@ -126,6 +126,16 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__change_txn_props
 };
 
+/* Declarations. */
+
+static svn_error_t *
+read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
+                      const char *path,
+                      apr_pool_t *pool);
+
+static svn_error_t *
+update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -180,6 +190,8 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   assert(ffd->max_files_per_dir);
+  assert(is_packed_rev(fs, rev));
+
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
                             apr_psprintf(pool, "%ld.pack",
                                          rev / ffd->max_files_per_dir),
@@ -203,6 +215,8 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
+  assert(! is_packed_rev(fs, rev));
+
   if (ffd->max_files_per_dir)
     {
       return svn_path_join(path_rev_shard(fs, rev, pool),
@@ -216,13 +230,46 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
 /* Returns the path of REV in FS, whether in a pack file or not.
    Allocate in POOL. */
-const char *
-svn_fs_fs__path_rev_absolute(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__path_rev_absolute(const char **path,
+                             svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool)
 {
-  if (is_packed_rev(fs, rev))
-    return path_rev_packed(fs, rev, "pack", pool);
-  else
-    return path_rev(fs, rev, pool);
+  if (! is_packed_rev(fs, rev))
+    {
+      svn_node_kind_t kind;
+
+      /* Initialize the return variable. */
+      *path = path_rev(fs, rev, pool);
+
+      SVN_ERR(svn_io_check_path(*path, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          /* *path is already set correctly. */
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Someone must have run 'svnadmin pack' while this fs object
+           * was open. */
+
+          SVN_ERR(update_min_unpacked_rev(fs, pool));
+
+          /* The rev really should be present now. */
+          if (! is_packed_rev(fs, rev))
+            return svn_error_createf(APR_ENOENT, NULL,
+                                     "Revision file '%s' does not exist, "
+                                     "and r%ld is not packed",
+                                     svn_path_local_style(*path, pool),
+                                     rev);
+          /* Fall through. */
+        }
+    }
+
+  *path = path_rev_packed(fs, rev, "pack", pool);
+
+  return SVN_NO_ERROR;
 }
 
 static const char *
@@ -1606,42 +1653,19 @@ open_pack_or_rev_file(apr_file_t **file,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
+  const char *path;
 
-  err = svn_io_file_open(file, svn_fs_fs__path_rev_absolute(fs, rev, pool),
-                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+  err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
+
+  if (! err)
+    err = svn_io_file_open(file, path,
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
-      svn_boolean_t before, after;
-
       svn_error_clear(err);
-
-      /* Did someone run 'svnadmin pack' under our feet? */
-      /* TODO: this logic is needed by all callers of __path_rev_absolute();
-       * find a more general solution.
-       */
-      before = is_packed_rev(fs, rev);
-      SVN_ERR(update_min_unpacked_rev(fs, pool));
-      after = is_packed_rev(fs, rev);
-
-      if (before != after)
-        {
-          /* Yes. */
-          SVN_ERR_ASSERT(after);
-
-          /* Recursive call!
-           *
-           * However, by now REV is packed, so in the recursive call we will
-           * have 'before = TRUE' and won't get into an infinite loop.
-           */
-          return open_pack_or_rev_file(file, fs, rev, pool);
-        }
-      else
-        {
-          /* No. */
-          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                   _("No such revision %ld"), rev);
-        }
+      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                               _("No such revision %ld"), rev);
     }
 
   return err;
@@ -2518,6 +2542,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 {
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
+  const char *perms_reference;
   svn_stream_t *stream;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
@@ -2534,8 +2559,10 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      because when setting revprops for the first time, the revprop
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
-  return move_into_place(tmp_path, final_path,
-                         svn_fs_fs__path_rev_absolute(fs, rev, pool), pool);
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+  SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -5677,7 +5704,8 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Move the finished rev file into place. */
-  old_rev_filename = svn_fs_fs__path_rev_absolute(cb->fs, old_rev, pool);
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&old_rev_filename,
+                                       cb->fs, old_rev, pool));
   rev_filename = path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(move_into_place(proto_filename, rev_filename, old_rev_filename,
