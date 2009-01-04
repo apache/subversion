@@ -259,8 +259,8 @@ svn_fs_fs__path_rev_absolute(const char **path,
           /* The rev really should be present now. */
           if (! is_packed_rev(fs, rev))
             return svn_error_createf(APR_ENOENT, NULL,
-                                     "Revision file '%s' does not exist, "
-                                     "and r%ld is not packed",
+                                     _("Revision file '%s' does not exist, "
+                                       "and r%ld is not packed"),
                                      svn_path_local_style(*path, pool),
                                      rev);
           /* Fall through. */
