@@ -58,7 +58,7 @@ repository) is:
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
-  max-packed-rev      File containing the youngest revision to be in a pack file
+  min-unpacked-rev    File containing the oldest revision not in a pack file
   rep-cache.db        SQLite database mapping rep checksums to locations
 
 Files in the revprops directory are in the hash dump format used by
