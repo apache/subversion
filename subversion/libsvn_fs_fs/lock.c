@@ -149,6 +149,7 @@ write_digest_file(apr_hash_t *children,
   apr_hash_index_t *hi;
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
+  const char *rev_0_path;
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR,
                                                      pool), fs, pool));
@@ -206,8 +207,8 @@ write_digest_file(apr_hash_t *children,
 
   SVN_ERR(svn_stream_close(stream));
   SVN_ERR(svn_io_file_rename(tmp_path, digest_path, pool));
-  return svn_fs_fs__dup_perms
-         (digest_path, svn_fs_fs__path_rev_absolute(fs, 0, pool), pool);
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, fs, 0, pool));
+  return svn_fs_fs__dup_perms(digest_path, rev_0_path, pool);
 }
 
 

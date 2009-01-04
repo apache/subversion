@@ -401,10 +401,11 @@ svn_error_t *svn_fs_fs__dup_perms(const char *filename,
                                   const char *perms_reference,
                                   apr_pool_t *pool);
 
-/* Returns the path of REV in FS, whether in a pack file or not.
+/* Sets *PATH to the path of REV in FS, whether in a pack file or not.
    Allocate in POOL. */
-const char *
-svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
+svn_error_t *
+svn_fs_fs__path_rev_absolute(const char **path,
+                             svn_fs_t *fs,
                              svn_revnum_t rev,
                              apr_pool_t *pool);
 
