@@ -6799,6 +6799,8 @@ pack_shard(const char *revs_dir,
            const char *fs_path,
            apr_int64_t shard,
            int max_files_per_dir,
+           svn_fs_pack_notify_t notify_func,
+           void *notify_baton,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *pool)
@@ -6821,6 +6823,11 @@ pack_shard(const char *revs_dir,
   shard_path = svn_path_join(revs_dir,
                              apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
                              pool);
+
+  /* Notify caller we're starting to pack this shard. */
+  if (notify_func)
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start,
+                        pool));
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
   SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
@@ -6881,12 +6888,22 @@ pack_shard(const char *revs_dir,
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
-  return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
+  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton,
+                             pool));
+
+  /* Notify caller we're starting to pack this shard. */
+  if (notify_func)
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_end,
+                        pool));
+
+  return SVN_NO_ERROR;
 }
 
 struct pack_baton
 {
   svn_fs_t *fs;
+  svn_fs_pack_notify_t notify_func;
+  void *notify_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 };
@@ -6941,6 +6958,7 @@ pack_body(void *baton,
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
       SVN_ERR(pack_shard(data_path, pb->fs->path, i, max_files_per_dir,
+                         pb->notify_func, pb->notify_baton,
                          pb->cancel_func, pb->cancel_baton, iterpool));
       /* We can't pack revprops, because they aren't immutable :(
          If we ever do get clever and figure out how to pack revprops,
@@ -6953,10 +6971,13 @@ pack_body(void *baton,
 
 svn_error_t *
 svn_fs_fs__pack(svn_fs_t *fs,
+                svn_fs_pack_notify_t notify_func,
+                void *notify_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool)
 {
-  struct pack_baton pb = { fs, cancel_func, cancel_baton };
+  struct pack_baton pb = { fs, notify_func, notify_baton,
+                           cancel_func, cancel_baton };
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }

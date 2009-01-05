@@ -89,6 +89,7 @@ typedef struct fs_library_vtable_t
                           svn_cancel_func_t cancel_func, void *cancel_baton,
                           apr_pool_t *pool);
   svn_error_t *(*pack_fs)(svn_fs_t *fs, const char *path,
+                          svn_fs_pack_notify_t notify_func, void *notify_baton,
                           svn_cancel_func_t cancel_func, void *cancel_baton,
                           apr_pool_t *pool);
 
