@@ -1009,21 +1009,17 @@ class SvnClientTest < Test::Unit::TestCase
       assert_equal_log_entries([], merged_entries)
 
       ctx.revert(trunk)
-      ctx.revert(trunk_path)
       File.open(trunk_path, "a") {|f| f.print(src)}
       yield(ctx, branch, rev3, rev4, trunk)
-      ctx.resolved(trunk,false)
+      ctx.revert(trunk, false)
+      ctx.resolve(:path=>trunk_path,
+                  :conflict_choice=>Svn::Wc::CONFLICT_CHOOSE_MINE_FULL)
       rev5 = ctx.commit(@wc_path).revision
       assert(File.exist?(trunk_path))
+      ctx.up(@wc_path)
 
       yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
-      statuses = []
-      ctx.status(trunk) do |_, status|
-        statuses << status
-      end
-      assert_equal(1, statuses.size, "Only one entry should have changed")
-      assert_equal(Svn::Wc::STATUS_NORMAL, statuses.first.text_status, "No changes to file content expected")
-      assert_equal(Svn::Wc::STATUS_MODIFIED, statuses.first.prop_status, "merge info changes")
+      assert_changed(ctx, trunk)
 
       ctx.propdel("svn:mergeinfo", trunk)
       rev6 = ctx.commit(@wc_path).revision
