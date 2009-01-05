@@ -2114,7 +2114,7 @@ class SvnClientTest < Test::Unit::TestCase
                         repos_uri, info_revision)
       end
     end
-    
+
     Svn::Client::Context.new do |ctx|
       setup_auth_baton(ctx.auth_baton)
       ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
@@ -2341,6 +2341,121 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
 
       assert_equal(src, ctx.cat(uri, first_commit_time))
+    end
+  end
+
+  def assert_resolve(choice)
+    log = "sample log"
+    file = "sample.txt"
+    srcs = ["before\n","after\n"]
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+
+    make_context(log) do |ctx|
+      ctx.mkdir(dir_path)
+      File.open(path, "w") {}
+      ctx.add(path)
+      rev1 = ctx.ci(@wc_path).revision
+
+      File.open(path, "w") {|f| f.print(srcs[0])}
+      rev2 = ctx.ci(@wc_path).revision
+
+      ctx.up(@wc_path, rev1)
+
+      File.open(path, "w") {|f| f.print(srcs[1])}
+      ctx.up(@wc_path)
+
+      assert_raises(Svn::Error::WcFoundConflict) do
+        ctx.ci(@wc_path)
+      end
+
+      ctx.resolve(:path=>dir_path, :depth=>:empty, :conflict_choice=>choice)
+      assert_raises(Svn::Error::WcFoundConflict) do
+        ctx.ci(@wc_path)
+      end
+
+      ctx.resolve(:path=>dir_path, :depth=>:infinite, :conflict_choice=>choice)
+      yield ctx, path
+    end
+  end
+
+  def test_resolve_base
+    assert_resolve(Svn::Wc::CONFLICT_CHOOSE_BASE) do |ctx,path|
+      info = nil
+      assert_nothing_raised do
+        info = ctx.ci(@wc_path)
+      end
+      assert_not_nil(info)
+      assert_equal(3, info.revision)
+
+      assert_equal("", File.read(path))
+    end
+  end
+
+  def test_resolve_theirs_full
+    assert_resolve(Svn::Wc::CONFLICT_CHOOSE_THEIRS_FULL) do |ctx,path|
+      info = nil
+      assert_nothing_raised do
+        info = ctx.ci(@wc_path)
+      end
+      assert_not_nil(info)
+      assert_equal(-1, info.revision)
+
+      assert_equal("before\n", File.read(path))
+    end
+  end
+
+  def test_resolve_mine_full
+    assert_resolve(Svn::Wc::CONFLICT_CHOOSE_MINE_FULL) do |ctx,path|
+      info = nil
+      assert_nothing_raised do
+        info = ctx.ci(@wc_path)
+      end
+      assert_not_nil(info)
+      assert_equal(3, info.revision)
+
+      assert_equal("after\n", File.read(path))
+    end
+  end
+
+  def test_resolve_theirs_conflict
+    assert_resolve(Svn::Wc::CONFLICT_CHOOSE_THEIRS_FULL) do |ctx,path|
+      info = nil
+      assert_nothing_raised do
+        info = ctx.ci(@wc_path)
+      end
+      assert_not_nil(info)
+      assert_equal(-1, info.revision)
+
+      assert_equal("before\n", File.read(path))
+    end
+  end
+
+  def test_resolve_mine_conflict
+    assert_resolve(Svn::Wc::CONFLICT_CHOOSE_MINE_FULL) do |ctx,path|
+      info = nil
+      assert_nothing_raised do
+        info = ctx.ci(@wc_path)
+      end
+      assert_not_nil(info)
+      assert_equal(3, info.revision)
+
+      assert_equal("after\n", File.read(path))
+    end
+  end
+
+  def test_resolve_merged
+    assert_resolve(Svn::Wc::CONFLICT_CHOOSE_MERGED) do |ctx,path|
+      info = nil
+      assert_nothing_raised do
+        info = ctx.ci(@wc_path)
+      end
+      assert_not_nil(info)
+      assert_equal(3, info.revision)
+
+      assert_equal("<<<<<<< .mine\nafter\n=======\nbefore\n>>>>>>> .r2\n",
+                   File.read(path))
     end
   end
 end

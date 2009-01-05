@@ -230,6 +230,21 @@ module Svn
         Client.resolved(path, recurse, self)
       end
 
+      RESOLVE_REQUIRED_ARGUMENTS_KEYS = [:path]
+      def resolve(arguments={})
+        arguments = arguments.reject {|k, v| v.nil?}
+        optional_arguments_defaults = {
+          :depth => nil,
+          :conflict_choice => Wc::CONFLICT_CHOOSE_POSTPONE
+        }
+        arguments = optional_arguments_defaults.merge(arguments)
+        Util.validate_options(arguments,
+                              optional_arguments_defaults.keys,
+                              RESOLVE_REQUIRED_ARGUMENTS_KEYS)
+
+        Client.resolve(arguments[:path], arguments[:depth], arguments[:conflict_choice], self)
+      end
+
       def propset(name, value, target, depth_or_recurse=nil, force=false,
                   base_revision_for_url=nil, changelists_names=nil,
                   revprop_table=nil)
