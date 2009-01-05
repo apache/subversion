@@ -6011,7 +6011,7 @@ struct recover_read_from_file_baton
 {
   apr_file_t *file;
   apr_pool_t *pool;
-  apr_size_t remaining;
+  apr_off_t remaining;
 };
 
 /* A stream read handler used by recover_find_max_ids() below.
@@ -6021,7 +6021,7 @@ static svn_error_t *
 read_handler_recover(void *baton, char *buffer, apr_size_t *len)
 {
   struct recover_read_from_file_baton *b = baton;
-  apr_size_t bytes_to_read = *len;
+  svn_filesize_t bytes_to_read = *len;
 
   if (b->remaining == 0)
     {
@@ -6034,7 +6034,8 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
     bytes_to_read = b->remaining;
   b->remaining -= bytes_to_read;
 
-  return svn_io_file_read_full(b->file, buffer, bytes_to_read, len, b->pool);
+  return svn_io_file_read_full(b->file, buffer, (apr_size_t) bytes_to_read,
+                               len, b->pool);
 }
 
 /* Part of the recovery procedure.  Read the directory noderev at offset
