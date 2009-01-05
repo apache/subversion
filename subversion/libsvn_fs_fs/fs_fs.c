@@ -6884,13 +6884,18 @@ pack_shard(const char *revs_dir,
   return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
 }
 
-
-svn_error_t *
-svn_fs_fs__pack(const char *fs_path,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
+struct pack_baton
 {
+  svn_fs_t *fs;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
+static svn_error_t *
+pack_body(void *baton,
+          apr_pool_t *pool)
+{
+  struct pack_baton *pb = baton;
   int format, max_files_per_dir;
   int completed_shards;
   apr_int64_t i;
@@ -6900,7 +6905,7 @@ svn_fs_fs__pack(const char *fs_path,
   svn_revnum_t min_unpacked_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_path_join(fs_path, PATH_FORMAT, pool),
+                      svn_path_join(pb->fs->path, PATH_FORMAT, pool),
                       pool));
 
   /* If the repository isn't a new enough format, we don't support packing.
@@ -6914,29 +6919,29 @@ svn_fs_fs__pack(const char *fs_path,
     return SVN_NO_ERROR;
 
   SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
-                                svn_path_join(fs_path, PATH_MIN_UNPACKED_REV,
-                                              pool),
+                                svn_path_join(pb->fs->path,
+                                              PATH_MIN_UNPACKED_REV, pool),
                                 pool));
 
-  SVN_ERR(get_youngest(&youngest, fs_path, pool));
+  SVN_ERR(get_youngest(&youngest, pb->fs->path, pool));
   completed_shards = (youngest + 1) / max_files_per_dir;
 
   /* See if we've already completed all possible shards thus far. */
   if (min_unpacked_rev == (completed_shards * max_files_per_dir))
     return SVN_NO_ERROR;
 
-  data_path = svn_path_join(fs_path, PATH_REVS_DIR, pool);
+  data_path = svn_path_join(pb->fs->path, PATH_REVS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
   for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)
     {
       svn_pool_clear(iterpool);
 
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+      if (pb->cancel_func)
+        SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
-      SVN_ERR(pack_shard(data_path, fs_path, i, max_files_per_dir, cancel_func,
-                         cancel_baton, iterpool));
+      SVN_ERR(pack_shard(data_path, pb->fs->path, i, max_files_per_dir,
+                         pb->cancel_func, pb->cancel_baton, iterpool));
       /* We can't pack revprops, because they aren't immutable :(
          If we ever do get clever and figure out how to pack revprops,
          this is the place to do it. */
@@ -6944,4 +6949,14 @@ svn_fs_fs__pack(const char *fs_path,
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__pack(svn_fs_t *fs,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  struct pack_baton pb = { fs, cancel_func, cancel_baton };
+  return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }

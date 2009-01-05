@@ -248,6 +248,18 @@ fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   return svn_fs_fs__upgrade(fs, pool);
 }
 
+static svn_error_t *
+fs_pack(svn_fs_t *fs, const char *path, svn_cancel_func_t cancel_func,
+        void *cancel_baton, apr_pool_t *pool)
+{
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+  SVN_ERR(initialize_fs_struct(fs));
+  SVN_ERR(svn_fs_fs__open(fs, path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+  SVN_ERR(fs_serialized_init(fs, pool, pool));
+  return svn_fs_fs__pack(fs, cancel_func, cancel_baton, pool);
+}
+
 
 
 
@@ -321,7 +333,7 @@ static fs_library_vtable_t library_vtable = {
   fs_hotcopy,
   fs_get_description,
   svn_fs_fs__recover,
-  svn_fs_fs__pack,
+  fs_pack,
   fs_logfiles
 };
 

@@ -518,7 +518,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
    Existing filesystem references need not change.  */
 svn_error_t *
-svn_fs_fs__pack(const char *fs_path,
+svn_fs_fs__pack(svn_fs_t *fs,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool);
