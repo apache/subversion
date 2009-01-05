@@ -1121,6 +1121,32 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                      opt_state, pool);
 }
 
+/* This implements svn_fs_pack_notify_t */
+static svn_error_t *
+pack_notify(void *baton,
+            apr_int64_t shard,
+            svn_fs_pack_notify_action_t action,
+            apr_pool_t *pool)
+{
+  switch (action)
+    {
+      case svn_fs_pack_notify_start:
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Packing shard %" APR_INT64_T_FMT "..."),
+                                   shard));
+        break;
+
+      case svn_fs_pack_notify_end:
+        SVN_ERR(svn_cmdline_printf(pool, _("done.\n")));
+        break;
+
+      default:
+        return SVN_NO_ERROR;
+    }
+
+  return svn_cmdline_fflush(stdout);
+}
+
 
 /* This implements 'svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -1131,7 +1157,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
-  return svn_repos_fs_pack(repos, check_cancel, NULL, pool);
+  return svn_repos_fs_pack(repos, pack_notify, NULL, check_cancel, NULL, pool);
 }
 
 

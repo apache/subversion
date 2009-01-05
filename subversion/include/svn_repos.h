@@ -315,6 +315,8 @@ svn_repos_hotcopy(const char *src_path,
  */
 svn_error_t *
 svn_repos_fs_pack(svn_repos_t *repos,
+                  svn_fs_pack_notify_t notify_func,
+                  void *notify_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *pool);
