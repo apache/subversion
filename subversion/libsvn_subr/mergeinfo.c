@@ -87,13 +87,11 @@ parse_pathname(const char **input, const char *end,
   if (!last_colon)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("Pathname not terminated by ':'"));
-
-  *pathname = svn_stringbuf_create("", pool);
-  svn_stringbuf_appendbytes(*pathname, *input, (last_colon - *input));
-
-  if ((*pathname)->len == 0)
+  if (last_colon == *input)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("No pathname preceding ':'"));
+
+  *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
   *input = last_colon;
 
   return SVN_NO_ERROR;
