@@ -842,9 +842,8 @@ close_handler_checksum(void *baton)
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
                         svn_checksum_t **read_checksum,
-                        svn_checksum_kind_t read_checksum_kind,
                         svn_checksum_t **write_checksum,
-                        svn_checksum_kind_t write_checksum_kind,
+                        svn_checksum_kind_t checksum_kind,
                         svn_boolean_t read_all,
                         apr_pool_t *pool)
 {
@@ -856,12 +855,12 @@ svn_stream_checksummed2(svn_stream_t *stream,
 
   baton = apr_palloc(pool, sizeof(*baton));
   if (read_checksum)
-    baton->read_ctx = svn_checksum_ctx_create(read_checksum_kind, pool);
+    baton->read_ctx = svn_checksum_ctx_create(checksum_kind, pool);
   else
     baton->read_ctx = NULL;
 
   if (write_checksum)
-    baton->write_ctx = svn_checksum_ctx_create(write_checksum_kind, pool);
+    baton->write_ctx = svn_checksum_ctx_create(checksum_kind, pool);
   else
     baton->write_ctx = NULL;
 
@@ -956,7 +955,6 @@ svn_stream_checksummed(svn_stream_t *stream,
     baton->write_checksum = NULL;
 
   baton->proxy = svn_stream_checksummed2(stream, &baton->read_checksum,
-                                         svn_checksum_md5,
                                          &baton->write_checksum,
                                          svn_checksum_md5, read_all, pool);
 

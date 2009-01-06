@@ -878,8 +878,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
           /* Compute a checksum for what is *actually* found */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
-                                                svn_checksum_md5, NULL,
-                                                svn_checksum_md5, TRUE, pool);
+                                                NULL, svn_checksum_md5, TRUE,
+                                                pool);
         }
       else
         {
@@ -888,8 +888,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc_get_pristine_contents(&p_stream, path, pool, pool));
           p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
-                                             svn_checksum_md5, NULL,
-                                             svn_checksum_md5, TRUE, pool);
+                                             NULL, svn_checksum_md5, TRUE,
+                                             pool);
 
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));

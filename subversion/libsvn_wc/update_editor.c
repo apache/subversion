@@ -2923,8 +2923,7 @@ add_file_with_history(const char *path,
      ### this is temporary. in many cases, we already *know* the checksum
      ### since it is a copy. */
   copied_stream = svn_stream_checksummed2(copied_stream,
-                                          NULL, 0,
-                                          &tfb->copied_base_checksum,
+                                          NULL, &tfb->copied_base_checksum,
                                           svn_checksum_md5,
                                           FALSE, pool);
 
@@ -4950,9 +4949,8 @@ svn_wc_add_repos_file3(const char *dst_path,
   SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, adm_path,
                                   svn_io_file_del_none, pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
-                                              &base_checksum, svn_checksum_md5,
-                                              NULL, 0,
-                                              TRUE, pool);
+                                              &base_checksum, NULL,
+                                              svn_checksum_md5, TRUE, pool);
   tmp_base_contents = svn_stream_from_aprfile2(base_file, FALSE, pool);
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,
