@@ -401,6 +401,12 @@ def open_pipe(command, mode):
   if platform_with_subprocess:
     # Python >=2.4
     command = [str(x) for x in command]
+
+    # On Windows subprocess.Popen() won't accept a Python script as
+    # a valid program to execute, rather it wants the Python executable.
+    if (sys.platform == 'win32') and (command[0].endswith('.py')):
+      command.insert(0, sys.executable)
+
     p = subprocess.Popen(command, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          close_fds=not windows)
