@@ -35,6 +35,7 @@
 static svn_opt_subcommand_t initialize_cmd,
                             synchronize_cmd,
                             copy_revprops_cmd,
+                            info_cmd,
                             help_cmd;
 
 enum {
@@ -60,8 +61,7 @@ enum {
                              svnsync_opt_source_password, \
                              svnsync_opt_sync_username, \
                              svnsync_opt_sync_password, \
-                             svnsync_opt_config_dir, \
-                             'q'
+                             svnsync_opt_config_dir
 
 static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
   {
@@ -82,13 +82,13 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
          "mirror of the source repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT } },
+      { SVNSYNC_OPTS_DEFAULT, 'q' } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
          "Transfer all pending revisions to the destination from the source\n"
          "with which it was initialized.\n"),
-      { SVNSYNC_OPTS_DEFAULT } },
+      { SVNSYNC_OPTS_DEFAULT, 'q' } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
          "\n"
@@ -104,6 +104,12 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "REV and REV2 must be revisions which were previously transferred\n"
          "to the destination.  You may use \"HEAD\" for either revision to\n"
          "mean \"the last revision transferred\".\n"),
+      { SVNSYNC_OPTS_DEFAULT, 'q' } },
+    { "info", info_cmd, { 0 },
+      N_("usage: svnsync info DEST_URL\n"
+         "\n"
+         "Print information about the synchronization destination repository\n"
+         "located at DEST_URL.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "help", help_cmd, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
@@ -1791,6 +1797,68 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_copy_revprops, baton, pool));
 
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** `svnsync info' ***/
+
+
+/* SUBCOMMAND: info */
+static svn_error_t *
+info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
+{
+  svn_ra_session_t *to_session;
+  opt_baton_t *opt_baton = b;
+  apr_array_header_t *targets;
+  subcommand_baton_t *baton;
+  const char *to_url;
+  svn_string_t *from_url, *from_uuid, *last_merged_rev;
+
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
+                                        apr_array_make(pool, 0,
+                                                       sizeof(const char *)),
+                                        pool));
+  if (targets->nelts < 1)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+
+  /* Get the mirror repository URL, and verify that it is URL-ish. */
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
+  if (! svn_path_is_url(to_url))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Path '%s' is not a URL"), to_url);
+
+  /* Open an RA session to the mirror repository URL. */
+  baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+                       &(baton->sync_callbacks), baton, baton->config, pool));
+  SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
+
+  /* Verify that the repos has been initialized for synchronization. */
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
+                          &from_url, pool));
+  if (! from_url)
+    return svn_error_createf
+      (SVN_ERR_BAD_URL, NULL,
+       _("Repository '%s' is not initialized for synchronization"), to_url);
+
+  /* Fetch more of the magic properties, which are the source of our info. */
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
+                          &from_uuid, pool));
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
+                          &last_merged_rev, pool));
+
+  /* Print the info. */
+  SVN_ERR(svn_cmdline_printf(pool, _("Source URL: %s\n"), from_url->data));
+  if (from_uuid)
+    SVN_ERR(svn_cmdline_printf(pool, _("Source Repository UUID: %s\n"),
+                               from_uuid->data));
+  if (last_merged_rev)
+    SVN_ERR(svn_cmdline_printf(pool, _("Last Merged Revision: %s\n"),
+                               last_merged_rev->data));
   return SVN_NO_ERROR;
 }
 

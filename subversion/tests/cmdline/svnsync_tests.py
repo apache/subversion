@@ -99,6 +99,28 @@ def run_init(dst_url, src_url):
   if output != ['Copied properties for revision 0.\n']:
     raise SVNUnexpectedStdout(output)
 
+def run_info(url, expected_error=None):
+  "Print synchronization information of the repository"
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "info", url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+    if expected_error is None:
+      raise SVNUnexpectedStderr(errput)
+    else:
+      expected_error = svntest.verify.RegexOutput(expected_error,
+                                                  match_all=False)
+      svntest.verify.compare_and_display_lines(None, "STDERR",
+                                               expected_error, errput)
+  elif expected_error is not None:
+    raise SVNExpectedStderr
+  if not output and not expected_error:
+    # should be: ['From URL: http://....\n',
+    #             'From UUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\n',
+    #             'Last Merged Revision: XXX\n']
+    raise SVNUnexpectedStdout("Missing stdout")
+
 
 def run_test(sbox, dump_file_name, subdir = None, exp_dump_file_name = None):
   """Load a dump file, sync repositories, and compare contents with the original
@@ -680,6 +702,47 @@ def move_and_modify_in_the_same_revision(sbox):
   "test move parent and modify child file in same rev"
   run_test(sbox, "svnsync-move-and-modify.dump")
 
+def info_syncronized(sbox):
+  "test info cmd on a syncronized repo"
+
+  sbox.build("svnsync-info-syncd", False)
+
+  # Get the UUID of the source repository.
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  src_uuid = output[0].strip()
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+  run_sync(dest_sbox.repo_url)
+
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "info", dest_sbox.repo_url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+      raise SVNUnexpectedStderr(errput)
+
+  expected_out = ['Source URL: %s\n' % sbox.repo_url,
+                  'Source Repository UUID: %s\n' % src_uuid,
+                  'Last Merged Revision: 1\n',
+                  ]
+
+  svntest.verify.compare_and_display_lines(None,
+                                           'INFO',
+                                           expected_out,
+                                           output)
+
+def info_not_syncronized(sbox):
+  "test info cmd on an un-syncronized repo"
+
+  sbox.build("svnsync-info-not-syncd", False)
+
+  run_info(sbox.repo_url,
+           ".*Repository '%s' is not initialized.*" % sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -713,6 +776,8 @@ test_list = [ None,
               SkipUnless(only_trunk_A_with_changes,
                          server_has_partial_replay),
               move_and_modify_in_the_same_revision,
+              info_syncronized,
+              info_not_syncronized,
              ]
 
 if __name__ == '__main__':
