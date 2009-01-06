@@ -16,6 +16,13 @@ Blocker:
    updated to accept a prompt handler and svn should provide such a prompt
    handler. [stylesen]
 
+ * #3354: update fails when file with local mods is moved and modified.
+   If you run the attached script with current trunk, svn bails out
+   and leaves the working copy in locked state.
+   The problem occurs when an update pulls down both a move and a
+   textual diff for a file in one go.
+   Not deeply analysed, fix unknown as of yet, but reproduction script exists.
+
 Optional:
 
  * Merge the sparse-directories deselection branch, as noted by kfogel:
