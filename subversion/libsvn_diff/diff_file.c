@@ -2,7 +2,7 @@
  * diff_file.c :  routines for doing diffs on files
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -130,14 +130,14 @@ datasource_to_index(svn_diff_datasource_e datasource)
  */
 static APR_INLINE svn_error_t *
 read_chunk(apr_file_t *file, const char *path,
-           char *buffer, apr_size_t length,
+           char *buffer, apr_off_t length,
            apr_off_t offset, apr_pool_t *pool)
 {
   /* XXX: The final offset may not be the one we asked for.
    * XXX: Check.
    */
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
-  return svn_io_file_read_full(file, buffer, length, NULL, pool);
+  return svn_io_file_read_full(file, buffer, (apr_size_t) length, NULL, pool);
 }
 
 
@@ -171,7 +171,8 @@ map_or_read_file(apr_file_t **file,
 #if APR_HAS_MMAP
   if (finfo.size > APR_MMAP_THRESHOLD)
     {
-      rv = apr_mmap_create(mm, *file, 0, finfo.size, APR_MMAP_READ, pool);
+      rv = apr_mmap_create(mm, *file, 0, (apr_size_t) finfo.size,
+                           APR_MMAP_READ, pool);
       if (rv == APR_SUCCESS)
         {
           *buffer = (*mm)->mm;
@@ -185,9 +186,10 @@ map_or_read_file(apr_file_t **file,
 
    if (*buffer == NULL && finfo.size > 0)
     {
-      *buffer = apr_palloc(pool, finfo.size);
+      *buffer = apr_palloc(pool, (apr_size_t) finfo.size);
 
-      SVN_ERR(svn_io_file_read_full(*file, *buffer, finfo.size, NULL, pool));
+      SVN_ERR(svn_io_file_read_full(*file, *buffer, (apr_size_t) finfo.size,
+                                    NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
@@ -210,7 +212,7 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   svn_diff__file_baton_t *file_baton = baton;
   int idx;
   apr_finfo_t finfo;
-  apr_size_t length;
+  apr_off_t length;
   char *curp;
   char *endp;
 
@@ -228,7 +230,7 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   if (length == 0)
     return SVN_NO_ERROR;
 
-  endp = curp = apr_palloc(file_baton->pool, length);
+  endp = curp = apr_palloc(file_baton->pool, (apr_size_t) length);
   endp += length;
 
   file_baton->buffer[idx] = file_baton->curp[idx] = curp;
@@ -261,7 +263,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   char *endp;
   char *curp;
   char *eol;
-  int last_chunk;
+  apr_off_t last_chunk;
   apr_off_t length;
   apr_uint32_t h = 0;
   /* Did the last chunk end in a CR character? */
@@ -483,7 +485,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
       /* Compare two chunks (that could be entire tokens if they both reside
        * in memory).
        */
-      *compare = memcmp(bufp[0], bufp[1], len);
+      *compare = memcmp(bufp[0], bufp[1], (size_t) len);
       if (*compare != 0)
         return SVN_NO_ERROR;
 
@@ -1122,7 +1124,8 @@ output_unified_default_hdr(const char **header, const char *path,
   apr_time_exp_lt(&exploded_time, file_info.mtime);
 
   apr_strftime(time_buffer, &time_len, sizeof(time_buffer) - 1,
-               "%a %b %e %H:%M:%S %Y", &exploded_time);
+  /* Order of date components can be different in different languages */
+               _("%a %b %e %H:%M:%S %Y"), &exploded_time);
 
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, time_buffer, pool));
 

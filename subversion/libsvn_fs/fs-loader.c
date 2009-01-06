@@ -489,14 +489,29 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
 
 svn_error_t *
 svn_fs_pack(const char *path,
+            svn_fs_pack_notify_t notify_func,
+            void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->pack(path, cancel_func, cancel_baton, pool);
+  fs = fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->pack_fs(fs, path, notify_func, notify_baton,
+                        cancel_func, cancel_baton, pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
 }
 
 svn_error_t *
