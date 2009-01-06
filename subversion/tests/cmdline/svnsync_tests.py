@@ -702,8 +702,8 @@ def move_and_modify_in_the_same_revision(sbox):
   "test move parent and modify child file in same rev"
   run_test(sbox, "svnsync-move-and-modify.dump")
 
-def info_syncronized(sbox):
-  "test info cmd on a syncronized repo"
+def info_synchronized(sbox):
+  "test info cmd on a synchronized repo"
 
   sbox.build("svnsync-info-syncd", False)
 
@@ -735,8 +735,8 @@ def info_syncronized(sbox):
                                            expected_out,
                                            output)
 
-def info_not_syncronized(sbox):
-  "test info cmd on an un-syncronized repo"
+def info_not_synchronized(sbox):
+  "test info cmd on an un-synchronized repo"
 
   sbox.build("svnsync-info-not-syncd", False)
 
@@ -776,8 +776,8 @@ test_list = [ None,
               SkipUnless(only_trunk_A_with_changes,
                          server_has_partial_replay),
               move_and_modify_in_the_same_revision,
-              info_syncronized,
-              info_not_syncronized,
+              info_synchronized,
+              info_not_synchronized,
              ]
 
 if __name__ == '__main__':
