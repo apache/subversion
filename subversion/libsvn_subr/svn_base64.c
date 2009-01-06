@@ -68,12 +68,12 @@ encode_group(const unsigned char *in, char *out)
    initialize *INBUFLEN and *LINELEN to 0.  Output will be appended to
    STR.  Include newlines every so often if BREAK_LINES is true. */
 static void
-encode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
+encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
              unsigned char *inbuf, int *inbuflen, int *linelen,
              svn_boolean_t break_lines)
 {
   char group[4];
-  const char *p = data, *end = data + len;
+  const char *p = data, *end = p + len;
 
   /* Keep encoding three-byte groups until we run out.  */
   while (*inbuflen + (end - p) >= 3)
@@ -381,10 +381,7 @@ svn_base64_from_checksum(svn_checksum_t *checksum, apr_pool_t *pool)
   int ingrouplen = 0, linelen = 0;
   checksum_str = svn_stringbuf_create("", pool);
 
-  /* This cast is safe because we know encode_bytes does a memcpy and
-   * does an implicit unsigned char * cast.
-   */
-  encode_bytes(checksum_str, (char*)checksum->digest,
+  encode_bytes(checksum_str, checksum->digest,
                svn_checksum_size(checksum), ingroup, &ingrouplen,
                &linelen, TRUE);
   encode_partial_group(checksum_str, ingroup, ingrouplen, linelen, TRUE);
