@@ -975,9 +975,8 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
       svn_stream_t *contents, *checksum_contents;
 
       SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-      checksum_contents = svn_stream_checksummed2(contents, checksum, kind,
-                                                  NULL, svn_checksum_md5,
-                                                  TRUE, pool);
+      checksum_contents = svn_stream_checksummed2(contents, checksum, NULL,
+                                                  kind, TRUE, pool);
 
       /* This will force a read of any remaining data (which is all of it in
          this case) and dump the checksum into checksum->digest. */

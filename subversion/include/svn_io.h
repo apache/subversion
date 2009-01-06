@@ -874,9 +874,8 @@ svn_stream_compressed(svn_stream_t *stream,
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
                         svn_checksum_t **read_checksum,
-                        svn_checksum_kind_t read_checksum_kind,
                         svn_checksum_t **write_checksum,
-                        svn_checksum_kind_t write_checksum_kind,
+                        svn_checksum_kind_t checksum_kind,
                         svn_boolean_t read_all,
                         apr_pool_t *pool);
 
