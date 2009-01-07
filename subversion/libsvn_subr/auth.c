@@ -27,6 +27,7 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 #include "svn_dso.h"
+#include "svn_cmdline.h"
 
 /* The good way to think of this machinery is as a set of tables.
 
@@ -381,6 +382,7 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
                                         apr_pool_t *pool)
 {
   *provider = NULL;
+  svn_cmdline_prompt_baton2_t *pb = NULL;
 
   if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
       apr_strnatcmp(provider_name, "kwallet") == 0)
@@ -423,10 +425,22 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
             {
               if (strcmp(provider_type, "simple") == 0)
                 {
-                  svn_auth_simple_provider_func_t provider_function;
-                  provider_function = (svn_auth_simple_provider_func_t)
-                    provider_function_symbol;
-                  provider_function(provider, pool);
+                  if (strcmp(provider_name, "gnome_keyring") == 0)
+                    {
+                      svn_auth_unlock_provider_func_t provider_function;
+                      provider_function = (svn_auth_unlock_provider_func_t)
+                        provider_function_symbol;
+                      provider_function(provider,
+                                        svn_cmdline_auth_unlock_prompt,
+                                        pb, pool);
+                    }
+                  else
+                    {
+                      svn_auth_simple_provider_func_t provider_function;
+                      provider_function = (svn_auth_simple_provider_func_t)
+                        provider_function_symbol;
+                      provider_function(provider, pool);
+                    }
                 }
               else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
                 {
