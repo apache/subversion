@@ -15571,7 +15571,7 @@ def merge_non_reflective_text_change(sbox):
 
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   expected_output = wc.State(short_ABE, {
-    ''         : Item(status=' U'),
+    ''         : Item(status=' G'),
     'alpha'    : Item(status='G '),
     })
   expected_status = wc.State(short_ABE, {
@@ -15580,7 +15580,8 @@ def merge_non_reflective_text_change(sbox):
     'beta'     : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E_COPY:3-8'}),
+    ''         : Item(props={
+                     SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7\n/A/B/E_COPY:3-8\n'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("fbline1 \ntline2 \ntline3 \ntline4 \nadhoc fbline5 \n"),
     })
