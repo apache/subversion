@@ -1,4 +1,5 @@
-/* wc-metadata.sql3 -- schema used in the wc-metadata SQLite database
+/* wc-metadata.sql -- schema used in the wc-metadata SQLite database
+ *     This is intended for use with SQLite 3
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
