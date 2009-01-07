@@ -89,7 +89,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         status=required
       fi
     else
-      if test -n "`echo "$withval" | $GREP -o ":.*:"`"; then
+      if test -n "`echo "$withval" | $EGREP -o ":.*:"`"; then
         SVN_DB_INCLUDES=""
         for i in [`echo "$withval" | sed -e "s/\([^:]*\):.*/\1/"`]; do
           SVN_DB_INCLUDES="$SVN_DB_INCLUDES -I$i"
@@ -187,7 +187,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     # Or that it resides in a non-standard location which we would have
     # to compensate with using something like -R`$apu_config --prefix`/lib.
     #
-    SVN_DB_LIBS=["${SVN_DB_LIBS-`$apu_config --libs | $GREP -o -- '-ldb[^[:space:]]*'`}"]
+    SVN_DB_LIBS=["${SVN_DB_LIBS-`$apu_config --libs | $EGREP -o -- '-ldb[^[:space:]]*'`}"]
 
     CPPFLAGS="$SVN_APRUTIL_INCLUDES $SVN_DB_INCLUDES $CPPFLAGS" 
     LIBS="`$apu_config --ldflags` $SVN_DB_LIBS $LIBS"
