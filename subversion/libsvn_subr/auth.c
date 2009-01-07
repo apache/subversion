@@ -381,8 +381,8 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
                                         const char *provider_type,
                                         apr_pool_t *pool)
 {
-  *provider = NULL;
   svn_cmdline_prompt_baton2_t *pb = NULL;
+  *provider = NULL;
 
   if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
       apr_strnatcmp(provider_name, "kwallet") == 0)
