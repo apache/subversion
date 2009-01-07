@@ -967,11 +967,17 @@ svn_auth_gnome_keyring_version(void);
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
- * ~/.subversion configuration directory.  Allocate @a *provider in
- * @a pool.
+ * ~/.subversion configuration directory.
  *
  * This is like svn_client_get_simple_provider(), except that the
  * password is stored in GNOME Keyring.
+ *
+ * If the GNOME Keyring is locked the provider calls
+ * @a unlock_prompt_func in order to unlock the keyring.
+ *
+ * @a prompt_baton is passed to @a unlock_prompt_func.
+ *
+ * Allocate @a *provider in @a pool.
  *
  * @since New in 1.6
  * @note This function actually works only on systems with
