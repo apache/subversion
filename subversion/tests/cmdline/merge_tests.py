@@ -15352,13 +15352,14 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   short_A_C = shorten_path_kludge(A_C_path)
   expected_skip = wc.State(short_A_C, {})
   expected_output = wc.State(short_A_C, {
+    ''              : Item(status=' G'),
     'bfile1.txt'    : Item(status='A '),
     'bfile2.txt'    : Item(status='A '),
     'bfile3.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
     ''       : Item(props={SVN_PROP_MERGE_INFO :
-                                    '/A/C:4,8\n/A/FB2:3-10\n/A/FB1:3-12\n'}),
+                                    '/A/C:4,8\n/A/FB1:3-12\n/A/FB2:3-10\n'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
     'bfile3.txt'  : Item("This is the bfile3.\n"),
@@ -15373,14 +15374,14 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'tfile1.txt'   : Item(status='  ', wc_rev=12),
     'tfile2.txt'   : Item(status='  ', wc_rev=12),
-    'tfile3.txt'   : Item(status='  ', wc_rev=10),
+    'tfile3.txt'   : Item(status='  ', wc_rev=12),
     })
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_A_C, 2, 12,
                                        A_FB1_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
-                                       None, 1, 1)
+                                       None, 1, dry_run = False)
   os.chdir(saved_cwd)
 
 def merge_non_reflective_text_change(sbox):
