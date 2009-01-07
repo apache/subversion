@@ -443,11 +443,12 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
       if verbose_mode:
         # show the whole path to make it easier to start a debugger
         sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
+                         % (' '.join(command), exit_signal))
       raise SVNProcessTerminatedBySignal
     else:
       if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+        sys.stderr.write("CMD: %s exited with %d\n"
+                         % (' '.join(command), exit_code))
       return exit_code
   else:
     # Python <2.4
@@ -462,12 +463,13 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
       if verbose_mode:
         # show the whole path to make it easier to start a debugger
         sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
+                         % (' '.join(command), exit_signal))
       raise SVNProcessTerminatedBySignal
     else:
       exit_code = os.WEXITSTATUS(wait_code)
       if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+        sys.stderr.write("CMD: %s exited with %d\n"
+                         % (' '.join(command), exit_code))
       return exit_code
 
 # Convert Windows line ending ('\r\n') to universal line ending ('\n')
