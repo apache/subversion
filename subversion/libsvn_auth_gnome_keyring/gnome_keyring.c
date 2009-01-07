@@ -553,4 +553,6 @@ svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider
 
   po->vtable = &gnome_keyring_ssl_client_cert_pw_provider;
   *provider = po;
+
+  gnome_keyring_init();
 }
