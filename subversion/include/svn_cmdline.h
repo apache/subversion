@@ -304,6 +304,17 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
                                              void *baton,
                                              apr_pool_t *pool);
 
+/** An implementation of @c svn_auth_unlock_prompt_func_t that
+ * prompts the user for default GNOME Keyring password.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_auth_unlock_prompt(char **keyring_password,
+                               const char *keyring_name,
+                               void *baton,
+                               apr_pool_t *pool);
+
 /** Set @a *ab to an authentication baton allocated from @a pool and
  * initialized with the standard set of authentication providers used
  * by the command line client.

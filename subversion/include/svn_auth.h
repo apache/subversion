@@ -529,6 +529,34 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)
    void *baton,
    apr_pool_t *pool);
 
+/** Called only by providers which unlocks GNOME Keyring.
+ * In this callback, clients should ask the user for default keyring
+ * @a keyring_name password.
+ *
+ * The answer is returned in @a *keyring_password.
+ * @a baton is an implementation-specific closure.
+ * All allocations should be done in @a pool.
+ *
+ * If this callback is NULL it is not called.
+ *
+ * @since New in 1.6
+ */
+typedef svn_error_t *(*svn_auth_unlock_prompt_func_t)
+  (char **keyring_password,
+   const char *keyring_name,
+   void *baton,
+   apr_pool_t *pool);
+
+/** The type of function returning GNOME Keyring authentication provider.
+ *
+ *  @since New in 1.6
+ */
+typedef void (*svn_auth_unlock_provider_func_t)
+  (svn_auth_provider_object_t **provider,
+   svn_auth_unlock_prompt_func_t unlock_prompt_func,
+   void *unlock_prompt_baton,
+   apr_pool_t *pool);
+
 
 /** Initialize an authentication system.
  *
@@ -952,6 +980,8 @@ svn_auth_gnome_keyring_version(void);
 void
 svn_auth_get_gnome_keyring_simple_provider
     (svn_auth_provider_object_t **provider,
+     svn_auth_unlock_prompt_func_t unlock_prompt_func,
+     void *prompt_baton,
      apr_pool_t *pool);
 
 
