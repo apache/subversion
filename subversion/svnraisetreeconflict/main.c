@@ -1,4 +1,8 @@
-/*
+/* svnraisetreeconflict
+ * 
+ * Command line tool that publishes API to create tree-conflict markings
+ * in a working copy.
+ *
  * ====================================================================
  * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
@@ -298,11 +302,6 @@ check_lib_versions(void)
   return svn_ver_check_list(&my_version, checklist);
 }
 
-/*
- * Why is this not an svn subcommand?  I have this vague idea that it could
- * be run as part of the build process, with the output embedded in the svn
- * program.  Obviously we don't want to have to run svn when building svn.
- */
 int
 main(int argc, const char *argv[])
 {
