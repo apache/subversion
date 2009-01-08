@@ -691,9 +691,11 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
       /* Pre-1.2 filesystems did not have a format file (you could say
-         they were format "0"), so they get upgraded on the fly. */
+         they were format "0"), so they get upgraded on the fly.
+         However, we stopped "upgrading on the fly" in 1.5, so older
+         filesystems should only be bumped to 1.3, which is format "1". */
       svn_error_clear(svn_err);
-      format = SVN_FS_BASE__FORMAT_NUMBER;
+      format = 1;
       svn_err = svn_io_write_version_file
         (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
       if (svn_err) goto error;
