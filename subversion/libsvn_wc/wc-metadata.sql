@@ -18,61 +18,32 @@
 
 /* ### the following tables define the BASE tree */
 
-CREATE TABLE REPOSITORY (
+CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* the UUID of the repository */
-  uuid  TEXT NOT NULL,
-
-  /* URL of the root of the repository */
-  url  TEXT NOT NULL
+  /* absolute path in the local filesystem, or NULL if the metadata is
+     stored "here" (in {wcroot}/.svn/) */
+  local_abspath  TEXT,
   );
 
-CREATE INDEX I_UUID ON REPOSITORY (uuid);
-
-
-CREATE TABLE WORKING_COPY (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  /* foreign key to REPOSITORY.id */
-  repos_id  INTEGER NOT NULL,
-
-  /* absolute path in the local filesystem */
-  /* ### NULL if the metadata is stored in the wc root */
-  local_path  TEXT,
-
-  /* repository path corresponding to root of the working copy */
-  repos_path  TEXT NOT NULL
-  );
-
-CREATE UNIQUE INDEX I_LOCAL_PATH ON WORKING_COPY (local_path);
-
-
-CREATE TABLE DIRECTORY (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  wc_id  INTEGER NOT NULL,
-
-  /* relative path from wcroot. "" is used for the wcroot. */
-  local_relpath  TEXT NOT NULL,
-
-  /* path in repository */
-  /* ### for switched subdirs, this could point to something other than
-     ### local_relpath would imply. anything else for switching? */
-  /* ### NULL if local_relpath can imply the repos path */
-  repos_path  TEXT
-  );
-
-CREATE UNIQUE INDEX I_DIR_PATH ON DIRECTORY (wc_id, local_relpath);
+CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 
 CREATE TABLE NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  dir_id  INTEGER NOT NULL,
+  /* the WCROOT that we are part of */
+  wc_id  INTEGER NOT NULL,
 
-  /* ### use "" for "this directory" */
-  filename  TEXT NOT NULL,
+  /* relative path from wcroot */
+  local_relpath  TEXT NOT NULL,
+
+  /* URL of this node in the repository. NULL if implied by parent. for
+     switched nodes, this will be non-NULL. */
+  url  TEXT,
+
+  /* UUID of the repository. NULL if implied by parent. */
+  uuid  TEXT,
 
   revnum  INTEGER NOT NULL,
 
@@ -84,8 +55,8 @@ CREATE TABLE NODE (
   /* ### do we need to deal with repos-size vs. eol-style-size?
      ### this value is the size of WORKING (which is BASE plus the
      ### transforms as defined for this node), so we can quickly detect
-     ### differences. */
-  working_size  INTEGER NOT NULL,
+     ### differences.  NULL for a directory. */
+  working_size  INTEGER,
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
@@ -104,25 +75,15 @@ CREATE TABLE NODE (
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
      ### question which is better answered some other way. */
-  last_mod_time  INTEGER  /* an APR date/time (usec since 1970) */
+  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
+
+  /* serialized skel of this node's properties. */
+  properties  BLOB
   );
 
 CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);
 CREATE INDEX I_NODELIST ON NODE (dir_id);
 CREATE INDEX I_LOCKS ON NODE (lock_token);
-
-
-CREATE TABLE PROPERTIES (
-  node_id  INTEGER NOT NULL,
-
-  name  TEXT NOT NULL,
-
-  value  BLOB NOT NULL,
-
-  PRIMARY KEY (node_id, name)
-  );
-
-CREATE UNIQUE INDEX I_NODE_PROPS ON PROPERTIES (node_id);
 
 
 CREATE TABLE PRISTINE (
