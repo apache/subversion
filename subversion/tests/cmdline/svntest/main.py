@@ -413,7 +413,11 @@ def open_pipe(command, mode):
     return p.stdin, p.stdout, p.stderr, (p, command)
   else:
     # Python <2.4
-    command = ' '.join([_quote_arg(x) for x in command])
+    # Quote only the arguments, neither Popen3() or os.popen3
+    # work if the command itself is quoted.
+    args = command[1:]
+    args = ' '.join([_quote_arg(x) for x in args])
+    command = command[0] + ' ' + args    
     if platform_with_popen3_class:
       kid = Popen3(command, True)
       return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
