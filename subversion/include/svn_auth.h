@@ -723,7 +723,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
 
 /** @} */
 
-/** Create and return @a *provider, an authentication provider of type
+/** Set @a *provider to an authentication provider of type
  * svn_auth_cred_simple_t that gets information by prompting the user
  * with @a prompt_func and @a prompt_baton.  Allocate @a *provider in
  * @a pool.
@@ -746,7 +746,7 @@ svn_auth_get_simple_prompt_provider(svn_auth_provider_object_t **provider,
                                     apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_username_t that gets information by prompting the
  * user with @a prompt_func and @a prompt_baton.  Allocate @a *provider
  * in @a pool.
@@ -769,7 +769,7 @@ svn_auth_get_username_prompt_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.
  *
@@ -807,7 +807,7 @@ void
 svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_provider_object_t, or return @a NULL if the provider is not
  * available for the requested platform or the requested provider is unknown.
  *
@@ -855,7 +855,7 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -878,7 +878,7 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -901,7 +901,7 @@ svn_auth_get_windows_ssl_client_cert_pw_provider
    apr_pool_t *pool);
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * This provider automatically validates ssl server certificates with
@@ -921,7 +921,7 @@ svn_auth_get_windows_ssl_server_trust_provider
 
 #if defined(DARWIN) || defined(DOXYGEN)
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -937,7 +937,7 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
                                       apr_pool_t *pool);
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -965,7 +965,7 @@ svn_auth_gnome_keyring_version(void);
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.
  *
@@ -992,7 +992,7 @@ svn_auth_get_gnome_keyring_simple_provider
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1020,7 +1020,7 @@ svn_auth_kwallet_version(void);
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1038,7 +1038,7 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1057,7 +1057,7 @@ svn_auth_get_kwallet_ssl_client_cert_pw_provider
 #endif /* (!DARWIN && !WIN32) || DOXYGEN */
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1073,7 +1073,7 @@ svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials from the configuration
@@ -1087,7 +1087,7 @@ svn_auth_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials from the configuration
@@ -1102,7 +1102,7 @@ svn_auth_get_ssl_client_cert_file_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the user's
  * ~/.subversion configuration directory.
  *
@@ -1137,7 +1137,7 @@ svn_auth_get_ssl_client_cert_pw_file_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
@@ -1154,7 +1154,7 @@ svn_auth_get_ssl_server_trust_prompt_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
@@ -1174,7 +1174,7 @@ svn_auth_get_ssl_client_cert_prompt_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
