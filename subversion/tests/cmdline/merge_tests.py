@@ -15398,19 +15398,28 @@ def merge_non_reflective_text_and_prop_change(sbox):
   ABE_COPY_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   alpha_fb_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY', 'alpha')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  beta_fb_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY', 'beta')
 
   file_content = "line1 \nline2 \nline3 \nline4 \nline5 \n"
 
   # We'll consider A/B/E as the trunk
-  # Modify alpha contents
+  # Set first property on beta in trunk
+  svntest.main.run_svn(None, 'propset', 'prop1', 'val1', beta_path)
 
-  # Set first property on alpha
+  # Modify alpha contents in trunk
+  # Set first property on alpha in trunk
   svntest.main.run_svn(None, 'propset', 'prop1', 'val1', alpha_path)
-
   svntest.main.file_write(alpha_path, file_content)
-  expected_output = wc.State(wc_dir, {'A/B/E/alpha' : Item(verb='Sending')})
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending'),
+    'A/B/E/beta'  : Item(verb='Sending'),
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'A/B/E/alpha'     : Item(status='  ', wc_rev=2)})
+  expected_status.add({
+    'A/B/E/alpha'     : Item(status='  ', wc_rev=2),
+    'A/B/E/beta'      : Item(status='  ', wc_rev=2),
+    })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -15507,7 +15516,8 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5'}),
-    'beta'     : Item("This is the file 'beta'.\n"),
+    'beta'     : Item(props={'prop1' : 'val1'},
+                      contents="This is the file 'beta'.\n"),
     'alpha'    : Item(props={'prop1' : 'val1'},
                       contents="fbline1 \ntline2 \nline3 \nline4 \nline5 \n"),
     })
@@ -15537,7 +15547,8 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
-    'beta'     : Item("This is the file 'beta'.\n"),
+    'beta'     : Item(props={'prop1' : 'val1'},
+                      contents="This is the file 'beta'.\n"),
     'alpha'    : Item(props={'prop1' : 'val1'},
                       contents="fbline1 \ntline2 \nline3 \ntline4 \nline5 \n"),
     })
@@ -15555,20 +15566,21 @@ def merge_non_reflective_text_and_prop_change(sbox):
   # Do a local modification to alpha in feature branch
   svntest.main.file_substitute(alpha_fb_path, "line5 ", "adhoc fbline5 ")
 
-  # Set second property on alpha
-  svntest.main.run_svn(None, 'propset', 'prop2', 'val2', alpha_fb_path)
+  # Set second property on beta in feature branch
+  svntest.main.run_svn(None, 'propset', 'prop2', 'val2', beta_fb_path)
 
   # Commit the merged changes along with the local modifications ie., r8
   expected_output = wc.State(wc_dir, {
     'A/B/E_COPY'       : Item(verb='Sending'),
     'A/B/E_COPY/alpha' : Item(verb='Sending'),
+    'A/B/E_COPY/beta'  : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 7)
   expected_status.add({
     'A/B/E/alpha'          : Item(status='  ', wc_rev=7),
     'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=8),
     'A/B/E_COPY'           : Item(status='  ', wc_rev=8),
-    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=7),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=8),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
@@ -15581,18 +15593,20 @@ def merge_non_reflective_text_and_prop_change(sbox):
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   expected_output = wc.State(short_ABE, {
     ''         : Item(status=' G'),
-    'alpha'    : Item(status='GU'),
+    'alpha'    : Item(status='G '),
+    'beta'     : Item(status=' U'),
     })
   expected_status = wc.State(short_ABE, {
     ''         : Item(status=' M', wc_rev=7),
-    'alpha'    : Item(status='MM', wc_rev=7),
-    'beta'     : Item(status='  ', wc_rev=7),
+    'alpha'    : Item(status='M ', wc_rev=7),
+    'beta'     : Item(status=' M', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
                      SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7\n/A/B/E_COPY:3-8\n'}),
-    'beta'     : Item("This is the file 'beta'.\n"),
-    'alpha'    : Item(props={'prop1' : 'val1', 'prop2' : 'val2'},
+    'beta'     : Item(props={'prop1' : 'val1', 'prop2' : 'val2'},
+                      contents="This is the file 'beta'.\n"),
+    'alpha'    : Item(props={'prop1' : 'val1'},
                       contents=\
                       "fbline1 \ntline2 \ntline3 \ntline4 \nadhoc fbline5 \n"),
     })
