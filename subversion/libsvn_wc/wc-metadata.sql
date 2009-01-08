@@ -21,9 +21,8 @@
 CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* absolute path in the local filesystem, or NULL if the metadata is
-     stored "here" (in {wcroot}/.svn/) */
-  local_abspath  TEXT,
+  /* absolute path in the local filesystem */
+  local_abspath  TEXT NOT NULL
   );
 
 CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
@@ -32,8 +31,9 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 CREATE TABLE NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* the WCROOT that we are part of */
-  wc_id  INTEGER NOT NULL,
+  /* the WCROOT that we are part of. NULL if the metadata is stored in
+     {wcroot}/.svn/ */
+  wc_id  INTEGER,
 
   /* relative path from wcroot */
   local_relpath  TEXT NOT NULL,
@@ -44,6 +44,10 @@ CREATE TABLE NODE (
 
   /* UUID of the repository. NULL if implied by parent. */
   uuid  TEXT,
+
+  /* parent node. used to aggregate all child nodes of a given parent.
+     NULL for the wcroot node. */
+  parent_id  INTEGER,
 
   revnum  INTEGER NOT NULL,
 
@@ -81,8 +85,8 @@ CREATE TABLE NODE (
   properties  BLOB
   );
 
-CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);
-CREATE INDEX I_NODELIST ON NODE (dir_id);
+CREATE UNIQUE INDEX I_PATH ON NODE (wc_id, local_relpath);
+CREATE INDEX I_PARENT ON NODE (parent_id);
 CREATE INDEX I_LOCKS ON NODE (lock_token);
 
 
