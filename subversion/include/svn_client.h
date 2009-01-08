@@ -1911,9 +1911,10 @@ svn_client_status(svn_revnum_t *result_rev,
  */
 
 /**
- * Invoke @a receiver with @a receiver_baton on each log message from @a
- * start to @a end in turn, inclusive (but never invoke @a receiver on a
- * given log message more than once).
+ * Invoke @a receiver with @a receiver_baton on each log message from
+ * each start/end revision pair in the @a revision_ranges in turn,
+ * inclusive (but never invoke @a receiver on a given log message more
+ * than once).
  *
  * @a targets contains either a URL followed by zero or more relative
  * paths, or 1 working copy path, as <tt>const char *</tt>, for which log
@@ -1953,9 +1954,29 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_client_log5(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log5(), but takes explicit start and end parameters
+ * instead of an array of revision ranges.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
  * @since New in 1.5.
  */
-
 svn_error_t *
 svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
