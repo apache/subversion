@@ -1,7 +1,18 @@
 /* svnraisetreeconflict
  * 
- * Command line tool that publishes API to create tree-conflict markings
- * in a working copy.
+ * This is a crude command line tool that publishes API to create
+ * tree-conflict markings in a working copy.
+ *
+ * To compile this, go to the root of the Subversion source tree and
+ * call `make svnraisetreeconflict'. You will find the executable file
+ * next to this source file.
+ *
+ * If you want to "install" svnraisetreeconflict, you may call
+ * `make install-contrib' in the Subversion source tree root.
+ * (Note: This also installs any other installable contrib-tools.)
+ *
+ * svnraisetreeconflict cannot be compiled separate from a Subversion
+ * source tree.
  *
  * ====================================================================
  * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
