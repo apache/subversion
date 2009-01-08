@@ -28,7 +28,7 @@ CREATE TABLE WCROOT (
 CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 
-CREATE TABLE NODE (
+CREATE TABLE BASE_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
   /* the WCROOT that we are part of. NULL if the metadata is stored in
@@ -51,16 +51,11 @@ CREATE TABLE NODE (
 
   revnum  INTEGER NOT NULL,
 
+  /* file/dir/special. none is not allowed. */
   kind  INTEGER NOT NULL,
 
   /* NULL for a directory */
   checksum  TEXT,
-
-  /* ### do we need to deal with repos-size vs. eol-style-size?
-     ### this value is the size of WORKING (which is BASE plus the
-     ### transforms as defined for this node), so we can quickly detect
-     ### differences.  NULL for a directory. */
-  working_size  INTEGER,
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
@@ -85,9 +80,9 @@ CREATE TABLE NODE (
   properties  BLOB
   );
 
-CREATE UNIQUE INDEX I_PATH ON NODE (wc_id, local_relpath);
-CREATE INDEX I_PARENT ON NODE (parent_id);
-CREATE INDEX I_LOCKS ON NODE (lock_token);
+CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
+CREATE INDEX I_PARENT ON BASE_NODE (parent_id);
+CREATE INDEX I_LOCKS ON BASE_NODE (lock_token);
 
 
 CREATE TABLE PRISTINE (
@@ -111,25 +106,57 @@ CREATE TABLE PRISTINE (
 /* ### the following tables define the WORKING tree */
 
 /* ### add/delete nodes */
-CREATE TABLE NODE_CHANGES (
+CREATE TABLE WORKING_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT, 
 
-  /* Basic information about the node.  filename=="" for "this directory". */
-  dir_id  INTEGER NOT NULL,
-  filename  TEXT NOT NULL,
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER,
+  local_relpath  TEXT NOT NULL,
+
+  /* kind==none implies this node was deleted or moved (see moved_to).
+     other kinds:
+       if a BASE_NODE exists at the same local_relpath, then this is a
+       replaced item (possibly copied or moved here), which implies the
+       base node should be deleted first. */
   kind  INTEGER NOT NULL,
 
-  /* Enumerated type specifying what kind of change is at this location. */
-  status  INTEGER NOT NULL,
+  /* Where this node was copied from. */
+  copyfrom_repos_path  TEXT,
+  copyfrom_revnum  INTEGER,
 
-  /* Where this node was copied/moved from. */
-  original_repos_path  TEXT,
-  original_revnum  INTEGER,
+  /* If this node was moved (rather than just copied), this specifies
+     the local_relpath of the source of the move. */
+  moved_from  TEXT,
+
+  /* If this node was moved (rather than just deleted), this specifies
+     where the node was moved to. */
+  moved_to  TEXT,
+                 
   checksum  TEXT,
-  working_size  INTEGER,
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
+
+  changelist_id  INTEGER,
+
+  /* serialized skel of this node's properties. */
+  properties BLOB
+  );
+
+CREATE UNIQUE INDEX I_PATH_WORKING ON NODE_CHANGES (wc_id, local_relpath);
+
+
+CREATE TABLE ACTUAL_NODE (
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER,
+  local_relpath  TEXT NOT NULL,
+
+  size  INTEGER,
+
+  /* serialized skel of this node's properties. */
+  properties  BLOB,
 
   /* ### do we want to record the revnums which caused this? */
   conflict_old  TEXT,
@@ -137,14 +164,8 @@ CREATE TABLE NODE_CHANGES (
   conflict_working  TEXT,
   prop_reject  TEXT,  /* ### is this right? */
 
-  changelist_id  INTEGER,
-
-  /* Serialized skel of the new properties. */
-  new_properties BLOB
+  changelist_id  INTEGER
   );
-
-CREATE UNIQUE INDEX I_PATH_CHANGES ON NODE_CHANGES (dir_id, filename);
-CREATE INDEX I_NODELIST_CHANGES ON NODE_CHANGES (dir_id);
 
 
 CREATE TABLE CHANGELIST (
