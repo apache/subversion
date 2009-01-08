@@ -65,12 +65,6 @@ CREATE TABLE BASE_NODE (
   /* NULL depth means "default" (typically svn_depth_infinity) */
   depth  INTEGER,
 
-  /* ### note: these values are caches from the server! */
-  lock_token  TEXT,
-  lock_owner  TEXT,
-  lock_comment  TEXT,
-  lock_date  INTEGER,  /* an APR date/time (usec since 1970) */
-
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
      ### question which is better answered some other way. */
@@ -82,8 +76,9 @@ CREATE TABLE BASE_NODE (
 
 CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
 CREATE INDEX I_PARENT ON BASE_NODE (parent_id);
-CREATE INDEX I_LOCKS ON BASE_NODE (lock_token);
 
+
+/* ------------------------------------------------------------------------- */
 
 CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
@@ -131,20 +126,25 @@ CREATE TABLE WORKING_NODE (
   /* If this node was moved (rather than just deleted), this specifies
      where the node was moved to. */
   moved_to  TEXT,
-                 
+
+  /* if this node was added-with-history, then the following fields will
+     be NOT NULL */
   checksum  TEXT,
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
 
-  changelist_id  INTEGER,
-
   /* serialized skel of this node's properties. */
-  properties BLOB
+  properties BLOB,
+
+  /* if not NULL, this node is part of a changelist. */
+  changelist_id  INTEGER
   );
 
 CREATE UNIQUE INDEX I_PATH_WORKING ON NODE_CHANGES (wc_id, local_relpath);
 
+
+/* ------------------------------------------------------------------------- */
 
 CREATE TABLE ACTUAL_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -168,13 +168,36 @@ CREATE TABLE ACTUAL_NODE (
   );
 
 
+/* ------------------------------------------------------------------------- */
+
 CREATE TABLE CHANGELIST (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  wc_id  INTEGER NOT NULL,
+  /* what WCROOT is this changelist part of, or NULL if the metadata is
+     in the wcroot. */
+  wc_id  INTEGER,
 
   name  TEXT NOT NULL
   );
 
 CREATE UNIQUE INDEX I_CHANGELIST ON CHANGELIST (wc_id, name);
 CREATE UNIQUE INDEX I_CL_LIST ON CHANGELIST (wc_id);
+
+
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE LOCKS (
+  /* URL of the node which is locked */
+  url  TEXT NOT NULL PRIMARY KEY,
+
+  /* Information about the lock. Note: these values are just caches from
+     the server, and are not authoritative. */
+  lock_token  TEXT NOT NULL,
+  /* ### make the following fields NOT NULL ? */
+  lock_owner  TEXT,
+  lock_comment  TEXT,
+  lock_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  );
+
+
+/* ------------------------------------------------------------------------- */
