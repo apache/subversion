@@ -133,27 +133,14 @@ CREATE TABLE NODE_CHANGES (
   conflict_working  TEXT,
   prop_reject  TEXT,  /* ### is this right? */
 
-  changelist_id  INTEGER
+  changelist_id  INTEGER,
+
+  /* Serialized skel of the new properties. */
+  new_properties BLOB
   );
 
 CREATE UNIQUE INDEX I_PATH_CHANGES ON NODE_CHANGES (dir_id, filename);
 CREATE INDEX I_NODELIST_CHANGES ON NODE_CHANGES (dir_id);
-
-
-CREATE TABLE PROPERTIES_CHANGES (
-  dir_id  INTEGER NOT NULL,
-
-  filename  TEXT NOT NULL,
-
-  name  TEXT NOT NULL,
-
-  /* ### NULL implies deletion. */
-  value  BLOB,
-
-  PRIMARY KEY (dir_id, filename, name)
-  );
-
-CREATE INDEX I_PROPS_CHANGES ON PROPERTIES_CHANGES (dir_id, filename);
 
 
 CREATE TABLE CHANGELIST (
