@@ -15113,21 +15113,23 @@ def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
 
 def merge_non_reflective_changes_from_reflective_rev(sbox):
   "allow non-reflective changes from reflective rev"
-  #Copy A/C to A/FB1 results in r2.
-  #Copy A/C to A/FB2 results in r3.
-  #Add A/C/tfile1.txt and commit, results in r4.
-  #Add A/FB1/bfile1.txt and commit, results in r5.
-  #Add A/C/tfile2.txt and commit, results in r6.
-  #Add A/FB2/bfile2.txt and commit, results in r7.
-  #Add A/C/tfile3.txt and commit, results in r8.
-  #Merge r8 from A/C to A/FB1 and commit results in r9.
-  #Merge r4 from A/C to A/FB2 and commit results in r10.
-  #Merge A/FB2 to A/FB1 and commit results in r11.
-  #Add A/FB1/bfile3.txt and commit, results in r12.
-  #Merge r2:12 from A/FB1 to A/C. Here r9,r10, r11 are reflective of '/A/C'.
+  #Add file A/C/tfile0.txt and commit, results in r2.
+  #Copy A/C to A/FB1 results in r3.
+  #Copy A/C to A/FB2 results in r4.
+  #Add A/C/tfile1.txt and commit, results in r5.
+  #Delete A/C/tfile0.txt and commit, results in r6.
+  #Add A/FB1/bfile1.txt and commit, results in r7.
+  #Add A/C/tfile2.txt and commit, results in r8.
+  #Add A/FB2/bfile2.txt and commit, results in r9.
+  #Add A/C/tfile3.txt and commit, results in r10.
+  #Merge r10 from A/C to A/FB1 and commit results in r11.
+  #Merge r4:6 from A/C to A/FB2 and commit results in r12.
+  #Merge A/FB2 to A/FB1 and commit results in r13.
+  #Add A/FB1/bfile3.txt and commit, results in r14.
+  #Merge r3:14 from A/FB1 to A/C. Here r11,r12, r13 are reflective of '/A/C'.
   #Merge should extract changes that are not from merge of
   #'/A/C'(non-reflective-of-/A/C) and merge.
-  #i.e This should extract '/A/FB1/bfile2.txt from /A/FB1 of r11.
+  #i.e This should extract '/A/FB1/bfile2.txt from /A/FB1 of r13.
 
   # Create a WC with a single branch
   sbox.build()
@@ -15137,6 +15139,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   A_FB1_url = sbox.repo_url + '/A/FB1'
   A_FB2_url = sbox.repo_url + '/A/FB2'
   A_C_path = os.path.join(wc_dir, 'A', 'C')
+  A_C_tfile0_path = os.path.join(A_C_path, 'tfile0.txt')
   A_C_tfile1_path = os.path.join(A_C_path, 'tfile1.txt')
   A_C_tfile2_path = os.path.join(A_C_path, 'tfile2.txt')
   A_C_tfile3_path = os.path.join(A_C_path, 'tfile3.txt')
@@ -15146,6 +15149,19 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   A_FB2_path = os.path.join(wc_dir, 'A', 'FB2')
   A_FB2_bfile2_path = os.path.join(A_FB2_path, 'bfile2.txt')
 
+  svntest.main.file_write(A_C_tfile0_path, "This is the tfile0.\n")
+  svntest.main.run_svn(None, 'add', A_C_tfile0_path)
+  expected_output = wc.State(A_C_path, {
+    'tfile0.txt'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_C_path, {
+    ''        : Item(status='  ', wc_rev=1),
+    'tfile0.txt'   : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(A_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'cp', A_C_url, A_FB1_url, '-m', 'copy...')
   svntest.main.run_svn(None, 'cp', A_C_url, A_FB2_url, '-m', 'copy...')
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -15156,8 +15172,21 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile1.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_C_path, {
-    ''        : Item(status='  ', wc_rev=3),
-    'tfile1.txt'   : Item(status='  ', wc_rev=4),
+    ''        : Item(status='  ', wc_rev=4),
+    'tfile0.txt'   : Item(status='  ', wc_rev=4),
+    'tfile1.txt'   : Item(status='  ', wc_rev=5),
+    })
+  svntest.actions.run_and_verify_commit(A_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.run_svn(None, 'rm', A_C_tfile0_path)
+  expected_output = wc.State(A_C_path, {
+    'tfile0.txt'    : Item(verb='Deleting'),
+    })
+  expected_status = wc.State(A_C_path, {
+    ''        : Item(status='  ', wc_rev=5),
+    'tfile1.txt'   : Item(status='  ', wc_rev=5),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, None, None,
@@ -15169,8 +15198,9 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bfile1.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_FB1_path, {
-    ''        : Item(status='  ', wc_rev=4),
-    'bfile1.txt'   : Item(status='  ', wc_rev=5),
+    ''        : Item(status='  ', wc_rev=6),
+    'tfile0.txt'   : Item(status='  ', wc_rev=6),
+    'bfile1.txt'   : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
                                         expected_status, None, None, None,
@@ -15182,9 +15212,9 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile2.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_C_path, {
-    ''        : Item(status='  ', wc_rev=5),
-    'tfile1.txt'   : Item(status='  ', wc_rev=5),
-    'tfile2.txt'   : Item(status='  ', wc_rev=6),
+    ''        : Item(status='  ', wc_rev=7),
+    'tfile1.txt'   : Item(status='  ', wc_rev=7),
+    'tfile2.txt'   : Item(status='  ', wc_rev=8),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, None, None,
@@ -15196,8 +15226,9 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bfile2.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_FB2_path, {
-    ''        : Item(status='  ', wc_rev=6),
-    'bfile2.txt'   : Item(status='  ', wc_rev=7),
+    ''        : Item(status='  ', wc_rev=8),
+    'tfile0.txt'   : Item(status='  ', wc_rev=8),
+    'bfile2.txt'   : Item(status='  ', wc_rev=9),
     })
   svntest.actions.run_and_verify_commit(A_FB2_path, expected_output,
                                         expected_status, None, None, None,
@@ -15209,10 +15240,10 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_C_path, {
-    ''        : Item(status='  ', wc_rev=7),
-    'tfile1.txt'   : Item(status='  ', wc_rev=7),
-    'tfile2.txt'   : Item(status='  ', wc_rev=7),
-    'tfile3.txt'   : Item(status='  ', wc_rev=8),
+    ''        : Item(status='  ', wc_rev=9),
+    'tfile1.txt'   : Item(status='  ', wc_rev=9),
+    'tfile2.txt'   : Item(status='  ', wc_rev=9),
+    'tfile3.txt'   : Item(status='  ', wc_rev=10),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, None, None,
@@ -15224,18 +15255,20 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:8'}),
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:10'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
+    'tfile0.txt'  : Item("This is the tfile0.\n"),
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     })
   expected_status = wc.State(short_A_FB1, {
-    ''        : Item(status=' M', wc_rev=8),
-    'bfile1.txt'   : Item(status='  ', wc_rev=8),
+    ''        : Item(status=' M', wc_rev=10),
+    'bfile1.txt'   : Item(status='  ', wc_rev=10),
+    'tfile0.txt'   : Item(status='  ', wc_rev=10),
     'tfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     })
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB1, 7, 8,
+  svntest.actions.run_and_verify_merge(short_A_FB1, 9, 10,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
@@ -15246,9 +15279,10 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_FB1_path, {
-    ''        : Item(status='  ', wc_rev=9),
-    'bfile1.txt'   : Item(status='  ', wc_rev=8),
-    'tfile3.txt'   : Item(status='  ', wc_rev=9),
+    ''        : Item(status='  ', wc_rev=11),
+    'bfile1.txt'   : Item(status='  ', wc_rev=10),
+    'tfile0.txt'   : Item(status='  ', wc_rev=10),
+    'tfile3.txt'   : Item(status='  ', wc_rev=11),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
                                         expected_status, None, None, None,
@@ -15258,19 +15292,21 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   short_A_FB2 = shorten_path_kludge(A_FB2_path)
   expected_skip = wc.State(short_A_FB2, {})
   expected_output = wc.State(short_A_FB2, {
+    'tfile0.txt'    : Item(status='D '),
     'tfile1.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:4'}),
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:5-6'}),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
     'tfile1.txt'  : Item("This is the tfile1.\n"),
     })
   expected_status = wc.State(short_A_FB2, {
-    ''        : Item(status=' M', wc_rev=9),
-    'bfile2.txt'   : Item(status='  ', wc_rev=9),
+    ''        : Item(status=' M', wc_rev=11),
+    'bfile2.txt'   : Item(status='  ', wc_rev=11),
+    'tfile0.txt'   : Item(status='D ', wc_rev=11),
     'tfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     })
-  svntest.actions.run_and_verify_merge(short_A_FB2, 3, 4,
+  svntest.actions.run_and_verify_merge(short_A_FB2, 4, 6,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
@@ -15278,12 +15314,13 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   os.chdir(saved_cwd)
   expected_output = wc.State(A_FB2_path, {
     ''    : Item(verb='Sending'),
+    'tfile0.txt'    : Item(verb='Deleting'),
     'tfile1.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_FB2_path, {
-    ''        : Item(status='  ', wc_rev=10),
-    'bfile2.txt'   : Item(status='  ', wc_rev=9),
-    'tfile1.txt'   : Item(status='  ', wc_rev=10),
+    ''        : Item(status='  ', wc_rev=12),
+    'bfile2.txt'   : Item(status='  ', wc_rev=11),
+    'tfile1.txt'   : Item(status='  ', wc_rev=12),
     })
   svntest.actions.run_and_verify_commit(A_FB2_path, expected_output,
                                         expected_status, None, None, None,
@@ -15292,25 +15329,27 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   expected_skip = wc.State(short_A_FB1, {})
   expected_output = wc.State(short_A_FB1, {
     ''    : Item(status=' G'),
+    'tfile0.txt'    : Item(status='D '),
     'tfile1.txt'    : Item(status='A '),
     'bfile2.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:4,8\n/A/FB2:3-10\n'}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/C:5-6,10\n/A/FB2:4-12\n'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
     'tfile1.txt'  : Item("This is the tfile1.\n"),
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     })
   expected_status = wc.State(short_A_FB1, {
-    ''        : Item(status=' M', wc_rev=10),
+    ''        : Item(status=' M', wc_rev=12),
     'bfile2.txt'   : Item(status='A ', wc_rev='-', copied='+'),
-    'bfile1.txt'   : Item(status='  ', wc_rev=10),
+    'bfile1.txt'   : Item(status='  ', wc_rev=12),
+    'tfile0.txt'   : Item(status='D ', wc_rev=12),
     'tfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
-    'tfile3.txt'   : Item(status='  ', wc_rev=10),
+    'tfile3.txt'   : Item(status='  ', wc_rev=12),
     })
   os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB1, 2, 10,
+  svntest.actions.run_and_verify_merge(short_A_FB1, 3, 12,
                                        A_FB2_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
@@ -15318,15 +15357,16 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   os.chdir(saved_cwd)
   expected_output = wc.State(A_FB1_path, {
     ''    : Item(verb='Sending'),
+    'tfile0.txt'    : Item(verb='Deleting'),
     'tfile1.txt'    : Item(verb='Adding'),
     'bfile2.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_FB1_path, {
-    ''        : Item(status='  ', wc_rev=11),
-    'bfile2.txt'   : Item(status='  ', wc_rev=11),
-    'tfile1.txt'   : Item(status='  ', wc_rev=11),
-    'bfile1.txt'   : Item(status='  ', wc_rev=10),
-    'tfile3.txt'   : Item(status='  ', wc_rev=10),
+    ''        : Item(status='  ', wc_rev=13),
+    'bfile2.txt'   : Item(status='  ', wc_rev=13),
+    'tfile1.txt'   : Item(status='  ', wc_rev=13),
+    'bfile1.txt'   : Item(status='  ', wc_rev=12),
+    'tfile3.txt'   : Item(status='  ', wc_rev=12),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
                                         expected_status, None, None, None,
@@ -15338,12 +15378,12 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bfile3.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_FB1_path, {
-    ''        : Item(status='  ', wc_rev=11),
-    'tfile1.txt'   : Item(status='  ', wc_rev=11),
-    'tfile3.txt'   : Item(status='  ', wc_rev=11),
-    'bfile1.txt'   : Item(status='  ', wc_rev=11),
-    'bfile2.txt'   : Item(status='  ', wc_rev=11),
-    'bfile3.txt'   : Item(status='  ', wc_rev=12),
+    ''        : Item(status='  ', wc_rev=13),
+    'tfile1.txt'   : Item(status='  ', wc_rev=13),
+    'tfile3.txt'   : Item(status='  ', wc_rev=13),
+    'bfile1.txt'   : Item(status='  ', wc_rev=13),
+    'bfile2.txt'   : Item(status='  ', wc_rev=13),
+    'bfile3.txt'   : Item(status='  ', wc_rev=14),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
                                         expected_status, None, None, None,
@@ -15359,7 +15399,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_disk = wc.State('', {
     ''       : Item(props={SVN_PROP_MERGE_INFO :
-                                    '/A/C:4,8\n/A/FB1:3-12\n/A/FB2:3-10\n'}),
+                                   '/A/C:5-6,10\n/A/FB1:4-14\n/A/FB2:4-12\n'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
     'bfile3.txt'  : Item("This is the bfile3.\n"),
@@ -15368,16 +15408,16 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     })
   expected_status = wc.State(short_A_C, {
-    ''        : Item(status=' M', wc_rev=12),
+    ''        : Item(status=' M', wc_rev=14),
     'bfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bfile2.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
-    'tfile1.txt'   : Item(status='  ', wc_rev=12),
-    'tfile2.txt'   : Item(status='  ', wc_rev=12),
-    'tfile3.txt'   : Item(status='  ', wc_rev=12),
+    'tfile1.txt'   : Item(status='  ', wc_rev=14),
+    'tfile2.txt'   : Item(status='  ', wc_rev=14),
+    'tfile3.txt'   : Item(status='  ', wc_rev=14),
     })
   os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_C, 2, 12,
+  svntest.actions.run_and_verify_merge(short_A_C, 3, 14,
                                        A_FB1_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
