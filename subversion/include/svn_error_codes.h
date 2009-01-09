@@ -1275,6 +1275,11 @@ SVN_ERROR_START
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_CL_FAILED_EXTERNALS_CHANGE,
+             SVN_ERR_CL_CATEGORY_START + 10,
+             "Unable to handle change in externals definition")
+
   /* malfunctions such as assertion failures */
 
   SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,

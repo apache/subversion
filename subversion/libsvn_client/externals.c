@@ -1005,6 +1005,27 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 }
 
 
+static svn_error_t *
+handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
+                                    enum svn_hash_diff_key_status status,
+                                    void *baton)
+{
+  struct handle_external_item_change_baton *ib = baton;
+  svn_error_t *err = handle_external_item_change(key, klen, status, baton);
+  if (err && ib->ctx->notify_func2)
+    {
+      const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
+      svn_wc_notify_t *notifier = 
+        svn_wc_create_notify(path,
+                             svn_wc_notify_failed_external,
+                             ib->pool);
+      notifier->err = err;
+      ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier, ib->pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* Closure for handle_externals_change. */
 struct handle_externals_desc_change_baton
 {
@@ -1153,21 +1174,24 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
       item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
 
       if (apr_hash_get(new_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
-        SVN_ERR(handle_external_item_change(item->target_dir,
-                                            APR_HASH_KEY_STRING,
-                                            svn_hash_diff_key_both, &ib));
+        SVN_ERR(handle_external_item_change_wrapper(item->target_dir,
+                                                    APR_HASH_KEY_STRING,
+                                                    svn_hash_diff_key_both,
+                                                    &ib));
       else
-        SVN_ERR(handle_external_item_change(item->target_dir,
-                                            APR_HASH_KEY_STRING,
-                                            svn_hash_diff_key_a, &ib));
+        SVN_ERR(handle_external_item_change_wrapper(item->target_dir,
+                                                    APR_HASH_KEY_STRING,
+                                                    svn_hash_diff_key_a,
+                                                    &ib));
     }
   for (i = 0; new_desc && (i < new_desc->nelts); i++)
     {
       item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
       if (! apr_hash_get(old_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
-        SVN_ERR(handle_external_item_change(item->target_dir,
-                                            APR_HASH_KEY_STRING,
-                                            svn_hash_diff_key_b, &ib));
+        SVN_ERR(handle_external_item_change_wrapper(item->target_dir,
+                                                    APR_HASH_KEY_STRING,
+                                                    svn_hash_diff_key_b,
+                                                    &ib));
     }
 
   /* Now destroy the subpool we pass to the hash differ.  This will
