@@ -15847,7 +15847,6 @@ def merge_non_reflective_with_conflict(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/E/alpha'     : Item(status='  ', wc_rev=2),
-    'A/B/E/beta'      : Item(status='  ', wc_rev=1),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
@@ -15883,13 +15882,7 @@ def merge_non_reflective_with_conflict(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Sending')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.add({
-    'A/B/E/alpha'          : Item(status='  ', wc_rev=5),
-    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=4),
-    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
-    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
-    })
+  expected_status.tweak('A/B/E/alpha', wc_rev=5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -15899,13 +15892,7 @@ def merge_non_reflective_with_conflict(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/E_COPY/alpha' : Item(verb='Sending')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.add({
-    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=6),
-    'A/B/E/alpha'          : Item(status='  ', wc_rev=5),
-    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
-    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
-    })
+  expected_status.tweak('A/B/E_COPY/alpha', wc_rev=6)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -15915,13 +15902,7 @@ def merge_non_reflective_with_conflict(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Sending')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.add({
-    'A/B/E/alpha'          : Item(status='  ', wc_rev=7),
-    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=6),
-    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
-    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
-    })
+  expected_status.tweak('A/B/E/alpha', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -15931,13 +15912,7 @@ def merge_non_reflective_with_conflict(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Sending')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.add({
-    'A/B/E/alpha'          : Item(status='  ', wc_rev=8),
-    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=6),
-    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
-    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
-    })
+  expected_status.tweak('A/B/E/alpha', wc_rev=8)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
