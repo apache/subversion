@@ -35,7 +35,7 @@ CREATE TABLE BASE_NODE (
      {wcroot}/.svn/ */
   wc_id  INTEGER,
 
-  /* relative path from wcroot */
+  /* relative path from wcroot. this will be "" for the wcroot. */
   local_relpath  TEXT NOT NULL,
 
   /* URL of this node in the repository. NULL if implied by parent. for
@@ -46,7 +46,7 @@ CREATE TABLE BASE_NODE (
   uuid  TEXT,
 
   /* parent node. used to aggregate all child nodes of a given parent.
-     NULL for the wcroot node. */
+     NULL if this is the wcroot node. */
   parent_id  INTEGER,
 
   revnum  INTEGER NOT NULL,
@@ -54,8 +54,11 @@ CREATE TABLE BASE_NODE (
   /* file/dir/special. none is not allowed. */
   kind  INTEGER NOT NULL,
 
-  /* NULL for a directory */
+  /* if this node is a file, then the checksum and its translated size
+     (given the properties on this file) are specified by the following
+     two fields. */
   checksum  TEXT,
+  translated_size  INTEGER,
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
@@ -71,7 +74,7 @@ CREATE TABLE BASE_NODE (
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
   /* serialized skel of this node's properties. */
-  properties  BLOB
+  properties  BLOB NOT NULL
   );
 
 CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
@@ -108,6 +111,10 @@ CREATE TABLE WORKING_NODE (
   wc_id  INTEGER,
   local_relpath  TEXT NOT NULL,
 
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. */
+  parent_relpath  TEXT NOT NULL,
+
   /* kind==none implies this node was deleted or moved (see moved_to).
      other kinds:
        if a BASE_NODE exists at the same local_relpath, then this is a
@@ -127,21 +134,27 @@ CREATE TABLE WORKING_NODE (
      where the node was moved to. */
   moved_to  TEXT,
 
+  /* if this node was added-with-history AND is a file, then the checksum
+     and its translated size (given the properties on this file) are
+     specified by the following two fields. */
+  checksum  TEXT,
+  translated_size  INTEGER,
+
   /* if this node was added-with-history, then the following fields will
      be NOT NULL */
-  checksum  TEXT,
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
 
   /* serialized skel of this node's properties. */
-  properties BLOB,
+  properties  BLOB NOT NULL,
 
   /* if not NULL, this node is part of a changelist. */
   changelist_id  INTEGER
   );
 
-CREATE UNIQUE INDEX I_PATH_WORKING ON NODE_CHANGES (wc_id, local_relpath);
+CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
+CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -153,9 +166,8 @@ CREATE TABLE ACTUAL_NODE (
   wc_id  INTEGER,
   local_relpath  TEXT NOT NULL,
 
-  size  INTEGER,
-
-  /* serialized skel of this node's properties. */
+  /* serialized skel of this node's properties. NULL implies no change to
+     the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
   /* ### do we want to record the revnums which caused this? */
