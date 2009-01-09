@@ -615,7 +615,7 @@ svn_io_file_lock2(const char *lock_file,
                   apr_pool_t *pool);
 /**
  * Flush any unwritten data from @a file to disk.  Use @a pool for
- *  memory allocations.
+ * memory allocations.
  *
  * @since New in 1.1.
  */

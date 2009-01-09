@@ -410,9 +410,9 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   apr_array_header_t *providers;
 
   /* Populate the registered providers with the platform-specific providers */
-  SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
-                                                          cfg,
-                                                          pool));
+  SVN_ERR(svn_auth_get_platform_specific_client_providers
+            (&providers, cfg, pb, svn_cmdline_auth_unlock_prompt,
+             TRUE, pool));
 
   /* If we have a cancellation function, cram it and the stuff it
      needs into the prompt baton. */
@@ -442,9 +442,10 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   /* The server-cert, client-cert, and client-cert-password providers. */
-  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider, NULL,
                                                   "windows",
                                                   "ssl_server_trust",
+                                                  NULL, FALSE,
                                                   pool));
 
   if (provider)
