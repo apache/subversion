@@ -369,11 +369,13 @@ def ensure_tree_conflict(sbox, operation,
   # Local mods are the outer loop because cleaning up the WC is slow
   # ('svn revert' isn't sufficient because it leaves unversioned files)
   for _loc_init_mods, loc_action in localmod_scenarios:
+    # Determine the branch (directory) in which local mods will be made.
     if operation == 'update':
       # Path to target branch (where conflicts are raised), relative to wc_dir.
       target_br = source_br
       target_start_rev = source_left_rev
-    else:
+    else:  # switch/merge
+      # Make, and work in, a "branch2" that is a copy of "branch1".
       target_br = "branch2"
       run_and_verify_svn(None, AnyOutput, [],
                          'copy', '-r', str(source_left_rev), url_of(source_br),
@@ -418,9 +420,9 @@ def ensure_tree_conflict(sbox, operation,
         ]
 
       if 'commit-ood' in test_what:
-        # For update/switch, verify the pre-condition that WC is out of date.
-        # For merge, there is no such precondition.
-        if operation != 'merge':
+        # For update, verify the pre-condition that WC is out of date.
+        # For switch/merge, there is no such precondition.
+        if operation == 'update':
           verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
           run_and_verify_commit(".", None, None, "Commit failed",
                                 target_path)
@@ -430,7 +432,7 @@ def ensure_tree_conflict(sbox, operation,
       else:
         victim = os.path.join(target_path, 'D')
 
-      # Perform the operation that tries to apply the changes to the WC.
+      # Perform the operation that tries to apply incoming changes to the WC.
       # The command is expected to do something (and give some output),
       # and it should raise a conflict but not an error.
       if 'action' in test_what:
@@ -446,6 +448,10 @@ def ensure_tree_conflict(sbox, operation,
           verbose_print("--- Updating")
           run_and_verify_svn(None, expected_stdout, [],
                              'update', target_path)
+        elif operation == 'switch':
+          verbose_print("--- Switching")
+          run_and_verify_svn(None, expected_stdout, [],
+                             'switch', source_url, target_path)
         elif operation == 'merge':
           verbose_print("--- Merging")
           run_and_verify_svn(None, expected_stdout, [],
@@ -513,7 +519,7 @@ def ensure_tree_conflict(sbox, operation,
 # See test_wc_merge() for arguments.
 def test_tc_up_sw(sbox, incoming_scen, wc_scen):
   ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen, False)
-  #ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen, False)  ###
+  ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen, False)
 
 # Test 'merge'
 # INCOMING_SCEN is a list of scenarios describing the incoming changes to apply.
