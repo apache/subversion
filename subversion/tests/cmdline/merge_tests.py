@@ -15786,7 +15786,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
 
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   expected_output = wc.State(short_ABE, {
-    ''         : Item(status=' G'),
+    ''         : Item(status=' U'),
     'alpha'    : Item(status='G '),
     'beta'     : Item(status=' U'),
     })
