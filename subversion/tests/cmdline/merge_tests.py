@@ -15815,6 +15815,336 @@ def merge_non_reflective_text_and_prop_change(sbox):
                                        dry_run = False)
   os.chdir(saved_cwd)
 
+def merge_non_reflective_with_conflict(sbox):
+  "merge non-reflective with conflict"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2897. ##
+  ## In this test case we do merge of 3 different ranges from trunk to
+  ## feature branch in which the second merge gives rise to a conflict.
+  ## Once the conflict is resolved we do the third merge. When all these
+  ## 3 merges are done successfully and committed, we do a merge from 
+  ## feature branch to trunk.
+
+  # Create a WC
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  ABE_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  ABE_COPY_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  alpha_fb_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY', 'alpha')
+
+  file_content = "line1 \nline2 \nline3 \nline4 \nline5 \n"
+
+  # We'll consider A/B/E as the trunk
+  # Modify alpha contents in trunk
+  svntest.main.file_write(alpha_path, file_content)
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E/alpha'     : Item(status='  ', wc_rev=2),
+    'A/B/E/beta'      : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Copy A/B/E to A/B/E_COPY where A/B/E_COPY becomes our feature branch
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 3.\n'],
+                                     [],'cp', sbox.repo_url + "/A/B/E",
+                                     sbox.repo_url + "/A/B/E_COPY",
+                                     "-m", "Create ABE_COPY")
+
+  # Update wc_dir to get the feature branch
+  svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
+
+  # Modify alpha in feature branch at r4
+  svntest.main.file_substitute(alpha_fb_path, "line3 ", "fbline3 ")
+  expected_output = wc.State(wc_dir, {
+    'A/B/E_COPY/alpha' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=4),
+    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Modify alpha in trunk at r5
+  svntest.main.file_substitute(alpha_path, "line2 ", "tline2 ")
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/B/E/alpha'          : Item(status='  ', wc_rev=5),
+    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=4),
+    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Modify alpha in feature branch at r6
+  svntest.main.file_substitute(alpha_fb_path, "line5 ", "fbline5 ")
+  expected_output = wc.State(wc_dir, {
+    'A/B/E_COPY/alpha' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=6),
+    'A/B/E/alpha'          : Item(status='  ', wc_rev=5),
+    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Modify alpha in trunk at r7
+  svntest.main.file_substitute(alpha_path, "line5 ", "tline5 ")
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/B/E/alpha'          : Item(status='  ', wc_rev=7),
+    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=6),
+    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Modify alpha in trunk at r8
+  svntest.main.file_substitute(alpha_path, "line4 ", "tline4 ")
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/B/E/alpha'          : Item(status='  ', wc_rev=8),
+    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=6),
+    'A/B/E_COPY'           : Item(status='  ', wc_rev=3),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Update wc_dir to get the latest changes
+  svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
+
+  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge r5 from /A/B/E to /A/B/E_COPY
+  expected_output = wc.State(short_ABE_COPY, {
+    'alpha'    : Item(status='U '),
+    })
+  expected_status = wc.State(short_ABE_COPY, {
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='M ', wc_rev=8),
+    'beta'     : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5'}),
+    'beta'     : Item("This is the file 'beta'.\n"),
+    'alpha'    : Item("line1 \ntline2 \nfbline3 \nline4 \nfbline5 \n"),
+    })
+  expected_skip = wc.State(short_ABE_COPY, {})
+
+  svntest.actions.run_and_verify_merge(short_ABE_COPY, '1', '5',
+                                       sbox.repo_url + '/A/B/E',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
+  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge r7 from /A/B/E to /A/B/E_COPY
+  expected_output = wc.State(short_ABE_COPY, {
+    'alpha'    : Item(status='C '),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={
+                   SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
+    'beta'     : Item("This is the file 'beta'.\n"),
+    'alpha'    : Item("line1 \ntline2 \nfbline3 \nline4 \n"),
+    })
+  expected_status = wc.State(short_ABE_COPY, {
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='C ', wc_rev=8),
+    'beta'     : Item(status='  ', wc_rev=8),
+    })
+  expected_skip = wc.State('', { })
+
+  inject_conflict_into_expected_state('alpha', expected_disk,
+                                      expected_status, "fbline5 \n",
+                                      "tline5 \n", 7)
+
+  alpha_conflict_support_files = ["alpha\.working",
+                                  "alpha\.merge-right\.r7",
+                                  "alpha\.merge-left\.r6"]
+
+  svntest.actions.run_and_verify_merge(short_ABE_COPY, '6', '7',
+                                       sbox.repo_url + '/A/B/E',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None,
+                                       svntest.tree.detect_conflict_files,
+                                       list(alpha_conflict_support_files),
+                                       check_props=True)
+  os.chdir(saved_cwd)
+
+  # Resolve the conflicted state
+  new_file_content = "line1 \ntline2 \nfbline3 \nline4 \ntline5 \n"
+  svntest.main.file_write(alpha_fb_path, new_file_content)
+  svntest.actions.run_and_verify_svn(None, None, [],'resolved', alpha_fb_path)
+
+  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge r8 from /A/B/E to /A/B/E_COPY
+  expected_output = wc.State(short_ABE_COPY, {
+    'alpha'    : Item(status='G '),
+    })
+  expected_status = wc.State(short_ABE_COPY, {
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='M ', wc_rev=8),
+    'beta'     : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7-8'}),
+    'beta'     : Item("This is the file 'beta'.\n"),
+    'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
+    })
+  expected_skip = wc.State(short_ABE_COPY, {})
+
+  svntest.actions.run_and_verify_merge(short_ABE_COPY, '7', '8',
+                                       sbox.repo_url + '/A/B/E',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
+  # Commit the merged changes ie., r9
+  expected_output = wc.State(wc_dir, {
+    'A/B/E_COPY'       : Item(verb='Sending'),
+    'A/B/E_COPY/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 8)
+  expected_status.add({
+    'A/B/E/alpha'          : Item(status='  ', wc_rev=8),
+    'A/B/E_COPY/alpha'     : Item(status='  ', wc_rev=9),
+    'A/B/E_COPY'           : Item(status='  ', wc_rev=9),
+    'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=8),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  short_ABE = shorten_path_kludge(ABE_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
+  expected_output = wc.State(short_ABE, {
+    ''         : Item(status=' U'),
+    'alpha'    : Item(status='C '),
+    })
+  expected_status = wc.State(short_ABE, {
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='C ', wc_rev=8),
+    'beta'     : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={
+                   SVN_PROP_MERGE_INFO : '/A/B/E_COPY:3-8'}),
+    'beta'     : Item("This is the file 'beta'.\n"),
+    'alpha'    : Item("line1 \ntline2 \nfbline3 \n"),
+    })
+  expected_skip = wc.State(short_ABE, {})
+
+  inject_conflict_into_expected_state('alpha', expected_disk,
+                                      expected_status, "tline4 \ntline5 \n",
+                                      "line4 \nfbline5 \n", 8)
+
+  alpha_conflict_support_files = ["alpha\.working",
+                                  "alpha\.merge-right\.r8",
+                                  "alpha\.merge-left\.r2"]
+
+  expected_error = "conflicts were produced while merging r2:8"
+  #This merge will give raise to a conflict while merging r3:8
+  #equivalent of a conflict that we have resolved in feature branch
+  #As we get a conflict merge will halt at range 3:8 after recording it.
+  #Resolve it in a same way(Taking tline5 instead of fbline5) as we did in
+  #feature branch.
+  #Proceed with merge again.
+  svntest.actions.run_and_verify_merge(short_ABE, None, None,
+                                       sbox.repo_url + '/A/B/E_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       expected_error, 
+                                       svntest.tree.detect_conflict_files,
+                                       list(alpha_conflict_support_files),
+                                       check_props=True)
+  os.chdir(saved_cwd)
+
+  # Resolve the conflicted state
+  new_file_content = "line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"
+  svntest.main.file_write(alpha_path, new_file_content)
+  svntest.actions.run_and_verify_svn(None, None, [],'resolved', alpha_path)
+  expected_output = wc.State(short_ABE, {
+    ''         : Item(status=' G'),
+    })
+  expected_status = wc.State(short_ABE, {
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='M ', wc_rev=8),
+    'beta'     : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={
+                   SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7-8\n/A/B/E_COPY:3-9\n'}),
+    'beta'     : Item("This is the file 'beta'.\n"),
+    'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
+    })
+  #merge r9
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_ABE, None, None,
+                                       sbox.repo_url + '/A/B/E_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, 
+                                       svntest.tree.detect_conflict_files,
+                                       list(alpha_conflict_support_files),
+                                       check_props=True)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -16031,7 +16361,9 @@ test_list = [ None,
                       merge_non_reflective_changes_from_reflective_rev,
                       server_has_mergeinfo)),
               XFail(SkipUnless(merge_non_reflective_text_and_prop_change,
-                               server_has_mergeinfo))
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_non_reflective_with_conflict,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
