@@ -1173,6 +1173,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     /* Populate the registered providers with the platform-specific providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
                                                                 config,
+                                                                NULL,
+                                                                NULL,
+                                                                FALSE,
                                                                 pool),
                 NULL);
 
@@ -1187,8 +1190,11 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     /* The server-cert, client-cert, and client-cert-password providers. */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                        NULL,
                                                         "windows",
                                                         "ssl_server_trust",
+                                                        NULL,
+                                                        FALSE,
                                                         pool),
                 NULL);
 
