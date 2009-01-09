@@ -16,76 +16,75 @@
  * ====================================================================
  */
 
-/* ### the following tables define the BASE tree */
+/*
+ * the KIND column in these tables has one of six values:
+ *   DIRECTORY
+ *   FILE
+ *   SYMLINK
+ *   (absent) DIRECTORY
+ *   (absent) FILE
+ *   (absent) SYMLINK
+ */
+
+
+/* ------------------------------------------------------------------------- */
 
 CREATE TABLE REPOSITORY (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* the root URL of the repository */
+  root  TEXT NOT NULL,
 
   /* the UUID of the repository */
-  uuid  TEXT NOT NULL,
-
-  /* URL of the root of the repository */
-  url  TEXT NOT NULL
+  uuid  TEXT NOT NULL
   );
 
-CREATE INDEX I_UUID ON REPOSITORY (uuid);
 
+/* ------------------------------------------------------------------------- */
 
-CREATE TABLE WORKING_COPY (
+CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  /* foreign key to REPOSITORY.id */
-  repos_id  INTEGER NOT NULL,
 
   /* absolute path in the local filesystem */
-  /* ### NULL if the metadata is stored in the wc root */
-  local_path  TEXT,
-
-  /* repository path corresponding to root of the working copy */
-  repos_path  TEXT NOT NULL
+  local_abspath  TEXT NOT NULL
   );
 
-CREATE UNIQUE INDEX I_LOCAL_PATH ON WORKING_COPY (local_path);
+CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 
-CREATE TABLE DIRECTORY (
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE BASE_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  wc_id  INTEGER NOT NULL,
+  /* the WCROOT that we are part of. NULL if the metadata is stored in
+     {wcroot}/.svn/ */
+  wc_id  INTEGER,
 
-  /* relative path from wcroot. "" is used for the wcroot. */
+  /* relative path from wcroot. this will be "" for the wcroot. */
   local_relpath  TEXT NOT NULL,
 
-  /* path in repository */
-  /* ### for switched subdirs, this could point to something other than
-     ### local_relpath would imply. anything else for switching? */
-  /* ### NULL if local_relpath can imply the repos path */
-  repos_path  TEXT
-  );
+  /* the repository this node is part of, and the relative path [to its
+     root] within that repository.  these may be NULL, implying it should
+     be derived from the parent and local_relpath.  non-NULL typically
+     indicates a switched node. */
+  repos_id  INTEGER,
+  repos_relpath  TEXT,
 
-CREATE UNIQUE INDEX I_DIR_PATH ON DIRECTORY (wc_id, local_relpath);
-
-
-CREATE TABLE NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  dir_id  INTEGER NOT NULL,
-
-  /* ### use "" for "this directory" */
-  filename  TEXT NOT NULL,
+  /* parent node. used to aggregate all child nodes of a given parent.
+     NULL if this is the wcroot node. */
+  parent_id  INTEGER,
 
   revnum  INTEGER NOT NULL,
 
+  /* file/dir/special. none says this node is NOT present at this REV. */
   kind  INTEGER NOT NULL,
 
-  /* NULL for a directory */
+  /* if this node is a file, then the checksum and its translated size
+     (given the properties on this file) are specified by the following
+     two fields. */
   checksum  TEXT,
-
-  /* ### do we need to deal with repos-size vs. eol-style-size?
-     ### this value is the size of WORKING (which is BASE plus the
-     ### transforms as defined for this node), so we can quickly detect
-     ### differences. */
-  working_size  INTEGER NOT NULL,
+  translated_size  INTEGER,
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
@@ -95,35 +94,24 @@ CREATE TABLE NODE (
   /* NULL depth means "default" (typically svn_depth_infinity) */
   depth  INTEGER,
 
-  /* ### note: these values are caches from the server! */
-  lock_token  TEXT,
-  lock_owner  TEXT,
-  lock_comment  TEXT,
-  lock_date  INTEGER,  /* an APR date/time (usec since 1970) */
-
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
      ### question which is better answered some other way. */
-  last_mod_time  INTEGER  /* an APR date/time (usec since 1970) */
+  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
+
+  /* serialized skel of this node's properties. */
+  properties  BLOB NOT NULL,
+
+  /* this node is a directory, and all of its child nodes have not (yet)
+     been created [for this revision number]. */
+  incomplete_children  INTEGER
   );
 
-CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);
-CREATE INDEX I_NODELIST ON NODE (dir_id);
-CREATE INDEX I_LOCKS ON NODE (lock_token);
+CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
+CREATE INDEX I_PARENT ON BASE_NODE (parent_id);
 
 
-CREATE TABLE PROPERTIES (
-  node_id  INTEGER NOT NULL,
-
-  name  TEXT NOT NULL,
-
-  value  BLOB NOT NULL,
-
-  PRIMARY KEY (node_id, name)
-  );
-
-CREATE UNIQUE INDEX I_NODE_PROPS ON PROPERTIES (node_id);
-
+/* ------------------------------------------------------------------------- */
 
 CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
@@ -143,28 +131,80 @@ CREATE TABLE PRISTINE (
 
 /* ------------------------------------------------------------------------- */
 
-/* ### the following tables define the WORKING tree */
-
-/* ### add/delete nodes */
-CREATE TABLE NODE_CHANGES (
+CREATE TABLE WORKING_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT, 
 
-  /* Basic information about the node.  filename=="" for "this directory". */
-  dir_id  INTEGER NOT NULL,
-  filename  TEXT NOT NULL,
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER,
+  local_relpath  TEXT NOT NULL,
+
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. */
+  parent_relpath  TEXT NOT NULL,
+
+  /* kind==none implies this node was deleted or moved (see moved_to).
+     other kinds:
+       if a BASE_NODE exists at the same local_relpath, then this is a
+       replaced item (possibly copied or moved here), which implies the
+       base node should be deleted first. */
   kind  INTEGER NOT NULL,
 
-  /* Enumerated type specifying what kind of change is at this location. */
-  status  INTEGER NOT NULL,
+  /* Where this node was copied from. Set only on the root of the copy,
+     and implied for all children. */
+  copyfrom_repos_path  TEXT,
+  copyfrom_revnum  INTEGER,
 
-  /* Where this node was copied/moved from. */
-  original_repos_path  TEXT,
-  original_revnum  INTEGER,
+  /* If this node was moved (rather than just copied), this specifies
+     the local_relpath of the source of the move. */
+  moved_from  TEXT,
+
+  /* If this node was moved (rather than just deleted), this specifies
+     where the node was moved to. */
+  moved_to  TEXT,
+
+  /* if this node was added-with-history AND is a file, then the checksum
+     and its translated size (given the properties on this file) are
+     specified by the following two fields. */
   checksum  TEXT,
-  working_size  INTEGER,
+  translated_size  INTEGER,
+
+  /* if this node was added-with-history, then the following fields will
+     be NOT NULL */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  depth  INTEGER,
+
+  /* ### Do we need this?  We've currently got various mod time APIs
+     ### internal to libsvn_wc, but those might be used in answering some
+     ### question which is better answered some other way. */
+  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
+
+  /* serialized skel of this node's properties. */
+  properties  BLOB NOT NULL,
+
+  /* if not NULL, this node is part of a changelist. */
+  changelist_id  INTEGER
+  );
+
+CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
+CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (parent_relpath);
+
+
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE ACTUAL_NODE (
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER,
+  local_relpath  TEXT NOT NULL,
+
+  /* serialized skel of this node's properties. NULL implies no change to
+     the properties, relative to WORKING/BASE as appropriate. */
+  properties  BLOB,
 
   /* ### do we want to record the revnums which caused this? */
   conflict_old  TEXT,
@@ -175,33 +215,37 @@ CREATE TABLE NODE_CHANGES (
   changelist_id  INTEGER
   );
 
-CREATE UNIQUE INDEX I_PATH_CHANGES ON NODE_CHANGES (dir_id, filename);
-CREATE INDEX I_NODELIST_CHANGES ON NODE_CHANGES (dir_id);
 
-
-CREATE TABLE PROPERTIES_CHANGES (
-  dir_id  INTEGER NOT NULL,
-
-  filename  TEXT NOT NULL,
-
-  name  TEXT NOT NULL,
-
-  /* ### NULL implies deletion. */
-  value  BLOB,
-
-  PRIMARY KEY (dir_id, filename, name)
-  );
-
-CREATE INDEX I_PROPS_CHANGES ON PROPERTIES_CHANGES (dir_id, filename);
-
+/* ------------------------------------------------------------------------- */
 
 CREATE TABLE CHANGELIST (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  wc_id  INTEGER NOT NULL,
+  /* what WCROOT is this changelist part of, or NULL if the metadata is
+     in the wcroot. */
+  wc_id  INTEGER,
 
   name  TEXT NOT NULL
   );
 
 CREATE UNIQUE INDEX I_CHANGELIST ON CHANGELIST (wc_id, name);
 CREATE UNIQUE INDEX I_CL_LIST ON CHANGELIST (wc_id);
+
+
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE LOCKS (
+  /* URL of the node which is locked */
+  url  TEXT NOT NULL PRIMARY KEY,
+
+  /* Information about the lock. Note: these values are just caches from
+     the server, and are not authoritative. */
+  lock_token  TEXT NOT NULL,
+  /* ### make the following fields NOT NULL ? */
+  lock_owner  TEXT,
+  lock_comment  TEXT,
+  lock_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  );
+
+
+/* ------------------------------------------------------------------------- */
