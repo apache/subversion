@@ -395,7 +395,7 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
 
    This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
-                                           svn_checksum_t *checksum,
+                                           const svn_checksum_t *checksum,
                                            apr_pool_t *pool);
 
 
