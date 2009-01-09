@@ -1,0 +1,21 @@
+This branch is for work related to issue #3148[1]: Too early svn up/co
+abort if one item of svn:externals resource list is not accessible.
+
+Currently, the branch code seems to basically work, with 'svn update'
+and other operations printing inline warnings when the handling of an
+externals definition goes sour.  There are a few known issues, though:
+
+   * The original reporter wanted an end-of-operation summary of
+     externals-related failures (too?).
+
+   * The current warnings just say that there was a problem, but do
+     not reveal what the problem *was* (because the nested error from
+     the lower-level functions isn't displayed).
+
+   * The test suite hasn't been tweaked to expect the new behavior,
+     which means that externals_tests.py 14 and 16 are failing.
+
+NOTE: This is a fairly low-churn branch, so it is *not* yet being
+      maintained as --reintegrate-able branch.
+
+[1] http://subversion.tigris.org/issues/show_bug.cgi?id=3148
