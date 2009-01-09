@@ -816,8 +816,8 @@ svn_fs_base__rep_contents(svn_string_t *str,
 
     SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
     rep_checksum = rep->sha1_checksum ? rep->sha1_checksum : rep->md5_checksum;
-    SVN_ERR(svn_checksum(&checksum, svn_checksum_get_kind(rep_checksum),
-                         str->data, str->len, pool));
+    SVN_ERR(svn_checksum(&checksum, rep_checksum->kind, str->data, str->len,
+                         pool));
 
     if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf

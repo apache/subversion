@@ -971,8 +971,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                               svn_path_local_style(path, pool)));
 
   if (digest)
-    memcpy(digest, svn_checksum_get_digest(local_checksum),
-           svn_checksum_get_size(local_checksum));
+    memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));
 
   /* Close the file baton, and get outta here. */
   return editor->close_file

@@ -359,7 +359,7 @@ txdelta_md5_digest(void *baton)
     return NULL;
 
   /* The checksum should be there. */
-  return svn_checksum_get_digest(b->checksum);
+  return b->checksum->digest;
 }
 
 

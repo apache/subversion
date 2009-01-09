@@ -936,7 +936,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
       /* ... and its checksum. */
       fb->actual_checksum =
-        svn_checksum_from_digest(hb->digest, svn_checksum_md5, fb->pool);
+        svn_checksum__from_digest(hb->digest, svn_checksum_md5, fb->pool);
     }
 
   svn_pool_destroy(hb->pool);
