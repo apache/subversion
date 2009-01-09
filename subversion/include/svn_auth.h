@@ -822,6 +822,13 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
  * Valid @a provider_type values are: "simple", "ssl_client_cert_pw" and
  * "ssl_server_trust".
  *
+ * @a *pb is the prompt provider baton for any prompts that should be created.
+ * @a prompt_func is the actual prompt function for this provider.
+ * @a command_line boolean value is set to TRUE if we are called from
+ * command line.
+ *
+ * Both @a *pb and @a prompt_func can be NULL if @a command_line is FALSE.
+ *
  * Allocate @a *provider in @a pool.
  *
  * What actually happens is we invoke the appropriate provider function to
@@ -832,10 +839,14 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
-                                        const char *provider_name,
-                                        const char *provider_type,
-                                        apr_pool_t *pool);
+svn_auth_get_platform_specific_provider
+  (svn_auth_provider_object_t **provider,
+   void *pb,
+   const char *provider_name,
+   const char *provider_type,
+   svn_auth_unlock_prompt_func_t prompt_func,
+   svn_boolean_t command_line,
+   apr_pool_t *pool);
 
 /** Set @a *providers to an array of <tt>svn_auth_provider_object_t *</tt>
  * objects.
@@ -843,6 +854,13 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
  * returned. Order of the platform-specific authentication providers is
  * determined by the 'password-stores' configuration option which is retrieved
  * from @a config. @a config can be NULL.
+ *
+ * @a *pb is the prompt provider baton for any prompts that should be created.
+ * @a prompt_func is the actual prompt function for this provider.
+ * @a command_line boolean value is set to TRUE if we are called from
+ * command line.
+ *
+ * Both @a *pb and @a prompt_func can be NULL if @a command_line is FALSE.
  *
  * Create and allocate @a *providers in @a pool.
  *
@@ -855,9 +873,13 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
-                                                svn_config_t *config,
-                                                apr_pool_t *pool);
+svn_auth_get_platform_specific_client_providers
+  (apr_array_header_t **providers,
+   svn_config_t *config,
+   void *pb,
+   svn_auth_unlock_prompt_func_t prompt_func,
+   svn_boolean_t command_line,
+   apr_pool_t *pool);
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**

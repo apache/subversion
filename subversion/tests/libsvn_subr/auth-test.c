@@ -36,7 +36,8 @@ test_platform_specific_auth_providers(const char **msg,
     return SVN_NO_ERROR;
 
   /* Test non-available auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "fake", "fake", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "fake", "fake",
+                                          NULL, FALSE, pool);
 
   if (provider)
     return svn_error_createf
@@ -45,7 +46,8 @@ test_platform_specific_auth_providers(const char **msg,
        "return NULL");
 
   /* Make sure you get two providers when retrieving all auth providers */
-  svn_auth_get_platform_specific_client_providers(&providers, NULL, pool);
+  svn_auth_get_platform_specific_client_providers(&providers, NULL, NULL, NULL,
+                                                  FALSE, pool);
 
 #ifdef SVN_HAVE_GNOME_KEYRING
   number_of_providers += 2;
@@ -139,8 +141,8 @@ test_platform_specific_auth_providers(const char **msg,
 
   /* Test GNOME Keyring auth providers */
 #ifdef SVN_HAVE_GNOME_KEYRING
-  svn_auth_get_platform_specific_provider(&provider, "gnome_keyring", "simple",
-                                          pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "gnome_keyring",
+                                          "simple", NULL, FALSE, pool);
 
   if (!provider)
     return svn_error_createf
@@ -148,8 +150,9 @@ test_platform_specific_auth_providers(const char **msg,
        "svn_auth_get_platform_specific_provider('gnome_keyring', 'simple') "
        "should not return NULL");
 
-  svn_auth_get_platform_specific_provider(&provider, "gnome_keyring",
-                                          "ssl_client_cert_pw", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "gnome_keyring",
+                                          "ssl_client_cert_pw", NULL, FALSE,
+                                          pool);
 
   if (!provider)
     return svn_error_createf
@@ -158,7 +161,8 @@ test_platform_specific_auth_providers(const char **msg,
        "'ssl_client_cert_pw') should not return NULL");
 
   /* Make sure you do not get a Windows auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "windows", "simple", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "windows", "simple",
+                                          NULL, FALSE, pool);
 
   if (provider)
     return svn_error_createf
@@ -169,7 +173,8 @@ test_platform_specific_auth_providers(const char **msg,
 
   /* Test KWallet auth providers */
 #ifdef SVN_HAVE_KWALLET
-  svn_auth_get_platform_specific_provider(&provider, "kwallet", "simple", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "kwallet", "simple",
+                                          NULL, FALSE, pool);
 
   if (!provider)
     return svn_error_createf
@@ -177,8 +182,9 @@ test_platform_specific_auth_providers(const char **msg,
        "svn_auth_get_platform_specific_provider('kwallet', 'simple') "
        "should not return NULL");
 
-  svn_auth_get_platform_specific_provider(&provider, "kwallet",
-                                          "ssl_client_cert_pw", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "kwallet",
+                                          "ssl_client_cert_pw",
+                                          NULL, FALSE, pool);
 
   if (!provider)
     return svn_error_createf
@@ -187,7 +193,8 @@ test_platform_specific_auth_providers(const char **msg,
        "'ssl_client_cert_pw') should not return NULL");
 
   /* Make sure you do not get a Windows auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "windows", "simple", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "windows", "simple",
+                                          NULL, FALSE, pool);
 
   if (provider)
     return svn_error_createf
