@@ -315,6 +315,16 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_failed_external:
+      svn_handle_warning2
+        (stderr, 
+         svn_error_createf(SVN_ERR_CL_FAILED_EXTERNALS_CHANGE, n->err,
+                           _("Error handling externals definition for '%s'"),
+                           path_local),
+         "svn:");
+      svn_error_clear(n->err);
+      break;
+      
     case svn_wc_notify_update_completed:
       {
         if (! nb->suppress_final_line)
