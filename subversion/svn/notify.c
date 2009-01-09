@@ -322,7 +322,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
          externals definition any longer. */
       if (nb->in_external)
         {
-          svn_handle_warning2(stderr, n->err, "svn:");
+          svn_handle_warning2(stderr, n->err, "svn: ");
           nb->in_external = FALSE;
           nb->ext_text_conflicts = nb->ext_prop_conflicts
             = nb->ext_tree_conflicts = nb->ext_skipped_paths = 0;
@@ -337,12 +337,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       else
         {
           svn_error_t *warn_err =
-            svn_error_createf(SVN_ERR_CL_FAILED_EXTERNALS_CHANGE, NULL,
+            svn_error_createf(SVN_ERR_BASE, NULL,
                               _("Error handling externals definition for '%s':"),
                               path_local);
-          svn_handle_warning2(stderr, warn_err, "svn:");
+          svn_handle_warning2(stderr, warn_err, "svn: ");
           svn_error_clear(warn_err);
-          svn_handle_warning2(stderr, n->err, "svn:");
+          svn_handle_warning2(stderr, n->err, "svn: ");
         }
       break;
       
