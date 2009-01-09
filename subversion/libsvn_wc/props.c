@@ -896,63 +896,6 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-#if 0
-/*### Some day, when we get better log primitives,
-  we probably want to stat() less, which can be done coding
-  'calls' to functions like the one below into as a log command.*/
-svn_error_t *
-svn_wc__revert_props_create(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_boolean_t destroy_baseprops,
-                            svn_boolean_t maybe_rerun,
-                            apr_pool_t *pool)
-{
-  const svn_wc_entry_t *entry;
-  const char *revert_file, *base_file;
-  const char *tmp_revert_file;
-  svn_error_t *err;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-
-  SVN_ERR(svn_wc__prop_path(&base_file, path, entry->kind, svn_wc__props_base,
-                            FALSE, pool));
-  SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
-                            svn_wc__props_revert, FALSE, pool));
-  SVN_ERR(svn_wc__prop_path(&tmp_revert_file, path, entry->kind,
-                            svn_wc__props_revert, TRUE, pool));
-
-
-  if (destroy_baseprops)
-    err = svn_io_file_rename(base_file, revert_file, pool);
-  else
-    {
-      err  = svn_io_copy_file(base_file, tmp_revert_file, TRUE, pool);
-      if (! err)
-        SVN_ERR(svn_io_file_rename(tmp_revert_file, revert_file, pool));
-    }
-
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    /* If there's no file to move or copy, create one. */
-    {
-      svn_node_kind_t kind = svn_node_none;
-
-      svn_error_clear(err);
-
-      if (maybe_rerun)
-        SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
-
-      if (kind == svn_node_none)
-        {
-          SVN_ERR(save_prop_file(tmp_revert_file,
-                                 apr_hash_make(pool), TRUE, pool));
-          SVN_ERR(svn_io_file_rename(base_file, revert_file, pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif
-
 svn_error_t *
 svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
                                    const char *path,
@@ -975,30 +918,6 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
                             revert_file, base_file, pool);
 }
 
-
-#if 0
-/*### Some day, when we get better log primitives,
-  we probably want to stat() less, which can be done coding
-  'calls' to functions like the one below into as a log command.*/
-svn_error_t *
-svn_wc__revert_props_restore(const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool)
-{
-  const svn_wc_entry_t *entry;
-  const char *revert_file, *base_file;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-
-  SVN_ERR(svn_wc__prop_path(&base_file, path, entry->kind, svn_wc__props_base,
-                            FALSE, pool));
-  SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
-                            svn_wc__props_revert, FALSE, pool));
-
-  SVN_ERR(svn_io_file_rename(revert_file, base_file, pool));
-  return SVN_NO_ERROR;
-}
-#endif
 
 /*---------------------------------------------------------------------*/
 
