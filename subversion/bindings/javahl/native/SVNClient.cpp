@@ -220,13 +220,17 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_log4(targets,
-                                pegRevision.revision(),
-                                revisionStart.revision(),
-                                revisionEnd.revision(),
-                                limit,
-                                discoverPaths,
-                                stopOnCopy,
+    svn_opt_revision_range_t *range = (svn_opt_revision_range_t *)
+             apr_palloc(requestPool.pool(), sizeof(svn_opt_revision_range_t));
+    range->start = *revisionStart.revision();;
+    range->end = *revisionEnd.revision();
+
+    apr_array_header_t *ranges = apr_array_make(requestPool.pool(), 1,
+                                        sizeof(svn_opt_revision_range_t *));
+    APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+
+    SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
+                                limit, discoverPaths, stopOnCopy,
                                 includeMergedRevisions,
                                 revProps.array(requestPool),
                                 LogMessageCallback::callback, callback, ctx,
