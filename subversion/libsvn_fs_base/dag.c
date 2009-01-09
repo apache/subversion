@@ -1267,9 +1267,9 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     {
       svn_checksum_t *test_checksum;
 
-      if (checksum->kind == svn_checksum_md5)
+      if (svn_checksum_get_kind(checksum) == svn_checksum_md5)
         test_checksum = md5_checksum;
-      else if (checksum->kind == svn_checksum_sha1)
+      else if (svn_checksum_get_kind(checksum) == svn_checksum_sha1)
         test_checksum = sha1_checksum;
       else
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);

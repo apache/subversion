@@ -35,6 +35,16 @@
 #define DIGESTSIZE(k) ((k) == svn_checksum_md5 ? APR_MD5_DIGESTSIZE : \
                        (k) == svn_checksum_sha1 ? APR_SHA1_DIGESTSIZE : 0)
 
+struct svn_checksum_t
+{
+  /** The bytes of the checksum digest. */
+  unsigned char *digest;
+
+  /** The type of the checksum.  This should never be changed by consumers
+      of the APIs. */
+  svn_checksum_kind_t kind;
+};
+
 
 /* Check to see if KIND is something we recognize.  If not, return
  * SVN_ERR_BAD_CHECKSUM_KIND */
@@ -69,13 +79,13 @@ svn_checksum_create(svn_checksum_kind_t kind,
 }
 
 svn_checksum_t *
-svn_checksum__from_digest(const unsigned char *digest,
-                          svn_checksum_kind_t kind,
-                          apr_pool_t *result_pool)
+svn_checksum_from_digest(const unsigned char *digest,
+                         svn_checksum_kind_t kind,
+                         apr_pool_t *result_pool)
 {
   svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
 
-  memcpy((unsigned char *)checksum->digest, digest, DIGESTSIZE(kind));
+  memcpy(checksum->digest, digest, DIGESTSIZE(kind));
   return checksum;
 }
 
@@ -84,7 +94,7 @@ svn_checksum_clear(svn_checksum_t *checksum)
 {
   SVN_ERR(validate_kind(checksum->kind));
 
-  memset((unsigned char *) checksum->digest, 0, DIGESTSIZE(checksum->kind));
+  memset(checksum->digest, 0, DIGESTSIZE(checksum->kind));
   return SVN_NO_ERROR;
 }
 
@@ -168,7 +178,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
       if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      ((unsigned char *)(*checksum)->digest)[i] =
+      (*checksum)->digest[i] =
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
       is_zeros |= (*checksum)->digest[i];
@@ -223,13 +233,13 @@ svn_checksum(svn_checksum_t **checksum,
   switch (kind)
     {
       case svn_checksum_md5:
-        apr_md5((unsigned char *)(*checksum)->digest, data, len);
+        apr_md5((*checksum)->digest, data, len);
         break;
 
       case svn_checksum_sha1:
         apr_sha1_init(&sha1_ctx);
         apr_sha1_update(&sha1_ctx, data, len);
-        apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
+        apr_sha1_final((*checksum)->digest, &sha1_ctx);
         break;
 
       default:
@@ -250,12 +260,12 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
   switch (kind)
     {
       case svn_checksum_md5:
-        memcpy((unsigned char *)checksum->digest, svn_md5__empty_string_digest(),
+        memcpy(checksum->digest, svn_md5__empty_string_digest(),
                APR_MD5_DIGESTSIZE);
         break;
 
       case svn_checksum_sha1:
-        memcpy((unsigned char *)checksum->digest,
+        memcpy(checksum->digest,
                svn_sha1__empty_string_digest(), APR_SHA1_DIGESTSIZE);
         break;
 
@@ -332,11 +342,11 @@ svn_checksum_final(svn_checksum_t **checksum,
   switch (ctx->kind)
     {
       case svn_checksum_md5:
-        apr_md5_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
+        apr_md5_final((*checksum)->digest, ctx->apr_ctx);
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
+        apr_sha1_final((*checksum)->digest, ctx->apr_ctx);
         break;
 
       default:
@@ -348,7 +358,19 @@ svn_checksum_final(svn_checksum_t **checksum,
 }
 
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum)
+svn_checksum_get_size(const svn_checksum_t *checksum)
 {
   return DIGESTSIZE(checksum->kind);
+}
+
+svn_checksum_kind_t
+svn_checksum_get_kind(const svn_checksum_t *checksum)
+{
+  return checksum->kind;
+}
+
+const unsigned char *
+svn_checksum_get_digest(const svn_checksum_t *checksum)
+{
+  return checksum->digest;
 }

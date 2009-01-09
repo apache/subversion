@@ -388,8 +388,8 @@ svn_base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
   int ingrouplen = 0, linelen = 0;
   checksum_str = svn_stringbuf_create("", pool);
 
-  encode_bytes(checksum_str, checksum->digest,
-               svn_checksum_size(checksum), ingroup, &ingrouplen,
+  encode_bytes(checksum_str, svn_checksum_get_digest(checksum),
+               svn_checksum_get_size(checksum), ingroup, &ingrouplen,
                &linelen, TRUE);
   encode_partial_group(checksum_str, ingroup, ingrouplen, linelen, TRUE);
 
@@ -410,8 +410,7 @@ svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
 
-  checksum = svn_checksum_create(svn_checksum_md5, pool);
-  checksum->digest = digest;
+  checksum = svn_checksum_from_digest(digest, svn_checksum_md5, pool);
 
   return svn_base64_from_checksum(checksum, pool);
 }

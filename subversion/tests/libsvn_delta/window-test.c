@@ -84,8 +84,8 @@ stream_window_test(const char **msg,
       /* ### examine the window */
     }
 
-  actual = svn_checksum_create(svn_checksum_md5, pool);
-  actual->digest = svn_txdelta_md5_digest(txstream);
+  actual = svn_checksum_from_digest(svn_txdelta_md5_digest(txstream),
+                                    svn_checksum_md5, pool);
   printf("  actual: %s\n", svn_checksum_to_cstring(actual, pool));
 
   if (!svn_checksum_match(expected, actual))

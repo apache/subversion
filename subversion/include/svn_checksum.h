@@ -48,15 +48,7 @@ typedef enum
  *
  * @since New in 1.6.
  */
-typedef struct svn_checksum_t
-{
-  /** The bytes of the checksum. */
-  const unsigned char *digest;
-
-  /** The type of the checksum.  This should never be changed by consumers
-      of the APIs. */
-  svn_checksum_kind_t kind;
-} svn_checksum_t;
+typedef struct svn_checksum_t svn_checksum_t;
 
 /**
  * Opaque type for creating checksums of data.
@@ -200,18 +192,34 @@ svn_checksum_final(svn_checksum_t **checksum,
  * @since New in 1.6.
  */
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum);
-
+svn_checksum_get_size(const svn_checksum_t *checksum);
 
 /**
- * Internal function for creating a checksum from a binary digest.
+ * Return a (read-only) pointer to the binary digest of @a checksum.
+ *
+ * @since New in 1.6.
+ */
+const unsigned char *
+svn_checksum_get_digest(const svn_checksum_t *checksum);
+
+/**
+ * Return the checksum kind of @a checksum.
+ *
+ * @since New in 1.6.
+ */
+svn_checksum_kind_t
+svn_checksum_get_kind(const svn_checksum_t *checksum);
+
+/**
+ * Create a checksum from a binary digest @a digest of kind @a kind.
+ * Allocate the result in @a pool, making a deep copy of @a digest.
  *
  * @since New in 1.6
  */
 svn_checksum_t *
-svn_checksum__from_digest(const unsigned char *digest,
-                          svn_checksum_kind_t kind,
-                          apr_pool_t *result_pool);
+svn_checksum_from_digest(const unsigned char *digest,
+                         svn_checksum_kind_t kind,
+                         apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

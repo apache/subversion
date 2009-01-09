@@ -723,9 +723,9 @@ close_file(void *file_baton,
   if (text_checksum)
     {
       const char *actual_checksum =
-        svn_checksum_to_cstring(svn_checksum__from_digest(fb->text_digest,
-                                                          svn_checksum_md5,
-                                                          pool), pool);
+        svn_checksum_to_cstring(svn_checksum_from_digest(fb->text_digest,
+                                                         svn_checksum_md5,
+                                                         pool), pool);
 
       if (actual_checksum && (strcmp(text_checksum, actual_checksum) != 0))
         {
