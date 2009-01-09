@@ -16,7 +16,16 @@
  * ====================================================================
  */
 
-/* ### the following tables define the BASE tree */
+/*
+ * the KIND column in these tables has one of six values:
+ *   DIRECTORY
+ *   FILE
+ *   SYMLINK
+ *   (absent) DIRECTORY
+ *   (absent) FILE
+ *   (absent) SYMLINK
+ */
+
 
 /* ------------------------------------------------------------------------- */
 
@@ -29,6 +38,7 @@ CREATE TABLE REPOSITORY (
   /* the UUID of the repository */
   uuid  TEXT NOT NULL
   );
+
 
 /* ------------------------------------------------------------------------- */
 
@@ -121,9 +131,6 @@ CREATE TABLE PRISTINE (
 
 /* ------------------------------------------------------------------------- */
 
-/* ### the following tables define the WORKING tree */
-
-/* ### add/delete nodes */
 CREATE TABLE WORKING_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT, 
 
