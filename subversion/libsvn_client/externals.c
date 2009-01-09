@@ -1022,6 +1022,7 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
       notifier->err = err;
       ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier, ib->pool);
     }
+  svn_error_clear(err);
   return SVN_NO_ERROR;
 }
 

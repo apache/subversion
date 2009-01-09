@@ -316,13 +316,34 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_failed_external:
-      svn_handle_warning2
-        (stderr, 
-         svn_error_createf(SVN_ERR_CL_FAILED_EXTERNALS_CHANGE, n->err,
-                           _("Error handling externals definition for '%s'"),
-                           path_local),
-         "svn:");
-      svn_error_clear(n->err);
+      /* If we are currently inside the handling of an externals
+         definition, then we can simply present n->err as a warning
+         and feel confident that after this, we aren't handling that
+         externals definition any longer. */
+      if (nb->in_external)
+        {
+          svn_handle_warning2(stderr, n->err, "svn:");
+          nb->in_external = FALSE;
+          nb->ext_text_conflicts = nb->ext_prop_conflicts
+            = nb->ext_tree_conflicts = nb->ext_skipped_paths = 0;
+          if ((err = svn_cmdline_printf(pool, "\n")))
+            goto print_error;
+        }
+      /* Otherwise, we'll just print two warnings.  Why?  Because
+         svn_handle_warning2() only shows the single "best message",
+         but we have two pretty important ones: that the external at
+         '/some/path' didn't pan out, and then the more specific
+         reason why (from n->err). */
+      else
+        {
+          svn_error_t *warn_err =
+            svn_error_createf(SVN_ERR_CL_FAILED_EXTERNALS_CHANGE, NULL,
+                              _("Error handling externals definition for '%s':"),
+                              path_local);
+          svn_handle_warning2(stderr, warn_err, "svn:");
+          svn_error_clear(warn_err);
+          svn_handle_warning2(stderr, n->err, "svn:");
+        }
       break;
       
     case svn_wc_notify_update_completed:
