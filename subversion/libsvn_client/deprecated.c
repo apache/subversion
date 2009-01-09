@@ -906,7 +906,7 @@ svn_client_log4(const apr_array_header_t *targets,
   range->start = *start;
   range->end = *end;
 
-  revision_ranges = apr_array_make(pool, 0,
+  revision_ranges = apr_array_make(pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
 
   APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
