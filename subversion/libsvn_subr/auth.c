@@ -427,23 +427,14 @@ svn_auth_get_platform_specific_provider
             {
               if (strcmp(provider_type, "simple") == 0)
                 {
-                  if (strcmp(provider_name, "gnome_keyring") == 0)
+                  if (strcmp(provider_name, "gnome_keyring") == 0 &&
+                      command_line)
                     {
-                      if (command_line)
-                        {
-                          svn_auth_unlock_provider_func_t provider_function;
-                          provider_function = (svn_auth_unlock_provider_func_t)
-                            provider_function_symbol;
-                          provider_function(provider, prompt_func,
-                                            pb, pool);
-                        }
-                      else
-                        {
-                          svn_auth_simple_provider_func_t provider_function;
-                          provider_function = (svn_auth_simple_provider_func_t)
-                            provider_function_symbol;
-                          provider_function(provider, pool);
-                        }
+                      svn_auth_unlock_provider_func_t provider_function;
+                      provider_function = (svn_auth_unlock_provider_func_t)
+                        provider_function_symbol;
+                      provider_function(provider, prompt_func,
+                                        pb, pool);
                     }
                   else
                     {
