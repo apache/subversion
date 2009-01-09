@@ -972,13 +972,18 @@ def old_style_externals_ignore_peg_reg(sbox):
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A"), ext)
 
-  # Update the working copy.  This should fail because the URL with
-  # '@HEAD' does not exist.
-  svntest.actions.run_and_verify_svn("External '%s' used pegs" % ext.strip(),
-                                     None,
-                                     ".*URL .*/A/D/G@HEAD' .* doesn't exist",
-                                     'up',
-                                     wc_dir)
+  # Update the working copy.  This should succeed (exitcode 0) but
+  # should print warnings on the external because the URL with '@HEAD'
+  # does not exist.
+  expected_error = "|".join([".*Error handling externals definition.*",
+                             ".*URL .*/A/D/G@HEAD' .* doesn't exist.*",
+                             ])
+  svntest.actions.run_and_verify_svn2("External '%s' used pegs" % ext.strip(),
+                                      None,
+                                      expected_error,
+                                      0,
+                                      'up',
+                                      wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -1088,13 +1093,17 @@ def can_place_file_external_into_dir_external(sbox):
         "^/A/B/E/beta C/exdir_B/beta\n"
   change_external(os.path.join(wc_dir, 'A'), ext)
 
-  svntest.actions.run_and_verify_svn("Able to put file external in foreign wc",
-                                     None,
-                                     ".*Cannot insert a file external from "
-                                     ".*/beta' into a working copy "
-                                     ".*" + other_repo_url,
-                                     'up',
-                                     repo_url, wc_dir)
+  expected_error = "|".join([".*Error handling externals definition.*",
+                             ".*Cannot insert a file external from " \
+                             + ".*/beta' into a working copy " \
+                             + ".*" + other_repo_url,
+                             ])
+  svntest.actions.run_and_verify_svn2("Able to put file external in foreign wc",
+                                      None,
+                                      expected_error,
+                                      0,
+                                      'up',
+                                      repo_url, wc_dir)
 
 #----------------------------------------------------------------------
 
