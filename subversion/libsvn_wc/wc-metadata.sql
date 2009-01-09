@@ -18,6 +18,20 @@
 
 /* ### the following tables define the BASE tree */
 
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE REPOSITORY (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* the root URL of the repository */
+  root  TEXT NOT NULL,
+
+  /* the UUID of the repository */
+  uuid  TEXT NOT NULL
+  );
+
+/* ------------------------------------------------------------------------- */
+
 CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -27,6 +41,8 @@ CREATE TABLE WCROOT (
 
 CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
+
+/* ------------------------------------------------------------------------- */
 
 CREATE TABLE BASE_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,12 +54,12 @@ CREATE TABLE BASE_NODE (
   /* relative path from wcroot. this will be "" for the wcroot. */
   local_relpath  TEXT NOT NULL,
 
-  /* URL of this node in the repository. NULL if implied by parent. for
-     switched nodes, this will be non-NULL. */
-  url  TEXT,
-
-  /* UUID of the repository. NULL if implied by parent. */
-  uuid  TEXT,
+  /* the repository this node is part of, and the relative path [to its
+     root] within that repository.  these may be NULL, implying it should
+     be derived from the parent and local_relpath.  non-NULL typically
+     indicates a switched node. */
+  repos_id  INTEGER,
+  repos_relpath  TEXT,
 
   /* parent node. used to aggregate all child nodes of a given parent.
      NULL if this is the wcroot node. */
@@ -51,7 +67,7 @@ CREATE TABLE BASE_NODE (
 
   revnum  INTEGER NOT NULL,
 
-  /* file/dir/special. none is not allowed. */
+  /* file/dir/special. none says this node is NOT present at this REV. */
   kind  INTEGER NOT NULL,
 
   /* if this node is a file, then the checksum and its translated size
@@ -74,7 +90,11 @@ CREATE TABLE BASE_NODE (
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
   /* serialized skel of this node's properties. */
-  properties  BLOB NOT NULL
+  properties  BLOB NOT NULL,
+
+  /* this node is a directory, and all of its child nodes have not (yet)
+     been created [for this revision number]. */
+  incomplete_children  INTEGER
   );
 
 CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
@@ -122,7 +142,8 @@ CREATE TABLE WORKING_NODE (
        base node should be deleted first. */
   kind  INTEGER NOT NULL,
 
-  /* Where this node was copied from. */
+  /* Where this node was copied from. Set only on the root of the copy,
+     and implied for all children. */
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
@@ -145,6 +166,14 @@ CREATE TABLE WORKING_NODE (
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  depth  INTEGER,
+
+  /* ### Do we need this?  We've currently got various mod time APIs
+     ### internal to libsvn_wc, but those might be used in answering some
+     ### question which is better answered some other way. */
+  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
   /* serialized skel of this node's properties. */
   properties  BLOB NOT NULL,
