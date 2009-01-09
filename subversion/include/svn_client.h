@@ -1977,6 +1977,7 @@ svn_client_log5(const apr_array_header_t *targets,
  * @deprecated Provided for compatibility with the 1.5 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
