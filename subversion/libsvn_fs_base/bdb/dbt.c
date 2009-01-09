@@ -159,8 +159,7 @@ svn_fs_base__str_to_dbt(DBT *dbt, const char *str)
 DBT *
 svn_fs_base__checksum_to_dbt(DBT *dbt, svn_checksum_t *checksum)
 {
-  svn_fs_base__set_dbt(dbt, svn_checksum_get_digest(checksum),
-                       svn_checksum_get_size(checksum));
+  svn_fs_base__set_dbt(dbt, checksum->digest, svn_checksum_size(checksum));
 
   return dbt;
 }

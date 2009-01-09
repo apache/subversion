@@ -911,16 +911,14 @@ close_handler_md5(void *baton)
   if (btn->read_digest)
     {
       *btn->read_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->read_digest,
-             svn_checksum_get_digest(btn->read_checksum),
+      memcpy((unsigned char *) *btn->read_digest, btn->read_checksum->digest,
              APR_MD5_DIGESTSIZE);
     }
 
   if (btn->write_digest)
     {
       *btn->write_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->write_digest,
-             svn_checksum_get_digest(btn->write_checksum),
+      memcpy((unsigned char *) *btn->write_digest, btn->write_checksum->digest,
              APR_MD5_DIGESTSIZE);
     }
 

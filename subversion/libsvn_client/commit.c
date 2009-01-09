@@ -247,8 +247,8 @@ import_file(const svn_delta_editor_t *editor,
 
   /* Finally, close the file. */
   text_checksum =
-    svn_checksum_to_cstring(svn_checksum_from_digest(digest, svn_checksum_md5,
-                                                     pool), pool);
+    svn_checksum_to_cstring(svn_checksum__from_digest(digest, svn_checksum_md5,
+                                                      pool), pool);
 
   return editor->close_file(file_baton, text_checksum, pool);
 }
