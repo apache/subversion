@@ -373,8 +373,15 @@ svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
 }
 
 
-svn_stringbuf_t *
-svn_base64_from_checksum(svn_checksum_t *checksum, apr_pool_t *pool)
+/* Return a base64-encoded representation of CHECKSUM, allocated in POOL.
+   If CHECKSUM->kind is not recognized, return NULL.
+   ### That 'NULL' claim was in the header file when this was public, but
+   doesn't look true in the implementation.
+
+   ### This is now only used as a new implementation of svn_base64_from_md5();
+   it would probably be safer to revert that to its old implementation. */
+static svn_stringbuf_t *
+svn_base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
 {
   svn_stringbuf_t *checksum_str;
   unsigned char ingroup[3];
