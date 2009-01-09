@@ -310,10 +310,36 @@ public interface SVNClientInterface
      *                      limit)
      * @param callback      the object to receive the log messages
      * @since 1.5
+     * @deprecated Use {@link #logMessages(String, Revision, RevisionRange[],
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      */
     void logMessages(String path, Revision pegRevision,
                      Revision revisionStart,
                      Revision revisionEnd, boolean stopOnCopy,
+                     boolean discoverPath, boolean includeMergedRevisions,
+                     String[] revProps, long limit,
+                     LogMessageCallback callback)
+            throws ClientException;
+
+    /**
+     * Retrieve the log messages for an item.
+     * @param path          path or url to get the log message for.
+     * @param pegRevision   revision to interpret path
+     * @param revisionRanges an array of revision ranges to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath  returns the paths of the changed items in the
+     *                      returned objects
+     * @param includeMergedRevisions include log messages for revisions which
+     *                               were merged.
+     * @param revProps      the revprops to retrieve
+     * @param limit         limit the number of log messages (if 0 or less no
+     *                      limit)
+     * @param callback      the object to receive the log messages
+     * @since 1.6
+     */
+    void logMessages(String path, Revision pegRevision,
+                     RevisionRange[] ranges, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
                      String[] revProps, long limit,
                      LogMessageCallback callback)

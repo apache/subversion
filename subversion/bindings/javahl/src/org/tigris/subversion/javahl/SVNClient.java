@@ -293,12 +293,36 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #logMessages(String, Revision, RevisionRange[],
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      * @since 1.5
+     */
+    public void logMessages(String path,
+                            Revision pegRevision,
+                            Revision revisionStart,
+                            Revision revisionEnd,
+                            boolean stopOnCopy,
+                            boolean discoverPath,
+                            boolean includeMergedRevisions,
+                            String[] revProps,
+                            long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(revisionStart, revisionEnd);
+
+        logMessages(path, pegRevision, ranges, stopOnCopy, discoverPath,
+                    includeMergedRevisions, revProps, limit, callback);
+    }
+
+    /**
+     * @since 1.6
      */
     public native void logMessages(String path,
                                    Revision pegRevision,
-                                   Revision revisionStart,
-                                   Revision revisionEnd,
+                                   RevisionRange[] revisionRanges,
                                    boolean stopOnCopy,
                                    boolean discoverPath,
                                    boolean includeMergedRevisions,

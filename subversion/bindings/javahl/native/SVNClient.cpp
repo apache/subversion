@@ -202,10 +202,9 @@ void SVNClient::setPrompt(Prompter *prompter)
 }
 
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
-                            Revision &revisionStart,
-                            Revision &revisionEnd, bool stopOnCopy,
-                            bool discoverPaths, bool includeMergedRevisions,
-                            StringArray &revProps,
+                            std::vector<RevisionRange> &logRanges,
+                            bool stopOnCopy, bool discoverPaths,
+                            bool includeMergedRevisions, StringArray &revProps,
                             long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
@@ -220,14 +219,18 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    svn_opt_revision_range_t *range = (svn_opt_revision_range_t *)
-             apr_palloc(requestPool.pool(), sizeof(svn_opt_revision_range_t));
-    range->start = *revisionStart.revision();;
-    range->end = *revisionEnd.revision();
+    apr_array_header_t *ranges =
+        apr_array_make(requestPool.pool(), logRanges.size(),
+                       sizeof(svn_opt_revision_range_t *));
 
-    apr_array_header_t *ranges = apr_array_make(requestPool.pool(), 1,
-                                        sizeof(svn_opt_revision_range_t *));
-    APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+    std::vector<RevisionRange>::const_iterator it;
+    for (it = logRanges.begin(); it != logRanges.end(); ++it)
+    {
+        APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
+            it->toRange(requestPool);
+        if (JNIUtil::isExceptionThrown())
+            return;
+    }
 
     SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
                                 limit, discoverPaths, stopOnCopy,
