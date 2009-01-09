@@ -69,7 +69,8 @@ test_platform_specific_auth_providers(const char **msg,
 
   /* Test Keychain auth providers */
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
-  svn_auth_get_platform_specific_provider(&provider, "keychain", "simple",
+  svn_auth_get_platform_specific_provider(&provider, NULL, "keychain",
+                                          "simple", NULL, FALSE,
                                           pool);
 
   if (!provider)
@@ -78,8 +79,9 @@ test_platform_specific_auth_providers(const char **msg,
        "svn_auth_get_platform_specific_provider('keychain', 'simple') "
        "should not return NULL");
 
-  svn_auth_get_platform_specific_provider(&provider, "keychain",
-                                          "ssl_client_cert_pw", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "keychain",
+                                          "ssl_client_cert_pw", NULL,
+                                          FALSE, pool);
 
   if (!provider)
     return svn_error_createf
@@ -88,7 +90,8 @@ test_platform_specific_auth_providers(const char **msg,
        "'ssl_client_cert_pw') should not return NULL");
 
   /* Make sure you do not get a Windows auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "windows", "simple", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "windows",
+                                          "simple", NULL, FALSE, pool);
 
   if (provider)
     return svn_error_createf
@@ -99,7 +102,8 @@ test_platform_specific_auth_providers(const char **msg,
 
   /* Test Windows auth providers */
 #if defined(WIN32) && !defined(__MINGW32__)
-  svn_auth_get_platform_specific_provider(&provider, "windows", "simple",
+  svn_auth_get_platform_specific_provider(&provider, NULL, "windows",
+                                          "simple", NULL, FALSE,
                                           pool);
 
   if (!provider)
@@ -109,8 +113,8 @@ test_platform_specific_auth_providers(const char **msg,
        "should not return NULL");
 
 
-  svn_auth_get_platform_specific_provider(&provider, "windows", 
-                                          "ssl_client_cert_pw",
+  svn_auth_get_platform_specific_provider(&provider, NULL, "windows",
+                                          "ssl_client_cert_pw", NULL, FALSE,
                                           pool);
 
   if (!provider)
@@ -119,8 +123,9 @@ test_platform_specific_auth_providers(const char **msg,
        "svn_auth_get_platform_specific_provider('windows', "
        "'ssl_client_cert_pw') should not return NULL");
 
-  svn_auth_get_platform_specific_provider(&provider, "windows",
-                                          "ssl_server_trust", pool);
+  svn_auth_get_platform_specific_provider(&provider, NULL, "windows",
+                                          "ssl_server_trust", NULL, FALSE,
+                                          pool);
 
   if (!provider)
     return svn_error_createf
@@ -129,7 +134,8 @@ test_platform_specific_auth_providers(const char **msg,
        "'ssl_server_trust') should not return NULL");
 
   /* Make sure you do not get a Keychain auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "keychain", "simple",
+  svn_auth_get_platform_specific_provider(&provider, NULL, "keychain",
+                                          "simple", NULL, FALSE,
                                           pool);
 
   if (provider)
