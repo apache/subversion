@@ -803,6 +803,38 @@ Afterwards, we'll need:
 * Revamp of WC API, to propagate up into libsvn_client.
 * Reexamine any client/wc interactions, and look for final cleanups.
 
+Near-Term Plan
+--------------
+
+1. convert entries.c to use sqlite directly. migrate 'entries' file
+   during this step. the sqlite file will be in-memory if we are not
+   allowed to auto-upgrade the WC; otherwise, we'll write the sqlite
+   database into .svn/
+   note: the presence of 'wc.db' (or whatever its name) will indicate
+         a minimum format level. the user field in the database
+         contains the schema version which is our further format-level
+         descriptor value.
+
+2. convert entries.c to use wc_db. shift the sqlite code there.
+   note: this is a separate step from 1. there is a paradigm shift
+         between how entries.c works and wc_db works. we want to
+         ignore that in Step 1, and then handle it in this Step.
+   note: put wc_db handle into lock->shared and share the handle
+         across all directories/batons.
+
+3. convert props.c to use wc_db. migrate props to db simultaneously.
+
+4. incremental shift of pristines from N files into pristine db.
+   note: we could continue to leave .revert-base while we migrate the
+         primary base into the pristine dataset.
+
+5. shift libsvn_wc from using entries.h to using wc_db.h.
+   note: since entries.h is "merely" a wrapper for wc_db.h, this will
+         allow the libsvn_wc to start using the new wc_db APIs
+         wherever it is easy/possible.
+   goal: all libsvn_wc code uses wc_db.h and entries.h exists solely
+         to support old backwards-compat code.
+
 
 Other sections
 ==============
