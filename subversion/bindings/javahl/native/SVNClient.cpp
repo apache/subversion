@@ -226,8 +226,24 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     std::vector<RevisionRange>::const_iterator it;
     for (it = logRanges.begin(); it != logRanges.end(); ++it)
     {
-        APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
-            it->toRange(requestPool);
+        if (it->toRange(requestPool)->start.kind
+            == svn_opt_revision_unspecified
+            && it->toRange(requestPool)->end.kind
+            == svn_opt_revision_unspecified)
+        {
+            svn_opt_revision_range_t *range =
+                (svn_opt_revision_range_t *)apr_pcalloc(requestPool.pool(),
+                                                        sizeof(*range));
+            range->start.kind = svn_opt_revision_number;
+            range->start.value.number = 1;
+            range->end.kind = svn_opt_revision_head;
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
+        }
+        else
+        {
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
+                it->toRange(requestPool);
+        }
         if (JNIUtil::isExceptionThrown())
             return;
     }
