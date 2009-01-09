@@ -3234,8 +3234,8 @@ delta_read_md5_digest(void *baton)
 {
   struct delta_read_baton *drb = baton;
 
-  if (drb->checksum->kind == svn_checksum_md5)
-    return drb->checksum->digest;
+  if (svn_checksum_get_kind(drb->checksum) == svn_checksum_md5)
+    return svn_checksum_get_digest(drb->checksum);
   else
     return NULL;
 }

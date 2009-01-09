@@ -1134,7 +1134,7 @@ svn_io_file_checksum(unsigned char digest[],
   svn_checksum_t *checksum;
 
   SVN_ERR(svn_io_file_checksum2(&checksum, file, svn_checksum_md5, pool));
-  memcpy(digest, checksum->digest, APR_MD5_DIGESTSIZE);
+  memcpy(digest, svn_checksum_get_digest(checksum), APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }

@@ -77,7 +77,7 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
   int db_err;
 
   /* We only allow SHA1 checksums in this table. */
-  if (checksum->kind != svn_checksum_sha1)
+  if (svn_checksum_get_kind(checksum) != svn_checksum_sha1)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "checksum-reps table.\n"));
@@ -106,7 +106,7 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
   int db_err;
 
   /* We only allow SHA1 checksums in this table. */
-  if (checksum->kind != svn_checksum_sha1)
+  if (svn_checksum_get_kind(checksum) != svn_checksum_sha1)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "checksum-reps table.\n"));
@@ -149,7 +149,7 @@ svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
   DBT key;
 
   /* We only allow SHA1 checksums in this table. */
-  if (checksum->kind != svn_checksum_sha1)
+  if (svn_checksum_get_kind(checksum) != svn_checksum_sha1)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "checksum-reps table.\n"));

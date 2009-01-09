@@ -554,18 +554,18 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
     {
       svn_skel_t *checksum_skel = header_skel->children->next->next;
       rep->md5_checksum =
-        svn_checksum__from_digest((const unsigned char *)
-                                  (checksum_skel->children->next->data),
-                                  svn_checksum_md5, pool);
+        svn_checksum_from_digest((const unsigned char *)
+                                 (checksum_skel->children->next->data),
+                                 svn_checksum_md5, pool);
 
       /* SHA1 */
       if (header_skel->children->next->next->next)
         {
           checksum_skel = header_skel->children->next->next->next;
           rep->sha1_checksum =
-            svn_checksum__from_digest((const unsigned char *)
-                                      (checksum_skel->children->next->data),
-                                      svn_checksum_sha1, pool);
+            svn_checksum_from_digest((const unsigned char *)
+                                     (checksum_skel->children->next->data),
+                                     svn_checksum_sha1, pool);
         }
     }
 
@@ -1102,17 +1102,17 @@ prepend_checksum(svn_skel_t *skel,
 {
   svn_skel_t *checksum_skel = svn_skel__make_empty_list(pool);
 
-  switch (checksum->kind)
+  switch (svn_checksum_get_kind(checksum))
     {
     case svn_checksum_md5:
-      svn_skel__prepend(svn_skel__mem_atom(checksum->digest,
+      svn_skel__prepend(svn_skel__mem_atom(svn_checksum_get_digest(checksum),
                                            APR_MD5_DIGESTSIZE, pool),
                         checksum_skel);
       svn_skel__prepend(svn_skel__str_atom("md5", pool), checksum_skel);
       break;
 
     case svn_checksum_sha1:
-      svn_skel__prepend(svn_skel__mem_atom(checksum->digest,
+      svn_skel__prepend(svn_skel__mem_atom(svn_checksum_get_digest(checksum),
                                            APR_SHA1_DIGESTSIZE, pool),
                         checksum_skel);
       svn_skel__prepend(svn_skel__str_atom("sha1", pool), checksum_skel);

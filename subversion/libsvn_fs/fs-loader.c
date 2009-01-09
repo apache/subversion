@@ -970,7 +970,7 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
 {
   SVN_ERR(root->vtable->file_checksum(checksum, kind, root, path, pool));
 
-  if (force && (*checksum == NULL || (*checksum)->kind != kind))
+  if (force && (*checksum == NULL || svn_checksum_get_kind(*checksum) != kind))
     {
       svn_stream_t *contents, *checksum_contents;
 
@@ -996,7 +996,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
 
   SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
                                pool));
-  memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
+  memcpy(digest, svn_checksum_get_digest(md5sum), APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
