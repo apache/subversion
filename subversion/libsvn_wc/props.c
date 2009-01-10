@@ -113,8 +113,7 @@ load_props(apr_hash_t **hash,
   apr_finfo_t finfo;
   const char *prop_path;
 
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, FALSE,
-                            pool));
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, pool));
 
   *hash = apr_hash_make(pool);
   /* We shouldn't be calling load_prop_file() with an empty file, but
@@ -369,7 +368,7 @@ install_props_file(svn_stringbuf_t **log_accum,
     node_kind = svn_node_file;
 
   SVN_ERR(svn_wc__prop_path(&propfile_path, path,
-                            node_kind, wc_prop_kind, FALSE, pool));
+                            node_kind, wc_prop_kind, pool));
 
   /* Write the property hash into a temporary file. */
   SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props, 
@@ -440,7 +439,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       const char *working_propfile_path;
 
       SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
-                                kind, svn_wc__props_working, FALSE, pool));
+                                kind, svn_wc__props_working, pool));
 
       if (! has_propcaching || (entry && entry->has_prop_mods))
         SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
@@ -460,7 +459,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
           const char *base_propfile_path;
 
           SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
-                                    kind, svn_wc__props_base, FALSE, pool));
+                                    kind, svn_wc__props_base, pool));
 
           if (! has_propcaching || (entry && entry->has_props))
             SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
@@ -492,9 +491,9 @@ svn_wc__working_props_committed(const char *path,
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&working, path, entry->kind,
-                            svn_wc__props_working, FALSE, pool));
+                            svn_wc__props_working, pool));
   SVN_ERR(svn_wc__prop_path(&base, path, entry->kind,
-                            svn_wc__props_base, FALSE, pool));
+                            svn_wc__props_base, pool));
 
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
@@ -520,8 +519,7 @@ svn_wc__props_last_modified(apr_time_t *mod_time,
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
-                            FALSE, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
 
   err = svn_io_file_affected_time(mod_time, props_file, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -754,7 +752,7 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
       SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
       SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
-                                FALSE, pool));
+                                pool));
       SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
     }
 
@@ -831,7 +829,7 @@ svn_wc__props_delete(const char *path,
 
       SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
       SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
-                                FALSE, pool));
+                                pool));
       SVN_ERR(remove_file_if_present(props_file, pool));
     }
 
@@ -855,9 +853,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
      item. But do we really need show_hidden = TRUE here? */
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
-  SVN_ERR(svn_wc__prop_path(&dst_rprop, path,
-                            entry->kind, svn_wc__props_revert, FALSE, pool));
-
+  SVN_ERR(svn_wc__prop_path(&dst_rprop, path, entry->kind, svn_wc__props_revert,
+                            pool));
   if (entry->kind == svn_node_dir)
     SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop, path,
                                     svn_io_file_del_none, pool));
@@ -865,8 +862,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
     SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop,
                                     svn_path_dirname(path, pool),
                                     svn_io_file_del_none, pool));
-  SVN_ERR(svn_wc__prop_path(&dst_bprop, path,
-                            entry->kind, svn_wc__props_base, FALSE, pool));
+  SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind, svn_wc__props_base,
+                            pool));
 
   /* If prop base exist, copy it to revert base. */
   SVN_ERR(svn_io_check_path(dst_bprop, &kind, pool));
@@ -916,9 +913,9 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&base_file, path, entry->kind, svn_wc__props_base,
-                            FALSE, pool));
+                            pool));
   SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
-                            svn_wc__props_revert, FALSE, pool));
+                            svn_wc__props_revert, pool));
 
   return svn_wc__loggy_move(log_accum, adm_access,
                             revert_file, base_file, pool);
@@ -2662,8 +2659,7 @@ empty_props_p(svn_boolean_t *empty_p,
   apr_finfo_t finfo;
   const char *prop_path;
 
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, FALSE,
-                            pool));
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, pool));
 
   err = svn_io_stat(&finfo, prop_path, APR_FINFO_MIN | APR_FINFO_TYPE, pool);
   if (err)
@@ -2809,9 +2805,9 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
 
       /* Get the paths of the working and 'base' prop files. */
       SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                                svn_wc__props_working, FALSE, subpool));
+                                svn_wc__props_working, subpool));
       SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
-                                svn_wc__props_base, FALSE, subpool));
+                                svn_wc__props_base, subpool));
 
       /* Check if the local and prop-base file have *definitely*
          different filesizes. */
