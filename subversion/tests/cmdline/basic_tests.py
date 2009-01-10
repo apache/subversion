@@ -2393,6 +2393,22 @@ def basic_auth_test(sbox):
     svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
+def basic_add_svn_format_file(sbox):
+  'test add --parents .svn/format'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  entries_path = os.path.join(wc_dir, '.svn', 'format')
+
+  output = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # The .svn directory and the format file should not be added as this
+  # breaks the administrative area handling, so we expect some error here
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', '--parents', entries_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, output)
 
 #----------------------------------------------------------------------
 
@@ -2447,6 +2463,7 @@ test_list = [ None,
               basic_relative_url_non_canonical,
               basic_relative_url_with_peg_revisions,
               basic_auth_test,
+              XFail(basic_add_svn_format_file),
              ]
 
 if __name__ == '__main__':
