@@ -857,8 +857,14 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
   SVN_ERR(svn_wc__prop_path(&dst_rprop, path,
                             entry->kind, svn_wc__props_revert, FALSE, pool));
-  SVN_ERR(svn_wc__prop_path(&tmp_rprop, path,
-                            entry->kind, svn_wc__props_revert, TRUE, pool));
+
+  if (entry->kind == svn_node_dir)
+    SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop, path,
+                                    svn_io_file_del_none, pool));
+  else
+    SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop,
+                                    svn_path_dirname(path, pool),
+                                    svn_io_file_del_none, pool));
   SVN_ERR(svn_wc__prop_path(&dst_bprop, path,
                             entry->kind, svn_wc__props_base, FALSE, pool));
 
