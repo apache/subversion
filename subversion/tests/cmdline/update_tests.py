@@ -4016,8 +4016,8 @@ def tree_conflicts_on_update_2_1(sbox):
 
   expected_status = deep_trees_status_local_leaf_edit
   expected_status.tweak(
-    #'D/D1',
-    # The expectation on 'alpha' reflects partial progress on issue #3334.
+    # These incomplete expectations reflect partial progress on issue #3334.
+    'D/D1',
     'F/alpha',
     #'DD/D1',
     #'DF/D1',
