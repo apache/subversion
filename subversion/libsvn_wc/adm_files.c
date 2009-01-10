@@ -351,7 +351,6 @@ svn_wc__prop_path(const char **prop_path,
                   const char *path,
                   svn_node_kind_t node_kind,
                   svn_wc__props_kind_t props_kind,
-                  svn_boolean_t tmp,
                   apr_pool_t *pool)
 {
   if (node_kind == svn_node_dir)  /* It's a working copy dir */
@@ -366,7 +365,7 @@ svn_wc__prop_path(const char **prop_path,
       *prop_path = extend_with_adm_name
         (path,
          NULL,
-         tmp,
+         FALSE,
          pool,
          names[props_kind],
          NULL);
@@ -393,7 +392,7 @@ svn_wc__prop_path(const char **prop_path,
       *prop_path = extend_with_adm_name
         (*prop_path,
          extensions[props_kind],
-         tmp,
+         FALSE,
          pool,
          dirs[props_kind],
          base_name,
@@ -615,7 +614,7 @@ svn_wc__write_old_wcprops(const char *path,
   /* Close file, then do an atomic "move". */
 
   SVN_ERR(svn_wc__prop_path(&prop_path, path, kind, svn_wc__props_wcprop,
-                            FALSE, pool));
+                            pool));
   SVN_ERR(svn_io_file_rename(temp_prop_path, prop_path, pool));
   return svn_io_set_file_read_only(prop_path, FALSE, pool);
 }
