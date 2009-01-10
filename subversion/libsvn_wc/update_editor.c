@@ -1663,6 +1663,71 @@ already_in_a_tree_conflict(char **victim_path,
   return SVN_NO_ERROR;
 }
 
+/* Schedule the WC item named NAME in directory PARENT_PATH, whose entry is
+ * ENTRY, for re-addition as a copy with history of (ENTRY->url)@(ENTRY->rev).
+ * Assume that the item exists locally and is scheduled as still existing with
+ * some local modifications relative to its (old) base, but does not exist in
+ * the repository at the target revision.
+ *
+ * Use the local content of the item, even if it
+ * If the item is a directory, recursively schedule its contents to be the
+ * contents of the re-added tree, even if they are locally modified relative
+ * to it.
+ *
+ * Make changes to entries immediately, not loggily, because that is easier
+ * to keep track of when multiple directories are involved.
+ *  */
+static svn_error_t *
+schedule_existing_item_for_re_add(svn_wc_entry_t *entry,
+                                  struct edit_baton *eb,
+                                  const char *parent_path,
+                                  const char *name,
+                                  apr_pool_t *pool)
+{
+  svn_wc_entry_t tmp_entry;
+  apr_uint64_t flags = 0;
+  svn_wc_adm_access_t *entry_adm_access;
+
+  /* Update the details of the base rev/url to reflect the incoming
+   * delete, while leaving the working version as it is, scheduling it
+   * for re-addition unless it was already non-existent. */
+  tmp_entry.revision = *(eb->target_revision);
+  flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+  /* ### If it's a switch, need to update the "url" field too:
+   * see issue #3334. Otherwise it hasn't actually been switched.
+   * tmp_entry.url = ?
+   * flags |= SVN_WC__ENTRY_MODIFY_URL; */
+
+  /* Schedule the working version to be re-added. */
+  tmp_entry.schedule = svn_wc_schedule_add;
+  flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+  flags |= SVN_WC__ENTRY_MODIFY_FORCE;
+
+  tmp_entry.copyfrom_url = entry->url;
+  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+  tmp_entry.copyfrom_rev = entry->revision;
+  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+  tmp_entry.copied = TRUE;
+  flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+
+  /* ### Need to change the "base" into a "revert-base" ? */
+
+  /* Determine which adm dir holds this node's entry */
+  /* ### But this will fail if eb->adm_access holds only a shallow lock. */
+  SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, eb->adm_access,
+                              (entry->kind == svn_node_dir) ? full_path
+                              : parent_path, pool));
+
+  SVN_ERR(svn_wc__entry_modify(entry_adm_access, name, &tmp_entry, flags,
+                               TRUE /* do_sync */, pool));
+
+  if (entry->kind == svn_node_dir)
+    {
+      /* ### Need to set 'copied' recursively, in order to support the
+       * cases where this is a directory. Is there more too? */
+    }
+}
+
 /* Delete PATH from its immediate parent PARENT_PATH, in the edit
  * represented by EB.  Name temporary transactional logs based on
  * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
@@ -1738,55 +1803,8 @@ do_entry_deletion(struct edit_baton *eb,
                               svn_node_none, their_url, pool));
   if (tree_conflict != NULL)
     {
-      svn_wc_entry_t tmp_entry;
-      apr_uint64_t flags;
-
-      /* Update the details of the base version to reflect the incoming
-       * delete, while leaving the working version as it is, scheduling it
-       * for re-addition unless it was already non-existent. */
-      tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.deleted = TRUE;
-      flags = SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_DELETED;
-
-      if (tree_conflict->reason == svn_wc_conflict_reason_edited)
-        {
-          /* Schedule the working version to be re-added. */
-          tmp_entry.schedule = svn_wc_schedule_add;
-          tmp_entry.copyfrom_url = entry->url;
-          tmp_entry.copyfrom_rev = entry->revision;
-          tmp_entry.copied = TRUE;
-          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE
-            | SVN_WC__ENTRY_MODIFY_FORCE
-            | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-            | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-            | SVN_WC__ENTRY_MODIFY_COPIED;
-          /* ### Need to change the "base" into a "revert-base" ? */
-
-          SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
-                                             full_path, &tmp_entry, flags,
-                                             pool));
-          /* ### Need to set 'copied' recursively */
-        }
-      else
-        {
-          /* ### We're not ready to handle this case yet, so just leave
-             the update not done. */
-          /* Complete the deletion that was scheduled.
-          SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
-                                             full_path, &tmp_entry, flags,
-                                             pool));
-           */
-        }
-
-      /* Run the log immediately, so that the tree conflict is recorded. */
-      /* ### What's the significance of "immediately"? */
-      SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
-                                pool));
-      SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
-      *log_number = 0;
-
       /* When we raise a tree conflict on a directory, we want to avoid
-       * making any changes inside it. (Will an update will ever try to make
+       * making any changes inside it. (Will an update ever try to make
        * further changes to or inside a directory it's just deleted?) */
       remember_skipped_tree(eb, full_path);
 
@@ -1797,7 +1815,36 @@ do_entry_deletion(struct edit_baton *eb,
                                                 pool),
                            pool);
 
-      return SVN_NO_ERROR;
+      if (tree_conflict->reason == svn_wc_conflict_reason_edited)
+        {
+          /* The item exists locally and has some sort of local mod.
+           * It no longer exists in its WC parent's repository directory
+           * (### assuming that dir was updated), so
+           * we must schedule the existing content for add-with-history,
+           * and if it is a dir then process its children similarly. */
+
+          /* First run the log in the parent dir, to record the tree conflict,
+           * in case the following command needs to modify the same entries. */
+          SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
+                                    pool));
+          SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+          *log_number = 0;
+
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
+                                                    path, pool));
+          return SVN_NO_ERROR;
+        }
+      else if (conflict->reason == svn_wc_conflict_reason_deleted)
+        {
+          /* The item does not exist locally (except perhaps as a skeleton
+           * directory tree) because it was already scheduled for delete.
+           * We must complete the deletion, leaving the tree conflict info
+           * as the only difference from a normal deletion. */
+
+          /* Fall through to the normal "delete" code path. */
+        }
+      else
+        SVN_ERR_MALFUNCTION;  /* other reasons are not expected here */
     }
 
   /* Issue a loggy command to delete the entry from version control and to
@@ -1878,7 +1925,8 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
   *log_number = 0;
 
-  if (eb->notify_func)
+  /* Notify. (If tree_conflict, we've already notified.) */
+  if (eb->notify_func && tree_conflict == NULL)
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(full_path, svn_wc_notify_update_delete, pool);
