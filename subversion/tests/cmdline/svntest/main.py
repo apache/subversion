@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -27,10 +27,13 @@ import threading
 try:
   # Python >=3.0
   import queue
+  from urllib.parse import quote as urllib_parse_quote
+  from urllib.parse import unquote as urllib_parse_unquote
 except ImportError:
   # Python <3.0
   import Queue as queue
-import urllib
+  from urllib import quote as urllib_parse_quote
+  from urllib import unquote as urllib_parse_unquote
 
 import getopt
 try:
@@ -140,14 +143,14 @@ def pathname2url(path):
   """Convert the pathname PATH from the local syntax for a path to the form
   used in the path component of a URL. This does not produce a complete URL.
   The return value will already be quoted using the quote() function."""
-  return urllib.quote(path.replace('\\', '/'))
+  return urllib_parse_quote(path.replace('\\', '/'))
 
 # This function mimics the Python 2.3 urllib function of the same name.
 def url2pathname(path):
   """Convert the path component PATH from an encoded URL to the local syntax
   for a path. This does not accept a complete URL. This function uses
   unquote() to decode PATH."""
-  return os.path.normpath(urllib.unquote(path))
+  return os.path.normpath(urllib_parse_unquote(path))
 
 ######################################################################
 # Global variables set during option parsing.  These should not be used
