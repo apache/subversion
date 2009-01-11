@@ -68,6 +68,9 @@ APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
+dnl Search for pkg-config
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
@@ -264,6 +267,9 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
 
+AC_SUBST(SVN_DB_INCLUDES)
+AC_SUBST(SVN_DB_LIBS)
+
 SVN_LIB_SASL
 
 if test "$svn_lib_sasl" = "yes"; then
@@ -324,11 +330,6 @@ AC_PREPROC_IFELSE([
   APR_HAS_DSO="no"
   AC_MSG_RESULT([no]))
 CPPFLAGS="$old_CPPFLAGS"
-
-
-dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
-
-AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
 
 
 dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------

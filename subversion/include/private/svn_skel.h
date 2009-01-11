@@ -76,7 +76,7 @@ extern "C" {
 
 /* A structure representing the results of parsing an array of bytes
    as a skel.  */
-struct skel_t {
+struct svn_skel_t {
 
   /* True if the string was an atom, false if it was a list.
 
@@ -93,10 +93,10 @@ struct skel_t {
   /* If the string is a list, CHILDREN is a pointer to a
      null-terminated linked list of skel objects representing the
      elements of the list, linked through their NEXT pointers.  */
-  struct skel_t *children;
-  struct skel_t *next;
+  struct svn_skel_t *children;
+  struct svn_skel_t *next;
 };
-typedef struct skel_t skel_t;
+typedef struct svn_skel_t svn_skel_t;
 
 
 
@@ -110,40 +110,40 @@ typedef struct skel_t skel_t;
 
    The returned skel objects point into the block indicated by DATA
    and LEN; we don't copy the contents. */
-skel_t *svn_skel__parse(const char *data, apr_size_t len,
-                        apr_pool_t *pool);
+svn_skel_t *svn_skel__parse(const char *data, apr_size_t len,
+                            apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the C string STR, allocated
    from POOL.  */
-skel_t *svn_skel__str_atom(const char *str, apr_pool_t *pool);
+svn_skel_t *svn_skel__str_atom(const char *str, apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the LEN bytes at ADDR,
    allocated from POOL.  */
-skel_t *svn_skel__mem_atom(const void *addr, apr_size_t len,
-                           apr_pool_t *pool);
+svn_skel_t *svn_skel__mem_atom(const void *addr, apr_size_t len,
+                               apr_pool_t *pool);
 
 
 /* Create an empty list skel, allocated from POOL.  */
-skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
+svn_skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
 
 
 /* Prepend SKEL to LIST.  */
-void svn_skel__prepend(skel_t *skel, skel_t *list);
+void svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list);
 
 
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
-svn_stringbuf_t *svn_skel__unparse(const skel_t *skel, apr_pool_t *pool);
+svn_stringbuf_t *svn_skel__unparse(const svn_skel_t *skel, apr_pool_t *pool);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */
-svn_boolean_t svn_skel__matches_atom(const skel_t *skel, const char *str);
+svn_boolean_t svn_skel__matches_atom(const svn_skel_t *skel, const char *str);
 
 
 /* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
-int svn_skel__list_length(const skel_t *skel);
+int svn_skel__list_length(const svn_skel_t *skel);
 
 
 #ifdef __cplusplus

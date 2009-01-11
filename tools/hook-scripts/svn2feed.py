@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # ====================================================================
 # Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
@@ -80,7 +81,12 @@ if sys.version_info < (2, 3):
 import getopt
 import os
 import subprocess
-import cPickle as pickle
+try:
+  # Python <3.0
+  import cPickle as pickle
+except ImportError:
+  # Python >=3.0
+  import pickle
 import datetime
 import time
 

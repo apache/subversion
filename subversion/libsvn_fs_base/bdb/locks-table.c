@@ -74,7 +74,7 @@ svn_fs_bdb__lock_add(svn_fs_t *fs,
                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *lock_skel;
+  svn_skel_t *lock_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
@@ -121,7 +121,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
-  skel_t *skel;
+  svn_skel_t *skel;
   svn_lock_t *lock;
 
   svn_fs_base__trail_debug(trail, "lock", "get");

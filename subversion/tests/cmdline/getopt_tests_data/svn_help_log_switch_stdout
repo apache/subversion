@@ -11,6 +11,10 @@ usage: 1. log [PATH]
      the URL is looked up in HEAD, and the default revision range is
      HEAD:1.
 
+  Multiple '-c' and '-r' instances may be specified (but not a
+  combination of '-c' and '-r' flags), and mixing of forward and
+  reverse ranges is allowed.
+
   With -v, also print all affected paths with each log message.
   With -q, don't print the log message body itself (note that this is
   compatible with -v).
@@ -57,6 +61,11 @@ Global options:
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
+  --config-option ARG      : set user configuration option in the format:
+                                 FILE:SECTION:OPTION=[VALUE]
+                             For example:
+                                 servers:global:http-library=serf
+
 
 switch (sw): Update the working copy to a different URL.
 usage: 1. switch URL[@PEGREV] [PATH]
@@ -124,4 +133,9 @@ Global options:
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
+  --config-option ARG      : set user configuration option in the format:
+                                 FILE:SECTION:OPTION=[VALUE]
+                             For example:
+                                 servers:global:http-library=serf
+
 

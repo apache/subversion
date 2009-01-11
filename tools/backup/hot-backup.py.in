@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #  hot-backup.py: perform a "hot" backup of a Subversion repository
 #                 and clean any old Berkeley DB logfiles after the
@@ -31,7 +32,7 @@
 
 import sys, os, getopt, stat, re, time, shutil
 
-# Try to import the subprocess mode.  It works better then os.popen3
+# Try to import the subprocess module.  It works better then os.popen3
 # and os.spawnl on Windows when spaces appear in any of the svnadmin,
 # svnlook or repository paths.  os.popen3 and os.spawnl are still used
 # to support Python 2.3 and older which do not provide the subprocess

@@ -49,8 +49,16 @@
 #define Py_RETURN_NONE return Py_INCREF(Py_None), Py_None
 #endif
 
-
+/* Py_ssize_t for old Pythons */
+/* This code is as recommended by: */
+/* http://www.python.org/dev/peps/pep-0353/#conversion-guidelines */
+#if PY_VERSION_HEX < 0x02050000 && !defined(PY_SSIZE_T_MIN)
+typedef int Py_ssize_t;
+# define PY_SSIZE_T_MAX INT_MAX
+# define PY_SSIZE_T_MIN INT_MIN
+#endif
 
+
 /*** Manage the Global Interpreter Lock ***/
 
 /* If both Python and APR have threads available, we can optimize ourselves
@@ -2976,7 +2984,7 @@ ra_callbacks_get_wc_prop(void *baton,
   else if (result != Py_None)
     {
       char *buf;
-      int len;
+      Py_ssize_t len;
       if (PyString_AsStringAndSize(result, &buf, &len) == -1)
         {
       	  err = callback_exception_error();

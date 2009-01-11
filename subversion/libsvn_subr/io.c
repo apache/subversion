@@ -1116,9 +1116,8 @@ svn_io_file_checksum2(svn_checksum_t **checksum,
 
   SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
   file_stream = svn_stream_from_aprfile2(f, FALSE, pool);
-  checksum_stream = svn_stream_checksummed2(file_stream, checksum, kind,
-                                            NULL, svn_checksum_md5, TRUE,
-                                            pool);
+  checksum_stream = svn_stream_checksummed2(file_stream, checksum, NULL, kind,
+                                            TRUE, pool);
 
   /* Because the checksummed stream will force the reading (and
      checksumming) of all the file's bytes, we can just close the stream

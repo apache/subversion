@@ -19,8 +19,6 @@
 /* ==================================================================== */
 
 /*** Includes. ***/
-#include <stdlib.h>
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
@@ -397,12 +395,11 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
             }
 #ifdef CHOOSABLE_DAV_MODULE
           /* Now, which DAV-based RA method do we want to use today? */
-          if (! (http_library = getenv("SVN_HTTP_LIBRARY")))
-            http_library
-              = svn_config_get_server_setting(servers,
-                                              server_group, /* NULL is OK */
-                                              SVN_CONFIG_OPTION_HTTP_LIBRARY,
-                                              "neon");
+          http_library
+            = svn_config_get_server_setting(servers,
+                                            server_group, /* NULL is OK */
+                                            SVN_CONFIG_OPTION_HTTP_LIBRARY,
+                                            "neon");
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)

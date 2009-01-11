@@ -60,6 +60,8 @@ def _usage_exit():
   print("  --server-minor-version : the minor version of the server being")
   print("                           tested")
   print(" --config-file           : Configuration file for tests")
+  print(" --fsfs-sharding         : Specify shard size (for fsfs)")
+  print(" --fsfs-packing          : Run 'svnadmin pack' automatically")
 
   sys.exit(0)
 
@@ -90,6 +92,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
                         'httpd-server', 'http-library=', 'help',
+                        'fsfs-packing', 'fsfs-sharding=',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version='])
 if len(args) > 1:
@@ -110,6 +113,8 @@ list_tests = None
 enable_sasl = None
 svn_bin = None
 parallel = None
+fsfs_sharding = None
+fsfs_packing = None
 server_minor_version = None
 config_file = None
 
@@ -144,6 +149,10 @@ for opt, val in opts:
     httpd_service = 1
   elif opt == '--http-library':
     http_library = val
+  elif opt == '--fsfs-sharding':
+    fsfs_sharding = int(val)
+  elif opt == '--fsfs-packing':
+    fsfs_packing = 1
   elif opt == '--list':
     list_tests = 1
   elif opt == '--enable-sasl':
@@ -575,8 +584,9 @@ th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, http_library,
                            server_minor_version, 1, cleanup,
-                           enable_sasl, parallel, config_file, list_tests,
-                           svn_bin)
+                           enable_sasl, parallel, config_file,
+                           fsfs_sharding, fsfs_packing,
+                           list_tests, svn_bin)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)

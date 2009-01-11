@@ -349,10 +349,10 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data)
 {
+#if !SERF_VERSION_AT_LEAST(0,3,0)
   svn_ra_serf__session_t *serf_sess = data;
   int i;
 
-#if !SERF_VERSION_AT_LEAST(0,3,0)
   /* If we are cleaning up due to an error, don't call connection_close
    * as we're already on our way out of here and we'll defer to serf's
    * cleanups.

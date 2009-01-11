@@ -11,10 +11,15 @@ import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
 
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  try:
+    from cStringIO import StringIO
+  except ImportError:
+    from StringIO import StringIO
 
 import gen_base
 import ezt

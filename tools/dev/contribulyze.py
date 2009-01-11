@@ -43,7 +43,12 @@ try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
-from urllib import quote as url_encode
+try:
+  # Python >=3.0
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  from urllib import quote as urllib_parse_quote
 
 # Pretend we have true booleans on older python versions
 try:
@@ -315,7 +320,7 @@ class Contributor:
       retval = ''.join(self.real_name.lower().split(' '))
     if retval is None:
       complain('Unable to construct a canonical name for Contributor.', True)
-    return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
+    return urllib_parse_quote(retval, safe="!#$&'()+,;<=>@[]^`{}~")
 
   def big_name(self, html=False, html_eo=False):
     """Return as complete a name as possible for this contributor.
@@ -674,7 +679,7 @@ def drop(revision_url_pattern):
           urlpath = "%s/%s.html" % (detail_subdir, c.canonical_name())
           fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
           index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
-                      % (url_encode(urlpath),
+                      % (urllib_parse_quote(urlpath),
                          c.big_name(html=True),
                          c.score_str(), committerness))
           c.html_out(revision_url_pattern, fname)

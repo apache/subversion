@@ -202,10 +202,9 @@ void SVNClient::setPrompt(Prompter *prompter)
 }
 
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
-                            Revision &revisionStart,
-                            Revision &revisionEnd, bool stopOnCopy,
-                            bool discoverPaths, bool includeMergedRevisions,
-                            StringArray &revProps,
+                            std::vector<RevisionRange> &logRanges,
+                            bool stopOnCopy, bool discoverPaths,
+                            bool includeMergedRevisions, StringArray &revProps,
                             long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
@@ -220,13 +219,37 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_log4(targets,
-                                pegRevision.revision(),
-                                revisionStart.revision(),
-                                revisionEnd.revision(),
-                                limit,
-                                discoverPaths,
-                                stopOnCopy,
+    apr_array_header_t *ranges =
+        apr_array_make(requestPool.pool(), logRanges.size(),
+                       sizeof(svn_opt_revision_range_t *));
+
+    std::vector<RevisionRange>::const_iterator it;
+    for (it = logRanges.begin(); it != logRanges.end(); ++it)
+    {
+        if (it->toRange(requestPool)->start.kind
+            == svn_opt_revision_unspecified
+            && it->toRange(requestPool)->end.kind
+            == svn_opt_revision_unspecified)
+        {
+            svn_opt_revision_range_t *range =
+                (svn_opt_revision_range_t *)apr_pcalloc(requestPool.pool(),
+                                                        sizeof(*range));
+            range->start.kind = svn_opt_revision_number;
+            range->start.value.number = 1;
+            range->end.kind = svn_opt_revision_head;
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
+        }
+        else
+        {
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
+                it->toRange(requestPool);
+        }
+        if (JNIUtil::isExceptionThrown())
+            return;
+    }
+
+    SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
+                                limit, discoverPaths, stopOnCopy,
                                 includeMergedRevisions,
                                 revProps.array(requestPool),
                                 LogMessageCallback::callback, callback, ctx,
@@ -1173,6 +1196,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     /* Populate the registered providers with the platform-specific providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
                                                                 config,
+                                                                NULL,
+                                                                NULL,
+                                                                FALSE,
                                                                 pool),
                 NULL);
 
@@ -1187,8 +1213,11 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     /* The server-cert, client-cert, and client-cert-password providers. */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                        NULL,
                                                         "windows",
                                                         "ssl_server_trust",
+                                                        NULL,
+                                                        FALSE,
                                                         pool),
                 NULL);
 
