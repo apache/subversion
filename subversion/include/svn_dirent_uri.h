@@ -124,10 +124,9 @@ svn_dirent_join_many(apr_pool_t *pool,
                      ...);
 
 /** Get the basename of the specified canonicalized @a dirent.  The
- * basename is defined as the last component of the dirent (ignoring any
- * trailing slashes).  If the @a dirent is root ("/", "X:/", "//server/share/"),
- * then that is returned.  Otherwise, the returned value will have no slashes
- * in it.
+ * basename is defined as the last component of the dirent.  If the @a dirent 
+ * is root ("/", "X:/", "//server/share/"), then that is returned.  Otherwise,
+ * the returned value will have no slashes in it.
  *
  * Example: svn_dirent_basename("/foo/bar") -> "bar"
  *
@@ -185,6 +184,38 @@ svn_dirent_split(const char *dirent,
                  const char **dirpath,
                  const char **base_name,
                  apr_pool_t *pool);
+
+/** Get the basename of the specified canonicalized @a uri.  The
+ * basename is defined as the last component of the uri.  If the @a dirent 
+ * is root then that is returned. Otherwise, the returned value will have no 
+ * slashes in it.
+ *
+ * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
+ *
+ * The returned basename will be allocated in @a pool.
+ *
+ * @note If an empty string is passed, then an empty string will be returned.
+ *
+ * @since New in 1.6.
+ */
+char *
+svn_uri_basename(const char *uri,
+                 apr_pool_t *pool);
+
+/** Get the dirname of the specified canonicalized @a uri, defined as
+ * the dirent with its basename removed.
+ *
+ * If @a dirent is root  (e.g. "http://server"), it is returned
+ * unchanged.
+ *
+ * The returned dirname will be allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+char *
+svn_uri_dirname(const char *dirent,
+                   apr_pool_t *pool);
+
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
  * hand, amongst which '/foo' on all platforms or 'X:/foo', 
