@@ -2405,7 +2405,8 @@ def basic_add_svn_format_file(sbox):
 
   # The .svn directory and the format file should not be added as this
   # breaks the administrative area handling, so we expect some error here
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, None, 
+                                     ".*reserved name.*",
                                      'add', '--parents', entries_path)
 
   svntest.actions.run_and_verify_status(wc_dir, output)
@@ -2463,7 +2464,7 @@ test_list = [ None,
               basic_relative_url_non_canonical,
               basic_relative_url_with_peg_revisions,
               basic_auth_test,
-              XFail(basic_add_svn_format_file),
+              basic_add_svn_format_file,
              ]
 
 if __name__ == '__main__':
