@@ -214,7 +214,7 @@ svn_uri_basename(const char *uri,
  */
 char *
 svn_uri_dirname(const char *dirent,
-                   apr_pool_t *pool);
+                apr_pool_t *pool);
 
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
@@ -305,12 +305,14 @@ svn_boolean_t
 svn_dirent_is_canonical(const char *dirent,
                         apr_pool_t *pool);
 
-/** Return @c TRUE iff @a uri is canonical.
+/** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
+ * allocations.
  *
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_uri_is_canonical(const char *uri);
+svn_uri_is_canonical(const char *uri,
+                     apr_pool_t *pool);
 
 /** Return the longest common dirent shared by two canonicalized dirents,
  * @a dirent1 and @a dirent2.  If there's no common ancestor, return the
