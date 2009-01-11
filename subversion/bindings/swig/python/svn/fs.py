@@ -33,7 +33,12 @@ except ImportError:
   # Python <2.4
   _platform_with_subprocess = False
   import popen2 as _popen2
-import __builtin__
+try:
+  # Python >=3.0
+  import builtins
+except ImportError:
+  # Python <3.0
+  import __builtin__ as builtins
 import svn.core as _svncore
 
 
@@ -71,8 +76,8 @@ class FileDiff:
     return 0
 
   def _dump_contents(self, file, root, path, pool=None):
-    fp = __builtin__.open(file, 'w+') # avoid namespace clash with
-                                      # trimmed-down svn_fs_open()
+    fp = builtins.open(file, 'w+') # avoid namespace clash with
+                                   # trimmed-down svn_fs_open()
     if path is not None:
       stream = file_contents(root, path, pool)
       try:

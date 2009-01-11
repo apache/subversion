@@ -365,7 +365,7 @@ svn_handle_warning(FILE *stream,
   do {                                                       \
     svn_error__malfunction(FALSE, __FILE__, __LINE__, NULL); \
     abort();                                                 \
-  } while (0)
+  } while (1)
 
 /** Check that a condition is true: if not, report an error and possibly
  * terminate the program.

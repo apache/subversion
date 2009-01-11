@@ -30,6 +30,7 @@
 #endif
 
 #include <locale.h>
+#include <math.h>
 
 #include "svn_nls.h"
 #include "svn_pools.h"

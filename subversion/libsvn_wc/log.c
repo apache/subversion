@@ -1858,14 +1858,12 @@ run_log(svn_wc_adm_access_t *adm_access,
   /* If the logs included tree conflicts, write them to the entry. */
   if (loggy->tree_conflicts_added)
     {
-      char *conflict_data;
       svn_wc_entry_t tmp_entry;
       svn_error_t *err;
 
-      SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data,
+      SVN_ERR(svn_wc__write_tree_conflicts(&tmp_entry.tree_conflict_data,
                                            loggy->tree_conflicts, pool));
 
-      tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
       err = svn_wc__entry_modify(adm_access, SVN_WC_ENTRY_THIS_DIR,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
@@ -2463,7 +2461,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
-  char *conflict_data;
+  const char *conflict_data;
   apr_array_header_t *conflicts;
 
   /* ### TODO: implement write_one_tree_conflict(). */

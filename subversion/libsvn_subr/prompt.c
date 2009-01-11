@@ -508,3 +508,22 @@ svn_cmdline_prompt_user(const char **result,
 {
   return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
 }
+
+
+/* This implements 'svn_auth_unlock_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_unlock_prompt(char **keyring_password,
+                               const char *keyring_name,
+                               void *baton,
+                               apr_pool_t *pool)
+{
+  const char *password;
+  const char *pass_prompt;
+  svn_cmdline_prompt_baton2_t *pb = baton;
+
+  pass_prompt = apr_psprintf(pool, _("Password for [%s] GNOME keyring: "),
+                             keyring_name);
+  SVN_ERR(prompt(&password, pass_prompt, TRUE, pb, pool));
+  *keyring_password = apr_pstrdup(pool, password);
+  return SVN_NO_ERROR;
+}

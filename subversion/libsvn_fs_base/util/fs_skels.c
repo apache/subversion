@@ -45,7 +45,7 @@ skel_err(const char *skel_type)
 /*** Validity Checking ***/
 
 static svn_boolean_t
-is_valid_checksum_skel(skel_t *skel)
+is_valid_checksum_skel(svn_skel_t *skel)
 {
   if (svn_skel__list_length(skel) != 2)
     return FALSE;
@@ -63,13 +63,13 @@ is_valid_checksum_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_proplist_skel(skel_t *skel)
+is_valid_proplist_skel(svn_skel_t *skel)
 {
   int len = svn_skel__list_length(skel);
 
   if ((len >= 0) && (len & 1) == 0)
     {
-      skel_t *elt;
+      svn_skel_t *elt;
 
       for (elt = skel->children; elt; elt = elt->next)
         if (! elt->is_atom)
@@ -83,7 +83,7 @@ is_valid_proplist_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_revision_skel(skel_t *skel)
+is_valid_revision_skel(svn_skel_t *skel)
 {
   int len = svn_skel__list_length(skel);
 
@@ -97,7 +97,7 @@ is_valid_revision_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_transaction_skel(skel_t *skel, transaction_kind_t *kind)
+is_valid_transaction_skel(svn_skel_t *skel, transaction_kind_t *kind)
 {
   int len = svn_skel__list_length(skel);
 
@@ -125,11 +125,11 @@ is_valid_transaction_skel(skel_t *skel, transaction_kind_t *kind)
 
 
 static svn_boolean_t
-is_valid_rep_delta_chunk_skel(skel_t *skel)
+is_valid_rep_delta_chunk_skel(svn_skel_t *skel)
 {
   int len;
-  skel_t *window;
-  skel_t *diff;
+  svn_skel_t *window;
+  svn_skel_t *diff;
 
   /* check the delta skel. */
   if ((svn_skel__list_length(skel) != 2)
@@ -164,10 +164,10 @@ is_valid_rep_delta_chunk_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_representation_skel(skel_t *skel)
+is_valid_representation_skel(svn_skel_t *skel)
 {
   int len = svn_skel__list_length(skel);
-  skel_t *header;
+  svn_skel_t *header;
   int header_len;
 
   /* the rep has at least two items in it, a HEADER list, and at least
@@ -203,7 +203,7 @@ is_valid_representation_skel(skel_t *skel)
       && (svn_skel__matches_atom(header->children, "delta")))
     {
       /* it's a delta rep.  check the validity.  */
-      skel_t *chunk = skel->children->next;
+      svn_skel_t *chunk = skel->children->next;
 
       /* loop over chunks, checking each one. */
       while (chunk)
@@ -222,7 +222,7 @@ is_valid_representation_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_node_revision_header_skel(skel_t *skel, skel_t **kind_p)
+is_valid_node_revision_header_skel(svn_skel_t *skel, svn_skel_t **kind_p)
 {
   int len = svn_skel__list_length(skel);
 
@@ -263,11 +263,11 @@ is_valid_node_revision_header_skel(skel_t *skel, skel_t **kind_p)
 
 
 static svn_boolean_t
-is_valid_node_revision_skel(skel_t *skel)
+is_valid_node_revision_skel(svn_skel_t *skel)
 {
   int len = svn_skel__list_length(skel);
-  skel_t *header = skel->children;
-  skel_t *kind;
+  svn_skel_t *header = skel->children;
+  svn_skel_t *kind;
 
   if (len < 1)
     return FALSE;
@@ -314,7 +314,7 @@ is_valid_node_revision_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_copy_skel(skel_t *skel)
+is_valid_copy_skel(svn_skel_t *skel)
 {
   return (((svn_skel__list_length(skel) == 4)
            && (svn_skel__matches_atom(skel->children, "copy")
@@ -326,7 +326,7 @@ is_valid_copy_skel(skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_change_skel(skel_t *skel, svn_fs_path_change_kind_t *kind)
+is_valid_change_skel(svn_skel_t *skel, svn_fs_path_change_kind_t *kind)
 {
   if ((svn_skel__list_length(skel) == 6)
       && svn_skel__matches_atom(skel->children, "change")
@@ -336,7 +336,7 @@ is_valid_change_skel(skel_t *skel, svn_fs_path_change_kind_t *kind)
       && skel->children->next->next->next->next->is_atom
       && skel->children->next->next->next->next->next->is_atom)
     {
-      skel_t *kind_skel = skel->children->next->next->next;
+      svn_skel_t *kind_skel = skel->children->next->next->next;
 
       /* check the kind (and return it) */
       if (svn_skel__matches_atom(kind_skel, "reset"))
@@ -375,7 +375,7 @@ is_valid_change_skel(skel_t *skel, svn_fs_path_change_kind_t *kind)
 
 
 static svn_boolean_t
-is_valid_lock_skel(skel_t *skel)
+is_valid_lock_skel(svn_skel_t *skel)
 {
   if ((svn_skel__list_length(skel) == 8)
       && svn_skel__matches_atom(skel->children, "lock")
@@ -397,11 +397,11 @@ is_valid_lock_skel(skel_t *skel)
 
 svn_error_t *
 svn_fs_base__parse_proplist_skel(apr_hash_t **proplist_p,
-                                 skel_t *skel,
+                                 svn_skel_t *skel,
                                  apr_pool_t *pool)
 {
   apr_hash_t *proplist = NULL;
-  skel_t *elt;
+  svn_skel_t *elt;
 
   /* Validate the skel. */
   if (! is_valid_proplist_skel(skel))
@@ -428,7 +428,7 @@ svn_fs_base__parse_proplist_skel(apr_hash_t **proplist_p,
 
 svn_error_t *
 svn_fs_base__parse_revision_skel(revision_t **revision_p,
-                                 skel_t *skel,
+                                 svn_skel_t *skel,
                                  apr_pool_t *pool)
 {
   revision_t *revision;
@@ -450,12 +450,12 @@ svn_fs_base__parse_revision_skel(revision_t **revision_p,
 
 svn_error_t *
 svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
-                                    skel_t *skel,
+                                    svn_skel_t *skel,
                                     apr_pool_t *pool)
 {
   transaction_t *transaction;
   transaction_kind_t kind;
-  skel_t *root_id, *base_id_or_rev, *proplist, *copies;
+  svn_skel_t *root_id, *base_id_or_rev, *proplist, *copies;
   int len;
 
   /* Validate the skel. */
@@ -505,7 +505,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
     {
       const char *copy_id;
       apr_array_header_t *txncopies;
-      skel_t *cpy = copies->children;
+      svn_skel_t *cpy = copies->children;
 
       txncopies = apr_array_make(pool, len, sizeof(copy_id));
       while (cpy)
@@ -525,11 +525,11 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
 
 svn_error_t *
 svn_fs_base__parse_representation_skel(representation_t **rep_p,
-                                       skel_t *skel,
+                                       svn_skel_t *skel,
                                        apr_pool_t *pool)
 {
   representation_t *rep;
-  skel_t *header_skel;
+  svn_skel_t *header_skel;
 
   /* Validate the skel. */
   if (! is_valid_representation_skel(skel))
@@ -552,7 +552,7 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
   /* MD5 */
   if (header_skel->children->next->next)
     {
-      skel_t *checksum_skel = header_skel->children->next->next;
+      svn_skel_t *checksum_skel = header_skel->children->next->next;
       rep->md5_checksum =
         svn_checksum__from_digest((const unsigned char *)
                                   (checksum_skel->children->next->data),
@@ -581,7 +581,7 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
   else
     {
       /* "delta"-specific. */
-      skel_t *chunk_skel = skel->children->next;
+      svn_skel_t *chunk_skel = skel->children->next;
       rep_delta_chunk_t *chunk;
       apr_array_header_t *chunks;
 
@@ -592,8 +592,8 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
       /* Process the chunks. */
       while (chunk_skel)
         {
-          skel_t *window_skel = chunk_skel->children->next;
-          skel_t *diff_skel = window_skel->children;
+          svn_skel_t *window_skel = chunk_skel->children->next;
+          svn_skel_t *diff_skel = window_skel->children;
 
           /* Allocate a chunk and its window */
           chunk = apr_palloc(pool, sizeof(*chunk));
@@ -640,11 +640,11 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
 
 svn_error_t *
 svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
-                                      skel_t *skel,
+                                      svn_skel_t *skel,
                                       apr_pool_t *pool)
 {
   node_revision_t *noderev;
-  skel_t *header_skel, *cur_skel;
+  svn_skel_t *header_skel, *cur_skel;
 
   /* Validate the skel. */
   if (! is_valid_node_revision_skel(skel))
@@ -743,7 +743,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
 
 svn_error_t *
 svn_fs_base__parse_copy_skel(copy_t **copy_p,
-                             skel_t *skel,
+                             svn_skel_t *skel,
                              apr_pool_t *pool)
 {
   copy_t *copy;
@@ -784,12 +784,12 @@ svn_fs_base__parse_copy_skel(copy_t **copy_p,
 
 svn_error_t *
 svn_fs_base__parse_entries_skel(apr_hash_t **entries_p,
-                                skel_t *skel,
+                                svn_skel_t *skel,
                                 apr_pool_t *pool)
 {
   apr_hash_t *entries = NULL;
   int len = svn_skel__list_length(skel);
-  skel_t *elt;
+  svn_skel_t *elt;
 
   if (! (len >= 0))
     return skel_err("entries");
@@ -828,7 +828,7 @@ svn_fs_base__parse_entries_skel(apr_hash_t **entries_p,
 
 svn_error_t *
 svn_fs_base__parse_change_skel(change_t **change_p,
-                               skel_t *skel,
+                               svn_skel_t *skel,
                                apr_pool_t *pool)
 {
   change_t *change;
@@ -870,7 +870,7 @@ svn_fs_base__parse_change_skel(change_t **change_p,
 
 svn_error_t *
 svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
-                             skel_t *skel,
+                             svn_skel_t *skel,
                              apr_pool_t *pool)
 {
   svn_lock_t *lock;
@@ -941,11 +941,11 @@ svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
 /*** Unparsing (conversion from native FS type to skeleton) ***/
 
 svn_error_t *
-svn_fs_base__unparse_proplist_skel(skel_t **skel_p,
+svn_fs_base__unparse_proplist_skel(svn_skel_t **skel_p,
                                    apr_hash_t *proplist,
                                    apr_pool_t *pool)
 {
-  skel_t *skel = svn_skel__make_empty_list(pool);
+  svn_skel_t *skel = svn_skel__make_empty_list(pool);
   apr_hash_index_t *hi;
 
   /* Create the skel. */
@@ -980,11 +980,11 @@ svn_fs_base__unparse_proplist_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_revision_skel(skel_t **skel_p,
+svn_fs_base__unparse_revision_skel(svn_skel_t **skel_p,
                                    const revision_t *revision,
                                    apr_pool_t *pool)
 {
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Create the skel. */
   skel = svn_skel__make_empty_list(pool);
@@ -1004,12 +1004,12 @@ svn_fs_base__unparse_revision_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_transaction_skel(skel_t **skel_p,
+svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
                                       const transaction_t *transaction,
                                       apr_pool_t *pool)
 {
-  skel_t *skel;
-  skel_t *proplist_skel, *copies_skel, *header_skel;
+  svn_skel_t *skel;
+  svn_skel_t *proplist_skel, *copies_skel, *header_skel;
   svn_string_t *id_str;
   transaction_kind_t kind;
 
@@ -1096,11 +1096,11 @@ svn_fs_base__unparse_transaction_skel(skel_t **skel_p,
 
 
 static svn_error_t *
-prepend_checksum(skel_t *skel,
+prepend_checksum(svn_skel_t *skel,
                  svn_checksum_t *checksum,
                  apr_pool_t *pool)
 {
-  skel_t *checksum_skel = svn_skel__make_empty_list(pool);
+  svn_skel_t *checksum_skel = svn_skel__make_empty_list(pool);
 
   switch (checksum->kind)
     {
@@ -1128,13 +1128,13 @@ prepend_checksum(skel_t *skel,
 
 
 svn_error_t *
-svn_fs_base__unparse_representation_skel(skel_t **skel_p,
+svn_fs_base__unparse_representation_skel(svn_skel_t **skel_p,
                                          const representation_t *rep,
                                          int format,
                                          apr_pool_t *pool)
 {
-  skel_t *skel = svn_skel__make_empty_list(pool);
-  skel_t *header_skel = svn_skel__make_empty_list(pool);
+  svn_skel_t *skel = svn_skel__make_empty_list(pool);
+  svn_skel_t *header_skel = svn_skel__make_empty_list(pool);
 
   /** Some parts of the header are common to all representations; do
       those parts first. **/
@@ -1189,9 +1189,9 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
       /* Loop backwards through the windows, creating and prepending skels. */
       for (i = chunks->nelts; i > 0; i--)
         {
-          skel_t *window_skel = svn_skel__make_empty_list(pool);
-          skel_t *chunk_skel = svn_skel__make_empty_list(pool);
-          skel_t *diff_skel = svn_skel__make_empty_list(pool);
+          svn_skel_t *window_skel = svn_skel__make_empty_list(pool);
+          svn_skel_t *chunk_skel = svn_skel__make_empty_list(pool);
+          svn_skel_t *diff_skel = svn_skel__make_empty_list(pool);
           const char *size_str, *offset_str, *version_str;
           rep_delta_chunk_t *chunk = APR_ARRAY_IDX(chunks, i - 1,
                                                    rep_delta_chunk_t *);
@@ -1252,13 +1252,13 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
+svn_fs_base__unparse_node_revision_skel(svn_skel_t **skel_p,
                                         const node_revision_t *noderev,
                                         int format,
                                         apr_pool_t *pool)
 {
-  skel_t *skel;
-  skel_t *header_skel;
+  svn_skel_t *skel;
+  svn_skel_t *header_skel;
   const char *num_str;
 
   /* Create the skel. */
@@ -1329,7 +1329,7 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   if ((noderev->data_key_uniquifier) && (*noderev->data_key_uniquifier))
     {
       /* Build a 2-tuple with a rep key and uniquifier. */
-      skel_t *data_key_skel = svn_skel__make_empty_list(pool);
+      svn_skel_t *data_key_skel = svn_skel__make_empty_list(pool);
 
       /* DATA-KEY-UNIQID */
       svn_skel__prepend(svn_skel__str_atom(noderev->data_key_uniquifier,
@@ -1373,11 +1373,11 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_copy_skel(skel_t **skel_p,
+svn_fs_base__unparse_copy_skel(svn_skel_t **skel_p,
                                const copy_t *copy,
                                apr_pool_t *pool)
 {
-  skel_t *skel;
+  svn_skel_t *skel;
   svn_string_t *tmp_str;
 
   /* Create the skel. */
@@ -1415,11 +1415,11 @@ svn_fs_base__unparse_copy_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_entries_skel(skel_t **skel_p,
+svn_fs_base__unparse_entries_skel(svn_skel_t **skel_p,
                                   apr_hash_t *entries,
                                   apr_pool_t *pool)
 {
-  skel_t *skel = svn_skel__make_empty_list(pool);
+  svn_skel_t *skel = svn_skel__make_empty_list(pool);
   apr_hash_index_t *hi;
 
   /* Create the skel. */
@@ -1433,7 +1433,7 @@ svn_fs_base__unparse_entries_skel(skel_t **skel_p,
           apr_ssize_t klen;
           svn_fs_id_t *value;
           svn_string_t *id_str;
-          skel_t *entry_skel = svn_skel__make_empty_list(pool);
+          svn_skel_t *entry_skel = svn_skel__make_empty_list(pool);
 
           apr_hash_this(hi, &key, &klen, &val);
           value = val;
@@ -1459,11 +1459,11 @@ svn_fs_base__unparse_entries_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_change_skel(skel_t **skel_p,
+svn_fs_base__unparse_change_skel(svn_skel_t **skel_p,
                                  const change_t *change,
                                  apr_pool_t *pool)
 {
-  skel_t *skel;
+  svn_skel_t *skel;
   svn_string_t *tmp_str;
   svn_fs_path_change_kind_t kind;
 
@@ -1532,11 +1532,11 @@ svn_fs_base__unparse_change_skel(skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_lock_skel(skel_t **skel_p,
+svn_fs_base__unparse_lock_skel(svn_skel_t **skel_p,
                                const svn_lock_t *lock,
                                apr_pool_t *pool)
 {
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Create the skel. */
   skel = svn_skel__make_empty_list(pool);

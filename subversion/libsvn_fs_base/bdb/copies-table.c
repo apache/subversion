@@ -73,7 +73,7 @@ put_copy(svn_fs_t *fs,
          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *copy_skel;
+  svn_skel_t *copy_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
@@ -177,7 +177,7 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
-  skel_t *skel;
+  svn_skel_t *skel;
   copy_t *copy;
 
   /* Only in the context of this function do we know that the DB call

@@ -72,18 +72,27 @@ parse_pathname(const char **input, const char *end,
                svn_stringbuf_t **pathname, apr_pool_t *pool)
 {
   const char *curr = *input;
-  *pathname = svn_stringbuf_create("", pool);
+  const char *last_colon = NULL;
 
-  while (curr < end && *curr != ':')
+  /* A pathname may contain colons, so find the last colon before END
+     or newline.  We'll consider this the divider between the pathname
+     and the revisionlist. */
+  while (curr < end && *curr != '\n')
     {
-      svn_stringbuf_appendbytes(*pathname, curr, 1);
+      if (*curr == ':')
+        last_colon = curr;
       curr++;
     }
-
-  if ((*pathname)->len == 0)
+  
+  if (!last_colon)
+    return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                            _("Pathname not terminated by ':'"));
+  if (last_colon == *input)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("No pathname preceding ':'"));
-  *input = curr;
+
+  *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
+  *input = last_colon;
 
   return SVN_NO_ERROR;
 }

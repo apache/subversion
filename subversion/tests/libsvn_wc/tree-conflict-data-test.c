@@ -44,7 +44,8 @@ test_read_tree_conflict(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  tree_conflict_data = "Foo.c:file:update:deleted:edited::::::::";
+  tree_conflict_data = "((conflict Foo.c file update deleted edited "
+                         "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
 
   exp_conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                          svn_node_file,
@@ -87,8 +88,10 @@ test_read_2_tree_conflicts(const char **msg,
     return SVN_NO_ERROR;
 
   tree_conflict_data =
-    "Foo.c:file:update:deleted:edited::::::::|"
-    "Bar.h:file:update:edited:deleted::::::::";
+    "((conflict Foo.c file update deleted edited "
+      "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
+     "(conflict Bar.h file update edited deleted "
+      "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
 
   exp_conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                           svn_node_file,
@@ -196,7 +199,7 @@ test_write_tree_conflict(const char **msg,
                          apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
-  char *tree_conflict_data;
+  const char *tree_conflict_data;
   apr_array_header_t *conflicts;
   const char *expected;
 
@@ -216,7 +219,8 @@ test_write_tree_conflict(const char **msg,
       sizeof(svn_wc_conflict_description_t *));
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  expected = "Foo.c:file:update:deleted:edited::::::::";
+  expected = "((conflict Foo.c file update deleted edited "
+               "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
 
   SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
@@ -236,7 +240,7 @@ test_write_2_tree_conflicts(const char **msg,
 {
   svn_wc_conflict_description_t *conflict1, *conflict2;
   apr_array_header_t *conflicts;
-  char *tree_conflict_data;
+  const char *tree_conflict_data;
   const char *expected;
 
   *msg = "write 2 tree conflicts";
@@ -263,9 +267,10 @@ test_write_2_tree_conflicts(const char **msg,
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict1;
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict2;
 
-  expected =
-    "Foo.c:file:update:deleted:edited::::::::|"
-    "Bar.h:file:update:edited:deleted::::::::";
+  expected = "((conflict Foo.c file update deleted edited "
+                "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
+              "(conflict Bar.h file update edited deleted "
+                "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
 
   SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
@@ -285,7 +290,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 {
   svn_wc_conflict_description_t *conflict;
   apr_array_header_t *conflicts;
-  char *tree_conflict_data;
+  const char *tree_conflict_data;
   svn_error_t *err;
 
   *msg = "detect broken tree conflict data while writing";

@@ -75,7 +75,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *skel;
+  svn_skel_t *skel;
   int db_err;
   DBT query, result;
 
@@ -112,7 +112,7 @@ svn_fs_bdb__write_rep(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert from native type to skel. */
   SVN_ERR(svn_fs_base__unparse_representation_skel(&skel, rep,

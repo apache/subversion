@@ -196,7 +196,7 @@ svn_fs_bdb__get_node_revision(node_revision_t **noderev_p,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   node_revision_t *noderev;
-  skel_t *skel;
+  svn_skel_t *skel;
   int db_err;
   DBT key, value;
 
@@ -239,7 +239,7 @@ svn_fs_bdb__put_node_revision(svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
   DB_TXN *db_txn = trail->db_txn;
   DBT key, value;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert from native type into skel */
   SVN_ERR(svn_fs_base__unparse_node_revision_skel(&skel, noderev,
