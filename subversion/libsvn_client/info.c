@@ -57,7 +57,9 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->lock                 = lock;
   tmpinfo->depth                = svn_depth_unknown;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size                 = dirent->size;
+  /* ### The size overflows on files > 4 GB.
+     We should add a new field of apr_off_t if we need the full value */
+  tmpinfo->size                 = (apr_size_t)dirent->size;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
@@ -99,7 +101,10 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
   tmpinfo->changelist           = entry->changelist;
-  tmpinfo->working_size         = entry->working_size;
+
+  /* ### The working_size overflows on files > 4 GB.
+     We should add a new field of apr_off_t if we need the full value */
+  tmpinfo->working_size         = (apr_size_t)entry->working_size;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
 
   /* lock stuff */
