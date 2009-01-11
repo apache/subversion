@@ -905,7 +905,7 @@ svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
 
-  assert(svn_uri_is_canonical(dirent, pool));
+  assert(svn_uri_is_canonical(uri, pool));
 
   if (svn_uri_is_root(uri, len))
     return apr_pstrmemdup(pool, uri, len);
@@ -1141,7 +1141,7 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 }
 
 svn_boolean_t
-svn_uri_is_canonical(const char *uri)
+svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 {
   const char *ptr = uri, *seg = uri;
 

@@ -941,7 +941,7 @@ test_uri_is_canonical(const char **msg,
     {
       svn_boolean_t canonical;
 
-      canonical = svn_uri_is_canonical(tests[i].path);
+      canonical = svn_uri_is_canonical(tests[i].path, pool);
       if (tests[i].canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_is_canonical(\"%s\") returned "
