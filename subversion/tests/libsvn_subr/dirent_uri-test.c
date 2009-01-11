@@ -1041,19 +1041,19 @@ test_uri_split(const char **msg,
     {
       const char *dir, *base_name;
 
-      svn_dirent_split(paths[i][0], &dir, &base_name, pool);
+      svn_uri_split(paths[i][0], &dir, &base_name, pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
-             "test_uri_split (%s) returned dirname '%s' instead of '%s'",
+             "svn_uri_split (%s) returned dirname '%s' instead of '%s'",
              paths[i][0], dir, paths[i][1]);
         }
       if (strcmp(base_name, paths[i][2]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
-             "test_uri_split (%s) returned basename '%s' instead of '%s'",
+             "svn_uri_split (%s) returned basename '%s' instead of '%s'",
              paths[i][0], base_name, paths[i][2]);
         }
     }
