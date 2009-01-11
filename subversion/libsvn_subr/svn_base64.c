@@ -2,7 +2,7 @@
  * base64.c:  base64 encoding and decoding functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -381,7 +381,7 @@ svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
    ### This is now only used as a new implementation of svn_base64_from_md5();
    it would probably be safer to revert that to its old implementation. */
 static svn_stringbuf_t *
-svn_base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
+base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
 {
   svn_stringbuf_t *checksum_str;
   unsigned char ingroup[3];
@@ -413,5 +413,5 @@ svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
   checksum = svn_checksum_create(svn_checksum_md5, pool);
   checksum->digest = digest;
 
-  return svn_base64_from_checksum(checksum, pool);
+  return base64_from_checksum(checksum, pool);
 }
