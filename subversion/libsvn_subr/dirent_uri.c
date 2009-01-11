@@ -939,7 +939,7 @@ svn_uri_split(const char *uri,
               const char **base_name,
               apr_pool_t *pool)
 {
-  assert(uri != base_name);
+  assert(dirpath != base_name);
 
   if (dirpath)
     *dirpath = svn_uri_dirname(uri, pool);
