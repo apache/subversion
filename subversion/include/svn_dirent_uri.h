@@ -185,6 +185,32 @@ svn_dirent_split(const char *dirent,
                  const char **base_name,
                  apr_pool_t *pool);
 
+/** Divide the canonicalized @a uri into @a *dirpath and @a
+ * *base_name, allocated in @a pool.
+ *
+ * If @a dirpath or @a base_name is NULL, then don't set that one.
+ *
+ * Either @a dirpath or @a base_name may be @a dirent's own address, but they
+ * may not both be the same address, or the results are undefined.
+ *
+ * If @a dirent has two or more components, the separator between @a dirpath
+ * and @a base_name is not included in either of the new names.
+ *
+ *   examples:
+ *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
+ *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
+ *             - <pre>"/"             ==>  "/"  and "/"</pre>
+ *             - <pre>"bar"           ==>  ""   and "bar"</pre>
+ *             - <pre>""              ==>  ""   and ""</pre> 
+ *
+ * @since New in 1.6.
+ */
+void
+svn_uri_split(const char *dirent,
+              const char **dirpath,
+              const char **base_name,
+              apr_pool_t *pool);
+
 /** Get the basename of the specified canonicalized @a uri.  The
  * basename is defined as the last component of the uri.  If the @a dirent 
  * is root then that is returned. Otherwise, the returned value will have no 
