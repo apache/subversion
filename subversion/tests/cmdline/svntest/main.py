@@ -484,6 +484,7 @@ def wait_on_pipe2(waiter, binary_mode, stdin=None):
   # Normalize Windows line endings if in text mode.
   if windows and not binary_mode:
     stdout = stdout.replace('\r\n', '\n')
+    stderr = stderr.replace('\r\n', '\n')
 
   # Convert output strings to lists.  
   stdout_lines = stdout.splitlines(True) 
@@ -505,14 +506,6 @@ def wait_on_pipe2(waiter, binary_mode, stdin=None):
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (' '.join(command), exit_code))
     return stdout_lines, stderr_lines, exit_code
-
-# Convert Windows line ending ('\r\n') to universal line ending ('\n')
-if platform_with_subprocess and windows:
-  def _convert_windows_line_ending(line):
-    if line.endswith('\r\n'):
-      return line[:-2] + '\n'
-    else:
-      return line
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
@@ -538,9 +531,6 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   if platform_with_subprocess:
     stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
-    if windows and not binary_mode:
-      stdout_lines = [_convert_windows_line_ending(x) for x in stdout_lines]
-      stderr_lines = [_convert_windows_line_ending(x) for x in stderr_lines]
   else:
     stdout_lines = outfile.readlines()
     stderr_lines = errfile.readlines()
