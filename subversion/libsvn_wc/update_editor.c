@@ -1663,8 +1663,9 @@ already_in_a_tree_conflict(char **victim_path,
   return SVN_NO_ERROR;
 }
 
-/* Schedule the WC item named NAME in directory PARENT_PATH, whose entry is
- * ENTRY, for re-addition as a copy with history of (ENTRY->url)@(ENTRY->rev).
+/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
+ * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
+ * PATH and PARENT_PATH are relative to EB->anchor.
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
  * the repository at the target revision.
@@ -1678,12 +1679,14 @@ already_in_a_tree_conflict(char **victim_path,
  * to keep track of when multiple directories are involved.
  *  */
 static svn_error_t *
-schedule_existing_item_for_re_add(svn_wc_entry_t *entry,
+schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   struct edit_baton *eb,
                                   const char *parent_path,
-                                  const char *name,
+                                  const char *path,
                                   apr_pool_t *pool)
 {
+  const char *full_path = svn_path_join(eb->anchor, path, pool);
+  const char *base_name = svn_path_basename(full_path, pool);
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
   svn_wc_adm_access_t *entry_adm_access;
@@ -1715,17 +1718,21 @@ schedule_existing_item_for_re_add(svn_wc_entry_t *entry,
   /* Determine which adm dir holds this node's entry */
   /* ### But this will fail if eb->adm_access holds only a shallow lock. */
   SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, eb->adm_access,
-                              (entry->kind == svn_node_dir) ? full_path
-                              : parent_path, pool));
+                              (entry->kind == svn_node_dir)
+                              ? full_path : parent_path, pool));
 
-  SVN_ERR(svn_wc__entry_modify(entry_adm_access, name, &tmp_entry, flags,
-                               TRUE /* do_sync */, pool));
+  SVN_ERR(svn_wc__entry_modify(entry_adm_access,
+                               (entry->kind == svn_node_dir)
+                               ? SVN_WC_ENTRY_THIS_DIR : base_name,
+                               &tmp_entry, flags, TRUE /* do_sync */, pool));
 
   if (entry->kind == svn_node_dir)
     {
       /* ### Need to set 'copied' recursively, in order to support the
        * cases where this is a directory. Is there more too? */
     }
+
+  return SVN_NO_ERROR;
 }
 
 /* Delete PATH from its immediate parent PARENT_PATH, in the edit
@@ -1834,7 +1841,7 @@ do_entry_deletion(struct edit_baton *eb,
                                                     path, pool));
           return SVN_NO_ERROR;
         }
-      else if (conflict->reason == svn_wc_conflict_reason_deleted)
+      else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
         {
           /* The item does not exist locally (except perhaps as a skeleton
            * directory tree) because it was already scheduled for delete.
@@ -1844,7 +1851,7 @@ do_entry_deletion(struct edit_baton *eb,
           /* Fall through to the normal "delete" code path. */
         }
       else
-        SVN_ERR_MALFUNCTION;  /* other reasons are not expected here */
+        SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
     }
 
   /* Issue a loggy command to delete the entry from version control and to
