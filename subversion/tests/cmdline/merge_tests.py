@@ -15193,8 +15193,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'adhocdir'     : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'cp', A_C_url, A_FB1_url, '-m', 'copy...')
   svntest.main.run_svn(None, 'cp', A_C_url, A_FB2_url, '-m', 'copy...')
@@ -15217,8 +15216,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir1'        : Item(status='  ', wc_rev=5),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'rm', A_C_tfile0_path)
   svntest.main.run_svn(None, 'rm', A_C_tdir0_path)
@@ -15234,8 +15232,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir1'        : Item(status='  ', wc_rev=5),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.file_write(A_FB1_bfile1_path, "This is the bfile1.\n")
   svntest.main.run_svn(None, 'add', A_FB1_bfile1_path)
@@ -15254,8 +15251,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bdir1'        : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB1_path)
+                                        expected_status, None, A_FB1_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.file_write(A_C_tfile2_path, "This is the tfile2.\n")
   svntest.main.run_svn(None, 'add', A_C_tfile2_path)
@@ -15274,8 +15270,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir2'        : Item(status='  ', wc_rev=8),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.file_write(A_FB2_bfile2_path, "This is the bfile2.\n")
   svntest.main.run_svn(None, 'add', A_FB2_bfile2_path)
@@ -15294,8 +15289,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bdir2'        : Item(status='  ', wc_rev=9),
     })
   svntest.actions.run_and_verify_commit(A_FB2_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB2_path)
+                                        expected_status, None, A_FB2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.file_write(A_C_tfile3_path, "This is the tfile3.\n")
   svntest.main.run_svn(None, 'add', A_C_tfile3_path)
@@ -15316,8 +15310,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir3'        : Item(status='  ', wc_rev=10),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_A_FB1 = shorten_path_kludge(A_FB1_path)
   expected_skip = wc.State(short_A_FB1, {})
@@ -15372,8 +15365,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir3'        : Item(status='  ', wc_rev=11),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB1_path)
+                                        expected_status, None, A_FB1_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   os.chdir(svntest.main.work_dir)
   short_A_FB2 = shorten_path_kludge(A_FB2_path)
@@ -15428,8 +15420,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir1'        : Item(status='  ', wc_rev=12),
     })
   svntest.actions.run_and_verify_commit(A_FB2_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB2_path)
+                                        expected_status, None, A_FB2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_skip = wc.State(short_A_FB1, {})
   expected_output = wc.State(short_A_FB1, {
@@ -15506,8 +15497,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir3'        : Item(status='  ', wc_rev=12),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB1_path)
+                                        expected_status, None, A_FB1_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.file_write(A_FB1_bfile3_path, "This is the bfile3.\n")
   svntest.main.run_svn(None, 'add', A_FB1_bfile3_path)
@@ -15530,8 +15520,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bdir3'        : Item(status='  ', wc_rev=14),
     })
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB1_path)
+                                        expected_status, None, A_FB1_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'rm', A_C_tfile3_path)
   svntest.main.run_svn(None, 'rm', A_C_tdir3_path)
@@ -15549,8 +15538,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir2'        : Item(status='  ', wc_rev=14),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'mkdir', A_C_tdir0_path)
   svntest.main.file_write(A_C_tfile0_path, "This is the tfile0.\n")
@@ -15571,8 +15559,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir2'        : Item(status='  ', wc_rev=15),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_A_C = shorten_path_kludge(A_C_path)
   expected_skip = wc.State(short_A_C, {})
@@ -15666,8 +15653,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'A/B/E/beta'      : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Copy A/B/E to A/B/E_COPY where A/B/E_COPY becomes our feature branch
   svntest.actions.run_and_verify_svn(None,
@@ -15691,8 +15677,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r5
   svntest.main.file_substitute(alpha_path, "line2 ", "tline2 ")
@@ -15701,8 +15686,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_status.tweak('A/B/E/alpha', wc_rev=5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r6
   svntest.main.file_substitute(alpha_path, "line3 ", "tline3 ")
@@ -15711,8 +15695,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_status.tweak('A/B/E/alpha', wc_rev=6)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r7
   svntest.main.file_substitute(alpha_path, "line4 ", "tline4 ")
@@ -15721,8 +15704,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_status.tweak('A/B/E/alpha', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Update wc_dir to get the latest changes
   svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
@@ -15809,8 +15791,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=8),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_ABE = shorten_path_kludge(ABE_path)
@@ -15910,8 +15891,7 @@ def merge_non_reflective_with_conflict(sbox):
     'A/B/E/alpha'     : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Copy A/B/E to A/B/E_COPY where A/B/E_COPY becomes our feature branch
   svntest.actions.run_and_verify_svn(None,
@@ -15935,8 +15915,7 @@ def merge_non_reflective_with_conflict(sbox):
     'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r5
   svntest.main.file_substitute(alpha_path, "line2 ", "tline2 ")
@@ -15945,8 +15924,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_status.tweak('A/B/E/alpha', wc_rev=5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in feature branch at r6
   svntest.main.file_substitute(alpha_fb_path, "line5 ", "fbline5 ")
@@ -15955,8 +15933,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_status.tweak('A/B/E_COPY/alpha', wc_rev=6)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r7
   svntest.main.file_substitute(alpha_path, "line5 ", "tline5 ")
@@ -15965,8 +15942,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_status.tweak('A/B/E/alpha', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r8
   svntest.main.file_substitute(alpha_path, "line4 ", "tline4 ")
@@ -15975,8 +15951,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_status.tweak('A/B/E/alpha', wc_rev=8)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Update wc_dir to get the latest changes
   svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
@@ -16098,8 +16073,7 @@ def merge_non_reflective_with_conflict(sbox):
     'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=8),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_ABE = shorten_path_kludge(ABE_path)
@@ -16236,8 +16210,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E/alpha'     : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Copy A/B/E to A/B/E_COPY where A/B/E_COPY becomes our feature branch
   svntest.actions.run_and_verify_svn(None,
@@ -16262,8 +16235,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E/alpha' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # This will be a dummy change, r5
   svntest.main.file_append(lambda_path, "This is an extra line.\n")
@@ -16272,8 +16244,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/lambda' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in feature branch at r6
   svntest.main.file_substitute(alpha_fb_path, "line18.", "FBLINE18.")
@@ -16282,8 +16253,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E_COPY/alpha' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r7
   svntest.main.file_substitute(alpha_path, "line18.", "TLINE18.")
@@ -16292,8 +16262,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E/alpha' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # One more dummy change at r8.
   svntest.main.file_append(lambda_path, "This is another extra line.\n")
@@ -16302,8 +16271,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/lambda' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in trunk at r9
   svntest.main.file_substitute(alpha_path, "line13.", "TLINE13.")
@@ -16312,8 +16280,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E/alpha' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Update wc_dir to get the latest changes
   svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
@@ -16437,8 +16404,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E_COPY/beta'      : Item(status='  ', wc_rev=9),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Modify alpha in feature branch at r11
   svntest.main.file_substitute(alpha_fb_path, "line8.", "FBLINE8.")
@@ -16447,8 +16413,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'A/B/E_COPY/alpha' : Item(verb='Sending')
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   short_ABE = shorten_path_kludge(ABE_path)
   saved_cwd = os.getcwd()
@@ -16570,8 +16535,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file1.txt'   : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path)
+                                        expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   short_A_FB = shorten_path_kludge(A_FB_path)
@@ -16604,8 +16568,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file1.txt'   : Item(status='  ', wc_rev=4),
     })
   svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB_path)
+                                        expected_status, None, A_FB_path)
   svntest.main.run_svn(None, 'rm', A_C_url, '-m', 'deleting trunk') #r5.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'export', A_C_url + '@3', '-r', '3', A_C_path)
@@ -16624,8 +16587,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'unrelated.txt'   : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path) #r7
+                                        expected_status, None, A_C_path) #r7
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(short_A_FB, {
     'unrelated.txt'    : Item(status='A '),
@@ -16658,8 +16620,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file1.txt'       : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB_path) #r8
+                                        expected_status, None, A_FB_path) #r8
   svntest.main.run_svn(None, 'rm', A_C_url, '-m', 'deleting bogus trunk') #r9.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'cp', A_C_url + '@4', A_C1_url, '-m',
@@ -16676,8 +16637,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file2.txt'   : Item(status='  ', wc_rev=11),
     })
   svntest.actions.run_and_verify_commit(A_C1_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C1_path) #r11
+                                        expected_status, None, A_C1_path) #r11
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(short_A_FB, {
     'file2.txt'    : Item(status='A '),
@@ -16714,8 +16674,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'unrelated.txt'   : Item(status='  ', wc_rev=11),
     })
   svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB_path) #r12
+                                        expected_status, None, A_FB_path) #r12
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.run_svn(None, 'mv', A_C1_url, A_C_url, '-m',
                        'renaming trunk1 to trunk') #r13.
@@ -16732,8 +16691,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file3.txt'   : Item(status='  ', wc_rev=14),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_C_path) #r14
+                                        expected_status, None, A_C_path) #r14
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(short_A_FB, {
     'file3.txt'    : Item(status='A '),
@@ -16773,8 +16731,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'unrelated.txt'   : Item(status='  ', wc_rev=14),
     })
   svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, A_FB_path) #r15
+                                        expected_status, None, A_FB_path) #r15
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_A_C = shorten_path_kludge(A_C_path)
   expected_output = wc.State(short_A_C, {
