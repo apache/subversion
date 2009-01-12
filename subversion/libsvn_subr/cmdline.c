@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -411,8 +411,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
   /* Populate the registered providers with the platform-specific providers */
   SVN_ERR(svn_auth_get_platform_specific_client_providers
-            (&providers, cfg, pb, svn_cmdline_auth_unlock_prompt,
-             TRUE, pool));
+            (&providers, cfg, pool));
 
   /* If we have a cancellation function, cram it and the stuff it
      needs into the prompt baton. */
@@ -442,10 +441,9 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   /* The server-cert, client-cert, and client-cert-password providers. */
-  SVN_ERR(svn_auth_get_platform_specific_provider(&provider, NULL,
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                   "windows",
                                                   "ssl_server_trust",
-                                                  NULL, FALSE,
                                                   pool));
 
   if (provider)
@@ -551,6 +549,9 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
   if (no_auth_cache || ! store_auth_creds_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+
+  svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                         &svn_cmdline_auth_unlock_prompt);
 
   return SVN_NO_ERROR;
 }

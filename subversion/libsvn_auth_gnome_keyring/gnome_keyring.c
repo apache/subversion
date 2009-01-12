@@ -2,7 +2,7 @@
  * gnome_keyring.c: GNOME Keyring provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,13 +42,6 @@
 /* GNOME Keyring simple provider, puts passwords in GNOME Keyring        */
 /*-----------------------------------------------------------------------*/
 
-/* Baton type for the GNOME Keyring simple provider. */
-typedef struct
-{
-  svn_auth_unlock_prompt_func_t unlock_prompt_func;
-  void *unlock_prompt_baton;
-} unlock_prompt_provider_baton_t;
-
 
 struct gnome_keyring_baton
 {
@@ -86,8 +79,8 @@ callback_destroy_data_keyring(void *data)
 
 /* Callback function to complete the keyring operation. */
 static void
-callback_done (GnomeKeyringResult result,
-               gpointer data)
+callback_done(GnomeKeyringResult result,
+              gpointer data)
 {
   struct gnome_keyring_baton *key_info =
                                 (struct gnome_keyring_baton*) data;
@@ -175,7 +168,7 @@ get_default_keyring_name(apr_pool_t *pool)
   def = strdup(key_info.keyring_name);
   callback_destroy_data_keyring((void*)&key_info);
 
-  return (def);
+  return def;
 }
 
 /* Returns TRUE if the KEYRING_NAME is locked. */
@@ -391,20 +384,25 @@ gnome_keyring_simple_first_creds(void **credentials,
                                  const char *realmstring,
                                  apr_pool_t *pool)
 {
-  unlock_prompt_provider_baton_t *pb =
-    (unlock_prompt_provider_baton_t *)provider_baton;
+  svn_auth_unlock_prompt_func_t unlock_prompt_func =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                 APR_HASH_KEY_STRING);
+  void *unlock_prompt_baton =
+    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                 APR_HASH_KEY_STRING);
+
   char *keyring_password;
   const char *default_keyring = get_default_keyring_name(pool);
 
   if (check_keyring_is_locked(default_keyring))
     {
-      if (pb->unlock_prompt_func)
+      if (unlock_prompt_func)
         {
-          SVN_ERR((*pb->unlock_prompt_func)
-                  (&keyring_password,
-                   default_keyring,
-                   pb->unlock_prompt_baton,
-                   pool));
+          SVN_ERR(unlock_prompt_func(&keyring_password,
+                                      default_keyring,
+                                      unlock_prompt_baton,
+                                      pool));
           gnome_keyring_unlock_keyring(default_keyring, keyring_password,
                                        pool);
         }
@@ -427,21 +425,25 @@ gnome_keyring_simple_save_creds(svn_boolean_t *saved,
                                 const char *realmstring,
                                 apr_pool_t *pool)
 {
-  unlock_prompt_provider_baton_t *pb =
-    (unlock_prompt_provider_baton_t *)provider_baton;
+  svn_auth_unlock_prompt_func_t unlock_prompt_func =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                 APR_HASH_KEY_STRING);
+  void *unlock_prompt_baton =
+    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                 APR_HASH_KEY_STRING);
 
   char *keyring_password;
   const char *default_keyring = get_default_keyring_name(pool);
 
   if (check_keyring_is_locked(default_keyring))
     {
-      if (pb->unlock_prompt_func)
+      if (unlock_prompt_func)
         {
-          SVN_ERR((*pb->unlock_prompt_func)
-                  (&keyring_password,
-                   default_keyring,
-                   pb->unlock_prompt_baton,
-                   pool));
+          SVN_ERR(unlock_prompt_func(&keyring_password,
+                                     default_keyring,
+                                     unlock_prompt_baton,
+                                     pool));
           gnome_keyring_unlock_keyring(default_keyring, keyring_password,
                                        pool);
         }
@@ -475,18 +477,11 @@ static const svn_auth_provider_t gnome_keyring_simple_provider = {
 void
 svn_auth_get_gnome_keyring_simple_provider
     (svn_auth_provider_object_t **provider,
-     svn_auth_unlock_prompt_func_t unlock_prompt_func,
-     void *unlock_prompt_baton,
      apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
-  unlock_prompt_provider_baton_t *pb = apr_pcalloc(pool, sizeof(*pb));
-
-  pb->unlock_prompt_func = unlock_prompt_func;
-  pb->unlock_prompt_baton = unlock_prompt_baton;
 
   po->vtable = &gnome_keyring_simple_provider;
-  po->provider_baton = pb;
   *provider = po;
 
   gnome_keyring_init();
