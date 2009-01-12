@@ -16474,6 +16474,293 @@ def merge_non_reflective_with_complex_conflict(sbox):
                                        None, None, True, True)
   os.chdir(saved_cwd)
 
+def reflective_merge_on_reincarnated_target(sbox):
+  "reflective merge on reincarnated target"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2897. ##
+  ## Consider /A/C as trunk and /A/FB as feature branch in the following
+  ## discussion.
+  ## In this test case we create a feature branch from trunk at r2.
+  ## Add file 'trunk/file1.txt' and commit at r3.
+  ## merge trunk to feature branch and commit at r4.
+  ## Delete trunk at r5.
+  ## Export trunk at r3 and import again as trunk at r6.
+  ## Add file to trunk 'unrelated.txt' and commit at r7.
+  ## merge trunk to feature branch and commit at r8.
+  ## Delete trunk at r9.
+  ## Copy trunk@3 as trunk1 in r10.
+  ## Add file 'file2.txt' and commit at r11.
+  ## merge trunk1 to feature branch and commit at r12.
+  ## Rename trunk1 to trunk at r13
+  ## Add file 'file3.txt' and commit at r14.
+  ## merge trunk to feature branch and commit at r15.
+  ## merge feature branch to trunk working copy, it should *not* consider
+  ## r8 as reflective revision as trunk@8 is unrelated to trunk@HEAD and
+  ## hence add *only* unrelated.txt as a part of the merge.
+
+  # Create a WC
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_C_url = sbox.repo_url + '/A/C'
+  A_C1_url = sbox.repo_url + '/A/C1'
+  A_FB_url = sbox.repo_url + '/A/FB'
+  A_C_path = os.path.join(wc_dir, 'A', 'C')
+  A_C1_path = os.path.join(wc_dir, 'A', 'C1')
+  A_FB_path = os.path.join(wc_dir, 'A', 'FB')
+  A_C_file1_path = os.path.join(A_C_path, 'file1.txt')
+  A_C1_file2_path = os.path.join(A_C1_path, 'file2.txt')
+  A_C_file3_path = os.path.join(A_C_path, 'file3.txt')
+  A_C_unrelated_path = os.path.join(A_C_path, 'unrelated.txt')
+
+  svntest.main.run_svn(None, 'cp', A_C_url, A_FB_url, '-m',
+                       'cut feature branch')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.file_write(A_C_file1_path, "This is the file1.\n")
+  svntest.main.run_svn(None, 'add', A_C_file1_path)
+  expected_output = wc.State(A_C_path, {
+    'file1.txt'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_C_path, {
+    ''            : Item(status='  ', wc_rev=2),
+    'file1.txt'   : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(A_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  short_A_FB = shorten_path_kludge(A_FB_path)
+  expected_skip = wc.State(short_A_FB, {})
+  expected_output = wc.State(short_A_FB, {
+    'file1.txt'    : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''            : Item(props={SVN_PROP_MERGE_INFO : '/A/C:2-3'}),
+    'file1.txt'  : Item("This is the file1.\n"),
+    })
+  expected_status = wc.State(short_A_FB, {
+    ''            : Item(status=' M', wc_rev=3),
+    'file1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_FB, None, None,
+                                       A_C_url, expected_output,
+                                       expected_disk, expected_status,
+                                       expected_skip, None, None, None, None,
+                                       None, 1, 1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(A_FB_path, {
+    ''             : Item(verb='Sending'),
+    'file1.txt'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_FB_path, {
+    ''            : Item(status='  ', wc_rev=4),
+    'file1.txt'   : Item(status='  ', wc_rev=4),
+    })
+  svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_FB_path)
+  svntest.main.run_svn(None, 'rm', A_C_url, '-m', 'deleting trunk') #r5.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.run_svn(None, 'export', A_C_url + '@3', '-r', '3', A_C_path)
+  svntest.main.run_svn(None, 'import', A_C_path, A_C_url, '-m',
+                       'importing trunk in an history insensitive way.') #r6
+  svntest.main.safe_rmtree(A_C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.file_write(A_C_unrelated_path, "This is the unrelated file.\n")
+  svntest.main.run_svn(None, 'add', A_C_unrelated_path)
+  expected_output = wc.State(A_C_path, {
+    'unrelated.txt'   : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_C_path, {
+    ''                : Item(status='  ', wc_rev=6),
+    'file1.txt'       : Item(status='  ', wc_rev=6),
+    'unrelated.txt'   : Item(status='  ', wc_rev=7),
+    })
+  svntest.actions.run_and_verify_commit(A_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C_path) #r7
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(short_A_FB, {
+    'unrelated.txt'    : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''               : Item(props={SVN_PROP_MERGE_INFO : '/A/C:2-3,7'}),
+    'file1.txt'      : Item("This is the file1.\n"),
+    'unrelated.txt'  : Item("This is the unrelated file.\n"),
+    })
+  expected_status = wc.State(short_A_FB, {
+    ''                : Item(status=' M', wc_rev=7),
+    'file1.txt'       : Item(status='  ', wc_rev=7),
+    'unrelated.txt'   : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_FB, 6, 7,
+                                       A_C_url, expected_output,
+                                       expected_disk, expected_status,
+                                       expected_skip, None, None, None, None,
+                                       None, 1, 1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(A_FB_path, {
+    ''                 : Item(verb='Sending'),
+    'unrelated.txt'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_FB_path, {
+    ''                : Item(status='  ', wc_rev=8),
+    'unrelated.txt'   : Item(status='  ', wc_rev=8),
+    'file1.txt'       : Item(status='  ', wc_rev=7),
+    })
+  svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_FB_path) #r8
+  svntest.main.run_svn(None, 'rm', A_C_url, '-m', 'deleting bogus trunk') #r9.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.run_svn(None, 'cp', A_C_url + '@3', A_C1_url, '-r', '3', '-m',
+                       'Redeem original trunk again.') #r10
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.file_write(A_C1_file2_path, "This is the file2.\n")
+  svntest.main.run_svn(None, 'add', A_C1_file2_path)
+  expected_output = wc.State(A_C1_path, {
+    'file2.txt'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_C1_path, {
+    ''            : Item(status='  ', wc_rev=10),
+    'file1.txt'   : Item(status='  ', wc_rev=10),
+    'file2.txt'   : Item(status='  ', wc_rev=11),
+    })
+  svntest.actions.run_and_verify_commit(A_C1_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C1_path) #r11
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(short_A_FB, {
+    'file2.txt'    : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''            : Item(props={
+                          SVN_PROP_MERGE_INFO : '/A/C:2-3,7\n/A/C1:11\n'}),
+    'unrelated.txt'  : Item("This is the unrelated file.\n"),
+    'file1.txt'  : Item("This is the file1.\n"),
+    'file2.txt'  : Item("This is the file2.\n"),
+    })
+  expected_status = wc.State(short_A_FB, {
+    ''               : Item(status=' M', wc_rev=11),
+    'file1.txt'      : Item(status='  ', wc_rev=11),
+    'unrelated.txt'  : Item(status='  ', wc_rev=11),
+    'file2.txt'      : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_FB, 10, 11,
+                                       A_C1_url, expected_output,
+                                       expected_disk, expected_status,
+                                       expected_skip, None, None, None, None,
+                                       None, 1, 1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(A_FB_path, {
+    ''            : Item(verb='Sending'),
+    'file2.txt'   : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_FB_path, {
+    ''                : Item(status='  ', wc_rev=12),
+    'file1.txt'       : Item(status='  ', wc_rev=11),
+    'file2.txt'       : Item(status='  ', wc_rev=12),
+    'unrelated.txt'   : Item(status='  ', wc_rev=11),
+    })
+  svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_FB_path) #r12
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.run_svn(None, 'mv', A_C1_url, A_C_url, '-m',
+                       'renaming trunk1 to trunk') #r13.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.file_write(A_C_file3_path, "This is the file3.\n")
+  svntest.main.run_svn(None, 'add', A_C_file3_path)
+  expected_output = wc.State(A_C_path, {
+    'file3.txt'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_C_path, {
+    ''            : Item(status='  ', wc_rev=13),
+    'file1.txt'   : Item(status='  ', wc_rev=13),
+    'file2.txt'   : Item(status='  ', wc_rev=13),
+    'file3.txt'   : Item(status='  ', wc_rev=14),
+    })
+  svntest.actions.run_and_verify_commit(A_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C_path) #r14
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(short_A_FB, {
+    'file3.txt'    : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''               : Item(props={
+                          SVN_PROP_MERGE_INFO : '/A/C:2-3,7,14\n/A/C1:11\n'}),
+    'unrelated.txt'  : Item("This is the unrelated file.\n"),
+    'file1.txt'      : Item("This is the file1.\n"),
+    'file2.txt'      : Item("This is the file2.\n"),
+    'file3.txt'      : Item("This is the file3.\n"),
+    })
+  expected_status = wc.State(short_A_FB, {
+    ''               : Item(status=' M', wc_rev=14),
+    'file1.txt'      : Item(status='  ', wc_rev=14),
+    'file2.txt'      : Item(status='  ', wc_rev=14),
+    'unrelated.txt'  : Item(status='  ', wc_rev=14),
+    'file3.txt'      : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_FB, 13, 14,
+                                       A_C_url, expected_output,
+                                       expected_disk, expected_status,
+                                       expected_skip, None, None, None, None,
+                                       None, 1, 1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(A_FB_path, {
+    ''            : Item(verb='Sending'),
+    'file3.txt'   : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_FB_path, {
+    ''                : Item(status='  ', wc_rev=15),
+    'file1.txt'       : Item(status='  ', wc_rev=14),
+    'file2.txt'       : Item(status='  ', wc_rev=14),
+    'file3.txt'       : Item(status='  ', wc_rev=15),
+    'unrelated.txt'   : Item(status='  ', wc_rev=14),
+    })
+  svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_FB_path) #r15
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  short_A_C = shorten_path_kludge(A_C_path)
+  expected_output = wc.State(short_A_C, {
+    ''               : Item(status=' G'),
+    'unrelated.txt'  : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''               : Item(props={SVN_PROP_MERGE_INFO : 
+                            '/A/C:2-3,7,14\n/A/C1:11\n/A/FB:2-15\n'}),
+    'unrelated.txt'  : Item("This is the unrelated file.\n"),
+    'file1.txt'      : Item("This is the file1.\n"),
+    'file2.txt'      : Item("This is the file2.\n"),
+    'file3.txt'      : Item("This is the file3.\n"),
+    })
+  expected_status = wc.State(short_A_C, {
+    ''               : Item(status=' M', wc_rev=15),
+    'file1.txt'      : Item(status='  ', wc_rev=15),
+    'file2.txt'      : Item(status='  ', wc_rev=15),
+    'file3.txt'      : Item(status='  ', wc_rev=15),
+    'unrelated.txt'  : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_C, None, None,
+                                       A_FB_url, expected_output,
+                                       expected_disk, expected_status,
+                                       expected_skip, None, None, None, None,
+                                       None, 1, dry_run = False)
+  os.chdir(saved_cwd)
 ########################################################################
 # Run the tests
 
@@ -16694,6 +16981,8 @@ test_list = [ None,
               XFail(SkipUnless(merge_non_reflective_with_conflict,
                                server_has_mergeinfo)),
               XFail(SkipUnless(merge_non_reflective_with_complex_conflict,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(reflective_merge_on_reincarnated_target,
                                server_has_mergeinfo)),
              ]
 
