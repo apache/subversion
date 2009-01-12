@@ -503,6 +503,30 @@ gnome_keyring_ssl_client_cert_pw_first_creds(void **credentials,
                                              const char *realmstring,
                                              apr_pool_t *pool)
 {
+  svn_auth_unlock_prompt_func_t unlock_prompt_func =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                 APR_HASH_KEY_STRING);
+  void *unlock_prompt_baton =
+    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                 APR_HASH_KEY_STRING);
+
+  char *keyring_password;
+  const char *default_keyring = get_default_keyring_name(pool);
+
+  if (check_keyring_is_locked(default_keyring))
+    {
+      if (unlock_prompt_func)
+        {
+          SVN_ERR(unlock_prompt_func(&keyring_password,
+                                     default_keyring,
+                                     unlock_prompt_baton,
+                                     pool));
+          gnome_keyring_unlock_keyring(default_keyring, keyring_password,
+                                       pool);
+        }
+    }
+
   return svn_auth__ssl_client_cert_pw_file_first_creds_helper
            (credentials,
             iter_baton, provider_baton,
@@ -522,6 +546,30 @@ gnome_keyring_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
                                             const char *realmstring,
                                             apr_pool_t *pool)
 {
+  svn_auth_unlock_prompt_func_t unlock_prompt_func =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                 APR_HASH_KEY_STRING);
+  void *unlock_prompt_baton =
+    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                 APR_HASH_KEY_STRING);
+
+  char *keyring_password;
+  const char *default_keyring = get_default_keyring_name(pool);
+
+  if (check_keyring_is_locked(default_keyring))
+    {
+      if (unlock_prompt_func)
+        {
+          SVN_ERR(unlock_prompt_func(&keyring_password,
+                                     default_keyring,
+                                     unlock_prompt_baton,
+                                     pool));
+          gnome_keyring_unlock_keyring(default_keyring, keyring_password,
+                                       pool);
+        }
+    }
+
   return svn_auth__ssl_client_cert_pw_file_save_creds_helper
            (saved, credentials,
             provider_baton, parameters,
