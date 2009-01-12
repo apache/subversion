@@ -15137,7 +15137,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   #and commit results in r13.
   #Add A/FB1/bfile3.txt, A/FB1/bdir3 and commit, results in r14.
   #Remove A/C/tfile3.txt and A/C/tdir3 and commit at r15.
-  #Merge r3:15 from A/FB1 to A/C. Here r11,r12, r13 are reflective of '/A/C'.
+  #Add A/C/tfile0.txt and A/C/tdir0 and commit at r16.
+  #Merge r3:16 from A/FB1 to A/C. Here r11,r12, r13 are reflective of '/A/C'.
   #Merge should extract changes that are not from merge of
   #'/A/C'(non-reflective-of-/A/C) and merge.
   #i.e This should extract '+/A/FB1/bfile2.txt, '-/A/FB1/adhoc.txt' 
@@ -15551,6 +15552,28 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
                                         expected_status, None, None, None,
                                         None, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.run_svn(None, 'mkdir', A_C_tdir0_path)
+  svntest.main.file_write(A_C_tfile0_path, "This is the tfile0.\n")
+  svntest.main.run_svn(None, 'add', A_C_tfile0_path)
+  expected_output = wc.State(A_C_path, {
+    'tfile0.txt'   : Item(verb='Adding'),
+    'tdir0'        : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_C_path, {
+    ''             : Item(status='  ', wc_rev=15),
+    'adhoc.txt'    : Item(status='  ', wc_rev=15),
+    'adhocdir'     : Item(status='  ', wc_rev=15),
+    'tfile0.txt'   : Item(status='  ', wc_rev=16),
+    'tdir0'        : Item(status='  ', wc_rev=16),
+    'tfile1.txt'   : Item(status='  ', wc_rev=15),
+    'tdir1'        : Item(status='  ', wc_rev=15),
+    'tfile2.txt'   : Item(status='  ', wc_rev=15),
+    'tdir2'        : Item(status='  ', wc_rev=15),
+    })
+  svntest.actions.run_and_verify_commit(A_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_A_C = shorten_path_kludge(A_C_path)
   expected_skip = wc.State(short_A_C, {})
   expected_output = wc.State(short_A_C, {
@@ -15566,13 +15589,15 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_disk = wc.State('', {
     ''            : Item(props={SVN_PROP_MERGE_INFO : 
-                                   '/A/C:5-6,10\n/A/FB1:4-15\n/A/FB2:4-12\n'}),
+                                   '/A/C:5-6,10\n/A/FB1:4-16\n/A/FB2:4-12\n'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bdir1'       : Item(),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
     'bdir2'       : Item(),
     'bfile3.txt'  : Item("This is the bfile3.\n"),
     'bdir3'       : Item(),
+    'tfile0.txt'  : Item("This is the tfile0.\n"),
+    'tdir0'       : Item(),
     'tfile1.txt'  : Item("This is the tfile1.\n"),
     'tdir1'       : Item(),
     'tfile2.txt'  : Item("This is the tfile2.\n"),
@@ -15580,22 +15605,24 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'adhocdir'    : Item(),
     })
   expected_status = wc.State(short_A_C, {
-    ''             : Item(status=' M', wc_rev=15),
+    ''             : Item(status=' M', wc_rev=16),
     'bfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bdir1'        : Item(status='A ', wc_rev='-', copied='+'),
     'bfile2.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bdir2'        : Item(status='A ', wc_rev='-', copied='+'),
     'bfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bdir3'        : Item(status='A ', wc_rev='-', copied='+'),
-    'adhoc.txt'    : Item(status='D ', wc_rev=15),
-    'adhocdir'     : Item(status='D ', wc_rev=15),
-    'tfile1.txt'   : Item(status='  ', wc_rev=15),
-    'tdir1'        : Item(status='  ', wc_rev=15),
-    'tfile2.txt'   : Item(status='  ', wc_rev=15),
-    'tdir2'        : Item(status='  ', wc_rev=15),
+    'adhoc.txt'    : Item(status='D ', wc_rev=16),
+    'adhocdir'     : Item(status='D ', wc_rev=16),
+    'tfile0.txt'   : Item(status='  ', wc_rev=16),
+    'tdir0'        : Item(status='  ', wc_rev=16),
+    'tfile1.txt'   : Item(status='  ', wc_rev=16),
+    'tdir1'        : Item(status='  ', wc_rev=16),
+    'tfile2.txt'   : Item(status='  ', wc_rev=16),
+    'tdir2'        : Item(status='  ', wc_rev=16),
     })
   os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_C, 3, 15,
+  svntest.actions.run_and_verify_merge(short_A_C, 3, 16,
                                        A_FB1_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
