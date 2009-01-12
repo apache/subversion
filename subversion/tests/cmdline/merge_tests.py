@@ -6435,6 +6435,7 @@ def avoid_reflected_revs(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   # Merge 2:8 from A_COPY(feature branch) to A(trunk).
   expected_output = wc.State(A_path, {
     ''       : Item(status='CG'),
@@ -6442,29 +6443,29 @@ def avoid_reflected_revs(sbox):
     'bfile1' : Item(status='A '),
     })
   expected_status = wc.State(A_path, {
-    ''          : Item(status='CM', wc_rev=6),
+    ''          : Item(status='CM', wc_rev=8),
     'bfile2'    : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1'    : Item(status='A ', wc_rev='-', copied='+'),
-    'tfile2'    : Item(status='  ', wc_rev=6),
-    'tfile1'    : Item(status='  ', wc_rev=6),
-    'mu'        : Item(status='  ', wc_rev=6),
-    'C'         : Item(status='  ', wc_rev=6),
-    'D'         : Item(status='  ', wc_rev=6),
-    'B'         : Item(status='  ', wc_rev=6),
-    'B/lambda'  : Item(status='  ', wc_rev=6),
-    'B/E'       : Item(status='  ', wc_rev=6),
-    'B/E/alpha' : Item(status='  ', wc_rev=6),
-    'B/E/beta'  : Item(status='  ', wc_rev=6),
-    'B/F'       : Item(status='  ', wc_rev=6),
-    'D/gamma'   : Item(status='  ', wc_rev=6),
-    'D/G'       : Item(status='  ', wc_rev=6),
-    'D/G/pi'    : Item(status='  ', wc_rev=6),
-    'D/G/rho'   : Item(status='  ', wc_rev=6),
-    'D/G/tau'   : Item(status='  ', wc_rev=6),
-    'D/H'       : Item(status='  ', wc_rev=6),
-    'D/H/chi'   : Item(status='  ', wc_rev=6),
-    'D/H/omega' : Item(status='  ', wc_rev=6),
-    'D/H/psi'   : Item(status='  ', wc_rev=6),
+    'tfile2'    : Item(status='  ', wc_rev=8),
+    'tfile1'    : Item(status='  ', wc_rev=8),
+    'mu'        : Item(status='  ', wc_rev=8),
+    'C'         : Item(status='  ', wc_rev=8),
+    'D'         : Item(status='  ', wc_rev=8),
+    'B'         : Item(status='  ', wc_rev=8),
+    'B/lambda'  : Item(status='  ', wc_rev=8),
+    'B/E'       : Item(status='  ', wc_rev=8),
+    'B/E/alpha' : Item(status='  ', wc_rev=8),
+    'B/E/beta'  : Item(status='  ', wc_rev=8),
+    'B/F'       : Item(status='  ', wc_rev=8),
+    'D/gamma'   : Item(status='  ', wc_rev=8),
+    'D/G'       : Item(status='  ', wc_rev=8),
+    'D/G/pi'    : Item(status='  ', wc_rev=8),
+    'D/G/rho'   : Item(status='  ', wc_rev=8),
+    'D/G/tau'   : Item(status='  ', wc_rev=8),
+    'D/H'       : Item(status='  ', wc_rev=8),
+    'D/H/chi'   : Item(status='  ', wc_rev=8),
+    'D/H/omega' : Item(status='  ', wc_rev=8),
+    'D/H/psi'   : Item(status='  ', wc_rev=8),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3,5\n/A_COPY:3-8\n'}),
@@ -15768,6 +15769,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_ABE = shorten_path_kludge(ABE_path)
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
@@ -15779,9 +15781,9 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'beta'     : Item(status=' U'),
     })
   expected_status = wc.State(short_ABE, {
-    ''         : Item(status=' M', wc_rev=7),
-    'alpha'    : Item(status='M ', wc_rev=7),
-    'beta'     : Item(status=' M', wc_rev=7),
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='M ', wc_rev=8),
+    'beta'     : Item(status=' M', wc_rev=8),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
@@ -15816,9 +15818,9 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'beta'     : Item(status=' U'),
     })
   expected_status = wc.State('', {
-    ''         : Item(status=' M', wc_rev=7),
-    'alpha'    : Item(status='M ', wc_rev=7),
-    'beta'     : Item(status=' M', wc_rev=7),
+    ''         : Item(status=' M', wc_rev=8),
+    'alpha'    : Item(status='M ', wc_rev=8),
+    'beta'     : Item(status=' M', wc_rev=8),
     })
   expected_skip = wc.State('', {})
 
@@ -16056,6 +16058,7 @@ def merge_non_reflective_with_conflict(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   short_ABE = shorten_path_kludge(ABE_path)
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
@@ -16066,9 +16069,9 @@ def merge_non_reflective_with_conflict(sbox):
     'alpha'    : Item(status='C '),
     })
   expected_status = wc.State(short_ABE, {
-    ''         : Item(status=' M', wc_rev=8),
-    'alpha'    : Item(status='C ', wc_rev=8),
-    'beta'     : Item(status='  ', wc_rev=8),
+    ''         : Item(status=' M', wc_rev=9),
+    'alpha'    : Item(status='C ', wc_rev=9),
+    'beta'     : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
@@ -16113,9 +16116,9 @@ def merge_non_reflective_with_conflict(sbox):
     ''         : Item(status=' G'),
     })
   expected_status = wc.State(short_ABE, {
-    ''         : Item(status=' M', wc_rev=8),
-    'alpha'    : Item(status='M ', wc_rev=8),
-    'beta'     : Item(status='  ', wc_rev=8),
+    ''         : Item(status=' M', wc_rev=9),
+    'alpha'    : Item(status='M ', wc_rev=9),
+    'beta'     : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
