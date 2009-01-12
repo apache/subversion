@@ -35,7 +35,7 @@ public class Status implements java.io.Serializable
     // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
     // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * the url for accessing the item
@@ -104,6 +104,12 @@ public class Status implements java.io.Serializable
      * is this item in a tree conflicted state
      */
     private boolean treeConflicted;
+
+    /**
+     * @since 1.6
+     * description of the tree conflict
+     */
+    private ConflictDescriptor conflictDescriptor;
 
     /**
      * the file or directory status of base (See StatusKind)
@@ -226,6 +232,7 @@ public class Status implements java.io.Serializable
      *                              operation)
      * @param copied                if the item is copy
      * @param treeConflicted        if the item is part of a tree conflict
+     * @param conflictDescriptor    the description of the tree conflict
      * @param conflictOld           in case of conflict, the file name of the
      *                              the common base version
      * @param conflictNew           in case of conflict, the file name of new
@@ -256,7 +263,7 @@ public class Status implements java.io.Serializable
                   String lastCommitAuthor, int textStatus, int propStatus,
                   int repositoryTextStatus, int repositoryPropStatus,
                   boolean locked, boolean copied, boolean treeConflicted,
-                  String conflictOld,
+                  ConflictDescriptor conflictDescriptor, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, String lockToken, String lockOwner,
@@ -276,6 +283,7 @@ public class Status implements java.io.Serializable
         this.locked = locked;
         this.copied = copied;
         this.treeConflicted = treeConflicted;
+        this.conflictDescriptor = conflictDescriptor;
         this.repositoryTextStatus = repositoryTextStatus;
         this.repositoryPropStatus = repositoryPropStatus;
         this.conflictOld = conflictOld;
@@ -739,6 +747,15 @@ public class Status implements java.io.Serializable
     public boolean getTreeConflicted()
     {
         return treeConflicted;
+    }
+
+    /**
+     * @return the conflict descriptor for the tree conflict
+     * @since 1.6
+     */
+    public ConflictDescriptor getConflictDescriptor()
+    {
+        return conflictDescriptor;
     }
 
     /**
