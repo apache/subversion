@@ -400,9 +400,9 @@ gnome_keyring_simple_first_creds(void **credentials,
       if (unlock_prompt_func)
         {
           SVN_ERR(unlock_prompt_func(&keyring_password,
-                                      default_keyring,
-                                      unlock_prompt_baton,
-                                      pool));
+                                     default_keyring,
+                                     unlock_prompt_baton,
+                                     pool));
           gnome_keyring_unlock_keyring(default_keyring, keyring_password,
                                        pool);
         }
