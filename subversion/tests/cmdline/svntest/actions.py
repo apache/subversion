@@ -1604,7 +1604,8 @@ def inject_conflict_into_expected_state(state_path,
     conflict_marker = make_conflict_marker_text(wc_text, merged_text,
                                                 merged_rev)
     existing_text = expected_disk.desc[state_path].contents or ""
-    expected_disk.tweak(state_path, contents=existing_text + conflict_marker)
+    new_text = existing_text.replace(wc_text, conflict_marker)
+    expected_disk.tweak(state_path, contents=new_text)
 
   if expected_status:
     expected_status.tweak(state_path, status='C ')
