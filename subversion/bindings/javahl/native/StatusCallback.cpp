@@ -118,7 +118,7 @@ StatusCallback::createJavaStatus(const char *path,
                              "L"JAVA_PACKAGE"/ConflictDescriptor;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
-                             "JZLjava/lang/String;Ljava/lang/String;"
+                             "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JLorg/tigris/subversion/javahl/Lock;"
                              "JJILjava/lang/String;Ljava/lang/String;)V");
@@ -143,6 +143,7 @@ StatusCallback::createJavaStatus(const char *path,
   jboolean jIsLocked = JNI_FALSE;
   jboolean jIsCopied = JNI_FALSE;
   jboolean jIsSwitched = JNI_FALSE;
+  jboolean jIsFileExternal = JNI_FALSE;
   jboolean jIsTreeConflicted = JNI_FALSE;
   jobject jConflictDescription = NULL;
   jstring jConflictOld = NULL;
@@ -173,6 +174,7 @@ StatusCallback::createJavaStatus(const char *path,
       jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
+      jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
       jConflictDescription = ConflictResolverCallback::createJConflictDescriptor(
                                                       status->tree_conflict);
       if (JNIUtil::isJavaExceptionThrown())
@@ -248,10 +250,10 @@ StatusCallback::createJavaStatus(const char *path,
                                jLastCommitAuthor, jTextType, jPropType,
                                jRepositoryTextType, jRepositoryPropType,
                                jIsLocked, jIsCopied, jIsTreeConflicted,
-                               jConflictDescription,
-                               jConflictOld, jConflictNew, jConflictWorking,
-                               jURLCopiedFrom, jRevisionCopiedFrom,
-                               jIsSwitched, jLockToken, jLockOwner,
+                               jConflictDescription, jConflictOld, jConflictNew,
+                               jConflictWorking, jURLCopiedFrom,
+                               jRevisionCopiedFrom, jIsSwitched, jIsFileExternal,
+                               jLockToken, jLockOwner,
                                jLockComment, jLockCreationDate, jLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
                                jOODKind, jOODLastCmtAuthor, jChangelist);
