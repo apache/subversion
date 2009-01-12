@@ -15800,7 +15800,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
 
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   expected_output = wc.State(short_ABE, {
-    ''         : Item(status=' U'),
+    ''         : Item(status=' G'),
     'alpha'    : Item(status='G '),
     'beta'     : Item(status=' U'),
     })
@@ -15811,7 +15811,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                     SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7\n/A/B/E_COPY:3-8\n'}),
+                     SVN_PROP_MERGE_INFO : '/A/B/E:2-5,7\n/A/B/E_COPY:3-8\n'}),
     'beta'     : Item(props={'prop1' : 'val1', 'prop2' : 'val2'},
                       contents="This is the file 'beta'.\n"),
     'alpha'    : Item(props={'prop1' : 'val1'},
@@ -15837,7 +15837,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
   #TODO Duplicating above expected_* for the target '', should be
   #smart enough here to reuse without duplicating.
   expected_output = wc.State('', {
-    ''         : Item(status=' U'),
+    ''         : Item(status=' G'),
     'alpha'    : Item(status='G '),
     'beta'     : Item(status=' U'),
     })
@@ -16139,7 +16139,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                   SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7-8\n/A/B/E_COPY:3-9\n'}),
+                   SVN_PROP_MERGE_INFO : '/A/B/E:2-5,7-8\n/A/B/E_COPY:3-9\n'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
     })
