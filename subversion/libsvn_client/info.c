@@ -57,9 +57,14 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->lock                 = lock;
   tmpinfo->depth                = svn_depth_unknown;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
-  /* ### The size overflows on files > 4 GB.
-     We should add a new field of apr_off_t if we need the full value */
-  tmpinfo->size                 = (apr_size_t)dirent->size;
+  
+  if (((apr_size_t)dirent->size) == dirent->size)
+    tmpinfo->size               = (apr_size_t)dirent->size;
+  else /* >= 4GB - 1 byte */
+    tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN; 
+    
+  tmpinfo->size64               = dirent->size;
+  tmpinfo->working_size         = SVN_FILE_SIZE_UNKNOWN;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
@@ -102,10 +107,15 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->prejfile             = entry->prejfile;
   tmpinfo->changelist           = entry->changelist;
 
-  /* ### The working_size overflows on files > 4 GB.
-     We should add a new field of apr_off_t if we need the full value */
-  tmpinfo->working_size         = (apr_size_t)entry->working_size;
+  if (((apr_size_t)entry->working_size) == entry->working_size)
+    tmpinfo->working_size       = (apr_size_t)entry->working_size;
+  else /* >= 4GB - 1 byte */
+    tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
+
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
+  tmpinfo->size64               = SVN_FILE_SIZE_UNKNOWN;
+
+  tmpinfo->working_size64       = entry->working_size;
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
@@ -143,7 +153,9 @@ build_info_for_unversioned(svn_info_t **info,
   tmpinfo->last_changed_author  = NULL;
   tmpinfo->lock                 = NULL;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size                 = 0;
+  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
+  tmpinfo->size64               = SVN_FILE_SIZE_UNKNOWN;
+  tmpinfo->working_size64       = SVN_FILE_SIZE_UNKNOWN;  
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
