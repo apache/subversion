@@ -147,6 +147,7 @@ struct edit_baton
      but it is never NULL; for example, for checkouts and for updates
      that do not specify a target path, ANCHOR holds the whole path,
      and TARGET is empty. */
+  /* ### ANCHOR is relative to CWD; TARGET is relative to ANCHOR? */
   const char *anchor;
   const char *target;
 
@@ -1663,6 +1664,57 @@ already_in_a_tree_conflict(char **victim_path,
   return SVN_NO_ERROR;
 }
 
+struct set_copied_baton_t
+{
+  struct edit_baton *eb;
+};
+
+/* An svn_wc_entry_callbacks2_t found_entry callback function.
+ * Set the 'copied' flag on the given entry. */
+static svn_error_t *
+set_copied_callback(const char *path,
+                    const svn_wc_entry_t *entry,
+                    void *walk_baton,
+                    apr_pool_t *pool)
+{
+  struct set_copied_baton_t *b = walk_baton;
+  const char *full_path = svn_path_join(b->eb->anchor, path, pool);
+  const char *base_name = svn_path_basename(path, pool);
+  svn_wc_adm_access_t *entry_adm_access;
+  svn_wc_entry_t tmp_entry;
+  apr_uint64_t flags = 0;
+
+  /* Directories are notified twice. Handle them only once, as "this dir". */
+  if (entry->kind == svn_node_dir
+      && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+    return SVN_NO_ERROR;
+
+  /* Determine which adm dir holds this node's entry */
+  /* ### But this will fail if eb->adm_access holds only a shallow lock. */
+  SVN_ERR(svn_wc_adm_probe_retrieve(&entry_adm_access, b->eb->adm_access,
+                                    full_path, pool));
+
+  /* Set the 'copied' flag and write the entry out to disk. */
+  tmp_entry.copied = TRUE;
+  flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+  SVN_ERR(svn_wc__entry_modify(entry_adm_access,
+                               (entry->kind == svn_node_dir)
+                               ? SVN_WC_ENTRY_THIS_DIR : base_name,
+                               &tmp_entry, flags, TRUE /* do_sync */, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_entry_callbacks2_t found_entry callback function. */
+static svn_error_t *
+set_copied_handle_error(const char *path,
+                        svn_error_t *err,
+                        void *walk_baton,
+                        apr_pool_t *pool)
+{
+  return err;
+}
+
 /* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
  * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
  * PATH and PARENT_PATH are relative to EB->anchor.
@@ -1728,20 +1780,38 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
 
   if (entry->kind == svn_node_dir)
     {
-      /* ### Need to set 'copied' recursively, in order to support the
-       * cases where this is a directory. Is there more too? */
+      svn_wc_entry_callbacks2_t set_copied_callbacks
+        = { set_copied_callback, set_copied_handle_error };
+      struct set_copied_baton_t set_copied_baton;
+      svn_wc_adm_access_t *parent_adm_access;
+
+      parent_adm_access = entry_adm_access;  /* ### no, retrieve it */
+
+      /* Set the 'copied' flag recursively, to support the
+       * cases where this is a directory. */
+      set_copied_baton.eb = eb;
+      SVN_ERR(svn_wc_walk_entries3(full_path, parent_adm_access,
+                                   &set_copied_callbacks, &set_copied_baton,
+                                   svn_depth_infinity, FALSE /* show_hidden */,
+                                   NULL, NULL, pool));
+
+      /* ### Need to do something more? */
     }
 
   return SVN_NO_ERROR;
 }
 
 /* Delete PATH from its immediate parent PARENT_PATH, in the edit
- * represented by EB.  Name temporary transactional logs based on
- * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
- * Perform all allocations in POOL.
+ * represented by EB. PATH is relative to EB->anchor.
+ * PARENT_PATH is relative to the current working directory.
+ *
  * THEIR_URL is the deleted node's URL on the source-right side, the
  * side that the target should become after the update. Simply put,
  * that's the URL obtained from the batons.
+ *
+ * Name temporary transactional logs based on *LOG_NUMBER, but set
+ * *LOG_NUMBER to 0 after running the final log.  Perform all allocations in
+ * POOL.
  */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
@@ -1825,20 +1895,23 @@ do_entry_deletion(struct edit_baton *eb,
       if (tree_conflict->reason == svn_wc_conflict_reason_edited)
         {
           /* The item exists locally and has some sort of local mod.
-           * It no longer exists in its WC parent's repository directory
-           * (### assuming that dir was updated), so
-           * we must schedule the existing content for add-with-history,
-           * and if it is a dir then process its children similarly. */
+           * It no longer exists in the repository at its target URL@REV.
+           * (### If its WC parent was not updated similarly, then it needs to
+           * be marked 'deleted' in its WC parent.)
+           * To prepare the "accept mine" resolution for the tree conflict,
+           * we must schedule the existing content for re-addition as a copy
+           * of what it was, but with its local modifications preserved. */
 
-          /* First run the log in the parent dir, to record the tree conflict,
-           * in case the following command needs to modify the same entries. */
+          /* Run the log in the parent dir, to record the tree conflict.
+           * Do this before schedule_existing_item_for_re_add(), in case
+           * that needs to modify the same entries. */
           SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
                                     pool));
           SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
-                                                    path, pool));
+                                                    full_path, pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
