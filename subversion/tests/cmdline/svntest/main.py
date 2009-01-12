@@ -538,12 +538,13 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   if platform_with_subprocess:
     stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
+    infile.close()
   else:
+    infile.close()
     stdout_lines = outfile.readlines()
     stderr_lines = errfile.readlines()
     exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
-  infile.close()
   outfile.close()
   errfile.close()
 
