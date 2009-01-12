@@ -351,7 +351,8 @@ def merge_history_repos(sbox):
   #    Merged /branches/a:r6,8-11
   #    Merged /branches/b:r10-13
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b) + '@HEAD')
+  svntest.main.run_svn(None, 'merge', '--accept=mine-full',
+                       os.path.join('..', branch_b) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/b to trunk.",
                        '--username', svntest.main.wc_author2)
