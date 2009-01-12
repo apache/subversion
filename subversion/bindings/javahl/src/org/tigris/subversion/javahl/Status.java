@@ -100,6 +100,11 @@ public class Status implements java.io.Serializable
     private boolean switched;
 
     /**
+     * has the item is a file external
+     */
+    private boolean fileExternal;
+
+    /**
      * @since 1.6
      * is this item in a tree conflicted state
      */
@@ -244,6 +249,7 @@ public class Status implements java.io.Serializable
      *                              source
      * @param switched              flag if the node has been switched in the
      *                              path
+     * @param fileExternal          flag if the node is a file external
      * @param lockToken             the token for the current lock if any
      * @param lockOwner             the owner of the current lock is any
      * @param lockComment           the comment of the current lock if any
@@ -266,10 +272,11 @@ public class Status implements java.io.Serializable
                   ConflictDescriptor conflictDescriptor, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched, String lockToken, String lockOwner,
-                  String lockComment, long lockCreationDate, Lock reposLock,
-                  long reposLastCmtRevision, long reposLastCmtDate,
-                  int reposKind, String reposLastCmtAuthor, String changelist)
+                  boolean switched, boolean fileExternal, String lockToken,
+                  String lockOwner, String lockComment, long lockCreationDate,
+                  Lock reposLock, long reposLastCmtRevision,
+                  long reposLastCmtDate, int reposKind,
+                  String reposLastCmtAuthor, String changelist)
     {
         this.path = path;
         this.url = url;
@@ -292,6 +299,7 @@ public class Status implements java.io.Serializable
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
+        this.fileExternal = fileExternal;
         this.lockToken = lockToken;
         this.lockOwner = lockOwner;
         this.lockComment = lockComment;
@@ -540,6 +548,15 @@ public class Status implements java.io.Serializable
     public boolean isSwitched()
     {
         return switched;
+    }
+
+    /**
+     * Returns if the item is a file external
+     * @return is the item is a file external
+     */
+    public boolean isFileExternal()
+    {
+        return fileExternal;
     }
 
     /**
