@@ -550,10 +550,10 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   if (no_auth_cache || ! store_auth_creds_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
-#if (!defined(DARWIN) && !defined(WIN32))
+#ifdef SVN_HAVE_GNOME_KEYRING
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
                          &svn_cmdline_auth_unlock_prompt);
-#endif /* (!DARWIN && !WIN32) */
+#endif /* SVN_HAVE_GNOME_KEYRING */
 
   return SVN_NO_ERROR;
 }
