@@ -15136,7 +15136,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   #(Merge A/FB2 to A/FB1) + delete A/FB1/adhoc.txt + delete A/FB1/adhocdir
   #and commit results in r13.
   #Add A/FB1/bfile3.txt, A/FB1/bdir3 and commit, results in r14.
-  #Merge r3:14 from A/FB1 to A/C. Here r11,r12, r13 are reflective of '/A/C'.
+  #Remove A/C/tfile3.txt and A/C/tdir3 and commit at r15.
+  #Merge r3:15 from A/FB1 to A/C. Here r11,r12, r13 are reflective of '/A/C'.
   #Merge should extract changes that are not from merge of
   #'/A/C'(non-reflective-of-/A/C) and merge.
   #i.e This should extract '+/A/FB1/bfile2.txt, '-/A/FB1/adhoc.txt' 
