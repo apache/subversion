@@ -16634,7 +16634,7 @@ def reflective_merge_on_reincarnated_target(sbox):
                                         None, None, A_FB_path) #r8
   svntest.main.run_svn(None, 'rm', A_C_url, '-m', 'deleting bogus trunk') #r9.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.main.run_svn(None, 'cp', A_C_url + '@3', A_C1_url, '-r', '3', '-m',
+  svntest.main.run_svn(None, 'cp', A_C_url + '@4', A_C1_url, '-m',
                        'Redeem original trunk again.') #r10
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.main.file_write(A_C1_file2_path, "This is the file2.\n")
