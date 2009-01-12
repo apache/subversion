@@ -405,7 +405,7 @@ def open_pipe(command, mode):
   # work if the command itself is quoted.
   args = command[1:]
   args = ' '.join([_quote_arg(x) for x in args])
-  command = command[0] + ' ' + args    
+  command = command[0] + ' ' + args
   if platform_with_popen3_class:
     kid = Popen3(command, True)
     return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
@@ -425,7 +425,13 @@ def open_pipe2(command, stdin=None, stdout=None, stderr=None):
   # a valid program to execute, rather it wants the Python executable.
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
-
+  
+  # Quote only the arguments.  Later versions of subprocess, 2.5.2+ confirmed,
+  # don't require this quoting, but versions < 2.4.3 do.
+  args = command[1:]
+  args = ' '.join([_quote_arg(x) for x in args])
+  command = command[0] + ' ' + args
+ 
   if not stdin:
     stdin = subprocess.PIPE
   if not stdout:
