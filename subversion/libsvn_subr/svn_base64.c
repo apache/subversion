@@ -381,7 +381,7 @@ svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
    ### This is now only used as a new implementation of svn_base64_from_md5();
    it would probably be safer to revert that to its old implementation. */
 static svn_stringbuf_t *
-base64_from_checksum(svn_checksum_t *checksum, apr_pool_t *pool)
+base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
 {
   svn_stringbuf_t *checksum_str;
   unsigned char ingroup[3];
