@@ -8,19 +8,21 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Actually document how to build with SQLite (ie, make the part in
-   INSTALL not blank, explain how to build against a newer version
-   of SQLite than what may be installed in your system, figure out
-   if the text in sqlite.m4 about being able to use a sqlite/
-   subdirectory is in any way true, etc etc)
+ * #3334: Tree conflicts "merry-go-round" about update updating the base.
+   Julian Foad is working on this. Done for when victim is a file, still
+   doing for when victim is a directory.  [julianfoad]
+   See: <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1019712>.
 
- * Tree conflicts - essential issues:
+ * #3354: update fails when file with local mods is moved and modified.
+   If you run the attached script with current trunk, svn bails out
+   and leaves the working copy in locked state.
+   The problem occurs when an update pulls down both a move and a
+   textual diff for a file in one go.
+   Not deeply analysed, fix unknown as of yet, but reproduction script exists.
 
-   - #3334: "Merry-go-round" about update updating the base.
-
- * Switch to skel for TC information, rather than using another
-   serialization format.
-
+ * Review the new "svn_dirent/svn_uri" API and ensure we aren't putting
+   functions into the public name space that we won't want to support.
+   See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1010183>.
 
 Optional:
 
@@ -37,46 +39,3 @@ Optional:
      Should print a 'Skipped' message instead.  Update of an item that is
      inside a tree conflict, and that no longer exists in the repo, does
      nothing.  Should print a 'Skipped' message instead.
-
-   - #3343: Making use of skels to store tree conflict data in entries file
-
-     Mailing list thread:
-     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=145582
-
-     IRC conversation excerpts:
-     <stsp> gstein, made up your mind about skels yet?
-     <gstein> yeah. skels are all-ascii, so they'll work just fine in entries
-     <gstein> two files to move to libsvn_subr
-     <stsp> that was the only other tc-blocking issue I can remember
-     <stsp> but the code as-is is working fine and has been tested for more
-            than half a year
-     <gstein> stsp: and the skel code works and has been tested for 8 years
-     [...]
-     <gstein> anyways, I do agree/believe that the code is solid,
-     <stsp> well, I'm still not entirely convince the extra effort of changing
-            the code to use skels is really worth it, but we'll see --
-            I'd still say solve the other issues first, and convert to skels
-            then if time is left
-     <gstein> but it is more code to support over the long haul
-     <gstein> the "read" code has to exist forever
-     <stsp> yes
-     <stsp> till 2.0
-     <gstein> right
-     <stsp> I don't mind maintaining the read code :)
-     <gstein> I'd prefer that we don't have to carry it around
-     <gstein> haha
-     <gstein> well, the community has to maintain it
-     <gstein> oh. what I was about to say, is that I'm leaving in 2 hrs,
-     <gstein> but will work on skel'ing the code when I get home
-     <stsp> right
-     <gstein> I'll make the skels svn-private in trunk,
-     <gstein> and then do the skel work on a branch for eval
-     <stsp> that's fine -- I'm just objected to taking tc-focused resources
-            away for skels from other things
-     <stsp> if you do it, +1
-     <gstein> well, I can more or less buy the "will only have to leave
-              read code" argument,
-     <gstein> so it is hard to strenuously object and maintain my -1,
-     <gstein> so I'm good with doing the work myself
-     <gstein> my wc work isn't going to be done for 1.6, so distraction
-              is fine :-P

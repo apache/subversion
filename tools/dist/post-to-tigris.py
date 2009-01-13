@@ -16,14 +16,25 @@ post-to-tigris.py <username> <password> <folderId> <release>
     release - the full name of the release, such as 1.5.0-beta1
 '''
 
-import sys, cookielib, urllib2, urllib, re
-
+import sys, cookielib, re
+try:
+  # Python >=3.0
+  from urllib.parse import urlencode as urllib_parse_urlencode
+  from urllib.request import build_opener as urllib_request_build_opener
+  from urllib.request import HTTPCookieProcessor as urllib_request_HTTPCookieProcessor
+  from urllib.request import Request as urllib_request_Request
+except ImportError:
+  # Python <3.0
+  from urllib import urlencode as urllib_parse_urlencode
+  from urllib2 import build_opener as urllib_request_build_opener
+  from urllib2 import HTTPCookieProcessor as urllib_request_HTTPCookieProcessor
+  from urllib2 import Request as urllib_request_Request
 
 def login(username, password, folderId):
     '''Login to tigris.org, using the provided username and password.
        Return the OpenDirector object for future use.'''
     cj = cookielib.CookieJar()
-    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    opener = urllib_request_build_opener(urllib_request_HTTPCookieProcessor(cj))
 
     folderURL = 'http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=%d' % folderId,
     params = {
@@ -31,8 +42,8 @@ def login(username, password, folderId):
         'loginID' : username,
         'password' : password,
       }
-    request = urllib2.Request('http://www.tigris.org/servlets/TLogin',
-                               urllib.urlencode(params))
+    request = urllib_request_Request('http://www.tigris.org/servlets/TLogin',
+                                     urllib_parse_urlencode(params))
     # We open the above request, grabbing the appropriate credentials for
     # future interactions.
     opener.open(request)
@@ -80,8 +91,8 @@ def add_items(opener, folderId, release_name):
             }
 
             # Add file
-            request = urllib2.Request(folder_add_url,
-                                      urllib.urlencode(params))
+            request = urllib_request_Request(folder_add_url,
+                                             urllib_parse_urlencode(params))
             opener.open(request)
 
             # Add signature
@@ -90,14 +101,14 @@ def add_items(opener, folderId, release_name):
             params['description'] = 'PGP signatures for %s' % desc
             params['url'] = 'http://subversion.tigris.org/downloads/%s' % \
                                                                       filename
-            request = urllib2.Request(folder_add_url,
-                                      urllib.urlencode(params))
+            request = urllib_request_Request(folder_add_url,
+                                             urllib_parse_urlencode(params))
             opener.open(request)
 
 
 def main():
     if len(sys.argv) < 5:
-        print usage
+        print(usage)
         sys.exit(-1)
 
     folderId = int(sys.argv[3])

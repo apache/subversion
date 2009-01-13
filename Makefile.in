@@ -2,7 +2,7 @@
 # Makefile.in:  template Makefile for Subversion
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -41,7 +41,7 @@ NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
-SVN_DB_LIBS =
+SVN_DB_LIBS = @SVN_DB_LIBS@
 SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
@@ -110,9 +110,9 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
-           @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ \
-           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@ \
-           @SVN_SQLITE_INCLUDES@
+           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ \
+           @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ \
+           @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -176,7 +176,8 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 # special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
-COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(CFLAGS) $(SWIG_RB_INCLUDES) $(INCLUDES) -o $@ -c
+# Ruby doesn't like '-ansi', so strip that out of CFLAGS
+COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) `echo "$(CFLAGS)" | sed -e "s/-ansi//"` $(SWIG_RB_INCLUDES) $(INCLUDES) -o $@ -c
 
 # special compilation for files destined for javahl (i.e. C++)
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(JAVAHL_INCLUDES) -o $@ -c
@@ -406,6 +407,12 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(ENABLE_SASL)" != ""; then                               \
 	    flags="--enable-sasl $$flags";                                   \
 	  fi;                                                                \
+	  if test "$(FSFS_SHARDING)" != ""; then                             \
+	    flags="--fsfs-sharding $(FSFS_SHARDING) $$flags";                \
+	  fi;                                                                \
+	  if test "$(FSFS_PACKING)" != ""; then                              \
+	    flags="--fsfs-packing $$flags";                                  \
+	  fi;                                                                \
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
@@ -454,9 +461,10 @@ bdbcheck:
 	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
-	rm -rf subversion/tests/cmdline/svn-test-work              \
+	rm -rf subversion/tests/cmdline/svn-test-work          \
                subversion/tests/libsvn_fs/test-repo-*          \
                subversion/tests/libsvn_fs_base/test-repo-*     \
+               subversion/tests/libsvn_fs_fs/test-repo-*       \
                subversion/tests/libsvn_ra_local/test-repo-*    \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \

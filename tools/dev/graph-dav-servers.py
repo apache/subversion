@@ -94,7 +94,8 @@ STATS = """1/1/2003       70
 9/1/2008              254757
 10/1/2008             268081
 11/1/2008             299071
-12/1/2008             330884"""
+12/1/2008             330884
+1/1/2009              369719"""
 
 
 def get_date(raw_date):
@@ -150,11 +151,11 @@ def draw_graph(dates, counts):
   try:
     im = Image.open(OUTPUT_FILE + ".tmp.png", 'r')
     (width, height) = im.size
-    print "Original size: %d x %d pixels" % (width, height)
+    print("Original size: %d x %d pixels" % (width, height))
     scale = float(OUTPUT_IMAGE_WIDTH) / float(width)
     width = OUTPUT_IMAGE_WIDTH
     height = int(float(height) * scale)
-    print "Final size: %d x %d pixels" % (width, height)
+    print("Final size: %d x %d pixels" % (width, height))
     im = im.resize((width, height), Image.ANTIALIAS)
     im.save(OUTPUT_FILE, im.format)
     os.unlink(OUTPUT_FILE + ".tmp.png")
@@ -168,4 +169,4 @@ def draw_graph(dates, counts):
 if __name__ == '__main__':
   dates, counts = parse_stats(STATS);
   draw_graph(dates, counts)
-  print "Don't forget to update ../../www/svn-dav-securityspace-survey.html!"
+  print("Don't forget to update ../../www/svn-dav-securityspace-survey.html!")

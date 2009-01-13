@@ -396,8 +396,8 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
-      SVN_ERR(svn_wc__has_prop_mods(&prop_modified_p, path, adm_access,
-                                    pool));
+      SVN_ERR(svn_wc_props_modified_p(&prop_modified_p, path, adm_access,
+                                      pool));
 
 #ifdef HAVE_SYMLINK
       if (has_props)
@@ -1018,8 +1018,6 @@ get_dir_status(struct edit_baton *eb,
     }
 
   /* Add empty status structures for nonexistent tree conflict victims. */
-  tree_conflicts = apr_array_make(pool, 0,
-                                  sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
                                       dir_entry->tree_conflict_data,
                                       path, subpool));

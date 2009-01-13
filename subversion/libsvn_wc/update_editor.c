@@ -183,7 +183,8 @@ struct edit_baton
   /* Allow unversioned obstructions when adding a path. */
   svn_boolean_t allow_unver_obstructions;
 
-  /* Non-null if this is a 'switch' operation. */
+  /* If this is a 'switch' operation, the target URL (### corresponding to
+     the ANCHOR plus TARGET path?), else NULL. */
   const char *switch_url;
 
   /* The URL to the root of the repository, or NULL. */
@@ -860,8 +861,8 @@ struct file_baton
 
 
 /* Make a new file baton in the provided POOL, with PB as the parent baton.
-   PATH is relative to the root of the edit. */
-
+ * PATH is relative to the root of the edit. ADDING tells whether this file
+ * is being added. */
 static svn_error_t *
 make_file_baton(struct file_baton **f_p,
                 struct dir_baton *pb,
@@ -1713,52 +1714,108 @@ do_entry_deletion(struct edit_baton *eb,
      marked as a tree conflict victim? */
   SVN_ERR(already_in_a_tree_conflict(&victim_path, full_path, eb->cancel_func,
                                      eb->cancel_baton, pool));
-
-  /* Is this path the victim of a newly-discovered tree conflict? */
-  tree_conflict = NULL;
-  if (victim_path == NULL)
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path,
-                                entry, parent_adm_access,
-                                svn_wc_conflict_action_delete,
-                                svn_node_none, their_url, pool));
-
-  if (tree_conflict != NULL)
-    {
-      /* Run the log immediately, so that the tree conflict is recorded. */
-      SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
-                                pool));
-      SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
-      *log_number = 0;
-    }
-
-  if (victim_path != NULL || tree_conflict != NULL)
+  if (victim_path != NULL)
     {
       remember_skipped_tree(eb, full_path);
 
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton, 
-                           svn_wc_create_notify(full_path,
-                                                (tree_conflict != NULL)
-                                                ? svn_wc_notify_tree_conflict
-                                                : svn_wc_notify_skip,
+        (*eb->notify_func)(eb->notify_baton,
+                           svn_wc_create_notify(full_path, svn_wc_notify_skip,
                                                 pool),
                            pool);
 
       return SVN_NO_ERROR;
     }
 
+  /* Is this path the victim of a newly-discovered tree conflict?  If so,
+   * remember it and notify the client. Then (if it was existing and
+   * modified), re-schedule the node to be added back again, as a (modified)
+   * copy of the previous base version.
+   */
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
+                              parent_adm_access, svn_wc_conflict_action_delete,
+                              svn_node_none, their_url, pool));
+  if (tree_conflict != NULL)
+    {
+      svn_wc_entry_t tmp_entry;
+      apr_uint64_t flags;
+
+      /* Update the details of the base version to reflect the incoming
+       * delete, while leaving the working version as it is, scheduling it
+       * for re-addition unless it was already non-existent. */
+      tmp_entry.revision = *(eb->target_revision);
+      tmp_entry.deleted = TRUE;
+      flags = SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_DELETED;
+
+      if (tree_conflict->reason == svn_wc_conflict_reason_edited)
+        {
+          /* Schedule the working version to be re-added. */
+          tmp_entry.schedule = svn_wc_schedule_add;
+          tmp_entry.copyfrom_url = entry->url;
+          tmp_entry.copyfrom_rev = entry->revision;
+          tmp_entry.copied = TRUE;
+          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE
+            | SVN_WC__ENTRY_MODIFY_FORCE
+            | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+            | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+            | SVN_WC__ENTRY_MODIFY_COPIED;
+          /* ### Need to change the "base" into a "revert-base" ? */
+
+          SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
+                                             full_path, &tmp_entry, flags,
+                                             pool));
+          /* ### Need to set 'copied' recursively */
+        }
+      else
+        {
+          /* ### We're not ready to handle this case yet, so just leave
+             the update not done. */
+          /* Complete the deletion that was scheduled.
+          SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
+                                             full_path, &tmp_entry, flags,
+                                             pool));
+           */
+        }
+
+      /* Run the log immediately, so that the tree conflict is recorded. */
+      /* ### What's the significance of "immediately"? */
+      SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
+                                pool));
+      SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+      *log_number = 0;
+
+      /* When we raise a tree conflict on a directory, we want to avoid
+       * making any changes inside it. (Will an update will ever try to make
+       * further changes to or inside a directory it's just deleted?) */
+      remember_skipped_tree(eb, full_path);
+
+      if (eb->notify_func)
+        (*eb->notify_func)(eb->notify_baton,
+                           svn_wc_create_notify(full_path,
+                                                svn_wc_notify_tree_conflict,
+                                                pool),
+                           pool);
+
+      return SVN_NO_ERROR;
+    }
+
+  /* Issue a loggy command to delete the entry from version control and to
+   * delete it from disk if unmodified, but leave any modified files on disk
+   * unversioned. */
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, parent_adm_access, full_path,
                                      pool));
 
   /* If the thing being deleted is the *target* of this update, then
-     we need to recreate a 'deleted' entry, so that parent can give
+     we need to recreate a 'deleted' entry, so that the parent can give
      accurate reports about itself in the future. */
   if (strcmp(path, eb->target) == 0)
     {
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.revision = *(eb->target_revision);
+      /* ### Why not URL as well? This might be a switch. ... */
+      /* tmp_entry.url = *(eb->target_url) or db->new_URL ? */
       tmp_entry.kind = entry->kind;
       tmp_entry.deleted = TRUE;
 
@@ -1902,16 +1959,6 @@ add_directory(const char *path,
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
 
-  /* The path can exist, but it must be a directory... */
-  if (kind == svn_node_file || kind == svn_node_unknown)
-    {
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add directory '%s': a non-directory object of the "
-         "same name already exists"),
-       svn_path_local_style(db->path, pool));
-    }
-
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
   if (in_skipped_tree(eb, full_path, pool))
@@ -1926,16 +1973,26 @@ add_directory(const char *path,
     {
       /* Record this conflict so that its descendants are skipped silently. */
       remember_skipped_tree(eb, full_path);
-      
+
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton, 
+        (*eb->notify_func)(eb->notify_baton,
                            svn_wc_create_notify(full_path,
                                                 svn_wc_notify_skip,
                                                 pool),
                            pool);
 
       return SVN_NO_ERROR;
+    }
+
+  /* The path can exist, but it must be a directory... */
+  if (kind == svn_node_file || kind == svn_node_unknown)
+    {
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       _("Failed to add directory '%s': a non-directory object of the "
+         "same name already exists"),
+       svn_path_local_style(db->path, pool));
     }
 
   if (kind == svn_node_dir)
@@ -2866,8 +2923,7 @@ add_file_with_history(const char *path,
      ### this is temporary. in many cases, we already *know* the checksum
      ### since it is a copy. */
   copied_stream = svn_stream_checksummed2(copied_stream,
-                                          NULL, 0,
-                                          &tfb->copied_base_checksum,
+                                          NULL, &tfb->copied_base_checksum,
                                           svn_checksum_md5,
                                           FALSE, pool);
 
@@ -4649,6 +4705,56 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
 }
 
 
+svn_error_t*
+svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
+                           const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           apr_pool_t *pool)
+{
+  SVN_ERR(svn_wc_is_wc_root(wc_root, path, adm_access, pool));
+
+  if (*wc_root)
+    {
+      const svn_wc_entry_t *entry;
+
+      /* Check whether this is a switched subtree or an absent item.
+       * Switched subtrees are considered working copy roots by
+       * svn_wc_is_wc_root(). */
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+
+      /* If this has no entry, it can't possibly be a switched subdir.
+       * It can't be a WC root either, for that matter.*/
+      if (entry == NULL)
+        *wc_root = FALSE;
+      else
+      if (entry->kind == svn_node_dir)
+        {
+          svn_error_t *err;
+          svn_boolean_t switched;
+
+          err = svn_wc__path_switched(path, &switched, entry, pool);
+
+          if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
+            {
+              /* This is e.g. a locally deleted dir. It has an entry but
+               * no repository URL. It cannot be a WC root. */
+              svn_error_clear(err);
+              *wc_root = FALSE;
+            }
+          else
+            {
+              SVN_ERR(err);
+              /* The query for a switched dir succeeded. If switched,
+               * don't consider this a WC root. */
+              *wc_root = switched ? FALSE : TRUE;
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc_get_actual_target(const char *path,
                          const char **anchor,
@@ -4843,9 +4949,8 @@ svn_wc_add_repos_file3(const char *dst_path,
   SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, adm_path,
                                   svn_io_file_del_none, pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
-                                              &base_checksum, svn_checksum_md5,
-                                              NULL, 0,
-                                              TRUE, pool);
+                                              &base_checksum, NULL,
+                                              svn_checksum_md5, TRUE, pool);
   tmp_base_contents = svn_stream_from_aprfile2(base_file, FALSE, pool);
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,

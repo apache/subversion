@@ -18,11 +18,13 @@
 #include <string.h>
 
 #include "bdb_compat.h"
+
+#include "private/svn_skel.h"
+
 #include "../fs.h"
 #include "../err.h"
 #include "../key-gen.h"
 #include "dbt.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"
@@ -71,7 +73,7 @@ put_copy(svn_fs_t *fs,
          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *copy_skel;
+  svn_skel_t *copy_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
@@ -175,7 +177,7 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
-  skel_t *skel;
+  svn_skel_t *skel;
   copy_t *copy;
 
   /* Only in the context of this function do we know that the DB call
@@ -192,7 +194,7 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
   SVN_ERR(BDB_WRAP(fs, _("reading copy"), db_err));
 
   /* Unparse COPY skel */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_copy(fs, copy_id);
 

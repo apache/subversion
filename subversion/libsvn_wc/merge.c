@@ -24,6 +24,7 @@
 
 #include "wc.h"
 #include "entries.h"
+#include "adm_files.h"
 #include "translate.h"
 #include "questions.h"
 #include "log.h"
@@ -205,10 +206,9 @@ detranslate_wc_file(const char **detranslated_file,
                svn_wc_adm_access_path(adm_access),
                svn_io_file_del_none, pool));
 
-      /* Always 'repair' EOLs here, so that we can apply a diff that changes
-       * from inconsistent newlines and no 'svn:eol-style' to consistent
-       * newlines and 'svn:eol-style' set. */
-
+      /* Always 'repair' EOLs here, so that we can apply a diff that
+         changes from inconsistent newlines and no 'svn:eol-style' to
+         consistent newlines and 'svn:eol-style' set.  */
       SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
                                                  detranslated,
                                                  style,
@@ -249,10 +249,9 @@ maybe_update_target_eols(const char **new_target,
                                       svn_io_file_del_none,
                                       pool));
 
-      /* Always 'repair' EOLs here, so that we can apply a diff that changes
-       * from inconsistent newlines and no 'svn:eol-style' to consistent
-       * newlines and 'svn:eol-style' set. */
-
+      /* Always 'repair' EOLs here, so that we can apply a diff that
+         changes from inconsistent newlines and no 'svn:eol-style' to
+         consistent newlines and 'svn:eol-style' set.  */
       SVN_ERR(svn_subst_copy_and_translate3(old_target,
                                             tmp_new,
                                             eol, TRUE /* repair EOLs */,
@@ -263,6 +262,36 @@ maybe_update_target_eols(const char **new_target,
   else
     *new_target = old_target;
 
+  return SVN_NO_ERROR;
+}
+
+/* Like svn_wc_create_tmp_file2(), but adds TEMPLATE_PATH as the path
+   from which a meaningful-to-humans name is derived. */
+static svn_error_t *
+create_name_preserving_tmp_file(apr_file_t **fp,
+                                const char **new_name,
+                                const char *adm_path,
+                                const char *template_path,
+                                svn_io_file_del_t delete_when,
+                                apr_pool_t *pool)
+{
+  const char *temp_dir;
+  apr_file_t *file;
+  const char *base_name = svn_path_basename(template_path, pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+  SVN_ERR_ASSERT(fp || new_name);
+
+  temp_dir = svn_wc__adm_child(adm_path, SVN_WC__ADM_TMP, pool);
+  SVN_ERR(svn_io_open_uniquely_named(&file, new_name,
+                                     temp_dir, base_name, ".tmp",
+                                     delete_when, pool, scratch_pool));
+  if (fp)
+    *fp = file;
+  else
+    SVN_ERR(svn_io_file_close(file, pool));
+
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -330,10 +359,12 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   if (! is_binary)              /* this is a text file */
     {
       /* Open a second temporary file for writing; this is where diff3
-         will write the merged results. */
-      SVN_ERR(svn_wc_create_tmp_file2(&result_f, &result_target,
-                                      adm_path, svn_io_file_del_none,
-                                      pool));
+         will write the merged results.  We want to use a tempfile
+         with a name that reflects the original, in case this
+         ultimately winds up in a conflict resolution editor.  */
+      SVN_ERR(create_name_preserving_tmp_file(&result_f, &result_target,
+                                              adm_path, merge_target,
+                                              svn_io_file_del_none, pool));
 
       options = svn_diff_file_options_create(pool);
 

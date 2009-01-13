@@ -75,7 +75,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *skel;
+  svn_skel_t *skel;
   int db_err;
   DBT query, result;
 
@@ -96,7 +96,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
   SVN_ERR(BDB_WRAP(fs, _("reading representation"), db_err));
 
   /* Parse the REPRESENTATION skel.  */
-  skel = svn_fs_base__parse_skel(result.data, result.size, pool);
+  skel = svn_skel__parse(result.data, result.size, pool);
 
   /* Convert to a native type.  */
   return svn_fs_base__parse_representation_skel(rep_p, skel, pool);
@@ -112,7 +112,7 @@ svn_fs_bdb__write_rep(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert from native type to skel. */
   SVN_ERR(svn_fs_base__unparse_representation_skel(&skel, rep,

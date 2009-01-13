@@ -1356,6 +1356,20 @@ def run_and_validate_lock(path, username):
             comment_re.match(output))):
     raise Failure
 
+def run_and_verify_resolved(expected_paths, *args):
+  """Run "svn resolved" with arguments ARGS, and verify that it resolves the
+  paths in EXPECTED_PATHS and no others. If no ARGS are specified, use the
+  elements of EXPECTED_PATHS as the arguments."""
+  # TODO: verify that the status of PATHS changes accordingly.
+  if len(args) == 0:
+    args = expected_paths
+  expected_output = verify.UnorderedOutput([
+    "Resolved conflicted state of '" + path + "'\n" for path in
+    expected_paths])
+  run_and_verify_svn(None, expected_output, [],
+                     'resolved', *args)
+
+
 ######################################################################
 # Other general utilities
 
@@ -1872,6 +1886,18 @@ deep_trees_empty_dirs = wc.State('', {
   'DDD/D1/D2/D3'    : Item(),
   })
 
+def deep_trees_tree_del_repos(base):
+  """Helper function for deep trees test cases.  Delete top-level dirs,
+  directly in the repository."""
+  j = '/'.join
+  F   = j([base, 'F', 'alpha'])
+  D   = j([base, 'D', 'D1'])
+  DF  = j([base, 'DF', 'D1'])
+  DD  = j([base, 'DD', 'D1'])
+  DDF = j([base, 'DDF', 'D1'])
+  DDD = j([base, 'DDD', 'D1'])
+  main.run_svn(None, 'mkdir', '-m', '', F, D, DF, DD, DDF, DDD)
+
 # Expected merge/update/switch output.
 
 deep_trees_conflict_output = wc.State('', {
@@ -2108,12 +2134,24 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
   """
   Create tree conflicts, then update again, expecting the existing tree
   conflicts to be skipped.
+  SKIP_PATHS is a list of paths, relative to the "base dir", for which
+  "update" on the "base dir" should report as skipped.
+  CHDIR_SKIP_PATHS is a list of (target-path, skipped-path) pairs for which
+  an update of "target-path" (relative to the "base dir") should result in
+  "skipped-path" (relative to "target-path") being reported as skipped.
   """
+
+  """FURTHER_ACTION is a function that will make a further modification to
+  each target, this being the modification that we expect to be skipped. The
+  function takes the "base dir" (the WC path to the test case directory) as
+  its only argument."""
+  further_action = deep_trees_tree_del_repos
 
   j = os.path.join
   wc_dir = sbox.wc_dir
+  base = j(wc_dir, test_case.name)
 
-  # Initialize silently.
+  # Initialize: generate conflicts. (We do not check anything here.)
   setup_case = DeepTreesTestCase(test_case.name,
                                  test_case.local_action,
                                  test_case.incoming_action,
@@ -2122,8 +2160,12 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
                                  None)
   deep_trees_run_tests_scheme_for_update(sbox, [setup_case])
 
-  # Update whole working copy again.
-  base = j(wc_dir, test_case.name)
+  # Make a further change to each target in the repository so there is a new
+  # revision to update to. (This is r4.)
+  further_action(sbox.repo_url + '/' + test_case.name)
+
+  # Update whole working copy, expecting the nodes still in conflict to be
+  # skipped.
 
   x_out = test_case.expected_output
   if x_out != None:
@@ -2134,22 +2176,28 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
 
   x_status = test_case.expected_status
   if x_status != None:
-    x_status.copy()
+    x_status = x_status.copy()
     x_status.wc_dir = base
+    # Account for nodes that were updated by further_action
+    x_status.tweak('', 'D', 'F', 'DD', 'DF', 'DDD', 'DDF', wc_rev=4)
 
   run_and_verify_update(base, x_out, x_disk, None,
                         error_re_string = test_case.error_re_string)
 
   run_and_verify_unquiet_status(base, x_status)
 
-  # Update subtrees, expecting a single 'Skipped' output for each one.
+  # Try to update each in-conflict subtree. Expect a 'Skipped' output for
+  # each, and the WC status to be unchanged.
   for path in skip_paths:
     run_and_verify_update(j(base, path),
                           wc.State(base, {path : Item(verb='Skipped')}),
                           None, None)
 
-  # Update subtrees, expecting a single 'Skipped' output for each one.
-  # This time, cd to the subdir before .
+  run_and_verify_unquiet_status(base, x_status)
+
+  # Try to update each in-conflict subtree. Expect a 'Skipped' output for
+  # each, and the WC status to be unchanged.
+  # This time, cd to the subdir before updating it.
   was_cwd = os.getcwd()
   for path, skipped in chdir_skip_paths:
     #print("CHDIR TO: %s" % j(base, path))

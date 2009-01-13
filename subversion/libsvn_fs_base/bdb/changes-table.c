@@ -75,7 +75,7 @@ svn_fs_bdb__changes_add(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, value;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert native type to skel. */
   SVN_ERR(svn_fs_base__unparse_change_skel(&skel, change, pool));
@@ -265,15 +265,14 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
   while (! db_err)
     {
       change_t *change;
-      skel_t *result_skel;
+      svn_skel_t *result_skel;
 
       /* Clear the per-iteration subpool. */
       svn_pool_clear(subpool);
 
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
-      result_skel = svn_fs_base__parse_skel(result.data, result.size,
-                                            subpool);
+      result_skel = svn_skel__parse(result.data, result.size, subpool);
       if (! result_skel)
         {
           err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -388,11 +387,11 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   while (! db_err)
     {
-      skel_t *result_skel;
+      svn_skel_t *result_skel;
 
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
-      result_skel = svn_fs_base__parse_skel(result.data, result.size, pool);
+      result_skel = svn_skel__parse(result.data, result.size, pool);
       if (! result_skel)
         {
           err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,

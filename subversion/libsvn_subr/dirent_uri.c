@@ -146,6 +146,31 @@ dirent_previous_segment(const char *dirent,
     return len;
 }
 
+/* Return the length of substring necessary to encompass the entire
+ * previous uri segment in URI, which should be a LEN byte string.
+ *
+ * A trailing slash will not be included in the returned length except
+ * in the case in which URI is absolute and there are no more
+ * previous segments.
+ */
+static apr_size_t
+uri_previous_segment(const char *uri,
+                     apr_size_t len)
+{
+  /* ### Still the old path segment code, should start checking scheme specific format */
+  if (len == 0)
+    return 0;
+
+  --len;
+  while (len > 0 && uri[len] != '/')
+    --len;
+
+  /* check if the remaining segment including trailing '/' is a root dirent */
+  if (svn_uri_is_root(uri, len + 1))
+    return len + 1;
+  else
+    return len;
+}
 
 /* Return the canonicalized version of PATH, allocated in POOL.
  * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
@@ -876,13 +901,61 @@ svn_dirent_split(const char *dirent,
 }
 
 char *
+svn_uri_dirname(const char *uri, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(uri);
+
+  assert(svn_uri_is_canonical(uri, pool));
+
+  if (svn_uri_is_root(uri, len))
+    return apr_pstrmemdup(pool, uri, len);
+  else
+    return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
+}
+
+char *
+svn_uri_basename(const char *uri, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(uri);
+  apr_size_t start;
+
+  assert(svn_uri_is_canonical(uri, pool));
+
+  if (svn_uri_is_root(uri, len))
+    start = 0;
+  else
+    {
+      start = len;
+      while (start > 0 && uri[start - 1] != '/')
+        --start;
+    }
+
+  return apr_pstrmemdup(pool, uri + start, len - start);
+}
+
+void
+svn_uri_split(const char *uri,
+              const char **dirpath,
+              const char **base_name,
+              apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_uri_dirname(uri, pool);
+
+  if (base_name)
+    *base_name = svn_uri_basename(uri, pool);
+}
+
+char *
 svn_dirent_get_longest_ancestor(const char *dirent1,
                                 const char *dirent2,
                                 apr_pool_t *pool)
 {
   return apr_pstrndup(pool, dirent1,
-                      get_longest_ancestor_length(type_dirent, dirent1, dirent2,
-                                                  pool));
+                      get_longest_ancestor_length(type_dirent, dirent1, 
+                                                  dirent2, pool));
 }
 
 char *
@@ -918,8 +991,8 @@ svn_uri_get_longest_ancestor(const char *uri1,
 
       i += 3;  /* Advance past '://' */
 
-      uri_ancestor_len = get_longest_ancestor_length(type_uri, uri1 + i, uri2 + i,
-                                                     pool);
+      uri_ancestor_len = get_longest_ancestor_length(type_uri, uri1 + i, 
+                                                     uri2 + i, pool);
 
       if (uri_ancestor_len == 0 ||
           (uri_ancestor_len == 1 && (uri1 + i)[0] == '/'))
@@ -1068,7 +1141,7 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 }
 
 svn_boolean_t
-svn_uri_is_canonical(const char *uri)
+svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 {
   const char *ptr = uri, *seg = uri;
 
@@ -1136,10 +1209,13 @@ svn_uri_is_canonical(const char *uri)
       /* If this is a file url, ptr now points to the third '/' in
          file:///C:/path. Check that if we have such a URL the drive
          letter is in uppercase. */
-        if (strncmp(uri, "file:", 5) == 0 &&
-            ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
-            *(ptr+2) == ':')
-          return FALSE;
+      if (strncmp(uri, "file:", 5) == 0 &&
+          ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
+          *(ptr+2) == ':')
+        return FALSE;
+      /* if this is an UNC path, we have two '/' here */
+      if (*(ptr+1) == '/')
+        ptr++;
     }
 #endif /* WIN32 or Cygwin */
 

@@ -52,8 +52,8 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
-#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Youngest revision which
-                                                    has been packed. */
+#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
+                                                    has not been packed. */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -298,7 +298,10 @@ typedef struct
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content. */
+     intra-node uniqification content.
+     
+     May be NULL, in which case, it is considered to match other NULL
+     values.*/
   const char *uniquifier;
 } representation_t;
 

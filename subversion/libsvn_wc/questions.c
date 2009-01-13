@@ -278,8 +278,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                          TRUE, pool));
 
           if (entry->checksum)
-            b_stream = svn_stream_checksummed2(b_stream, &checksum,
-                                               svn_checksum_md5, NULL,
+            b_stream = svn_stream_checksummed2(b_stream, &checksum, NULL,
                                                svn_checksum_md5, TRUE, pool);
         }
 
@@ -615,6 +614,9 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
 {
   svn_node_kind_t kind;
   const char *path;
+
+  *text_conflicted_p = FALSE;
+  *prop_conflicted_p = FALSE;
 
   if (entry->conflict_old)
     {

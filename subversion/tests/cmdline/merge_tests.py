@@ -233,8 +233,8 @@ def textual_merges_galore(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '-r', '1', other_rho_path)
 
-  # For A/D/G/tau, we append ten different lines, to conflict with the
-  # ten lines appended in revision 3.
+  # For A/D/G/tau, we append few different lines, to conflict with the
+  # few lines appended in revision 3.
   other_tau_text = fill_file_with_lines(other_tau_path, 2,
                                         line_descrip="Conflicting line")
 
@@ -8015,16 +8015,16 @@ def mergeinfo_recording_in_skipped_merge(sbox):
 
   # Merge /A to /A_COPY ie., r1 to r4
   expected_output = wc.State(A_COPY_path, {
-    'mu' : Item(status='U '),
-    'B'        : Item(status='C ', wc_rev=2),
+    'mu'  : Item(status='U '),
+    'B/E' : Item(status='  ', treeconflict='C'),
     })
   expected_status = wc.State(A_COPY_path, {
     ''         : Item(status=' M', wc_rev=2),
     'mu'       : Item(status='M ', wc_rev=2),
-    'B'        : Item(status='C ', wc_rev=2),
+    'B'        : Item(status='  ', wc_rev=2),
     'B/lambda' : Item(status='  ', wc_rev=2),
     'B/F'      : Item(status='  ', wc_rev=2),
-    'B/E'      : Item(status='D ', wc_rev=2),
+    'B/E'      : Item(status='D ', wc_rev=2, treeconflict='C'),
     'B/E/alpha': Item(status='D ', wc_rev=2),
     'B/E/beta' : Item(status='D ', wc_rev=2),
     'C'        : Item(status='  ', wc_rev=2),
@@ -8058,9 +8058,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'D/H/omega': Item("This is the file 'omega'.\n"),
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
-  expected_skip = wc.State(A_COPY_path, {
-    'B/E/alpha' : Item(),
-    })
+  expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        A_url,
                                        expected_output,
@@ -8457,10 +8455,10 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
     'lambda' : Item(status='U '),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:1-3'}),
+    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:2-3'}),
     'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
-    'F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:1,2-3*'}),
-    'E'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:1,2-3*'}),
+    'F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2-3*'}),
+    'E'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:2-3*'}),
     'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
     'E/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -8488,7 +8486,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
     'E/newfile'     : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:1-3'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:2-3'}),
     'lambda'    : Item(contents="This is the file 'lambda' modified.\n"),
     'F'         : Item(),
     'E'         : Item(),
@@ -12914,6 +12912,7 @@ def merge_adds_mergeinfo_correctly(sbox):
 
   # Some paths we'll care about
   A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
   A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
   D_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D")
 
@@ -13091,6 +13090,28 @@ def merge_adds_mergeinfo_correctly(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, '8', '9',
+                                       sbox.repo_url + '/A_COPY_2',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  # Revert and repeat the above merge, but this time create some
+  # uncommitted mergeinfo on A_COPY/D, this should not cause a write
+  # lock error as was seen in http://subversion.tigris.org/
+  # ds/viewMessage.do?dsForumId=462&dsMessageId=103945
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', SVN_PROP_MERGEINFO, '',
+                                     D_COPY_path)
+  expected_output = wc.State(A_COPY_path, {
+    'D'        : Item(status=' G'), # Merged with local svn:mergeinfo
+    'D/H/omega': Item(status='U '),
+    })
   svntest.actions.run_and_verify_merge(A_COPY_path, '8', '9',
                                        sbox.repo_url + '/A_COPY_2',
                                        expected_output,
@@ -14446,7 +14467,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_disk.tweak('A_COPY_3/D/gamma', contents="New content")
 
   # r10 - Merge r9 from A_COPY_3/D to A/D, creating explicit subtree
-  # mergeinfo under A.  For this an every subsequent merge we update the WC
+  # mergeinfo under A.  For this and every subsequent merge we update the WC
   # first to allow full inheritance and elision.
   svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
                                      wc_dir)
@@ -14765,8 +14786,8 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Reintegrate A_COPY to A, this should work A_COPY/D/gamma_moved's natural
-  # history,
+  # Reintegrate A_COPY to A, this should work since
+  # A_COPY/D/gamma_moved's natural history,
   #
   #   /A/D/gamma:1-15
   #   /A/D/gamma_moved:16
@@ -15211,8 +15232,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_with_auto_rev_range_detection,
                          server_has_mergeinfo),
-              XFail(SkipUnless(mergeinfo_recording_in_skipped_merge,
-                               server_has_mergeinfo)),
+              SkipUnless(mergeinfo_recording_in_skipped_merge,
+                         server_has_mergeinfo),
               SkipUnless(cherry_picking,
                          server_has_mergeinfo),
               SkipUnless(propchange_of_subdir_raises_conflict,

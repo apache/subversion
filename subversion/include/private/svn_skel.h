@@ -1,4 +1,4 @@
-/* skel.h : interface to `skeleton' functions
+/* svn_skel.h : interface to `skeleton' functions
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_SKEL_H
-#define SVN_LIBSVN_FS_SKEL_H
+#ifndef SVN_SKEL_H
+#define SVN_SKEL_H
 
 #include <apr_pools.h>
 
@@ -76,7 +76,7 @@ extern "C" {
 
 /* A structure representing the results of parsing an array of bytes
    as a skel.  */
-struct skel_t {
+struct svn_skel_t {
 
   /* True if the string was an atom, false if it was a list.
 
@@ -93,10 +93,10 @@ struct skel_t {
   /* If the string is a list, CHILDREN is a pointer to a
      null-terminated linked list of skel objects representing the
      elements of the list, linked through their NEXT pointers.  */
-  struct skel_t *children;
-  struct skel_t *next;
+  struct svn_skel_t *children;
+  struct svn_skel_t *next;
 };
-typedef struct skel_t skel_t;
+typedef struct svn_skel_t svn_skel_t;
 
 
 
@@ -110,66 +110,44 @@ typedef struct skel_t skel_t;
 
    The returned skel objects point into the block indicated by DATA
    and LEN; we don't copy the contents. */
-skel_t *svn_fs_base__parse_skel(const char *data, apr_size_t len,
-                                apr_pool_t *pool);
+svn_skel_t *svn_skel__parse(const char *data, apr_size_t len,
+                            apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the C string STR, allocated
    from POOL.  */
-skel_t *svn_fs_base__str_atom(const char *str, apr_pool_t *pool);
+svn_skel_t *svn_skel__str_atom(const char *str, apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the LEN bytes at ADDR,
    allocated from POOL.  */
-skel_t *svn_fs_base__mem_atom(const void *addr, apr_size_t len,
-                              apr_pool_t *pool);
+svn_skel_t *svn_skel__mem_atom(const void *addr, apr_size_t len,
+                               apr_pool_t *pool);
 
 
 /* Create an empty list skel, allocated from POOL.  */
-skel_t *svn_fs_base__make_empty_list(apr_pool_t *pool);
+svn_skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
 
 
 /* Prepend SKEL to LIST.  */
-void svn_fs_base__prepend(skel_t *skel, skel_t *list);
-
-
-/* Append SKEL to LIST.  This is not as efficient as prepending skels,
-   so prepend in places where you can sensibly do so, and you want to
-   save a couple clock cycles. */
-void svn_fs_base__append(skel_t *skel, skel_t *list);
+void svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list);
 
 
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
-svn_stringbuf_t *svn_fs_base__unparse_skel(skel_t *skel, apr_pool_t *pool);
+svn_stringbuf_t *svn_skel__unparse(const svn_skel_t *skel, apr_pool_t *pool);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */
-svn_boolean_t svn_fs_base__matches_atom(skel_t *skel, const char *str);
-
-
-/* Return true iff SKEL is an atom whose data is the same as STR.  */
-svn_boolean_t svn_fs_base__atom_matches_string(skel_t *skel,
-                                               const svn_string_t *str);
+svn_boolean_t svn_skel__matches_atom(const svn_skel_t *skel, const char *str);
 
 
 /* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
-int svn_fs_base__list_length(skel_t *skel);
-
-
-/* Return TRUE if SKEL1 and SKEL2 are the same in structure and contents,
-   or 0 if they are not.  This is like a lisp `equal' not `eq': atoms
-   are equal if their lengths and contents are the same, lists are
-   equal if they have the same number and order of equal elements. */
-svn_boolean_t svn_fs_base__skels_are_equal(skel_t *skel1, skel_t *skel2);
-
-
-/* Make a copy of SKEL and its data in POOL.  */
-skel_t *svn_fs_base__copy_skel(skel_t *skel, apr_pool_t *pool);
+int svn_skel__list_length(const svn_skel_t *skel);
 
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_SKEL_H */
+#endif /* SVN_SKEL_H */

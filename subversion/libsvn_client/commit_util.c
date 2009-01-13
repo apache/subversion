@@ -203,7 +203,8 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
 
 /* Helper for harvest_committables().
  * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
- * encountering a tree-conflicted child node within the bounds of DEPTH.
+ * encountering a tree-conflicted immediate child node. However, do
+ * not consider immediate children that are outside the bounds of DEPTH.
  *
  * PATH, ENTRY, ADM_ACCESS, DEPTH, CHANGELISTS and POOL are the same ones
  * originally received by harvest_committables().
@@ -233,8 +234,6 @@ bail_on_tree_conflicted_children(const char *path,
     /* There can't possibly be tree-conflicts information here. */
     return SVN_NO_ERROR;
 
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
                                       path, pool));
 
@@ -293,6 +292,66 @@ bail_on_tree_conflicted_children(const char *path,
 
   return SVN_NO_ERROR;
 }
+
+/* Helper function for svn_client__harvest_committables().
+ * Determine whether we are within a tree-conflicted subtree of the
+ * working copy and return an SVN_ERR_WC_FOUND_CONFLICT error if so.
+ * Step outward through the parent directories up to the working copy
+ * root, obtaining read locks temporarily. */
+static svn_error_t *
+bail_on_tree_conflicted_ancestor(svn_wc_adm_access_t *first_ancestor,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *path;
+  const char *parent_path;
+  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t wc_root;
+  svn_boolean_t tree_conflicted;
+
+  path = svn_wc_adm_access_path(first_ancestor);
+  adm_access = first_ancestor;
+
+  while(1)
+    {
+      /* Here, ADM_ACCESS refers to PATH. */
+      svn_wc__strictly_is_wc_root(&wc_root,
+                                  path,
+                                  adm_access,
+                                  scratch_pool);
+
+      if (adm_access != first_ancestor)
+        svn_wc_adm_close2(adm_access, scratch_pool);
+
+      if (wc_root)
+        break;
+
+      /* Check the parent directory's entry for tree-conflicts
+       * on PATH. */
+      parent_path = svn_path_dirname(path, scratch_pool);
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path,
+                               FALSE,  /* Write lock */
+                               0, /* lock levels */
+                               NULL, NULL,
+                               scratch_pool));
+      /* Now, ADM_ACCESS refers to PARENT_PATH. */
+
+      svn_wc_conflicted_p2(NULL, NULL, &tree_conflicted,
+                           path, adm_access, scratch_pool);
+
+      if (tree_conflicted)
+        return svn_error_createf(
+                 SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                 _("Aborting commit: '%s' remains in tree-conflict"),
+                 svn_path_local_style(path, scratch_pool));
+
+      /* Step outwards */
+      path = parent_path;
+      /* And again, ADM_ACCESS refers to PATH. */
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -971,6 +1030,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                    ? target
                                    : svn_path_dirname(target, subpool)),
                                   subpool));
+
+      /* Make sure this isn't inside a working copy subtree that is
+       * marked as tree-conflicted. */
+      SVN_ERR(bail_on_tree_conflicted_ancestor(dir_access, subpool));
+
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
                                    dir_access, entry->url, NULL,
                                    entry, NULL, FALSE, FALSE, depth,

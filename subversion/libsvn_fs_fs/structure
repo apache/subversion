@@ -34,8 +34,9 @@ repository) is:
   revs/               Subdirectory containing revs
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev <revnum>
-    <shard>.pack      Pack file, if the repository has been packed (see below)
-    <shard>.manifest  Pack manifest file, if a pack file exists (see below)
+    <shard>.pack      Pack directory, if the repo has been packed (see below)
+      pack            Pack file, if the repository has been packed (see below)
+      manifest        Pack manifest file, if a pack file exists (see below)
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
@@ -57,7 +58,7 @@ repository) is:
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
-  max-packed-rev      File containing the youngest revision to be in a pack file
+  min-unpacked-rev    File containing the oldest revision not in a pack file
   rep-cache.db        SQLite database mapping rep checksums to locations
 
 Files in the revprops directory are in the hash dump format used by
@@ -418,7 +419,9 @@ only be present if the node-rev properties have been changed.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID
-assignments (without the leading underscores).
+assignments (without the leading underscores).  The next node-ID is
+also used as a uniquifier for representations which may share the same
+underlying rep.
 
 The "children" file for a node-revision begins with a copy of the hash
 dump representation of the directory entries from the old node-rev (or

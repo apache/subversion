@@ -1154,7 +1154,6 @@ svn_wc_delete3(const char *path,
 {
   svn_wc_adm_access_t *dir_access;
   const svn_wc_entry_t *entry;
-  const char *parent, *base_name;
   svn_boolean_t was_schedule;
   svn_node_kind_t was_kind;
   svn_boolean_t was_copied;
@@ -1187,13 +1186,14 @@ svn_wc_delete3(const char *path,
   was_kind = entry->kind;
   was_copied = entry->copied;
 
-  svn_path_split(path, &parent, &base_name, pool);
-
   if (was_kind == svn_node_dir)
     {
+      const char *parent, *base_name;
       svn_wc_adm_access_t *parent_access;
       apr_hash_t *entries;
       const svn_wc_entry_t *entry_in_parent;
+
+      svn_path_split(path, &parent, &base_name, pool);
 
       /* The deleted state is only available in the entry in parent's
          entries file */
@@ -1429,6 +1429,11 @@ svn_wc_add3(const char *path,
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        _("Can't find parent directory's entry while trying to add '%s'"),
+       svn_path_local_style(path, pool));
+  if (svn_wc_is_adm_dir(base_name, pool))
+    return svn_error_createf
+      (SVN_ERR_ENTRY_FORBIDDEN, NULL,
+       _("Can't create an entry with a reserved name while trying to add '%s'"),
        svn_path_local_style(path, pool));
   if (parent_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
@@ -2320,8 +2325,7 @@ revert_internal(const char *path,
       /* Visit any unversioned children that are tree conflict victims. */
       {
         int i;
-        apr_array_header_t *conflicts
-          = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
+        apr_array_header_t *conflicts;
 
         /* Loop through all the tree conflict victims */
         SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
@@ -2595,7 +2599,6 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       /* Remove self from parent's entries file, but only if parent is
          a working copy.  If it's not, that's fine, we just move on. */
       {
-        const char *parent_dir, *base_name;
         svn_boolean_t is_root;
 
         SVN_ERR(svn_wc_is_wc_root(&is_root, full_path, adm_access, pool));
@@ -2605,6 +2608,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
+            const char *parent_dir, *base_name;
             svn_wc_entry_t *dir_entry;
             apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
@@ -2930,14 +2934,14 @@ resolve_found_entry_callback(const char *path,
    * If the target is a working copy root, don't check on the target itself.*/
   if (baton->resolve_tree && ! wc_root) /* but possibly a switched subdir */
     {
-      const char *conflict_dir, *base_name = NULL;
+      const char *conflict_dir;
       svn_wc_adm_access_t *parent_adm_access;
       svn_wc_conflict_description_t *conflict;
       svn_boolean_t tree_conflict;
 
       /* For tree-conflicts, we want the *parent* directory's adm_access,
        * even for directories. */
-      svn_path_split(path, &conflict_dir, &base_name, pool);
+      conflict_dir = svn_path_dirname(path, pool);
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
@@ -2962,7 +2966,7 @@ resolve_found_entry_callback(const char *path,
   /* If this is a versioned entry, resolve its other conflicts, if any. */
   if (entry && (baton->resolve_text || baton->resolve_props))
     {
-      const char *base_name = NULL;
+      const char *base_name = svn_path_basename(path, pool);
       svn_wc_adm_access_t *adm_access;
       svn_boolean_t did_resolve = FALSE;
 
@@ -3124,6 +3128,9 @@ svn_wc_set_changelist(const char *path,
   const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
   svn_wc_notify_t *notify;
+
+  /* Assert that we aren't being asked to set an empty changelist. */
+  SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (! entry)

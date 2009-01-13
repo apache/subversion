@@ -2617,13 +2617,17 @@ svn_wc__entry_remove(apr_hash_t *entries, const char *name)
 }
 
 
-/* Our general purpose intelligence module for handling scheduling
-   changes to a single entry.
+/* Our general purpose intelligence module for handling a scheduling
+   change to a single entry.
 
    Given an entryname NAME in ENTRIES, examine the caller's requested
-   change in *SCHEDULE and the current state of the entry.  Possibly
-   modify *SCHEDULE and *MODIFY_FLAGS so that when merged, it will
-   reflect the caller's original intent.
+   scheduling change in *SCHEDULE and the current state of the entry.
+   *MODIFY_FLAGS should have the 'SCHEDULE' flag set (else do nothing) and
+   may have the 'FORCE' flag set (in which case do nothing).
+   Determine the final schedule for the entry. Output the result by doing
+   none or any or all of: delete the entry from *ENTRIES, change *SCHEDULE
+   to the new schedule, remove the 'SCHEDULE' change flag from
+   *MODIFY_FLAGS.
 
    POOL is used for local allocations only, calling this function does not
    use POOL to allocate any memory referenced by ENTRIES.
@@ -2740,6 +2744,8 @@ fold_scheduling(apr_hash_t *entries,
         case svn_wc_schedule_add:
         case svn_wc_schedule_replace:
           /* These are all no-op cases.  Normal is obvious, as is add.
+               ### The 'add' case is not obvious: above, we throw an error if
+               ### already versioned, so why not here too?
              Replace on an entry marked for addition breaks down to
              (add + (delete + add)), which resolves to just (add), and
              since this entry is already marked with (add), this too
@@ -2752,6 +2758,8 @@ fold_scheduling(apr_hash_t *entries,
           /* Not-yet-versioned item being deleted.  If the original
              entry was not marked as "deleted", then remove the entry.
              Else, return the entry to a 'normal' state, preserving
+               ### What does it mean for an entry be schedule-add and
+               ### deleted at once, and why change schedule to normal?
              the "deleted" flag.  Check that we are not trying to
              remove the SVN_WC_ENTRY_THIS_DIR entry as that would
              leave the entries file in an invalid state. */
@@ -3369,8 +3377,7 @@ visit_tc_too_found_entry(const char *path,
        * in case of svn_depth_files, don't visit directories. */
 
       svn_wc_adm_access_t *adm_access = NULL;
-      apr_array_header_t *conflicts
-        = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
+      apr_array_header_t *conflicts;
       int i;
 
       /* Loop through all the tree conflict victims */

@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -24,8 +24,21 @@ del _unprefix_names
 
 
 # Names that are not to be exported
-import sys as _sys, os as _os, popen2 as _popen2, tempfile as _tempfile
-import __builtin__
+import sys as _sys, os as _os, tempfile as _tempfile
+try:
+  # Python >=2.4
+  import subprocess as _subprocess
+  _platform_with_subprocess = True
+except ImportError:
+  # Python <2.4
+  _platform_with_subprocess = False
+  import popen2 as _popen2
+try:
+  # Python >=3.0
+  import builtins
+except ImportError:
+  # Python <3.0
+  import __builtin__ as builtins
 import svn.core as _svncore
 
 
@@ -63,8 +76,8 @@ class FileDiff:
     return 0
 
   def _dump_contents(self, file, root, path, pool=None):
-    fp = __builtin__.open(file, 'w+') # avoid namespace clash with
-                                      # trimmed-down svn_fs_open()
+    fp = builtins.open(file, 'w+') # avoid namespace clash with
+                                   # trimmed-down svn_fs_open()
     if path is not None:
       stream = file_contents(root, path, pool)
       try:
@@ -101,15 +114,25 @@ class FileDiff:
           + self.diffoptions \
           + [self.tempfile1, self.tempfile2]
 
-    # the windows implementation of popen2 requires a string
-    if _sys.platform == "win32":
-      cmd = _svncore.argv_to_command_string(cmd)
+    if _platform_with_subprocess:
+      # Python >=2.4
 
-    # open the pipe, forget the end for writing to the child (we won't),
-    # and then return the file object for reading from the child.
-    fromchild, tochild = _popen2.popen2(cmd)
-    tochild.close()
-    return fromchild
+      # open the pipe, and return the file object for reading from the child.
+      p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE,
+                            close_fds=_sys.platform != "win32")
+      return p.stdout
+    else:
+      # Python <2.4
+
+      # the windows implementation of popen2 requires a string
+      if _sys.platform == "win32":
+        cmd = _svncore.argv_to_command_string(cmd)
+
+      # open the pipe, forget the end for writing to the child (we won't),
+      # and then return the file object for reading from the child.
+      fromchild, tochild = _popen2.popen2(cmd)
+      tochild.close()
+      return fromchild
 
   def __del__(self):
     # it seems that sometimes the files are deleted, so just ignore any

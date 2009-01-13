@@ -667,7 +667,8 @@ def update_delete_modified_files(sbox):
                       "This is the file 'pi'.\nappended pi text\n")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E/alpha', status ='M ', wc_rev=1,
+  # The expectation on 'alpha' reflects partial progress on issue #3334.
+  expected_status.tweak('A/B/E/alpha', status='A ', copied='+', wc_rev='-',
                         treeconflict='C')
   expected_status.tweak('A/D/G/pi', status='M ')
   expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', wc_rev=1)
@@ -2119,7 +2120,13 @@ def update_wc_on_windows_drive(sbox):
   if drive is None:
     raise svntest.Skip
 
-  os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
+  try:
+    # Python >=2.4
+    import subprocess
+    subprocess.call(['subst', drive +':', sbox.wc_dir])
+  except ImportError:
+    # Python <2.4
+    os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
   wc_dir = drive + ':/'
   was_cwd = os.getcwd()
 
@@ -2218,7 +2225,13 @@ def update_wc_on_windows_drive(sbox):
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive
-    os.popen3('subst /D ' + drive +': ', 't')
+    try:
+      # Python >=2.4
+      import subprocess
+      subprocess.call(['subst', '/D', drive +':'])
+    except ImportError:
+      # Python <2.4
+      os.popen3('subst /D ' + drive +': ', 't')
 
 # Issue #2618: update a working copy with a replaced file.
 def update_wc_with_replaced_file(sbox):
@@ -4002,6 +4015,15 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  expected_status.tweak(
+    #'D/D1',
+    # The expectation on 'alpha' reflects partial progress on issue #3334.
+    'F/alpha',
+    #'DD/D1',
+    #'DF/D1',
+    #'DDD/D1',
+    #'DDF/D1',
+    status='A ', copied='+', wc_rev='-')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
@@ -4075,6 +4097,15 @@ def tree_conflicts_on_update_2_3(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  expected_status.tweak(
+    #'D/D1',
+    # The expectation on 'alpha' reflects partial progress on issue #3334.
+    'F/alpha',
+    #'DD/D1',
+    #'DF/D1',
+    #'DDD/D1',
+    #'DDF/D1',
+    status='A ', copied='+', wc_rev='-')
 
   # Paths where output should be a single 'Skipped' message.
   skip_paths = [
@@ -4126,7 +4157,108 @@ def tree_conflicts_on_update_3(sbox):
                         expected_disk,
                         expected_status) ] )
 
+#----------------------------------------------------------------------
+# Test for issue #3354 'update fails when file with local mods is moved
+# and modified'
+#
+# Marked as XFail until issue #3354 is resolved.
+def update_moves_and_modifies_an_edited_file(sbox):
+  "update moves and modifies a file with edits"
 
+  # r1: Create our standard greek test tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Some paths we'll care about
+  E_path           = os.path.join(wc_dir, "A", "B", "E")
+  alpha_path       = os.path.join(wc_dir, "A", "B", "E", "alpha")
+  alpha_moved_path = os.path.join(wc_dir, "A", "B", "E", "alpha.moved")
+  other_alpha_path = os.path.join(other_wc, "A", "B", "E", "alpha")
+  other_E_path     = os.path.join(other_wc, "A", "B", "E")
+  
+  # r2: Move A/B/E/alpha to A/B/E/alpha.moved in the first WC.
+  svntest.actions.run_and_verify_svn(None, None, [], 'move',
+                                     alpha_path, alpha_moved_path)
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha'       : Item(verb='Deleting'),
+    'A/B/E/alpha.moved' : Item(verb='Adding')
+    })
+  expected_status.add({'A/B/E/alpha.moved' : Item(status='  ', wc_rev=2)})
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+    
+  # r3: Make a text mod to A/B/E/alpha.moved in the first WC.
+  new_content_for_alpha = 'alpha, modified after move'
+  svntest.main.file_write(alpha_moved_path, new_content_for_alpha)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha.moved' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/B/E/alpha.moved', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        wc_dir)
+  
+  # Make a text mod to A/B/E/alpha.moved in the second WC then
+  # update the second WC.
+  new_content_for_other_alpha = 'alpha, modified'
+  svntest.main.file_write(other_alpha_path, new_content_for_other_alpha)
+
+  expected_output = wc.State(other_E_path, {
+    'alpha'       : Item(status='  ', treeconflict='C'),
+    'alpha.moved' : Item(status='A '),
+    })
+  ### TODO: Yes, the update should succeed and leave a tree conflict,
+  ###       but is this the right conflict?
+  expected_status = wc.State(other_E_path, {
+    ''            : Item(status='  ', wc_rev=3),
+    'alpha'       : Item(status='A ', wc_rev='-', copied='+'),
+    'alpha.moved' : Item(status='  ', wc_rev=3),
+    'beta'        : Item(status='  ', wc_rev=3),
+    })
+  expected_disk = wc.State('', {
+    'alpha'       : Item(new_content_for_other_alpha),
+    'alpha.moved' : Item(new_content_for_alpha),
+    'beta'        : Item("This is the file 'beta'.\n"),
+    })
+
+  # Test is failing on this update and leaving the WC locked:
+  #
+  #   >svn up update_tests-52.other\A\B\E
+  #      C update_tests-52.other\A\B\E\alpha
+  #   Conflict discovered in 'update_tests-52.other/A/B/E/alpha.moved'.
+  #   Select: (p) postpone, (df) diff-full, (e) edit,
+  #           (mc) mine-conflict, (tc) theirs-conflict,
+  #           (s) show all options: p
+  #   C    update_tests-52.other\A\B\E\alpha.moved
+  #   ..\..\..\subversion\libsvn_wc\log.c:625: (apr_err=155009)
+  #   svn: In directory 'update_tests-52.other\A\B\E'
+  #   ..\..\..\subversion\libsvn_subr\io.c:2636: (apr_err=720002)
+  #   svn: Can't open file 'update_tests-52.other\A\B\E\alpha.moved':
+  #     The system cannot find the file specified.
+  #
+  #   >svn st update_tests-52.other\A\B\E
+  #   ! L     update_tests-52.other\A\B\E
+  #   ?       update_tests-52.other\A\B\E\alpha.moved.copied
+  #   ?       update_tests-52.other\A\B\E\alpha.moved.r3
+  #   ?       update_tests-52.other\A\B\E\alpha.moved.mine
+  #   A  +  C update_tests-52.other\A\B\E\alpha
+  #         >   local edit, incoming delete upon update
+  #
+  # The update should succeed and leave A/B/E/alpha as an unversioned
+  # obstruction.
+  expected_skip = wc.State(other_E_path, { })
+  svntest.actions.run_and_verify_update(other_E_path,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
 
 #######################################################################
 # Run the tests
@@ -4186,8 +4318,9 @@ test_list = [ None,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
               tree_conflicts_on_update_2_2,
-              tree_conflicts_on_update_2_3,
+              XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
+              XFail(update_moves_and_modifies_an_edited_file),
              ]
 
 if __name__ == '__main__':

@@ -390,9 +390,9 @@ def merge_history_repos(sbox):
                           "This is yet more content in 'mu'.",
                           "wb")
   # Resolve conflicts, and commit
-  svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'),
-                                         os.path.join('A', 'xi'),
-                                         os.path.join('A', 'upsilon'))
+  svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),
+                                           os.path.join('A', 'xi'),
+                                           os.path.join('A', 'upsilon')])
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",
@@ -1671,7 +1671,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               log_single_change,
               XFail(log_changes_range),
-              XFail(log_changes_list),
+              log_changes_list,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,

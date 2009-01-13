@@ -26,9 +26,9 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "private/svn_skel.h"
 
 #include "../svn_test_fs.h"
-#include "../../libsvn_fs_base/util/skel.h"
 #include "../../libsvn_fs_base/util/fs_skels.h"
 #include "../../libsvn_fs_base/bdb/changes-table.h"
 

@@ -102,6 +102,7 @@ svn_client_version(void);
  * default arguments when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_simple_prompt_provider() instead.
@@ -126,6 +127,7 @@ svn_client_get_simple_prompt_provider
  * default argument when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_username_prompt_provider() instead.
@@ -284,6 +286,7 @@ svn_client_get_ssl_server_trust_prompt_provider
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
  * a server.  The prompt will be retried @a retry_limit times.
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_ssl_client_cert_prompt_provider() instead.
@@ -304,7 +307,8 @@ svn_client_get_ssl_client_cert_prompt_provider
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
  * client certificate is protected by a passphrase.  The prompt will
- * be retried @a retry_limit times.
+ * be retried @a retry_limit times. For infinite retries, set @a retry_limit
+ * to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_ssl_client_cert_pw_prompt_provider() instead.
@@ -1907,9 +1911,10 @@ svn_client_status(svn_revnum_t *result_rev,
  */
 
 /**
- * Invoke @a receiver with @a receiver_baton on each log message from @a
- * start to @a end in turn, inclusive (but never invoke @a receiver on a
- * given log message more than once).
+ * Invoke @a receiver with @a receiver_baton on each log message from
+ * each start/end revision pair in the @a revision_ranges in turn,
+ * inclusive (but never invoke @a receiver on a given log message more
+ * than once).
  *
  * @a targets contains either a URL followed by zero or more relative
  * paths, or 1 working copy path, as <tt>const char *</tt>, for which log
@@ -1949,9 +1954,30 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_client_log5(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log5(), but takes explicit start and end parameters
+ * instead of an array of revision ranges.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
  * @since New in 1.5.
  */
-
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -4273,10 +4299,18 @@ svn_client_unlock(const apr_array_header_t *targets,
  */
 
 /** The size of the file is unknown.
+ * Used as value in fields of type @c apr_size_t.
  *
  * @since New in 1.5
  */
 #define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
+
+/** The size of the file is unknown.
+ * Used as value in fields of type @c apr_off_t.
+ *
+ * @since New in 1.6
+ */
+#define SVN_FILE_SIZE_UNKNOWN ((apr_off_t) -1)
 
 /**
  * A structure which describes various system-generated metadata about
@@ -4344,29 +4378,45 @@ typedef struct svn_info_t
   svn_depth_t depth;
 
   /**
-   * The size of the file after being translated into its local
-   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
-   * unknown.  Not applicable for directories.
-   * @since New in 1.5.
+   * Similar to working_size64, but working_size will be
+   * @c SVN_INFO_SIZE_UNKNOWN when its value overflows apr_size_t.
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
    */
-  apr_size_t working_size;
+  apr_size_t working_size; /* ### Overflows on > 4 GB files. */
 
   /** @} */
 
   /**
+   * Similar to size64, but size will be @c SVN_INFO_SIZE_UNKNOWN when
+   * its value overflows apr_size_t.
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
+   */
+  apr_size_t size;
+  
+  /**
    * The size of the file in the repository (untranslated,
    * e.g. without adjustment of line endings and keyword
    * expansion). Only applicable for file -- not directory -- URLs.
-   * For working copy paths, size will be @c SVN_INFO_SIZE_UNKNOWN.
-   * @since New in 1.5.
+   * For working copy paths, size will be @c SVN_FILE_SIZE_UNKNOWN.
+   * @since New in 1.6.
    */
-  apr_size_t size;
+  apr_off_t size64;
+  
+  /**
+   * The size of the file after being translated into its local
+   * representation, or @c SVN_FILE_SIZE_UNKNOWN if
+   * unknown.  Not applicable for directories.
+   * @since New in 1.6.
+   * @name Working-copy path fields
+   * @{   
+   */
+  apr_off_t working_size64;
 
   /**
    * Info on any tree conflict of which this node is a victim. Otherwise NULL.
    * @since New in 1.6.
-   * @name Working-copy path fields
-   * @{
    */
   svn_wc_conflict_description_t *tree_conflict;
 

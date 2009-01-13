@@ -2025,6 +2025,27 @@ svn_fs_print_modules(svn_stringbuf_t *output,
                      apr_pool_t *pool);
 
 
+/** The kind of action being taken by 'pack'. */
+typedef enum
+{
+  /** packing of the shard has commenced */
+  svn_fs_pack_notify_start = 0,
+
+  /** packing of the shard is completed */
+  svn_fs_pack_notify_end
+
+} svn_fs_pack_notify_action_t;
+
+/** The type of a pack notification function.  @a shard is the shard being
+ * acted upon; @a action is the type of action being performed.  @a baton is
+ * the corresponding baton for the notification function, and @a pool can
+ * be used for temporary allocations, but will be cleared between invocations.
+ */
+typedef svn_error_t *(*svn_fs_pack_notify_t)(void *baton,
+                                             apr_int64_t shard,
+                                             svn_fs_pack_notify_action_t action,
+                                             apr_pool_t *pool);
+
 /**
  * Possibly update the filesystem located in the directory @a path
  * to use disk space more efficiently.
@@ -2033,6 +2054,8 @@ svn_fs_print_modules(svn_stringbuf_t *output,
  */
 svn_error_t *
 svn_fs_pack(const char *db_path,
+            svn_fs_pack_notify_t notify_func,
+            void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             apr_pool_t *pool);

@@ -845,7 +845,11 @@ typedef enum svn_wc_notify_action_t
   /** The path is a tree-conflict victim of the intended action (*not*
    * a persistent tree-conflict from an earlier operation, but *this*
    * operation caused the tree-conflict). @since New in 1.6. */
-  svn_wc_notify_tree_conflict
+  svn_wc_notify_tree_conflict,
+
+  /** The path is a subdirectory referenced in an externals definition
+   * which is unable to be operated on.  @since New in 1.6. */
+  svn_wc_notify_failed_external
 
 } svn_wc_notify_action_t;
 
@@ -947,7 +951,8 @@ typedef struct svn_wc_notify_t {
   const svn_lock_t *lock;
 
   /** Points to an error describing the reason for the failure when @c
-   * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
+   * action is one of the following: @c svn_wc_notify_failed_lock, @c
+   * svn_wc_notify_failed_unlock, @c svn_wc_notify_failed_external.
    * Is @c NULL otherwise. */
   svn_error_t *err;
 
@@ -1992,7 +1997,11 @@ typedef struct svn_wc_entry_t
 
   /** in a copied state (possibly because the entry is a child of a
    *  path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
-   *  when the entry itself is @c svn_wc_schedule_normal) */
+   *  when the entry itself is @c svn_wc_schedule_normal).
+   *  COPIED is true for nodes under a directory that was copied, but
+   *  COPYFROM_URL is null there. They are both set for the root
+   *  destination of the copy.
+   */
   svn_boolean_t copied;
 
   /** The directory containing this entry had a versioned child of this
@@ -2017,16 +2026,20 @@ typedef struct svn_wc_entry_t
   /** copyfrom revision */
   svn_revnum_t copyfrom_rev;
 
-  /** old version of conflicted file */
+  /** old version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_old;
 
-  /** new version of conflicted file */
+  /** new version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_new;
 
-  /** working version of conflicted file */
+  /** working version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_wrk;
 
-  /** property reject file */
+  /** property reject file. A file basename, relative to the user's
+   * directory that the THIS_DIR entry refers to. */
   const char *prejfile;
 
   /** last up-to-date time for text contents (0 means no information available)
@@ -2267,23 +2280,22 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a path in a dir under version control, decide if it is in
+/** Given a @a path in a dir under version control, decide if it is in a
  * state of conflict; return the answers in @a *text_conflicted_p, @a
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
- * answers are uninteresting, simply pass @c NULL pointers.
+ * answers are uninteresting, simply pass @c NULL pointers for those.
  *
  * If @a path is unversioned or does not exist, @a *text_conflicted_p and
  * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
  * @a adm_access is the admin access baton of the parent directory.
  *
- * If the @a path has a corresponding text conflict file (with suffix
- * .mine, .theirs, etc.) that cannot be found, assume that the text
- * conflict has been resolved by the user and return @c FALSE in @a
- * *text_conflicted_p.
+ * If the @a path has corresponding text conflict files (with suffix .mine,
+ * .theirs, etc.) that cannot be found, assume that the text conflict has
+ * been resolved by the user and return @c FALSE in @a *text_conflicted_p.
  *
- * Similarly, if a property conflicts file (.prej suffix) exists, but
- * it cannot be found, assume that the property conflicts have been
+ * Similarly, if a property conflicts file (.prej suffix) is said to exist,
+ * but it cannot be found, assume that the property conflicts have been
  * resolved by the user and return @c FALSE in @a *prop_conflicted_p.
  *
  * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
@@ -2299,8 +2311,20 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
-/** Like svn_wc_conflicted_p2, but without the capability to
- * detect tree conflicts.
+/** Given a @a dir_path under version control, decide if one of its entries
+ * (@a entry) is in a state of conflict; return the answers in @a
+ * text_conflicted_p and @a prop_conflicted_p. These pointers must not be
+ * null.
+ *
+ * If the @a entry mentions that text conflict files (with suffix .mine,
+ * .theirs, etc.) exist, but they cannot be found, assume the text conflict
+ * has been resolved by the user and return FALSE in @a *text_conflicted_p.
+ *
+ * Similarly, if the @a entry mentions that a property conflicts file (.prej
+ * suffix) exists, but it cannot be found, assume the property conflicts
+ * have been resolved by the user and return FALSE in @a *prop_conflicted_p.
+ *
+ * The @a entry is not updated.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -2397,8 +2421,7 @@ typedef struct svn_wc_entry_callbacks_t
 svn_error_t *
 svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks2_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_depth_t depth,
                      svn_boolean_t show_hidden,
@@ -2417,8 +2440,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2434,8 +2456,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    const svn_wc_entry_callbacks_t
-                    *walk_callbacks,
+                    const svn_wc_entry_callbacks_t *walk_callbacks,
                     void *walk_baton,
                     svn_boolean_t show_hidden,
                     apr_pool_t *pool);
@@ -3863,7 +3884,8 @@ svn_wc_crawl_revisions(const char *path,
  * @c FALSE otherwise. Here, @a path is a "working copy root" if its parent
  * directory is not a WC or if its parent directory's repository URL is not
  * the parent of its own repository URL. Thus, a switched subtree is
- * considered to be a working copy root.
+ * considered to be a working copy root. Also, a deleted tree-conflict
+ * victim is considered a "working copy root" because it has no URL.
  *
  * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
@@ -5402,8 +5424,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 /**
  * Set @a path's entry's 'changelist' attribute to @a changelist iff
  * @a changelist is not @c NULL; otherwise, remove any current
- * changelist assignment from @a path.  @a adm_access is an access
- * baton set that contains @a path.
+ * changelist assignment from @a path.  @a changelist may not be the
+ * empty string.  @a adm_access is an access baton set that contains
+ * @a path.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
  * determine if the client has cancelled the operation.

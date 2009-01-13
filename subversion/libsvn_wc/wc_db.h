@@ -119,6 +119,11 @@ typedef enum {
 /* ### some kind of _create() call to set things up? */
 
 /**
+ * @defgroup svn_wc__db_admin  General administractive functions
+ * @{
+ */
+
+/**
  * Open the administrative database for the working copy identified by the
  * (absolute) @a path. The (opaque) handle for interacting with the database
  * will be returned in @a *db. Note that the database MAY NOT be specific
@@ -135,6 +140,15 @@ typedef enum {
  * ### root of that working copy?  Perhaps there needs to be an output
  * ### parameter 'const char **wc_root_path', so a person can tell if
  * ### they opened the root or some subdir?
+ *
+ * ### HKW: How are transactions handled?  Do the db_open* APIs automatically
+ * ### create db transactions, or do we need explicit APIs for that?  Would
+ * ### it be possible to automatically create/commit transactions as part
+ * ### of the existing APIs?
+ * ###
+ * ### Also, do we need an explicit svn_wc__db_close() function, or will that
+ * ### be handled on pool cleanup?  Does this close function commit any
+ * ### outstanding work, or will that need to be manual committed?  (See above.)
  *
  * The configuration options are provided by @a config, and must live at
  * least as long as the database.
@@ -172,7 +186,71 @@ svn_wc__db_open_many(svn_wc__db_t **db,
                      apr_pool_t *scratch_pool);
 
 /**
+ * Start a transaction for the database(s) which are part of @a db.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_txn_begin(svn_wc__db_t *db,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Rollback any changes to @a db which have happened since the last
+ * call to svn_wc__db_txn_begin().  If a transaction is not currently in
+ * progress, nothing occurs.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_txn_rollback(svn_wc__db_t *db,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Commit the currently active transaction for @a db.  If a transaction is not
+ * currently in progress, nothing occurs.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_txn_commit(svn_wc__db_t *db,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Close @a db, and rollback any pending transaction associated with it.
+ *
+ * Any results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_close(svn_wc__db_t *db,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
+/** @} */
+
+/**
+ * Different kind of trees
+ *
+ * The design doc mentions three different kinds of trees, BASE, WORKING and
+ * ACTUAL: http://svn.collab.net/repos/svn/trunk/notes/wc-ng-design
+ * We have different APIs to handle each tree, enumerated below, along with
+ * a blurb to explain what that tree represents.
+ */
+
+/**
  * @defgroup svn_wc__db_base  BASE tree management
+ *
+ * BASE should be what we get from the server. The *absolute* pristine copy.
+ * Nothing can change it -- it is always a reflection of the repository.
+ * You need to use checkout, update, switch, or commit to alter your view of
+ * the repository.
+ * 
  * @{
  */
 

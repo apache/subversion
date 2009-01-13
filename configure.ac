@@ -68,6 +68,9 @@ APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
+dnl Search for pkg-config
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
@@ -264,6 +267,9 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
 
+AC_SUBST(SVN_DB_INCLUDES)
+AC_SUBST(SVN_DB_LIBS)
+
 SVN_LIB_SASL
 
 if test "$svn_lib_sasl" = "yes"; then
@@ -324,11 +330,6 @@ AC_PREPROC_IFELSE([
   APR_HAS_DSO="no"
   AC_MSG_RESULT([no]))
 CPPFLAGS="$old_CPPFLAGS"
-
-
-dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
-
-AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
 
 
 dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------
@@ -715,28 +716,32 @@ AS_HELP_STRING([--enable-maintainer-mode],
       enable_debugging=yes
       if test "$GCC" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
-        CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        dnl Enable some extra warnings. Put these before the user's flags
+        dnl so the user can specify flags that override these.
+        CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl CFLAGS="$CFLAGS -Wswitch-enum -Wswitch-default"
+        dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
+
+        dnl Add each of the following flags only if the compiler accepts it.
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
 
-        CFLAGS="$CFLAGS_KEEP -Wextra-tokens"
+        CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wnewline-eof"
+        CFLAGS="-Wnewline-eof $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wshorten-64-to-32"
+        CFLAGS="-Wshorten-64-to-32 $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wold-style-definition"
+        CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         AC_LANG_POP([C])
