@@ -64,7 +64,7 @@ build_info_from_dirent(svn_info_t **info,
     tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN;
 
   tmpinfo->size64               = dirent->size;
-  tmpinfo->working_size         = SVN_INFO_SIZE64_UNKNOWN;
+  tmpinfo->working_size         = SVN_INVALID_FILESIZE;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
@@ -113,7 +113,7 @@ build_info_from_entry(svn_info_t **info,
     tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
 
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_INFO_SIZE64_UNKNOWN;
+  tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
   tmpinfo->working_size64       = entry->working_size;
 
@@ -154,8 +154,8 @@ build_info_for_unversioned(svn_info_t **info,
   tmpinfo->lock                 = NULL;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_INFO_SIZE64_UNKNOWN;
-  tmpinfo->working_size64       = SVN_INFO_SIZE64_UNKNOWN;
+  tmpinfo->size64               = SVN_INVALID_FILESIZE;
+  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
