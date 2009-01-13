@@ -2516,17 +2516,6 @@ svn_wc_prop_set2(const char *name,
 
 
 svn_error_t *
-svn_wc_prop_set(const char *name,
-                const svn_string_t *value,
-                const char *path,
-                svn_wc_adm_access_t *adm_access,
-                apr_pool_t *pool)
-{
-  return svn_wc_prop_set2(name, value, path, adm_access, FALSE, pool);
-}
-
-
-svn_error_t *
 svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
                              const char *propname,
                              const svn_string_t *propval,
