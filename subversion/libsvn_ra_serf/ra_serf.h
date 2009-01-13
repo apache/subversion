@@ -1072,6 +1072,24 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool);
 
+/* Set YOUNGEST_REVNUM to the head revision of the repository opened
+ * by SESSION.
+ *
+ * NOTE: this function will first attempt to return a *cached* revnum
+ * within the session_t; if not available, it makes a network request
+ * to discover it.  As such, this routine is best called by internal
+ * routines which need a value for HEAD which is "recent enough".
+ * Routines which absolutely need the latest value to be fetched by
+ * network request should call svn_ra_serf__get_baseline_info() instead.
+ *
+ * Use POOL for all allocations.
+ */
+svn_error_t *
+svn_ra_serf__get_youngest_rev(svn_revnum_t *youngest_revnum,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *pool);
+
+
 /** RA functions **/
 
 svn_error_t *
