@@ -362,9 +362,9 @@ class SvnmergeHistoryMigrator:
                             sys.stdout.write("   new sanitized chunk:\n")
                             pretty_print_mergeinfo(history, 6)
                         new_mergeinfo = mergeinfo_merge(new_mergeinfo, history)
-                    except svn.core.SubversionException, e:
-                        if not (e.apr_err == svn.core.SVN_ERR_FS_NOT_FOUND
-                                or e.apr_err == svn.core.SVN_ERR_FS_NO_SUCH_REVISION):
+                    except core.SubversionException, e:
+                        if not (e.apr_err == core.SVN_ERR_FS_NOT_FOUND
+                                or e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION):
                             raise
 
         if self.verbose:
