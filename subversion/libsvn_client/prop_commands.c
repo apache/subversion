@@ -479,8 +479,23 @@ svn_client_revprop_set2(const char *propname,
     }
 
   /* The actual RA call. */
-  return svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
-                                pool);
+  SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
+                                 pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(URL,
+                                             propval == NULL
+                                               ? svn_wc_notify_revprop_set
+                                               : svn_wc_notify_revprop_deleted,
+                                             pool);
+      notify->prop_name = propname;
+      notify->revision = *set_rev;
+
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

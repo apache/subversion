@@ -636,6 +636,22 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           goto print_error;
       break;
 
+    case svn_wc_notify_revprop_set:
+        err = svn_cmdline_printf(pool,
+                          _("property '%s' set on repository revision %ld\n"),
+                          n->prop_name, n->revision);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_revprop_deleted:
+        err = svn_cmdline_printf(pool,
+                     _("property '%s' deleted from repository revision %ld\n"),
+                     n->prop_name, n->revision);
+        if (err)
+          goto print_error;
+      break;
+
     default:
       break;
     }

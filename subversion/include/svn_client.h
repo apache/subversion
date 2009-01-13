@@ -3524,6 +3524,10 @@ svn_client_propset(const char *propname,
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
  * and the like.  Be careful:  it's a lossy operation.
+
+ * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
+ * functions and baton which are called upon successful setting of the
+ * property.
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
