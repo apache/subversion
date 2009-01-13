@@ -95,6 +95,10 @@ svn_cl__propset(apr_getopt_t *os,
                                                       opt_state->targets,
                                                       ctx, pool));
 
+  if (! opt_state->quiet)
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
+
   /* Implicit "." is okay for revision properties; it just helps
      us find the right repository. */
   if (opt_state->revprop)
@@ -174,7 +178,6 @@ svn_cl__propset(apr_getopt_t *os,
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_commit_info_t *commit_info;
-          svn_boolean_t success;
 
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -183,23 +186,13 @@ svn_cl__propset(apr_getopt_t *os,
                                opt_state->depth, opt_state->force,
                                SVN_INVALID_REVNUM, opt_state->changelists,
                                NULL, ctx, subpool),
-                              &success, opt_state->quiet,
+                              NULL, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
                               SVN_NO_ERROR));
 
           if (! opt_state->quiet)
             svn_cl__check_boolean_prop_val(pname_utf8, propval->data, subpool);
-
-          if (success && (! opt_state->quiet))
-            {
-              SVN_ERR
-                (svn_cmdline_printf
-                 (pool, SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
-                  ? _("property '%s' set (recursively) on '%s'\n")
-                  : _("property '%s' set on '%s'\n"),
-                  pname, svn_path_local_style(target, pool)));
-            }
         }
       svn_pool_destroy(subpool);
     }

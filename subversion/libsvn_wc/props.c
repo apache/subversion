@@ -2540,6 +2540,8 @@ svn_wc_prop_set3(const char *name,
   if (notify_func)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(path, notify_action, pool);
+      notify->prop_name = name;
+
       (*notify_func)(notify_baton, notify, pool);
     }
 
