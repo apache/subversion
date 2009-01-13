@@ -15312,9 +15312,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  short_A_FB1 = shorten_path_kludge(A_FB1_path)
-  expected_skip = wc.State(short_A_FB1, {})
-  expected_output = wc.State(short_A_FB1, {
+  expected_skip = wc.State(A_FB1_path, {})
+  expected_output = wc.State(A_FB1_path, {
     'tfile3.txt'    : Item(status='A '),
     'tdir3'         : Item(status='A '),
     })
@@ -15329,7 +15328,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     'tdir3'       : Item(),
     })
-  expected_status = wc.State(short_A_FB1, {
+  expected_status = wc.State(A_FB1_path, {
     ''             : Item(status=' M', wc_rev=10),
     'bfile1.txt'   : Item(status='  ', wc_rev=10),
     'adhoc.txt'    : Item(status='  ', wc_rev=10),
@@ -15340,14 +15339,11 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'tdir3'        : Item(status='A ', wc_rev='-', copied='+'),
     })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB1, 9, 10,
+  svntest.actions.run_and_verify_merge(A_FB1_path, 9, 10,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
   expected_output = wc.State(A_FB1_path, {
     ''              : Item(verb='Sending'),
     'tfile3.txt'    : Item(verb='Adding'),
@@ -15367,10 +15363,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   svntest.actions.run_and_verify_commit(A_FB1_path, expected_output,
                                         expected_status, None, A_FB1_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  os.chdir(svntest.main.work_dir)
-  short_A_FB2 = shorten_path_kludge(A_FB2_path)
-  expected_skip = wc.State(short_A_FB2, {})
-  expected_output = wc.State(short_A_FB2, {
+  expected_skip = wc.State(A_FB2_path, {})
+  expected_output = wc.State(A_FB2_path, {
     'tfile0.txt'    : Item(status='D '),
     'tdir0'         : Item(status='D '),
     'tfile1.txt'    : Item(status='A '),
@@ -15386,7 +15380,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir1'       : Item(),
     'tdir0'       : Item(),
     })
-  expected_status = wc.State(short_A_FB2, {
+  expected_status = wc.State(A_FB2_path, {
     ''             : Item(status=' M', wc_rev=11),
     'bfile2.txt'   : Item(status='  ', wc_rev=11),
     'tfile0.txt'   : Item(status='D ', wc_rev=11),
@@ -15397,12 +15391,11 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'tdir1'        : Item(status='A ', wc_rev='-', copied='+'),
     })
-  svntest.actions.run_and_verify_merge(short_A_FB2, 4, 6,
+  svntest.actions.run_and_verify_merge(A_FB2_path, 4, 6,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
   expected_output = wc.State(A_FB2_path, {
     ''              : Item(verb='Sending'),
     'tfile0.txt'    : Item(verb='Deleting'),
@@ -15422,8 +15415,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   svntest.actions.run_and_verify_commit(A_FB2_path, expected_output,
                                         expected_status, None, A_FB2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_skip = wc.State(short_A_FB1, {})
-  expected_output = wc.State(short_A_FB1, {
+  expected_skip = wc.State(A_FB1_path, {})
+  expected_output = wc.State(A_FB1_path, {
     ''              : Item(status=' G'),
     'tfile0.txt'    : Item(status='D '),
     'tdir0'         : Item(status='D '),
@@ -15447,7 +15440,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     'tdir3'       : Item(),
     })
-  expected_status = wc.State(short_A_FB1, {
+  expected_status = wc.State(A_FB1_path, {
     ''             : Item(status=' M', wc_rev=12),
     'bfile2.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bdir2'        : Item(status='A ', wc_rev='-', copied='+'),
@@ -15462,13 +15455,11 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile3.txt'   : Item(status='  ', wc_rev=12),
     'tdir3'        : Item(status='  ', wc_rev=12),
     })
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB1, 3, 12,
+  svntest.actions.run_and_verify_merge(A_FB1_path, 3, 12,
                                        A_FB2_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
 
   #Do adhoc delete and commit along with reflective merge.
   svntest.main.run_svn(None, 'rm', A_FB1_adhoc_path)
@@ -15561,9 +15552,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  short_A_C = shorten_path_kludge(A_C_path)
-  expected_skip = wc.State(short_A_C, {})
-  expected_output = wc.State(short_A_C, {
+  expected_skip = wc.State(A_C_path, {})
+  expected_output = wc.State(A_C_path, {
     ''              : Item(status=' G'),
     'adhoc.txt'     : Item(status='D '),
     'adhocdir'      : Item(status='D '),
@@ -15591,7 +15581,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir2'       : Item(),
     'adhocdir'    : Item(),
     })
-  expected_status = wc.State(short_A_C, {
+  expected_status = wc.State(A_C_path, {
     ''             : Item(status=' M', wc_rev=16),
     'bfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bdir1'        : Item(status='A ', wc_rev='-', copied='+'),
@@ -15608,13 +15598,11 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tfile2.txt'   : Item(status='  ', wc_rev=16),
     'tdir2'        : Item(status='  ', wc_rev=16),
     })
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_C, 3, 16,
+  svntest.actions.run_and_verify_merge(A_C_path, 3, 16,
                                        A_FB1_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, dry_run = False)
-  os.chdir(saved_cwd)
 
 def merge_non_reflective_text_and_prop_change(sbox):
   "merge non-reflective text and prop change"
@@ -15709,15 +15697,11 @@ def merge_non_reflective_text_and_prop_change(sbox):
   # Update wc_dir to get the latest changes
   svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
 
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-
   # Merge r5 from /A/B/E to /A/B/E_COPY
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='U '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=7),
     'alpha'    : Item(status='M ', wc_rev=7),
     'beta'     : Item(status='  ', wc_rev=7),
@@ -15729,26 +15713,21 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'alpha'    : Item(props={'prop1' : 'val1'},
                       contents="fbline1 \ntline2 \nline3 \nline4 \nline5 \n"),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '1', '5',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '1', '5',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
-
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
 
   # Merge r7 from /A/B/E to /A/B/E_COPY
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='G '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=7),
     'alpha'    : Item(status='M ', wc_rev=7),
     'beta'     : Item(status='  ', wc_rev=7),
@@ -15760,16 +15739,15 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'alpha'    : Item(props={'prop1' : 'val1'},
                       contents="fbline1 \ntline2 \nline3 \ntline4 \nline5 \n"),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '6', '7',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '6', '7',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
 
   # Do a local modification to alpha in feature branch
   svntest.main.file_substitute(alpha_fb_path, "line5 ", "adhoc fbline5 ")
@@ -15794,17 +15772,14 @@ def merge_non_reflective_text_and_prop_change(sbox):
                                         expected_status, None, wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  short_ABE = shorten_path_kludge(ABE_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
 
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
-  expected_output = wc.State(short_ABE, {
+  expected_output = wc.State(ABE_path, {
     ''         : Item(status=' G'),
     'alpha'    : Item(status='G '),
     'beta'     : Item(status=' U'),
     })
-  expected_status = wc.State(short_ABE, {
+  expected_status = wc.State(ABE_path, {
     ''         : Item(status=' M', wc_rev=8),
     'alpha'    : Item(status='M ', wc_rev=8),
     'beta'     : Item(status=' M', wc_rev=8),
@@ -15818,9 +15793,9 @@ def merge_non_reflective_text_and_prop_change(sbox):
                       contents=\
                       "fbline1 \ntline2 \ntline3 \ntline4 \nadhoc fbline5 \n"),
     })
-  expected_skip = wc.State(short_ABE, {})
+  expected_skip = wc.State(ABE_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE, None, None,
+  svntest.actions.run_and_verify_merge(ABE_path, None, None,
                                        sbox.repo_url + '/A/B/E_COPY',
                                        expected_output,
                                        expected_disk,
@@ -15828,7 +15803,6 @@ def merge_non_reflective_text_and_prop_change(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1,
                                        dry_run = False)
-  os.chdir(saved_cwd)
   # Revert 
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   #Redo the above merge with current working directory being a implicit
@@ -15856,7 +15830,6 @@ def merge_non_reflective_text_and_prop_change(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1,
                                        dry_run = False)
-  os.chdir(saved_cwd)
 
 def merge_non_reflective_with_conflict(sbox):
   "merge non-reflective with conflict"
@@ -15956,15 +15929,11 @@ def merge_non_reflective_with_conflict(sbox):
   # Update wc_dir to get the latest changes
   svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
 
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-
   # Merge r5 from /A/B/E to /A/B/E_COPY
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='U '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=8),
     'alpha'    : Item(status='M ', wc_rev=8),
     'beta'     : Item(status='  ', wc_rev=8),
@@ -15974,23 +15943,18 @@ def merge_non_reflective_with_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \nline4 \nfbline5 \n"),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '1', '5',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '1', '5',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
-
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
 
   # Merge r7 from /A/B/E to /A/B/E_COPY
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='C '),
     })
   expected_disk = wc.State('', {
@@ -15999,7 +15963,7 @@ def merge_non_reflective_with_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \nline4 \nfbline5 \n"),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=8),
     'alpha'    : Item(status='C ', wc_rev=8),
     'beta'     : Item(status='  ', wc_rev=8),
@@ -16014,7 +15978,7 @@ def merge_non_reflective_with_conflict(sbox):
                                   "alpha\.merge-right\.r7",
                                   "alpha\.merge-left\.r6"]
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '6', '7',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '6', '7',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
@@ -16024,22 +15988,17 @@ def merge_non_reflective_with_conflict(sbox):
                                        svntest.tree.detect_conflict_files,
                                        list(alpha_conflict_support_files),
                                        check_props=True)
-  os.chdir(saved_cwd)
 
   # Resolve the conflicted state
   new_file_content = "line1 \ntline2 \nfbline3 \nline4 \ntline5 \n"
   svntest.main.file_write(alpha_fb_path, new_file_content)
   svntest.actions.run_and_verify_svn(None, None, [],'resolved', alpha_fb_path)
 
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-
   # Merge r8 from /A/B/E to /A/B/E_COPY
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='G '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=8),
     'alpha'    : Item(status='M ', wc_rev=8),
     'beta'     : Item(status='  ', wc_rev=8),
@@ -16049,16 +16008,15 @@ def merge_non_reflective_with_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '7', '8',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '7', '8',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
 
   # Commit the merged changes ie., r9
   expected_output = wc.State(wc_dir, {
@@ -16076,16 +16034,13 @@ def merge_non_reflective_with_conflict(sbox):
                                         expected_status, None, wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  short_ABE = shorten_path_kludge(ABE_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
 
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
-  expected_output = wc.State(short_ABE, {
+  expected_output = wc.State(ABE_path, {
     ''         : Item(status=' U'),
     'alpha'    : Item(status='C '),
     })
-  expected_status = wc.State(short_ABE, {
+  expected_status = wc.State(ABE_path, {
     ''         : Item(status=' M', wc_rev=9),
     'alpha'    : Item(status='C ', wc_rev=9),
     'beta'     : Item(status='  ', wc_rev=9),
@@ -16096,7 +16051,7 @@ def merge_non_reflective_with_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \n"),
     })
-  expected_skip = wc.State(short_ABE, {})
+  expected_skip = wc.State(ABE_path, {})
 
   inject_conflict_into_expected_state('alpha', expected_disk,
                                       expected_status, "tline4 \ntline5 \n",
@@ -16113,7 +16068,7 @@ def merge_non_reflective_with_conflict(sbox):
   #Resolve it in a same way(Taking tline5 instead of fbline5) as we did in
   #feature branch.
   #Proceed with merge again.
-  svntest.actions.run_and_verify_merge(short_ABE, None, None,
+  svntest.actions.run_and_verify_merge(ABE_path, None, None,
                                        sbox.repo_url + '/A/B/E_COPY',
                                        expected_output,
                                        expected_disk,
@@ -16123,16 +16078,15 @@ def merge_non_reflective_with_conflict(sbox):
                                        svntest.tree.detect_conflict_files,
                                        list(alpha_conflict_support_files),
                                        check_props=True)
-  os.chdir(saved_cwd)
 
   # Resolve the conflicted state
   new_file_content = "line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"
   svntest.main.file_write(alpha_path, new_file_content)
   svntest.actions.run_and_verify_svn(None, None, [],'resolved', alpha_path)
-  expected_output = wc.State(short_ABE, {
+  expected_output = wc.State(ABE_path, {
     ''         : Item(status=' G'),
     })
-  expected_status = wc.State(short_ABE, {
+  expected_status = wc.State(ABE_path, {
     ''         : Item(status=' M', wc_rev=9),
     'alpha'    : Item(status='M ', wc_rev=9),
     'beta'     : Item(status='  ', wc_rev=9),
@@ -16144,8 +16098,7 @@ def merge_non_reflective_with_conflict(sbox):
     'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
     })
   #merge r9
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_ABE, None, None,
+  svntest.actions.run_and_verify_merge(ABE_path, None, None,
                                        sbox.repo_url + '/A/B/E_COPY',
                                        expected_output,
                                        expected_disk,
@@ -16155,7 +16108,6 @@ def merge_non_reflective_with_conflict(sbox):
                                        svntest.tree.detect_conflict_files,
                                        list(alpha_conflict_support_files),
                                        check_props=True)
-  os.chdir(saved_cwd)
 
 def merge_non_reflective_with_complex_conflict(sbox):
   "merge non-reflective with complex conflict"
@@ -16285,17 +16237,13 @@ def merge_non_reflective_with_complex_conflict(sbox):
   # Update wc_dir to get the latest changes
   svntest.actions.run_and_verify_svn(None, None, [],'up', wc_dir)
 
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-
   # Merge r4 from /A/B/E to /A/B/E_COPY
   new_content = file_content.replace("line28.", "TLINE28.")
   new_content = new_content.replace("line18.", "FBLINE18.")
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='U '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=9),
     'alpha'    : Item(status='M ', wc_rev=9),
     'beta'     : Item(status='  ', wc_rev=9),
@@ -16305,26 +16253,21 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '1', '4',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '1', '4',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
-
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
 
   # Merge r7 from /A/B/E to /A/B/E_COPY
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='C '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=9),
     'alpha'    : Item(status='M ', wc_rev=9),
     'beta'     : Item(status='  ', wc_rev=9),
@@ -16334,7 +16277,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
   inject_conflict_into_expected_state('alpha', expected_disk,
                                       expected_status, "This is FBLINE18.\n",
@@ -16344,7 +16287,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
                                   "alpha\.merge-right\.r7",
                                   "alpha\.merge-left\.r6"]
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '6', '7',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '6', '7',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
@@ -16354,22 +16297,17 @@ def merge_non_reflective_with_complex_conflict(sbox):
                                        svntest.tree.detect_conflict_files,
                                        list(alpha_conflict_support_files),
                                        check_props=True)
-  os.chdir(saved_cwd)
 
   # Resolve the conflicted state
   svntest.main.file_write(alpha_fb_path, new_content)
   svntest.actions.run_and_verify_svn(None, None, [],'resolved', alpha_fb_path)
 
-  short_ABE_COPY = shorten_path_kludge(ABE_COPY_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-
   # Merge r9 from /A/B/E to /A/B/E_COPY
   new_content = new_content.replace("line13.", "TLINE13.")
-  expected_output = wc.State(short_ABE_COPY, {
+  expected_output = wc.State(ABE_COPY_path, {
     'alpha'    : Item(status='G '),
     })
-  expected_status = wc.State(short_ABE_COPY, {
+  expected_status = wc.State(ABE_COPY_path, {
     ''         : Item(status=' M', wc_rev=9),
     'alpha'    : Item(status='M ', wc_rev=9),
     'beta'     : Item(status='  ', wc_rev=9),
@@ -16379,16 +16317,15 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
-  expected_skip = wc.State(short_ABE_COPY, {})
+  expected_skip = wc.State(ABE_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(short_ABE_COPY, '8', '9',
+  svntest.actions.run_and_verify_merge(ABE_COPY_path, '8', '9',
                                        sbox.repo_url + '/A/B/E',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
 
   # Commit the merged changes ie., r10
   # REFLECTIVE_REV=10
@@ -16415,18 +16352,14 @@ def merge_non_reflective_with_complex_conflict(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  short_ABE = shorten_path_kludge(ABE_path)
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   # It will conflict at r2:9. After resolving the conflict run rest of
   # the merge.
   new_content = new_content.replace("FBLINE18.", "TLINE18.")
-  expected_output = wc.State(short_ABE, {
+  expected_output = wc.State(ABE_path, {
     'alpha'    : Item(status='C '),
     })
-  expected_status = wc.State(short_ABE, {
+  expected_status = wc.State(ABE_path, {
     ''         : Item(status=' M', wc_rev=9),
     'alpha'    : Item(status='C ', wc_rev=9),
     'beta'     : Item(status='  ', wc_rev=9),
@@ -16437,7 +16370,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
-  expected_skip = wc.State(short_ABE, {})
+  expected_skip = wc.State(ABE_path, {})
   inject_conflict_into_expected_state('alpha', expected_disk,
                                       expected_status, "This is TLINE18.\n",
                                       "This is FBLINE18.\n", 9)
@@ -16446,7 +16379,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
                                   "alpha\.merge-right\.r9",
                                   "alpha\.merge-left\.r2"]
 
-  svntest.actions.run_and_verify_merge(short_ABE, 2, 9,
+  svntest.actions.run_and_verify_merge(ABE_path, 2, 9,
                                        sbox.repo_url + '/A/B/E_COPY',
                                        expected_output,
                                        expected_disk,
@@ -16456,14 +16389,12 @@ def merge_non_reflective_with_complex_conflict(sbox):
                                        svntest.tree.detect_conflict_files,
                                        list(alpha_conflict_support_files),
                                        None, None, True, True)
-  os.chdir(saved_cwd)
 
   # Resolve the conflicted state
   svntest.main.file_write(alpha_path, new_content)
   svntest.actions.run_and_verify_svn(None, None, [], 'resolved', alpha_path)
 
-  os.chdir(svntest.main.work_dir)
-  expected_output = wc.State(short_ABE, {
+  expected_output = wc.State(ABE_path, {
     ''         : Item(status=' G'),
     'alpha'    : Item(status='U ')
     })
@@ -16472,7 +16403,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
   expected_disk.tweak('alpha', contents=new_content)
   expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : 
                                  '/A/B/E:3-4,7,9\n/A/B/E_COPY:3-11\n'})
-  svntest.actions.run_and_verify_merge(short_ABE, 9, 11,
+  svntest.actions.run_and_verify_merge(ABE_path, 9, 11,
                                        sbox.repo_url + '/A/B/E_COPY',
                                        expected_output,
                                        expected_disk,
@@ -16480,7 +16411,6 @@ def merge_non_reflective_with_complex_conflict(sbox):
                                        expected_skip,
                                        None, None, None,
                                        None, None, True, True)
-  os.chdir(saved_cwd)
 
 def reflective_merge_on_reincarnated_target(sbox):
   "reflective merge on reincarnated target"
@@ -16538,27 +16468,23 @@ def reflective_merge_on_reincarnated_target(sbox):
                                         expected_status, None, A_C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  short_A_FB = shorten_path_kludge(A_FB_path)
-  expected_skip = wc.State(short_A_FB, {})
-  expected_output = wc.State(short_A_FB, {
+  expected_skip = wc.State(A_FB_path, {})
+  expected_output = wc.State(A_FB_path, {
     'file1.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
     ''            : Item(props={SVN_PROP_MERGE_INFO : '/A/C:2-3'}),
     'file1.txt'  : Item("This is the file1.\n"),
     })
-  expected_status = wc.State(short_A_FB, {
+  expected_status = wc.State(A_FB_path, {
     ''            : Item(status=' M', wc_rev=3),
     'file1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB, None, None,
+  svntest.actions.run_and_verify_merge(A_FB_path, None, None,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
   expected_output = wc.State(A_FB_path, {
     ''             : Item(verb='Sending'),
     'file1.txt'    : Item(verb='Adding'),
@@ -16589,7 +16515,7 @@ def reflective_merge_on_reincarnated_target(sbox):
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, A_C_path) #r7
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_output = wc.State(short_A_FB, {
+  expected_output = wc.State(A_FB_path, {
     'unrelated.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
@@ -16597,19 +16523,16 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file1.txt'      : Item("This is the file1.\n"),
     'unrelated.txt'  : Item("This is the unrelated file.\n"),
     })
-  expected_status = wc.State(short_A_FB, {
+  expected_status = wc.State(A_FB_path, {
     ''                : Item(status=' M', wc_rev=7),
     'file1.txt'       : Item(status='  ', wc_rev=7),
     'unrelated.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB, 6, 7,
+  svntest.actions.run_and_verify_merge(A_FB_path, 6, 7,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
   expected_output = wc.State(A_FB_path, {
     ''                 : Item(verb='Sending'),
     'unrelated.txt'    : Item(verb='Adding'),
@@ -16639,7 +16562,7 @@ def reflective_merge_on_reincarnated_target(sbox):
   svntest.actions.run_and_verify_commit(A_C1_path, expected_output,
                                         expected_status, None, A_C1_path) #r11
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_output = wc.State(short_A_FB, {
+  expected_output = wc.State(A_FB_path, {
     'file2.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
@@ -16649,20 +16572,17 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file1.txt'  : Item("This is the file1.\n"),
     'file2.txt'  : Item("This is the file2.\n"),
     })
-  expected_status = wc.State(short_A_FB, {
+  expected_status = wc.State(A_FB_path, {
     ''               : Item(status=' M', wc_rev=11),
     'file1.txt'      : Item(status='  ', wc_rev=11),
     'unrelated.txt'  : Item(status='  ', wc_rev=11),
     'file2.txt'      : Item(status='A ', wc_rev='-', copied='+'),
     })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB, 10, 11,
+  svntest.actions.run_and_verify_merge(A_FB_path, 10, 11,
                                        A_C1_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
   expected_output = wc.State(A_FB_path, {
     ''            : Item(verb='Sending'),
     'file2.txt'   : Item(verb='Adding'),
@@ -16693,7 +16613,7 @@ def reflective_merge_on_reincarnated_target(sbox):
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, A_C_path) #r14
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_output = wc.State(short_A_FB, {
+  expected_output = wc.State(A_FB_path, {
     'file3.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
@@ -16704,21 +16624,18 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file2.txt'      : Item("This is the file2.\n"),
     'file3.txt'      : Item("This is the file3.\n"),
     })
-  expected_status = wc.State(short_A_FB, {
+  expected_status = wc.State(A_FB_path, {
     ''               : Item(status=' M', wc_rev=14),
     'file1.txt'      : Item(status='  ', wc_rev=14),
     'file2.txt'      : Item(status='  ', wc_rev=14),
     'unrelated.txt'  : Item(status='  ', wc_rev=14),
     'file3.txt'      : Item(status='A ', wc_rev='-', copied='+'),
     })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_FB, 13, 14,
+  svntest.actions.run_and_verify_merge(A_FB_path, 13, 14,
                                        A_C_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
-  os.chdir(saved_cwd)
   expected_output = wc.State(A_FB_path, {
     ''            : Item(verb='Sending'),
     'file3.txt'   : Item(verb='Adding'),
@@ -16733,8 +16650,7 @@ def reflective_merge_on_reincarnated_target(sbox):
   svntest.actions.run_and_verify_commit(A_FB_path, expected_output,
                                         expected_status, None, A_FB_path) #r15
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  short_A_C = shorten_path_kludge(A_C_path)
-  expected_output = wc.State(short_A_C, {
+  expected_output = wc.State(A_C_path, {
     ''               : Item(status=' G'),
     'unrelated.txt'  : Item(status='A '),
     })
@@ -16746,21 +16662,18 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file2.txt'      : Item("This is the file2.\n"),
     'file3.txt'      : Item("This is the file3.\n"),
     })
-  expected_status = wc.State(short_A_C, {
+  expected_status = wc.State(A_C_path, {
     ''               : Item(status=' M', wc_rev=15),
     'file1.txt'      : Item(status='  ', wc_rev=15),
     'file2.txt'      : Item(status='  ', wc_rev=15),
     'file3.txt'      : Item(status='  ', wc_rev=15),
     'unrelated.txt'  : Item(status='A ', wc_rev='-', copied='+'),
     })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_C, None, None,
+  svntest.actions.run_and_verify_merge(A_C_path, None, None,
                                        A_FB_url, expected_output,
                                        expected_disk, expected_status,
                                        expected_skip, None, None, None, None,
                                        None, 1, dry_run = False)
-  os.chdir(saved_cwd)
 ########################################################################
 # Run the tests
 
