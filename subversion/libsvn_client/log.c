@@ -93,18 +93,28 @@ copyfrom_info_receiver(svn_location_segment_t *segment,
                        apr_pool_t *pool)
 {
   copyfrom_info_t *copyfrom_info = baton;
+
+  /* If we've already identified the copy source, there's nothing more
+     to do.
+     ### FIXME:  We *should* be able to send */
   if (copyfrom_info->path)
-    /* The copy source has already been found. */
     return SVN_NO_ERROR;
 
+  /* If this is the first segment, it's not of interest to us. Otherwise
+     (so long as this segment doesn't represent a history gap), it holds
+     our path's previous location (from which it was last copied). */
   if (copyfrom_info->is_first)
-    copyfrom_info->is_first = FALSE; /* Skip the first segment */
-  else
-    { /* The end of the second segment is the location copied from */
-      copyfrom_info->path = apr_pstrdup(copyfrom_info->pool,
-                                        segment->path);
-
+    {
+      copyfrom_info->is_first = FALSE;
+    }
+  else if (segment->path)
+    {
+      /* The end of the second non-gap segment is the location copied from.  */
+      copyfrom_info->path = apr_pstrdup(copyfrom_info->pool, segment->path);
       copyfrom_info->rev = segment->range_end;
+
+      /* ### FIXME: We *should* be able to return SVN_ERR_CEASE_INVOCATION 
+         ### here so we don't get called anymore. */
     }
 
   return SVN_NO_ERROR;
