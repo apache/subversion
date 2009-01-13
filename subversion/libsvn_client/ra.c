@@ -167,7 +167,8 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_wc_prop_set2(name, value, full_path, adm_access, TRUE, pool);
+  return svn_wc_prop_set3(name, value, full_path, adm_access, TRUE, NULL, NULL,
+                          pool);
 }
 
 
@@ -199,8 +200,8 @@ invalidate_wcprop_for_entry(const char *path,
                               pool));
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
-  return svn_wc_prop_set2(wb->prop_name, NULL, path, entry_access,
-                          FALSE, pool);
+  return svn_wc_prop_set3(wb->prop_name, NULL, path, entry_access,
+                          FALSE, NULL, NULL, pool);
 }
 
 
