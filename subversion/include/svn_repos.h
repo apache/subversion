@@ -1175,7 +1175,7 @@ svn_repos_stat(svn_dirent_t **dirent,
 /**
  * Given @a path which exists at revision @a start in @a fs, set
  * @a *deleted to the revision @a path was first deleted, within the
- * inclusive revision range set by @a start and @a end.  If @a path
+ * inclusive revision range bounded by @a start and @a end.  If @a path
  * does not exist at revision @a start or was not deleted within the
  * specified range, then set @a *deleted to SVN_INVALID_REVNUM.
  * Use @a pool for memory allocation.
