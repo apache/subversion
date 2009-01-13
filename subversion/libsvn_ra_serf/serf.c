@@ -522,14 +522,9 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  /* Using HTTP protocol v2;  already got it in the initial OPTIONS response. */
-  if (SVN_IS_VALID_REVNUM(session->youngest_rev))
-    {
-      *latest_revnum = session->youngest_rev;
-      return SVN_NO_ERROR;
-    }
-
-  /* Fall back to old-fashioned way of getting it. */
+  /* Because this is a public RA function, we deliberately do *not*
+     use the cached HEAD value in our session_t.  The caller might
+     depend on the value to not be stale.  */
   return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                         session, session->repos_url.path,
                                         SVN_INVALID_REVNUM, latest_revnum,

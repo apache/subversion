@@ -922,6 +922,26 @@ svn_ra_serf__set_bare_props(void *baton,
                         ns, ns_len, name, name_len, val, pool);
 }
 
+svn_error_t *
+svn_ra_serf__get_youngest_rev(svn_revnum_t *youngest_revnum,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *pool)
+{
+  const char *relative_url, *basecoll_url;
+
+  if (SVN_IS_VALID_REVNUM(session->youngest_rev))
+    {
+      /* Return cached value */
+      *youngest_revnum = session->youngest_rev;
+      return SVN_NO_ERROR;
+    }
+  
+  /* else do a network request to get HEAD */
+  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
+                                        session, session->repos_url.path,
+                                        SVN_INVALID_REVNUM, youngest_revnum,
+                                        pool);
+}
 
 svn_error_t *
 svn_ra_serf__get_baseline_info(const char **bc_url,
@@ -993,6 +1013,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
         }
 
       *latest_revnum = SVN_STR_TO_REV(version_name);
+      session->youngest_rev = *latest_revnum;  /* cache this! */
     }
 
   *bc_url = basecoll_url;
