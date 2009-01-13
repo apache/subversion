@@ -15318,7 +15318,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir3'         : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''            : Item(props={SVN_PROP_MERGE_INFO : '/A/C:10'}),
+    ''            : Item(props={SVN_PROP_MERGEINFO : '/A/C:10'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bdir1'       : Item(),
     'adhoc.txt'   : Item("This is the adhoc file.\n"),
@@ -15371,7 +15371,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'tdir1'         : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''            : Item(props={SVN_PROP_MERGE_INFO : '/A/C:5-6'}),
+    ''            : Item(props={SVN_PROP_MERGEINFO : '/A/C:5-6'}),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
     'adhoc.txt'   : Item("This is the adhoc file.\n"),
     'adhocdir'    : Item(),
@@ -15427,7 +15427,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_disk = wc.State('', {
     ''            : Item(props=\
-                         {SVN_PROP_MERGE_INFO : '/A/C:5-6,10\n/A/FB2:4-12\n'}),
+                         {SVN_PROP_MERGEINFO : '/A/C:5-6,10\n/A/FB2:4-12\n'}),
     'tdir0'       : Item(),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bdir1'       : Item(),
@@ -15565,7 +15565,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bdir3'         : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''            : Item(props={SVN_PROP_MERGE_INFO : 
+    ''            : Item(props={SVN_PROP_MERGEINFO : 
                                    '/A/C:5-6,10\n/A/FB1:4-16\n/A/FB2:4-12\n'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bdir1'       : Item(),
@@ -15707,7 +15707,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'beta'     : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-5'}),
     'beta'     : Item(props={'prop1' : 'val1'},
                       contents="This is the file 'beta'.\n"),
     'alpha'    : Item(props={'prop1' : 'val1'},
@@ -15733,7 +15733,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     'beta'     : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-5,7'}),
     'beta'     : Item(props={'prop1' : 'val1'},
                       contents="This is the file 'beta'.\n"),
     'alpha'    : Item(props={'prop1' : 'val1'},
@@ -15786,7 +15786,7 @@ def merge_non_reflective_text_and_prop_change(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                     SVN_PROP_MERGE_INFO : '/A/B/E:2-5,7\n/A/B/E_COPY:3-8\n'}),
+                     SVN_PROP_MERGEINFO : '/A/B/E:2-5,7\n/A/B/E_COPY:3-8\n'}),
     'beta'     : Item(props={'prop1' : 'val1', 'prop2' : 'val2'},
                       contents="This is the file 'beta'.\n"),
     'alpha'    : Item(props={'prop1' : 'val1'},
@@ -15939,7 +15939,7 @@ def merge_non_reflective_with_conflict(sbox):
     'beta'     : Item(status='  ', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-5'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \nline4 \nfbline5 \n"),
     })
@@ -15959,7 +15959,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                   SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
+                   SVN_PROP_MERGEINFO : '/A/B/E:3-5,7'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \nline4 \nfbline5 \n"),
     })
@@ -16004,7 +16004,7 @@ def merge_non_reflective_with_conflict(sbox):
     'beta'     : Item(status='  ', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7-8'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-5,7-8'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
     })
@@ -16047,7 +16047,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                   SVN_PROP_MERGE_INFO : '/A/B/E_COPY:3-8'}),
+                   SVN_PROP_MERGEINFO : '/A/B/E_COPY:3-8'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \n"),
     })
@@ -16093,7 +16093,7 @@ def merge_non_reflective_with_conflict(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                   SVN_PROP_MERGE_INFO : '/A/B/E:2-5,7-8\n/A/B/E_COPY:3-9\n'}),
+                   SVN_PROP_MERGEINFO : '/A/B/E:2-5,7-8\n/A/B/E_COPY:3-9\n'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item("line1 \ntline2 \nfbline3 \ntline4 \ntline5 \n"),
     })
@@ -16249,7 +16249,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-4'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
@@ -16273,7 +16273,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4,7'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-4,7'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
@@ -16313,7 +16313,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     'beta'     : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4,7,9'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-4,7,9'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
@@ -16366,7 +16366,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
-                   SVN_PROP_MERGE_INFO : '/A/B/E_COPY:3-9'}),
+                   SVN_PROP_MERGEINFO : '/A/B/E_COPY:3-9'}),
     'beta'     : Item("This is the file 'beta'.\n"),
     'alpha'    : Item(new_content),
     })
@@ -16401,7 +16401,7 @@ def merge_non_reflective_with_complex_conflict(sbox):
   expected_status.tweak('alpha', status='M ')
   new_content = new_content.replace("line8.", "FBLINE8.")
   expected_disk.tweak('alpha', contents=new_content)
-  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : 
+  expected_disk.tweak('', props={SVN_PROP_MERGEINFO : 
                                  '/A/B/E:3-4,7,9\n/A/B/E_COPY:3-11\n'})
   svntest.actions.run_and_verify_merge(ABE_path, 9, 11,
                                        sbox.repo_url + '/A/B/E_COPY',
@@ -16473,7 +16473,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'file1.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''            : Item(props={SVN_PROP_MERGE_INFO : '/A/C:2-3'}),
+    ''            : Item(props={SVN_PROP_MERGEINFO : '/A/C:2-3'}),
     'file1.txt'  : Item("This is the file1.\n"),
     })
   expected_status = wc.State(A_FB_path, {
@@ -16519,7 +16519,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'unrelated.txt'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''               : Item(props={SVN_PROP_MERGE_INFO : '/A/C:2-3,7'}),
+    ''               : Item(props={SVN_PROP_MERGEINFO : '/A/C:2-3,7'}),
     'file1.txt'      : Item("This is the file1.\n"),
     'unrelated.txt'  : Item("This is the unrelated file.\n"),
     })
@@ -16567,7 +16567,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     })
   expected_disk = wc.State('', {
     ''            : Item(props={
-                          SVN_PROP_MERGE_INFO : '/A/C:2-3,7\n/A/C1:11\n'}),
+                          SVN_PROP_MERGEINFO : '/A/C:2-3,7\n/A/C1:11\n'}),
     'unrelated.txt'  : Item("This is the unrelated file.\n"),
     'file1.txt'  : Item("This is the file1.\n"),
     'file2.txt'  : Item("This is the file2.\n"),
@@ -16618,7 +16618,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     })
   expected_disk = wc.State('', {
     ''               : Item(props={
-                          SVN_PROP_MERGE_INFO : '/A/C:2-3,7,14\n/A/C1:11\n'}),
+                          SVN_PROP_MERGEINFO : '/A/C:2-3,7,14\n/A/C1:11\n'}),
     'unrelated.txt'  : Item("This is the unrelated file.\n"),
     'file1.txt'      : Item("This is the file1.\n"),
     'file2.txt'      : Item("This is the file2.\n"),
@@ -16655,7 +16655,7 @@ def reflective_merge_on_reincarnated_target(sbox):
     'unrelated.txt'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    ''               : Item(props={SVN_PROP_MERGE_INFO : 
+    ''               : Item(props={SVN_PROP_MERGEINFO : 
                             '/A/C:2-3,7,14\n/A/C1:11\n/A/FB:2-15\n'}),
     'unrelated.txt'  : Item("This is the unrelated file.\n"),
     'file1.txt'      : Item("This is the file1.\n"),
