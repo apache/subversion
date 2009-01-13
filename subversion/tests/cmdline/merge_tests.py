@@ -233,8 +233,8 @@ def textual_merges_galore(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '-r', '1', other_rho_path)
 
-  # For A/D/G/tau, we append ten different lines, to conflict with the
-  # ten lines appended in revision 3.
+  # For A/D/G/tau, we append few different lines, to conflict with the
+  # few lines appended in revision 3.
   other_tau_text = fill_file_with_lines(other_tau_path, 2,
                                         line_descrip="Conflicting line")
 

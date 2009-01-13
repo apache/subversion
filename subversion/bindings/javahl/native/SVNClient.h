@@ -147,8 +147,7 @@ class SVNClient :public SVNBase
                  Revision &revision, Revision &pegRevsion, svn_depth_t depth,
                  bool ignoreExternals, bool allowUnverObstructions);
   void logMessages(const char *path, Revision &pegRevision,
-                   Revision &revisionStart,
-                   Revision &revisionEnd, bool stopOnCopy,
+                   std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
                    StringArray &revProps,
                    long limit, LogMessageCallback *callback);

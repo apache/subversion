@@ -549,7 +549,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   while (len)
     {
-      readbuf_len = len > sizeof(readbuf) ? sizeof(readbuf) : len;
+      readbuf_len = len > sizeof(readbuf) ? sizeof(readbuf) : (apr_size_t)len;
 
       SVN_ERR(readbuf_read(conn, pool, readbuf, readbuf_len));
       /* Read into a stringbuf_t to so we don't allow the sender to allocate
@@ -854,9 +854,9 @@ svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
          easily change that, so "" means a nonexistent message. */
       if (!*message)
         message = NULL;
-      err = svn_error_create(apr_err, err, message);
+      err = svn_error_create((apr_status_t)apr_err, err, message);
       err->file = apr_pstrdup(err->pool, file);
-      err->line = line;
+      err->line = (long)line;
     }
 
   svn_pool_destroy(subpool);

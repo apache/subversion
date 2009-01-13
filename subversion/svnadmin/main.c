@@ -1131,9 +1131,10 @@ pack_notify(void *baton,
   switch (action)
     {
       case svn_fs_pack_notify_start:
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("Packing shard %" APR_INT64_T_FMT "..."),
-                                   shard));
+        {
+          const char *shardstr = apr_psprintf(pool, "%" APR_INT64_T_FMT, shard);
+          SVN_ERR(svn_cmdline_printf(pool, _("Packing shard %s..."), shardstr));
+        }
         break;
 
       case svn_fs_pack_notify_end:

@@ -11,10 +11,18 @@ Blocker:
  * #3334: Tree conflicts "merry-go-round" about update updating the base.
    Julian Foad is working on this. Done for when victim is a file, still
    doing for when victim is a directory.  [julianfoad]
+   See: <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1019712>.
 
- * r34977 added a cmdline prompt to a library function. This api should be
-   updated to accept a prompt handler and svn should provide such a prompt
-   handler. [stylesen]
+ * #3354: update fails when file with local mods is moved and modified.
+   If you run the attached script with current trunk, svn bails out
+   and leaves the working copy in locked state.
+   The problem occurs when an update pulls down both a move and a
+   textual diff for a file in one go.
+   Not deeply analysed, fix unknown as of yet, but reproduction script exists.
+
+ * Review the new "svn_dirent/svn_uri" API and ensure we aren't putting
+   functions into the public name space that we won't want to support.
+   See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1010183>.
 
 Optional:
 

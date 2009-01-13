@@ -144,6 +144,9 @@ typedef struct svn_cl__opt_state_t
   /* Flag which is only set if the '-c' option was used. */
   svn_boolean_t used_change_arg;
 
+  /* Flag which is only set if the '-r' option was used. */
+  svn_boolean_t used_revision_arg;
+
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 

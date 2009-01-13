@@ -1587,7 +1587,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
                                  "get-location-segments",
                                  path, peg_revision, start_rev, end_rev));
 
-  /* Servers before 1.1 don't support this command. Check for this here. */
+  /* Servers before 1.5 don't support this command. Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
                                  _("'get-location-segments' not implemented")));
 
