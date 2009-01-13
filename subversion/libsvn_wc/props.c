@@ -2394,17 +2394,20 @@ validate_eol_prop_against_file(const char *path,
 
 
 svn_error_t *
-svn_wc_prop_set2(const char *name,
+svn_wc_prop_set3(const char *name,
                  const svn_string_t *value,
                  const char *path,
                  svn_wc_adm_access_t *adm_access,
                  svn_boolean_t skip_checks,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
                  apr_pool_t *pool)
 {
   apr_hash_t *prophash, *base_prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const svn_wc_entry_t *entry;
+  svn_wc_notify_action_t notify_action;
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set(name, value, path, adm_access, TRUE, pool);
@@ -2504,6 +2507,27 @@ svn_wc_prop_set2(const char *name,
         }
     }
 
+  /* Find out what type of property change we are doing: add, modify, or
+     delete. */
+  if (apr_hash_get(prophash, name, APR_HASH_KEY_STRING) == NULL)
+    {
+      if (value == NULL)
+        /* Deleting a non-existent property. */
+        notify_action = svn_wc_notify_property_deleted_nonexistent;
+      else
+        /* Adding a property. */
+        notify_action = svn_wc_notify_property_added;
+    }
+  else
+    {
+      if (value == NULL)
+        /* Deleting the property. */
+        notify_action = svn_wc_notify_property_deleted;
+      else
+        /* Modifying property. */
+        notify_action = svn_wc_notify_property_modified;
+    }
+
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
@@ -2511,7 +2535,15 @@ svn_wc_prop_set2(const char *name,
   SVN_ERR(svn_wc__install_props(&log_accum, adm_access, path,
                                 base_prophash, prophash, FALSE, pool));
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  return svn_wc__run_log(adm_access, NULL, pool);
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(path, notify_action, pool);
+      (*notify_func)(notify_baton, notify, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

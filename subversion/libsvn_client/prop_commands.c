@@ -139,7 +139,7 @@ propset_walk_cb(const char *path,
   if (wb->notify_func)
     {
       svn_wc_notify_t *notify =
-          svn_wc_create_notify(path, svn_wc_notify_property_updated,
+          svn_wc_create_notify(path, svn_wc_notify_property_modified,
                                pool);
 
       (*wb->notify_func)(wb->notify_baton, notify, pool);
