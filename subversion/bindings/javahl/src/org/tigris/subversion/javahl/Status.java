@@ -761,7 +761,7 @@ public class Status implements java.io.Serializable
      * @return the tree conflicted state
      * @since 1.6
      */
-    public boolean getTreeConflicted()
+    public boolean hasTreeConflict()
     {
         return treeConflicted;
     }
