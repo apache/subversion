@@ -30,9 +30,11 @@ import sys
 try:
   # Python >=3.0
   import configparser
+  from urllib.parse import quote as urllib_parse_quote
 except ImportError:
   # Python <3.0
   import ConfigParser as configparser
+  from urllib import quote as urllib_parse_quote
 import time
 try:
   # Python >=2.4
@@ -52,7 +54,6 @@ import smtplib
 import re
 import tempfile
 import types
-import urllib
 
 # Minimal version of Subversion's bindings required
 _MIN_SVN_VERSION = [1, 5, 0]
@@ -650,8 +651,8 @@ class DiffURLSelections:
     # parameters for the configuration module, otherwise we may get
     # KeyError exceptions.
     params = self.params.copy()
-    params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
+    params['path'] = change.path and urllib_parse_quote(change.path) or None
+    params['base_path'] = change.base_path and urllib_parse_quote(change.base_path) \
                           or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev

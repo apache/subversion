@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -27,10 +27,13 @@ import threading
 try:
   # Python >=3.0
   import queue
+  from urllib.parse import quote as urllib_parse_quote
+  from urllib.parse import unquote as urllib_parse_unquote
 except ImportError:
   # Python <3.0
   import Queue as queue
-import urllib
+  from urllib import quote as urllib_parse_quote
+  from urllib import unquote as urllib_parse_unquote
 
 import getopt
 try:
@@ -140,14 +143,14 @@ def pathname2url(path):
   """Convert the pathname PATH from the local syntax for a path to the form
   used in the path component of a URL. This does not produce a complete URL.
   The return value will already be quoted using the quote() function."""
-  return urllib.quote(path.replace('\\', '/'))
+  return urllib_parse_quote(path.replace('\\', '/'))
 
 # This function mimics the Python 2.3 urllib function of the same name.
 def url2pathname(path):
   """Convert the path component PATH from an encoded URL to the local syntax
   for a path. This does not accept a complete URL. This function uses
   unquote() to decode PATH."""
-  return os.path.normpath(urllib.unquote(path))
+  return os.path.normpath(urllib_parse_unquote(path))
 
 ######################################################################
 # Global variables set during option parsing.  These should not be used
@@ -402,7 +405,7 @@ def open_pipe(command, mode):
   # work if the command itself is quoted.
   args = command[1:]
   args = ' '.join([_quote_arg(x) for x in args])
-  command = command[0] + ' ' + args    
+  command = command[0] + ' ' + args
   if platform_with_popen3_class:
     kid = Popen3(command, True)
     return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
@@ -423,6 +426,13 @@ def open_pipe2(command, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
+  # Quote only the arguments on Windows.  Later versions of subprocess,
+  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
+  if (sys.platform == 'win32'):
+    args = command[1:]
+    args = ' '.join([_quote_arg(x) for x in args])
+    command = command[0] + ' ' + args
+ 
   if not stdin:
     stdin = subprocess.PIPE
   if not stdout:
@@ -481,6 +491,7 @@ def wait_on_pipe2(waiter, binary_mode, stdin=None):
   # Normalize Windows line endings if in text mode.
   if windows and not binary_mode:
     stdout = stdout.replace('\r\n', '\n')
+    stderr = stderr.replace('\r\n', '\n')
 
   # Convert output strings to lists.  
   stdout_lines = stdout.splitlines(True) 
@@ -502,14 +513,6 @@ def wait_on_pipe2(waiter, binary_mode, stdin=None):
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (' '.join(command), exit_code))
     return stdout_lines, stderr_lines, exit_code
-
-# Convert Windows line ending ('\r\n') to universal line ending ('\n')
-if platform_with_subprocess and windows:
-  def _convert_windows_line_ending(line):
-    if line.endswith('\r\n'):
-      return line[:-2] + '\n'
-    else:
-      return line
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
@@ -535,15 +538,13 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   if platform_with_subprocess:
     stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
-    if windows and not binary_mode:
-      stdout_lines = [_convert_windows_line_ending(x) for x in stdout_lines]
-      stderr_lines = [_convert_windows_line_ending(x) for x in stderr_lines]
+    infile.close()
   else:
+    infile.close()
     stdout_lines = outfile.readlines()
     stderr_lines = errfile.readlines()
     exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
-  infile.close()
   outfile.close()
   errfile.close()
 

@@ -302,6 +302,10 @@ source file is...]
    investigate. Given our metadata/base-text storage system, I suspect
    it will be very easy to cache decompressed copies for a while.
 
+###GJS: a very reasonable strategy is: non-binary files are compressed
+   by default. binaries are stored uncompressed.
+   future improvement: extension-based choices, or some other control
+
 In order to keep developers sane, it should be extremely clear at any
 one time - when operating on a tree - which tree is being operated upon.
 
@@ -346,6 +350,7 @@ rewritten on most wc-transformations anyway.
 Cross node type change representation
 -------------------------------------
 ####EHU To be done
+
 
 Flexibility of metadata storage
 -------------------------------
@@ -393,6 +398,42 @@ releases).
    explicit action in order to complete the upgrade. However, 1.6 will
    not be able to *modify* wc-1.0 metadata -- just read it in order to
    upgrade it to the new storage system.
+
+When svn detects an old working copy, then it will error out and
+request that the user run "svn cleanup" to upgrade their working copy
+to the new format.
+
+The metadata location is determined at one of two points:
+
+  * checkout time
+  * upgrade time
+
+According to the user's config, the metadata will be placed in one of
+three areas:
+
+  wcroot: at the root of the working copy in a .svn subdirectory
+  home: in the .subversion/wc/ subdirectory
+  /some/path: stored in the given path
+
+All wcroot directories will have a .svn subdirectory. In that
+directory will be the datastore, or there will be a file that provides
+two pieces of information:
+
+  * absolute path to the (centralized) metadata
+  * absolute path of where this wcroot was created
+
+With this information, we can link a wcroot to its metadata in the
+centralized store. If the user has moved the wcroot (the stored path
+is different from the current/actual path), then Subversion will exit
+with an error. The user must then ###somehow tell svn that the wc has
+been copied (duplicate the metadata for the wcroot) or moved (tweak
+the path stored in the metadata and in the linkage file). Subversion
+is unable to programmatically determine which operation was used.
+
+Note that we use "svn cleanup" as the trigger to *perform* the
+upgrade. The amount of file opens, parsing, moving, deleting, etc is
+expected to consume significant amounts of I/O and (thus) cannot
+simply be done on-the-fly without the user's knowledge and consent.
 
 
 Transaction duration / memory management
@@ -815,7 +856,7 @@ Near-Term Plan
          contains the schema version which is our further format-level
          descriptor value.
 
-2. convert entries.c to use wc_db. shift the sqlite code there.
+2. convert entries.c to use wc_db. shift the sqlite code into wc_db.
    note: this is a separate step from 1. there is a paradigm shift
          between how entries.c works and wc_db works. we want to
          ignore that in Step 1, and then handle it in this Step.
@@ -832,8 +873,11 @@ Near-Term Plan
    note: since entries.h is "merely" a wrapper for wc_db.h, this will
          allow the libsvn_wc to start using the new wc_db APIs
          wherever it is easy/possible.
-   goal: all libsvn_wc code uses wc_db.h and entries.h exists solely
+   goal: all libsvn_wc code uses wc_db.h, and entries.h exists solely
          to support old backwards-compat code.
+
+6. centralize the metadata and pristines
+   note: this will also involve merging datastores
 
 
 Other sections
