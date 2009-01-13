@@ -619,11 +619,18 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_property_modified:
-    case svn_wc_notify_property_deleted:
     case svn_wc_notify_property_added:
-    case svn_wc_notify_property_deleted_nonexistent:
         err = svn_cmdline_printf(pool,
                                  _("property '%s' set on '%s'\n"),
+                                 n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_property_deleted_nonexistent:
+    case svn_wc_notify_property_deleted:
+        err = svn_cmdline_printf(pool,
+                                 _("property '%s' deleted from '%s'.\n"),
                                  n->prop_name, path_local);
         if (err)
           goto print_error;
