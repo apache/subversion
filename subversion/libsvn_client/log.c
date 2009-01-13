@@ -78,19 +78,18 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
 /* The baton for use with copyfrom_info_receiver(). */
 typedef struct
 {
-  const char *target_path;
+  svn_boolean_t is_first;
   const char *path;
-  svn_revnum_t rev;
+  svn_revnum_t rev;  
   apr_pool_t *pool;
 } copyfrom_info_t;
 
-/* A log callback conforming to the svn_log_message_receiver_t
-   interface for obtaining the copy source of a node at a path and
-   storing it in *BATON (a struct copyfrom_info_t *).
-   Implements svn_log_entry_receiver_t. */
+/* A location segment callback for obtaining the copy source of 
+   a node at a path and storing it in *BATON (a struct copyfrom_info_t *).
+   Implements svn_location_segment_receiver_t. */
 static svn_error_t *
-copyfrom_info_receiver(void *baton,
-                       svn_log_entry_t *log_entry,
+copyfrom_info_receiver(svn_location_segment_t *segment,
+                       void *baton,
                        apr_pool_t *pool)
 {
   copyfrom_info_t *copyfrom_info = baton;
@@ -98,51 +97,16 @@ copyfrom_info_receiver(void *baton,
     /* The copy source has already been found. */
     return SVN_NO_ERROR;
 
-  if (log_entry->changed_paths)
-    {
-      int i;
-      const char *path;
-      svn_log_changed_path_t *changed_path;
-      /* Sort paths into depth-first order. */
-      apr_array_header_t *sorted_changed_paths =
-        svn_sort__hash(log_entry->changed_paths,
-                       svn_sort_compare_items_as_paths, pool);
+  if (copyfrom_info->is_first)
+    copyfrom_info->is_first = FALSE; /* Skip the first segment */
+  else
+    { /* The end of the second segment is the location copied from */
+      copyfrom_info->path = apr_pstrdup(copyfrom_info->pool,
+                                        segment->path);
 
-      for (i = (sorted_changed_paths->nelts -1) ; i >= 0 ; i--)
-        {
-          svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_changed_paths, i,
-                                                  svn_sort__item_t);
-          path = item->key;
-          changed_path = item->value;
-
-          /* Consider only the path we're interested in. */
-          if (changed_path->copyfrom_path &&
-              SVN_IS_VALID_REVNUM(changed_path->copyfrom_rev) &&
-              svn_path_is_ancestor(path, copyfrom_info->target_path))
-            {
-              /* Copy source found!  Determine path and note revision. */
-              if (strcmp(path, copyfrom_info->target_path) == 0)
-                {
-                  /* We have the details for a direct copy to
-                     copyfrom_info->target_path. */
-                  copyfrom_info->path =
-                    apr_pstrdup(copyfrom_info->pool,
-                                changed_path->copyfrom_path);
-                }
-              else
-                {
-                  /* We have a parent of copyfrom_info->target_path. */
-                  copyfrom_info->path =
-                    apr_pstrcat(copyfrom_info->pool,
-                                changed_path->copyfrom_path,
-                                copyfrom_info->target_path +
-                                strlen(path), NULL);
-                }
-              copyfrom_info->rev = changed_path->copyfrom_rev;
-              break;
-            }
-        }
+      copyfrom_info->rev = segment->range_end;
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -155,8 +119,7 @@ svn_client__get_copy_source(const char *path_or_url,
                             apr_pool_t *pool)
 {
   svn_error_t *err;
-  copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
-  apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(path_or_url));
+  copyfrom_info_t copyfrom_info = { TRUE, NULL, SVN_INVALID_REVNUM, pool };
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
   svn_revnum_t at_rev;
@@ -166,17 +129,14 @@ svn_client__get_copy_source(const char *path_or_url,
                                            path_or_url, NULL,
                                            revision, revision,
                                            ctx, sesspool));
-  SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
-                                            path_or_url, NULL, TRUE,
-                                            ra_session, NULL, pool));
-  APR_ARRAY_PUSH(targets, const char *) = "";
 
-  /* Find the copy source.  Trace back in history to find the revision
+  /* Find the copy source.  Walk the location segments to find the revision
      at which this node was created (copied or added). */
-  err = svn_ra_get_log2(ra_session, targets, at_rev, 1, 0, TRUE,
-                        TRUE, FALSE,
-                        apr_array_make(pool, 0, sizeof(const char *)),
-                        copyfrom_info_receiver, &copyfrom_info, pool);
+
+  err = svn_ra_get_location_segments(ra_session, "", at_rev, at_rev,
+                                     SVN_INVALID_REVNUM,
+                                     copyfrom_info_receiver, &copyfrom_info,
+                                     pool);
 
   svn_pool_destroy(sesspool);
 
