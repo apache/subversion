@@ -116,13 +116,6 @@ svn_cl__propset(apr_getopt_t *os,
       SVN_ERR(svn_client_revprop_set2(pname_utf8, propval, NULL,
                                       URL, &(opt_state->start_revision),
                                       &rev, opt_state->force, ctx, pool));
-      if (! opt_state->quiet)
-        {
-          SVN_ERR
-            (svn_cmdline_printf
-             (pool, _("property '%s' set on repository revision %ld\n"),
-              pname_utf8, rev));
-        }
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {

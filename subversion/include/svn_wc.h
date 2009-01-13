@@ -848,6 +848,12 @@ typedef enum svn_wc_notify_action_t
   /** Nonexistent property deleted. @since New in 1.6. */
   svn_wc_notify_property_deleted_nonexistent,
 
+  /** Revprop set. @since New in 1.6. */
+  svn_wc_notify_revprop_set,
+
+  /** Revprop deleted. @since New in 1.6. */
+  svn_wc_notify_revprop_deleted,
+
   /** The last notification in a merge. @since New in 1.6. */
   svn_wc_notify_merge_completed,
 
