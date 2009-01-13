@@ -63,10 +63,10 @@ copy_props(const char *src_path,
       propname = key;
       propval = val;
 
-      SVN_ERR(svn_wc_prop_set2(propname, propval,
+      SVN_ERR(svn_wc_prop_set3(propname, propval,
                                dst_path, dst_access,
                                FALSE /* skip_checks */,
-                               pool));
+                               NULL, NULL, pool));
     }
 
   return SVN_NO_ERROR;

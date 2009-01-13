@@ -112,8 +112,8 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
      ### svn_client__get_prop_from_wc(). */
-  return svn_wc_prop_set2(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
-                          adm_access, TRUE /* skip checks */, pool);
+  return svn_wc_prop_set3(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
+                          adm_access, TRUE /* skip checks */, NULL, NULL, pool);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -613,8 +613,8 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                                  path_suffix, pool));
 
   if (elides)
-    SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
-                             TRUE, pool));
+    SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
+                             TRUE, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
