@@ -995,6 +995,10 @@ typedef struct svn_wc_notify_t {
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
 
+  /** If @c action relates to properties, specifies the name of the property.
+   * @since New in 1.6 */
+  const char *prop_name;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
