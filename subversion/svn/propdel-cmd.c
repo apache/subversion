@@ -2,7 +2,7 @@
  * propdel-cmd.c -- Remove property from files/dirs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -107,10 +107,9 @@ svn_cl__propdel(apr_getopt_t *os,
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
-      return svn_error_createf
-        (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-         _("Cannot specify revision for deleting versioned property '%s'"),
-         pname);
+      return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+               _("Cannot specify revision for deleting versioned property '%s'"),
+               pname);
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
@@ -142,9 +141,9 @@ svn_cl__propdel(apr_getopt_t *os,
                               SVN_ERR_ENTRY_NOT_FOUND,
                               SVN_NO_ERROR));
           if (nwb.found_deleted_nonexistent)
-            return svn_error_createf
-              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-               _("Attempting to delete nonexistent property '%s'"), pname);
+            return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("Attempting to delete nonexistent property '%s'"),
+                             pname);
         }
       svn_pool_destroy(subpool);
     }
