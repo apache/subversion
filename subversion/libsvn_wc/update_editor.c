@@ -1678,28 +1678,30 @@ set_copied_callback(const char *path,
                     apr_pool_t *pool)
 {
   struct set_copied_baton_t *b = walk_baton;
-  const char *full_path = svn_path_join(b->eb->anchor, path, pool);
-  const char *base_name = svn_path_basename(path, pool);
   svn_wc_adm_access_t *entry_adm_access;
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
 
-  /* Directories are notified twice. Handle them only once, as "this dir". */
-  if (entry->kind == svn_node_dir
-      && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
-    return SVN_NO_ERROR;
-
-  /* Determine which adm dir holds this node's entry */
-  /* ### But this will fail if eb->adm_access holds only a shallow lock. */
-  SVN_ERR(svn_wc_adm_probe_retrieve(&entry_adm_access, b->eb->adm_access,
-                                    full_path, pool));
+  /* Determine which adm dir holds this entry */
+  /* ### This will fail if the operation holds only a shallow lock. */
+  /* Directories are notified twice. Handle them both. */
+  if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+    {
+      /* It's the "this dir" entry in its own adm dir. */
+      SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
+                                  path, pool));
+    }
+  else
+    {
+      /* It's an entry in its parent dir */
+      SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
+                                  svn_path_dirname(path, pool), pool));
+    }
 
   /* Set the 'copied' flag and write the entry out to disk. */
   tmp_entry.copied = TRUE;
   flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-  SVN_ERR(svn_wc__entry_modify(entry_adm_access,
-                               (entry->kind == svn_node_dir)
-                               ? SVN_WC_ENTRY_THIS_DIR : base_name,
+  SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
                                &tmp_entry, flags, TRUE /* do_sync */, pool));
 
   return SVN_NO_ERROR;
