@@ -1,0 +1,59 @@
+This branch exists for the development of ideas documented in
+/trunk/notes/http-protocol-v2.txt.  It is being managed as a
+reintegrate-able branch, with regular catch-up merges from the trunk.
+
+TODO:
+
+ * Teach mod_dav_svn to answer the OPTIONS request with four
+   additional pieces of information: youngest revision, root URI stub,
+   pegrev URI stub, revision URI stub.  [DONE]
+
+ * Teach mod_dav_svn to handle POST against the root URI stub,
+   returning a transaction URI stub and transaction prop URI stub for
+   further use in the commit.
+
+ * Teach mod_dav_svn to recognize and correctly interpret URLs which
+   make use of the new URI stubs:
+
+      root URI stub         -> !svn/me
+      pegrev URI stub       -> !svn/bc  [DONE]
+      revision URI stub     -> !svn/rev
+      transaction URI stub  -> !svn/txn
+      transaction prop stub -> !svn/txp
+
+ * Teach ra_serf operations to not do the multi-PROPFIND dance any
+   more, but to fetch the information they seek from mod_dav_svn using
+   the new stub URIs:
+
+      get-file              -> GET (against pegrev URI)
+      get-dir               -> PROPFIND depth 1 (against pegrev URI)
+      rev-prop              -> PROPFIND (against revision URI)
+      rev-proplist          -> PROPFIND (against revision URI, but recursive)
+      check-path            -> PROPFIND (against pegrev URI)
+      stat                  -> PROPFIND (against pegrev URI)
+      get-lock              -> PROPFIND (against public HEAD URI)
+
+ * Teach ra_serf REPORT-type requests to use the URI stubs, too:
+
+      log                   -> REPORT (against root stub)
+      get-dated-rev         -> REPORT (against root stub)
+      get-locations         -> REPORT (against root stub)
+      get-location-segments -> REPORT (against root stub)
+      get-file-revs         -> REPORT (against root stub)
+      get-locks             -> REPORT (against root stub)
+      get-mergeinfo         -> REPORT (against root stub)
+      replay                -> REPORT (against root stub)
+      replay-range          -> pipelined REPORTs (against root stub)
+
+ * Teach ra_serf simple write requests to use new URI stubs:
+
+      change-rev-prop       -> PROPPATCH (against revision URI)
+      lock                  -> LOCK (against public HEAD URI)
+      unlock                -> UNLOCK (against public HEAD URI)
+
+ * Teach ra_serf to do update-style REPORTs a little differently:
+
+    - REPORT against the new 'root stub' instead of VCC URI
+    - eliminate now-unnecessary wcprops cache
+    - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
+
