@@ -2,7 +2,7 @@
  * mergeinfo.c :  merge history functions for the libsvn_client library
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1089,6 +1089,7 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   apr_array_header_t *revision_ranges;
   svn_opt_revision_t oldest_rev, youngest_rev;
   svn_opt_revision_range_t *range;
+  svn_client_log_args_t *log_args;
   struct filter_log_entry_baton_t fleb;
 
   if (! rangelist->nelts)
@@ -1117,15 +1118,19 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   fleb.log_receiver_baton = log_receiver_baton;
   fleb.ctx = ctx;
 
-  /* Drive the log. */
+  /* Build log API arguments. */
   revision_ranges = apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
   range = apr_pcalloc(pool, sizeof(*range));
   range->end = youngest_rev;
   range->start = oldest_rev;
   APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
-  SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
-                          0, discover_changed_paths, FALSE, FALSE, revprops,
-                          filter_log_entry_with_rangelist, &fleb, ctx, pool));
+  log_args = svn_client_log_args_create(pool);
+  log_args->discover_changed_paths = discover_changed_paths;
+
+  /* Drive the log. */
+  SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges, revprops,
+                          log_args, filter_log_entry_with_rangelist, &fleb, ctx,
+                          pool));
 
   /* Check for cancellation. */
   if (ctx->cancel_func)
