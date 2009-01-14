@@ -116,14 +116,14 @@ svn_fs_bdb__changes_delete(svn_fs_t *fs,
 
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
-   svn_fs_path_change_t CHANGES, collapsing multiple changes into a
+   svn_fs_path_change2_t CHANGES, collapsing multiple changes into a
    single succinct change per path. */
 static svn_error_t *
 fold_change(apr_hash_t *changes,
             const change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
-  svn_fs_path_change_t *old_change, *new_change;
+  svn_fs_path_change2_t *old_change, *new_change;
   const char *path;
 
   if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
@@ -223,6 +223,8 @@ fold_change(apr_hash_t *changes,
       new_change->change_kind = change->kind;
       new_change->text_mod = change->text_mod;
       new_change->prop_mod = change->prop_mod;
+      new_change->node_kind = svn_node_unknown;
+      new_change->copyfrom_known = FALSE;
       path = apr_pstrdup(pool, change->path);
     }
 
