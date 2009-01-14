@@ -605,8 +605,8 @@ svn_client_blame4(const char *target,
   const char *url;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk, *walk_merged = NULL;
-  apr_file_t *file;
   apr_pool_t *iterpool;
+  svn_stream_t *last_stream;
   svn_stream_t *stream;
 
   if (start->kind == svn_opt_revision_unspecified
@@ -687,10 +687,9 @@ svn_client_blame4(const char *target,
   iterpool = svn_pool_create(pool);
 
   /* Open the last file and get a stream. */
-  SVN_ERR(svn_io_file_open(&file, frb.last_filename, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  stream = svn_subst_stream_translated(svn_stream_from_aprfile2(file, TRUE,
-                                                                pool),
+  SVN_ERR(svn_stream_open_readonly(&last_stream, frb.last_filename,
+                                   pool, pool));
+  stream = svn_subst_stream_translated(last_stream,
                                        "\n", TRUE, NULL, FALSE, pool);
 
   /* Perform optional merged chain normalization. */
@@ -755,9 +754,6 @@ svn_client_blame4(const char *target,
     }
 
   SVN_ERR(svn_stream_close(stream));
-
-  /* We don't need the temp file any more. */
-  SVN_ERR(svn_io_file_close(file, pool));
 
   svn_pool_destroy(frb.lastpool);
   svn_pool_destroy(frb.currpool);

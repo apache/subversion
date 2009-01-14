@@ -286,9 +286,11 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
 
 /** Return a stream which performs eol translation and keyword
  * expansion when read from or written to.  The stream @a stream
- * is used to read and write all data.  Make sure you call
- * svn_stream_close() on @a stream to make sure all data are flushed
- * and cleaned up.
+ * is used to read and write all data.
+ *
+ * Make sure you call svn_stream_close() on the returned stream to
+ * ensure all data is flushed and cleaned up (this will also close
+ * the provided @a stream).
  *
  * Read operations from and write operations to the stream
  * perform the same operation: if @a expand is @c FALSE, both
@@ -313,6 +315,8 @@ svn_subst_stream_translated(svn_stream_t *stream,
  * is used to read and write all data.  Make sure you call
  * svn_stream_close() on @a stream to make sure all data are flushed
  * and cleaned up.
+ *
+ * When @a stream is closed, then @a source will be closed.
  *
  * Read and write operations perform the same transformation:
  * all data is translated to normal form.
