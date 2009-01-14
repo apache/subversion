@@ -39,10 +39,28 @@
 
 struct location_segment_baton
 {
+  svn_boolean_t sent_opener;
   ap_filter_t *output;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
 };
+
+
+/* Send the get-location-segments-report XML open tag if it hasn't
+   been sent already.  */
+static svn_error_t *
+maybe_send_opener(struct location_segment_baton *b)
+{
+  if (! b->sent_opener)
+    {
+      SVN_ERR(dav_svn__send_xml(b->bb, b->output, DAV_XML_HEADER DEBUG_CR
+                                "<S:get-location-segments-report xmlns:S=\""
+                                SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">"
+                                DEBUG_CR));
+      b->sent_opener = TRUE;
+    }
+  return SVN_NO_ERROR;
+}
 
 
 /* Implements `svn_location_segment_receiver_t'; helper for
@@ -54,6 +72,8 @@ location_segment_receiver(svn_location_segment_t *segment,
 {
   struct location_segment_baton *b = baton;
   apr_status_t apr_err;
+  
+  SVN_ERR(maybe_send_opener(b));
 
   if (segment->path)
     {
@@ -81,7 +101,7 @@ location_segment_receiver(svn_location_segment_t *segment,
    END_REV as inputs.  This helper exists for simplification of error
    handing (what with APR status, Subversion errors, and DAV error
    types all flying about...). */
-static svn_error_t *
+static dav_error *
 send_get_location_segments_report(ap_filter_t *output,
                                   apr_bucket_brigade *bb,
                                   const dav_resource *resource,
@@ -91,35 +111,65 @@ send_get_location_segments_report(ap_filter_t *output,
                                   const char *path)
 {
   apr_status_t apr_err;
+  svn_error_t *serr;
+  dav_error *derr = NULL;
   dav_svn__authz_read_baton arb;
   struct location_segment_baton location_segment_baton;
-
-  if ((apr_err = ap_fprintf(output, bb, DAV_XML_HEADER DEBUG_CR
-                            "<S:get-location-segments-report xmlns:S=\""
-                            SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">"
-                            DEBUG_CR)))
-    return svn_error_create(apr_err, 0, NULL);
 
   /* Build an authz read baton. */
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
-
+  
   /* Do what we came here for. */
+  location_segment_baton.sent_opener = FALSE;
   location_segment_baton.output = output;
   location_segment_baton.bb = bb;
-  SVN_ERR(svn_repos_node_location_segments(resource->info->repos->repos,
-                                           path, peg_rev,
-                                           start_rev, end_rev,
-                                           location_segment_receiver,
-                                           &location_segment_baton,
-                                           dav_svn__authz_read_func(&arb),
-                                           &arb, resource->pool));
+  if ((serr = svn_repos_node_location_segments(resource->info->repos->repos,
+                                               path, peg_rev,
+                                               start_rev, end_rev,
+                                               location_segment_receiver,
+                                               &location_segment_baton,
+                                               dav_svn__authz_read_func(&arb),
+                                               &arb, resource->pool)))
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                  resource->pool);
+      goto cleanup;
+    }
 
-  if ((apr_err = ap_fprintf(output, bb,
-                            "</S:get-location-segments-report>" DEBUG_CR)))
-    return svn_error_create(apr_err, 0, NULL);
+  if ((serr = maybe_send_opener(&location_segment_baton)))
+    {
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error beginning REPORT response.",
+                                  resource->pool);
+      goto cleanup;
+    }
+    
+  if ((serr = dav_svn__send_xml(bb, output,
+                                "</S:get-location-segments-report>" DEBUG_CR)))
+    {
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error ending REPORT response.",
+                                  resource->pool);
+      goto cleanup;
+    }
 
-  return SVN_NO_ERROR;
+ cleanup:
+  /* Flush the contents of the brigade (returning an error only if we
+     don't already have one). */
+  if (location_segment_baton.sent_opener)
+    {
+      apr_err = ap_fflush(output, bb);
+      if (apr_err && (! derr))
+        {
+          derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error flushing brigade.",
+                                      resource->pool);
+        }
+    }
+  
+  return derr;
 }
 
 
@@ -128,9 +178,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
                                       ap_filter_t *output)
 {
-  svn_error_t *serr;
   dav_error *derr = NULL;
-  apr_status_t apr_err;
   apr_bucket_brigade *bb;
   int ns;
   apr_xml_elem *child;
@@ -210,20 +258,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   /* Alright, time to drive the response. */
-  if ((serr = send_get_location_segments_report(output, bb, resource,
-                                                peg_revision, start_rev,
-                                                end_rev, path)))
-    derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                "Error writing REPORT response.",
-                                resource->pool);
-
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-
-  return derr;
+  return send_get_location_segments_report(output, bb, resource,
+                                           peg_revision, start_rev,
+                                           end_rev, path);
 }
