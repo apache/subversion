@@ -1898,13 +1898,13 @@ fs_delete_node(svn_fs_root_t *root,
   parent_path_t *parent_path;
   const char *txn_id = root->txn;
   apr_int64_t mergeinfo_count;
-  svn_node_kind_t node_kind;
+  svn_node_kind_t kind;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
 
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, pool));
-  node_kind = svn_fs_fs__dag_node_kind(parent_path->node);
+  kind = svn_fs_fs__dag_node_kind(parent_path->node);
 
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
@@ -1940,7 +1940,7 @@ fs_delete_node(svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
                     svn_fs_fs__dag_get_id(parent_path->node),
-                    svn_fs_path_change_delete, FALSE, FALSE, node_kind,
+                    svn_fs_path_change_delete, FALSE, FALSE, kind,
                     SVN_INVALID_REVNUM, NULL, pool);
 }
 
