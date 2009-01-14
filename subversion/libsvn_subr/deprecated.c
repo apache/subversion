@@ -98,6 +98,21 @@ kwstruct_to_kwhash(const svn_subst_keywords_t *kwstruct,
 }
 
 svn_error_t *
+svn_subst_translate_stream3(svn_stream_t *src_stream,
+                            svn_stream_t *dst_stream,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool)
+{
+  return svn_subst_translate_stream4(svn_stream_disown(src_stream, pool),
+                                     svn_stream_disown(dst_stream, pool),
+                                     eol_str, repair, keywords, expand,
+                                     pool);
+}
+
+svn_error_t *
 svn_subst_translate_stream2(svn_stream_t *s, /* src stream */
                             svn_stream_t *d, /* dst stream */
                             const char *eol_str,
