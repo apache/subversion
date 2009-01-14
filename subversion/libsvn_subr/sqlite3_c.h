@@ -24576,7 +24576,11 @@ static int full_fsync(int fd, int fullSync, int dataOnly){
 #else 
   if( dataOnly ){
     rc = fdatasync(fd);
-    if( OS_VXWORKS && rc==-1 && errno==ENOTSUP ){
+    if( OS_VXWORKS && rc==-1
+#ifdef ENOTSUP
+    && errno==ENOTSUP
+#endif
+    ){
       rc = fsync(fd);
     }
   }else{
