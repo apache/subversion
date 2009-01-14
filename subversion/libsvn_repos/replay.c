@@ -371,11 +371,17 @@ path_driver_cb_func(void **dir_baton,
     SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
                                  parent_baton, pool));
 
-  if ((change->node_kind != svn_node_dir) &&
-      (change->node_kind != svn_node_file))
-    return svn_error_createf
-        (SVN_ERR_FS_NOT_FOUND, NULL,
-         _("Filesystem path '%s' is neither a file nor a directory"), path);
+  /* Fetch the node kind if it makes sense to do so. */
+  if (! do_delete || do_add)
+    {
+      if (change->node_kind == svn_node_unknown)
+        SVN_ERR(svn_fs_check_path(&(change->node_kind), root, path, pool));
+      if ((change->node_kind != svn_node_dir) &&
+          (change->node_kind != svn_node_file))
+        return svn_error_createf
+          (SVN_ERR_FS_NOT_FOUND, NULL,
+           _("Filesystem path '%s' is neither a file nor a directory"), path);
+    }
 
   /* Handle any adds/opens. */
   if (do_add)
@@ -383,9 +389,12 @@ path_driver_cb_func(void **dir_baton,
       svn_fs_root_t *copyfrom_root = NULL;
       /* Was this node copied? */
       if (! change->copyfrom_known)
-        return svn_error_createf
-            (SVN_ERR_FS_NOT_FOUND, NULL,
-             _("Filesystem path '%s' does not know if it is copied"), path);
+        {
+          SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
+                                     &(change->copyfrom_path),
+                                     root, path, pool));
+          change->copyfrom_known = TRUE;
+        }
       copyfrom_rev = change->copyfrom_rev;
       copyfrom_path = change->copyfrom_path;
 
@@ -655,9 +664,8 @@ svn_repos_replay2(svn_fs_root_t *root,
   struct path_driver_cb_baton cb_baton;
   int base_path_len;
 
-  /* Fetch the paths changed under ROOT; we'll need the kinds and
-   * copyfrom data. */
-  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, TRUE, pool));
+  /* Fetch the paths changed under ROOT. */
+  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));
 
   if (! base_path)
     base_path = "";
