@@ -4260,6 +4260,80 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         None, None, None, None, None,
                                         True)
 
+# Issue #3334: a delete-onto-modified tree conflict should leave the node
+# scheduled for re-addition.
+def tree_conflict_uc2_schedule_re_add(sbox):
+  "tree conflicts on update UC2, schedule re-add"
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  from svntest.actions import run_and_verify_svn, run_and_verify_resolve
+  from svntest.actions import run_and_verify_update
+  from svntest.verify import AnyOutput
+
+  """A directory tree 'D1' should end up exactly the same in these two
+  scenarios:
+
+  New scenario:
+  [[[
+    svn checkout -r1             # in which D1 exists
+    modify_d1                    # make local mods in D1
+    svn update -r2               # tries to delete D1
+    svn resolve --accept=mine    # keep the local, re-added version
+  ]]]
+
+  Existing scenario:
+  [[[
+    svn checkout -r2             # in which D1 does not exist
+    svn copy -r1 D1 .            # make a pristine copy of D1@1
+    modify_d1                    # make local mods in D1
+  ]]]
+
+  where modify_d1 makes property changes to D1 itself and/or
+  adds/deletes/modifies any of D1's children.
+  """
+
+  dir = 'A'  # an existing tree in the WC and repos
+  dir_url = sbox.repo_url + '/' + dir
+
+  def modify_dir(dir):
+    """Make some set of local modifications to an existing tree.
+    Suggestions: prop change, add a child, delete a child, change a child."""
+    run_and_verify_svn(None, AnyOutput, [],
+                       'propset', 'p', 'v', dir)
+
+  # Prepare the repos so that a later 'update' has an incoming deletion:
+  # Delete the dir in the repos, making r2
+  run_and_verify_svn(None, AnyOutput, [],
+                     '-m', '', 'delete', dir_url)
+
+  # New scenario
+  # (The dir is already checked out.)
+
+  modify_dir(dir)
+
+  expected_output = None
+  expected_disk = None
+  expected_status = None
+  run_and_verify_update('A', expected_output, expected_disk, expected_status)
+
+  run_and_verify_resolve([dir], '--recursive', '--accept=mine-full', dir)
+
+  # Existing scenario
+
+  ### The test suite has a better way to make a second WC than this...
+  wc2 = 'wc2'
+  dir2 = os.path.join(wc2, dir)
+
+  run_and_verify_svn(None, AnyOutput, [],
+                     'checkout', '-r2', sbox.repo_url, wc2)
+  run_and_verify_svn(None, AnyOutput, [],
+                     'copy', dir_url + '@1', dir2)
+  modify_dir(dir2)
+
+  ### This "test" needs to actually test that the scenarios come out the same.
+
+
 #######################################################################
 # Run the tests
 
@@ -4321,6 +4395,7 @@ test_list = [ None,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               XFail(update_moves_and_modifies_an_edited_file),
+              tree_conflict_uc2_schedule_re_add,
              ]
 
 if __name__ == '__main__':
