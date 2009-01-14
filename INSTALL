@@ -552,7 +552,12 @@ I.    INTRODUCTION
       version if MASM is not compatible with MSVC 6).
 
 
-      13. SQLite 3.4.x, 3.5.x or 3.6.x
+      13. SQLite
+
+      While Subversion (starting with version 1.6) uses SQLite, you
+      don't need to have it already installed: Subversion ships with
+      a single-file "amalgamation" of SQLite 3.6.8, which is
+      automatically built as part of Subversion.
 
 
   D. Documentation
