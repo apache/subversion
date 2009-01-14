@@ -3524,6 +3524,10 @@ svn_client_propset(const char *propname,
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
  * and the like.  Be careful:  it's a lossy operation.
+
+ * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
+ * functions and baton which are called upon successful setting of the
+ * property.
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
@@ -4305,13 +4309,6 @@ svn_client_unlock(const apr_array_header_t *targets,
  */
 #define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
 
-/** The size of the file is unknown.
- * Used as value in fields of type @c apr_off_t.
- *
- * @since New in 1.6
- */
-#define SVN_INFO_SIZE64_UNKNOWN ((apr_off_t) -1)
-
 /**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
@@ -4399,20 +4396,20 @@ typedef struct svn_info_t
    * The size of the file in the repository (untranslated,
    * e.g. without adjustment of line endings and keyword
    * expansion). Only applicable for file -- not directory -- URLs.
-   * For working copy paths, size64 will be @c SVN_INFO_SIZE64_UNKNOWN.
+   * For working copy paths, size64 will be @c SVN_INVALID_FILESIZE.
    * @since New in 1.6.
    */
-  apr_off_t size64;
+  svn_filesize_t size64;
 
   /**
    * The size of the file after being translated into its local
-   * representation, or @c SVN_INFO_SIZE64_UNKNOWN if
-   * unknown.  Not applicable for directories.
+   * representation, or @c SVN_INVALID_FILESIZE if unknown.
+   * Not applicable for directories.
    * @since New in 1.6.
    * @name Working-copy path fields
    * @{
    */
-  apr_off_t working_size64;
+  svn_filesize_t working_size64;
 
   /**
    * Info on any tree conflict of which this node is a victim. Otherwise NULL.

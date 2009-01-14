@@ -1,5 +1,5 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * get-locations.c:  generate the 'get locations' report response.
  *
  * ====================================================================
  * Copyright (c) 2000-2006 CollabNet.  All rights reserved.

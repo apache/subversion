@@ -126,23 +126,13 @@ propset_walk_cb(const char *path,
                               (entry->kind == svn_node_dir ? path
                                : svn_path_dirname(path, pool)),
                               pool));
-  err = svn_wc_prop_set2(wb->propname, wb->propval,
-                         path, adm_access, wb->force, pool);
+  err = svn_wc_prop_set3(wb->propname, wb->propval, path, adm_access,
+                         wb->force, wb->notify_func, wb->notify_baton, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
         return err;
       svn_error_clear(err);
-    }
-
-  /* Notify we updated a property value */
-  if (wb->notify_func)
-    {
-      svn_wc_notify_t *notify =
-          svn_wc_create_notify(path, svn_wc_notify_property_updated,
-                               pool);
-
-      (*wb->notify_func)(wb->notify_baton, notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -412,8 +402,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
-          SVN_ERR(svn_wc_prop_set2(propname, propval, target,
-                                   adm_access, skip_checks, pool));
+          SVN_ERR(svn_wc_prop_set3(propname, propval, target,
+                                   adm_access, skip_checks, ctx->notify_func2,
+                                   ctx->notify_baton2, pool));
         }
       return svn_wc_adm_close2(adm_access, pool);
     }
@@ -488,8 +479,23 @@ svn_client_revprop_set2(const char *propname,
     }
 
   /* The actual RA call. */
-  return svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
-                                pool);
+  SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
+                                 pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(URL,
+                                             propval == NULL
+                                               ? svn_wc_notify_revprop_set
+                                               : svn_wc_notify_revprop_deleted,
+                                             pool);
+      notify->prop_name = propname;
+      notify->revision = *set_rev;
+
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
