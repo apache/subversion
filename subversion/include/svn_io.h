@@ -833,7 +833,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
  *  Allocate the stream in @a pool.
  */
 svn_stream_t *
-svn_stream_from_string(svn_string_t *str,
+svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
 
 /** Return a stream that decompresses all data read and compresses all
