@@ -2484,7 +2484,7 @@ verify_locks(const char *txn_name,
   for (i = 0; i < changed_paths->nelts; i++)
     {
       const char *path;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t recurse = TRUE;
 
       svn_pool_clear(subpool);

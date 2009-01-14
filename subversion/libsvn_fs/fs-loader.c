@@ -780,10 +780,82 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
 }
 
 svn_error_t *
+svn_fs_paths_changed2(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
+                      svn_boolean_t get_all_kinds_and_copyfroms,
+                      apr_pool_t *pool)
+{
+  SVN_ERR(root->vtable->paths_changed(changed_paths_p, root, pool));
+
+  /* If the caller really needs to know all the kinds and copyfroms,
+   * we'll fill them in, even if this way is slower. */
+  if (get_all_kinds_and_copyfroms)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, *changed_paths_p);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *key;
+          const char *path;
+          void *val;
+          svn_fs_path_change2_t *change;
+          apr_hash_this(hi, &key, NULL, &val);
+          path = key;
+          change = val;
+          if (change->node_kind == svn_node_unknown)
+            {
+              SVN_ERR(svn_fs_check_path(&(change->node_kind), root, path,
+                                        pool));
+            }
+          if (! change->copyfrom_known)
+            {
+              if (change->change_kind == svn_fs_path_change_add
+                  || change->change_kind == svn_fs_path_change_replace)
+                {
+                  SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
+                                             &(change->copyfrom_path),
+                                             root, path, pool));
+                }
+              else
+                {
+                  change->copyfrom_rev = SVN_INVALID_REVNUM;
+                  change->copyfrom_path = NULL;
+                }
+              change->copyfrom_known = TRUE;
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_paths_changed(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
                      apr_pool_t *pool)
 {
-  return root->vtable->paths_changed(changed_paths_p, root, pool);
+  apr_hash_t *changed_paths_new_structs;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_paths_changed2(&changed_paths_new_structs, root, FALSE, pool));
+  *changed_paths_p = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, changed_paths_new_structs);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *vkey;
+      apr_ssize_t klen;
+      void *vval;
+      svn_fs_path_change2_t *val;
+      svn_fs_path_change_t *change;
+      apr_hash_this(hi, &vkey, &klen, &vval);
+      val = vval;
+      change = apr_palloc(pool, sizeof(*change));
+      change->node_rev_id = val->node_rev_id;
+      change->change_kind = val->change_kind;
+      change->text_mod = val->text_mod;
+      change->prop_mod = val->prop_mod;
+      apr_hash_set(*changed_paths_p, vkey, klen, change);
+    }
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

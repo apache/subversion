@@ -270,6 +270,7 @@ svn_error_t *svn_fs_fs__add_change(svn_fs_t *fs,
                                    svn_fs_path_change_kind_t change_kind,
                                    svn_boolean_t text_mod,
                                    svn_boolean_t prop_mod,
+                                   svn_node_kind_t node_kind,
                                    svn_revnum_t copyfrom_rev,
                                    const char *copyfrom_path,
                                    apr_pool_t *pool);
@@ -376,13 +377,11 @@ svn_error_t *svn_fs_fs__delete_node_revision(svn_fs_t *fs,
 
 
 /* Find the paths which were changed in transaction TXN_ID of
-   filesystem FS and store them in *CHANGED_PATHS_P.  Cached copyfrom
-   information will be stored in COPYFROM_CACHE if it is non-NULL.
+   filesystem FS and store them in *CHANGED_PATHS_P.
    Get any temporary allocations from POOL. */
 svn_error_t *svn_fs_fs__txn_changes_fetch(apr_hash_t **changes,
                                           svn_fs_t *fs,
                                           const char *txn_id,
-                                          apr_hash_t *copyfrom_cache,
                                           apr_pool_t *pool);
 
 
