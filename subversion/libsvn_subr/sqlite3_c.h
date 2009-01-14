@@ -1,6 +1,6 @@
 /******************************************************************************
 ** This file is an amalgamation of many separate C source files from SQLite
-** version 3.6.8.  By combining all the individual C code files into this 
+** version 3.6.9.  By combining all the individual C code files into this 
 ** single large file, the entire code can be compiled as a one translation
 ** unit.  This allows many compilers to do optimizations that would not be
 ** possible if the files were compiled separately.  Performance improvements
@@ -17,7 +17,7 @@
 ** is also in a separate file.  This file contains only code for the core
 ** SQLite library.
 **
-** This amalgamation was generated on 2009-01-12 15:48:39 UTC.
+** This amalgamation was generated on 2009-01-14 02:20:51 UTC.
 */
 #define SQLITE_CORE 1
 #define SQLITE_AMALGAMATION 1
@@ -603,8 +603,8 @@ extern "C" {
 **          with the value (X*1000000 + Y*1000 + Z) where X, Y, and Z
 **          are the major version, minor version, and release number.
 */
-#define SQLITE_VERSION         "3.6.8"
-#define SQLITE_VERSION_NUMBER  3006008
+#define SQLITE_VERSION         "3.6.9"
+#define SQLITE_VERSION_NUMBER  3006009
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers {H10020} <S60100>
@@ -30447,6 +30447,8 @@ SQLITE_PRIVATE void sqlite3PcacheStats(
 **
 ** Big chunks of rowid/next-ptr pairs are allocated at a time, to
 ** reduce the malloc overhead.
+**
+** $Id: rowset.c,v 1.3 2009/01/13 20:14:16 drh Exp $
 */
 
 /*
@@ -30679,7 +30681,7 @@ SQLITE_PRIVATE int sqlite3RowSetNext(RowSet *p, i64 *pRowid){
 ** file simultaneously, or one process from reading the database while
 ** another is writing.
 **
-** @(#) $Id: pager.c,v 1.548 2009/01/11 17:00:02 drh Exp $
+** @(#) $Id: pager.c,v 1.549 2009/01/13 16:03:44 danielk1977 Exp $
 */
 #ifndef SQLITE_OMIT_DISKIO
 
@@ -31645,10 +31647,7 @@ static int addToSavepointBitvecs(Pager *pPager, Pgno pgno){
 */
 static void pager_unlock(Pager *pPager){
   if( !pPager->exclusiveMode ){
-    int rc = osUnlock(pPager->fd, NO_LOCK);
-    if( rc ) pPager->errCode = rc;
-    pPager->dbSizeValid = 0;
-    IOTRACE(("UNLOCK %p\n", pPager))
+    int rc;
 
     /* Always close the journal file when dropping the database lock.
     ** Otherwise, another connection with journal_mode=delete might
@@ -31662,6 +31661,11 @@ static void pager_unlock(Pager *pPager){
       sqlite3BitvecDestroy(pPager->pAlwaysRollback);
       pPager->pAlwaysRollback = 0;
     }
+
+    rc = osUnlock(pPager->fd, NO_LOCK);
+    if( rc ) pPager->errCode = rc;
+    pPager->dbSizeValid = 0;
+    IOTRACE(("UNLOCK %p\n", pPager))
 
     /* If Pager.errCode is set, the contents of the pager cache cannot be
     ** trusted. Now that the pager file is unlocked, the contents of the
@@ -48619,7 +48623,7 @@ SQLITE_API int sqlite3_stmt_status(sqlite3_stmt *pStmt, int op, int resetFlag){
 ** in this file for details.  If in doubt, do not deviate from existing
 ** commenting and indentation practices when changing or adding code.
 **
-** $Id: vdbe.c,v 1.810 2009/01/05 22:30:39 drh Exp $
+** $Id: vdbe.c,v 1.811 2009/01/14 00:55:10 drh Exp $
 */
 
 /*
@@ -52572,6 +52576,7 @@ case OP_Last: {        /* jump */
   rc = sqlite3BtreeLast(pCrsr, &res);
   pC->nullRow = (u8)res;
   pC->deferredMoveto = 0;
+  pC->rowidIsValid = 0;
   pC->cacheStatus = CACHE_STALE;
   if( res && pOp->p2>0 ){
     pc = pOp->p2 - 1;
@@ -52622,6 +52627,7 @@ case OP_Rewind: {        /* jump */
     pC->atFirst = res==0 ?1:0;
     pC->deferredMoveto = 0;
     pC->cacheStatus = CACHE_STALE;
+    pC->rowidIsValid = 0;
   }else{
     res = 1;
   }
@@ -70040,7 +70046,7 @@ SQLITE_PRIVATE int sqlite3AutoLoadExtensions(sqlite3 *db){
 *************************************************************************
 ** This file contains code used to implement the PRAGMA command.
 **
-** $Id: pragma.c,v 1.200 2009/01/09 21:41:17 drh Exp $
+** $Id: pragma.c,v 1.201 2009/01/13 20:14:16 drh Exp $
 */
 
 /* Ignore this whole file if pragmas are disabled
@@ -70552,7 +70558,7 @@ SQLITE_PRIVATE void sqlite3Pragma(
   **  PRAGMA [database.]journal_size_limit
   **  PRAGMA [database.]journal_size_limit=N
   **
-  ** Get or set the (boolean) value of the database 'auto-vacuum' parameter.
+  ** Get or set the size limit on rollback journal files.
   */
   if( sqlite3StrICmp(zLeft,"journal_size_limit")==0 ){
     Pager *pPager = sqlite3BtreePager(pDb->pBt);
@@ -70574,7 +70580,8 @@ SQLITE_PRIVATE void sqlite3Pragma(
   **  PRAGMA [database.]auto_vacuum
   **  PRAGMA [database.]auto_vacuum=N
   **
-  ** Get or set the (boolean) value of the database 'auto-vacuum' parameter.
+  ** Get or set the value of the database 'auto-vacuum' parameter.
+  ** The value is one of:  0 NONE 1 FULL 2 INCREMENTAL
   */
 #ifndef SQLITE_OMIT_AUTOVACUUM
   if( sqlite3StrICmp(zLeft,"auto_vacuum")==0 ){
@@ -79368,7 +79375,7 @@ SQLITE_PRIVATE void sqlite3VtabMakeWritable(Parse *pParse, Table *pTab){
 ** so is applicable.  Because this module is responsible for selecting
 ** indices, you might also think of this module as the "query optimizer".
 **
-** $Id: where.c,v 1.363 2009/01/10 15:34:12 drh Exp $
+** $Id: where.c,v 1.364 2009/01/14 00:55:10 drh Exp $
 */
 
 /*
@@ -81197,6 +81204,7 @@ static void bestIndex(
       WhereClause *pOrWC = &pTerm->u.pOrInfo->wc;
       WhereTerm *pOrTerm;
       int j;
+      int sortable = 0;
       double rTotal = 0;
       nRow = 0;
       for(j=0, pOrTerm=pOrWC->a; j<pOrWC->nTerm; j++, pOrTerm++){
@@ -81216,6 +81224,14 @@ static void bestIndex(
         nRow += sTermCost.nRow;
         if( rTotal>=pCost->rCost ) break;
       }
+      if( pOrderBy!=0 ){
+        if( sortableByRowid(iCur, pOrderBy, pWC->pMaskSet, &rev) && !rev ){
+          sortable = 1;
+        }else{
+          rTotal += nRow*estLog(nRow);
+          WHERETRACE(("... sorting increases OR cost to %.9g\n", rTotal));
+        }
+      }
       WHERETRACE(("... multi-index OR cost=%.9g nrow=%.9g\n",
                   rTotal, nRow));
       if( rTotal<pCost->rCost ){
@@ -81223,10 +81239,7 @@ static void bestIndex(
         pCost->nRow = nRow;
         pCost->plan.wsFlags = WHERE_MULTI_OR;
         pCost->plan.u.pTerm = pTerm;
-        if( pOrderBy!=0
-         && sortableByRowid(iCur, pOrderBy, pWC->pMaskSet, &rev)
-         && !rev
-        ){
+        if( sortable ){
           pCost->plan.wsFlags = WHERE_ORDERBY|WHERE_MULTI_OR;
         }
       }
