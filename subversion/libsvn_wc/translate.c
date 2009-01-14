@@ -128,19 +128,19 @@ svn_wc_translated_file2(const char **xlated_path,
                                adm_access, NULL, pool));
   SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
-
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
       && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
     {
       /* Translation would be a no-op, so return the original file. */
       *xlated_path = src;
-
     }
   else  /* some translation (or copying) is necessary */
     {
       const char *tmp_dir;
       const char *tmp_vfile;
-      svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+      svn_boolean_t repair_forced
+          = (flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR) != 0;
+      svn_boolean_t expand = (flags & SVN_WC_TRANSLATE_TO_NF) == 0;
 
       if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
         tmp_dir = NULL;
@@ -154,19 +154,35 @@ svn_wc_translated_file2(const char **xlated_path,
                   : svn_io_file_del_on_pool_cleanup,
                 pool, pool));
 
-      if (flags & SVN_WC_TRANSLATE_TO_NF)
-        /* to normal form */
-        SVN_ERR(svn_subst_translate_to_normal_form
-                (src, tmp_vfile, style, eol,
-                 repair_forced,
-                 keywords, special, pool));
-      else /* from normal form */
-        SVN_ERR(svn_subst_copy_and_translate3
-                (src, tmp_vfile,
-                 eol, TRUE,
-                 keywords, TRUE,
-                 special,
-                 pool));
+      /* ### ugh. the repair behavior does NOT match the docstring. bleah.
+         ### all of these translation functions are crap and should go
+         ### away anyways. we'll just deprecate most of the functions and
+         ### properly document the survivors */
+
+      if (expand)
+        {
+          /* from normal form */
+
+          repair_forced = TRUE;
+        }
+      else
+        {
+          /* to normal form */
+
+          if (style == svn_subst_eol_style_native)
+            eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+          else if (style == svn_subst_eol_style_fixed)
+            repair_forced = TRUE;
+          else if (style != svn_subst_eol_style_none)
+            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+        }
+
+      SVN_ERR(svn_subst_copy_and_translate3(src, tmp_vfile,
+                                            eol, repair_forced,
+                                            keywords,
+                                            expand,
+                                            special,
+                                            pool));
 
       *xlated_path = tmp_vfile;
     }
