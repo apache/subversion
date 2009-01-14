@@ -1460,8 +1460,9 @@ def invalid_propnames(sbox):
   propname = chr(8)
   propval = 'foo'
 
-  expected_stdout = ["property '%s' deleted from '.'.\n" % (propname,)]
-  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
+  expected_stderr = (".*Attempting to delete nonexistent property "
+                     "'%s'.*" % (propname,))
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'propdel', propname)
   expected_stderr = (".*'%s' is not a valid Subversion"
                      ' property name' % (propname,))
@@ -1500,7 +1501,11 @@ def perms_on_symlink(sbox):
     os.symlink('newdir', 'symlink')
     svntest.actions.run_and_verify_svn(None, None, [], 'add', 'symlink')
     old_mode = os.stat('newdir')[stat.ST_MODE]
-    svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
+    # The only property on 'symlink' is svn:special, so attempting to remove
+    # 'svn:executable' should result in an error
+    expected_stderr = (".*Attempting to delete nonexistent property "
+                       "'svn:executable'.*")
+    svntest.actions.run_and_verify_svn(None, None, expected_stderr, 'propdel',
                                      'svn:executable', 'symlink')
     new_mode = os.stat('newdir')[stat.ST_MODE]
     if not old_mode == new_mode:
@@ -1706,6 +1711,21 @@ def added_moved_file(sbox):
   svntest.actions.check_prop('someprop', foo2_url, ['someval'])
 
 
+# Issue 2220, deleting a non-existent property should error 
+def delete_nonexistent_property(sbox):
+  "remove a property which doesn't exist"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Remove one property
+  expected_stderr = ".*Attempting to delete nonexistent property 'yellow'.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'propdel', 'yellow',
+                                     os.path.join(wc_dir, 'A', 'D', 'G'))
+
+
 ########################################################################
 # Run the tests
 
@@ -1744,6 +1764,7 @@ test_list = [ None,
                     svntest.main.server_enforces_date_syntax),
               same_replacement_props,
               added_moved_file,
+              delete_nonexistent_property,
              ]
 
 if __name__ == '__main__':
