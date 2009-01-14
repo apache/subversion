@@ -57,3 +57,5 @@ TODO:
     - eliminate now-unnecessary wcprops cache
     - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
 
+ * Rework ra_serf commit editor implementation to use new direct
+   methods as described in the design doc.
