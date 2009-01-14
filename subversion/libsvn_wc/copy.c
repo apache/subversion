@@ -895,7 +895,7 @@ svn_wc_copy2(const char *src_path,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool));
 
-  /* TODO(#2843): Rework the erroer report. */
+  /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
      disk, before actually doing the file copy. */
   target_path = svn_path_join(dst_path, dst_basename, pool);
