@@ -1729,6 +1729,10 @@ set_copied_handle_error(const char *path,
  * contents of the re-added tree, even if they are locally modified relative
  * to it.
  *
+ * THEIR_URL is the deleted node's URL on the source-right side, the
+ * side that the target should become after the update. In other words,
+ * that's the new URL the node would have if it were not deleted.
+ *
  * Make changes to entries immediately, not loggily, because that is easier
  * to keep track of when multiple directories are involved.
  *  */
@@ -1737,6 +1741,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   struct edit_baton *eb,
                                   const char *parent_path,
                                   const char *path,
+                                  const char *their_url,
                                   apr_pool_t *pool)
 {
   const char *full_path = svn_path_join(eb->anchor, path, pool);
@@ -1750,10 +1755,8 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
    * for re-addition unless it was already non-existent. */
   tmp_entry.revision = *(eb->target_revision);
   flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-  /* ### If it's a switch, need to update the "url" field too:
-   * see issue #3334. Otherwise it hasn't actually been switched.
-   * tmp_entry.url = ?
-   * flags |= SVN_WC__ENTRY_MODIFY_URL; */
+  tmp_entry.url = their_url;
+  flags |= SVN_WC__ENTRY_MODIFY_URL;
 
   /* Schedule the working version to be re-added. */
   tmp_entry.schedule = svn_wc_schedule_add;
@@ -1780,6 +1783,9 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                ? SVN_WC_ENTRY_THIS_DIR : base_name,
                                &tmp_entry, flags, TRUE /* do_sync */, pool));
 
+  /* If it's a directory, set the 'copied' flag recursively. The rest of the
+   * directory tree's state can stay exactly as it was before being
+   * scheduled for re-add. */
   if (entry->kind == svn_node_dir)
     {
       svn_wc_entry_callbacks2_t set_copied_callbacks
@@ -1797,7 +1803,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                    svn_depth_infinity, FALSE /* show_hidden */,
                                    NULL, NULL, pool));
 
-      /* ### Need to do something more? */
+      /* ### Need to do something more, such as change 'base' into 'revert-base'? */
     }
 
   return SVN_NO_ERROR;
@@ -1808,8 +1814,8 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
  * PARENT_PATH is relative to the current working directory.
  *
  * THEIR_URL is the deleted node's URL on the source-right side, the
- * side that the target should become after the update. Simply put,
- * that's the URL obtained from the batons.
+ * side that the target should become after the update. In other words,
+ * that's the new URL the node would have if it were not deleted.
  *
  * Name temporary transactional logs based on *LOG_NUMBER, but set
  * *LOG_NUMBER to 0 after running the final log.  Perform all allocations in
@@ -1913,7 +1919,8 @@ do_entry_deletion(struct edit_baton *eb,
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
-                                                    full_path, pool));
+                                                    full_path, their_url,
+                                                    pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
