@@ -138,11 +138,10 @@ cat_local_file(const char *path,
      be closed, which is good (since we opened it). */
   output = svn_stream_disown(output, pool);
 
+  /* Wrap the output stream if translation is needed. */
   if (eol != NULL || kw != NULL)
-    return svn_subst_translate_stream4(input, output, eol, FALSE, kw, TRUE,
-                                       pool);
+    output = svn_subst_stream_translated(output, eol, FALSE, kw, TRUE, pool);
 
-  /* No translation needed. Just copy it to the output. */
   return svn_stream_copy3(input, output, cancel_func, cancel_baton, pool);
 }
 

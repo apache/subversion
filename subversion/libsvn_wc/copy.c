@@ -539,8 +539,8 @@ copy_file_administratively(const char *src_path,
       SVN_ERR(svn_wc__get_special(&special, src_path, src_access, pool));
       if (special)
         {
-          SVN_ERR(svn_subst_stream_from_specialfile(&contents, src_path,
-                                                    pool));
+          SVN_ERR(svn_subst_read_specialfile(&contents, src_path,
+                                             pool, pool));
         }
       else
         {
