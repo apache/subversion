@@ -131,7 +131,7 @@ copy_one_versioned_file(const char *from,
     {
       svn_wc_status2_t *status;
 
-      SVN_ERR(svn_subst_stream_from_specialfile(&source, from, pool));
+      SVN_ERR(svn_subst_read_specialfile(&source, from, pool, pool));
 
       SVN_ERR(svn_wc_prop_list(&props, from, adm_access, pool));
       SVN_ERR(svn_wc_status2(&status, from, adm_access, pool));

@@ -279,9 +279,8 @@ compare_and_verify(svn_boolean_t *modified_p,
 
       if (special)
         {
-          SVN_ERR(svn_subst_stream_from_specialfile(&v_stream,
-                                                    versioned_file,
-                                                    pool));
+          SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file,
+                                             pool, pool));
         }
       else
         {
