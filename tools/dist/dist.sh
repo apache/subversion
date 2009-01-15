@@ -5,7 +5,7 @@
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
-#                  [-zip] [-sign] [-nodeps]
+#                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign] [-nodeps]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The tarball will be constructed from the root located at REPOS-PATH,
@@ -14,9 +14,9 @@
 #      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x
 #
 #   will create a 1.4.0 release tarball. Make sure you have apr,
-#   apr-util, neon, serf and zlib subdirectories in your current working
-#   directory or specify the path to them with the -apr, -apru, -neon or
-#   -zlib options.  For example:
+#   apr-util, neon, serf, zlib and sqlite subdirectories in your current
+#   working directory or specify the path to them with the -apr, -apru,
+#   -neon or -zlib options.  For example:
 #      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x \
 #        -apr  ~/in-tree-libraries/apr-0.9.12 \
 #        -apru ~/in-tree-libraries/apr-util-0.9.12 \
@@ -25,8 +25,8 @@
 #
 #   Note that there is _no_ need to run dist.sh from a Subversion
 #   working copy, so you may wish to create a dist-resources directory
-#   containing the apr/, apr-util/, neon/ serf/ and zlib/ dependencies, and
-#   run dist.sh from that.
+#   containing the apr/, apr-util/, neon/, serf/, zlib/ and sqlite/
+#   dependencies, and run dist.sh from that.
 #  
 #   When building alpha, beta or rc tarballs pass the appropriate flag
 #   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
@@ -41,8 +41,8 @@
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
-[-neon NEON_PATH ] [-serf SERF_PATH] [-zlib ZLIB_PATH] [-zip] [-sign] \
-[-nodeps]
+[-neon NEON_PATH ] [-serf SERF_PATH] [-zlib ZLIB_PATH] \
+[-sqlite SQLITE_PATH] [-zip] [-sign] [-nodeps]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278 -pr branches/foo
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -70,13 +70,14 @@ do
       -apru)  APRU_PATH="$ARG" ;;
       -apri)  APRI_PATH="$ARG" ;;
       -zlib)  ZLIB_PATH="$ARG" ;;
+    -sqlite)  SQLITE_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
       -serf)  SERF_PATH="$ARG" ;;
     esac
     ARG_PREV=""
   else
     case $ARG in
-      -v|-r|-rs|-pr|-alpha|-beta|-pre|-rc|-apr|-apru|-apri|-zlib|-neon|-serf|-nightly)
+      -v|-r|-rs|-pr|-alpha|-beta|-pre|-rc|-apr|-apru|-apri|-zlib|-sqlite|-neon|-serf|-nightly)
         ARG_PREV=$ARG
         ;;
       -zip) ZIP=1 ;;
@@ -148,6 +149,10 @@ fi
 
 if [ -z "$ZLIB_PATH" ]; then
   ZLIB_PATH='zlib'
+fi
+
+if [ -z "$SQLITE_PATH" ]; then
+  SQLITE_PATH='sqlite-amalgamation'
 fi
 
 REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
@@ -264,6 +269,9 @@ fi
 install_dependency neon "$NEON_PATH"
 install_dependency serf "$SERF_PATH"
 install_dependency zlib "$ZLIB_PATH"
+echo "HKW +$SQLITE_PATH+"
+install_dependency sqlite "$SQLITE_PATH"
+
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
@@ -314,6 +322,7 @@ fi
 move_dependency neon
 move_dependency serf
 move_dependency zlib
+move_dependency sqlite
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
