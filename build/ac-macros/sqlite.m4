@@ -61,8 +61,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
 
     if test -z "$svn_lib_sqlite"; then
-      dnl finally, see if the sqlite amalgamation 
-      SVN_SQLITE_FILE_CONFIG(build/sqlite3.c)
+      dnl finally, see if the sqlite amalgamation exists
+      SVN_SQLITE_FILE_CONFIG(`pwd`/sqlite-amalgamation/sqlite3.c)
     fi
 
     if test -z "$svn_lib_sqlite"; then
@@ -107,6 +107,9 @@ dnl If we don't, fail.
 AC_DEFUN(SVN_SQLITE_DIR_CONFIG,
 [
   sqlite_dir="$1"
+
+  AC_MSG_CHECKING([sqlite library in $sqlite_dir])
+  echo ""
 
   dnl if the header file doesn't exist, fail
   sqlite_header=$sqlite_dir/include/sqlite3.h
@@ -157,7 +160,7 @@ AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
       AC_MSG_RESULT([$sqlite_version])
       AC_DEFINE(SVN_SQLITE_INLINE, 1,
                 [Defined if svn should use the amalgamated version of sqlite])
-      cp $sqlite_amalg subversion/libsvn_subr/sqlite3_c.h
+      SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
       svn_lib_sqlite="yes"
     else
       AC_MSG_RESULT([none or unsupported $sqlite_version])
