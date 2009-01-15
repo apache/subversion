@@ -3686,9 +3686,9 @@ fold_change(apr_hash_t *changes,
               old_change->change_kind = svn_fs_path_change_delete;
               old_change->text_mod = change->text_mod;
               old_change->prop_mod = change->prop_mod;
+              old_change->copyfrom_rev = SVN_INVALID_REVNUM;
+              old_change->copyfrom_path = NULL;
             }
-          old_change->copyfrom_rev = SVN_INVALID_REVNUM;
-          old_change->copyfrom_path = NULL;
           break;
 
         case svn_fs_path_change_add:
