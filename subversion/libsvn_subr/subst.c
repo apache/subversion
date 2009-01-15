@@ -1151,11 +1151,11 @@ translated_stream_close(void *baton)
 }
 
 
-svn_error_t *
-svn_subst_get_detranslated_stream(svn_stream_t **stream,
-                                  const char *path,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+static svn_error_t *
+open_specialfile(svn_stream_t **stream,
+                 const char *path,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
   svn_string_t *buf;
@@ -1187,31 +1187,6 @@ svn_subst_get_detranslated_stream(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_subst_stream_detranslated(svn_stream_t **stream_p,
-                              const char *src,
-                              svn_subst_eol_style_t eol_style,
-                              const char *eol_str,
-                              svn_boolean_t always_repair_eols,
-                              apr_hash_t *keywords,
-                              svn_boolean_t special,
-                              apr_pool_t *pool)
-{
-  svn_stream_t *src_stream;
-
-  if (special)
-    return svn_subst_get_detranslated_stream(stream_p, src, pool, pool);
-
-  /* This will be closed by svn_subst_stream_translated_to_normal_form
-     when the returned stream is closed. */
-  SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
-
-  return svn_subst_stream_translated_to_normal_form(stream_p, src_stream,
-                                                    eol_style, eol_str,
-                                                    always_repair_eols,
-                                                    keywords, pool);
-}
 
 svn_stream_t *
 svn_subst_stream_translated(svn_stream_t *stream,
@@ -1286,11 +1261,6 @@ svn_subst_translate_stream4(svn_stream_t *src_stream,
                             svn_boolean_t expand,
                             apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  apr_pool_t *iterpool = svn_pool_create(subpool);
-  struct translation_baton *baton;
-  apr_size_t readlen = SVN__STREAM_CHUNK_SIZE;
-  char *buf = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
   svn_error_t *err;
 
   /* The docstring requires that *some* translation be requested. */
@@ -1298,29 +1268,15 @@ svn_subst_translate_stream4(svn_stream_t *src_stream,
     {
       err = svn_error_raise_on_malfunction(TRUE, __FILE__, __LINE__,
                                            "some translation expected");
-      goto done;
+      err = svn_error_compose_create(err, svn_stream_close(src_stream));
+      return svn_error_compose_create(err, svn_stream_close(dst_stream));
     }
 
-  baton = create_translation_baton(eol_str, repair, keywords, expand, subpool);
-  while (readlen == SVN__STREAM_CHUNK_SIZE)
-    {
-      svn_pool_clear(iterpool);
-
-      if ((err = svn_stream_read(src_stream, buf, &readlen)) != NULL)
-        goto done;
-      if ((err = translate_chunk(dst_stream, baton, buf, readlen,
-                                 iterpool)) != NULL)
-        goto done;
-    }
-
-  /* signal the end of input to be translated */
-  err = translate_chunk(dst_stream, baton, NULL, 0, iterpool);
-
-  svn_pool_destroy(subpool); /* also destroys iterpool */
-
- done:
-  err = svn_error_compose_create(err, svn_stream_close(src_stream));
-  return svn_error_compose_create(err, svn_stream_close(dst_stream));
+  /* Wrap the destination stream with our translation stream. It is more
+     efficient than wrapping the source stream. */
+  dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
+                                           keywords, expand, scratch_pool);
+  return svn_stream_copy3(src_stream, dst_stream, NULL, NULL, scratch_pool);
 }
 
 
@@ -1364,6 +1320,7 @@ svn_subst_translate_cstring2(const char *src,
 
 /* Given a special file at SRC, generate a textual representation of
    it in a normal file at DST.  Perform all allocations in POOL. */
+/* ### this should be folded into svn_subst_copy_and_translate3 */
 static svn_error_t *
 detranslate_special_file(const char *src, const char *dst,
                          apr_pool_t *scratch_pool)
@@ -1378,8 +1335,7 @@ detranslate_special_file(const char *src, const char *dst,
                                  svn_path_dirname(dst, scratch_pool),
                                  svn_io_file_del_none,
                                  scratch_pool, scratch_pool));
-  SVN_ERR(svn_subst_get_detranslated_stream(&src_stream, src,
-                                            scratch_pool, scratch_pool));
+  SVN_ERR(open_specialfile(&src_stream, src, scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
@@ -1493,11 +1449,9 @@ svn_subst_copy_and_translate3(const char *src,
 
               /* ### woah. this section just undoes all the work we already did
                  ### to read the contents of the special file. shoot... the
-                 ### svn_subst_get_detranslated_stream even checks the file
-                 ### type for us! */
+                 ### open_specialfile even checks the file type for us! */
 
-              SVN_ERR(svn_subst_get_detranslated_stream(&source, src,
-                                                        pool, pool));
+              SVN_ERR(open_specialfile(&source, src, pool, pool));
             }
           else
             {
@@ -1606,7 +1560,7 @@ read_handler_special(void *baton, char *buffer, apr_size_t *len)
   else
     return svn_error_createf(APR_ENOENT, NULL,
                              "Can't read special file: File '%s' not found",
-                             svn_path_local_style (btn->path, btn->pool));
+                             svn_path_local_style(btn->path, btn->pool));
 }
 
 static svn_error_t *
@@ -1638,8 +1592,8 @@ close_handler_special(void *baton)
 
 svn_error_t *
 svn_subst_stream_from_specialfile(svn_stream_t **stream,
-                                   const char *path,
-                                   apr_pool_t *pool)
+                                  const char *path,
+                                  apr_pool_t *pool)
 {
   struct special_stream_baton *baton = apr_palloc(pool, sizeof(*baton));
   svn_error_t *err;
@@ -1647,13 +1601,14 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
   baton->pool = pool;
   baton->path = apr_pstrdup(pool, path);
 
-  err = svn_subst_get_detranslated_stream(&baton->read_stream, path,
-                                          pool, pool);
+  err = open_specialfile(&baton->read_stream, path, pool, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
       baton->read_stream = NULL;
+
+      /* ### maybe an option to fail immediately, instead of first-read? */
     }
 
   baton->write_content = svn_stringbuf_create("", pool);

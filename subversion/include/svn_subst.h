@@ -532,7 +532,11 @@ svn_subst_translate_to_normal_form(const char *src,
  *
  * @since New in 1.4.
  *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ *   Use svn_subst_stream_from_specialfile if the source is special;
+ *   otherwise, use svn_subst_stream_translated_to_normal_form.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_stream_detranslated(svn_stream_t **stream_p,
                               const char *src,
@@ -565,25 +569,6 @@ svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           const svn_string_t *value,
                                           svn_boolean_t for_output,
                                           apr_pool_t *pool);
-
-
-/** Get a stream that contains the (detranslated) "normal form" of the
- * file located at @a path. If the file is not special, then a normal,
- * readonly stream is opened up on it.
- *
- * The stream is allocated in @a result_pool, and all temporary allocations
- * are performed in @a scratch_pool.
- *
- * @since New in 1.6
- */
-/* ### ugh. misnomer. this doesn't do general detranslation. it is only food
-   ### for "special" files. should toss. this whole file needs cleanup
-   ### around the API. too many variants of the same thing. */
-svn_error_t *
-svn_subst_get_detranslated_stream(svn_stream_t **stream,
-                                  const char *path,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
