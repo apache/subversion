@@ -76,8 +76,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
 
 dnl SVN_SQLITE_PKG_CONFIG
 dnl
-dnl Look for sqlite in PATH using pkg-config.  If not found, check the standard
-dnl locations.
+dnl Look for sqlite in PATH using pkg-config.
 AC_DEFUN(SVN_SQLITE_PKG_CONFIG,
 [
     AC_PATH_PROG(pkg_config,pkg-config)
