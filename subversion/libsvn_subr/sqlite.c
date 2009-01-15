@@ -28,9 +28,13 @@
 #include "private/svn_dep_compat.h"
 
 
+#ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
-#define SQLITE_API static
-#include "sqlite3_c.h"
+  #define SQLITE_API static
+  #include "sqlite3_c.h"
+#else
+  #include <sqlite3.h>
+#endif
 
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
