@@ -581,6 +581,33 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   default:
                     {
                       /* Assume conflict remains, fall through to code below. */
+
+                      /* TODO: Issue #3354: And what if the conflicted file 
+                       * does not yet exist on disk (i.e. in ACTUAL)?
+                       *
+                       * It looks like this code was written with the
+                       * implicit assumption that a copy of the conflicted
+                       * file already exists in ACTUAL.
+                       *
+                       * But that is not true in the 'copyfrom' case.
+                       * If a text conflict is found while merging local
+                       * changes from the copyfrom file to the copied file
+                       * added by the update, the merge_target only
+                       * exists in WC meta-data (because update_editor.c,
+                       * add_file_with_history(), put it there).
+                       * But it does not yet exist in ACTUAL!
+                       *
+                       * Since the merge_target is never created in ACTUAL,
+                       * the commands added to the log below fail miserably.
+                       *
+                       * So what we probably should be doing here is checking
+                       * whether the merge_target exists in ACTUAL, and if
+                       * it if does not, create it with conflict markers
+                       * intact, and in text-conflicted state.
+                       *
+                       * Well, that is my theory anyway.
+                       * I hope to be proven correct, but it's too late
+                       * at night already to test my theory... --stsp */
                     }
                 }
             }
