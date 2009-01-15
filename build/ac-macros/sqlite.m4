@@ -56,6 +56,11 @@ AC_DEFUN(SVN_LIB_SQLITE,
     SVN_SQLITE_PKG_CONFIG
 
     if test -z "$svn_lib_sqlite"; then
+      dnl check the "standard" location of /usr
+      SVN_SQLITE_DIR_CONFIG(/usr)
+    fi
+
+    if test -z "$svn_lib_sqlite"; then
       dnl finally, see if the sqlite amalgamation 
       SVN_SQLITE_FILE_CONFIG(build/sqlite3.c)
     fi
