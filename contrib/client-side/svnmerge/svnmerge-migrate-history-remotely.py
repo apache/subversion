@@ -107,7 +107,7 @@ def svnmerge_prop_to_mergeinfo(svnmerge_prop_val):
     svnmerge_prop_val = ''
     for source in sources:
         pieces = source.split(':')
-        if len(pieces) != 2:
+        if not (len(pieces) == 2 and pieces[1]):
             continue
         pieces[0] = urllib.unquote(pieces[0])
         svnmerge_prop_val = svnmerge_prop_val + '%s\n' % (':'.join(pieces))
