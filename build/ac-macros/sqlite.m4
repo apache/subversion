@@ -167,6 +167,9 @@ AC_DEFUN(SVN_SQLITE_VERNUM_PARSE,
   sqlite_major=`expr $sqlite_version : '\([[0-9]]*\)'`
   sqlite_minor=`expr $sqlite_version : '[[0-9]]*\.\([[0-9]]*\)'`
   sqlite_micro=`expr $sqlite_version : '[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\)'`
+  if test -z "$sqlite_micro"; then
+    sqlite_micro=0
+  fi
   sqlite_ver_num=`expr $sqlite_major \* 1000000 \
                     \+ $sqlite_minor \* 1000 \
                     \+ $sqlite_micro`
