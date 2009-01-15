@@ -3735,7 +3735,6 @@ fold_change(apr_hash_t *changes,
       new_change->change_kind = change->kind;
       new_change->text_mod = change->text_mod;
       new_change->prop_mod = change->prop_mod;
-      new_change->node_kind = change->node_kind;
       /* In FSFS, copyfrom_known is *always* true, since we've always
        * stored copyfroms in changed paths lists. */
       new_change->copyfrom_known = TRUE;
@@ -3751,6 +3750,9 @@ fold_change(apr_hash_t *changes,
         }
       path = apr_pstrdup(pool, change->path);
     }
+
+  if (new_change)
+    new_change->node_kind = change->node_kind;
 
   /* Add (or update) this path. */
   apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
