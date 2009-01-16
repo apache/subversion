@@ -10,7 +10,7 @@ APR_UTIL=apr-util-1.3.4
 NEON=neon-0.28.3
 SERF=serf-0.2.0
 ZLIB=zlib-1.2.3
-SQLITE=sqlite-amalgamation-3.5.9
+SQLITE=sqlite-amalgamation-3.6.10
 
 HTTPD=httpd-2.2.11
 HTTPD_OOPS=
