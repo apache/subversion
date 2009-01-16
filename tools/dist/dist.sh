@@ -269,7 +269,6 @@ fi
 install_dependency neon "$NEON_PATH"
 install_dependency serf "$SERF_PATH"
 install_dependency zlib "$ZLIB_PATH"
-echo "HKW +$SQLITE_PATH+"
 install_dependency sqlite "$SQLITE_PATH"
 
 
