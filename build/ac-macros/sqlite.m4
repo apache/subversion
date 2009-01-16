@@ -100,8 +100,6 @@ AC_DEFUN(SVN_SQLITE_PKG_CONFIG,
 
     if test -z "$svn_lib_sqlite"; then
       AC_MSG_RESULT(no)
-    else
-      AC_MSG_RESULT([$svn_lib_sqlite])
     fi
 ])
 
