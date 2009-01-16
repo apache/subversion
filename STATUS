@@ -55,7 +55,7 @@ Candidate changes for 1.5.6:
      confusing client-side XML parsing errors that fuss about
      responses with 200 status codes.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, gstein
 
 Approved changes:
 =================
