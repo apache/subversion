@@ -47,7 +47,7 @@ Candidate changes for 1.5.6:
    Votes:
      +1: rhuijben
 
- * r35250
+ * r35250, r35286
    Fix the error handling logic of the get-location-segments REPORT code
    in mod_dav_svn.
    Justification:
