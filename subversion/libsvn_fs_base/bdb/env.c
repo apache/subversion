@@ -548,9 +548,11 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 
       /* If the environment is panicked and automatic recovery is not
          enabled, return an appropriate error. */
-      if (!SVN_BDB_AUTO_RECOVER && svn_atomic_read(&bdb->panic))
+#if !SVN_BDB_AUTO_RECOVER
+      if (svn_atomic_read(&bdb->panic))
         err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
                                db_strerror(DB_RUNRECOVERY));
+#endif
     }
   else
     {
