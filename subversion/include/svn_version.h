@@ -115,7 +115,7 @@ extern "C" {
  * When rolling a tarball, we automatically replace it with what we
  * guess to be the correct revision number.
  */
-#define SVN_VER_REVISION   33841
+#define SVN_VER_REVISION   34862
 
 
 /* Version strings composed from the above definitions. */

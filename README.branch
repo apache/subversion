@@ -33,6 +33,8 @@ Revisions included:
     release.
   * Merge r33570:33842 from 1.5.x branch to bring it up-to-date with 1.5.4
     release.
+  * Merge r33842:34862 from 1.5.x branch to bring it up-to-date with 1.5.5
+    release.
 
 Features:
   * Don't save plaintext passwords without prompting
