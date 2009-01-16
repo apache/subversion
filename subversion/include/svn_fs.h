@@ -1111,6 +1111,8 @@ typedef struct svn_fs_path_change_t
  * that and some of the @c copyfrom_known fields will be FALSE.
  *
  * Use @c pool for all allocations, including the hash and its values.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
