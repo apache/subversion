@@ -53,7 +53,10 @@ svn_cl__changelist(apr_getopt_t *os,
       apr_array_header_t *args;
       SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
       changelist_name = APR_ARRAY_IDX(args, 0, const char *);
-      SVN_ERR(svn_utf_cstring_to_utf8(&changelist_name, 
+      if (changelist_name[0] == '\0')
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Changelist names must not be empty"));
+      SVN_ERR(svn_utf_cstring_to_utf8(&changelist_name,
                                       changelist_name, pool));
     }
 

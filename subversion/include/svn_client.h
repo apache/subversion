@@ -1647,7 +1647,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
  * @a changelist_name, FALSE for @a keep_changelist, NULL for @a
  * revprop_table, and @a depth set according to @a recurse: if @a
  * recurse is TRUE, use @c svn_depth_infinity, else @c
- * svn_depth_files.
+ * svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -4341,13 +4341,14 @@ svn_client_uuid_from_url(const char **uuid,
 
 /** Return the repository @a uuid for working-copy @a path, allocated
  * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
- * entry; if not present in the entry, then call
- * svn_client_uuid_from_url() to retrieve, using the entry's URL.  @a
- * ctx is required for possible repository authentication.
+ * entry; if not present in the entry, then look in its parents. If not
+ * present in the workingcopy call svn_client_uuid_from_url() to 
+ * retrieve, using the entry's URL.  @a ctx is required for possible
+ * repository authentication.
  *
  * @note The only reason this function falls back on
- * svn_client_uuid_from_url() is for compatibility purposes.  Old
- * working copies may not have uuids in the entries file.
+ * svn_client_uuid_from_url() is for compatibility purposes.  Old and
+ * detached working copies may not have uuids in the entries file.
  */
 svn_error_t *
 svn_client_uuid_from_path(const char **uuid,

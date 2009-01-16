@@ -24,6 +24,7 @@
 
 
 #include <string.h>
+#include <assert.h>
 
 #include <apr_pools.h>
 #include <apr_tables.h>
@@ -1548,8 +1549,9 @@ svn_wc_add2(const char *path,
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
-                                     0, svn_depth_infinity, pool));
+          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url, 
+                                     p_entry->repos, 0, svn_depth_infinity,
+                                     pool));
         }
       else
         {
@@ -1557,7 +1559,7 @@ svn_wc_add2(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
+          SVN_ERR(svn_wc_ensure_adm3(path, parent_entry->uuid, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
                                      svn_depth_infinity, pool));
         }
@@ -2952,6 +2954,9 @@ svn_wc_set_changelist(const char *path,
   const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
   svn_wc_notify_t *notify;
+
+  /* Assert that we aren't being asked to set an empty changelist. */
+  assert(! (changelist && changelist[0] == '\0'));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (! entry)

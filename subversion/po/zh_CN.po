@@ -9,7 +9,7 @@
 #    msgfmt --statistics -c -o zh_CN.mo zh_CN.po
 #
 # Please format your translation before commit:
-#    msgmerge --sort-by-file --no-wrap -o zh_CN_new.po zh_CN.po subversion.pot
+#    msgcat --sort-by-file --width=80 -o zh_CN_new.po zh_CN.po
 #    mv -f zh_CN_new.po zh_CN.po
 #
 # Dictionary:
@@ -35,13 +35,94 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-09-28 11:42+0800\n"
-"PO-Revision-Date: 2008-09-28 11:24+0800\n"
+"POT-Creation-Date: 2008-12-19 16:03+0800\n"
+"PO-Revision-Date: 2008-12-19 16:05+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#. Constructing nice error messages for roots.
+#. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
+#. for PATH in ROOT. ROOT is of type svn_fs_root_t *.
+#: ../include/private/svn_fs_util.h:53
+#, c-format
+msgid "File not found: transaction '%s', path '%s'"
+msgstr "没有找到文件: 事务“%s”，路径 “%s”"
+
+#: ../include/private/svn_fs_util.h:58
+#, c-format
+msgid "File not found: revision %ld, path '%s'"
+msgstr "没有找到文件: 版本“%ld”，路径 “%s”"
+
+#. Build a detailed `file already exists' message for PATH in ROOT.
+#. ROOT is of type svn_fs_root_t *.
+#: ../include/private/svn_fs_util.h:69
+#, c-format
+msgid "File already exists: filesystem '%s', transaction '%s', path '%s'"
+msgstr "文件已经存在: 文件系统“%s”，事务“%s”，路径“%s”"
+
+#: ../include/private/svn_fs_util.h:74
+#, c-format
+msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
+msgstr "文件已经存在: 文件系统“%s”，版本“%ld”，路径“%s”"
+
+#. ROOT is of type svn_fs_root_t *.
+#: ../include/private/svn_fs_util.h:82
+msgid "Root object must be a transaction root"
+msgstr "根对象必须是事务的根"
+
+#. SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node
+#. outside of a transaction. FS is of type "svn_fs_t *".
+#: ../include/private/svn_fs_util.h:89
+#, c-format
+msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
+msgstr "文件不是可变的: 文件系统“%s”，版本“%ld”，路径 “%s”"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:96
+#, c-format
+msgid "'%s' is not a directory in filesystem '%s'"
+msgstr "“%s”在文件系统“%s”中不是目录"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:103
+#, c-format
+msgid "'%s' is not a file in filesystem '%s'"
+msgstr "“%s”在文件系统“%s”中不是文件"
+
+#. FS is of type "svn fs_t *", LOCK is of type "svn_lock_t *".
+#: ../include/private/svn_fs_util.h:110
+#, c-format
+msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
+msgstr "路径“%s”已经被用户“%s”锁定，其文件系统是“%s”"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:117
+#, c-format
+msgid "No lock on path '%s' in filesystem '%s'"
+msgstr "路径“%s”没有被锁定，其文件系统是“%s”"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:124
+#, c-format
+msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
+msgstr "锁定过期: 锁标识“%s”，其文件系统是“%s”"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:131
+#, c-format
+msgid "No username is currently associated with filesystem '%s'"
+msgstr "当前没有用户名称与文件系统“%s”关联"
+
+#. SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose
+#. LOCK_OWNER doesn't match the USERNAME associated with FS.
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:140
+#, c-format
+msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
+msgstr "用户“%s”试图使用“%s”的锁，其文件系统是“%s”"
 
 #: ../include/svn_error_codes.h:156
 msgid "Bad parent pool passed to svn_make_pool()"
@@ -992,7 +1073,7 @@ msgstr "(本地)"
 msgid "URL '%s' refers to a directory"
 msgstr "URL “%s” 指向目录"
 
-#: ../libsvn_client/checkout.c:91 ../libsvn_client/export.c:943
+#: ../libsvn_client/checkout.c:91 ../libsvn_client/export.c:952
 #, c-format
 msgid "URL '%s' doesn't exist"
 msgstr "URL “%s” 不存在"
@@ -1025,21 +1106,21 @@ msgstr "“%s” 是未知类型或不可纳入版本控制"
 msgid "New entry name required when importing a file"
 msgstr "导入文件时，需要一个新的条目名称"
 
-#: ../libsvn_client/commit.c:573 ../libsvn_wc/adm_ops.c:1038
+#: ../libsvn_client/commit.c:573 ../libsvn_wc/adm_ops.c:1039
 #: ../libsvn_wc/questions.c:93
 #, c-format
 msgid "'%s' does not exist"
 msgstr "“%s” 不存在"
 
-#: ../libsvn_client/commit.c:635 ../libsvn_client/copy.c:513
+#: ../libsvn_client/commit.c:635 ../libsvn_client/copy.c:394
 #: ../svnlook/main.c:1303
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "路径 “%s” 不存在"
 
-#: ../libsvn_client/commit.c:772 ../libsvn_client/copy.c:522
-#: ../libsvn_client/copy.c:913 ../libsvn_client/copy.c:1156
-#: ../libsvn_client/copy.c:1585
+#: ../libsvn_client/commit.c:772 ../libsvn_client/copy.c:403
+#: ../libsvn_client/copy.c:814 ../libsvn_client/copy.c:1057
+#: ../libsvn_client/copy.c:1486
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "路径 “%s” 已经存在"
@@ -1049,7 +1130,7 @@ msgstr "路径 “%s” 已经存在"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "“%s” 是保留名称，无法被导入"
 
-#: ../libsvn_client/commit.c:920 ../libsvn_client/copy.c:1325
+#: ../libsvn_client/commit.c:920 ../libsvn_client/copy.c:1226
 msgid "Commit failed (details follow):"
 msgstr "提交失败(细节如下): "
 
@@ -1114,8 +1195,11 @@ msgstr "丢失了预定增加的“%s”"
 
 #: ../libsvn_client/commit_util.c:706
 #, c-format
-msgid "'%s' is not under version control and is not part of the commit, yet its child '%s' is part of the commit"
-msgstr "“%s” 尚未纳入版本控制，也不是提交的一部份，但是它的子路径 “%s” 是提交的一部份"
+msgid ""
+"'%s' is not under version control and is not part of the commit, yet its "
+"child '%s' is part of the commit"
+msgstr ""
+"“%s” 尚未纳入版本控制，也不是提交的一部份，但是它的子路径 “%s” 是提交的一部份"
 
 #: ../libsvn_client/commit_util.c:794 ../libsvn_client/url.c:155
 #, c-format
@@ -1151,76 +1235,77 @@ msgstr "提交项目 “%s” 有复制标志，但是版本无效"
 msgid "Standard properties can't be set explicitly as revision properties"
 msgstr "标准属性不能设置为版本属性"
 
-#: ../libsvn_client/copy.c:538 ../libsvn_client/copy.c:1601
+#: ../libsvn_client/copy.c:419 ../libsvn_client/copy.c:1502
 #: ../libsvn_client/update.c:140
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "路径 “%s” 不是目录"
 
-#: ../libsvn_client/copy.c:779
+#: ../libsvn_client/copy.c:660
 #, c-format
-msgid "Source and dest appear not to be in the same repository (src: '%s'; dst: '%s')"
+msgid ""
+"Source and dest appear not to be in the same repository (src: '%s'; dst: '%s')"
 msgstr "来源与目标似乎不在同一版本库 (来源: “%s”；目的: “%s”)"
 
-#: ../libsvn_client/copy.c:894
+#: ../libsvn_client/copy.c:795
 #, c-format
 msgid "Cannot move URL '%s' into itself"
 msgstr "无法移动 URL “%s” 到本身"
 
-#: ../libsvn_client/copy.c:903 ../libsvn_client/prop_commands.c:238
+#: ../libsvn_client/copy.c:804 ../libsvn_client/prop_commands.c:238
 #, c-format
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "路径 “%s” 不在版本 %ld 中"
 
-#: ../libsvn_client/copy.c:1424
+#: ../libsvn_client/copy.c:1325
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr "源 URL “%s” 来自其它版本库；把它当作脱离的工作副本"
 
-#: ../libsvn_client/copy.c:1572
+#: ../libsvn_client/copy.c:1473
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "路径 “%s” 不在版本 %ld 中"
 
-#: ../libsvn_client/copy.c:1577
+#: ../libsvn_client/copy.c:1478
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "HEAD 版本中找不到路径 “%s”"
 
-#: ../libsvn_client/copy.c:1627
+#: ../libsvn_client/copy.c:1528
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "“%s” 的入口存在(尽管丢失了工作文件)"
 
-#: ../libsvn_client/copy.c:1720 ../libsvn_client/diff.c:1724
+#: ../libsvn_client/copy.c:1621 ../libsvn_client/diff.c:1724
 #: ../libsvn_client/log.c:334
 msgid "Revision type requires a working copy path, not a URL"
 msgstr "版本类型需要工作目录，不是 URL"
 
-#: ../libsvn_client/copy.c:1765
+#: ../libsvn_client/copy.c:1666
 msgid "Cannot mix repository and working copy sources"
 msgstr "不能在源中混合版本库和工作副本"
 
-#: ../libsvn_client/copy.c:1808
+#: ../libsvn_client/copy.c:1709
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "无法复制路径 “%s” 到其子目录 “%s” 中"
 
-#: ../libsvn_client/copy.c:1828
+#: ../libsvn_client/copy.c:1729
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "无法移动路径 “%s” 到本身"
 
-#: ../libsvn_client/copy.c:1837
+#: ../libsvn_client/copy.c:1738
 msgid "Moves between the working copy and the repository are not supported"
 msgstr "不支持在工作副本和版本库之间移动"
 
-#: ../libsvn_client/copy.c:1900
+#: ../libsvn_client/copy.c:1801
 #, c-format
 msgid "'%s' does not have a URL associated with it"
 msgstr "“%s” 没有关联的 URL"
 
-#: ../libsvn_client/copy.c:2271 ../svn/move-cmd.c:61
+#: ../libsvn_client/copy.c:2172 ../svn/move-cmd.c:61
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移动操作不能指定版本"
 
@@ -1229,7 +1314,7 @@ msgstr "移动操作不能指定版本"
 msgid "'%s' is in the way of the resource actually under version control"
 msgstr "“%s” 阻碍资源纳入版本控制"
 
-#: ../libsvn_client/delete.c:67 ../libsvn_wc/adm_ops.c:2959
+#: ../libsvn_client/delete.c:67 ../libsvn_wc/adm_ops.c:2964
 #: ../libsvn_wc/entries.c:1272 ../libsvn_wc/entries.c:2383
 #: ../libsvn_wc/entries.c:3005 ../libsvn_wc/update_editor.c:2369
 #, c-format
@@ -1251,8 +1336,8 @@ msgstr "   已经撤销合并 %s:r%s%s"
 msgid "   Merged %s:r%s%s"
 msgstr "   已经合并 %s:r%s%s"
 
-#: ../libsvn_client/diff.c:165 ../libsvn_diff/diff_file.c:1203
-#: ../libsvn_diff/diff_file.c:1215
+#: ../libsvn_client/diff.c:165 ../libsvn_diff/diff_file.c:1206
+#: ../libsvn_diff/diff_file.c:1218
 #, c-format
 msgid "Path '%s' must be an immediate child of the directory '%s'"
 msgstr "路径 “%s” 必须是目录 “%s” 的直接子孙"
@@ -1292,8 +1377,8 @@ msgstr "%s\t（工作副本）"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
-#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:4233
-#: ../libsvn_client/merge.c:5683
+#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:4588
+#: ../libsvn_client/merge.c:6256
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1311,7 +1396,9 @@ msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
 msgstr "抱歉，svn_client_diff4 尚不支持这种调用方式"
 
 #: ../libsvn_client/diff.c:1119
-msgid "Only diffs between a path's text-base and its working files are supported at this time"
+msgid ""
+"Only diffs between a path's text-base and its working files are supported at "
+"this time"
 msgstr "当前 diff 只支持参考文件与其工作文件比较"
 
 #: ../libsvn_client/diff.c:1264 ../libsvn_client/switch.c:126
@@ -1328,21 +1415,21 @@ msgstr "只有版本库和版本库才能比较差异概要"
 msgid "'%s' is not a valid EOL value"
 msgstr "“%s” 不是一个有效的 EOL 值"
 
-#: ../libsvn_client/export.c:261
+#: ../libsvn_client/export.c:270
 msgid "Destination directory exists, and will not be overwritten unless forced"
 msgstr "目的目录已存在，除非强迫为之，否则不会覆盖"
 
-#: ../libsvn_client/export.c:407 ../libsvn_client/export.c:550
+#: ../libsvn_client/export.c:416 ../libsvn_client/export.c:559
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "“%s” 已存在且不是目录"
 
-#: ../libsvn_client/export.c:411 ../libsvn_client/export.c:554
+#: ../libsvn_client/export.c:420 ../libsvn_client/export.c:563
 #, c-format
 msgid "'%s' already exists"
 msgstr "“%s” 已存在"
 
-#: ../libsvn_client/export.c:725 ../libsvn_wc/adm_crawler.c:1092
+#: ../libsvn_client/export.c:734 ../libsvn_wc/adm_crawler.c:1092
 #: ../libsvn_wc/update_editor.c:2053 ../libsvn_wc/update_editor.c:2721
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -1398,10 +1485,10 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5700
-#: ../libsvn_client/merge.c:5706 ../libsvn_client/merge.c:6277
-#: ../libsvn_client/merge.c:6433 ../libsvn_client/ra.c:397
-#: ../libsvn_client/ra.c:434 ../libsvn_client/ra.c:637
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:6273
+#: ../libsvn_client/merge.c:6279 ../libsvn_client/merge.c:6849
+#: ../libsvn_client/merge.c:7005 ../libsvn_client/ra.c:429
+#: ../libsvn_client/ra.c:461 ../libsvn_client/ra.c:664
 #, c-format
 msgid "'%s' has no URL"
 msgstr "“%s” 没有 URL"
@@ -1461,25 +1548,27 @@ msgstr "不支持存取混合方案 (“%s”与“%s”)"
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
-#: ../libsvn_client/merge.c:767
+#: ../libsvn_client/merge.c:1021
 msgid ".working"
 msgstr ".working"
 
-#: ../libsvn_client/merge.c:769
+#: ../libsvn_client/merge.c:1023
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
-#: ../libsvn_client/merge.c:772
+#: ../libsvn_client/merge.c:1026
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: ../libsvn_client/merge.c:2152
-msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
+#: ../libsvn_client/merge.c:2413
+msgid ""
+"Cannot reverse-merge a range from a path's own future history; try updating "
+"first"
 msgstr "不能从路径的未来历史中反向合并范围；请先更新"
 
-#: ../libsvn_client/merge.c:2662
+#: ../libsvn_client/merge.c:2970
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1490,45 +1579,46 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: ../libsvn_client/merge.c:5398
+#: ../libsvn_client/merge.c:5974
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5405 ../libsvn_client/merge.c:5621
-msgid "Merge from foreign repository is not compatible with mergeinfo modification"
+#: ../libsvn_client/merge.c:5981 ../libsvn_client/merge.c:6194
+msgid ""
+"Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "从外部版本库合并与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5927
+#: ../libsvn_client/merge.c:6499
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能复兴到包含已经切换子目录的工作副本"
 
-#: ../libsvn_client/merge.c:5932
+#: ../libsvn_client/merge.c:6504
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "不能复兴到非全部无限制深度的工作副本"
 
-#: ../libsvn_client/merge.c:5937
+#: ../libsvn_client/merge.c:6509
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "不能复兴到有本地修改的工作副本"
 
-#: ../libsvn_client/merge.c:5943
+#: ../libsvn_client/merge.c:6515
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#: ../libsvn_client/merge.c:5947
+#: ../libsvn_client/merge.c:6519
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能复兴到有混合版本的工作副本；请先更新"
 
-#: ../libsvn_client/merge.c:6014
+#: ../libsvn_client/merge.c:6586
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "至少有一个版本(r%ld)没有自“%s”合并"
 
-#: ../libsvn_client/merge.c:6172 ../libsvn_client/merge.c:6336
+#: ../libsvn_client/merge.c:6744 ../libsvn_client/merge.c:6908
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
-#: ../libsvn_client/merge.c:6295
+#: ../libsvn_client/merge.c:6867
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
@@ -1587,14 +1677,16 @@ msgstr "“%s” 是未知的节点类型"
 msgid "Attempt to set wc property '%s' on '%s' in a non-commit operation"
 msgstr "试图在非提交操作中，设定工作副本属性 “%s” 于 “%s”"
 
-#: ../libsvn_client/ra.c:706 ../libsvn_ra/compat.c:372
+#: ../libsvn_client/ra.c:733 ../libsvn_ra/compat.c:372
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "“%s” 的版本库位置不在版本 %ld 中"
 
-#: ../libsvn_client/ra.c:713
+#: ../libsvn_client/ra.c:740
 #, c-format
-msgid "The location for '%s' for revision %ld does not exist in the repository or refers to an unrelated object"
+msgid ""
+"The location for '%s' for revision %ld does not exist in the repository or "
+"refers to an unrelated object"
 msgstr "“%s” 不在版本库的版本 %ld 中，或是指向一个无关对象"
 
 #: ../libsvn_client/relocate.c:98
@@ -1669,7 +1761,8 @@ msgstr "无效的差异流: [src] insn %d 溢出源视图"
 
 #: ../libsvn_delta/svndiff.c:507
 #, c-format
-msgid "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
+msgid ""
+"Invalid diff stream: [tgt] insn %d starts beyond the target view position"
 msgstr "无效的差异流: [tgt] insn %d 起点超过目标视图位置"
 
 #: ../libsvn_delta/svndiff.c:514
@@ -1717,7 +1810,7 @@ msgstr "解析 diff 参数出错"
 msgid "Invalid argument '%s' in diff options"
 msgstr "diff 选项中参数'%s'无效"
 
-#: ../libsvn_diff/diff_file.c:1594
+#: ../libsvn_diff/diff_file.c:1597
 #, c-format
 msgid "Failed to delete mmap '%s'"
 msgstr "删除 mmap“%s”失败"
@@ -1745,7 +1838,8 @@ msgstr "加载 “%s” 文件系统模块失败"
 
 #: ../libsvn_fs/fs-loader.c:188
 #, c-format
-msgid "Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
+msgid ""
+"Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "文件系统模块 “%s” 版本不匹配 : 找到 %d.%d.%d%s，期望 %d.%d.%d%s"
 
 #: ../libsvn_fs/fs-loader.c:213
@@ -1835,7 +1929,9 @@ msgstr "正在读取副本"
 
 #: ../libsvn_fs_base/bdb/node-origins-table.c:111
 #, c-format
-msgid "Node origin for '%s' exists in filesystem '%s' with a different value (%s) than what we were about to store (%s)"
+msgid ""
+"Node origin for '%s' exists in filesystem '%s' with a different value (%s) "
+"than what we were about to store (%s)"
 msgstr "“%s” 的原始节点在文件系统 “%s” 中，取值(%s)与我们要存储的值(%s)不同"
 
 #: ../libsvn_fs_base/bdb/node-origins-table.c:121
@@ -1868,8 +1964,7 @@ msgstr "正在读取节点版本"
 msgid "storing node revision"
 msgstr "正在存储节点版本"
 
-#: ../libsvn_fs_base/bdb/reps-table.c:93
-#: ../libsvn_fs_base/bdb/reps-table.c:200
+#: ../libsvn_fs_base/bdb/reps-table.c:93 ../libsvn_fs_base/bdb/reps-table.c:200
 #, c-format
 msgid "No such representation '%s'"
 msgstr "没有修订版“%s”"
@@ -2144,7 +2239,9 @@ msgstr "打开文件系统“%s”的BDB环境句柄时出错: \n"
 
 #: ../libsvn_fs_base/fs.c:677
 #, c-format
-msgid "The '%s' feature requires version %d of the filesystem schema; filesystem '%s' uses only version %d"
+msgid ""
+"The '%s' feature requires version %d of the filesystem schema; filesystem '%"
+"s' uses only version %d"
 msgstr "“%s”特性需要文件系统方案版本 %d；文件系统“%s”版本仅为 %d"
 
 #: ../libsvn_fs_base/fs.c:699
@@ -2152,7 +2249,7 @@ msgstr "“%s”特性需要文件系统方案版本 %d；文件系统“%s”�
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr "期望文件系统格式“%d”；发现格式“%d”"
 
-#: ../libsvn_fs_base/fs.c:1183
+#: ../libsvn_fs_base/fs.c:1185
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature\n"
 "may be interfering with the hotcopy algorithm.  If\n"
@@ -2162,7 +2259,7 @@ msgstr ""
 "复制日志文件出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。如果问题一直存在，请\n"
 "尝试在 DB_CONFIG 中禁用此特性。"
 
-#: ../libsvn_fs_base/fs.c:1202
+#: ../libsvn_fs_base/fs.c:1204
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the\n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the\n"
@@ -2172,11 +2269,11 @@ msgstr ""
 "热复制时执行灾难恢复出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。如果问题一直\n"
 "存在，请尝试在 DB_CONFIG 中禁用此特性。"
 
-#: ../libsvn_fs_base/fs.c:1249
+#: ../libsvn_fs_base/fs.c:1251
 msgid "Module for working with a Berkeley DB repository."
 msgstr "模块只能操作BDB版本库。"
 
-#: ../libsvn_fs_base/fs.c:1284
+#: ../libsvn_fs_base/fs.c:1286
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "不支持的BDB之FS加载器版本 (%d)"
@@ -2218,7 +2315,9 @@ msgstr "在修订版“%s”中diff的版本不一致"
 
 #: ../libsvn_fs_base/reps-strings.c:531
 #, c-format
-msgid "Corruption detected whilst reading delta chain from representation '%s' to '%s'"
+msgid ""
+"Corruption detected whilst reading delta chain from representation '%s' to '%"
+"s'"
 msgstr "从修订版“%s”到“%s”读差异链时检测到数据损坏"
 
 #: ../libsvn_fs_base/reps-strings.c:779
@@ -2357,14 +2456,16 @@ msgstr "不能在两个不同的文件系统间比较文件内容"
 msgid "'%s' is not a file"
 msgstr "“%s”不是一个文件"
 
-#: ../libsvn_fs_base/tree.c:4815 ../libsvn_fs_base/tree.c:5003
+#: ../libsvn_fs_base/tree.c:4818 ../libsvn_fs_base/tree.c:5006
 #, c-format
 msgid "Node-revision '%s' claims to have mergeinfo but doesn't"
 msgstr "节点版本“%s”声称自己有合并信息，实际上却没有"
 
-#: ../libsvn_fs_base/tree.c:4839
+#: ../libsvn_fs_base/tree.c:4842
 #, c-format
-msgid "Node-revision '%s' claims to sit atop a tree containing mergeinfo but is not a directory"
+msgid ""
+"Node-revision '%s' claims to sit atop a tree containing mergeinfo but is not "
+"a directory"
 msgstr "节点版本“%s”声称自己是包含合并信息的树顶，实际上却不是目录"
 
 #: ../libsvn_fs_fs/dag.c:426
@@ -2373,12 +2474,14 @@ msgstr "不能获取非目录的条目"
 
 #: ../libsvn_fs_fs/dag.c:535
 #, c-format
-msgid "Can't increment mergeinfo count on node-revision %%s to negative value %%%s"
+msgid ""
+"Can't increment mergeinfo count on node-revision %%s to negative value %%%s"
 msgstr "不能在节点版本 %%s 增加合并信息计数，因为会溢出到负值 %%%s"
 
 #: ../libsvn_fs_fs/dag.c:546
 #, c-format
-msgid "Can't increment mergeinfo count on *file* node-revision %%s to %%%s (> 1)"
+msgid ""
+"Can't increment mergeinfo count on *file* node-revision %%s to %%%s (> 1)"
 msgstr "不能在*文件*修订节点增加合并信息计数 %%s 到 %%%s (> 1)"
 
 #: ../libsvn_fs_fs/dag.c:1042
@@ -2473,15 +2576,19 @@ msgstr "不能为事务“%s”关闭原型版本锁文件"
 
 #: ../libsvn_fs_fs/fs_fs.c:637
 #, c-format
-msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by this process"
+msgid ""
+"Cannot write to the prototype revision file of transaction '%s' because a "
+"previous representation is currently being written by this process"
 msgstr "因为当前进程正在写入以前版本，所以不能为事务 '%s' 写入原型版本文件。"
 
 #: ../libsvn_fs_fs/fs_fs.c:673
 #, c-format
-msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by another process"
+msgid ""
+"Cannot write to the prototype revision file of transaction '%s' because a "
+"previous representation is currently being written by another process"
 msgstr "因为其它进程正在写入以前版本，所以不能为事务 '%s' 写入原型版本文件。"
 
-#: ../libsvn_fs_fs/fs_fs.c:680 ../libsvn_subr/io.c:1545
+#: ../libsvn_fs_fs/fs_fs.c:680 ../libsvn_subr/io.c:1550
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "不能获取文件“%s”的排它锁"
@@ -2516,8 +2623,8 @@ msgid "Invalid revision number '%ld'"
 msgstr "无效的版本号“%ld”"
 
 #: ../libsvn_fs_fs/fs_fs.c:1439 ../libsvn_fs_fs/fs_fs.c:2119
-#: ../libsvn_fs_fs/fs_fs.c:2212 ../libsvn_repos/log.c:1588
-#: ../libsvn_repos/log.c:1592
+#: ../libsvn_fs_fs/fs_fs.c:2212 ../libsvn_repos/log.c:1625
+#: ../libsvn_repos/log.c:1629
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
@@ -2663,7 +2770,7 @@ msgstr "无法设定目录的文本内容"
 msgid "Corrupt current file"
 msgstr "当前文件损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:4930 ../libsvn_subr/io.c:2832 ../svn/util.c:379
+#: ../libsvn_fs_fs/fs_fs.c:4930 ../libsvn_subr/io.c:2838 ../svn/util.c:379
 #: ../svn/util.c:394 ../svn/util.c:418
 #, c-format
 msgid "Can't stat '%s'"
@@ -2688,7 +2795,9 @@ msgstr "修复时遇到差异目录表示"
 
 #: ../libsvn_fs_fs/fs_fs.c:5917
 #, c-format
-msgid "Node origin for '%s' exists with a different value (%s) than what we were about to store (%s)"
+msgid ""
+"Node origin for '%s' exists with a different value (%s) than what we were "
+"about to store (%s)"
 msgstr "“%s” 的 origin 节点取值(%s)与我们要存储的值(%s)不同"
 
 #: ../libsvn_fs_fs/fs_fs.c:6028
@@ -2727,7 +2836,9 @@ msgstr "节点版本“%s@%ld”声称有合并信息，实际上却没有"
 
 #: ../libsvn_fs_fs/tree.c:3709
 #, c-format
-msgid "Querying mergeinfo requires version %d of the FSFS filesystem schema; filesystem '%s' uses only version %d"
+msgid ""
+"Querying mergeinfo requires version %d of the FSFS filesystem schema; "
+"filesystem '%s' uses only version %d"
 msgstr "查询合并信息需要 FSFS 文件系统方案版本 %d；文件系统“%s”只使用版本 %d"
 
 #: ../libsvn_fs_util/fs-util.c:98
@@ -2846,7 +2957,9 @@ msgid "Unable to open repository '%s'"
 msgstr "无法打开版本库“%s”"
 
 #: ../libsvn_ra_neon/commit.c:244
-msgid "Could not fetch the Version Resource URL (needed during an import or when it is missing from the local, cached props)"
+msgid ""
+"Could not fetch the Version Resource URL (needed during an import or when it "
+"is missing from the local, cached props)"
 msgstr "不能获取版本资源URL(导入时需要或本地缓存属性中缺少)"
 
 #: ../libsvn_ra_neon/commit.c:497
@@ -2903,7 +3016,9 @@ msgid "Server response missing the expected deadprop-count property"
 msgstr "服务器响应丢失了期望的 deadprop-count 属性"
 
 #: ../libsvn_ra_neon/fetch.c:1177 ../libsvn_ra_serf/commit.c:2136
-msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
+msgid ""
+"DAV request failed; it's possible that the repository's pre-revprop-change "
+"hook either failed or is non-existent"
 msgstr "DAV 请求失败；可能是版本库的 pre-revprop-change 钩子执行失败或者不存在"
 
 #: ../libsvn_ra_neon/fetch.c:1422
@@ -2931,13 +3046,13 @@ msgstr "元素 resource 没有 path 属性"
 msgid "Missing rev attr in open-directory element"
 msgstr "元素 open-directory 没有 rev 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1504 ../libsvn_ra_serf/replay.c:258
+#: ../libsvn_ra_neon/fetch.c:1504 ../libsvn_ra_serf/replay.c:261
 #: ../libsvn_ra_serf/update.c:1293
 #, c-format
 msgid "Missing name attr in open-directory element"
 msgstr "元素 open-directory 没有 name 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1531 ../libsvn_ra_serf/replay.c:284
+#: ../libsvn_ra_neon/fetch.c:1531 ../libsvn_ra_serf/replay.c:287
 #: ../libsvn_ra_serf/update.c:1328
 #, c-format
 msgid "Missing name attr in add-directory element"
@@ -2953,13 +3068,13 @@ msgstr "元素 add-directory 没有 copyfrom-rev 属性"
 msgid "Missing rev attr in open-file element"
 msgstr "元素 open-file 没有 rev 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1628 ../libsvn_ra_serf/replay.c:319
+#: ../libsvn_ra_neon/fetch.c:1628 ../libsvn_ra_serf/replay.c:322
 #: ../libsvn_ra_serf/update.c:1368
 #, c-format
 msgid "Missing name attr in open-file element"
 msgstr "元素 open-file 没有 name 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1654 ../libsvn_ra_serf/replay.c:345
+#: ../libsvn_ra_neon/fetch.c:1654 ../libsvn_ra_serf/replay.c:348
 #: ../libsvn_ra_serf/update.c:1403
 #, c-format
 msgid "Missing name attr in add-file element"
@@ -2980,7 +3095,7 @@ msgstr "元素 set-pro 没有 name 属性"
 msgid "Missing name attr in remove-prop element"
 msgstr "元素 remove-prop 没有 name 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1810 ../libsvn_ra_serf/replay.c:232
+#: ../libsvn_ra_neon/fetch.c:1810 ../libsvn_ra_serf/replay.c:235
 #: ../libsvn_ra_serf/update.c:1433
 #, c-format
 msgid "Missing name attr in delete-entry element"
@@ -3087,18 +3202,26 @@ msgstr "服务器不支持通过日志自定义 revprops"
 
 #: ../libsvn_ra_neon/merge.c:218
 #, c-format
-msgid "Protocol error: we told the server not to auto-merge any resources, but it said that '%s' was merged"
+msgid ""
+"Protocol error: we told the server not to auto-merge any resources, but it "
+"said that '%s' was merged"
 msgstr "通讯协议错误: 我们让服务器不要自动合并任何资源，但是它报告“%s”已被合并"
 
 #: ../libsvn_ra_neon/merge.c:227
 #, c-format
-msgid "Internal error: there is an unknown parent (%d) for the 'DAV:response' element within the MERGE response"
+msgid ""
+"Internal error: there is an unknown parent (%d) for the 'DAV:response' "
+"element within the MERGE response"
 msgstr "内部错误: 在 MERGE 响应中，“DAV:response”元素有未知的父项 (%d)"
 
 #: ../libsvn_ra_neon/merge.c:242
 #, c-format
-msgid "Protocol error: the MERGE response for the '%s' resource did not return all of the properties that we asked for (and need to complete the commit)"
-msgstr "通讯协议错误: 对“%s”的 MERGE 响应并未返回所有我们请求的属性 (这些是完成提交所需要的)"
+msgid ""
+"Protocol error: the MERGE response for the '%s' resource did not return all "
+"of the properties that we asked for (and need to complete the commit)"
+msgstr ""
+"通讯协议错误: 对“%s”的 MERGE 响应并未返回所有我们请求的属性 (这些是完成提交所"
+"需要的)"
 
 #: ../libsvn_ra_neon/merge.c:261 ../libsvn_ra_serf/merge.c:302
 #, c-format
@@ -3110,8 +3233,12 @@ msgid "The MERGE property response had an error status"
 msgstr "MERGE 属性响应包含错误状态"
 
 #: ../libsvn_ra_neon/options.c:144
-msgid "The OPTIONS response did not include the requested activity-collection-set; this often means that the URL is not WebDAV-enabled"
-msgstr "OPTIONS 响应没有包含请求的 activity-collection-set；通常是此 URL 没有启用 WebDAV。"
+msgid ""
+"The OPTIONS response did not include the requested activity-collection-set; "
+"this often means that the URL is not WebDAV-enabled"
+msgstr ""
+"OPTIONS 响应没有包含请求的 activity-collection-set；通常是此 URL 没有启用 "
+"WebDAV。"
 
 #: ../libsvn_ra_neon/props.c:598
 #, c-format
@@ -3170,7 +3297,7 @@ msgstr "元素close-file之前没有add-file或者open-file元素"
 msgid "Got close-directory element without ever opening a directory"
 msgstr "在没有打开目录的情况下发现了close-directory元素"
 
-#: ../libsvn_ra_neon/replay.c:432 ../libsvn_ra_serf/replay.c:537
+#: ../libsvn_ra_neon/replay.c:432 ../libsvn_ra_serf/replay.c:543
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "写入流出错: 意外的 EOF"
@@ -3194,7 +3321,8 @@ msgid "Invalid URL: negative proxy port number"
 msgstr "无效URL: 负的代理端口"
 
 #: ../libsvn_ra_neon/session.c:539 ../libsvn_ra_serf/serf.c:426
-msgid "Invalid URL: proxy port number greater than maximum TCP port number 65535"
+msgid ""
+"Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr "无效URL: 代理端口大于TCP通信端口最大值65535"
 
 #: ../libsvn_ra_neon/session.c:553
@@ -3300,7 +3428,8 @@ msgstr "版本库临时移到‘%s’；请重新定位。"
 
 #: ../libsvn_ra_neon/util.c:563
 #, c-format
-msgid "Server sent unexpected return value (%d %s) in response to %s request for '%s'"
+msgid ""
+"Server sent unexpected return value (%d %s) in response to %s request for '%s'"
 msgstr "服务器发送了意外的返回值(%d %s)，在响应 “%s” 的请求 “%s” 中"
 
 #: ../libsvn_ra_neon/util.c:569
@@ -3343,7 +3472,8 @@ msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
 #: ../libsvn_ra_serf/blame.c:499 ../libsvn_ra_serf/commit.c:1379
 #: ../libsvn_ra_serf/commit.c:1780 ../libsvn_ra_serf/property.c:900
 #: ../libsvn_ra_serf/serf.c:787 ../libsvn_ra_serf/serf.c:1045
-msgid "The OPTIONS response did not include the requested baseline-collection value"
+msgid ""
+"The OPTIONS response did not include the requested baseline-collection value"
 msgstr "OPTIONS 响应中没有包含请求的 baseline-collection 值。"
 
 #: ../libsvn_ra_serf/commit.c:408 ../libsvn_ra_serf/commit.c:422
@@ -3367,7 +3497,9 @@ msgid "Failed writing updated file"
 msgstr "更新文件失败"
 
 #: ../libsvn_ra_serf/commit.c:1094
-msgid "The OPTIONS response did not include the requested activity-collection-set value"
+msgid ""
+"The OPTIONS response did not include the requested activity-collection-set "
+"value"
 msgstr "OPTIONS 响应中没有包含请求的 activity-collection-set 值。"
 
 #: ../libsvn_ra_serf/commit.c:1122
@@ -3403,34 +3535,34 @@ msgstr "加锁请求失败"
 msgid "Unlock request failed: %d %s"
 msgstr "解锁请求失败: %d %s"
 
-#: ../libsvn_ra_serf/replay.c:195 ../libsvn_ra_serf/update.c:1231
+#: ../libsvn_ra_serf/replay.c:198 ../libsvn_ra_serf/update.c:1231
 msgid "Missing revision attr in target-revision element"
 msgstr "元素“target-revision没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:213
+#: ../libsvn_ra_serf/replay.c:216
 msgid "Missing revision attr in open-root element"
 msgstr "元素“open-root没有revisioin属性"
 
-#: ../libsvn_ra_serf/replay.c:238
+#: ../libsvn_ra_serf/replay.c:241
 msgid "Missing revision attr in delete-entry element"
 msgstr "delete-entry元素没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:264 ../libsvn_ra_serf/update.c:1249
+#: ../libsvn_ra_serf/replay.c:267 ../libsvn_ra_serf/update.c:1249
 #: ../libsvn_ra_serf/update.c:1284
 msgid "Missing revision attr in open-directory element"
 msgstr "open-directory元素没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:325 ../libsvn_ra_serf/update.c:1377
+#: ../libsvn_ra_serf/replay.c:328 ../libsvn_ra_serf/update.c:1377
 msgid "Missing revision attr in open-file element"
 msgstr "open-file元素没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:412 ../libsvn_ra_serf/update.c:1523
+#: ../libsvn_ra_serf/replay.c:415 ../libsvn_ra_serf/update.c:1523
 #: ../libsvn_ra_serf/update.c:1600
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "元素“%s”没有name属性"
 
-#: ../libsvn_ra_serf/replay.c:800
+#: ../libsvn_ra_serf/replay.c:831
 #, c-format
 msgid "Error retrieving replay REPORT (%d)"
 msgstr "获取重放报告出错(%d)"
@@ -3446,7 +3578,9 @@ msgstr "无法解析主机 “%s” 的地址"
 
 #: ../libsvn_ra_serf/serf.c:649 ../libsvn_ra_serf/update.c:2220
 #: ../libsvn_ra_serf/util.c:1415
-msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
+msgid ""
+"The OPTIONS response did not include the requested version-controlled-"
+"configuration value"
 msgstr "OPTIONS 响应中没有包含请求的 version-controlled-configuration 值。"
 
 #: ../libsvn_ra_serf/serf.c:682
@@ -3562,7 +3696,8 @@ msgid "Server did not send repository root"
 msgstr "服务器没有返回版本库根路径"
 
 #: ../libsvn_ra_svn/client.c:859
-msgid "Server doesn't support setting arbitrary revision properties during commit"
+msgid ""
+"Server doesn't support setting arbitrary revision properties during commit"
 msgstr "在提交时，服务器不支持设置任意版本属性"
 
 #: ../libsvn_ra_svn/client.c:947
@@ -3681,7 +3816,7 @@ msgstr "不支持ra_svn RA加载器版本 %d"
 
 #: ../libsvn_ra_svn/cram.c:194 ../libsvn_ra_svn/cram.c:212
 #: ../libsvn_ra_svn/cyrus_auth.c:442 ../libsvn_ra_svn/cyrus_auth.c:497
-#: ../libsvn_ra_svn/internal_auth.c:60
+#: ../libsvn_ra_svn/internal_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "服务器意外响应认证请求"
 
@@ -3691,8 +3826,8 @@ msgstr "服务器意外响应认证请求"
 msgid "Could not initialize the SASL library"
 msgstr "不能初始化 SASL 库"
 
-#: ../libsvn_ra_svn/cyrus_auth.c:820 ../libsvn_ra_svn/internal_auth.c:57
-#: ../libsvn_ra_svn/internal_auth.c:108
+#: ../libsvn_ra_svn/cyrus_auth.c:820 ../libsvn_ra_svn/internal_auth.c:58
+#: ../libsvn_ra_svn/internal_auth.c:109
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "服务器报告认证错误: %s"
@@ -3727,7 +3862,7 @@ msgstr "finish-replay命令只在重放时有效"
 msgid "Unknown command '%s'"
 msgstr "未知命令: “%s”"
 
-#: ../libsvn_ra_svn/internal_auth.c:95 ../libsvn_subr/prompt.c:156
+#: ../libsvn_ra_svn/internal_auth.c:96 ../libsvn_subr/prompt.c:156
 #, c-format
 msgid "Can't get password"
 msgstr "无法取得密码"
@@ -3830,7 +3965,9 @@ msgid "Delta depth 'exclude' not supported"
 msgstr "不支持差异深度 “exclude”"
 
 #: ../libsvn_repos/delta.c:269
-msgid "Invalid editor anchoring; at least one of the input paths is not a directory and there was no source entry"
+msgid ""
+"Invalid editor anchoring; at least one of the input paths is not a directory "
+"and there was no source entry"
 msgstr "无效编辑器定位；至少一个输入路径不是目录，并且没有源入口"
 
 #: ../libsvn_repos/dump.c:419
@@ -3875,7 +4012,9 @@ msgstr "提交成功，但是后置提交钩子(post-commit)失败"
 
 #: ../libsvn_repos/fs-wrap.c:165
 #, c-format
-msgid "Storage of non-regular property '%s' is disallowed through the repository interface, and could indicate a bug in your client"
+msgid ""
+"Storage of non-regular property '%s' is disallowed through the repository "
+"interface, and could indicate a bug in your client"
 msgstr "不允许通过版本库接口存储非正规属性“%s”，它说明您的客户端有漏洞"
 
 #: ../libsvn_repos/fs-wrap.c:282
@@ -3907,7 +4046,9 @@ msgstr "[没有可用的错误输出。]"
 
 #: ../libsvn_repos/hooks.c:116
 #, c-format
-msgid "'%s' hook failed (did not exit cleanly: apr_exit_why_e was %d, exitcode was %d).  "
+msgid ""
+"'%s' hook failed (did not exit cleanly: apr_exit_why_e was %d, exitcode was %"
+"d).  "
 msgstr "钩子“%s”失败(没有干净的退出: apr_exit_why_e 是 %d，exitcode 是 %d)。"
 
 #: ../libsvn_repos/hooks.c:125
@@ -4361,242 +4502,242 @@ msgstr "%s 警告: %s\n"
 msgid "Can't check path '%s'"
 msgstr "无法检查路径“%s”"
 
-#: ../libsvn_subr/io.c:404
+#: ../libsvn_subr/io.c:409
 #, c-format
 msgid "Can't open '%s'"
 msgstr "不能打开“%s”"
 
-#: ../libsvn_subr/io.c:426 ../libsvn_subr/io.c:549
+#: ../libsvn_subr/io.c:431 ../libsvn_subr/io.c:554
 #, c-format
 msgid "Unable to make name for '%s'"
 msgstr "不能为“%s”产生名字"
 
-#: ../libsvn_subr/io.c:536
+#: ../libsvn_subr/io.c:541
 #, c-format
 msgid "Can't create symbolic link '%s'"
 msgstr "无法创建符号连接“%s”"
 
-#: ../libsvn_subr/io.c:553 ../libsvn_subr/io.c:607 ../libsvn_subr/io.c:635
+#: ../libsvn_subr/io.c:558 ../libsvn_subr/io.c:612 ../libsvn_subr/io.c:640
 msgid "Symbolic links are not supported on this platform"
 msgstr "此平台不支持符号链接"
 
-#: ../libsvn_subr/io.c:586
+#: ../libsvn_subr/io.c:591
 #, c-format
 msgid "Can't read contents of link"
 msgstr "不能读取链接的内容"
 
-#: ../libsvn_subr/io.c:648
+#: ../libsvn_subr/io.c:653
 #, c-format
 msgid "Can't find a temporary directory"
 msgstr "无法找到临时目录"
 
-#: ../libsvn_subr/io.c:742
+#: ../libsvn_subr/io.c:747
 #, c-format
 msgid "Can't copy '%s' to '%s'"
 msgstr "不能复制“%s”到“%s”"
 
-#: ../libsvn_subr/io.c:795
+#: ../libsvn_subr/io.c:800
 #, c-format
 msgid "Can't set permissions on '%s'"
 msgstr "不能在“%s”设置权限"
 
-#: ../libsvn_subr/io.c:817
+#: ../libsvn_subr/io.c:822
 #, c-format
 msgid "Can't append '%s' to '%s'"
 msgstr "不能附加“%s”到“%s”"
 
-#: ../libsvn_subr/io.c:851
+#: ../libsvn_subr/io.c:856
 #, c-format
 msgid "Source '%s' is not a directory"
 msgstr "源“%s”不是目录"
 
-#: ../libsvn_subr/io.c:857
+#: ../libsvn_subr/io.c:862
 #, c-format
 msgid "Destination '%s' is not a directory"
 msgstr "目的“%s”不是目录"
 
-#: ../libsvn_subr/io.c:863
+#: ../libsvn_subr/io.c:868
 #, c-format
 msgid "Destination '%s' already exists"
 msgstr "目的“%s”已存在"
 
-#: ../libsvn_subr/io.c:932 ../libsvn_subr/io.c:1883 ../libsvn_subr/io.c:1934
-#: ../libsvn_subr/io.c:1986
+#: ../libsvn_subr/io.c:937 ../libsvn_subr/io.c:1888 ../libsvn_subr/io.c:1939
+#: ../libsvn_subr/io.c:1991
 #, c-format
 msgid "Can't read directory '%s'"
 msgstr "无法读取目录“%s”"
 
-#: ../libsvn_subr/io.c:937 ../libsvn_subr/io.c:1888 ../libsvn_subr/io.c:1939
-#: ../libsvn_subr/io.c:1991 ../libsvn_subr/io.c:3154
+#: ../libsvn_subr/io.c:942 ../libsvn_subr/io.c:1893 ../libsvn_subr/io.c:1944
+#: ../libsvn_subr/io.c:1996 ../libsvn_subr/io.c:3165
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "关闭目录“%s”出错"
 
-#: ../libsvn_subr/io.c:965
+#: ../libsvn_subr/io.c:970
 #, c-format
 msgid "Can't make directory '%s'"
 msgstr "无法创建目录“%s”"
 
-#: ../libsvn_subr/io.c:1052
+#: ../libsvn_subr/io.c:1057
 #, c-format
 msgid "Can't set access time of '%s'"
 msgstr "不能设置“%s”的存取时间"
 
-#: ../libsvn_subr/io.c:1192
+#: ../libsvn_subr/io.c:1197
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "不能获取“%s”文件的缺省权限(文件 stat 错误)"
 
-#: ../libsvn_subr/io.c:1203
+#: ../libsvn_subr/io.c:1208
 #, c-format
 msgid "Can't open file at '%s'"
 msgstr "不能打开文件“%s”"
 
-#: ../libsvn_subr/io.c:1207
+#: ../libsvn_subr/io.c:1212
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "不能获取“%s”文件的权限(文件 stat 错误)"
 
-#: ../libsvn_subr/io.c:1246 ../libsvn_subr/io.c:1344
+#: ../libsvn_subr/io.c:1251 ../libsvn_subr/io.c:1349
 #, c-format
 msgid "Can't change perms of file '%s'"
 msgstr "不能改变文件“%s”的权限"
 
-#: ../libsvn_subr/io.c:1384
+#: ../libsvn_subr/io.c:1389
 #, c-format
 msgid "Can't set file '%s' read-only"
 msgstr "无法设置文件“%s”只读"
 
-#: ../libsvn_subr/io.c:1416
+#: ../libsvn_subr/io.c:1421
 #, c-format
 msgid "Can't set file '%s' read-write"
 msgstr "无法设置文件“%s”可读写"
 
-#: ../libsvn_subr/io.c:1460
+#: ../libsvn_subr/io.c:1465
 #, c-format
 msgid "Error getting UID of process"
 msgstr "获取进程用户ID（UID）时出错"
 
-#: ../libsvn_subr/io.c:1541
+#: ../libsvn_subr/io.c:1546
 #, c-format
 msgid "Can't get shared lock on file '%s'"
 msgstr "不能获取文件“%s”的共享锁"
 
-#: ../libsvn_subr/io.c:1576
+#: ../libsvn_subr/io.c:1581
 #, c-format
 msgid "Can't flush file '%s'"
 msgstr "不能刷新文件“%s”"
 
-#: ../libsvn_subr/io.c:1577
+#: ../libsvn_subr/io.c:1582
 #, c-format
 msgid "Can't flush stream"
 msgstr "不能刷新流"
 
-#: ../libsvn_subr/io.c:1589 ../libsvn_subr/io.c:1606
+#: ../libsvn_subr/io.c:1594 ../libsvn_subr/io.c:1611
 #, c-format
 msgid "Can't flush file to disk"
 msgstr "不能刷新文件到磁盘"
 
-#: ../libsvn_subr/io.c:1628 ../libsvn_subr/prompt.c:97 ../svnserve/main.c:528
+#: ../libsvn_subr/io.c:1633 ../libsvn_subr/prompt.c:97 ../svnserve/main.c:528
 #, c-format
 msgid "Can't open stdin"
 msgstr "无法打开标准输入"
 
-#: ../libsvn_subr/io.c:1649
+#: ../libsvn_subr/io.c:1654
 msgid "Reading from stdin is disallowed"
 msgstr "不接受从标准输入设备读取"
 
-#: ../libsvn_subr/io.c:1663
+#: ../libsvn_subr/io.c:1668
 #, c-format
 msgid "Can't get file name"
 msgstr "无法获取文件名"
 
-#: ../libsvn_subr/io.c:1731
+#: ../libsvn_subr/io.c:1736
 #, c-format
 msgid "Can't remove file '%s'"
 msgstr "不能移动文件“%s”"
 
-#: ../libsvn_subr/io.c:1810 ../libsvn_subr/io.c:3005 ../libsvn_subr/io.c:3091
+#: ../libsvn_subr/io.c:1815 ../libsvn_subr/io.c:3016 ../libsvn_subr/io.c:3102
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "无法打开目录“%s”"
 
-#: ../libsvn_subr/io.c:1864 ../libsvn_subr/io.c:1894
+#: ../libsvn_subr/io.c:1869 ../libsvn_subr/io.c:1899
 #, c-format
 msgid "Can't remove '%s'"
 msgstr "无法删除“%s”"
 
-#: ../libsvn_subr/io.c:1874
+#: ../libsvn_subr/io.c:1879
 #, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "无法重绕目录“%s”"
 
-#: ../libsvn_subr/io.c:2055
+#: ../libsvn_subr/io.c:2060
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "无法创建进程“%s”的属性"
 
-#: ../libsvn_subr/io.c:2061
+#: ../libsvn_subr/io.c:2066
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "无法设置进程“%s”的命令类型"
 
-#: ../libsvn_subr/io.c:2073
+#: ../libsvn_subr/io.c:2078
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "无法设定进程“%s”的目录"
 
-#: ../libsvn_subr/io.c:2086
+#: ../libsvn_subr/io.c:2091
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "无法设置“%s”的子进程输入文件"
 
-#: ../libsvn_subr/io.c:2093
+#: ../libsvn_subr/io.c:2098
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "无法设置“%s”的子进程输出文件"
 
-#: ../libsvn_subr/io.c:2100
+#: ../libsvn_subr/io.c:2105
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "无法设置“%s”的子进程错误输出文件"
 
-#: ../libsvn_subr/io.c:2107
+#: ../libsvn_subr/io.c:2112
 #, c-format
 msgid "Can't set process '%s' child errfile for error handler"
 msgstr "无法为错误处理函数设置“%s”的子进程错误输出文件"
 
-#: ../libsvn_subr/io.c:2113
+#: ../libsvn_subr/io.c:2118
 #, c-format
 msgid "Can't set process '%s' error handler"
 msgstr "无法设置进程“%s”的错误处理函数"
 
-#: ../libsvn_subr/io.c:2136
+#: ../libsvn_subr/io.c:2141
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "不能取得进程“%s”状态"
 
-#: ../libsvn_subr/io.c:2160
+#: ../libsvn_subr/io.c:2165
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "等待进程“%s”出错"
 
-#: ../libsvn_subr/io.c:2168
+#: ../libsvn_subr/io.c:2173
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "进程“%s”失败(返回 %d)"
 
-#: ../libsvn_subr/io.c:2175
+#: ../libsvn_subr/io.c:2180
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "进程“%s”返回错误退出码 %d"
 
-#: ../libsvn_subr/io.c:2286
+#: ../libsvn_subr/io.c:2291
 #, c-format
 msgid "'%s' returned %d"
 msgstr "“%s” 返回 %d"
 
-#: ../libsvn_subr/io.c:2409
+#: ../libsvn_subr/io.c:2414
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -4611,121 +4752,121 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: ../libsvn_subr/io.c:2536
+#: ../libsvn_subr/io.c:2541
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "不能检测非文件的“%s”之MIME类型"
 
-#: ../libsvn_subr/io.c:2626
+#: ../libsvn_subr/io.c:2632
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "不能打开文件“%s”"
 
-#: ../libsvn_subr/io.c:2662
+#: ../libsvn_subr/io.c:2668
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "无法关闭文件“%s”"
 
-#: ../libsvn_subr/io.c:2663
+#: ../libsvn_subr/io.c:2669
 #, c-format
 msgid "Can't close stream"
 msgstr "无法关闭流"
 
-#: ../libsvn_subr/io.c:2673 ../libsvn_subr/io.c:2697 ../libsvn_subr/io.c:2710
+#: ../libsvn_subr/io.c:2679 ../libsvn_subr/io.c:2703 ../libsvn_subr/io.c:2716
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "不能读取文件“%s”"
 
-#: ../libsvn_subr/io.c:2674 ../libsvn_subr/io.c:2698 ../libsvn_subr/io.c:2711
+#: ../libsvn_subr/io.c:2680 ../libsvn_subr/io.c:2704 ../libsvn_subr/io.c:2717
 #, c-format
 msgid "Can't read stream"
 msgstr "无法读取流"
 
-#: ../libsvn_subr/io.c:2685
+#: ../libsvn_subr/io.c:2691
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "无法从文件“%s”获取属性信息"
 
-#: ../libsvn_subr/io.c:2686
+#: ../libsvn_subr/io.c:2692
 #, c-format
 msgid "Can't get attribute information from stream"
 msgstr "无法从流获取属性信息"
 
-#: ../libsvn_subr/io.c:2722
+#: ../libsvn_subr/io.c:2728
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "无法在文件“%s”设置定位指针"
 
-#: ../libsvn_subr/io.c:2723
+#: ../libsvn_subr/io.c:2729
 #, c-format
 msgid "Can't set position pointer in stream"
 msgstr "无法在流中设置定位指针"
 
-#: ../libsvn_subr/io.c:2734 ../libsvn_subr/io.c:2768
+#: ../libsvn_subr/io.c:2740 ../libsvn_subr/io.c:2774
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "无法写入文件“%s”"
 
-#: ../libsvn_subr/io.c:2735 ../libsvn_subr/io.c:2769
+#: ../libsvn_subr/io.c:2741 ../libsvn_subr/io.c:2775
 #, c-format
 msgid "Can't write to stream"
 msgstr "无法写入流"
 
-#: ../libsvn_subr/io.c:2809
+#: ../libsvn_subr/io.c:2815
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "不能从文件“%s”读取长度行"
 
-#: ../libsvn_subr/io.c:2813
+#: ../libsvn_subr/io.c:2819
 msgid "Can't read length line in stream"
 msgstr "无法从数据流读取长度行"
 
-#: ../libsvn_subr/io.c:2860
+#: ../libsvn_subr/io.c:2866
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "不能移动“%s”到“%s”"
 
-#: ../libsvn_subr/io.c:2939
+#: ../libsvn_subr/io.c:2945
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "无法创建目录“%s”"
 
-#: ../libsvn_subr/io.c:2950 ../libsvn_wc/copy.c:542
+#: ../libsvn_subr/io.c:2956 ../libsvn_wc/copy.c:565
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "无法隐藏目录“%s”"
 
-#: ../libsvn_subr/io.c:3023
+#: ../libsvn_subr/io.c:3034
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "无法删除目录“%s”"
 
-#: ../libsvn_subr/io.c:3041
+#: ../libsvn_subr/io.c:3052
 #, c-format
 msgid "Can't read directory"
 msgstr "无法读取目录"
 
-#: ../libsvn_subr/io.c:3110
+#: ../libsvn_subr/io.c:3121
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "无法在“%s”读取目录内容"
 
-#: ../libsvn_subr/io.c:3235
+#: ../libsvn_subr/io.c:3246
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "无法检查目录“%s”"
 
-#: ../libsvn_subr/io.c:3257
+#: ../libsvn_subr/io.c:3268
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "版本 %d 是负数"
 
-#: ../libsvn_subr/io.c:3307
+#: ../libsvn_subr/io.c:3318
 #, c-format
 msgid "Reading '%s'"
 msgstr "正在读取“%s”"
 
-#: ../libsvn_subr/io.c:3323
+#: ../libsvn_subr/io.c:3334
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "“%s”的第一行包含了非数字"
@@ -4771,7 +4912,8 @@ msgstr "不能解析反向的版本范围 “%ld - %ld”"
 
 #: ../libsvn_subr/mergeinfo.c:480
 #, c-format
-msgid "Unable to parse revision range '%ld-%ld' with same start and end revisions"
+msgid ""
+"Unable to parse revision range '%ld-%ld' with same start and end revisions"
 msgstr "不能解析开始与结束版本相同的版本范围 “%ld-%ld”"
 
 #: ../libsvn_subr/mergeinfo.c:520 ../libsvn_subr/mergeinfo.c:527
@@ -4880,7 +5022,8 @@ msgstr ""
 msgid ""
 "Copyright (C) 2000-2008 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
-"This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
+"This product includes software developed by CollabNet (http://www.Collab."
+"Net/).\n"
 "\n"
 msgstr ""
 "版权所有 (C) 2000-2008 CollabNet。\n"
@@ -4893,22 +5036,22 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "使用“%s help”得到用法。\n"
 
-#: ../libsvn_subr/path.c:1169
+#: ../libsvn_subr/path.c:1168
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "不能确定“%s”的绝对路径"
 
-#: ../libsvn_subr/path.c:1206
+#: ../libsvn_subr/path.c:1205
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "“%s”不是文件名也不是目录名"
 
-#: ../libsvn_subr/path.c:1332
+#: ../libsvn_subr/path.c:1331
 #, c-format
 msgid "Can't determine the native path encoding"
 msgstr "不能确定本地路径编码"
 
-#: ../libsvn_subr/path.c:1445
+#: ../libsvn_subr/path.c:1444
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "无效控制字符 “0x%02x” 在路径 “%s” 中"
@@ -5051,12 +5194,15 @@ msgstr "不能把字符串从 CCSID“%i”编码转换为 CCSID“%i”编码�
 
 #: ../libsvn_subr/utf.c:583
 #, c-format
-msgid "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from UTF-8"
+msgid ""
+"Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
+"UTF-8"
 msgstr "安全数据“%s”后面是非ASCII字节 %d: 不能转换到/自 UTF-8"
 
 #: ../libsvn_subr/utf.c:591
 #, c-format
-msgid "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
+msgid ""
+"Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr "检测到非ASCII字符 (代码 %d)，并且不能转换到/自 UTF-8"
 
 #: ../libsvn_subr/utf.c:633
@@ -5120,11 +5266,12 @@ msgid "APR_APPEND not supported for adm files"
 msgstr "APR_APPEND 不支持管理文件"
 
 #: ../libsvn_wc/adm_files.c:536
-msgid "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try again"
+msgid ""
+"Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try "
+"again"
 msgstr "你的 .svn/tmp 目录可能丢失或损坏；请执行“svn cleanup”，然后重试"
 
-#: ../libsvn_wc/adm_files.c:705 ../libsvn_wc/lock.c:606
-#: ../libsvn_wc/lock.c:872
+#: ../libsvn_wc/adm_files.c:705 ../libsvn_wc/lock.c:606 ../libsvn_wc/lock.c:872
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "“%s”不是工作副本"
@@ -5143,89 +5290,94 @@ msgstr "版本 %ld 不匹配现有版本 %ld 于 “%s”"
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "URL “%s” 不匹配现有 URL “%s” 于 “%s”"
 
-#: ../libsvn_wc/adm_ops.c:278
+#: ../libsvn_wc/adm_ops.c:279
 #, c-format
 msgid "Unrecognized node kind: '%s'"
 msgstr "无法识别的节点种类: “%s”"
 
-#: ../libsvn_wc/adm_ops.c:1042 ../libsvn_wc/adm_ops.c:1407
+#: ../libsvn_wc/adm_ops.c:1043 ../libsvn_wc/adm_ops.c:1408
 #, c-format
 msgid "Unsupported node kind for path '%s'"
 msgstr "路径“%s”有不支持的节点种类"
 
-#: ../libsvn_wc/adm_ops.c:1403
+#: ../libsvn_wc/adm_ops.c:1404
 #, c-format
 msgid "'%s' not found"
 msgstr "找不到“%s”"
 
-#: ../libsvn_wc/adm_ops.c:1437
+#: ../libsvn_wc/adm_ops.c:1438
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "“%s”已纳入版本控制"
 
-#: ../libsvn_wc/adm_ops.c:1449
+#: ../libsvn_wc/adm_ops.c:1450
 #, c-format
-msgid "Can't replace '%s' with a node of a differing type; the deletion must be committed and the parent updated before adding '%s'"
-msgstr "无法以不同类型的节点来替换“%s”；在增加“%s”前必须提交删除操作并更新父目录"
+msgid ""
+"Can't replace '%s' with a node of a differing type; the deletion must be "
+"committed and the parent updated before adding '%s'"
+msgstr ""
+"无法以不同类型的节点来替换“%s”；在增加“%s”前必须提交删除操作并更新父目录"
 
-#: ../libsvn_wc/adm_ops.c:1466
+#: ../libsvn_wc/adm_ops.c:1467
 #, c-format
 msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr "增加“%s”时无法找到父目录入口"
 
-#: ../libsvn_wc/adm_ops.c:1471
+#: ../libsvn_wc/adm_ops.c:1472
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "增加“%s”到调度删除的目录中"
 
-#: ../libsvn_wc/adm_ops.c:1487
+#: ../libsvn_wc/adm_ops.c:1488
 #, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL“%s”与其父目录的版本库根目录不相同"
 
-#: ../libsvn_wc/adm_ops.c:1816
+#: ../libsvn_wc/adm_ops.c:1818
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "还原“%s”文本出错"
 
-#: ../libsvn_wc/adm_ops.c:2020
-msgid "Cannot revert addition of current directory; please try again from the parent directory"
+#: ../libsvn_wc/adm_ops.c:2022
+msgid ""
+"Cannot revert addition of current directory; please try again from the parent "
+"directory"
 msgstr "无法恢复增加的当前目录；请从父目录重试"
 
-#: ../libsvn_wc/adm_ops.c:2051
+#: ../libsvn_wc/adm_ops.c:2053
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "路径“%s”的种类未知或意外"
 
-#: ../libsvn_wc/adm_ops.c:2168
+#: ../libsvn_wc/adm_ops.c:2170
 msgid "Cannot revert"
 msgstr "不能转换"
 
-#: ../libsvn_wc/adm_ops.c:2195
+#: ../libsvn_wc/adm_ops.c:2197
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "无法恢复“%s”: 不支持的节点种类"
 
-#: ../libsvn_wc/adm_ops.c:2206
+#: ../libsvn_wc/adm_ops.c:2208
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "无法恢复“%s”: 工作副本中有不支持的节点种类"
 
-#: ../libsvn_wc/adm_ops.c:2384
+#: ../libsvn_wc/adm_ops.c:2386
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "文件“%s”有本地修改"
 
-#: ../libsvn_wc/adm_ops.c:2666
+#: ../libsvn_wc/adm_ops.c:2668
 msgid "Invalid 'conflict_result' argument"
 msgstr "无效的 “conflict_result” 参数"
 
-#: ../libsvn_wc/adm_ops.c:2964
+#: ../libsvn_wc/adm_ops.c:2969
 #, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist"
 msgstr "“%s” 是目录，因此不能是修改列表的成员"
 
-#: ../libsvn_wc/adm_ops.c:2984
+#: ../libsvn_wc/adm_ops.c:2989
 #, c-format
 msgid "Removing '%s' from changelist '%s'."
 msgstr "删除 “%s”，从修改列表 “%s”。"
@@ -5235,27 +5387,34 @@ msgstr "删除 “%s”，从修改列表 “%s”。"
 msgid "Error during recursive copy of '%s'"
 msgstr "递归复制“%s”时出错"
 
-#: ../libsvn_wc/copy.c:403
+#: ../libsvn_wc/copy.c:335
+#, c-format
+msgid "no parent with copyfrom information found above '%s'"
+msgstr "没有在“%s”上找到具有 copyfrom 信息的父对象"
+
+#: ../libsvn_wc/copy.c:426
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "“%s”已存在，变成拦路虎"
 
-#: ../libsvn_wc/copy.c:414
+#: ../libsvn_wc/copy.c:437
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "已有纳入版本控制项“%s”"
 
-#: ../libsvn_wc/copy.c:429 ../libsvn_wc/copy.c:691
+#: ../libsvn_wc/copy.c:452 ../libsvn_wc/copy.c:714
 #, c-format
-msgid "Cannot copy or move '%s': it is not in the repository yet; try committing first"
+msgid ""
+"Cannot copy or move '%s': it is not in the repository yet; try committing "
+"first"
 msgstr "无法复制或移动“%s”: 它不在版本库中；请先提交"
 
-#: ../libsvn_wc/copy.c:798
+#: ../libsvn_wc/copy.c:821
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr "无法复制到“%s”，因为它不在版本库“%s”中；它来自“%s”"
 
-#: ../libsvn_wc/copy.c:805
+#: ../libsvn_wc/copy.c:828
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "无法复制到“%s”，因为它已调度删除"
@@ -5351,17 +5510,23 @@ msgstr "损坏的工作副本: “%s”有无效调度，在目录 “%s” 中"
 
 #: ../libsvn_wc/entries.c:1363
 #, c-format
-msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for addition) is not itself scheduled for addition"
+msgid ""
+"Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
+"addition) is not itself scheduled for addition"
 msgstr "损坏的工作副本: “%s”(已加入增加调度)增加的调度不一致，在目录 “%s” 中"
 
 #: ../libsvn_wc/entries.c:1371
 #, c-format
-msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for deletion) is not itself scheduled for deletion"
+msgid ""
+"Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
+"deletion) is not itself scheduled for deletion"
 msgstr "损坏的工作副本: “%s”(已加入删除调度)删除调度不一致，在目录 “%s” 中"
 
 #: ../libsvn_wc/entries.c:1379
 #, c-format
-msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for replacement) has an invalid schedule"
+msgid ""
+"Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
+"replacement) has an invalid schedule"
 msgstr "损坏的工作副本: “%s”(已加入替换调度)有无效的调度，在目录 “%s” 中"
 
 #: ../libsvn_wc/entries.c:2026
@@ -5376,12 +5541,15 @@ msgstr "写入“%s”出错"
 
 #: ../libsvn_wc/entries.c:2410
 #, c-format
-msgid "Can't add '%s' to deleted directory; try undeleting its parent directory first"
+msgid ""
+"Can't add '%s' to deleted directory; try undeleting its parent directory first"
 msgstr "无法增加“%s”至已删除的目录；请先恢复其父目录"
 
 #: ../libsvn_wc/entries.c:2416
 #, c-format
-msgid "Can't replace '%s' in deleted directory; try undeleting its parent directory first"
+msgid ""
+"Can't replace '%s' in deleted directory; try undeleting its parent directory "
+"first"
 msgstr "无法在已删除的目录中替换“%s”；请先恢复其父目录"
 
 #: ../libsvn_wc/entries.c:2425
@@ -5615,11 +5783,11 @@ msgstr "为“%s”写入日志出错"
 msgid "'%s' is not a working copy directory"
 msgstr "“%s”不是工作副本目录"
 
-#: ../libsvn_wc/merge.c:433 ../libsvn_wc/merge.c:687
+#: ../libsvn_wc/merge.c:441 ../libsvn_wc/merge.c:695
 msgid "Conflict callback violated API: returned no results"
 msgstr "冲突的回调函数违反 API：没有返回结果。"
 
-#: ../libsvn_wc/merge.c:734
+#: ../libsvn_wc/merge.c:742
 msgid "Conflict callback violated API: returned no merged file"
 msgstr "冲突的回调函数违反 API：没有返回合并文件。"
 
@@ -5768,22 +5936,32 @@ msgstr "解析 %s 属性于“%s”出错: “%s”"
 
 #: ../libsvn_wc/props.c:3306
 #, c-format
-msgid "Invalid %s property on '%s': cannot use two absolute URLs ('%s' and '%s') in an external; one must be a path where an absolute or relative URL is checked out to"
-msgstr "非法属性 “%s” 于 “%s”: 不能在外部定义中使用 2 个绝对 URL(“%s” 和 “%s”)；绝对或相对 URL 必须检出到本地路径"
+msgid ""
+"Invalid %s property on '%s': cannot use two absolute URLs ('%s' and '%s') in "
+"an external; one must be a path where an absolute or relative URL is checked "
+"out to"
+msgstr ""
+"非法属性 “%s” 于 “%s”: 不能在外部定义中使用 2 个绝对 URL(“%s” 和 “%s”)；绝对或"
+"相对 URL 必须检出到本地路径"
 
 #: ../libsvn_wc/props.c:3315 ../libsvn_wc/props.c:3323
 #, c-format
-msgid "Invalid %s property on '%s': cannot use a URL '%s' as the target directory for an external definition"
+msgid ""
+"Invalid %s property on '%s': cannot use a URL '%s' as the target directory "
+"for an external definition"
 msgstr "非法属性 “%s” 于 “%s”: 对于外部定义，不能使用 URL \"%s\" 作为目标目录"
 
 #: ../libsvn_wc/props.c:3361
 #, c-format
-msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
+msgid ""
+"Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
 msgstr "无效属性 %s 位于 “%s”: 目标 “%s” 包含 “..” 或是绝对路径"
 
 #: ../libsvn_wc/questions.c:122
 #, c-format
-msgid "Working copy format of '%s' is too old (%d); please check out your working copy again"
+msgid ""
+"Working copy format of '%s' is too old (%d); please check out your working "
+"copy again"
 msgstr "“%s”的工作副本格式太旧(%d)；请重新取出工作副本"
 
 #: ../libsvn_wc/questions.c:133
@@ -5795,7 +5973,8 @@ msgid ""
 "for details."
 msgstr ""
 "此客户端对于工作副本 “%s” 太旧。你需要取得更新的 Subversion 客户端，或者降级\n"
-"工作副本。参见 http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"工作副本。参见 http://subversion.tigris.org/faq.html#working-copy-format-"
+"change\n"
 "以获得更详细的信息。"
 
 #: ../libsvn_wc/questions.c:344
@@ -5825,22 +6004,30 @@ msgstr "路径 “%s” 不在工作副本中"
 
 #: ../libsvn_wc/update_editor.c:1264
 #, c-format
-msgid "Failed to add directory '%s': a non-directory object of the same name already exists"
+msgid ""
+"Failed to add directory '%s': a non-directory object of the same name already "
+"exists"
 msgstr "无法新增目录“%s”: 同名非目录对象已存在"
 
 #: ../libsvn_wc/update_editor.c:1297
 #, c-format
-msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
+msgid ""
+"Failed to add directory '%s': an unversioned directory of the same name "
+"already exists"
 msgstr "无法新增目录“%s”: 同名未版本控制目录对象已存在"
 
 #: ../libsvn_wc/update_editor.c:1319
 #, c-format
-msgid "Failed to add directory '%s': a versioned directory of the same name already exists"
+msgid ""
+"Failed to add directory '%s': a versioned directory of the same name already "
+"exists"
 msgstr "无法新增目录“%s”: 同名受版本控制目录已存在"
 
 #: ../libsvn_wc/update_editor.c:1330
 #, c-format
-msgid "Failed to add directory '%s': object of the same name as the administrative directory"
+msgid ""
+"Failed to add directory '%s': object of the same name as the administrative "
+"directory"
 msgstr "无法增加目录“%s”: 对象与管理目录同名"
 
 #: ../libsvn_wc/update_editor.c:1344
@@ -5854,7 +6041,9 @@ msgstr "无法进行属性合并"
 
 #: ../libsvn_wc/update_editor.c:1711
 #, c-format
-msgid "Failed to mark '%s' absent: item of the same name is already scheduled for addition"
+msgid ""
+"Failed to mark '%s' absent: item of the same name is already scheduled for "
+"addition"
 msgstr "无法将“%s”标记为不存在: 同名项目已加入增加调度"
 
 #: ../libsvn_wc/update_editor.c:1784
@@ -5863,12 +6052,15 @@ msgstr "接收到非法的 copyfrom 参数"
 
 #: ../libsvn_wc/update_editor.c:1823
 #, c-format
-msgid "Failed to add file '%s': a file of the same name is already scheduled for addition with history"
+msgid ""
+"Failed to add file '%s': a file of the same name is already scheduled for "
+"addition with history"
 msgstr "无法新增文件“%s”: 同名文件已加入新增调度"
 
 #: ../libsvn_wc/update_editor.c:1835
 #, c-format
-msgid "Failed to add file '%s': a non-file object of the same name already exists"
+msgid ""
+"Failed to add file '%s': a non-file object of the same name already exists"
 msgstr "无法新增文件“%s”: 同名非文件对象已存在"
 
 #: ../libsvn_wc/update_editor.c:1850
@@ -5941,6 +6133,10 @@ msgstr "只有在XML模式“incremental”选项才有效"
 msgid "Skipping binary file: '%s'\n"
 msgstr "略过二进制文件: “%s”\n"
 
+#: ../svn/changelist-cmd.c:58 ../svn/main.c:1494
+msgid "Changelist names must not be empty"
+msgstr "修改列表的名称不能为空"
+
 #: ../svn/checkout-cmd.c:130 ../svn/switch-cmd.c:138
 #, c-format
 msgid "'%s' does not appear to be a URL"
@@ -5999,12 +6195,15 @@ msgstr "属性 “%s” 冲突，位于 “%s”。\n"
 
 #: ../svn/conflict-callbacks.c:366
 #, c-format
-msgid "They want to delete the property, you want to change the value to '%s'.\n"
+msgid ""
+"They want to delete the property, you want to change the value to '%s'.\n"
 msgstr "他人想删除此属性，你想改变其取值为 “%s”。\n"
 
 #: ../svn/conflict-callbacks.c:375
 #, c-format
-msgid "They want to change the property value to '%s', you want to delete the property.\n"
+msgid ""
+"They want to change the property value to '%s', you want to delete the "
+"property.\n"
 msgstr "他人想改变其取值为 “%s”，你想删除此属性。\n"
 
 #: ../svn/conflict-callbacks.c:397
@@ -6131,7 +6330,8 @@ msgstr ""
 
 #: ../svn/copy-cmd.c:126 ../svn/delete-cmd.c:65 ../svn/mkdir-cmd.c:66
 #: ../svn/move-cmd.c:77 ../svn/propedit-cmd.c:202
-msgid "Local, non-commit operations do not take a log message or revision properties"
+msgid ""
+"Local, non-commit operations do not take a log message or revision properties"
 msgstr "本地操作，非提交操作无须日志信息或版本属性"
 
 #: ../svn/diff-cmd.c:170 ../svnserve/main.c:535
@@ -6158,7 +6358,9 @@ msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr "差异比较目标不可同时包含工作副本路径与URL"
 
 #: ../svn/export-cmd.c:88
-msgid "Destination directory exists; please remove the directory or use --force to overwrite"
+msgid ""
+"Destination directory exists; please remove the directory or use --force to "
+"overwrite"
 msgstr "目的目录已存在；请删除目录或用 --force 来覆盖目录"
 
 #: ../svn/help-cmd.c:45
@@ -6577,15 +6779,18 @@ msgstr "指定密码 ARG"
 #: ../svn/main.c:151
 msgid ""
 "Default: '-u'. When Subversion is invoking an\n"
-"                             external diff program, ARG is simply passed along\n"
-"                             to the program. But when Subversion is using its\n"
+"                             external diff program, ARG is simply passed "
+"along\n"
+"                             to the program. But when Subversion is using "
+"its\n"
 "                             default internal diff implementation, or when\n"
 "                             Subversion is displaying blame annotations, ARG\n"
 "                             could be any of the following:\n"
 "                                -u (--unified):\n"
 "                                   Output 3 lines of unified context.\n"
 "                                -b (--ignore-space-change):\n"
-"                                   Ignore changes in the amount of white space.\n"
+"                                   Ignore changes in the amount of white "
+"space.\n"
 "                                -w (--ignore-all-space):\n"
 "                                   Ignore all white space.\n"
 "                                --ignore-eol-style:\n"
@@ -6603,7 +6808,8 @@ msgstr ""
 "                                -w (--ignore-all-space):\n"
 "                                   忽略所有的空白。\n"
 "                                --ignore-eol-style:\n"
-"                                   忽略行尾样式的改变。                                -p (--show-c-function):\n"
+"                                   忽略行尾样式的改"
+"变。                                -p (--show-c-function):\n"
 "                                   在比较输出中显示 C 函数名称。"
 
 #: ../svn/main.c:184
@@ -6620,7 +6826,8 @@ msgstr "受深度参数 ARG(“empty”，“files”，“immediates”，或�
 msgid ""
 "set new working copy depth to ARG ('empty',\n"
 "                            'files', 'immediates', or 'infinity')"
-msgstr "设置工作副本的新深度为 ARG(“empty”，“files”，“immediates”，或“infinity”)"
+msgstr ""
+"设置工作副本的新深度为 ARG(“empty”，“files”，“immediates”，或“infinity”)"
 
 #: ../svn/main.c:193
 msgid "output in XML"
@@ -6885,7 +7092,8 @@ msgstr ""
 "  如果使用了“--force”选项，在工作副本中未版本控制的障碍路径，不会自动导\n"
 "  致签出失败。 如果障碍路径与版本库中的对应路径类型相同(文件或目录),它将成\n"
 "  为受版本控制的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
-"  径，那么也会受版本控制。对于障碍路径中的文件，如果与版本库内的不同，将视为工\n"
+"  径，那么也会受版本控制。对于障碍路径中的文件，如果与版本库内的不同，将视为"
+"工\n"
 "  作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
 
 #: ../svn/main.c:375
@@ -7017,7 +7225,8 @@ msgid ""
 "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
 "     OLD-TGT and NEW-TGT and restrict the output to differences for those\n"
 "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV].\n"
-"     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n"
+"     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV "
+"default\n"
 "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
 "\n"
 "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
@@ -7032,11 +7241,13 @@ msgstr ""
 "\n"
 "  1、显示版本 REV 中 TARGET 在两个不同的版本之间的差异。TARGET 要么全是\n"
 "     工作副本路径，要么全是 URL。如果 TARGET 是工作副本路径，N 默认为\n"
-"     BASE，M 默认为工作副本；如果 TARGET 是 URL，N 必须指定， M 默认为 HEAD。\n"
+"     BASE，M 默认为工作副本；如果 TARGET 是 URL，N 必须指定， M 默认为 "
+"HEAD。\n"
 "    “-c M” 等价于 “-r M-1:M”，“-c -M” 等价于 “-r M:M-1”。\n"
 "\n"
 "  2、显示新旧版本中对应目标的差异。PATH 是相对于新旧目标的相对路径，\n"
-"     它限制只输出这些路径上的差异。新旧目标可以是工作副本路径或地址 URL[@REV]。\n"
+"     它限制只输出这些路径上的差异。新旧目标可以是工作副本路径或地址 URL"
+"[@REV]。\n"
 "     新目标默认与旧目标相同，OLDREV 默认为 N，NEWREV 默认为 M。\n"
 "\n"
 "  3、“svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]” 的简写。\n"
@@ -7109,7 +7320,8 @@ msgstr ""
 "  如果省略 PATH，则默认为 “.”。\n"
 "  父目录会根据需要在版本库内创建。\n"
 "  如果 PATH 是目录，则其下的内容直接加入到 URL 指定的位置内。\n"
-"  如果使用了 “--force”，那么不能纳入版本控制的项目，例如设备文件，管道等，会被忽略。\n"
+"  如果使用了 “--force”，那么不能纳入版本控制的项目，例如设备文件，管道等，会被"
+"忽略。\n"
 
 #: ../svn/main.c:510
 msgid ""
@@ -7291,15 +7503,19 @@ msgstr ""
 "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
 "       3. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [WCPATH]\n"
 "\n"
-"  1、第一种形式中，源 URL 的版本 N 与 M 作为比较的来源。如果没有指定版本，默认\n"
+"  1、第一种形式中，源 URL 的版本 N 与 M 作为比较的来源。如果没有指定版本，默"
+"认\n"
 "     为 HEAD。\n"
 "\n"
-"  2、在第二种形式中，两个源工作副本路径对应的版本库中的 URL 作为比较的来源。这\n"
+"  2、在第二种形式中，两个源工作副本路径对应的版本库中的 URL 作为比较的来源。"
+"这\n"
 "     里必须指定版本。\n"
 "\n"
 "  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径(后者会使用版本库中对应\n"
-"     的 URL)。如果没有指定，SOURCE 就和 WCPATH 相同。比较版本为 REV 的 SOURCE，\n"
-"     就像它在版本 N 到 M 存在一样。如果没有给出 REV，默认为 HEAD。选项 “-c M”\n"
+"     的 URL)。如果没有指定，SOURCE 就和 WCPATH 相同。比较版本为 REV 的 "
+"SOURCE，\n"
+"     就像它在版本 N 到 M 存在一样。如果没有给出 REV，默认为 HEAD。选项 “-c "
+"M”\n"
 "     等价于 “-r <M-1>:M”，“-c -M” 与之相反，等价于 “-r M:<M-1>”。如果没\n"
 "     有指定版本范围，默认为 0:REV。可以指定多个 “-c” 或 “-r”，并且可以混\n"
 "     合使用向前范围或向后范围。\n"
@@ -7307,9 +7523,12 @@ msgstr ""
 "  WCPATH 是接收修改的工作副本路径。如果省略了 WCPATH，默认为 “.”，除非来源中\n"
 "  有与当前目录内同名的文件，这时修改会直接应用至该文件。\n"
 "\n"
-"  注意:  Subversion 只有当两个合并源有继承关系的时候才会内部跟踪合并操作的源数\n"
-"  据 -- 即如果第一个合并源是第二个的祖先，或者相反。在上述的第三种形式中，已经\n"
-"  保证了满足条件。选项 --ignore-ancestry 忽略继承关系，强制 Subversion 认为合并\n"
+"  注意:  Subversion 只有当两个合并源有继承关系的时候才会内部跟踪合并操作的源"
+"数\n"
+"  据 -- 即如果第一个合并源是第二个的祖先，或者相反。在上述的第三种形式中，已"
+"经\n"
+"  保证了满足条件。选项 --ignore-ancestry 忽略继承关系，强制 Subversion 认为合"
+"并\n"
 "  源之间没有关系，不跟踪本次合并。\n"
 
 #: ../svn/main.c:623
@@ -7564,11 +7783,14 @@ msgstr ""
 "        以及 Apache 如何处理它。媒体类型以“text/”开头(或是没有指\n"
 "        定媒体类型)的文件会被视为纯文本文件，否则就是二进制数据。\n"
 "    svn:externals    - 以换行符隔开的模块说明列表，每项都由一个\n"
-"        相对路径、可选的版本标志、一个 URL 组成。这三个元素的顺序实现不同的行为。\n"
-"        Subversion 1.4 和早期的版本仅支持下列格式，并且 URL 中不能有 peg 版本：\n"
+"        相对路径、可选的版本标志、一个 URL 组成。这三个元素的顺序实现不同的行"
+"为。\n"
+"        Subversion 1.4 和早期的版本仅支持下列格式，并且 URL 中不能有 peg 版"
+"本：\n"
 "            foo             http://example.com/repos/zig\n"
 "            foo/bar -r 1234 http://example.com/repos/zag\n"
-"        Subversion 1.5 和更高的版本支持以上格式，以及下列格式，URL 中可以有 peg\n"
+"        Subversion 1.5 和更高的版本支持以上格式，以及下列格式，URL 中可以有 "
+"peg\n"
 "        版本：\n"
 "                    http://example.com/repos/zig foo\n"
 "            -r 1234 http://example.com/repos/zig foo/bar\n"
@@ -7833,7 +8055,8 @@ msgstr ""
 "     如果使用了 “--force” 选项，在工作副本中未版本控制的障碍路径，不会自动\n"
 "     导致失败。如果障碍路径与版本库中的对应路径类型相同(文件或目录)，它将成\n"
 "     为受版本控制的路径，但是内容不改变。它意味着障碍路径的子孙，如果也是障\n"
-"     碍路径，那么也会受版本控制。对于障碍路径中的文件，如果与版本库内的不同，\n"
+"     碍路径，那么也会受版本控制。对于障碍路径中的文件，如果与版本库内的不"
+"同，\n"
 "     将视为工作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
 "\n"
 "     使用“--set-depth”选项设置此操作目标的工作副本之新深度。目前工作副本的\n"
@@ -7972,7 +8195,8 @@ msgstr "深度从本地编码转换到 UTF8 失败"
 
 #: ../svn/main.c:1349 ../svn/main.c:1368
 #, c-format
-msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
+msgid ""
+"'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "“%s” 不是有效的深度；尝试 “empty”，“files”，“immediates”，或 “infinity”"
 
 #: ../svn/main.c:1475
@@ -7980,28 +8204,28 @@ msgstr "“%s” 不是有效的深度；尝试 “empty”，“files”，“i
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "原生换行符号参数“%s”中有语法错误"
 
-#: ../svn/main.c:1521
+#: ../svn/main.c:1527
 #, c-format
 msgid "'%s' is not a valid --accept value"
 msgstr "“%s” 是非法 --accept 取值"
 
-#: ../svn/main.c:1530
+#: ../svn/main.c:1536
 #, c-format
 msgid "'%s' is not a valid --show-revs value"
 msgstr "“%s” 是非法 --show-revs 取值"
 
-#: ../svn/main.c:1592 ../svndumpfilter/main.c:1315 ../svnlook/main.c:2193
+#: ../svn/main.c:1598 ../svndumpfilter/main.c:1315 ../svnlook/main.c:2193
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
 
-#: ../svn/main.c:1611 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1334
+#: ../svn/main.c:1617 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1334
 #: ../svnlook/main.c:2212
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知命令: “%s”\n"
 
-#: ../svn/main.c:1645
+#: ../svn/main.c:1651
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8010,65 +8234,73 @@ msgstr ""
 "子命令“%s”不接受选项“%s”\n"
 "输入“svn help %s”得到用法。\n"
 
-#: ../svn/main.c:1659
-msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
+#: ../svn/main.c:1665
+msgid ""
+"Multiple revision arguments encountered; can't specify -c twice, or both -c "
+"and -r"
 msgstr "遇到了多个版本参数；不能指定 -c 两次或者同时使用 -c 和 -r"
 
-#: ../svn/main.c:1673
+#: ../svn/main.c:1679
 msgid "-r and -c can't be used with --reintegrate"
 msgstr "-r 和 -c 不能与 --reintegrate 共存"
 
-#: ../svn/main.c:1682
+#: ../svn/main.c:1688
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth 与 --set-depth 是互斥的"
 
-#: ../svn/main.c:1732
+#: ../svn/main.c:1738
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "日志信息文件受版本控制；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1739
+#: ../svn/main.c:1745
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "锁注释文件受版本控制；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1759
-msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
-msgstr "日志信息是路径名称 (本来想用 -F 选项的吗？)；请使用“--force-log”强制执行"
+#: ../svn/main.c:1765
+msgid ""
+"The log message is a pathname (was -F intended?); use '--force-log' to "
+"override"
+msgstr ""
+"日志信息是路径名称 (本来想用 -F 选项的吗？)；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1766
-msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
+#: ../svn/main.c:1772
+msgid ""
+"The lock comment is a pathname (was -F intended?); use '--force-log' to "
+"override"
 msgstr "锁注释是路径名称 (本来想用-F 选项的吗？)；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1777
+#: ../svn/main.c:1783
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate 与 --depth 是互斥的"
 
-#: ../svn/main.c:1853
+#: ../svn/main.c:1860
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 与 --no-auto-props 是互斥的"
 
-#: ../svn/main.c:1867
+#: ../svn/main.c:1874
 msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
 msgstr "--reintegrate 不能与 --ignore-ancestry 或 --record-only 共存"
 
-#: ../svn/main.c:1875
+#: ../svn/main.c:1882
 msgid "--reintegrate cannot be used with --ignore-ancestry"
 msgstr "--reintegrate 不能与 --ignore-ancestry 共存"
 
-#: ../svn/main.c:1883
+#: ../svn/main.c:1890
 msgid "--reintegrate cannot be used with --record-only"
 msgstr "--reintegrate 不能与 --record-only 共存"
 
-#: ../svn/main.c:1996 ../svn/main.c:2002
+#: ../svn/main.c:2003 ../svn/main.c:2009
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s 与 --non-interactive 不兼容"
 
-#: ../svn/main.c:2029
+#: ../svn/main.c:2036
 msgid "Try 'svn help' for more info"
 msgstr "请使用 “svn help” 以得到更多信息"
 
-#: ../svn/main.c:2039
-msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
+#: ../svn/main.c:2046
+msgid ""
+"svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: 运行“svn cleanup”删除锁定 (输入“svn help cleanup”得到用法)\n"
 
 #: ../svn/merge-cmd.c:105
@@ -8331,7 +8563,8 @@ msgstr "--- 正在合并(从外部版本库) r%ld，经由 r%ld，到 “%s”:\
 
 #: ../svn/notify.c:473
 #, c-format
-msgid "--- Reverse-merging (from foreign repository) r%ld through r%ld into '%s':\n"
+msgid ""
+"--- Reverse-merging (from foreign repository) r%ld through r%ld into '%s':\n"
 msgstr "--- 正在反向合并(从外部版本库) r%ld，经由 r%ld，到 “%s”:\n"
 
 #: ../svn/propdel-cmd.c:82
@@ -8355,7 +8588,8 @@ msgid "property '%s' deleted from '%s'.\n"
 msgstr "删除属性 “%s” 于 “%s”。\n"
 
 #: ../svn/propedit-cmd.c:65 ../svn/propset-cmd.c:89
-msgid "--encoding option applies only to textual Subversion-controlled properties"
+msgid ""
+"--encoding option applies only to textual Subversion-controlled properties"
 msgstr "--encoding 选项只能用于 Subversion 的文本属性"
 
 #: ../svn/propedit-cmd.c:115
@@ -8403,7 +8637,9 @@ msgid "Unversioned properties on revision %ld:\n"
 msgstr "版本 %ld 上的未纳入版本控制的属性: \n"
 
 #: ../svn/props.c:54
-msgid "Must specify the revision as a number, a date or 'HEAD' when operating on a revision property"
+msgid ""
+"Must specify the revision as a number, a date or 'HEAD' when operating on a "
+"revision property"
 msgstr "操作版本属性时，必须指定数字、日期形式的版本号或“HEAD”。"
 
 #: ../svn/props.c:61
@@ -8498,12 +8734,21 @@ msgstr ""
 "警告: %s\n"
 
 #: ../svn/util.c:132
-msgid "The EDITOR, SVN_EDITOR or VISUAL environment variable or 'editor-cmd' run-time configuration option is empty or consists solely of whitespace. Expected a shell command."
-msgstr "环境变量 EDITOR，SVN_EDITOR，或 VISUAL；或者运行时配置选项 “editor-cmd” 为空或取值包含了不加引号的空格。期望外壳命令。"
+msgid ""
+"The EDITOR, SVN_EDITOR or VISUAL environment variable or 'editor-cmd' run-"
+"time configuration option is empty or consists solely of whitespace. Expected "
+"a shell command."
+msgstr ""
+"环境变量 EDITOR，SVN_EDITOR，或 VISUAL；或者运行时配置选项 “editor-cmd” 为空或"
+"取值包含了不加引号的空格。期望外壳命令。"
 
 #: ../svn/util.c:139
-msgid "None of the environment variables SVN_EDITOR, VISUAL or EDITOR are set, and no 'editor-cmd' run-time configuration option was found"
-msgstr "没有设置 SVN_EDITOR，VISUAL 或 EDITOR 环境变量，运行时的配置参数中也没有 “editor-cmd” 选项"
+msgid ""
+"None of the environment variables SVN_EDITOR, VISUAL or EDITOR are set, and "
+"no 'editor-cmd' run-time configuration option was found"
+msgstr ""
+"没有设置 SVN_EDITOR，VISUAL 或 EDITOR 环境变量，运行时的配置参数中也没有 "
+"“editor-cmd” 选项"
 
 #: ../svn/util.c:167 ../svn/util.c:305
 #, c-format
@@ -8526,12 +8771,17 @@ msgid "system('%s') returned %d"
 msgstr "system('%s') 返回 %d"
 
 #: ../svn/util.c:231
-msgid "The SVN_MERGE environment variable is empty or consists solely of whitespace. Expected a shell command.\n"
+msgid ""
+"The SVN_MERGE environment variable is empty or consists solely of whitespace. "
+"Expected a shell command.\n"
 msgstr "环境变量 SVN_MERGE 没有设置或者由空白组成。期望外壳命令。\n"
 
 #: ../svn/util.c:237
-msgid "The environment variable SVN_MERGE and the merge-tool-cmd run-time configuration option were not set.\n"
-msgstr "环境变量 SVN_MERGE 没有设置，运行时的配置中也没有设置 “merge-tool-cmd”。\n"
+msgid ""
+"The environment variable SVN_MERGE and the merge-tool-cmd run-time "
+"configuration option were not set.\n"
+msgstr ""
+"环境变量 SVN_MERGE 没有设置，运行时的配置中也没有设置 “merge-tool-cmd”。\n"
 
 #: ../svn/util.c:364
 #, c-format
@@ -8559,16 +8809,25 @@ msgid "Error normalizing log message to internal format"
 msgstr "将日志内容规格化为内部格式出错"
 
 #: ../svn/util.c:675
-msgid "Use of an external editor to fetch log message is not supported on OS400; consider using the --message (-m) or --file (-F) options"
-msgstr "OS400上不支持通过外部编辑器获得日志信息；请使用 --message (-m) 或 -file (-F) 选项"
+msgid ""
+"Use of an external editor to fetch log message is not supported on OS400; "
+"consider using the --message (-m) or --file (-F) options"
+msgstr ""
+"OS400上不支持通过外部编辑器获得日志信息；请使用 --message (-m) 或 -file (-F) "
+"选项"
 
 #: ../svn/util.c:761
 msgid "Cannot invoke editor to get log message when non-interactive"
 msgstr "在非交互式环境中不能调用编辑器获得日志信息"
 
 #: ../svn/util.c:774
-msgid "Could not use external editor to fetch log message; consider setting the $SVN_EDITOR environment variable or using the --message (-m) or --file (-F) options"
-msgstr "无法使用外部编辑器获得日志信息；考虑设置环境变量 $SVN_EDITOR，或者使用 --message (-m) 或 --file (-F) 选项"
+msgid ""
+"Could not use external editor to fetch log message; consider setting the "
+"$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
+"options"
+msgstr ""
+"无法使用外部编辑器获得日志信息；考虑设置环境变量 $SVN_EDITOR，或者使用 --"
+"message (-m) 或 --file (-F) 选项"
 
 #: ../svn/util.c:810
 msgid ""
@@ -8695,7 +8954,8 @@ msgid ""
 msgstr ""
 "用法: svnadmin crashtest REPOS_PATH\n"
 "\n"
-"打开位于 REPOS_PATH 的版本库, 然后终止, 从而模拟一个持有版本库句柄进程的崩溃。\n"
+"打开位于 REPOS_PATH 的版本库, 然后终止, 从而模拟一个持有版本库句柄进程的崩"
+"溃。\n"
 
 #: ../svnadmin/main.c:321
 msgid ""
@@ -9121,11 +9381,15 @@ msgstr ""
 "请稍候；升级版本库可能需要一段时间...\n"
 
 #: ../svnadmin/main.c:1351
-msgid "Upgrade of this repository's underlying versioned filesystem is not supported; consider dumping and loading the data elsewhere"
+msgid ""
+"Upgrade of this repository's underlying versioned filesystem is not "
+"supported; consider dumping and loading the data elsewhere"
 msgstr "文件系统不支持升级此版本库；请考虑使用导出后加载数据的升级方案"
 
 #: ../svnadmin/main.c:1358
-msgid "Upgrade of this repository is not supported; consider dumping and loading the data elsewhere"
+msgid ""
+"Upgrade of this repository is not supported; consider dumping and loading the "
+"data elsewhere"
 msgstr "不支持升级此版本库；请考虑使用导出后加载数据的升级方案"
 
 #: ../svnadmin/main.c:1364
@@ -9138,7 +9402,8 @@ msgstr ""
 "完成升级。\n"
 
 #: ../svnadmin/main.c:1459
-msgid "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
+msgid ""
+"Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr "遇到了多个版本参数；请使用“-r N:M”代替“-r M -r N”"
 
 #: ../svnadmin/main.c:1587
@@ -9372,15 +9637,18 @@ msgstr "详细"
 #: ../svnlook/main.c:138
 msgid ""
 "Default: '-u'. When Subversion is invoking an\n"
-"                             external diff program, ARG is simply passed along\n"
-"                             to the program. But when Subversion is using its\n"
+"                             external diff program, ARG is simply passed "
+"along\n"
+"                             to the program. But when Subversion is using "
+"its\n"
 "                             default internal diff implementation, or when\n"
 "                             Subversion is displaying blame annotations, ARG\n"
 "                             could be any of the following:\n"
 "                                -u (--unified):\n"
 "                                   Output 3 lines of unified context.\n"
 "                                -b (--ignore-space-change):\n"
-"                                   Ignore changes in the amount of white space.\n"
+"                                   Ignore changes in the amount of white "
+"space.\n"
 "                                -w (--ignore-all-space):\n"
 "                                   Ignore all white space.\n"
 "                                --ignore-eol-style:\n"
@@ -9729,7 +9997,8 @@ msgid "Invalid revision number supplied"
 msgstr "提供了无效的版本号码"
 
 #: ../svnlook/main.c:2163
-msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
+msgid ""
+"The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "“--transaction” (-t) 与 “--revision” (-r) 参数不能同时存在"
 
 #: ../svnlook/main.c:2245
@@ -9867,7 +10136,9 @@ msgstr "选项 --tunnel-user 只在隧道模式有效。\n"
 
 #: ../svnserve/main.c:581
 #, c-format
-msgid "svnserve: The --service flag is only valid if the process is started by the Service Control Manager.\n"
+msgid ""
+"svnserve: The --service flag is only valid if the process is started by the "
+"Service Control Manager.\n"
 msgstr "svnserve: 只有被服务控制管理器启动时 --service 选项才有效。\n"
 
 #: ../svnserve/main.c:617
@@ -9939,7 +10210,9 @@ msgstr "连接服务管理器失败"
 
 #: ../svnserve/winservice.c:411
 #, c-format
-msgid "The service failed to start; an internal error occurred while starting the service"
+msgid ""
+"The service failed to start; an internal error occurred while starting the "
+"service"
 msgstr "发生内部错误，启动服务失败"
 
 #: ../svnsync/main.c:65
@@ -10109,17 +10382,27 @@ msgstr "提交创建版本 %ld，应该创建版本 %ld"
 
 #: ../svnsync/main.c:1405
 #, c-format
-msgid "Revision being currently copied (%ld), last merged revision (%ld), and destination HEAD (%ld) are inconsistent; have you committed to the destination without using svnsync?"
-msgstr "当前复制版本(%ld), 最后合并版本(%ld), 和目标 HEAD (%ld) 不一致；你是否使用非svnsync方法提交到目标版本库？"
+msgid ""
+"Revision being currently copied (%ld), last merged revision (%ld), and "
+"destination HEAD (%ld) are inconsistent; have you committed to the "
+"destination without using svnsync?"
+msgstr ""
+"当前复制版本(%ld), 最后合并版本(%ld), 和目标 HEAD (%ld) 不一致；你是否使用非"
+"svnsync方法提交到目标版本库？"
 
 #: ../svnsync/main.c:1442
 #, c-format
-msgid "Destination HEAD (%ld) is not the last merged revision (%ld); have you committed to the destination without using svnsync?"
-msgstr "目标 HEAD (%ld)不是最后合并版本(%ld)；你是否使用非 svnsync 方法提交到目标版本库？"
+msgid ""
+"Destination HEAD (%ld) is not the last merged revision (%ld); have you "
+"committed to the destination without using svnsync?"
+msgstr ""
+"目标 HEAD (%ld)不是最后合并版本(%ld)；你是否使用非 svnsync 方法提交到目标版本"
+"库？"
 
 #: ../svnsync/main.c:1545 ../svnsync/main.c:1550
 #, c-format
-msgid "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
+msgid ""
+"Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
 msgstr "不能在尚未同步时复制版本(%ld)的 revprops"
 
 #: ../svnsync/main.c:1602
@@ -10147,8 +10430,12 @@ msgstr ""
 "可用的子命令: \n"
 
 #: ../svnsync/main.c:1838
-msgid "Cannot use --username or --password with any of --source-username, --source-password, --sync-username, or --sync-password.\n"
-msgstr "不能将 --username 或 --password 与 --source-username, --source-password, --sync-username, 或 --sync-password 一起使用。\n"
+msgid ""
+"Cannot use --username or --password with any of --source-username, --source-"
+"password, --sync-username, or --sync-password.\n"
+msgstr ""
+"不能将 --username 或 --password 与 --source-username, --source-password, --"
+"sync-username, 或 --sync-password 一起使用。\n"
 
 #: ../svnsync/main.c:1918
 #, c-format

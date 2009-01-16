@@ -401,10 +401,12 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             /* For anything else, delete the mech from the list
                and try again. */
             {
-              char *dst = strstr(mechstring, mech);
-              char *src = dst + strlen(mech);
-              while ((*dst++ = *src++) != '\0')
-                ;
+              const char *pmech = strstr(mechstring, mech);
+              const char *head = apr_pstrndup(pool, mechstring,
+                                              pmech - mechstring);
+              const char *tail = pmech + strlen(mech);
+
+              mechstring = apr_pstrcat(pool, head, tail, NULL);
               again = TRUE;
             }
         }
@@ -740,22 +742,22 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                                         sess->conn, pool));
     }
 
-  /* Create a string containing the list of mechanisms, separated by spaces. */
-  for (i = 0; i < mechlist->nelts; i++)
+  /* Prefer EXTERNAL, then ANONYMOUS, then let SASL decide. */
+  if (svn_ra_svn__find_mech(mechlist, "EXTERNAL"))
+    mechstring = "EXTERNAL";
+  else if (svn_ra_svn__find_mech(mechlist, "ANONYMOUS"))
+    mechstring = "ANONYMOUS";
+  else
     {
-      svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
-
-      /* Force the client to use ANONYMOUS or EXTERNAL if they are available.*/
-      if (strcmp(elt->u.word, "ANONYMOUS") == 0
-          || strcmp(elt->u.word, "EXTERNAL") == 0)
+      /* Create a string containing the list of mechanisms, separated by spaces. */
+      for (i = 0; i < mechlist->nelts; i++)
         {
-          mechstring = elt->u.word;
-          break;
+          svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
+          mechstring = apr_pstrcat(pool,
+                                   mechstring,
+                                   i == 0 ? "" : " ",
+                                   elt->u.word, NULL);
         }
-      mechstring = apr_pstrcat(pool,
-                               mechstring,
-                               i == 0 ? "" : " ",
-                               elt->u.word, NULL);
     }
 
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
