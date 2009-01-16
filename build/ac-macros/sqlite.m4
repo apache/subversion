@@ -62,7 +62,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
 
     if test -z "$svn_lib_sqlite"; then
       dnl finally, see if the sqlite amalgamation exists
-      SVN_SQLITE_FILE_CONFIG(`pwd`/sqlite-amalgamation/sqlite3.c)
+      SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
     fi
 
     if test -z "$svn_lib_sqlite"; then
