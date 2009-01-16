@@ -1745,8 +1745,10 @@ do_entry_deletion(struct edit_baton *eb,
        * delete, while leaving the working version as it is, scheduling it
        * for re-addition unless it was already non-existent. */
       tmp_entry.revision = *(eb->target_revision);
+      tmp_entry.url = their_url;
       tmp_entry.deleted = TRUE;
-      flags = SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_DELETED;
+      flags = SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_URL |
+        SVN_WC__ENTRY_MODIFY_DELETED;
 
       if (tree_conflict->reason == svn_wc_conflict_reason_edited)
         {
