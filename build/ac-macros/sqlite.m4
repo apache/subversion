@@ -26,6 +26,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
   SQLITE_URL="$3"
   SQLITE_PKGNAME="sqlite3"
 
+  SVN_SQLITE_MIN_VERNUM_PARSE
+
   AC_MSG_NOTICE([checking sqlite library])
 
   AC_ARG_WITH(sqlite,
@@ -57,7 +59,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
 
     if test -z "$svn_lib_sqlite"; then
       dnl check the "standard" location of /usr
-      SVN_SQLITE_DIR_CONFIG(/usr)
+      SVN_SQLITE_DIR_CONFIG()
     fi
 
     if test -z "$svn_lib_sqlite"; then
@@ -109,39 +111,32 @@ dnl Check to see if we've got an appropriate sqlite library at sqlite_dir.
 dnl If we don't, fail.
 AC_DEFUN(SVN_SQLITE_DIR_CONFIG,
 [
-  sqlite_dir="$1"
-
-  AC_MSG_CHECKING([sqlite library in $sqlite_dir])
-  echo ""
-
-  dnl if the header file doesn't exist, fail
-  sqlite_header=$sqlite_dir/include/sqlite3.h
-  if test ! -e $sqlite_header; then
-    echo "header not found in $sqlite_dir/include"
-    SVN_DOWNLOAD_SQLITE
+  if test -z "$1"; then
+    sqlite_dir=""
+    sqlite_include="sqlite3.h"
+  else
+    sqlite_dir="$1"
+    sqlite_include="$1/include/sqlite3.h"
   fi
 
   AC_CHECK_HEADER(sqlite3.h,
     [
       AC_MSG_CHECKING([sqlite library version (via header)])
-      sqlite_version=`python build/getversion.py SQLITE $sqlite_header`
-      SVN_SQLITE_VERNUM_PARSE(sqlite_version)
-     
-      if test "$sqlite_ver_num" -ge "$sqlite_min_ver_num"; then
-        AC_MSG_RESULT([$sqlite_version])
-        AC_CHECK_LIB(sqlite3, sqlite3_close,
-        [
-          svn_lib_sqlite="yes"
-          if test -d "$sqlite_dir"; then
-            SVN_SQLITE_INCLUDES="-I$sqlite_dir/include"
-            SVN_SQLITE_LIBS="-L$sqlite_dir/lib -lsqlite3"
-          else
-            SVN_SQLITE_LIBS="-lsqlite3"
-          fi
-        ])
-      else
-        AC_MSG_RESULT([none or unsupported $sqlite_version])
-      fi
+      AC_EGREP_CPP(SQLITE_VERSION_OKAY,[
+#include "$sqlite_include"
+#if SQLITE_VERSION_NUMBER >= $sqlite_min_ver_num
+SQLITE_VERSION_OKAY
+#endif],
+                  [AC_MSG_RESULT([okay])
+                   AC_CHECK_LIB(sqlite3, sqlite3_close, [
+                      svn_lib_sqlite="yes"
+                      if test -z "$sqlite_dir" -o ! -d "$sqlite_dir"; then
+                        SVN_SQLITE_LIBS="-lsqlite3"
+                      else
+                        SVN_SQLITE_INCLUDES="-I$sqlite_dir/include"
+                        SVN_SQLITE_LIBS="-L$sqlite_dir/lib -lsqlite3"
+                      fi
+                  ])], [AC_MSG_RESULT([unsupported SQLite version])])
     ])
 ])
 
@@ -155,19 +150,18 @@ AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
   if test ! -e $sqlite_amalg; then
     echo "amalgamation not found at $sqlite_amalg"
   else
-    AC_MSG_CHECKING([sqlite amalgamation file])
-    sqlite_version=`python build/getversion.py SQLITE $sqlite_amalg`
-    SVN_SQLITE_VERNUM_PARSE(sqlite_version)
-
-    if test "$sqlite_ver_num" -ge "$sqlite_min_ver_num"; then
-      AC_MSG_RESULT([$sqlite_version])
-      AC_DEFINE(SVN_SQLITE_INLINE, 1,
-                [Defined if svn should use the amalgamated version of sqlite])
-      SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
-      svn_lib_sqlite="yes"
-    else
-      AC_MSG_RESULT([none or unsupported $sqlite_version])
-    fi
+    AC_MSG_CHECKING([sqlite amalgamation file version])
+    AC_EGREP_CPP(SQLITE_VERSION_OKAY,[
+#include "$sqlite_amalg"
+#if SQLITE_VERSION_NUMBER >= $sqlite_min_ver_num
+SQLITE_VERSION_OKAY
+#endif],
+                 [AC_MSG_RESULT([amalgamation found and is okay])
+                  AC_DEFINE(SVN_SQLITE_INLINE, 1,
+                  [Defined if svn should use the amalgamated version of sqlite])
+                  SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
+                  svn_lib_sqlite="yes"],
+                 [AC_MSG_RESULT([unsupported amalgamation SQLite version])])
   fi
 ])
 
@@ -184,7 +178,10 @@ AC_DEFUN(SVN_SQLITE_VERNUM_PARSE,
   sqlite_ver_num=`expr $sqlite_major \* 1000000 \
                     \+ $sqlite_minor \* 1000 \
                     \+ $sqlite_micro`
+])
 
+AC_DEFUN(SVN_SQLITE_MIN_VERNUM_PARSE,
+[
   sqlite_min_major=`expr $SQLITE_MINIMUM_VER : '\([[0-9]]*\)'`
   sqlite_min_minor=`expr $SQLITE_MINIMUM_VER : '[[0-9]]*\.\([[0-9]]*\)'`
   sqlite_min_micro=`expr $SQLITE_MINIMUM_VER : '[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\)'`
