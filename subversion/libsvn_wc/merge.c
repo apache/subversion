@@ -445,6 +445,7 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                           const char *left,
                           const char *right,
                           const char *merge_target,
+                          const char *copyfrom_text,
                           svn_wc_adm_access_t *adm_access,
                           const char *result_target,
                           const char *detranslated_target,
@@ -538,35 +539,18 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
       case svn_wc_conflict_choose_postpone:
       default:
         {
+          /* Issue #3354: We need to install the copyfrom_text,
+           * which now carries conflicts, into ACTUAL, by copying
+           * it to the merge target. */
+          if (copyfrom_text)
+            {
+              SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                         copyfrom_text, merge_target,
+                                         pool));
+            }
+
           /* Assume conflict remains. */
           return SVN_NO_ERROR;
-
-          /* TODO: Issue #3354: And what if the conflicted file 
-           * does not yet exist on disk (i.e. in ACTUAL)?
-           *
-           * It looks like this code was written with the
-           * implicit assumption that a copy of the conflicted
-           * file already exists in ACTUAL.
-           *
-           * But that is not true in the 'copyfrom' case.
-           * If a text conflict is found while merging local
-           * changes from the copyfrom file to the copied file
-           * added by the update, the merge_target only
-           * exists in WC meta-data (because update_editor.c,
-           * add_file_with_history(), put it there).
-           * But it does not yet exist in ACTUAL!
-           *
-           * Since the merge_target is never created in ACTUAL,
-           * the commands added to the log below fail miserably.
-           *
-           * So what we probably should be doing here is checking
-           * whether the merge_target exists in ACTUAL, and if
-           * it if does not, create it with conflict markers
-           * intact, and in text-conflicted state.
-           *
-           * Well, that is my theory anyway.
-           * I hope to be proven correct, but it's too late
-           * at night already to test my theory... --stsp */
         }
     }
 }
@@ -751,6 +735,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                         const char *left,
                         const char *right,
                         const char *merge_target,
+                        const char *copyfrom_text,
                         svn_wc_adm_access_t *adm_access,
                         const char *left_label,
                         const char *right_label,
@@ -809,6 +794,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                                         left,
                                         right,
                                         merge_target,
+                                        copyfrom_text,
                                         adm_access,
                                         result_target,
                                         detranslated_target,
@@ -917,6 +903,7 @@ merge_text_file(const char *left,
                                       left,
                                       right,
                                       merge_target,
+                                      copyfrom_text,
                                       adm_access,
                                       left_label,
                                       right_label,
