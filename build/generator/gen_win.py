@@ -54,6 +54,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
+    self.sqlite_path = 'sqlite'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -98,6 +99,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sqlite':
+        self.sqlite_path = val
       elif opt == '--with-sasl':
         self.sasl_path = val
       elif opt == '--with-openssl':
@@ -208,6 +211,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find APR and APR-util version
     self._find_apr()
     self._find_apr_util()
+
+    # Find Sqlite
+    self._find_sqlite()
 
     # Look for ML
     if self.zlib_path:
@@ -845,6 +851,7 @@ class WinGeneratorBase(GeneratorBase):
 
     fakeincludes.extend([
                          self.apath(self.zlib_path),
+                         self.apath(self.sqlite_path, 'inc'),
                          ])
 
     if self.sasl_path:
@@ -864,6 +871,7 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
+                    self.apath(self.sqlite_path, "lib"),
                     ]
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
@@ -941,6 +949,9 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
+
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
+        nondeplibs.append('sqlite3.lib')
 
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
@@ -1331,6 +1342,39 @@ class WinGeneratorBase(GeneratorBase):
       self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
     else:
       self.aprutil_lib = 'libaprutil.lib'
+
+  def _find_sqlite(self):
+    "Find the Sqlite library and version"
+
+    header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
+    lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
+
+    if not os.path.exists(header_file):
+      sys.stderr.write("ERROR: '%s' not found.\n" % header_file)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
+
+    if not os.path.exists(lib_file):
+      sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
+
+    fp = open(header_file)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', txt, re.M)
+
+    version = tuple(map(int, vermatch.groups()))
+
+    self.sqlite_version = '%d.%d.%d' % version
+
+    msg = 'Found SQLite version %s\n'
+
+    major, minor, patch = version
+    if major < 3 or (major == 3 and minor < 4):
+      msg = "WARNING: SQLite 3.4.0 or higher is required (%s found)\n"
+
+    sys.stderr.write(msg % self.sqlite_version)
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
