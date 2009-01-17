@@ -324,7 +324,7 @@ init_conflict_markers(const char **target_marker,
 
 /* Do a 3-way merge of the files at paths LEFT, DETRANSLATED_TARGET,
  * and RIGHT, using diff options provided in OPTIONS.  Store the merge
- * result * in the file RESULT_F.
+ * result in the file RESULT_F.
  * If there are conflicts, set *CONTAINS_CONFLICTS to true, and use
  * TARGET_LABEL, LEFT_LABEL, and RIGHT_LABEL as labels for conflict
  * markers.  Else, set *CONTAINS_CONFLICTS to false.
