@@ -46,8 +46,9 @@ AC_DEFUN(SVN_LIB_SERF,
   if test $serf_found = "yes"; then
     SVN_SERF_PREFIX="$serf_prefix"
     SVN_SERF_INCLUDES="-I$serf_prefix/include/serf-0"
-    SVN_SERF_LIBS="$serf_prefix/lib/libserf-0.la"
-    if test ! -e "$serf_prefix/lib/libserf-0.la"; then
+    if test -e "$serf_prefix/lib/libserf-0.la"; then
+      SVN_SERF_LIBS="$serf_prefix/lib/libserf-0.la"
+    else
       SVN_SERF_LIBS="-lserf-0"
       LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
     fi
