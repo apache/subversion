@@ -1173,7 +1173,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 {
   const char *merge_dirpath;
   const char *merge_filename;
-  const char *destranslated_target, *result_target, *working_text;
+  const char *detranslated_target, *result_target, *working_text;
   svn_boolean_t is_binary = FALSE;
   const svn_wc_entry_t *entry;
   const svn_prop_t *mimeprop;
@@ -1198,7 +1198,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
     SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
   working_text = copyfrom_text ? copyfrom_text : merge_target;
-  SVN_ERR(detranslate_wc_file(&destranslated_target, working_text, adm_access,
+  SVN_ERR(detranslate_wc_file(&detranslated_target, working_text, adm_access,
                               (! is_binary) && diff3_cmd != NULL,
                               prop_diff, pool));
 
@@ -1226,7 +1226,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                           merge_outcome,
                           left_version,
                           right_version,
-                          destranslated_target,
+                          detranslated_target,
                           mimeprop,
                           merge_dirpath,
                           merge_filename,
@@ -1251,7 +1251,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                             right_version,
                             copyfrom_text,
                             result_target,
-                            destranslated_target,
+                            detranslated_target,
                             mimeprop,
                             merge_dirpath,
                             merge_filename,
