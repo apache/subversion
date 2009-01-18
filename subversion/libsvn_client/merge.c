@@ -3381,7 +3381,7 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
       void *value;
       const char *path;
       apr_array_header_t *ranges, *rangelist;
-      int len;
+      size_t len;
       svn_error_t *err;
 
       svn_pool_clear(subpool);

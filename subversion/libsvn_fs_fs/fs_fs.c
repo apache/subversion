@@ -126,7 +126,26 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__change_txn_props
 };
 
+/* Declarations. */
+
+static svn_error_t *
+read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
+                      const char *path,
+                      apr_pool_t *pool);
+
+static svn_error_t *
+update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
+
 /* Pathname helper functions */
+
+/* Return TRUE is REV is packed in FS, FALSE otherwise. */
+static svn_boolean_t
+is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return (rev < ffd->min_unpacked_rev);
+}
 
 static const char *
 path_format(svn_fs_t *fs, apr_pool_t *pool)
@@ -171,6 +190,8 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   assert(ffd->max_files_per_dir);
+  assert(is_packed_rev(fs, rev));
+
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
                             apr_psprintf(pool, "%ld.pack",
                                          rev / ffd->max_files_per_dir),
@@ -189,10 +210,12 @@ path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                             NULL);
 }
 
-const char *
-svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+static const char *
+path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(! is_packed_rev(fs, rev));
 
   if (ffd->max_files_per_dir)
     {
@@ -203,6 +226,50 @@ svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
                             apr_psprintf(pool, "%ld", rev), NULL);
+}
+
+/* Returns the path of REV in FS, whether in a pack file or not.
+   Allocate in POOL. */
+svn_error_t *
+svn_fs_fs__path_rev_absolute(const char **path,
+                             svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool)
+{
+  if (! is_packed_rev(fs, rev))
+    {
+      svn_node_kind_t kind;
+
+      /* Initialize the return variable. */
+      *path = path_rev(fs, rev, pool);
+
+      SVN_ERR(svn_io_check_path(*path, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          /* *path is already set correctly. */
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Someone must have run 'svnadmin pack' while this fs object
+           * was open. */
+
+          SVN_ERR(update_min_unpacked_rev(fs, pool));
+
+          /* The rev really should be present now. */
+          if (! is_packed_rev(fs, rev))
+            return svn_error_createf(APR_ENOENT, NULL,
+                                     _("Revision file '%s' does not exist, "
+                                       "and r%ld is not packed"),
+                                     svn_path_local_style(*path, pool),
+                                     rev);
+          /* Fall through. */
+        }
+    }
+
+  *path = path_rev_packed(fs, rev, "pack", pool);
+
+  return SVN_NO_ERROR;
 }
 
 static const char *
@@ -1030,7 +1097,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"### " CONFIG_OPTION_ENABLE_REP_SHARING " = false"                           NL
+"# " CONFIG_OPTION_ENABLE_REP_SHARING " = false"                             NL
 
 ;
 #undef NL
@@ -1055,6 +1122,16 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 
   *min_unpacked_rev = SVN_STR_TO_REV(buf);
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                               path_min_unpacked_rev(fs, pool),
+                               pool);
 }
 
 static svn_error_t *
@@ -1093,8 +1170,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the min unpacked revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                                  path_min_unpacked_rev(fs, pool), pool));
+    SVN_ERR(update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
@@ -1566,15 +1642,6 @@ ensure_revision_exists(svn_fs_t *fs,
                            _("No such revision %ld"), rev);
 }
 
-/* Return TRUE is REV is packed in FS, FALSE otherwise. */
-static svn_boolean_t
-is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  return (rev < ffd->min_unpacked_rev);
-}
-
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
@@ -1586,12 +1653,13 @@ open_pack_or_rev_file(apr_file_t **file,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
+  const char *path;
 
-   err = svn_io_file_open(file,
-                          is_packed_rev(fs, rev)
-                              ? path_rev_packed(fs, rev, "pack", pool)
-                              : svn_fs_fs__path_rev(fs, rev, pool),
-                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+  err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
+
+  if (! err)
+    err = svn_io_file_open(file, path,
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -2376,6 +2444,61 @@ get_root_changes_offset(apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
+/* Move a file into place from OLD_FILENAME in the transactions
+   directory to its final location NEW_FILENAME in the repository.  On
+   Unix, match the permissions of the new file to the permissions of
+   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+static svn_error_t *
+move_into_place(const char *old_filename,
+                const char *new_filename,
+                const char *perms_reference,
+                apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  SVN_ERR(svn_fs_fs__dup_perms(old_filename, perms_reference, pool));
+
+  /* Move the file into place. */
+  err = svn_io_file_rename(old_filename, new_filename, pool);
+  if (err && APR_STATUS_IS_EXDEV(err->apr_err))
+    {
+      apr_file_t *file;
+
+      /* Can't rename across devices; fall back to copying. */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
+
+      /* Flush the target of the copy to disk. */
+      SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
+                               APR_OS_DEFAULT, pool));
+      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+      SVN_ERR(svn_io_file_close(file, pool));
+    }
+  if (err)
+    return err;
+
+#ifdef __linux__
+  {
+    /* Linux has the unusual feature that fsync() on a file is not
+       enough to ensure that a file's directory entries have been
+       flushed to disk; you have to fsync the directory as well.
+       On other operating systems, we'd only be asking for trouble
+       by trying to open and fsync a directory. */
+    const char *dirname;
+    apr_file_t *file;
+
+    dirname = svn_path_dirname(new_filename, pool);
+    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
+                             pool));
+    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+    SVN_ERR(svn_io_file_close(file, pool));
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_fs_t *fs,
@@ -2419,6 +2542,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 {
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
+  const char *perms_reference;
   svn_stream_t *stream;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
@@ -2435,11 +2559,10 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      because when setting revprops for the first time, the revprop
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
-  return svn_fs_fs__move_into_place(tmp_path, final_path,
-                                    is_packed_rev(fs, rev)
-                                      ? path_rev_packed(fs, rev, "pack", pool)
-                                      : svn_fs_fs__path_rev(fs, rev, pool),
-                                    pool);
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+  SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3492,32 +3615,22 @@ svn_fs_fs__rep_copy(representation_t *rep,
 }
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
-   svn_fs_path_change_t CHANGES, collapsing multiple changes into a
+   svn_fs_path_change2_t CHANGES, collapsing multiple changes into a
    single summarical (is that real word?) change per path.  Also keep
-   the COPYFROM_HASH up to date with new adds and replaces.  */
+   the COPYFROM_CACHE up to date with new adds and replaces.  */
 static svn_error_t *
 fold_change(apr_hash_t *changes,
             const change_t *change,
-            apr_hash_t *copyfrom_hash)
+            apr_hash_t *copyfrom_cache)
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
-  apr_pool_t *copyfrom_pool = apr_hash_pool_get(copyfrom_hash);
-  svn_fs_path_change_t *old_change, *new_change;
-  const char *path, *copyfrom_string, *copyfrom_path = NULL;
+  svn_fs_path_change2_t *old_change, *new_change;
+  const char *path = NULL;
 
   if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
-
-      /* Get the existing copyfrom entry for this path. */
-      copyfrom_string = apr_hash_get(copyfrom_hash, change->path,
-                                     APR_HASH_KEY_STRING);
-
-      /* If this entry existed in the copyfrom hash, we don't need to
-         copy it. */
-      if (copyfrom_string)
-        copyfrom_path = change->path;
 
       /* Since the path already exists in the hash, we don't have to
          dup the allocation for the path itself. */
@@ -3557,7 +3670,6 @@ fold_change(apr_hash_t *changes,
           /* A reset here will simply remove the path change from the
              hash. */
           old_change = NULL;
-          copyfrom_string = NULL;
           break;
 
         case svn_fs_path_change_delete:
@@ -3574,8 +3686,9 @@ fold_change(apr_hash_t *changes,
               old_change->change_kind = svn_fs_path_change_delete;
               old_change->text_mod = change->text_mod;
               old_change->prop_mod = change->prop_mod;
+              old_change->copyfrom_rev = SVN_INVALID_REVNUM;
+              old_change->copyfrom_path = NULL;
             }
-          copyfrom_string = NULL;
           break;
 
         case svn_fs_path_change_add:
@@ -3588,13 +3701,15 @@ fold_change(apr_hash_t *changes,
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           if (change->copyfrom_rev == SVN_INVALID_REVNUM)
-            copyfrom_string = apr_pstrdup(copyfrom_pool, "");
+            {
+              old_change->copyfrom_rev = SVN_INVALID_REVNUM;
+              old_change->copyfrom_path = NULL;
+            }
           else
             {
-              copyfrom_string = apr_psprintf(copyfrom_pool,
-                                             "%ld %s",
-                                             change->copyfrom_rev,
-                                             change->copyfrom_path);
+              old_change->copyfrom_rev = change->copyfrom_rev;
+              old_change->copyfrom_path = apr_pstrdup(pool,
+                                                      change->copyfrom_path);
             }
           break;
 
@@ -3620,33 +3735,50 @@ fold_change(apr_hash_t *changes,
       new_change->change_kind = change->kind;
       new_change->text_mod = change->text_mod;
       new_change->prop_mod = change->prop_mod;
+      /* In FSFS, copyfrom_known is *always* true, since we've always
+       * stored copyfroms in changed paths lists. */
+      new_change->copyfrom_known = TRUE;
       if (change->copyfrom_rev != SVN_INVALID_REVNUM)
         {
-          copyfrom_string = apr_psprintf(copyfrom_pool, "%ld %s",
-                                         change->copyfrom_rev,
-                                         change->copyfrom_path);
+          new_change->copyfrom_rev = change->copyfrom_rev;
+          new_change->copyfrom_path = apr_pstrdup(pool, change->copyfrom_path);
         }
       else
-        copyfrom_string = apr_pstrdup(copyfrom_pool, "");
+        {
+          new_change->copyfrom_rev = SVN_INVALID_REVNUM;
+          new_change->copyfrom_path = NULL;
+        }
       path = apr_pstrdup(pool, change->path);
     }
+
+  if (new_change)
+    new_change->node_kind = change->node_kind;
 
   /* Add (or update) this path. */
   apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
 
-  /* If copyfrom_path is non-NULL, the key is already present in the
-     hash, so we don't need to duplicate it in the copyfrom pool. */
-  if (! copyfrom_path)
+  /* Update the copyfrom cache, if any. */
+  if (copyfrom_cache)
     {
-      /* If copyfrom_string is NULL, the hash entry will be deleted,
-         so we don't need to duplicate the key in the copyfrom
-         pool. */
-      copyfrom_path = copyfrom_string ? apr_pstrdup(copyfrom_pool, path)
-        : path;
+      apr_pool_t *copyfrom_pool = apr_hash_pool_get(copyfrom_cache);
+      const char *copyfrom_string = NULL, *copyfrom_key = path;
+      if (new_change)
+        {
+          if (SVN_IS_VALID_REVNUM(new_change->copyfrom_rev))
+            copyfrom_string = apr_psprintf(copyfrom_pool, "%ld %s",
+                                           new_change->copyfrom_rev,
+                                           new_change->copyfrom_path);
+          else
+            copyfrom_string = "";
+        }
+      /* We need to allocate a copy of the key in the copyfrom_pool if
+       * we're not doing a deletion and if it isn't already there. */
+      if (copyfrom_string && ! apr_hash_get(copyfrom_cache, copyfrom_key,
+                                            APR_HASH_KEY_STRING))
+        copyfrom_key = apr_pstrdup(copyfrom_pool, copyfrom_key);
+      apr_hash_set(copyfrom_cache, copyfrom_key, APR_HASH_KEY_STRING,
+                   copyfrom_string);
     }
-
-  apr_hash_set(copyfrom_hash, copyfrom_path, APR_HASH_KEY_STRING,
-               copyfrom_string);
 
   return SVN_NO_ERROR;
 }
@@ -3666,7 +3798,7 @@ read_change(change_t **change_p,
   char buf[MAX_CHANGE_LINE_LEN];
   apr_size_t len = sizeof(buf);
   change_t *change;
-  char *str, *last_str;
+  char *str, *last_str, *kind_str;
   svn_error_t *err;
 
   /* Default return value. */
@@ -3705,6 +3837,24 @@ read_change(change_t **change_p,
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
+
+  /* Don't bother to check the format number before looking for
+   * node-kinds: just read them if you find them. */
+  change->node_kind = svn_node_unknown;
+  kind_str = strchr(str, '-');
+  if (kind_str)
+    {
+      /* Cap off the end of "str" (the action). */
+      *kind_str = '\0';
+      kind_str++;
+      if (strcmp(kind_str, KIND_FILE) == 0)
+        change->node_kind = svn_node_file;
+      else if (strcmp(kind_str, KIND_DIR) == 0)
+        change->node_kind = svn_node_dir;
+      else
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Invalid changes line in rev-file"));
+    }
 
   if (strcmp(str, ACTION_MODIFY) == 0)
     {
@@ -3822,11 +3972,6 @@ fetch_all_changes(apr_hash_t *changed_paths,
 {
   change_t *change;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_t *my_hash;
-
-  /* If we are passed a NULL copyfrom hash, manufacture one for the
-     duration of this call. */
-  my_hash = copyfrom_hash ? copyfrom_hash : apr_hash_make(pool);
 
   /* Read in the changes one by one, folding them into our local hash
      as necessary. */
@@ -3835,7 +3980,7 @@ fetch_all_changes(apr_hash_t *changed_paths,
 
   while (change)
     {
-      SVN_ERR(fold_change(changed_paths, change, my_hash));
+      SVN_ERR(fold_change(changed_paths, change, copyfrom_hash));
 
       /* Now, if our change was a deletion or replacement, we have to
          blow away any changes thus far on paths that are (or, were)
@@ -3886,7 +4031,6 @@ svn_error_t *
 svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                              svn_fs_t *fs,
                              const char *txn_id,
-                             apr_hash_t *copyfrom_cache,
                              apr_pool_t *pool)
 {
   apr_file_t *file;
@@ -3895,8 +4039,7 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR(fetch_all_changes(changed_paths, copyfrom_cache, file, FALSE,
-                            pool));
+  SVN_ERR(fetch_all_changes(changed_paths, NULL, file, FALSE, pool));
 
   SVN_ERR(svn_io_file_close(file, pool));
 
@@ -4016,8 +4159,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
       break;
     }
-  if (err)
-    return err;
+  SVN_ERR(err);
 
   svn_pool_destroy(iterpool);
 
@@ -4031,10 +4173,10 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_write_unique(&tmp_filename,
                               svn_path_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
-                                     txn_current_filename, pool));
+  SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
+                          txn_current_filename, pool));
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* Create a unique directory for a transaction in FS based on revision
@@ -4519,17 +4661,19 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  All temporary
+   string COPYFROM, into the file specified by FILE.  Only include the
+   node kind field if INCLUDE_NODE_KIND is true.  All temporary
    allocations are in POOL. */
 static svn_error_t *
 write_change_entry(apr_file_t *file,
                    const char *path,
-                   svn_fs_path_change_t *change,
-                   const char *copyfrom,
+                   svn_fs_path_change2_t *change,
+                   svn_boolean_t include_node_kind,
                    apr_pool_t *pool)
 {
   const char *idstr, *buf;
   const char *change_string = NULL;
+  const char *kind_string = "";
 
   switch (change->change_kind)
     {
@@ -4558,18 +4702,27 @@ write_change_entry(apr_file_t *file,
   else
     idstr = ACTION_RESET;
 
-  buf = apr_psprintf(pool, "%s %s %s %s %s\n",
-                     idstr, change_string,
+  if (include_node_kind)
+    {
+      assert(change->node_kind == svn_node_dir
+                     || change->node_kind == svn_node_file);
+      kind_string = apr_psprintf(pool, "-%s",
+                                 change->node_kind == svn_node_dir
+                                 ? KIND_DIR : KIND_FILE);
+    }
+  buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
+                     idstr, change_string, kind_string,
                      change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                      change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                      path);
 
   SVN_ERR(svn_io_file_write_full(file, buf, strlen(buf), NULL, pool));
 
-  if (copyfrom)
+  if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
     {
-      SVN_ERR(svn_io_file_write_full(file, copyfrom, strlen(copyfrom),
-                                     NULL, pool));
+      buf = apr_psprintf(pool, "%ld %s", change->copyfrom_rev,
+                         change->copyfrom_path);
+      SVN_ERR(svn_io_file_write_full(file, buf, strlen(buf), NULL, pool));
     }
 
   return svn_io_file_write_full(file, "\n", 1, NULL, pool);
@@ -4583,29 +4736,26 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                       svn_fs_path_change_kind_t change_kind,
                       svn_boolean_t text_mod,
                       svn_boolean_t prop_mod,
+                      svn_node_kind_t node_kind,
                       svn_revnum_t copyfrom_rev,
                       const char *copyfrom_path,
                       apr_pool_t *pool)
 {
   apr_file_t *file;
-  const char *copyfrom;
-  svn_fs_path_change_t *change = apr_pcalloc(pool, sizeof(*change));
+  svn_fs_path_change2_t *change;
 
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
                            APR_APPEND | APR_WRITE | APR_CREATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  if (copyfrom_rev != SVN_INVALID_REVNUM)
-    copyfrom = apr_psprintf(pool, "%ld %s", copyfrom_rev, copyfrom_path);
-  else
-    copyfrom = "";
-
-  change->node_rev_id = id;
-  change->change_kind = change_kind;
+  change = svn_fs_path_change2_create(id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
+  change->node_kind = node_kind;
+  change->copyfrom_rev = copyfrom_rev;
+  change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
 
-  SVN_ERR(write_change_entry(file, path, change, copyfrom, pool));
+  SVN_ERR(write_change_entry(file, path, change, TRUE, pool));
 
   return svn_io_file_close(file, pool);
 }
@@ -5231,16 +5381,17 @@ write_final_changed_path_info(apr_off_t *offset_p,
                               const char *txn_id,
                               apr_pool_t *pool)
 {
-  const char *copyfrom;
-  apr_hash_t *changed_paths, *copyfrom_cache = apr_hash_make(pool);
+  apr_hash_t *changed_paths;
   apr_off_t offset;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t include_node_kinds =
+      ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
 
   SVN_ERR(get_file_offset(&offset, file, pool));
 
-  SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, fs, txn_id,
-                                       copyfrom_cache, pool));
+  SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
 
   /* Iterate through the changed paths one at a time, and convert the
      temporary node-id into a permanent one for each change entry. */
@@ -5248,7 +5399,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
     {
       node_revision_t *noderev;
       const svn_fs_id_t *id;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       const void *key;
       void *val;
 
@@ -5272,11 +5423,9 @@ write_final_changed_path_info(apr_off_t *offset_p,
           change->node_rev_id = noderev->id;
         }
 
-      /* Find the cached copyfrom information. */
-      copyfrom = apr_hash_get(copyfrom_cache, key, APR_HASH_KEY_STRING);
-
       /* Write out the new entry into the final rev-file. */
-      SVN_ERR(write_change_entry(file, key, change, copyfrom, iterpool));
+      SVN_ERR(write_change_entry(file, key, change, include_node_kinds,
+                                 iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -5314,57 +5463,6 @@ svn_fs_fs__dup_perms(const char *filename,
 }
 
 
-svn_error_t *
-svn_fs_fs__move_into_place(const char *old_filename,
-                           const char *new_filename,
-                           const char *perms_reference,
-                           apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  SVN_ERR(svn_fs_fs__dup_perms(old_filename, perms_reference, pool));
-
-  /* Move the file into place. */
-  err = svn_io_file_rename(old_filename, new_filename, pool);
-  if (err && APR_STATUS_IS_EXDEV(err->apr_err))
-    {
-      apr_file_t *file;
-
-      /* Can't rename across devices; fall back to copying. */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
-
-      /* Flush the target of the copy to disk. */
-      SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
-                               APR_OS_DEFAULT, pool));
-      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-    }
-  if (err)
-    return err;
-
-#ifdef __linux__
-  {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    const char *dirname;
-    apr_file_t *file;
-
-    dirname = svn_path_dirname(new_filename, pool);
-    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                             pool));
-    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-    SVN_ERR(svn_io_file_close(file, pool));
-  }
-#endif
-
-  return SVN_NO_ERROR;
-}
-
 /* Atomically update the current file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be NULL if the FS format does not use them.)
@@ -5389,7 +5487,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
                               buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
-  return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
+  return move_into_place(tmp_name, name, name, pool);
 }
 
 /* Update the current file to hold the correct next node and copy_ids
@@ -5437,7 +5535,7 @@ verify_locks(svn_fs_t *fs,
   int i;
 
   /* Fetch the changes for this transaction. */
-  SVN_ERR(svn_fs_fs__txn_changes_fetch(&changes, fs, txn_name, NULL, pool));
+  SVN_ERR(svn_fs_fs__txn_changes_fetch(&changes, fs, txn_name, pool));
 
   /* Make an array of the changed paths, and sort them depth-first-ily.  */
   changed_paths = apr_array_make(pool, apr_hash_count(changes) + 1,
@@ -5457,7 +5555,7 @@ verify_locks(svn_fs_t *fs,
   for (i = 0; i < changed_paths->nelts; i++)
     {
       const char *path;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t recurse = TRUE;
 
       svn_pool_clear(subpool);
@@ -5633,11 +5731,12 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Move the finished rev file into place. */
-  old_rev_filename = svn_fs_fs__path_rev(cb->fs, old_rev, pool);
-  rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&old_rev_filename,
+                                       cb->fs, old_rev, pool));
+  rev_filename = path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
-  SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename,
-                                     old_rev_filename, pool));
+  SVN_ERR(move_into_place(proto_filename, rev_filename, old_rev_filename,
+                          pool));
 
   /* Now that we've moved the prototype revision file out of the way,
      we can unlock it (since further attempts to write to the file
@@ -5655,8 +5754,8 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
   final_revprop = path_revprops(cb->fs, new_rev, pool);
-  SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop,
-                                     old_rev_filename, pool));
+  SVN_ERR(move_into_place(revprop_filename, final_revprop, old_rev_filename,
+                          pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
@@ -5749,7 +5848,7 @@ write_revision_zero(svn_fs_t *fs)
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_rev(fs, 0, fs->pool),
+  SVN_ERR(svn_io_file_create(path_rev(fs, 0, fs->pool),
                              "PLAIN\nEND\nENDREP\n"
                              "id: 0.0.r0/17\n"
                              "type: dir\n"
@@ -5939,7 +6038,7 @@ struct recover_read_from_file_baton
 {
   apr_file_t *file;
   apr_pool_t *pool;
-  apr_size_t remaining;
+  apr_off_t remaining;
 };
 
 /* A stream read handler used by recover_find_max_ids() below.
@@ -5949,7 +6048,7 @@ static svn_error_t *
 read_handler_recover(void *baton, char *buffer, apr_size_t *len)
 {
   struct recover_read_from_file_baton *b = baton;
-  apr_size_t bytes_to_read = *len;
+  svn_filesize_t bytes_to_read = *len;
 
   if (b->remaining == 0)
     {
@@ -5962,7 +6061,8 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
     bytes_to_read = b->remaining;
   b->remaining -= bytes_to_read;
 
-  return svn_io_file_read_full(b->file, buffer, bytes_to_read, len, b->pool);
+  return svn_io_file_read_full(b->file, buffer, (apr_size_t) bytes_to_read,
+                               len, b->pool);
 }
 
 /* Part of the recovery procedure.  Read the directory noderev at offset
@@ -6290,8 +6390,8 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, uuid_path,
-                                     svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(move_into_place(tmp_path, uuid_path,
+                          svn_fs_fs__path_current(fs, pool), pool));
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
@@ -6726,6 +6826,8 @@ pack_shard(const char *revs_dir,
            const char *fs_path,
            apr_int64_t shard,
            int max_files_per_dir,
+           svn_fs_pack_notify_t notify_func,
+           void *notify_baton,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *pool)
@@ -6748,6 +6850,11 @@ pack_shard(const char *revs_dir,
   shard_path = svn_path_join(revs_dir,
                              apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
                              pool);
+
+  /* Notify caller we're starting to pack this shard. */
+  if (notify_func)
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start,
+                        pool));
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
   SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
@@ -6795,28 +6902,44 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_fs_fs__dup_perms(pack_file_dir, shard_path, pool));
 
-  /* Update the max-pack-rev file to reflect our newly packed shard. */
+  /* Update the min-unpacked-rev file to reflect our newly packed shard.
+   * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
+   */
   final_path = svn_path_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, iterpool, iterpool));
   SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
                             (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
   SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, final_path,
-                                     iterpool));
+  SVN_ERR(move_into_place(tmp_path, final_path, final_path, iterpool));
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
-  return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
+  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton,
+                             pool));
+
+  /* Notify caller we're starting to pack this shard. */
+  if (notify_func)
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_end,
+                        pool));
+
+  return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_fs__pack(const char *fs_path,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
+struct pack_baton
 {
+  svn_fs_t *fs;
+  svn_fs_pack_notify_t notify_func;
+  void *notify_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
+static svn_error_t *
+pack_body(void *baton,
+          apr_pool_t *pool)
+{
+  struct pack_baton *pb = baton;
   int format, max_files_per_dir;
   int completed_shards;
   apr_int64_t i;
@@ -6826,7 +6949,7 @@ svn_fs_fs__pack(const char *fs_path,
   svn_revnum_t min_unpacked_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_path_join(fs_path, PATH_FORMAT, pool),
+                      svn_path_join(pb->fs->path, PATH_FORMAT, pool),
                       pool));
 
   /* If the repository isn't a new enough format, we don't support packing.
@@ -6840,29 +6963,30 @@ svn_fs_fs__pack(const char *fs_path,
     return SVN_NO_ERROR;
 
   SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
-                                svn_path_join(fs_path, PATH_MIN_UNPACKED_REV,
-                                              pool),
+                                svn_path_join(pb->fs->path,
+                                              PATH_MIN_UNPACKED_REV, pool),
                                 pool));
 
-  SVN_ERR(get_youngest(&youngest, fs_path, pool));
+  SVN_ERR(get_youngest(&youngest, pb->fs->path, pool));
   completed_shards = (youngest + 1) / max_files_per_dir;
 
   /* See if we've already completed all possible shards thus far. */
   if (min_unpacked_rev == (completed_shards * max_files_per_dir))
     return SVN_NO_ERROR;
 
-  data_path = svn_path_join(fs_path, PATH_REVS_DIR, pool);
+  data_path = svn_path_join(pb->fs->path, PATH_REVS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
   for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)
     {
       svn_pool_clear(iterpool);
 
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+      if (pb->cancel_func)
+        SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
-      SVN_ERR(pack_shard(data_path, fs_path, i, max_files_per_dir, cancel_func,
-                         cancel_baton, iterpool));
+      SVN_ERR(pack_shard(data_path, pb->fs->path, i, max_files_per_dir,
+                         pb->notify_func, pb->notify_baton,
+                         pb->cancel_func, pb->cancel_baton, iterpool));
       /* We can't pack revprops, because they aren't immutable :(
          If we ever do get clever and figure out how to pack revprops,
          this is the place to do it. */
@@ -6870,4 +6994,17 @@ svn_fs_fs__pack(const char *fs_path,
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__pack(svn_fs_t *fs,
+                svn_fs_pack_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  struct pack_baton pb = { fs, notify_func, notify_baton,
+                           cancel_func, cancel_baton };
+  return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }

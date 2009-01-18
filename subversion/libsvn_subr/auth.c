@@ -2,7 +2,7 @@
  * auth.c: authentication support functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -375,10 +375,11 @@ svn_auth_ssl_server_cert_info_dup
 }
 
 svn_error_t *
-svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
-                                        const char *provider_name,
-                                        const char *provider_type,
-                                        apr_pool_t *pool)
+svn_auth_get_platform_specific_provider
+  (svn_auth_provider_object_t **provider,
+   const char *provider_name,
+   const char *provider_type,
+   apr_pool_t *pool)
 {
   *provider = NULL;
 
@@ -424,7 +425,8 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
               if (strcmp(provider_type, "simple") == 0)
                 {
                   svn_auth_simple_provider_func_t provider_function;
-                  provider_function = (svn_auth_simple_provider_func_t)
+                  provider_function =
+                    (svn_auth_simple_provider_func_t)
                     provider_function_symbol;
                   provider_function(provider, pool);
                 }
@@ -478,9 +480,10 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
 }
 
 svn_error_t *
-svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
-                                                svn_config_t *config,
-                                                apr_pool_t *pool)
+svn_auth_get_platform_specific_client_providers
+  (apr_array_header_t **providers,
+   svn_config_t *config,
+   apr_pool_t *pool)
 {
   svn_auth_provider_object_t *provider;
   const char *password_stores_config_option;
@@ -587,7 +590,8 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
           if (provider)
             APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
 
-          SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "windows",
+          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                          "windows",
                                                           "ssl_client_cert_pw",
                                                           pool));
 

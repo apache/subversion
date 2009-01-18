@@ -12,7 +12,7 @@ command-line client.  It has no access to code internals; it never
 looks inside the .svn/ directory; it only performs actions that a
 human user would do.
 
-These tests require Python 2.2 or later.
+These tests require Python 2.4 or later.
 
   [ For more general information on Subversion's testing system,
     please read the README in subversion/tests/. ]

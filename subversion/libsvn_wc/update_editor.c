@@ -2,7 +2,7 @@
  * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1745,8 +1745,10 @@ do_entry_deletion(struct edit_baton *eb,
        * delete, while leaving the working version as it is, scheduling it
        * for re-addition unless it was already non-existent. */
       tmp_entry.revision = *(eb->target_revision);
+      tmp_entry.url = their_url;
       tmp_entry.deleted = TRUE;
-      flags = SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_DELETED;
+      flags = SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_URL |
+        SVN_WC__ENTRY_MODIFY_DELETED;
 
       if (tree_conflict->reason == svn_wc_conflict_reason_edited)
         {
@@ -2923,8 +2925,7 @@ add_file_with_history(const char *path,
      ### this is temporary. in many cases, we already *know* the checksum
      ### since it is a copy. */
   copied_stream = svn_stream_checksummed2(copied_stream,
-                                          NULL, 0,
-                                          &tfb->copied_base_checksum,
+                                          NULL, &tfb->copied_base_checksum,
                                           svn_checksum_md5,
                                           FALSE, pool);
 
@@ -4062,6 +4063,7 @@ close_file(void *file_baton,
        (fb->tree_conflicted))
       && eb->notify_func)
     {
+      const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
@@ -4082,7 +4084,12 @@ close_file(void *file_baton,
       notify->content_state = content_state;
       notify->prop_state = prop_state;
       notify->lock_state = lock_state;
-      /* ### use merge_file() mimetype here */
+
+      /* Fetch the mimetype */
+      SVN_ERR(svn_wc_prop_get(&mime_type, SVN_PROP_MIME_TYPE, fb->path,
+                              eb->adm_access, pool));
+      notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
+
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
   return SVN_NO_ERROR;
@@ -4950,9 +4957,8 @@ svn_wc_add_repos_file3(const char *dst_path,
   SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, adm_path,
                                   svn_io_file_del_none, pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
-                                              &base_checksum, svn_checksum_md5,
-                                              NULL, 0,
-                                              TRUE, pool);
+                                              &base_checksum, NULL,
+                                              svn_checksum_md5, TRUE, pool);
   tmp_base_contents = svn_stream_from_aprfile2(base_file, FALSE, pool);
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,

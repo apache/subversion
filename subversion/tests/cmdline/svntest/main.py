@@ -27,10 +27,13 @@ import threading
 try:
   # Python >=3.0
   import queue
+  from urllib.parse import quote as urllib_parse_quote
+  from urllib.parse import unquote as urllib_parse_unquote
 except ImportError:
   # Python <3.0
   import Queue as queue
-import urllib
+  from urllib import quote as urllib_parse_quote
+  from urllib import unquote as urllib_parse_unquote
 
 import getopt
 try:
@@ -119,7 +122,7 @@ if not platform_with_subprocess:
     platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
-if sys.platform == 'win32':
+if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
@@ -140,14 +143,14 @@ def pathname2url(path):
   """Convert the pathname PATH from the local syntax for a path to the form
   used in the path component of a URL. This does not produce a complete URL.
   The return value will already be quoted using the quote() function."""
-  return urllib.quote(path.replace('\\', '/'))
+  return urllib_parse_quote(path.replace('\\', '/'))
 
 # This function mimics the Python 2.3 urllib function of the same name.
 def url2pathname(path):
   """Convert the path component PATH from an encoded URL to the local syntax
   for a path. This does not accept a complete URL. This function uses
   unquote() to decode PATH."""
-  return os.path.normpath(urllib.unquote(path))
+  return os.path.normpath(urllib_parse_unquote(path))
 
 ######################################################################
 # Global variables set during option parsing.  These should not be used
@@ -188,6 +191,13 @@ use_jsvn = False
 # Global variable indicating which DAV library, if any, is in use
 # ('neon', 'serf')
 http_library = None
+
+# Global variable: Number of shards to use in FSFS
+# 'None' means "use FSFS's default"
+fsfs_sharding = None
+
+# Global variable: automatically pack FSFS repositories after every commit
+fsfs_packing = None
 
 # Configuration file (copied into FSFS fsfs.conf).
 config_file = None
@@ -346,6 +356,11 @@ def get_fsfs_conf_file_path(repo_dir):
 
   return os.path.join(repo_dir, "db", "fsfs.conf")
 
+def get_fsfs_format_file_path(repo_dir):
+  "Return the path of the format file in REPO_DIR."
+
+  return os.path.join(repo_dir, "db", "format")
+
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return exit code as int; stdout, stderr
@@ -386,22 +401,51 @@ def open_pipe(command, mode):
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
-  if platform_with_subprocess:
-    # Python >=2.4
-    command = [str(x) for x in command]
-    p = subprocess.Popen(command, stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         close_fds=not windows)
-    return p.stdin, p.stdout, p.stderr, (p, command)
+  # Quote only the arguments, neither Popen3() or os.popen3
+  # work if the command itself is quoted.
+  args = command[1:]
+  args = ' '.join([_quote_arg(x) for x in args])
+  command = command[0] + ' ' + args
+  if platform_with_popen3_class:
+    kid = Popen3(command, True)
+    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
   else:
-    # Python <2.4
-    command = ' '.join([_quote_arg(x) for x in command])
-    if platform_with_popen3_class:
-      kid = Popen3(command, True)
-      return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
-    else:
-      inf, outf, errf = os.popen3(command, mode)
-      return inf, outf, errf, None
+    inf, outf, errf = os.popen3(command, mode)
+    return inf, outf, errf, None
+
+def open_pipe2(command, stdin=None, stdout=None, stderr=None):
+  """Opens a subprocess.Popen pipe to COMMAND using STDIN,
+  STDOUT, and STDERR.  For use with Python > 2.4 only.
+
+  Returns (infile, outfile, errfile, waiter); waiter
+  should be passed to wait_on_pipe2."""
+  command = [str(x) for x in command]
+
+  # On Windows subprocess.Popen() won't accept a Python script as
+  # a valid program to execute, rather it wants the Python executable.
+  if (sys.platform == 'win32') and (command[0].endswith('.py')):
+    command.insert(0, sys.executable)
+
+  # Quote only the arguments on Windows.  Later versions of subprocess,
+  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
+  if (sys.platform == 'win32'):
+    args = command[1:]
+    args = ' '.join([_quote_arg(x) for x in args])
+    command = command[0] + ' ' + args
+ 
+  if not stdin:
+    stdin = subprocess.PIPE
+  if not stdout:
+    stdout = subprocess.PIPE
+  if not stderr:
+    stderr = subprocess.PIPE
+    
+  p = subprocess.Popen(command,
+                       stdin=stdin,
+                       stdout=stdout,
+                       stderr=stderr,
+                       close_fds=not windows)
+  return p.stdin, p.stdout, p.stderr, (p, command)
 
 def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   """Waits for KID (opened with open_pipe) to finish, dying
@@ -410,55 +454,65 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   if waiter is None:
     return
 
-  kid, command = waiter
+  kid, command = waiter    
+  wait_code = kid.wait()
 
-  if platform_with_subprocess:
-    # Python >=2.4
-    exit_code = kid.wait()
-
-    if exit_code < 0:
-      exit_signal = os.WTERMSIG(-exit_code)
-      if stdout_lines is not None:
-        sys.stdout.write("".join(stdout_lines))
-      if stderr_lines is not None:
-        sys.stderr.write("".join(stderr_lines))
-      if verbose_mode:
-        # show the whole path to make it easier to start a debugger
-        sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
-      raise SVNProcessTerminatedBySignal
-    else:
-      if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
-      return exit_code
+  if os.WIFSIGNALED(wait_code):
+    exit_signal = os.WTERMSIG(wait_code)
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
+    if verbose_mode:
+      # show the whole path to make it easier to start a debugger
+      sys.stderr.write("CMD: %s terminated by signal %d\n"
+                       % (' '.join(command), exit_signal))
+    raise SVNProcessTerminatedBySignal
   else:
-    # Python <2.4
-    wait_code = kid.wait()
+    exit_code = os.WEXITSTATUS(wait_code)
+    if exit_code and verbose_mode:
+      sys.stderr.write("CMD: %s exited with %d\n"
+                       % (' '.join(command), exit_code))
+    return exit_code
 
-    if os.WIFSIGNALED(wait_code):
-      exit_signal = os.WTERMSIG(wait_code)
-      if stdout_lines is not None:
-        sys.stdout.write("".join(stdout_lines))
-      if stderr_lines is not None:
-        sys.stderr.write("".join(stderr_lines))
-      if verbose_mode:
-        # show the whole path to make it easier to start a debugger
-        sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
-      raise SVNProcessTerminatedBySignal
-    else:
-      exit_code = os.WEXITSTATUS(wait_code)
-      if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
-      return exit_code
+def wait_on_pipe2(waiter, binary_mode, stdin=None):
+  """Waits for KID (opened with open_pipe2) to finish, dying
+  if it does.  If kid fails create an error message containing
+  any stdout and stderr from the kid.  Returns kid's exit code,
+  stdout and stderr (the latter two as lists).
+  For use with Python > 2.4 only."""
+  if waiter is None:
+    return
+  
+  kid, command = waiter
+  stdout, stderr = kid.communicate(stdin)
+  exit_code = kid.returncode
+  
+  # Normalize Windows line endings if in text mode.
+  if windows and not binary_mode:
+    stdout = stdout.replace('\r\n', '\n')
+    stderr = stderr.replace('\r\n', '\n')
 
-# Convert Windows line ending ('\r\n') to universal line ending ('\n')
-if platform_with_subprocess and windows:
-  def _convert_windows_line_ending(line):
-    if line.endswith('\r\n'):
-      return line[:-2] + '\n'
-    else:
-      return line
+  # Convert output strings to lists.  
+  stdout_lines = stdout.splitlines(True) 
+  stderr_lines = stderr.splitlines(True)
+
+  if exit_code < 0:
+    exit_signal = os.WTERMSIG(-exit_code)
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
+    if verbose_mode:
+      # show the whole path to make it easier to start a debugger
+      sys.stderr.write("CMD: %s terminated by signal %d\n"
+                       % (' '.join(command), exit_signal))
+    raise SVNProcessTerminatedBySignal
+  else:
+    if exit_code and verbose_mode:
+      sys.stderr.write("CMD: %s exited with %d\n"
+                       % (' '.join(command), exit_code))
+    return stdout_lines, stderr_lines, exit_code
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
@@ -473,25 +527,26 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   else:
     mode = 't'
 
-  infile, outfile, errfile, kid = open_pipe([command] + list(varargs), mode)
+  if platform_with_subprocess:
+    infile, outfile, errfile, kid = open_pipe2([command] + list(varargs))
+  else:
+    infile, outfile, errfile, kid = open_pipe([command] + list(varargs), mode)
 
   if stdin_lines:
     for x in stdin_lines:
       infile.write(x)
 
-  infile.close()
-
-  stdout_lines = outfile.readlines()
-  stderr_lines = errfile.readlines()
-
-  if platform_with_subprocess and windows and not binary_mode:
-    stdout_lines = [_convert_windows_line_ending(x) for x in stdout_lines]
-    stderr_lines = [_convert_windows_line_ending(x) for x in stderr_lines]
+  if platform_with_subprocess:
+    stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
+    infile.close()
+  else:
+    infile.close()
+    stdout_lines = outfile.readlines()
+    stderr_lines = errfile.readlines()
+    exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   outfile.close()
   errfile.close()
-
-  exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -721,8 +776,46 @@ def create_repos(path):
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
-  if config_file is not None and (fs_type is None or fs_type == 'fsfs'):
-    shutil.copy(config_file, get_fsfs_conf_file_path(path))
+  if fs_type is None or fs_type == 'fsfs':
+    # fsfs.conf file
+    if config_file is not None:
+      shutil.copy(config_file, get_fsfs_conf_file_path(path))
+
+    # format file
+    if fsfs_sharding is not None:
+      def transform_line(line):
+        if line.startswith('layout '):
+          if fsfs_sharding > 0:
+            line = 'layout sharded %d' % fsfs_sharding
+          else:
+            line = 'layout linear'
+        return line
+
+      # read it
+      format_file_path = get_fsfs_format_file_path(path)
+      contents = file_read(format_file_path, 'rb')
+
+      # tweak it
+      new_contents = "".join([transform_line(line) + "\n"
+                              for line in contents.split("\n")])
+      if new_contents[-1] == "\n":
+        # we don't currently allow empty lines (\n\n) in the format file.
+        new_contents = new_contents[:-1]
+
+      # replace it
+      os.chmod(format_file_path, 0666)
+      file_write(format_file_path, new_contents, 'wb')
+
+    # post-commit
+    # Note that some tests (currently only commit_tests) create their own
+    # post-commit hooks, which would override this one. :-(
+    if fsfs_packing:
+      create_python_hook_script(get_post_commit_hook_path(path), 
+          "import subprocess\n"
+          "import sys\n"
+          "command = %s\n"
+          "sys.exit(subprocess.Popen(command).wait())\n"
+          % repr([svnadmin_binary, 'pack', path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
@@ -740,40 +833,65 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
-    sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary), \
-                     ' '.join(dump_args), os.path.basename(svnadmin_binary), ' '.join(load_args)))
+    sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary),
+                                            ' '.join(dump_args),
+                                            os.path.basename(svnadmin_binary),
+                                            ' '.join(load_args)))
     sys.stdout.flush()
   start = time.time()
 
-  dump_in, dump_out, dump_err, dump_kid = \
-           open_pipe([svnadmin_binary] + dump_args, 'b')
-  dump_in.close()
-  load_in, load_out, load_err, load_kid = \
-           open_pipe([svnadmin_binary] + load_args, 'b')
-  stop = time.time()
-  if verbose_mode:
-    print('<TIME = %.6f>' % (stop - start))
+  if platform_with_subprocess:
+    dump_in, dump_out, dump_err, dump_kid = open_pipe2(
+      [svnadmin_binary] + dump_args)
+    load_in, load_out, load_err, load_kid = open_pipe2(
+      [svnadmin_binary] + load_args,
+      stdin=dump_out) # Attached to dump_kid
 
-  while 1:
-    data = dump_out.read(1024*1024)  # Arbitrary buffer size
-    if data == "":
-      break
-    load_in.write(data)
-  load_in.close() # Tell load we are done
+    stop = time.time()
+    if verbose_mode:
+      print('<TIME = %.6f>' % (stop - start))
 
-  dump_lines = dump_err.readlines()
-  load_lines = load_out.readlines()
-  dump_out.close()
-  dump_err.close()
-  load_out.close()
-  load_err.close()
-  # Wait on the pipes; ignore return code.
-  wait_on_pipe(dump_kid, None, dump_lines)
-  wait_on_pipe(load_kid, load_lines, None)
+    load_stdout, load_stderr, load_exit_code = wait_on_pipe2(load_kid, 'b')
+    dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe2(dump_kid, 'b')
+    
+    dump_in.close()
+    dump_out.close()
+    dump_err.close()
+    #load_in is dump_out so it's already closed.
+    load_out.close()
+    load_err.close()
+  else:
+    # Python < 2.4
+    dump_in, dump_out, dump_err, dump_kid = \
+             open_pipe([svnadmin_binary] + dump_args, 'b')
+    dump_in.close()
+    load_in, load_out, load_err, load_kid = \
+             open_pipe([svnadmin_binary] + load_args, 'b')
+    stop = time.time()
+    if verbose_mode:
+      print('<TIME = %.6f>' % (stop - start))
+
+    while 1:
+      data = dump_out.read(1024*1024)  # Arbitrary buffer size
+      if data == "":
+        break
+      load_in.write(data)
+    load_in.close() # Tell load we are done
+
+    dump_stderr = dump_err.readlines()
+    load_stdout = load_out.readlines()
+    dump_out.close()
+    dump_err.close()
+    load_out.close()
+    load_err.close()
+    
+    # Wait on the pipes; ignore return code.
+    wait_on_pipe(dump_kid, None, dump_stderr)
+    wait_on_pipe(load_kid, load_stdout, None)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
-  for dump_line in dump_lines:
+  for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
       sys.stdout.write('ERROR:  dump failed: %s ' % dump_line)
@@ -786,7 +904,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
   expect_revision = 1
-  for load_line in load_lines:
+  for load_line in load_stdout:
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
@@ -814,7 +932,7 @@ def create_python_hook_script (hook_path, hook_script_code):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
-  if sys.platform == 'win32':
+  if windows:
     # Use an absolute path since the working directory is not guaranteed
     hook_path = os.path.abspath(hook_path)
     # Fill the python file.
@@ -1350,6 +1468,8 @@ def usage():
         "                 useful during test development!")
   print(" --server-minor-version  Set the minor version for the server.\n"
         "                 Supports version 4 or 5.")
+  print(" --fsfs-sharding Default shard size (for fsfs)\n"
+        " --fsfs-packing  Run 'svnadmin pack' automatically")
   print(" --config-file   Configuration file for tests.")
   print(" --help          This information")
 
@@ -1381,6 +1501,8 @@ def run_tests(test_list, serial_only = False):
   global svnversion_binary
   global command_line_parsed
   global http_library
+  global fsfs_sharding
+  global fsfs_packing
   global config_file
   global server_minor_version
   global use_jsvn
@@ -1399,6 +1521,7 @@ def run_tests(test_list, serial_only = False):
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=',
+                            'fsfs-packing', 'fsfs-sharding=',
                             'use-jsvn', 'development', 'config-file='])
   except getopt.GetoptError as e:
     print("ERROR: %s\n" % e)
@@ -1483,6 +1606,11 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--http-library':
       http_library = val
 
+    elif opt == '--fsfs-sharding':
+      fsfs_sharding = int(val)
+    elif opt == '--fsfs-packing':
+      fsfs_packing = 1
+
     elif opt == '--server-minor-version':
       server_minor_version = int(val)
       if server_minor_version < 4 or server_minor_version > 6:
@@ -1497,6 +1625,9 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == '--config-file':
       config_file = val
+
+  if fsfs_packing is not None and fsfs_sharding is None:
+    raise Exception('--fsfs-packing requires --fsfs-sharding')
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]

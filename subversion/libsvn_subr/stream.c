@@ -842,9 +842,8 @@ close_handler_checksum(void *baton)
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
                         svn_checksum_t **read_checksum,
-                        svn_checksum_kind_t read_checksum_kind,
                         svn_checksum_t **write_checksum,
-                        svn_checksum_kind_t write_checksum_kind,
+                        svn_checksum_kind_t checksum_kind,
                         svn_boolean_t read_all,
                         apr_pool_t *pool)
 {
@@ -856,12 +855,12 @@ svn_stream_checksummed2(svn_stream_t *stream,
 
   baton = apr_palloc(pool, sizeof(*baton));
   if (read_checksum)
-    baton->read_ctx = svn_checksum_ctx_create(read_checksum_kind, pool);
+    baton->read_ctx = svn_checksum_ctx_create(checksum_kind, pool);
   else
     baton->read_ctx = NULL;
 
   if (write_checksum)
-    baton->write_ctx = svn_checksum_ctx_create(write_checksum_kind, pool);
+    baton->write_ctx = svn_checksum_ctx_create(checksum_kind, pool);
   else
     baton->write_ctx = NULL;
 
@@ -945,21 +944,18 @@ svn_stream_checksummed(svn_stream_t *stream,
   baton->write_digest = write_digest;
   baton->pool = pool;
 
-  if (read_digest)
-    baton->read_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  else
-    baton->read_checksum = NULL;
+  /* Set BATON->proxy to a stream that will fill in BATON->read_checksum
+   * and BATON->write_checksum (if we want them) when it is closed. */
+  baton->proxy
+    = svn_stream_checksummed2(stream,
+                              read_digest ? &baton->read_checksum : NULL,
+                              write_digest ? &baton->write_checksum : NULL,
+                              svn_checksum_md5,
+                              read_all, pool);
 
-  if (write_digest)
-    baton->write_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  else
-    baton->write_checksum = NULL;
-
-  baton->proxy = svn_stream_checksummed2(stream, &baton->read_checksum,
-                                         svn_checksum_md5,
-                                         &baton->write_checksum,
-                                         svn_checksum_md5, read_all, pool);
-
+  /* Create a stream that will forward its read/write/close operations to
+   * BATON->proxy and will fill in *READ_DIGEST and *WRITE_DIGEST (if we
+   * want them) after it closes BATON->proxy. */
   s = svn_stream_create(baton, pool);
   svn_stream_set_read(s, read_handler_md5);
   svn_stream_set_write(s, write_handler_md5);
@@ -1019,7 +1015,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
 
 struct string_stream_baton
 {
-  svn_string_t *str;
+  const svn_string_t *str;
   apr_size_t amt_read;
 };
 
@@ -1036,7 +1032,7 @@ read_handler_string(void *baton, char *buffer, apr_size_t *len)
 }
 
 svn_stream_t *
-svn_stream_from_string(svn_string_t *str,
+svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool)
 {
   svn_stream_t *stream;

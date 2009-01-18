@@ -1225,7 +1225,7 @@ svn_fs_base__dag_get_edit_stream(svn_stream_t **contents,
 
 svn_error_t *
 svn_fs_base__dag_finalize_edits(dag_node_t *file,
-                                svn_checksum_t *checksum,
+                                const svn_checksum_t *checksum,
                                 const char *txn_id,
                                 trail_t *trail,
                                 apr_pool_t *pool)
@@ -1538,18 +1538,21 @@ maybe_store_checksum_rep(const char *rep,
                          trail_t *trail,
                          apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_fs_t *fs = trail->fs;
   svn_checksum_t *sha1_checksum;
 
   /* We want the SHA1 checksum, if any. */
   SVN_ERR(svn_fs_base__rep_contents_checksums(NULL, &sha1_checksum,
                                               fs, rep, trail, pool));
-  err = svn_fs_bdb__set_checksum_rep(fs, sha1_checksum, rep, trail, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+  if (sha1_checksum)
     {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
+      err = svn_fs_bdb__set_checksum_rep(fs, sha1_checksum, rep, trail, pool);
+      if (err && (err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
     }
   return err;
 }

@@ -21,7 +21,12 @@ import os
 import re
 import sys
 import tempfile
-import urllib
+try:
+  # Python >=3.0
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  from urllib import quote as urllib_parse_quote
 import unittest
 
 import svn.core
@@ -354,8 +359,8 @@ if __name__ == '__main__':
     # Use the argument as the path to a log file to test against.
 
     def uri_encode(s):
-        # urllib.quote encodes :&@ characters, svn does not.
-        return urllib.quote(s, safe='/:&@')
+        # urllib.parse.quote encodes :&@ characters, svn does not.
+        return urllib_parse_quote(s, safe='/:&@')
 
     # Define a class to reconstruct the SVN-ACTION string.
     class Test(svn_server_log_parse.Parser):

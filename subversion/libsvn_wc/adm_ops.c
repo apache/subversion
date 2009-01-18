@@ -1430,6 +1430,11 @@ svn_wc_add3(const char *path,
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        _("Can't find parent directory's entry while trying to add '%s'"),
        svn_path_local_style(path, pool));
+  if (svn_wc_is_adm_dir(base_name, pool))
+    return svn_error_createf
+      (SVN_ERR_ENTRY_FORBIDDEN, NULL,
+       _("Can't create an entry with a reserved name while trying to add '%s'"),
+       svn_path_local_style(path, pool));
   if (parent_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,

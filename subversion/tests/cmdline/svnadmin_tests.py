@@ -454,7 +454,21 @@ def verify_windows_paths_in_repos(sbox):
 # using a sharded repository.
 def fsfs_file(repo_dir, kind, rev):
   if svntest.main.server_minor_version >= 5:
-    return os.path.join(repo_dir, 'db', kind, '0', rev)
+    if svntest.main.fsfs_sharding is None:
+      return os.path.join(repo_dir, 'db', kind, '0', rev)
+    else:
+      shard = int(rev) // svntest.main.fsfs_sharding
+      path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
+
+      if svntest.main.fsfs_packing is None or kind == 'revprops':
+        # we don't pack revprops
+        return path
+      elif os.path.exists(path):
+        # rev exists outside a pack file.
+        return path
+      else:
+        # didn't find the plain file; assume it's in a pack file
+        return os.path.join(repo_dir, 'db', kind, ('%d.pack' % shard), 'pack')
   else:
     return os.path.join(repo_dir, 'db', kind, rev)
 
@@ -476,6 +490,9 @@ def verify_incremental_fsfs(sbox):
   # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  if r2.endswith('pack'):
+    raise svntest.Skip
+
   fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
 type: dir
@@ -804,7 +821,7 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
 
   rev_3 = fsfs_file(sbox.repo_dir, 'revs', '3')
-  rev_was_3 = fsfs_file(sbox.repo_dir, 'revs', 'was_3')
+  rev_was_3 = rev_3 + '.was'
 
   # Move aside the revs file for r3.
   os.rename(rev_3, rev_was_3)
@@ -816,14 +833,17 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin recover' is unexpected.", None, errput, None,
-    ".*Expected current rev to be <= 2 but found 3"):
+    ".*Expected current rev to be <= %s but found 3"
+    # For example, if svntest.main.fsfs_sharding == 2, then rev_3 would
+    # be the pack file for r2:r3, and the error message would report "<= 1".
+    % (rev_3.endswith('pack') and '[012]' or '2')):
     raise svntest.Failure
 
   # Restore the r3 revs file, thus repairing the repository.
   os.rename(rev_was_3, rev_3)
 
   revprop_3 = fsfs_file(sbox.repo_dir, 'revprops', '3')
-  revprop_was_3 = fsfs_file(sbox.repo_dir, 'revprops', 'was_3')
+  revprop_was_3 = revprop_3 + '.was'
 
   # Move aside the revprops file for r3.
   os.rename(revprop_3, revprop_was_3)
