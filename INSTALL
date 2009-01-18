@@ -561,9 +561,9 @@ I.    INTRODUCTION
         * Let Subversion find an installed SQLite.
       
       To use an SQLite-provided amalgamation, just drop sqlite3.c into
-      Subversion's build/ directory, or point to it with the --with-sqlite
-      configure option.  This file also ships with the Subversion dependencies
-      distribution, or you can download it from SQLite:
+      Subversion's sqlite-amalgamation/ directory, or point to it with the
+      --with-sqlite configure option.  This file also ships with the Subversion
+      dependencies distribution, or you can download it from SQLite:
 
           http://www.sqlite.org/download.html
 
