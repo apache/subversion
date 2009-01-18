@@ -15,9 +15,9 @@ TODO:
  * Teach mod_dav_svn to recognize and correctly interpret URLs which
    make use of the new URI stubs:
 
-      root URI stub         -> !svn/me
+      root URI stub         -> !svn/me  [STARTED]
       pegrev URI stub       -> !svn/bc  [DONE]
-      revision URI stub     -> !svn/rev
+      revision URI stub     -> !svn/rev [STARTED]
       transaction URI stub  -> !svn/txn
       transaction prop stub -> !svn/txp
 
