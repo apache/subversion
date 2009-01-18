@@ -154,7 +154,11 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../!svn/bln/ */
   DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../!svn/wbl/ */
   DAV_SVN_RESTYPE_VCC,                  /* .../!svn/vcc/NAME */
-  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION /* see SVNParentPath directive */
+  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION,/* see SVNParentPath directive */
+
+  /* new types in HTTP protocol v2: */
+  DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION,  /* .../!svn/me/ */
+  DAV_SVN_RESTYPE_REVSTUB_COLLECTION    /* .../!svn/rev/ */
 };
 
 

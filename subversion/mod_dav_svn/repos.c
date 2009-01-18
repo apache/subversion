@@ -307,6 +307,36 @@ parse_vcc_uri(dav_resource_combined *comb,
 
 
 static int
+parse_rootstub_uri(dav_resource_combined *comb,
+                   const char *path,
+                   const char *label,
+                   int use_checked_in)
+{
+  /* There are no components after the root stub, i.e. just
+     "!svn/me/".  
+
+     In HTTP protocol v2, this uri represents the repository itself,
+     and is the place where custom REPORTs get sent to.  (It replaces
+     the older vcc uri form.)  */
+
+  if (path != NULL)
+    return TRUE;
+
+  comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+  comb->priv.restype = DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION;
+  
+  /* We're keeping these the same as the VCC resource, to make things
+     smoother for our report requests. */
+  comb->res.exists = TRUE;
+  comb->res.versioned = TRUE;
+  comb->res.baselined = TRUE;
+  /* NOTE: comb->priv.repos_path == NULL */
+
+  return FALSE;
+}
+
+
+static int
 parse_baseline_coll_uri(dav_resource_combined *comb,
                         const char *path,
                         const char *label,
@@ -368,6 +398,39 @@ parse_baseline_uri(dav_resource_combined *comb,
   /* exists? need to wait for now */
   comb->res.versioned = TRUE;
   comb->res.baselined = TRUE;
+
+  /* which baseline (revision tree) to access */
+  comb->priv.root.rev = revnum;
+
+  /* NOTE: comb->priv.repos_path == NULL */
+  /* NOTE: comb->priv.created_rev == SVN_INVALID_REVNUM */
+
+  return FALSE;
+}
+
+
+static int
+parse_revstub_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
+{
+  /* format: !svn/rev/REVISION
+
+     In HTTP protocol v2, this represents a specific revision in the
+     repository.  Clients perform PROPFIND and PROPPATCH against it to
+     read and write revprops.  (This uri replaces baseline (bln) and
+     working baseline (wbl) forms.)
+   */
+
+  svn_revnum_t revnum = SVN_STR_TO_REV(path);
+  if (!SVN_IS_VALID_REVNUM(revnum))
+    return TRUE;  /* fail */
+
+  comb->res.type = DAV_RESOURCE_TYPE_VERSION;
+  comb->res.versioned = TRUE;
+  comb->res.baselined = TRUE;
+  /* exists? need to wait for now */
 
   /* which baseline (revision tree) to access */
   comb->priv.root.rev = revnum;
@@ -442,6 +505,7 @@ static const struct special_defn
 
 } special_subdirs[] =
 {
+  /* Our original delta-V-ish protocol uses all these: */
   { "ver", parse_version_uri, 1, TRUE, DAV_SVN_RESTYPE_VER_COLLECTION },
   { "his", parse_history_uri, 0, FALSE, DAV_SVN_RESTYPE_HIS_COLLECTION },
   { "wrk", parse_working_uri, 1, TRUE,  DAV_SVN_RESTYPE_WRK_COLLECTION },
@@ -450,6 +514,11 @@ static const struct special_defn
   { "bc", parse_baseline_coll_uri, 1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
   { "bln", parse_baseline_uri, 1, FALSE, DAV_SVN_RESTYPE_BLN_COLLECTION },
   { "wbl", parse_wrk_baseline_uri, 2, FALSE, DAV_SVN_RESTYPE_WBL_COLLECTION },
+
+  /* The new v2 protocol uses these new 'stub' uris: */
+  { "me",  parse_rootstub_uri, 0, FALSE, DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION },
+  { "rev", parse_revstub_uri, 1, FALSE, DAV_SVN_RESTYPE_REVSTUB_COLLECTION },
+
   { NULL } /* sentinel */
 };
 
