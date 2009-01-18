@@ -2,7 +2,7 @@
  * prompt.c -- ask the user for authentication information.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -510,18 +510,18 @@ svn_cmdline_prompt_user(const char **result,
 }
 
 
-/* This implements 'svn_auth_unlock_prompt_func_t'. */
+/* This implements 'svn_auth_gnome_keyring_unlock_prompt_func_t'. */
 svn_error_t *
-svn_cmdline_auth_unlock_prompt(char **keyring_password,
-                               const char *keyring_name,
-                               void *baton,
-                               apr_pool_t *pool)
+svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
+                                              const char *keyring_name,
+                                              void *baton,
+                                              apr_pool_t *pool)
 {
   const char *password;
   const char *pass_prompt;
   svn_cmdline_prompt_baton2_t *pb = baton;
 
-  pass_prompt = apr_psprintf(pool, _("Password for [%s] GNOME keyring: "),
+  pass_prompt = apr_psprintf(pool, _("Password for '%s' GNOME keyring: "),
                              keyring_name);
   SVN_ERR(prompt(&password, pass_prompt, TRUE, pb, pool));
   *keyring_password = apr_pstrdup(pool, password);
