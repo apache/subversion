@@ -80,7 +80,7 @@ Step 1:  Install a suitable version of SWIG (which is
 
              --with-python=/path/to/correct/python/binary
 
-        to the configure script.  You need Python 2.2 or above.
+        to the configure script.  You need Python 2.4 or above.
 
         If you plan to build the Perl bindings, and have a system
         with more than one version of perl installed, you may need
@@ -109,7 +109,7 @@ Step 2:  Build and Install Subversion.
   python executable you used to configure SWIG as above.  If it does not then
   you can specify the correct path by adding PYTHON=/path/to/python or
   PERL=/path/to/perl onto the command line for configure.  For example:
-       ./configure PYTHON=/usr/bin/python2.2 PERL=/usr/bin/perl5.8.0
+       ./configure PYTHON=/usr/bin/python2.4 PERL=/usr/bin/perl5.8.0
 
   If Subversion's ./configure finds a SWIG that it's happy with, then
   it will build special glue libraries to link svn to the swig bindings:
