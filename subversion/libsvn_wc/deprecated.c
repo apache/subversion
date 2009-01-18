@@ -1118,6 +1118,28 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_prop_set2(const char *name,
+                 const svn_string_t *value,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t skip_checks,
+                 apr_pool_t *pool)
+{
+  return svn_wc_prop_set3(name, value, path, adm_access, skip_checks,
+                          NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_prop_set(const char *name,
+                const svn_string_t *value,
+                const char *path,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+  return svn_wc_prop_set2(name, value, path, adm_access, FALSE, pool);
+}
+
 /*** From status.c ***/
 struct status_editor3_compat_baton
 {

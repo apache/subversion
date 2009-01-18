@@ -1045,7 +1045,48 @@ typedef enum
 
 } svn_fs_path_change_kind_t;
 
-/** Change descriptor. */
+/** Change descriptor.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @since New in 1.6. */
+typedef struct svn_fs_path_change2_t
+{
+  /** node revision id of changed path */
+  const svn_fs_id_t *node_rev_id;
+
+  /** kind of change */
+  svn_fs_path_change_kind_t change_kind;
+
+  /** were there text mods? */
+  svn_boolean_t text_mod;
+
+  /** were there property mods? */
+  svn_boolean_t prop_mod;
+
+  /** what node kind is the path?
+      (Note: it is legal for this to be @c svn_node_unknown.) */
+  svn_node_kind_t node_kind;
+
+  /** Copyfrom revision and path; this is only valid if copyfrom_known
+   * is true. */
+  svn_boolean_t copyfrom_known;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  /* NOTE! Please update svn_fs_path_change2_create() when adding new
+     fields here. */
+} svn_fs_path_change2_t;
+
+
+/** Similar to @c svn_fs_path_change2_t, but without kind and copyfrom
+ * information.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
+ */
+
 typedef struct svn_fs_path_change_t
 {
   /** node revision id of changed path */
@@ -1062,14 +1103,49 @@ typedef struct svn_fs_path_change_t
 
 } svn_fs_path_change_t;
 
+/**
+ * Allocate an @c svn_fs_path_change2_t structure in @a pool, initialize and
+ * return it.
+ *
+ * Set the @c node_rev_id field of the created struct to @a node_rev_id, and 
+ * @c change_kind to @a change_kind.  Set all other fields to their 
+ * @c _unknown, @c NULL or invalid value, respectively.  
+ *
+ * @since New in 1.6.
+ */
+svn_fs_path_change2_t *
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id, 
+                           svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *pool);
 
 /** Determine what has changed under a @a root.
  *
  * Allocate and return a hash @a *changed_paths_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
- * <tt>const char *</tt> paths, and has @c svn_fs_path_change_t * values.
+ * <tt>const char *</tt> paths, and has @c svn_fs_path_change2_t * values.
+ *
+ * Callers can assume that this function takes time proportional to
+ * the amount of data output, and does not need to do tree crawls;
+ * however, it is possible that some of the @c node_kind fields in the
+ * @c svn_fs_path_change2_t * values will be @c svn_node_unknown or
+ * that and some of the @c copyfrom_known fields will be FALSE.
+ *
  * Use @c pool for all allocations, including the hash and its values.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
+                      svn_fs_root_t *root,
+                      apr_pool_t *pool);
+
+
+/** Same as svn_fs_paths_changed2(), only with @c svn_fs_path_change_t * values
+ * in the hash (and thus no kind or copyfrom data).
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_paths_changed(apr_hash_t **changed_paths_p,
                      svn_fs_root_t *root,

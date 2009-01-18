@@ -188,7 +188,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"set-depth",     opt_set_depth, 1,
                     N_("set new working copy depth to ARG ('empty',\n"
                        "                            "
-                       "'files', 'immediates', or 'infinity')")},
+                       "'exclude', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
@@ -564,8 +564,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     the URL is looked up in HEAD, and the default revision range is\n"
      "     HEAD:1.\n"
      "\n"
-     "  Multiple '-c' and '-r' instances may be specified (but not a\n"
-     "  combination of '-c' and '-r' flags), and mixing of forward and\n"
+     "  Multiple '-c' or '-r' options may be specified (but not a\n"
+     "  combination of '-c' and '-r' options), and mixing of forward and\n"
      "  reverse ranges is allowed.\n"
      "\n"
      "  With -v, also print all affected paths with each log message.\n"
@@ -608,7 +608,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
      "     specified, the default range of 0:REV is used.  Multiple '-c'\n"
-     "     and/or '-r' instances may be specified, and mixing of forward\n"
+     "     and/or '-r' options may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"

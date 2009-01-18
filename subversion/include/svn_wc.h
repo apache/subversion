@@ -836,8 +836,23 @@ typedef enum svn_wc_notify_action_t
   /** Replace notification. @since New in 1.5. */
   svn_wc_notify_update_replace,
 
+  /** Property added. @since New in 1.6. */
+  svn_wc_notify_property_added,
+
   /** Property updated. @since New in 1.6. */
-  svn_wc_notify_property_updated,
+  svn_wc_notify_property_modified,
+
+  /** Property deleted. @since New in 1.6. */
+  svn_wc_notify_property_deleted,
+
+  /** Nonexistent property deleted. @since New in 1.6. */
+  svn_wc_notify_property_deleted_nonexistent,
+
+  /** Revprop set. @since New in 1.6. */
+  svn_wc_notify_revprop_set,
+
+  /** Revprop deleted. @since New in 1.6. */
+  svn_wc_notify_revprop_deleted,
 
   /** The last notification in a merge. @since New in 1.6. */
   svn_wc_notify_merge_completed,
@@ -985,6 +1000,10 @@ typedef struct svn_wc_notify_t {
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
+
+  /** If @c action relates to properties, specifies the name of the property.
+   * @since New in 1.6 */
+  const char *prop_name;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -2421,8 +2440,7 @@ typedef struct svn_wc_entry_callbacks_t
 svn_error_t *
 svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks2_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_depth_t depth,
                      svn_boolean_t show_hidden,
@@ -2441,8 +2459,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2458,8 +2475,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    const svn_wc_entry_callbacks_t
-                    *walk_callbacks,
+                    const svn_wc_entry_callbacks_t *walk_callbacks,
                     void *walk_baton,
                     svn_boolean_t show_hidden,
                     apr_pool_t *pool);
@@ -4263,10 +4279,31 @@ svn_wc_prop_get(const svn_string_t **value,
  * entry property, return the error @c SVN_ERR_BAD_PROP_KIND, even if
  * @a skip_checks is TRUE.
  *
+ * For each file or directory operated on, @a notify_func will be called
+ * with its path and the @a notify_baton.  @a notify_func may be @c NULL
+ * if you are not interested in this information.
+ *
  * Use @a pool for temporary allocation.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_prop_set3(const char *name,
+                 const svn_string_t *value,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t skip_checks,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *pool);
+
+
+/**
+ * Like svn_wc_prop_set3(), but without the notification callbacks.
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_set2(const char *name,
                  const svn_string_t *value,
