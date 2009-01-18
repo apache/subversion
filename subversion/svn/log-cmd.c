@@ -476,7 +476,7 @@ svn_cl__log(apr_getopt_t *os,
         {
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-             _("Can not mix change revision with revisions"));
+             _("-c and -r are mutually exclusive"));
         }
       for (i = 0; i < opt_state->revision_ranges->nelts; i++)
         {
