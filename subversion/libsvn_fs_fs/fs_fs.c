@@ -4742,14 +4742,13 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_file_t *file;
-  svn_fs_path_change2_t *change = apr_pcalloc(pool, sizeof(*change));
+  svn_fs_path_change2_t *change;
 
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
                            APR_APPEND | APR_WRITE | APR_CREATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  change->node_rev_id = id;
-  change->change_kind = change_kind;
+  change = svn_fs_path_change2_create(id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
   change->node_kind = node_kind;
