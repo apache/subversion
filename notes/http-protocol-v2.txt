@@ -60,11 +60,11 @@ Our Plans, in a Nutshell
 
 * Phase 2:  Speed up commits
 
-  - Make PUT requests pipelined, the way ra_svn does.
+  - make PUT requests pipelined, the way ra_svn does.
 
 * Phase 3:  (maybe) get rid of XML in request/response bodies
 
-  - if there's a worthwhile speed gain, us serialzed Thrift objects.
+  - if there's a worthwhile speed gain, use serialized Thrift objects.
 
 
 

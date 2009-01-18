@@ -63,10 +63,10 @@ copy_props(const char *src_path,
       propname = key;
       propval = val;
 
-      SVN_ERR(svn_wc_prop_set2(propname, propval,
+      SVN_ERR(svn_wc_prop_set3(propname, propval,
                                dst_path, dst_access,
                                FALSE /* skip_checks */,
-                               pool));
+                               NULL, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -539,8 +539,8 @@ copy_file_administratively(const char *src_path,
       SVN_ERR(svn_wc__get_special(&special, src_path, src_access, pool));
       if (special)
         {
-          SVN_ERR(svn_subst_get_detranslated_stream(&contents, src_path,
-                                                    pool, pool));
+          SVN_ERR(svn_subst_read_specialfile(&contents, src_path,
+                                             pool, pool));
         }
       else
         {
@@ -553,19 +553,20 @@ copy_file_administratively(const char *src_path,
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
                                         src_access, pool));
 
+          SVN_ERR(svn_stream_open_readonly(&contents, src_path, pool, pool));
+
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
             {
-              SVN_ERR(svn_subst_stream_detranslated(&contents, src_path,
-                                                    eol_style, eol_str,
-                                                    FALSE,
-                                                    keywords,
-                                                    FALSE,
-                                                    pool));
+              /* Wrap the stream to translate to normal form */
+              SVN_ERR(svn_subst_stream_translated_to_normal_form(&contents,
+                                                                 contents,
+                                                                 eol_style,
+                                                                 eol_str,
+                                                                 FALSE,
+                                                                 keywords,
+                                                                 pool));
             }
-          else
-            SVN_ERR(svn_stream_open_readonly(&contents, src_path,
-                                             pool, pool));
         }
     }
 
@@ -895,7 +896,7 @@ svn_wc_copy2(const char *src_path,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool));
 
-  /* TODO(#2843): Rework the erroer report. */
+  /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
      disk, before actually doing the file copy. */
   target_path = svn_path_join(dst_path, dst_basename, pool);

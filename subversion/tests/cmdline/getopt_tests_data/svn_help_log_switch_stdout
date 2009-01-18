@@ -11,8 +11,8 @@ usage: 1. log [PATH]
      the URL is looked up in HEAD, and the default revision range is
      HEAD:1.
 
-  Multiple '-c' and '-r' instances may be specified (but not a
-  combination of '-c' and '-r' flags), and mixing of forward and
+  Multiple '-c' or '-r' options may be specified (but not a
+  combination of '-c' and '-r' options), and mixing of forward and
   reverse ranges is allowed.
 
   With -v, also print all affected paths with each log message.
@@ -114,7 +114,7 @@ Valid options:
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                             'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('empty',
-                            'files', 'immediates', or 'infinity')
+                            'exclude', 'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting

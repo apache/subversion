@@ -133,17 +133,16 @@ cat_local_file(const char *path,
                entry->url, tm, author, pool));
     }
 
-  if ( eol || kw )
-    SVN_ERR(svn_subst_translate_stream3(input, output, eol, FALSE, kw,
-                                        TRUE, pool));
-  else
-    {
-      /* We are not supposed to close the output stream, so "disown" it */
-      SVN_ERR(svn_stream_copy3(input, svn_stream_disown(output, pool),
-                               cancel_func, cancel_baton, pool));
-    }
+  /* Our API contract says that OUTPUT will not be closed. The two paths
+     below close it, so disown the stream to protect it. The input will
+     be closed, which is good (since we opened it). */
+  output = svn_stream_disown(output, pool);
 
-  return SVN_NO_ERROR;
+  /* Wrap the output stream if translation is needed. */
+  if (eol != NULL || kw != NULL)
+    output = svn_subst_stream_translated(output, eol, FALSE, kw, TRUE, pool);
+
+  return svn_stream_copy3(input, output, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *

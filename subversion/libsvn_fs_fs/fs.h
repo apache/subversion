@@ -109,6 +109,9 @@ extern "C" {
 /* The minimum format number that supports packed shards. */
 #define SVN_FS_FS__MIN_PACKED_FORMAT 4
 
+/* The minimum format number that stores node kinds in changed-paths lists. */
+#define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
+
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
@@ -373,6 +376,9 @@ typedef struct
   /* Text or property mods? */
   svn_boolean_t text_mod;
   svn_boolean_t prop_mod;
+
+  /* Node kind (possibly svn_node_unknown). */
+  svn_node_kind_t node_kind;
 
   /* Copyfrom revision and path. */
   svn_revnum_t copyfrom_rev;

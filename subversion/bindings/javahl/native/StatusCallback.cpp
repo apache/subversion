@@ -20,6 +20,7 @@
  */
 
 #include "StatusCallback.h"
+#include "ConflictResolverCallback.h"
 #include "EnumMapper.h"
 #include "SVNClient.h"
 #include "JNIUtil.h"
@@ -114,9 +115,10 @@ StatusCallback::createJavaStatus(const char *path,
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
                              "IJJJLjava/lang/String;IIIIZZZ"
+                             "L"JAVA_PACKAGE"/ConflictDescriptor;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
-                             "JZLjava/lang/String;Ljava/lang/String;"
+                             "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JLorg/tigris/subversion/javahl/Lock;"
                              "JJILjava/lang/String;Ljava/lang/String;)V");
@@ -141,7 +143,9 @@ StatusCallback::createJavaStatus(const char *path,
   jboolean jIsLocked = JNI_FALSE;
   jboolean jIsCopied = JNI_FALSE;
   jboolean jIsSwitched = JNI_FALSE;
+  jboolean jIsFileExternal = JNI_FALSE;
   jboolean jIsTreeConflicted = JNI_FALSE;
+  jobject jConflictDescription = NULL;
   jstring jConflictOld = NULL;
   jstring jConflictNew = NULL;
   jstring jConflictWorking = NULL;
@@ -170,7 +174,12 @@ StatusCallback::createJavaStatus(const char *path,
       jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
-          /* ## TODO: Map tree_conflict data */
+      jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
+      jConflictDescription = ConflictResolverCallback::createJConflictDescriptor(
+                                                      status->tree_conflict);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
       jIsTreeConflicted = (status->tree_conflict != NULL) 
                              ? JNI_TRUE: JNI_FALSE;
       jLock = SVNClient::createJavaLock(status->repos_lock);
@@ -241,9 +250,10 @@ StatusCallback::createJavaStatus(const char *path,
                                jLastCommitAuthor, jTextType, jPropType,
                                jRepositoryTextType, jRepositoryPropType,
                                jIsLocked, jIsCopied, jIsTreeConflicted,
-                               jConflictOld, jConflictNew, jConflictWorking,
-                               jURLCopiedFrom, jRevisionCopiedFrom,
-                               jIsSwitched, jLockToken, jLockOwner,
+                               jConflictDescription, jConflictOld, jConflictNew,
+                               jConflictWorking, jURLCopiedFrom,
+                               jRevisionCopiedFrom, jIsSwitched, jIsFileExternal,
+                               jLockToken, jLockOwner,
                                jLockComment, jLockCreationDate, jLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
                                jOODKind, jOODLastCmtAuthor, jChangelist);

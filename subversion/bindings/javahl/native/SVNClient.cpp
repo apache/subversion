@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -248,10 +248,15 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
             return;
     }
 
+    svn_client_log_args_t *log_args = svn_client_log_args_create(
+                                                            requestPool.pool());
+    log_args->limit = limit;
+    log_args->discover_changed_paths = discoverPaths;
+    log_args->strict_node_history = stopOnCopy;
+    log_args->include_merged_revisions = includeMergedRevisions;
+
     SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
-                                limit, discoverPaths, stopOnCopy,
-                                includeMergedRevisions,
-                                revProps.array(requestPool),
+                                revProps.array(requestPool), log_args,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
@@ -1196,9 +1201,6 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     /* Populate the registered providers with the platform-specific providers */
     SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
                                                                 config,
-                                                                NULL,
-                                                                NULL,
-                                                                FALSE,
                                                                 pool),
                 NULL);
 
@@ -1213,11 +1215,8 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     /* The server-cert, client-cert, and client-cert-password providers. */
     SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        NULL,
                                                         "windows",
                                                         "ssl_server_trust",
-                                                        NULL,
-                                                        FALSE,
                                                         pool),
                 NULL);
 

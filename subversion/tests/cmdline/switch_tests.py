@@ -754,9 +754,7 @@ def failed_anchor_is_target(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', switched='S', wc_rev=2)
-  # The expectation on 'psi' reflects partial progress on issue #3334.
-  # ### I don't think it should show as 'switched'.
-  expected_status.tweak('A/D/H/psi', status='A ', copied='+', switched='S',
+  expected_status.tweak('A/D/H/psi', status='A ', copied='+',
                         wc_rev='-', treeconflict='C')
   expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
@@ -2276,7 +2274,9 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
+  # These 'switched' statuses are bogus, because of do_entry_deletion not
+  # updating the URLs (issue #3334).
+  expected_status.tweak('D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
   # The expectation on 'alpha' reflects partial progress on issue #3334.
   expected_status.tweak('F/alpha', status='A ', copied='+', wc_rev='-')

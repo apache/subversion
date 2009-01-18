@@ -17,8 +17,6 @@
 
 #include <apr_pools.h>
 
-#include <sqlite3.h>
-
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -29,6 +27,14 @@
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 
+
+#ifdef SVN_SQLITE_INLINE
+/* Include sqlite3 inline, making all symbols private. */
+  #define SQLITE_API static
+  #include <sqlite3.c>
+#else
+  #include <sqlite3.h>
+#endif
 
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
@@ -175,7 +181,7 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
 svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt,
                        int slot,
-                       sqlite_int64 val)
+                       apr_int64_t val)
 {
   SQLITE_ERR(sqlite3_bind_int64(stmt->s3stmt, slot, val), stmt->db);
   return SVN_NO_ERROR;

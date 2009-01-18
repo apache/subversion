@@ -405,7 +405,7 @@ def open_pipe(command, mode):
   # work if the command itself is quoted.
   args = command[1:]
   args = ' '.join([_quote_arg(x) for x in args])
-  command = command[0] + ' ' + args    
+  command = command[0] + ' ' + args
   if platform_with_popen3_class:
     kid = Popen3(command, True)
     return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
@@ -426,6 +426,13 @@ def open_pipe2(command, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
+  # Quote only the arguments on Windows.  Later versions of subprocess,
+  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
+  if (sys.platform == 'win32'):
+    args = command[1:]
+    args = ' '.join([_quote_arg(x) for x in args])
+    command = command[0] + ' ' + args
+ 
   if not stdin:
     stdin = subprocess.PIPE
   if not stdout:
@@ -531,12 +538,13 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   if platform_with_subprocess:
     stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
+    infile.close()
   else:
+    infile.close()
     stdout_lines = outfile.readlines()
     stderr_lines = errfile.readlines()
     exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
-  infile.close()
   outfile.close()
   errfile.close()
 

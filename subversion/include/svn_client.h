@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1911,6 +1911,48 @@ svn_client_status(svn_revnum_t *result_rev,
  */
 
 /**
+ * A structure to optional arguments for svn_client_log5().  It can grow
+ * as needed to avoid rev'ing the API.  Never allocate this structure directly,
+ * as its size may change in future versions of Subversion.  Use
+ * svn_client_log_args_create() instead.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_client_log_args_t
+{
+  /** If non-zero only invoke the reciever on the first @a limit logs. */
+  int limit;
+
+  /** If set, then the `@a changed_paths' argument to the receiver will be
+   * passed on each invocation. */
+  svn_boolean_t discover_changed_paths;
+
+  /** If set, copy history (if any exists) will not be traversed while
+   * harvesting revision logs for each target. */
+  svn_boolean_t strict_node_history;
+
+
+  /** If set, log information for revisions which have been merged to the
+   * log targets will also be returned. */
+  svn_boolean_t include_merged_revisions;
+
+  /* Add new members here, and update svn_client_log_args_create(). */
+} svn_client_log_args_t;
+
+/**
+ * Create a @c svn_client_log_args_t structure, for use with svn_client_log5().
+ * Values of structure members are as follows:
+ *   @c limit: 0
+ *   @c discover_changed_paths: FALSE
+ *   @c strict_node_history: FALSE
+ *   @c include_merged_revisions: FALSE
+ *
+ * @since New in 1.6.
+ */
+svn_client_log_args_t *
+svn_client_log_args_create(apr_pool_t *pool);
+
+/**
  * Invoke @a receiver with @a receiver_baton on each log message from
  * each start/end revision pair in the @a revision_ranges in turn,
  * inclusive (but never invoke @a receiver on a given log message more
@@ -1924,17 +1966,7 @@ svn_client_status(svn_revnum_t *result_rev,
  * @c svn_opt_revision_unspecified, it defaults to @c svn_opt_revision_head
  * for URLs or @c svn_opt_revision_working for WC paths.
  *
- * If @a limit is non-zero only invoke @a receiver on the first @a limit
- * logs.
- *
- * If @a discover_changed_paths is set, then the `@a changed_paths' argument
- * to @a receiver will be passed on each invocation.
- *
- * If @a strict_node_history is set, copy history (if any exists) will
- * not be traversed while harvesting revision logs for each target.
- *
- * If @a include_merged_revisions is set, log information for revisions
- * which have been merged to @a targets will also be returned.
+ * Use additional argument values as defined in @a args.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -1960,11 +1992,8 @@ svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const apr_array_header_t *revision_ranges,
-                int limit,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t strict_node_history,
-                svn_boolean_t include_merged_revisions,
                 const apr_array_header_t *revprops,
+                const svn_client_log_args_t *args,
                 svn_log_entry_receiver_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -3524,6 +3553,10 @@ svn_client_propset(const char *propname,
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
  * and the like.  Be careful:  it's a lossy operation.
+
+ * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
+ * functions and baton which are called upon successful setting of the
+ * property.
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
@@ -4299,6 +4332,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  */
 
 /** The size of the file is unknown.
+ * Used as value in fields of type @c apr_size_t.
  *
  * @since New in 1.5
  */
@@ -4370,29 +4404,45 @@ typedef struct svn_info_t
   svn_depth_t depth;
 
   /**
-   * The size of the file after being translated into its local
-   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
-   * unknown.  Not applicable for directories.
-   * @since New in 1.5.
+   * Similar to working_size64, but will be @c SVN_INFO_SIZE_UNKNOWN when
+   * its value would overflow apr_size_t (so when size >= 4 GB - 1 byte).
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
    */
   apr_size_t working_size;
 
   /** @} */
 
   /**
-   * The size of the file in the repository (untranslated,
-   * e.g. without adjustment of line endings and keyword
-   * expansion). Only applicable for file -- not directory -- URLs.
-   * For working copy paths, size will be @c SVN_INFO_SIZE_UNKNOWN.
-   * @since New in 1.5.
+   * Similar to size64, but size will be @c SVN_INFO_SIZE_UNKNOWN when
+   * its value would overflow apr_size_t (so when size >= 4 GB - 1 byte).
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
    */
   apr_size_t size;
 
   /**
-   * Info on any tree conflict of which this node is a victim. Otherwise NULL.
+   * The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, size64 will be @c SVN_INVALID_FILESIZE.
+   * @since New in 1.6.
+   */
+  svn_filesize_t size64;
+
+  /**
+   * The size of the file after being translated into its local
+   * representation, or @c SVN_INVALID_FILESIZE if unknown.
+   * Not applicable for directories.
    * @since New in 1.6.
    * @name Working-copy path fields
    * @{
+   */
+  svn_filesize_t working_size64;
+
+  /**
+   * Info on any tree conflict of which this node is a victim. Otherwise NULL.
+   * @since New in 1.6.
    */
   svn_wc_conflict_description_t *tree_conflict;
 
