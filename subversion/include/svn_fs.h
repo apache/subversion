@@ -1076,7 +1076,7 @@ typedef struct svn_fs_path_change2_t
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
-  /* NOTE! Please update svn_fs_path_change2_dup() when adding new
+  /* NOTE! Please update svn_fs_path_change2_create() when adding new
      fields here. */
 } svn_fs_path_change2_t;
 
