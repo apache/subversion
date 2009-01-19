@@ -74,23 +74,6 @@ maybe_send_header(struct log_receiver_baton *lrb)
   return SVN_NO_ERROR;
 }
 
-static const char *
-kind_str(svn_node_kind_t kind)
-{
-  switch(kind)
-    {
-      case svn_node_none:
-        return "none";
-      case svn_node_file:
-        return "file";
-      case svn_node_dir:
-        return "dir";
-      case svn_node_unknown:
-      default:
-        return "unknown";
-    }
-}
-
 
 /* This implements `svn_log_entry_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
@@ -203,7 +186,8 @@ log_receiver(void *baton,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
-                                          kind_str(log_item->node_kind),
+                                          svn_node_kind_to_word(
+                                                            log_item->node_kind),
                                           apr_xml_quote_string(iterpool,
                                                                path, 0)));
               else
@@ -211,7 +195,8 @@ log_receiver(void *baton,
                                           "<S:added-path"
                                           " node-kind=\"%s\">%s</S:added-path>"
                                           DEBUG_CR,
-                                          kind_str(log_item->node_kind),
+                                          svn_node_kind_to_word(
+                                                            log_item->node_kind),
                                           apr_xml_quote_string(iterpool, path,
                                                                0)));
               break;
@@ -230,7 +215,8 @@ log_receiver(void *baton,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
-                                          kind_str(log_item->node_kind),
+                                          svn_node_kind_to_word(
+                                                            log_item->node_kind),
                                           apr_xml_quote_string(iterpool,
                                                                path, 0)));
               else
@@ -238,7 +224,8 @@ log_receiver(void *baton,
                                           "<S:replaced-path"
                                           " node-kind=\"%s\">%s"
                                           "</S:replaced-path>" DEBUG_CR,
-                                          kind_str(log_item->node_kind),
+                                          svn_node_kind_to_word(
+                                                            log_item->node_kind),
                                           apr_xml_quote_string(iterpool, path,
                                                                0)));
               break;
@@ -248,7 +235,8 @@ log_receiver(void *baton,
                                         "<S:deleted-path"
                                         " node-kind=\"%s\">%s</S:deleted-path>"
                                         DEBUG_CR,
-                                        kind_str(log_item->node_kind),
+                                        svn_node_kind_to_word(
+                                                            log_item->node_kind),
                                         apr_xml_quote_string(iterpool,
                                                              path, 0)));
               break;
@@ -258,7 +246,8 @@ log_receiver(void *baton,
                                         "<S:modified-path"
                                         " node-kind=\"%s\">%s"
                                         "</S:modified-path>" DEBUG_CR,
-                                        kind_str(log_item->node_kind),
+                                        svn_node_kind_to_word(
+                                                            log_item->node_kind),
                                         apr_xml_quote_string(iterpool,
                                                              path, 0)));
               break;
