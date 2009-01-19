@@ -63,7 +63,7 @@ svn_log_changed_path2_create(apr_pool_t *pool)
 }
 
 svn_log_changed_path2_t *
-svn_log_changed_path2_dup(const svn_log_changed_path_t *changed_path,
+svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
                           apr_pool_t *pool)
 {
   svn_log_changed_path2_t *new_changed_path
