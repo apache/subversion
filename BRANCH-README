@@ -59,3 +59,5 @@ TODO:
 
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
+
+ * Optional:  All that stuff for ra_serf above?  Do it for ra_neon, too.
