@@ -198,7 +198,7 @@ detect_changed(apr_hash_t **changed,
       svn_fs_path_change2_t *change;
       const char *path;
       char action;
-      svn_log_changed_path_t *item;
+      svn_log_changed_path2_t *item;
 
       svn_pool_clear(subpool);
 
@@ -249,6 +249,7 @@ detect_changed(apr_hash_t **changed,
 
       item = apr_pcalloc(pool, sizeof(*item));
       item->action = action;
+      item->node_kind = change->node_kind;
       item->copyfrom_rev = SVN_INVALID_REVNUM;
       if ((action == 'A') || (action == 'R'))
         {

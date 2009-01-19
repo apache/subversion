@@ -554,7 +554,33 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
                     apr_pool_t *pool);
 
 
-/** A structure to represent a path that changed for a log entry. */
+/**
+ * A structure to represent a path that changed for a log entry.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_log_changed_path2_t
+{
+  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
+  char action;
+
+  /** Source path of copy (if any). */
+  const char *copyfrom_path;
+
+  /** Source revision of copy (if any). */
+  svn_revnum_t copyfrom_rev;
+
+  /** The type of the node, may be svn_node_unknown. */
+  svn_node_kind_t node_kind;
+
+} svn_log_changed_path2_t;
+
+/**
+ * A structure to represent a path that changed for a log entry.  Same as
+ * @c svn_log_changed_path2_t, but without the node kind.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
 typedef struct svn_log_changed_path_t
 {
   /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */

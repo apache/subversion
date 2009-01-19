@@ -64,7 +64,7 @@ struct log_baton
   svn_boolean_t want_message;
 
   /* The current changed path item. */
-  svn_log_changed_path_t *this_path_item;
+  svn_log_changed_path2_t *this_path_item;
 
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
@@ -98,6 +98,22 @@ reset_log_item(struct log_baton *lb)
   lb->log_entry->has_children  = FALSE;
 
   svn_pool_clear(lb->subpool);
+}
+
+static svn_node_kind_t
+kind_val(const char *kind_str)
+{
+  if (kind_str == NULL)
+    return svn_node_unknown;
+
+  if (strcmp(kind_str, "file") == 0)
+    return svn_node_file;
+  if (strcmp(kind_str, "dir") == 0)
+    return svn_node_dir;
+  if (strcmp(kind_str, "none") == 0)
+    return svn_node_none;
+
+  return svn_node_unknown;
 }
 
 
@@ -182,6 +198,8 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_modified_path:
       lb->this_path_item = apr_pcalloc(lb->subpool,
                                        sizeof(*(lb->this_path_item)));
+      lb->this_path_item->node_kind =
+                            kind_val(svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,

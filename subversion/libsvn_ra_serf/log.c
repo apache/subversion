@@ -67,7 +67,7 @@ typedef struct {
   apr_size_t tmp_len;
 
   /* Temporary change path - ultimately inserted into changed_paths hash. */
-  svn_log_changed_path_t *tmp_path;
+  svn_log_changed_path2_t *tmp_path;
 
   /* Log information */
   svn_log_entry_t *log_entry;
@@ -148,6 +148,22 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   return parser->state->private;
 }
 
+static svn_node_kind_t
+kind_val(const char *kind_str)
+{
+  if (kind_str == NULL)
+    return svn_node_unknown;
+
+  if (strcmp(kind_str, "file") == 0)
+    return svn_node_file;
+  if (strcmp(kind_str, "dir") == 0)
+    return svn_node_dir;
+  if (strcmp(kind_str, "none") == 0)
+    return svn_node_none;
+
+  return svn_node_unknown;
+}
+
 static svn_error_t *
 start_log(svn_ra_serf__xml_parser_t *parser,
           void *userData,
@@ -222,6 +238,9 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                   info->tmp_path->copyfrom_rev = copy_rev;
                 }
             }
+
+          info->tmp_path->node_kind = kind_val(svn_xml_get_attr_value(
+                                                            "node-kind", attrs));
         }
       else if (strcmp(name.name, "replaced-path") == 0)
         {
@@ -244,16 +263,23 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                   info->tmp_path->copyfrom_rev = copy_rev;
                 }
             }
+
+          info->tmp_path->node_kind = kind_val(svn_xml_get_attr_value(
+                                                            "node-kind", attrs));
         }
       else if (strcmp(name.name, "deleted-path") == 0)
         {
           info = push_state(parser, log_ctx, DELETED_PATH);
           info->tmp_path->action = 'D';
+          info->tmp_path->node_kind = kind_val(svn_xml_get_attr_value(
+                                                            "node-kind", attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)
         {
           info = push_state(parser, log_ctx, MODIFIED_PATH);
           info->tmp_path->action = 'M';
+          info->tmp_path->node_kind = kind_val(svn_xml_get_attr_value(
+                                                            "node-kind", attrs));
         }
     }
 

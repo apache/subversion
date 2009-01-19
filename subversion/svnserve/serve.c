@@ -1810,7 +1810,7 @@ static svn_error_t *log_receiver(void *baton,
   const void *key;
   void *val;
   const char *path;
-  svn_log_changed_path_t *change;
+  svn_log_changed_path2_t *change;
   svn_boolean_t invalid_revnum = FALSE;
   char action[2];
   const char *author, *date, *message;
@@ -1841,9 +1841,10 @@ static svn_error_t *log_receiver(void *baton,
           change = val;
           action[0] = change->action;
           action[1] = '\0';
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw(?cr)", path, action,
-                                         change->copyfrom_path,
-                                         change->copyfrom_rev));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw(?cr)(?c)", path,
+                                         action, change->copyfrom_path,
+                                         change->copyfrom_rev,
+                                         kind_word(change->node_kind)));
         }
     }
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);

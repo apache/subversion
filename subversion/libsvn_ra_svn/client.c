@@ -203,6 +203,12 @@ static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
 static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
                                    svn_node_kind_t *kind)
 {
+  if (str == NULL)
+    {
+      *kind = svn_node_unknown;
+      return SVN_NO_ERROR;
+    }
+
   if (strcmp(str, "none") == 0)
     *kind = svn_node_none;
   else if (strcmp(str, "file") == 0)
@@ -1246,7 +1252,6 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   int nest_level = 0;
   const char *path;
   char *name;
-  svn_log_changed_path_t *change;
   svn_boolean_t want_custom_revprops;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
@@ -1339,7 +1344,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           cphash = apr_hash_make(iterpool);
           for (i = 0; i < cplist->nelts; i++)
             {
-              const char *copy_path, *action, *cpath;
+              svn_log_changed_path2_t *change;
+              const char *copy_path, *action, *cpath, *kind_str;
               svn_revnum_t copy_rev;
               svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(cplist, i,
                                                       svn_ra_svn_item_t);
@@ -1347,9 +1353,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
-              SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool, "cw(?cr)",
+              SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool,
+                                             "cw(?cr)(?c)",
                                              &cpath, &action, &copy_path,
-                                             &copy_rev));
+                                             &copy_rev, &kind_str));
               cpath = svn_path_canonicalize(cpath, iterpool);
               if (copy_path)
                 copy_path = svn_path_canonicalize(copy_path, iterpool);
@@ -1357,6 +1364,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               change->action = *action;
               change->copyfrom_path = copy_path;
               change->copyfrom_rev = copy_rev;
+              SVN_ERR(interpret_kind(kind_str, pool, &change->node_kind));
               apr_hash_set(cphash, cpath, APR_HASH_KEY_STRING, change);
             }
         }
