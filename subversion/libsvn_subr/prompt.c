@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 
+#include "private/svn_cmdline_private.h"
 #include "svn_private_config.h"
 
 
