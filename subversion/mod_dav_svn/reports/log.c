@@ -252,7 +252,6 @@ dav_svn__log_report(const dav_resource *resource,
                     ap_filter_t *output)
 {
   svn_error_t *serr;
-  apr_status_t apr_err;
   dav_error *derr = NULL;
   apr_xml_elem *child;
   struct log_receiver_baton lrb;
@@ -421,18 +420,6 @@ dav_svn__log_report(const dav_resource *resource,
                                         include_merged_revisions, revprops,
                                         resource->pool));
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (!lrb.needs_header)
-    {
-       apr_err = ap_fflush(output, lrb.bb);
-       if (!derr && apr_err)
-         {
-           derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                       HTTP_INTERNAL_SERVER_ERROR,
-                                       "Error flushing brigade.",
-                                       resource->pool);
-         }
-    }
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, lrb.bb, output,
+                                       derr, resource->pool);
 }
