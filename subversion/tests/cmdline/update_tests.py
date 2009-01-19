@@ -4194,7 +4194,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         expected_status, None, wc_dir)
     
   # r3: Make a text mod to A/B/E/alpha.moved in the first WC.
-  new_content_for_alpha = 'alpha, modified after move'
+  new_content_for_alpha = 'alpha, modified after move\n'
   svntest.main.file_write(alpha_moved_path, new_content_for_alpha)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha.moved' : Item(verb='Sending'),
@@ -4206,24 +4206,26 @@ def update_moves_and_modifies_an_edited_file(sbox):
   
   # Make a text mod to A/B/E/alpha.moved in the second WC then
   # update the second WC.
-  new_content_for_other_alpha = 'alpha, modified'
+  new_content_for_other_alpha = 'alpha, modified\n'
   svntest.main.file_write(other_alpha_path, new_content_for_other_alpha)
 
   expected_output = wc.State(other_E_path, {
     'alpha'       : Item(status='  ', treeconflict='C'),
-    'alpha.moved' : Item(status='A '),
+    'alpha.moved' : Item(status='C '),
     })
-  ### TODO: Yes, the update should succeed and leave a tree conflict,
-  ###       but is this the right conflict?
   expected_status = wc.State(other_E_path, {
     ''            : Item(status='  ', wc_rev=3),
-    'alpha'       : Item(status='A ', wc_rev='-', copied='+'),
-    'alpha.moved' : Item(status='  ', wc_rev=3),
+    'alpha'       : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    'alpha.moved' : Item(status='C ', wc_rev=3),
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_disk = wc.State('', {
     'alpha'       : Item(new_content_for_other_alpha),
-    'alpha.moved' : Item(new_content_for_alpha),
+    'alpha.moved' : Item("<<<<<<< .mine\n" +
+                         new_content_for_other_alpha +
+                         "=======\n" +
+                         new_content_for_alpha +
+                         ">>>>>>> .r3\n"),
     'beta'        : Item("This is the file 'beta'.\n"),
     })
 
