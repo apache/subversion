@@ -97,6 +97,7 @@ kwstruct_to_kwhash(const svn_subst_keywords_t *kwstruct,
   return kwhash;
 }
 
+
 svn_error_t *
 svn_subst_translate_stream3(svn_stream_t *src_stream,
                             svn_stream_t *dst_stream,
@@ -106,10 +107,19 @@ svn_subst_translate_stream3(svn_stream_t *src_stream,
                             svn_boolean_t expand,
                             apr_pool_t *pool)
 {
-  return svn_subst_translate_stream4(svn_stream_disown(src_stream, pool),
-                                     svn_stream_disown(dst_stream, pool),
-                                     eol_str, repair, keywords, expand,
-                                     pool);
+  /* The docstring requires that *some* translation be requested. */
+  SVN_ERR_ASSERT(eol_str || keywords);
+
+  /* We don't want the copy3 to close the provided streams. */
+  src_stream = svn_stream_disown(src_stream, pool);
+  dst_stream = svn_stream_disown(dst_stream, pool);
+
+  /* Wrap the destination stream with our translation stream. It is more
+     efficient than wrapping the source stream. */
+  dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
+                                           keywords, expand, pool);
+
+  return svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -184,6 +194,31 @@ svn_subst_copy_and_translate2(const char *src,
   return svn_subst_copy_and_translate3(src, dst, eol_str,
                                        repair, kh, expand, special,
                                        pool);
+}
+
+svn_error_t *
+svn_subst_stream_detranslated(svn_stream_t **stream_p,
+                              const char *src,
+                              svn_subst_eol_style_t eol_style,
+                              const char *eol_str,
+                              svn_boolean_t always_repair_eols,
+                              apr_hash_t *keywords,
+                              svn_boolean_t special,
+                              apr_pool_t *pool)
+{
+  svn_stream_t *src_stream;
+
+  if (special)
+    return svn_subst_read_specialfile(stream_p, src, pool, pool);
+
+  /* This will be closed by svn_subst_stream_translated_to_normal_form
+     when the returned stream is closed. */
+  SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
+
+  return svn_subst_stream_translated_to_normal_form(stream_p, src_stream,
+                                                    eol_style, eol_str,
+                                                    always_repair_eols,
+                                                    keywords, pool);
 }
 
 /*** From opt.c ***/

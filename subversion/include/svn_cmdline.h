@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -308,18 +308,6 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
                                              void *baton,
                                              apr_pool_t *pool);
 
-/** An implementation of @c svn_auth_unlock_prompt_func_t that
- * prompts the user for default GNOME Keyring password.
- *
- * Expects a @c svn_cmdline_prompt_baton2_t to be passed as @a baton.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_cmdline_auth_unlock_prompt(char **keyring_password,
-                               const char *keyring_name,
-                               void *baton,
-                               apr_pool_t *pool);
 
 /** Set @a *ab to an authentication baton allocated from @a pool and
  * initialized with the standard set of authentication providers used

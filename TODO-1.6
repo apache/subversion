@@ -14,11 +14,8 @@ Blocker:
    See: <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1019712>.
 
  * #3354: update fails when file with local mods is moved and modified.
-   If you run the attached script with current trunk, svn bails out
-   and leaves the working copy in locked state.
-   The problem occurs when an update pulls down both a move and a
-   textual diff for a file in one go.
-   Not deeply analysed, fix unknown as of yet, but reproduction script exists.
+   The bug has been fixed, but the regression test for the issue seems
+   to have problems.
 
  * Review the new "svn_dirent/svn_uri" API and ensure we aren't putting
    functions into the public name space that we won't want to support.

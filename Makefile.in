@@ -421,7 +421,7 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	            $$flags                                                  \
 	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
-	  echo "make check: Python 2.2 or greater is required,";             \
+	  echo "make check: Python 2.4 or greater is required,";             \
 	  echo "            but was not detected during configure";          \
 	  exit 1;                                                            \
 	fi;

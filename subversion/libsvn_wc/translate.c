@@ -61,49 +61,65 @@ svn_wc_translated_stream(svn_stream_t **stream,
                          apr_uint32_t flags,
                          apr_pool_t *pool)
 {
+  svn_boolean_t special;
+  svn_boolean_t to_nf = flags & SVN_WC_TRANSLATE_TO_NF;
   svn_subst_eol_style_t style;
   const char *eol;
   apr_hash_t *keywords;
-  svn_boolean_t special;
-  svn_boolean_t to_nf = flags & SVN_WC_TRANSLATE_TO_NF;
+  svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+
+  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+
+  if (special)
+    {
+      if (to_nf)
+        return svn_subst_read_specialfile(stream, path, pool, pool);
+
+      return svn_subst_create_specialfile(stream, path, pool, pool);
+    }
 
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
                                 adm_access, pool));
   SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
                                adm_access, NULL, pool));
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
-  if (special)
-    SVN_ERR(svn_subst_stream_from_specialfile(stream, path, pool));
+  if (to_nf)
+    SVN_ERR(svn_stream_open_readonly(stream, path, pool, pool));
   else
     {
       apr_file_t *file;
-      svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
 
+      /* We don't want the "open-exclusively" feature of the normal
+         svn_stream_open_writable interface. Do this manually. */
       SVN_ERR(svn_io_file_open(&file, path,
-                               to_nf ? (APR_READ | APR_BUFFERED)
-                               : (APR_CREATE | APR_WRITE | APR_BUFFERED),
+                               APR_CREATE | APR_WRITE | APR_BUFFERED,
                                APR_OS_DEFAULT, pool));
-
       *stream = svn_stream_from_aprfile2(file, FALSE, pool);
-
-      if (svn_subst_translation_required(style, eol, keywords, special, TRUE))
-        {
-          if (to_nf)
-            SVN_ERR(svn_subst_stream_translated_to_normal_form
-                    (stream, *stream, style, eol, repair_forced,
-                     keywords, pool));
-          else
-            *stream = svn_subst_stream_translated
-              (*stream, eol, TRUE, keywords, TRUE, pool);
-        }
     }
 
-  /* Enfore our contract, because a specialfile stream won't */
-  if (to_nf)
-    svn_stream_set_write(*stream, write_handler_unsupported);
-  else
-    svn_stream_set_read(*stream, read_handler_unsupported);
+  if (svn_subst_translation_required(style, eol, keywords, special, TRUE))
+    {
+      if (to_nf)
+        {
+          SVN_ERR(svn_subst_stream_translated_to_normal_form(stream,
+                                                             *stream,
+                                                             style, eol,
+                                                             repair_forced,
+                                                             keywords,
+                                                             pool));
+
+          /* Enforce our contract. TO_NF streams are readonly */
+          svn_stream_set_write(*stream, write_handler_unsupported);
+        }
+      else
+        {
+          *stream = svn_subst_stream_translated(*stream, eol, TRUE,
+                                                keywords, TRUE, pool);
+
+          /* Enforce our contract. FROM_NF streams are write-only */
+          svn_stream_set_read(*stream, read_handler_unsupported);
+        }
+    }
 
   return SVN_NO_ERROR;
 }

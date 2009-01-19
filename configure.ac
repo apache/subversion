@@ -6,8 +6,8 @@ AC_PREREQ(2.58)
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
-        [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
-        [http://subversion.tigris.org/])
+     [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
+     [http://subversion.tigris.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR([build])
@@ -114,10 +114,10 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_ALLOWED_PATTERN="(3\.4|3\.5|3\.6)($|\..*)"
-SQLITE_RECOMMENDED_VER="3.5.9"
-SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
-SVN_LIB_SQLITE(${SQLITE_ALLOWED_PATTERN}, ${SQLITE_RECOMMENDED_VER},
+SQLITE_MINIMUM_VER="3.4.0"
+SQLITE_RECOMMENDED_VER="3.6.10"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
 
 dnl Set up a number of directories ---------------------
@@ -837,7 +837,7 @@ AS_HELP_STRING([--enable-gprof],
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.2 or later is required to run the testsuite])
+  AC_MSG_WARN([Python 2.4 or later is required to run the testsuite])
   AC_MSG_WARN([or to use the Subversion Python bindings])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])
