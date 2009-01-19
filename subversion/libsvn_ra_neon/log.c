@@ -179,8 +179,7 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
-      lb->this_path_item = apr_pcalloc(lb->subpool,
-                                       sizeof(*(lb->this_path_item)));
+      lb->this_path_item = svn_log_changed_path2_create(lb->subpool);
       lb->this_path_item->node_kind = svn_node_kind_from_word(
                                      svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;

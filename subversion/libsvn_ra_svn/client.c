@@ -1336,7 +1336,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               cpath = svn_path_canonicalize(cpath, iterpool);
               if (copy_path)
                 copy_path = svn_path_canonicalize(copy_path, iterpool);
-              change = apr_palloc(iterpool, sizeof(*change));
+              change = svn_log_changed_path2_create(iterpool);
               change->action = *action;
               change->copyfrom_path = copy_path;
               change->copyfrom_rev = copy_rev;

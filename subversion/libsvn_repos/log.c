@@ -247,7 +247,7 @@ detect_changed(apr_hash_t **changed,
           break;
         }
 
-      item = apr_pcalloc(pool, sizeof(*item));
+      item = svn_log_changed_path2_create(pool);
       item->action = action;
       item->node_kind = change->node_kind;
       item->copyfrom_rev = SVN_INVALID_REVNUM;

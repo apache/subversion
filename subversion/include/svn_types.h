@@ -576,6 +576,10 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
 /**
  * A structure to represent a path that changed for a log entry.
  *
+ * @note To allow for extending the @c svn_log_changed_path2_t structure in
+ * future releases, always use svn_log_changed_path2_create() to allocate
+ * the structure.
+ *
  * @since New in 1.6.
  */
 typedef struct svn_log_changed_path2_t
@@ -592,7 +596,32 @@ typedef struct svn_log_changed_path2_t
   /** The type of the node, may be svn_node_unknown. */
   svn_node_kind_t node_kind;
 
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update 
+     svn_log_changed_path2_dup(). */
 } svn_log_changed_path2_t;
+
+/**
+ * Returns an @c svn_log_changed_path2_t, allocated in @a pool with all fields
+ * initialized to NULL, None or empty values.
+ *
+ * @note To allow for extending the @c svn_log_changed_path2_t structure in
+ * future releases, this function should always be used to allocate the 
+ * structure.
+ *
+ * @since New in 1.6.
+ */
+svn_log_changed_path2_t *
+svn_log_changed_path2_create(apr_pool_t *pool);
+
+/**
+ * Return a deep copy of @a changed_path, allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_log_changed_path2_t *
+svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
+                          apr_pool_t *pool);
 
 /**
  * A structure to represent a path that changed for a log entry.  Same as
@@ -617,8 +646,9 @@ typedef struct svn_log_changed_path_t
 /**
  * Return a deep copy of @a changed_path, allocated in @a pool.
  *
- * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
                          apr_pool_t *pool);
