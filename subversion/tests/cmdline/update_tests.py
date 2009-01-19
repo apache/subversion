@@ -2065,18 +2065,36 @@ def forced_update_failures(sbox):
                                         None, None, None, None, 0, C_Path,
                                         '--force')
 
-  # A forced update that tries to add a directory when a versioned directory
-  # of the same name already exists should fail.
-
-  # Remove the file A/C/I and make it a versioned directory.
-  I_url = sbox.repo_url + "/A/C/I"
+  # Clean-up what we have done so far.  Remove the unversioned file A/C/I
+  # and the unversioned directory A/B/F/nu.  Then update the backup to
+  # r2, except for A/C, update that to r1 so A/C/I isn't present.
+  # working copy.
   os.remove(I_path)
-  os.mkdir(I_path)
+  os.rmdir(nu_path)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'up', wc_backup)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'up', '-r', '1', C_Path)
+  
+  # Prior to the introduction of tree conflict handling, a forced update
+  # that tried to add a directory when a versioned directory of the same
+  # name already exists failed with an error:
+  #
+  #   svn: Failed to add directory 'update_tests-31.backup\A\C\I':
+  #   a versioned directory of the same name already exists
+  #
+  # Now this attempt succeeds, but results in a tree conflict.
+  #
+  ### Are either of these behaviors correct? See issue #3209:
+  ### http://subversion.tigris.org/issues/show_bug.cgi?id=3209
+  #
+  # Checkout %URL%/A/C/I@2 directly to A/C/I.  A/C, being at r1, views
+  # this as an unversioned object.
+  I_url = sbox.repo_url + "/A/C/I"
   exit_code, so, se = svntest.actions.run_and_verify_svn(
     "Unexpected error during co",
     ['Checked out revision 2.\n'], [],
     "co", I_url, I_path)
-
   svntest.actions.run_and_verify_update(C_Path, None, None, None,
                                         ".*Failed to add " + \
                                         "directory.*a versioned directory " + \
