@@ -2233,7 +2233,8 @@ def update_wc_on_windows_drive(sbox):
       # Python <2.4
       os.popen3('subst /D ' + drive +': ', 't')
 
-# Issue #2618: update a working copy with a replaced file.
+# Issue #2618: "'Checksum mismatch' error when receiving
+# update for replaced-with-history file".
 def update_wc_with_replaced_file(sbox):
   "update wc containing a replaced-with-history file"
 
@@ -2261,23 +2262,18 @@ def update_wc_with_replaced_file(sbox):
   expected_status.tweak('iota', status='R ', wc_rev='1')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Now update the wc
+  # Now update the wc.  The delete half of the local replacement
+  # is a tree conflict with the incoming edit on that deleted item.
   expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='C '),
+    'iota' : Item(status='  ', treeconflict='C'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev='2'),
+    'iota' : Item(status='R ', wc_rev='1', treeconflict='C'),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota',
-                      contents="\n".join(["<<<<<<< .mine",
-                                          "=======",
-                                          "This is the file 'iota'.",
-                                          "New line in 'iota'",
-                                          ">>>>>>> .r2",
-                                          ""]))
-  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  expected_disk.tweak('iota', contents="")
+  conflict_files = []
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2288,9 +2284,7 @@ def update_wc_with_replaced_file(sbox):
 
   # Make us a working copy with a 'replace-with-history' file.
   svntest.main.run_svn(None, 'revert', iota_path)
-  expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='U '),
-    })
+  expected_output = svntest.wc.State(wc_dir, {})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_update(wc_dir,
@@ -2308,24 +2302,18 @@ def update_wc_with_replaced_file(sbox):
   expected_status.tweak('iota', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Now update the wc
+  # Now update the wc.  The delete half of the local replacement
+  # is a tree conflict with the incoming edit on that deleted item.
   expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='C '),
+    'iota' : Item(status='  ', treeconflict='C'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev='-', copied='+'),
+    'iota' : Item(status='R ', wc_rev='-', treeconflict='C', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota',
-                      contents="\n".join(["<<<<<<< .mine",
-                                          "This is the file 'mu'.",
-                                          "=======",
-                                          "This is the file 'iota'.",
-                                          "New line in 'iota'",
-                                          ">>>>>>> .r2",
-                                          ""]))
-  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  expected_disk.tweak('iota', contents="This is the file 'mu'.\n")
+  conflict_files = [ ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -4301,7 +4289,7 @@ test_list = [ None,
               forced_update,
               XFail(forced_update_failures),
               XFail(update_wc_on_windows_drive),
-              XFail(update_wc_with_replaced_file),
+              update_wc_with_replaced_file,
               XFail(update_with_obstructing_additions),
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
