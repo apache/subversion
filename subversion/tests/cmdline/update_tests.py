@@ -4260,7 +4260,8 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None,
-                                        True)
+                                        True, other_E_path,
+                                        '--accept', 'postpone')
 
 #######################################################################
 # Run the tests
