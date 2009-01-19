@@ -2654,7 +2654,7 @@ def tree_conflicts_resolved(sbox):
   expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
   # The expectation on 'rho' reflects partial progress on issue #3334.
   expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
-  expected_status.tweak('A/D/G/tau', status='D ', wc_rev='1')
+  expected_status.remove('A/D/G/tau')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
