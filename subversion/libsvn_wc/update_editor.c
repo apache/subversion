@@ -1719,7 +1719,7 @@ set_copied_handle_error(const char *path,
 
 /* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
  * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
- * PATH and PARENT_PATH are relative to EB->anchor.
+ * PATH and PARENT_PATH are relative to the current working directory.
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
  * the repository at the target revision.
@@ -1744,8 +1744,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   const char *their_url,
                                   apr_pool_t *pool)
 {
-  const char *full_path = svn_path_join(eb->anchor, path, pool);
-  const char *base_name = svn_path_basename(full_path, pool);
+  const char *base_name = svn_path_basename(path, pool);
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
   svn_wc_adm_access_t *entry_adm_access;
@@ -1776,7 +1775,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   /* ### But this will fail if eb->adm_access holds only a shallow lock. */
   SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, eb->adm_access,
                               (entry->kind == svn_node_dir)
-                              ? full_path : parent_path, pool));
+                              ? path : parent_path, pool));
 
   SVN_ERR(svn_wc__entry_modify(entry_adm_access,
                                (entry->kind == svn_node_dir)
@@ -1798,7 +1797,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
       /* Set the 'copied' flag recursively, to support the
        * cases where this is a directory. */
       set_copied_baton.eb = eb;
-      SVN_ERR(svn_wc_walk_entries3(full_path, parent_adm_access,
+      SVN_ERR(svn_wc_walk_entries3(path, parent_adm_access,
                                    &set_copied_callbacks, &set_copied_baton,
                                    svn_depth_infinity, FALSE /* show_hidden */,
                                    NULL, NULL, pool));
