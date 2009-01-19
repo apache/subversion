@@ -552,7 +552,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
 #ifdef SVN_HAVE_GNOME_KEYRING
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                         &svn_cmdline_auth_unlock_prompt);
+                         &svn_cmdline__auth_gnome_keyring_unlock_prompt);
 #endif /* SVN_HAVE_GNOME_KEYRING */
 
   return SVN_NO_ERROR;

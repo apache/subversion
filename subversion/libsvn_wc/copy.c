@@ -539,8 +539,8 @@ copy_file_administratively(const char *src_path,
       SVN_ERR(svn_wc__get_special(&special, src_path, src_access, pool));
       if (special)
         {
-          SVN_ERR(svn_subst_get_detranslated_stream(&contents, src_path,
-                                                    pool, pool));
+          SVN_ERR(svn_subst_read_specialfile(&contents, src_path,
+                                             pool, pool));
         }
       else
         {
@@ -553,19 +553,20 @@ copy_file_administratively(const char *src_path,
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
                                         src_access, pool));
 
+          SVN_ERR(svn_stream_open_readonly(&contents, src_path, pool, pool));
+
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
             {
-              SVN_ERR(svn_subst_stream_detranslated(&contents, src_path,
-                                                    eol_style, eol_str,
-                                                    FALSE,
-                                                    keywords,
-                                                    FALSE,
-                                                    pool));
+              /* Wrap the stream to translate to normal form */
+              SVN_ERR(svn_subst_stream_translated_to_normal_form(&contents,
+                                                                 contents,
+                                                                 eol_style,
+                                                                 eol_str,
+                                                                 FALSE,
+                                                                 keywords,
+                                                                 pool));
             }
-          else
-            SVN_ERR(svn_stream_open_readonly(&contents, src_path,
-                                             pool, pool));
         }
     }
 

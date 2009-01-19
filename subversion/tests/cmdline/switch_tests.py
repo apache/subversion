@@ -2274,7 +2274,9 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
+  # These 'switched' statuses are bogus, because of do_entry_deletion not
+  # updating the URLs (issue #3334).
+  expected_status.tweak('D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
   # The expectation on 'alpha' reflects partial progress on issue #3334.
   expected_status.tweak('F/alpha', status='A ', copied='+', wc_rev='-')
