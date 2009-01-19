@@ -214,7 +214,7 @@ log_entry_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path_t *log_item
+          svn_log_changed_path2_t *log_item
             = apr_hash_get(log_entry->changed_paths, item->key, item->klen);
           const char *copy_data = "";
 
@@ -369,7 +369,7 @@ log_entry_receiver_xml(void *baton,
         {
           void *val;
           char action[2];
-          svn_log_changed_path_t *log_item;
+          svn_log_changed_path2_t *log_item;
 
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
