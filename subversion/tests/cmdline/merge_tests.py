@@ -2749,19 +2749,17 @@ def merge_dir_and_file_replace(sbox):
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
     })
+  expected_status.tweak('A/C', wc_rev=3) # From mergeinfo
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
                                         None, wc_dir)
   # Merge replacement of foo onto C
   expected_output = wc.State(C_path, {
-    'foo' : Item(status='D '),
-    'foo' : Item(status='A '),
-    'foo/new file 2' : Item(status='D '),
-    'foo/new file 2' : Item(status='A '),
-    'foo/bar'        : Item(status='A '),
+    'foo'                : Item(status='R '),
+    'foo/new file 2'     : Item(status='A '),
+    'foo/bar'            : Item(status='A '),
     'foo/bar/new file 3' : Item(status='A '),
-    'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
     ''    : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2-5'}),
@@ -2771,7 +2769,7 @@ def merge_dir_and_file_replace(sbox):
     'foo/bar/new file 3' : Item("Initial text in new file 3.\n"),
     })
   expected_status = wc.State(C_path, {
-    ''    : Item(status='  ', wc_rev=1),
+    ''    : Item(status=' M', wc_rev=3),
     'foo' : Item(status='R ', wc_rev='-', copied='+'),
     'foo/new file 2'     : Item(status='R ', wc_rev='-', copied='+'),
     'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
