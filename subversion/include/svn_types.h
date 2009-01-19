@@ -121,6 +121,25 @@ typedef enum
   svn_node_unknown
 } svn_node_kind_t;
 
+/** Return a constant string expressing @a kind as an English word, e.g.,
+ * "file", "dir", etc.  The string is not localized, as it may be used for
+ * client<->server communications.  If the kind is not recognized, return
+ * "unknown".
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_node_kind_to_word(svn_node_kind_t kind);
+
+/** Return the appropriate node_kind for @a word.  @a word is as
+ * returned from svn_node_kind_to_word().  If @a word does not
+ * represent a recognized kind or is @c NULL, return @c svn_node_unknown.
+ *
+ * @since New in 1.6.
+ */
+svn_node_kind_t
+svn_node_kind_from_word(const char *word);
+
 /** About Special Files in Subversion
  *
  * Subversion denotes files that cannot be portably created or
