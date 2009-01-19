@@ -130,7 +130,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
           info->log_entry->changed_paths = apr_hash_make(info->pool);
         }
 
-      info->tmp_path = apr_pcalloc(info->pool, sizeof(*info->tmp_path));
+      info->tmp_path = svn_log_changed_path2_create(info->pool);
       info->tmp_path->copyfrom_rev = SVN_INVALID_REVNUM;
     }
 
