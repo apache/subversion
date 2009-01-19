@@ -613,7 +613,7 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 typedef struct svn_log_entry_t
 {
   /** A hash containing as keys every path committed in @a revision; the
-   * values are (@c svn_log_changed_path_t *) stuctures.
+   * values are (@c svn_log_changed_path2_t *) stuctures.
    *
    * ### The only reason @a changed_paths is not qualified with `const' is
    * that we usually want to loop over it, and apr_hash_first() doesn't
