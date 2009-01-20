@@ -26,7 +26,7 @@ def main(input_filename, output_filename):
   var_name = os.path.basename(input_filename).replace('.', '_')
   var_name = var_name.replace('-', '_')
 
-  output.write('static const char * const %s[] = { NULL,\n' % var_name)
+  output.write('#define %s \\\n' % var_name.upper())
 
   in_comment = False
   for line in input:
@@ -34,11 +34,11 @@ def main(input_filename, output_filename):
     line = line.replace('"', '\\"')
 
     if line:
-      output.write('  "' + line + '"\n')
+      output.write('  "' + line + '"\\\n')
     else:
-      output.write('  APR_EOL_STR\n')
+      output.write('  APR_EOL_STR\\\n')
 
-  output.write('  };')
+  output.write('  ""\n')
 
   input.close()
   output.close()
