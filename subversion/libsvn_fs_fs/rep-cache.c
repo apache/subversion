@@ -25,18 +25,13 @@
 
 #include "private/svn_sqlite.h"
 
+#include "rep-cache-db.sql.h"
+
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
 
 static const char * const upgrade_sql[] = { NULL,
-  "pragma auto_vacuum = 1;"
-  APR_EOL_STR
-  "create table rep_cache (hash text not null primary key,   "
-  "                        revision integer not null,        "
-  "                        offset integer not null,          "
-  "                        size integer not null,            "
-  "                        expanded_size integer not null);  "
-  APR_EOL_STR
+  REP_CACHE_DB_SQL
   };
 
 
