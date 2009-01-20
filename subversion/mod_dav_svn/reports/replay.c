@@ -392,6 +392,7 @@ dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output)
 {
+  dav_error *derr = NULL;
   svn_revnum_t low_water_mark = SVN_INVALID_REVNUM;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   const svn_delta_editor_t *editor;
@@ -402,7 +403,6 @@ dav_svn__replay_report(const dav_resource *resource,
   apr_xml_elem *child;
   svn_fs_root_t *root;
   svn_error_t *err;
-  apr_status_t apr_err;
   void *edit_baton;
   int ns;
 
@@ -470,9 +470,12 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
-    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                "Couldn't retrieve revision root",
-                                resource->pool);
+    {
+      derr = dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Couldn't retrieve revision root",
+                                  resource->pool);
+      goto cleanup;
+    }
 
   make_editor(&editor, &edit_baton, bb, output, resource->pool);
 
@@ -480,26 +483,27 @@ dav_svn__replay_report(const dav_resource *resource,
                                send_deltas, editor, edit_baton,
                                dav_svn__authz_read_func(&arb), &arb,
                                resource->pool)))
-    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                "Problem replaying revision",
-                                resource->pool);
+    {
+      derr = dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Problem replaying revision",
+                                  resource->pool);
+      goto cleanup;
+    }
 
   if ((err = end_report(edit_baton)))
-    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                "Problem closing editor drive",
-                                resource->pool);
+    {
+      derr = dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Problem closing editor drive",
+                                  resource->pool);
+      goto cleanup;
+    }
 
+ cleanup:
   dav_svn__operational_log(resource->info,
                            svn_log__replay(base_dir, rev,
                                            resource->info->r->pool));
 
   /* Flush the brigade. */
-  if ((apr_err = ap_fflush(output, bb)))
-    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade "
-                                "in dav_svn__reply_report.",
-                                resource->pool);
-
-  return NULL;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

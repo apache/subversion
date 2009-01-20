@@ -64,7 +64,7 @@ struct log_baton
   svn_boolean_t want_message;
 
   /* The current changed path item. */
-  svn_log_changed_path_t *this_path_item;
+  svn_log_changed_path2_t *this_path_item;
 
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
@@ -99,7 +99,6 @@ reset_log_item(struct log_baton *lb)
 
   svn_pool_clear(lb->subpool);
 }
-
 
 /*
  * This implements the `svn_ra_neon__xml_startelm_cb' prototype.
@@ -180,8 +179,9 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
-      lb->this_path_item = apr_pcalloc(lb->subpool,
-                                       sizeof(*(lb->this_path_item)));
+      lb->this_path_item = svn_log_changed_path2_create(lb->subpool);
+      lb->this_path_item->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,

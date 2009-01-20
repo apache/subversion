@@ -566,3 +566,20 @@ svn_io_open_unique_file(apr_file_t **file,
                                     : svn_io_file_del_none,
                                   pool);
 }
+
+/*** From constructors.c ***/
+svn_log_changed_path_t *
+svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
+                         apr_pool_t *pool)
+{
+  svn_log_changed_path_t *new_changed_path
+    = apr_palloc(pool, sizeof(*new_changed_path));
+
+  *new_changed_path = *changed_path;
+
+  if (new_changed_path->copyfrom_path)
+    new_changed_path->copyfrom_path =
+      apr_pstrdup(pool, new_changed_path->copyfrom_path);
+
+  return new_changed_path;
+}
