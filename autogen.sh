@@ -100,7 +100,7 @@ fi
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
 #       and we can state that dev people need Python on their machine. Note
-#       that running gen-make.py requires Python 2.X or newer.
+#       that running gen-make.py requires Python 2.4 or newer.
 
 PYTHON="`./build/find_python.sh`"
 if test -z "$PYTHON"; then
