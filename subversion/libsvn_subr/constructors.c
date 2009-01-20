@@ -57,7 +57,7 @@ svn_log_changed_path2_t *
 svn_log_changed_path2_create(apr_pool_t *pool)
 {
   svn_log_changed_path2_t *new_changed_path
-    = apr_palloc(pool, sizeof(*new_changed_path));
+    = apr_pcalloc(pool, sizeof(*new_changed_path));
 
   return new_changed_path;
 }
@@ -69,7 +69,7 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
   svn_log_changed_path2_t *new_changed_path
     = svn_log_changed_path2_create(pool);
 
-  memcpy(new_changed_path, changed_path, sizeof(*new_changed_path));
+  *new_changed_path = *changed_path;
 
   if (new_changed_path->copyfrom_path)
     new_changed_path->copyfrom_path =
