@@ -120,6 +120,14 @@ AC_DEFUN(SVN_SQLITE_DIR_CONFIG,
     sqlite_include="$1/include/sqlite3.h"
   fi
 
+  save_CPPFLAGS="$CPPFLAGS"
+  save_LDFLAGS="$LDFLAGS"
+
+  if test ! -z "$1"; then
+    CPPFLAGS="$CPPFLAGS -I$sqlite_dir/include"
+    LDFLAGS="$LDFLAGS -L$sqlite_dir/lib"
+  fi
+
   AC_CHECK_HEADER(sqlite3.h,
     [
       AC_MSG_CHECKING([sqlite library version (via header)])
@@ -139,6 +147,9 @@ SQLITE_VERSION_OKAY
                       fi
                   ])], [AC_MSG_RESULT([unsupported SQLite version])])
     ])
+
+  CPPFLAGS="$save_CPPFLAGS"
+  LDFLAGS="$save_LDFLAGS"
 ])
 
 dnl SVN_SQLITE_FILE_CONFIG(sqlite_file)
