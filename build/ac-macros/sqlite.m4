@@ -6,15 +6,16 @@ dnl   recommended_ver is the recommended version of sqlite, which is
 dnl   not necessarily the latest version released.  url is the URL of
 dnl   the recommended version of sqlite.
 dnl
-dnl   If a --with-sqlite=PREFIX option is passed search for a suitable
-dnl   sqlite installed on the system.  In this case ignore any sqlite/
-dnl   subdir within the source tree.
+dnl   If a --with-sqlite=PREFIX option is passed, look for a suitable sqlite
+dnl   either installed under the directory PREFIX or as an amalgamation file
+dnl   at the path PREFIX.  In this case ignore any sqlite-amalgamation/ subdir
+dnl   within the source tree.
 dnl
-dnl   If no --with-sqlite option is passed look first build/sqlite3.c,
-dnl   which should be the amalgamated version of the source distribution.
-dnl   If the amalgamation exists and is the wrong version exit with a
-dnl   failure.  If no sqlite/ subdir is present search for a sqlite installed
-dnl   on the system.
+dnl   If no --with-sqlite option is passed, look first for
+dnl   sqlite-amalgamation/sqlite3.c which should be the amalgamated version of
+dnl   the source distribution.  If the amalgamation exists and is the wrong
+dnl   version, exit with a failure.  If no sqlite-amalgamation/ subdir is
+dnl   present, search for a sqlite installed on the system.
 dnl
 dnl   If the search for sqlite fails, set svn_lib_sqlite to no, otherwise set
 dnl   it to yes.
@@ -87,8 +88,8 @@ AC_DEFUN(SVN_SQLITE_PKG_CONFIG,
       sqlite_version=`$pkg_config $SQLITE_PKGNAME --modversion --silence-errors`
 
       if test -n "$sqlite_version"; then
-        SVN_SQLITE_VERNUM_PARSE(sqlite_version)
-     
+        SVN_SQLITE_VERNUM_PARSE
+
         if test "$sqlite_ver_num" -ge "$sqlite_min_ver_num"; then
           AC_MSG_RESULT([$sqlite_version])
           svn_lib_sqlite="yes"
@@ -165,10 +166,11 @@ SQLITE_VERSION_OKAY
   fi
 ])
 
-dnl Parse a x.y.z version string into a number
+dnl SVN_SQLITE_VERNUM_PARSE()
+dnl
+dnl Parse a x.y[.z] version string sqlite_version into a number sqlite_ver_num.
 AC_DEFUN(SVN_SQLITE_VERNUM_PARSE,
 [
-  ver_str="$1"
   sqlite_major=`expr $sqlite_version : '\([[0-9]]*\)'`
   sqlite_minor=`expr $sqlite_version : '[[0-9]]*\.\([[0-9]]*\)'`
   sqlite_micro=`expr $sqlite_version : '[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\)'`
@@ -180,6 +182,10 @@ AC_DEFUN(SVN_SQLITE_VERNUM_PARSE,
                     \+ $sqlite_micro`
 ])
 
+dnl SVN_SQLITE_MIN_VERNUM_PARSE()
+dnl
+dnl Parse a x.y.z version string SQLITE_MINIMUM_VER into a number
+dnl sqlite_min_ver_num.
 AC_DEFUN(SVN_SQLITE_MIN_VERNUM_PARSE,
 [
   sqlite_min_major=`expr $SQLITE_MINIMUM_VER : '\([[0-9]]*\)'`
