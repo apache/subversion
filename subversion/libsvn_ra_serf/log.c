@@ -67,7 +67,7 @@ typedef struct {
   apr_size_t tmp_len;
 
   /* Temporary change path - ultimately inserted into changed_paths hash. */
-  svn_log_changed_path_t *tmp_path;
+  svn_log_changed_path2_t *tmp_path;
 
   /* Log information */
   svn_log_entry_t *log_entry;
@@ -130,7 +130,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
           info->log_entry->changed_paths = apr_hash_make(info->pool);
         }
 
-      info->tmp_path = apr_pcalloc(info->pool, sizeof(*info->tmp_path));
+      info->tmp_path = svn_log_changed_path2_create(info->pool);
       info->tmp_path->copyfrom_rev = SVN_INVALID_REVNUM;
     }
 
@@ -222,6 +222,9 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                   info->tmp_path->copyfrom_rev = copy_rev;
                 }
             }
+
+          info->tmp_path->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", attrs));
         }
       else if (strcmp(name.name, "replaced-path") == 0)
         {
@@ -244,16 +247,23 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                   info->tmp_path->copyfrom_rev = copy_rev;
                 }
             }
+
+          info->tmp_path->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", attrs));
         }
       else if (strcmp(name.name, "deleted-path") == 0)
         {
           info = push_state(parser, log_ctx, DELETED_PATH);
           info->tmp_path->action = 'D';
+          info->tmp_path->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)
         {
           info = push_state(parser, log_ctx, MODIFIED_PATH);
           info->tmp_path->action = 'M';
+          info->tmp_path->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", attrs));
         }
     }
 

@@ -2065,18 +2065,36 @@ def forced_update_failures(sbox):
                                         None, None, None, None, 0, C_Path,
                                         '--force')
 
-  # A forced update that tries to add a directory when a versioned directory
-  # of the same name already exists should fail.
-
-  # Remove the file A/C/I and make it a versioned directory.
-  I_url = sbox.repo_url + "/A/C/I"
+  # Clean-up what we have done so far.  Remove the unversioned file A/C/I
+  # and the unversioned directory A/B/F/nu.  Then update the backup to
+  # r2, except for A/C, update that to r1 so A/C/I isn't present.
+  # working copy.
   os.remove(I_path)
-  os.mkdir(I_path)
+  os.rmdir(nu_path)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'up', wc_backup)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'up', '-r', '1', C_Path)
+  
+  # Prior to the introduction of tree conflict handling, a forced update
+  # that tried to add a directory when a versioned directory of the same
+  # name already exists failed with an error:
+  #
+  #   svn: Failed to add directory 'update_tests-31.backup\A\C\I':
+  #   a versioned directory of the same name already exists
+  #
+  # Now this attempt succeeds, but results in a tree conflict.
+  #
+  ### Are either of these behaviors correct? See issue #3209:
+  ### http://subversion.tigris.org/issues/show_bug.cgi?id=3209
+  #
+  # Checkout %URL%/A/C/I@2 directly to A/C/I.  A/C, being at r1, views
+  # this as an unversioned object.
+  I_url = sbox.repo_url + "/A/C/I"
   exit_code, so, se = svntest.actions.run_and_verify_svn(
     "Unexpected error during co",
     ['Checked out revision 2.\n'], [],
     "co", I_url, I_path)
-
   svntest.actions.run_and_verify_update(C_Path, None, None, None,
                                         ".*Failed to add " + \
                                         "directory.*a versioned directory " + \
@@ -2233,7 +2251,8 @@ def update_wc_on_windows_drive(sbox):
       # Python <2.4
       os.popen3('subst /D ' + drive +': ', 't')
 
-# Issue #2618: update a working copy with a replaced file.
+# Issue #2618: "'Checksum mismatch' error when receiving
+# update for replaced-with-history file".
 def update_wc_with_replaced_file(sbox):
   "update wc containing a replaced-with-history file"
 
@@ -2261,23 +2280,18 @@ def update_wc_with_replaced_file(sbox):
   expected_status.tweak('iota', status='R ', wc_rev='1')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Now update the wc
+  # Now update the wc.  The delete half of the local replacement
+  # is a tree conflict with the incoming edit on that deleted item.
   expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='C '),
+    'iota' : Item(status='  ', treeconflict='C'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev='2'),
+    'iota' : Item(status='R ', wc_rev='1', treeconflict='C'),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota',
-                      contents="\n".join(["<<<<<<< .mine",
-                                          "=======",
-                                          "This is the file 'iota'.",
-                                          "New line in 'iota'",
-                                          ">>>>>>> .r2",
-                                          ""]))
-  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  expected_disk.tweak('iota', contents="")
+  conflict_files = []
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2288,9 +2302,7 @@ def update_wc_with_replaced_file(sbox):
 
   # Make us a working copy with a 'replace-with-history' file.
   svntest.main.run_svn(None, 'revert', iota_path)
-  expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='U '),
-    })
+  expected_output = svntest.wc.State(wc_dir, {})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_update(wc_dir,
@@ -2308,24 +2320,18 @@ def update_wc_with_replaced_file(sbox):
   expected_status.tweak('iota', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Now update the wc
+  # Now update the wc.  The delete half of the local replacement
+  # is a tree conflict with the incoming edit on that deleted item.
   expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='C '),
+    'iota' : Item(status='  ', treeconflict='C'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev='-', copied='+'),
+    'iota' : Item(status='R ', wc_rev='-', treeconflict='C', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota',
-                      contents="\n".join(["<<<<<<< .mine",
-                                          "This is the file 'mu'.",
-                                          "=======",
-                                          "This is the file 'iota'.",
-                                          "New line in 'iota'",
-                                          ">>>>>>> .r2",
-                                          ""]))
-  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  expected_disk.tweak('iota', contents="This is the file 'mu'.\n")
+  conflict_files = [ ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -4194,7 +4200,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         expected_status, None, wc_dir)
     
   # r3: Make a text mod to A/B/E/alpha.moved in the first WC.
-  new_content_for_alpha = 'alpha, modified after move'
+  new_content_for_alpha = 'alpha, modified after move\n'
   svntest.main.file_write(alpha_moved_path, new_content_for_alpha)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha.moved' : Item(verb='Sending'),
@@ -4206,24 +4212,26 @@ def update_moves_and_modifies_an_edited_file(sbox):
   
   # Make a text mod to A/B/E/alpha.moved in the second WC then
   # update the second WC.
-  new_content_for_other_alpha = 'alpha, modified'
+  new_content_for_other_alpha = 'alpha, modified\n'
   svntest.main.file_write(other_alpha_path, new_content_for_other_alpha)
 
   expected_output = wc.State(other_E_path, {
     'alpha'       : Item(status='  ', treeconflict='C'),
-    'alpha.moved' : Item(status='A '),
+    'alpha.moved' : Item(status='C '),
     })
-  ### TODO: Yes, the update should succeed and leave a tree conflict,
-  ###       but is this the right conflict?
   expected_status = wc.State(other_E_path, {
     ''            : Item(status='  ', wc_rev=3),
-    'alpha'       : Item(status='A ', wc_rev='-', copied='+'),
-    'alpha.moved' : Item(status='  ', wc_rev=3),
+    'alpha'       : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    'alpha.moved' : Item(status='C ', wc_rev=3),
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_disk = wc.State('', {
     'alpha'       : Item(new_content_for_other_alpha),
-    'alpha.moved' : Item(new_content_for_alpha),
+    'alpha.moved' : Item("<<<<<<< .mine\n" +
+                         new_content_for_other_alpha +
+                         "=======\n" +
+                         new_content_for_alpha +
+                         ">>>>>>> .r3\n"),
     'beta'        : Item("This is the file 'beta'.\n"),
     })
 
@@ -4258,7 +4266,8 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None,
-                                        True)
+                                        True, other_E_path,
+                                        '--accept', 'postpone')
 
 # Issue #3334: a delete-onto-modified tree conflict should leave the node
 # scheduled for re-addition.
@@ -4372,7 +4381,7 @@ test_list = [ None,
               forced_update,
               XFail(forced_update_failures),
               XFail(update_wc_on_windows_drive),
-              XFail(update_wc_with_replaced_file),
+              update_wc_with_replaced_file,
               XFail(update_with_obstructing_additions),
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,

@@ -102,7 +102,6 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
                                       ap_filter_t *output)
 {
-  apr_status_t apr_err;
   svn_error_t *serr;
   dav_error *derr = NULL;
   apr_bucket_brigade *bb;
@@ -224,16 +223,6 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
     }
 
  cleanup:
-
-  /* Flush the contents of the brigade if we've started our response
-     (returning an error only if we don't already have one). */
-  if (location_segment_baton.sent_opener)
-    {
-      apr_err = ap_fflush(output, bb);
-      if (apr_err && (! derr))
-        derr = dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "Error flushing brigade.");
-    }
-
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

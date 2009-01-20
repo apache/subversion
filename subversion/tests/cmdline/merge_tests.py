@@ -2749,19 +2749,17 @@ def merge_dir_and_file_replace(sbox):
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
     })
+  expected_status.tweak('A/C', wc_rev=3) # From mergeinfo
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
                                         None, wc_dir)
   # Merge replacement of foo onto C
   expected_output = wc.State(C_path, {
-    'foo' : Item(status='D '),
-    'foo' : Item(status='A '),
-    'foo/new file 2' : Item(status='D '),
-    'foo/new file 2' : Item(status='A '),
-    'foo/bar'        : Item(status='A '),
+    'foo'                : Item(status='R '),
+    'foo/new file 2'     : Item(status='A '),
+    'foo/bar'            : Item(status='A '),
     'foo/bar/new file 3' : Item(status='A '),
-    'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
     ''    : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2-5'}),
@@ -2771,7 +2769,7 @@ def merge_dir_and_file_replace(sbox):
     'foo/bar/new file 3' : Item("Initial text in new file 3.\n"),
     })
   expected_status = wc.State(C_path, {
-    ''    : Item(status='  ', wc_rev=1),
+    ''    : Item(status=' M', wc_rev=3),
     'foo' : Item(status='R ', wc_rev='-', copied='+'),
     'foo/new file 2'     : Item(status='R ', wc_rev='-', copied='+'),
     'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
@@ -3659,7 +3657,6 @@ def merge_add_over_versioned_file_conflicts(sbox):
   new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
 
   # Create a new "alpha" file, with enough differences to cause a conflict.
-  ### TODO: Leverage inject_conflict_into_wc() here.
   svntest.main.file_write(new_alpha_path, 'new alpha content\n')
 
   # Add and commit the new "alpha" file, creating revision 2.
@@ -3676,39 +3673,28 @@ def merge_add_over_versioned_file_conflicts(sbox):
                                         expected_status, None,
                                         wc_dir)
 
-  # Merge changes from r1:2 into our pre-existing "alpha" file,
-  # causing a conflict.
+  # Merge r1:2 from A/C to A/B/E.  This will attempt to add A/C/alpha,
+  # but since A/B/E/alpha already exists we get a tree conflict.
   expected_output = wc.State(E_path, {
-    ''        : Item(status='C '),
-    'alpha'   : Item(status='A '),
+    'alpha'   : Item(status='  ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
-    'alpha'    : Item(""),  # state filled in below
+    'alpha'   : Item("This is the file 'alpha'.\n"),
     'beta'    : Item("This is the file 'beta'.\n"),
     })
   expected_status = wc.State(E_path, {
-    ''       : Item(status='CM', wc_rev=1),
-    'alpha'  : Item(status='  ', wc_rev=1),
+    ''       : Item(status=' M', wc_rev=1),
+    'alpha'  : Item(status='  ', wc_rev=1, treeconflict='C'),
     'beta'   : Item(status='  ', wc_rev=1),
     })
-
-  inject_conflict_into_expected_state('alpha', expected_disk, expected_status,
-                                      "This is the file 'alpha'.\n",
-                                      "new alpha content\n", 2)
   expected_skip = wc.State(E_path, { })
-
   svntest.actions.run_and_verify_merge(E_path, '1', '2',
                                        sbox.repo_url + \
                                        '/A/C',
                                        expected_output,
                                        expected_disk,
                                        expected_status,
-                                       expected_skip,
-                                       None,
-                                       svntest.tree.detect_conflict_files,
-                                       ["alpha\.working",
-                                        "alpha\.merge-right\.r2",
-                                        "alpha\.merge-left\.r0"])
+                                       expected_skip)
 
 #----------------------------------------------------------------------
 # eol-style handling during merge with conflicts, scenario 1:
@@ -15178,8 +15164,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_ignore_eolstyle,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_add_over_versioned_file_conflicts,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_add_over_versioned_file_conflicts,
+                         server_has_mergeinfo),
               SkipUnless(merge_conflict_markers_matching_eol,
                          server_has_mergeinfo),
               SkipUnless(merge_eolstyle_handling,

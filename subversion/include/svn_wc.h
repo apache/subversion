@@ -2749,9 +2749,27 @@ typedef struct svn_wc_status2_t
   svn_wc_conflict_description_t *tree_conflict;
 
   /** If the item is a file that was added to the working copy with an
-      svn:externals; if file_external is TRUE, then switched is always
-      FALSE. */
+   * svn:externals; if file_external is TRUE, then switched is always
+   * FALSE. 
+   * @since New in 1.6
+   */
   svn_boolean_t file_external;
+  
+  /** The actual status of the text compared to the pristine base of the
+   * file. This value isn't masked by other working copy statuses.
+   * @c pristine_text_status is @c svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind pristine_text_status;
+  
+  /** The actual status of the properties compared to the pristine base of 
+   * the node. This value isn't masked by other working copy statuses.
+   * @c pristine_prop_status is @c svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind pristine_prop_status;
 
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;

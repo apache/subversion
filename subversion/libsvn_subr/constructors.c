@@ -53,14 +53,23 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
   return dst_commit_info;
 }
 
-svn_log_changed_path_t *
-svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
-                         apr_pool_t *pool)
+svn_log_changed_path2_t *
+svn_log_changed_path2_create(apr_pool_t *pool)
 {
-  svn_log_changed_path_t *new_changed_path
+  svn_log_changed_path2_t *new_changed_path
     = apr_palloc(pool, sizeof(*new_changed_path));
 
-  *new_changed_path = *changed_path;
+  return new_changed_path;
+}
+
+svn_log_changed_path2_t *
+svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
+                          apr_pool_t *pool)
+{
+  svn_log_changed_path2_t *new_changed_path
+    = svn_log_changed_path2_create(pool);
+
+  memcpy(new_changed_path, changed_path, sizeof(*new_changed_path));
 
   if (new_changed_path->copyfrom_path)
     new_changed_path->copyfrom_path =
