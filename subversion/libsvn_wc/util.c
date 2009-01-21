@@ -116,19 +116,13 @@ svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool)
 {
-  svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
+  svn_wc_notify_t *ret = apr_pcalloc(pool, sizeof(*ret));
   ret->path = path;
   ret->action = action;
   ret->kind = svn_node_unknown;
-  ret->mime_type = NULL;
-  ret->lock = NULL;
-  ret->err = SVN_NO_ERROR;
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
-  ret->changelist_name = NULL;
-  ret->merge_range = NULL;
-  ret->path_prefix = NULL;
 
   return ret;
 }
