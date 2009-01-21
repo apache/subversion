@@ -133,6 +133,17 @@ svn_wc_create_notify(const char *path,
   return ret;
 }
 
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool)
+{
+  svn_wc_notify_t *ret = svn_wc_create_notify(".", action, pool);
+  ret->url = url;
+
+  return ret;
+}
+
 /* Pool cleanup function to clear an svn_error_t *. */
 static apr_status_t err_cleanup(void *data)
 {
@@ -165,6 +176,8 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
   if (ret->merge_range)
     ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
+  if (ret->url)
+    ret->url = apr_pstrdup(pool, ret->url);
   if (ret->path_prefix)
     ret->path_prefix = apr_pstrdup(pool, ret->path_prefix);
 
