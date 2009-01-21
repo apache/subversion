@@ -512,14 +512,14 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   /* Sort the rangelist, combine adjacent ranges into single ranges,
      and make sure there are no overlapping ranges. */
-  qsort(revlist->elts, revlist->nelts, revlist->elt_size,
-        svn_sort_compare_ranges);
   if (revlist->nelts > 1)
     {
       int i;
-      svn_merge_range_t *range;
-      svn_merge_range_t *lastrange =
-        APR_ARRAY_IDX(revlist, 0, svn_merge_range_t *);
+      svn_merge_range_t *range, *lastrange;
+
+      qsort(revlist->elts, revlist->nelts, revlist->elt_size,
+        svn_sort_compare_ranges);
+      lastrange = APR_ARRAY_IDX(revlist, 0, svn_merge_range_t *);
 
       for (i = 1; i < revlist->nelts; i++)
         {
