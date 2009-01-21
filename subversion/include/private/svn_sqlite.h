@@ -73,7 +73,7 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
    See svn_sqlite__get_statement() for how these strings are used. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
-                 svn_sqlite__mode_t mode, const char **statements,
+                 svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
