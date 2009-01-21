@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# transform-sql.py -- create a header file with the appropriate SQL variables
+# transform_sql.py -- create a header file with the appropriate SQL variables
 # from an SQL file
 #
 
