@@ -48,7 +48,7 @@ cleanup_db_apr(void *data)
   svn_sqlite__stmt_t *stmts[] = { ffd->rep_cache.get_rep_stmt,
                                   ffd->rep_cache.set_rep_stmt };
 
-  for (i = 0; i < 4; i++)
+  for (i = 0; i < 2; i++)
     {
       if (stmts[i])
         {
