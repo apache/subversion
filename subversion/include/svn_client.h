@@ -410,7 +410,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create2() to allocate and initialize this
+ * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -539,7 +539,7 @@ typedef struct svn_client_commit_item_t
  * @since New in 1.6.
  */
 svn_client_commit_item3_t *
-svn_client_commit_item_create2(apr_pool_t *pool);
+svn_client_commit_item3_create(apr_pool_t *pool);
 
 /** Like svn_client_commit_item_create2() but with a stupid "const"
  * qualifier on the returned structure, and it returns an error that

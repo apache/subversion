@@ -101,7 +101,7 @@ add_committable(apr_hash_t *committables,
 
   /* Now update pointer values, ensuring that their allocations live
      in POOL. */
-  new_item = svn_client_commit_item_create2(pool);
+  new_item = svn_client_commit_item3_create(pool);
   new_item->path           = apr_pstrdup(pool, path);
   new_item->kind           = kind;
   new_item->url            = apr_pstrdup(pool, url);
