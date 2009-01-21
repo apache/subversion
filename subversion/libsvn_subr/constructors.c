@@ -173,10 +173,10 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
        for (hi = apr_hash_first(pool, log_entry->revprops); 
             hi; hi = apr_hash_next(hi))
          {
-           const char *key;
-           svn_string_t *prop;
+           const void *key;
+           void *prop;
 
-           apr_hash_this(hi, (const void**)&key, NULL, (void**)&prop);
+           apr_hash_this(hi, &key, NULL, &prop);
 
            apr_hash_set(new_entry->revprops, apr_pstrdup(pool, key),
                         APR_HASH_KEY_STRING, svn_string_dup(prop, pool));
@@ -187,15 +187,15 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
     {
       new_entry->changed_paths2 = apr_hash_make(pool);
 
-      for (hi = apr_hash_first(pool, log_entry->changed_paths); 
+      for (hi = apr_hash_first(pool, log_entry->changed_paths2); 
            hi; hi = apr_hash_next(hi))
         {
-          const char *key;
-          svn_log_changed_path2_t *change;
+          const void *key;
+          void *change;
 
-          apr_hash_this(hi, (const void**)&key, NULL, (void**)&change);
+          apr_hash_this(hi, &key, NULL, &change);
 
-          apr_hash_set(new_entry->changed_paths, apr_pstrdup(pool, key),
+          apr_hash_set(new_entry->changed_paths2, apr_pstrdup(pool, key),
                        APR_HASH_KEY_STRING, 
                        svn_log_changed_path2_dup(change, pool));
         }
