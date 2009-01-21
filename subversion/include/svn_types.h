@@ -732,8 +732,8 @@ svn_log_entry_create(apr_pool_t *pool);
 /** Return a deep copy of @a log_entry, allocated in @a pool.
  *
  * The resulting svn_log_entry_t has @c changed_paths set to the same
- * value as @c changed_path2. @changed_paths will be @c NULL if
- * @changed_paths2 was @c NULL.
+ * value as @c changed_path2. @c changed_paths will be @c NULL if
+ * @c changed_paths2 was @c NULL.
  *
  * @since New in 1.6.
  */
