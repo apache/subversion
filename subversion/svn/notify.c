@@ -123,7 +123,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   svn_error_t *err;
 
   if (n->url)
-    path_local = url;
+    path_local = n->url;
   else
     path_local = n->path;
 
