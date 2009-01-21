@@ -55,8 +55,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
   ],
   [
-    dnl no --with-sqlite switch, and no sqlite subdir, look in PATH
-    SVN_SQLITE_PKG_CONFIG
+    dnl see if the sqlite amalgamation exists in the source tree
+    SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
 
     if test -z "$svn_lib_sqlite"; then
       dnl check the "standard" location of /usr
@@ -64,8 +64,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
 
     if test -z "$svn_lib_sqlite"; then
-      dnl finally, see if the sqlite amalgamation exists
-      SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
+      dnl no --with-sqlite switch, and no sqlite subdir, look in PATH
+      SVN_SQLITE_PKG_CONFIG
     fi
 
     if test -z "$svn_lib_sqlite"; then
