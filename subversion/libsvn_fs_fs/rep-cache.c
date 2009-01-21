@@ -59,7 +59,7 @@ cleanup_db_apr(void *data)
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
 
-  err = svn_sqlite__close(ffd->rep_cache.db, SVN_NO_ERROR);
+  err = svn_sqlite__close(ffd->rep_cache_db, SVN_NO_ERROR);
   if (err)
     {
       fs->warning(fs->warning_baton, err);
@@ -81,7 +81,7 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 
   /* Open (or create) the sqlite database */
   db_path = svn_path_join(fs->path, REP_CACHE_DB_NAME, pool);
-  SVN_ERR(svn_sqlite__open(&ffd->rep_cache.db, db_path,
+  SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            REP_CACHE_SCHEMA_FORMAT,
                            upgrade_sql, fs->pool, pool));
@@ -102,7 +102,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  if (ffd->rep_cache.db == NULL)
+  if (ffd->rep_cache_db == NULL)
     {
       *rep = NULL;
       return SVN_NO_ERROR;
@@ -114,7 +114,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache.db, stmt_get_rep));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, stmt_get_rep));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1,
                                 svn_checksum_to_cstring(checksum, pool)));
 
@@ -145,7 +145,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 
-  if (ffd->rep_cache.db == NULL)
+  if (ffd->rep_cache_db == NULL)
     return SVN_NO_ERROR;
 
   /* We only allow SHA1 checksums in this table. */
@@ -183,7 +183,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache.db, stmt_set_rep));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, stmt_set_rep));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1,
                                 svn_checksum_to_cstring(rep->sha1_checksum,
                                                         pool)));
