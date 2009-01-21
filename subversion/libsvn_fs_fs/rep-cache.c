@@ -34,12 +34,15 @@ static const char * const upgrade_sql[] = { NULL,
   REP_CACHE_DB_SQL
   };
 
+/* These values are directly related to the statements contained in STATEMENTS
+   below.  If you add something to that array, you'd better do the same here.
+*/
 enum statement_keys {
-  stmt_get_rep,
-  stmt_set_rep
+  STMT_GET_REP,
+  STMT_SET_REP
 };
 
-static const char *statements[] = {
+static const char * const statements[] = {
   "select revision, offset, size, expanded_size "
   "from rep_cache "
   "where hash = :1", 
@@ -47,7 +50,8 @@ static const char *statements[] = {
   "insert into rep_cache (hash, revision, offset, size, expanded_size) "
   "values (:1, :2, :3, :4, :5);",
 
-  NULL };
+  NULL
+  };
 
 
 /* APR cleanup function used to close the database when destroying the FS pool
@@ -114,7 +118,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, stmt_get_rep));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_GET_REP));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1,
                                 svn_checksum_to_cstring(checksum, pool)));
 
@@ -183,7 +187,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, stmt_set_rep));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1,
                                 svn_checksum_to_cstring(rep->sha1_checksum,
                                                         pool)));

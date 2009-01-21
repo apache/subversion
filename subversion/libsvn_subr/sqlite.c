@@ -50,10 +50,10 @@ sqlite_tracer(void *data, const char *sql)
 struct svn_sqlite__db_t
 {
   sqlite3 *db3;
-  const char **statement_strings;
+  const char * const *statement_strings;
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
-  apr_pool_t *pool;
+  apr_pool_t *result_pool;
 };
 
 struct svn_sqlite__stmt_t
@@ -128,7 +128,8 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 {
   if (db->prepared_stmts[stmt_idx] == NULL)
     SVN_ERR(svn_sqlite__prepare(&db->prepared_stmts[stmt_idx], db,
-                                db->statement_strings[stmt_idx], db->pool));
+                                db->statement_strings[stmt_idx],
+                                db->result_pool));
 
   *stmt = db->prepared_stmts[stmt_idx];
   return SVN_NO_ERROR;
@@ -395,7 +396,7 @@ init_sqlite(void)
 
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
-                 svn_sqlite__mode_t mode, const char **statements,
+                 svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -495,7 +496,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   else
     (*db)->nbr_statements = 0;
 
-  (*db)->pool = result_pool;
+  (*db)->result_pool = result_pool;
 
   return SVN_NO_ERROR;
 }
@@ -510,18 +511,8 @@ svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err)
   for (i = 0; i < db->nbr_statements; i++)
     {
       if (db->prepared_stmts[i])
-        {
-          svn_error_t *err2 = svn_sqlite__finalize(db->prepared_stmts[i]);
-          if (!err)
-            {
-              err = err2;
-              continue;
-            }
-          else
-            {
-              svn_error_clear(err2);
-            }
-        }
+        err = svn_error_compose_create(
+                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
     }
   
   result = sqlite3_close(db->db3);
