@@ -182,8 +182,6 @@ struct rep_cache_t
   /* Prepared statements. */
   svn_sqlite__stmt_t *get_rep_stmt;
   svn_sqlite__stmt_t *set_rep_stmt;
-  svn_sqlite__stmt_t *inc_select_stmt;
-  svn_sqlite__stmt_t *inc_update_stmt;
 
   /* The sqlite database handle. */
   svn_sqlite__db_t *db;
