@@ -180,6 +180,10 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     ret->url = apr_pstrdup(pool, ret->url);
   if (ret->path_prefix)
     ret->path_prefix = apr_pstrdup(pool, ret->path_prefix);
+  if (ret->prop_name)
+    ret->prop_name = apr_pstrdup(pool, ret->prop_name);
+  if (ret->rev_props)
+    ret->rev_props = svn_prop_hash_dup(ret->rev_props, pool);
 
   return ret;
 }
