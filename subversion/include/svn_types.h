@@ -646,6 +646,7 @@ typedef struct svn_log_changed_path_t
 /**
  * Return a deep copy of @a changed_path, allocated in @a pool.
  *
+ * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
