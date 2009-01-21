@@ -658,6 +658,8 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
  *
  * @note To allow for extending the @c svn_log_entry_t structure in future
  * releases, always use svn_log_entry_create() to allocate the structure.
+ *
+ * @since New in 1.5.
  */
 typedef struct svn_log_entry_t
 {
