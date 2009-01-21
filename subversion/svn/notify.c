@@ -119,8 +119,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 {
   struct notify_baton *nb = baton;
   char statchar_buf[5] = "    ";
-  const char *path_local = n->path;
+  const char *path_local;
   svn_error_t *err;
+
+  if (n->url)
+    path_local = url;
+  else
+    path_local = n->path;
 
   if (n->path_prefix)
     {

@@ -940,14 +940,17 @@ typedef enum svn_wc_notify_lock_state_t
  * give a less informative notification).
  *
  * @note Callers of notification functions should use svn_wc_create_notify()
- * to create structures of this type to allow for extensibility.
+ * or svn_wc_create_notify_url() to create structures of this type to allow
+ * for extensibility.
  *
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
 
   /** Path, either absolute or relative to the current working directory
-   * (i.e., not relative to an anchor). */
+   * (i.e., not relative to an anchor).@c path is "." or another valid path
+   * value for compatibilty reasons when the real target is an url that 
+   * is available in @c url. */
   const char *path;
 
   /** Action that describes what happened to @c path. */
@@ -995,9 +998,13 @@ typedef struct svn_wc_notify_t {
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
 
+  /** Similar to @c path, but if non-NULL the notification is about a url.
+   * @since New in 1.6 */
+  const char *url;
+
   /** If non-NULL, specifies an absolute path prefix that can be subtracted
-   * from the start of the absolute path in @c path.  Its purpose is to
-   * allow notification to remove a common prefix from all the paths
+   * from the start of the absolute path in @c path or @c url.  Its purpose 
+   * is to allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
 
@@ -1025,6 +1032,22 @@ svn_wc_notify_t *
 svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool);
+
+/**
+ * Allocate an @c svn_wc_notify_t structure in @a pool, initialize and return
+ * it.
+ *
+ * Set the @c url field of the created struct to @a url, @c action to, @c path
+ * to "." and @a action.  Set all other fields to their @c _unknown, @c NULL or
+ * invalid value, respectively. Make only a shallow copy of the pointer
+ * @a url.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool);
 
 /**
  * Return a deep copy of @a notify, allocated in @a pool.
