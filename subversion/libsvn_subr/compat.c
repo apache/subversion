@@ -131,7 +131,7 @@ log_wrapper_callback(void *baton,
       svn_compat_log_revprops_out(&author, &date, &message,
                                   log_entry->revprops);
       return lwb->receiver(lwb->baton,
-                           log_entry->changed_paths,
+                           log_entry->changed_paths2,
                            log_entry->revision,
                            author, date, message,
                            pool);
