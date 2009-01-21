@@ -1353,6 +1353,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           log_entry = svn_log_entry_create(iterpool);
 
           log_entry->changed_paths = cphash;
+          log_entry->changed_paths2 = cphash;
           log_entry->revision = rev;
           log_entry->has_children = has_children;
           if (rplist)

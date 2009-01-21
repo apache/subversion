@@ -158,6 +158,57 @@ svn_log_entry_create(apr_pool_t *pool)
   return log_entry;
 }
 
+svn_log_entry_t *
+svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  svn_log_entry_t *new_entry = svn_log_entry_create(pool);
+
+  *new_entry = *log_entry;
+
+  if (log_entry->revprops)
+    {
+      new_entry->revprops = apr_hash_make(pool);
+    
+       for (hi = apr_hash_first(pool, log_entry->revprops); 
+            hi; hi = apr_hash_next(hi))
+         {
+           const char *key;
+           svn_string_t *prop;
+
+           apr_hash_this(hi, (const void**)&key, NULL, (void**)&prop);
+
+           apr_hash_set(new_entry->revprops, apr_pstrdup(pool, key),
+                        APR_HASH_KEY_STRING, svn_string_dup(prop, pool));
+         }
+    }
+
+  if (log_entry->changed_paths2)
+    {
+      new_entry->changed_paths2 = apr_hash_make(pool);
+
+      for (hi = apr_hash_first(pool, log_entry->changed_paths); 
+           hi; hi = apr_hash_next(hi))
+        {
+          const char *key;
+          svn_log_changed_path2_t *change;
+
+          apr_hash_this(hi, (const void**)&key, NULL, (void**)&change);
+
+          apr_hash_set(new_entry->changed_paths, apr_pstrdup(pool, key),
+                       APR_HASH_KEY_STRING, 
+                       svn_log_changed_path2_dup(change, pool));
+        }
+    }
+
+  /* We can't copy changed_paths by itself without using deprecated code,
+     but we don't have to, as this function was new after the introduction
+     of the changed_paths2 field. */
+  new_entry->changed_paths = new_entry->changed_paths2;
+
+  return new_entry;
+}
+
 svn_location_segment_t *
 svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool)
