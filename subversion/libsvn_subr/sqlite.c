@@ -126,6 +126,8 @@ svn_error_t *
 svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                           int stmt_idx)
 {
+  SVN_ERR_ASSERT(stmt_idx < db->nbr_statements);
+
   if (db->prepared_stmts[stmt_idx] == NULL)
     SVN_ERR(svn_sqlite__prepare(&db->prepared_stmts[stmt_idx], db,
                                 db->statement_strings[stmt_idx],
