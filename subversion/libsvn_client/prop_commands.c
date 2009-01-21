@@ -263,7 +263,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
       const char *tmp_file;
       apr_array_header_t *commit_items = apr_array_make(pool, 1, sizeof(item));
 
-      item = svn_client_commit_item_create2(pool);
+      item = svn_client_commit_item3_create(pool);
       item->url = target;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
