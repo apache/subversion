@@ -64,12 +64,25 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
 /* Open a connection in *DB to the database at PATH. Validate the schema,
    creating/upgrading to LATEST_SCHEMA if needed using the instructions
    in UPGRADE_SQL. The resulting DB is allocated in RESULT_POOL, and any
-   temporary allocations are made in SCRATCH_POOL. */
+   temporary allocations are made in SCRATCH_POOL.
+   
+   STATEMENTS is an array of strings which may eventually be executed, the
+   last element of which should be NULL.  These strings are not duplicated
+   internally, and should have a lifetime at least as long as RESULT_POOL.
+   STATEMENTS itself may be NULL, in which case it has no impact.
+   See svn_sqlite__get_statement() for how these strings are used. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
-                 svn_sqlite__mode_t mode,
+                 svn_sqlite__mode_t mode, const char **statements,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
+
+/* Returns the statement in *STMT which has been prepared from the
+   STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
+   pool as the DB, and will be cleaned up with DB is closed. */
+svn_error_t *
+svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
+                          int stmt_idx);
 
 /* Prepares TEXT as a statement in DB, returning a statement in *STMT,
    allocated in RESULT_POOL. */

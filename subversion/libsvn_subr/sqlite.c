@@ -50,6 +50,10 @@ sqlite_tracer(void *data, const char *sql)
 struct svn_sqlite__db_t
 {
   sqlite3 *db3;
+  const char **statement_strings;
+  int nbr_statements;
+  svn_sqlite__stmt_t **prepared_stmts;
+  apr_pool_t *pool;
 };
 
 struct svn_sqlite__stmt_t
@@ -116,6 +120,18 @@ svn_error_t *
 svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
 {
   return svn_sqlite__exec(db, "ROLLBACK TRANSACTION;");
+}
+
+svn_error_t *
+svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
+                          int stmt_idx)
+{
+  if (db->prepared_stmts[stmt_idx] == NULL)
+    SVN_ERR(svn_sqlite__prepare(&db->prepared_stmts[stmt_idx], db,
+                                db->statement_strings[stmt_idx], db->pool));
+
+  *stmt = db->prepared_stmts[stmt_idx];
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -379,7 +395,7 @@ init_sqlite(void)
 
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
-                 svn_sqlite__mode_t mode,
+                 svn_sqlite__mode_t mode, const char **statements,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -461,13 +477,54 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   SVN_ERR(svn_sqlite__exec(*db, "PRAGMA case_sensitive_like=on;"));
 
   /* Validate the schema, upgrading if necessary. */
-  return check_format(*db, latest_schema, upgrade_sql, scratch_pool);
+  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
+
+  /* Store the provided statements. */
+  if (statements)
+    {
+      (*db)->statement_strings = statements;
+      (*db)->nbr_statements = 0;
+      while (*statements != NULL)
+        {
+          statements++;
+          (*db)->nbr_statements++;
+        }
+      (*db)->prepared_stmts = apr_pcalloc(result_pool, (*db)->nbr_statements
+                                                * sizeof(svn_sqlite__stmt_t *));
+    }
+  else
+    (*db)->nbr_statements = 0;
+
+  (*db)->pool = result_pool;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err)
 {
-  int result = sqlite3_close(db->db3);
+  int result;
+  int i;
+
+  /* Finalize any existing prepared statements. */
+  for (i = 0; i < db->nbr_statements; i++)
+    {
+      if (db->prepared_stmts[i])
+        {
+          svn_error_t *err2 = svn_sqlite__finalize(db->prepared_stmts[i]);
+          if (!err)
+            {
+              err = err2;
+              continue;
+            }
+          else
+            {
+              svn_error_clear(err2);
+            }
+        }
+    }
+  
+  result = sqlite3_close(db->db3);
   /* If there's a pre-existing error, return it. */
   /* ### If the connection close also fails, say something about it as well? */
   SVN_ERR(err);
