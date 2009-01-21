@@ -112,7 +112,7 @@ if test -z "$PYTHON"; then
 fi
 
 # Transform sql files into header files
-$PYTHON build/transform-sql.py subversion/libsvn_fs_fs/rep-cache-db.sql
+$PYTHON build/transform_sql.py subversion/libsvn_fs_fs/rep-cache-db.sql
 
 # Compile SWIG headers into standalone C files if we are in release mode
 if test -n "$RELEASE_MODE"; then
