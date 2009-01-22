@@ -259,6 +259,18 @@ struct options_response_ctx_t {
 };
 
 
+/* We use these static pointers so we can employ pointer comparison
+ * of our capabilities hash members instead of strcmp()ing all over
+ * the place.
+ */
+/* Both server and repository support the capability. */
+static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
+static const char *capability_no = "no";
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
+
+
 /* This implements serf_bucket_headers_do_callback_fn_t.
  */
 static int
@@ -284,29 +296,29 @@ capabilities_headers_iterator_callback(void *baton,
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         {
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, SERF_CAPABILITY_YES);
+                       APR_HASH_KEY_STRING, capability_yes);
         }
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
           /* The server doesn't know what repository we're referring
-             to, so it can't just say SERF_CAPABILITY_YES. */
+             to, so it can't just say capability_yes. */
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, SERF_CAPABILITY_SERVER_YES);
+                       APR_HASH_KEY_STRING, capability_server_yes);
         }
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_LOG_REVPROPS,
-                       APR_HASH_KEY_STRING, SERF_CAPABILITY_YES);
+                       APR_HASH_KEY_STRING, capability_yes);
         }
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-                       APR_HASH_KEY_STRING, SERF_CAPABILITY_YES);
+                       APR_HASH_KEY_STRING, capability_yes);
         }
     }
 
@@ -344,11 +356,11 @@ options_response_handler(serf_request_t *request,
 
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
-               APR_HASH_KEY_STRING, SERF_CAPABILITY_NO);
+               APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-               APR_HASH_KEY_STRING, SERF_CAPABILITY_NO);
+               APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-               APR_HASH_KEY_STRING, SERF_CAPABILITY_NO);
+               APR_HASH_KEY_STRING, capability_no);
 
   /* Then see which ones we can discover. */
   serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
@@ -411,6 +423,144 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   new_ctx->parser_ctx = parser_ctx;
 
   *opt_ctx = new_ctx;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/** Capabilities exchange. */
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   SERF_SESS->capabilities with the server's capabilities as read
+   from the response headers.  Use POOL only for temporary allocation. */
+svn_error_t *
+svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
+                                   apr_pool_t *pool)
+{
+  svn_ra_serf__options_context_t *opt_ctx;
+
+  /* This routine automatically fills in serf_sess->capabilities */
+  svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
+                                  serf_sess->repos_url_str, pool);
+
+  return svn_ra_serf__context_run_wait(
+                                   svn_ra_serf__get_options_done_ptr(opt_ctx),
+                                   serf_sess, pool);
+}
+
+
+svn_error_t *
+svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *serf_sess = ra_session->priv;
+  const char *cap_result;
+
+  /* This capability doesn't rely on anything server side. */
+  if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    {
+      *has = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability,
+                            APR_HASH_KEY_STRING);
+
+  /* If any capability is unknown, they're all unknown, so ask. */
+  if (cap_result == NULL)
+    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, pool));
+
+  /* Try again, now that we've fetched the capabilities. */
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability, APR_HASH_KEY_STRING);
+
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our svn_ra_serf__exchange_capabilities() call above
+             didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          svn_mergeinfo_catalog_t ignored;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+
+          err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
+                                           FALSE, FALSE, pool);
+
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
+            }
+          else
+            cap_result = capability_yes;
+
+          apr_hash_set(serf_sess->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
+        }
+    }
+
+  if (cap_result == capability_yes)
+    {
+      *has = TRUE;
+    }
+  else if (cap_result == capability_no)
+    {
+      *has = FALSE;
+    }
+  else if (cap_result == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
+    }
+  else  /* "can't happen" */
+    {
+      /* Well, let's hope it's a string. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("Attempt to fetch capability '%s' resulted in '%s'"),
+         capability, cap_result);
+    }
 
   return SVN_NO_ERROR;
 }
