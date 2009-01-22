@@ -486,7 +486,7 @@ dav_svn__get_special_uri(request_rec *r)
 
 
 const char *
-dav_svn__get_root_stub(request_rec *r)
+dav_svn__get_me_resource_uri(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/me", NULL);
 }

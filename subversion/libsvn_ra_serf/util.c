@@ -1553,6 +1553,8 @@ discover_vcc(const char **vcc_url,
   return SVN_NO_ERROR;
 }
 
+/* ### TODO:  Rename this function to svn_ra_serf__report_resource(),
+       per gstein's suggestion.  */
 svn_error_t *
 svn_ra_serf__discover_root(const char **root_url,
                            const char **rel_path,
@@ -1567,9 +1569,9 @@ svn_ra_serf__discover_root(const char **root_url,
   
      ### TODO:  Can we do a relative path calculation using the root stub?
   */
-  if ((! vcc_only) && (! rel_path) && session->root_stub)
+  if ((! vcc_only) && (! rel_path) && session->me_resource)
     {
-      *root_url = apr_pstrdup(pool, session->root_stub);
+      *root_url = apr_pstrdup(pool, session->me_resource);
       return SVN_NO_ERROR;
     }
   

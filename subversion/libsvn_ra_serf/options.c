@@ -325,8 +325,8 @@ capabilities_headers_iterator_callback(void *baton,
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
   if (strncmp(key, "SVN", 3) == 0)
     {
-      if (svn_cstring_casecmp(key, SVN_DAV_ROOT_STUB_HEADER) == 0)
-        orc->session->root_stub = apr_pstrdup(orc->session->pool, val);
+      if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
+        orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
 
       if (svn_cstring_casecmp(key, SVN_DAV_PEGREV_STUB_HEADER) == 0)
         orc->session->pegrev_stub = apr_pstrdup(orc->session->pool, val);

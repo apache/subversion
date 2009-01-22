@@ -938,7 +938,7 @@ dav_svn__update_report(const dav_resource *resource,
   arb.repos = repos;
 
   if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
-      && (resource->info->restype != DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION))
+      && (resource->info->restype != DAV_SVN_RESTYPE_ME))
     return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
                                   "This report can only be run against "
                                   "a VCC or root-stub URI.",
