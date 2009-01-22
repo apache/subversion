@@ -4210,7 +4210,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         expected_status, None,
                                         wc_dir)
   
-  # Make a text mod to A/B/E/alpha.moved in the second WC then
+  # Make a text mod to A/B/E/alpha in the second WC then
   # update the second WC.
   new_content_for_other_alpha = 'alpha, modified\n'
   svntest.main.file_write(other_alpha_path, new_content_for_other_alpha)
@@ -4226,13 +4226,16 @@ def update_moves_and_modifies_an_edited_file(sbox):
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_disk = wc.State('', {
-    'alpha'       : Item(new_content_for_other_alpha),
-    'alpha.moved' : Item("<<<<<<< .mine\n" +
-                         new_content_for_other_alpha +
-                         "=======\n" +
-                         new_content_for_alpha +
-                         ">>>>>>> .r3\n"),
-    'beta'        : Item("This is the file 'beta'.\n"),
+    'alpha'              : Item(new_content_for_other_alpha),
+    'alpha.moved'        : Item("<<<<<<< .mine\n" +
+                                new_content_for_other_alpha +
+                                "=======\n" +
+                                new_content_for_alpha +
+                                ">>>>>>> .r3\n"),
+    'alpha.moved.copied' : Item("This is the file 'alpha'.\n"),
+    'alpha.moved.r3'     : Item(new_content_for_alpha),
+    'alpha.moved.mine'   : Item(new_content_for_other_alpha),
+    'beta'               : Item("This is the file 'beta'.\n"),
     })
 
   # Test is failing on this update and leaving the WC locked:
