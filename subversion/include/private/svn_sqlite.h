@@ -1,7 +1,7 @@
 /* svn_sqlite.h
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -55,6 +55,12 @@ svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 */
 svn_error_t *
 svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
+
+/* Perform an insert as given by the prepared and bound STMT, and set
+   *ROW_ID to the id of the inserted row.  STMT will be reset prior
+   to returning. */
+svn_error_t *
+svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
    result is not okay.  */

@@ -195,6 +195,5 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                             (apr_int64_t) rep->size,
                             (apr_int64_t) rep->expanded_size));
 
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  return svn_sqlite__reset(stmt);
+  return svn_sqlite__insert(NULL, stmt);
 }
