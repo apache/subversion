@@ -90,6 +90,18 @@ svn_error_t *
 svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                     const char *text, apr_pool_t *result_pool);
 
+/* Bind values to arguments in STMT, according to FMT.  FMT may contain:
+
+   Spec  Argument type       Item type
+   ----  -----------------   ---------
+   i     apr_int64_t         Number
+   s     const char **       String
+
+  Each character in FMT maps to one argument, in the order they appear.
+*/
+svn_error_t *
+svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
+
 /* Error-handling wrapper around sqlite3_bind_int64. */
 svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
