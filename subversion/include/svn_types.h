@@ -518,6 +518,10 @@ svn_dirent_dup(const svn_dirent_t *dirent,
 /** A compressed combination of the other four keywords. */
 #define SVN_KEYWORD_ID               "Id"
 
+/** A full combination of the first four keywords.
+ * @since New in 1.6. */
+#define SVN_KEYWORD_HEADER           "Header"
+
 /** @} */
 
 

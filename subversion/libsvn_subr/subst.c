@@ -399,6 +399,15 @@ svn_subst_build_keywords2(apr_hash_t **kw,
           apr_hash_set(*kw, SVN_KEYWORD_ID,
                        APR_HASH_KEY_STRING, id_val);
         }
+      else if ((! svn_cstring_casecmp(keyword, SVN_KEYWORD_HEADER)))
+        {
+          svn_string_t *header_val;
+
+          header_val = keyword_printf("%u %r %d %a", rev, url, date, author,
+                                      pool);
+          apr_hash_set(*kw, SVN_KEYWORD_HEADER,
+                       APR_HASH_KEY_STRING, header_val);
+        }
     }
 
   return SVN_NO_ERROR;
