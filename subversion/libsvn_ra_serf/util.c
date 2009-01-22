@@ -1428,13 +1428,13 @@ svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
 #endif
 }
 
-svn_error_t *
-svn_ra_serf__discover_root(const char **vcc_url,
-                           const char **rel_path,
-                           svn_ra_serf__session_t *session,
-                           svn_ra_serf__connection_t *conn,
-                           const char *orig_path,
-                           apr_pool_t *pool)
+static svn_error_t *
+discover_vcc(const char **vcc_url,
+             const char **rel_path,
+             svn_ra_serf__session_t *session,
+             svn_ra_serf__connection_t *conn,
+             const char *orig_path,
+             apr_pool_t *pool)
 {
   apr_hash_t *props;
   const char *path, *relative_path, *present_path = "", *uuid;
@@ -1551,6 +1551,29 @@ svn_ra_serf__discover_root(const char **vcc_url,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__discover_root(const char **root_url,
+                           const char **rel_path,
+                           svn_boolean_t vcc_only,
+                           svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           const char *orig_path,
+                           apr_pool_t *pool)
+{
+  /* Unless our caller explicitly wants a VCC URL, or needs a relative
+     path calculation, we use the cached root stub URI (if any).
+  
+     ### TODO:  Can we do a relative path calculation using the root stub?
+  */
+  if ((! vcc_only) && (! rel_path) && session->root_stub)
+    {
+      *root_url = apr_pstrdup(pool, session->root_stub);
+      return SVN_NO_ERROR;
+    }
+  
+  return discover_vcc(root_url, rel_path, session, conn, orig_path, pool);
 }
 
 svn_error_t *

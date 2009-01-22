@@ -959,7 +959,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   if (! url)
     url = session->repos_url.path;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url, TRUE,
                                      session, session->conns[0], url, pool));
 
   if (revision != SVN_INVALID_REVNUM)

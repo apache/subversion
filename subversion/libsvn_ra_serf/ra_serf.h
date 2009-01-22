@@ -1033,9 +1033,15 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Try to discover our current root @a VCC_URL and the resultant @a REL_PATH
+/* Try to discover our current root @a ROOT_URL and the resultant @a REL_PATH
  * based on @a ORIG_PATH for the @a SESSION on @a CONN.
  * REL_PATH will be URI decoded.
+ *
+ * If VCC_ONLY is set, this will set @a ROOT_URL to the
+ * WebDAV-compliant VCC URI.  Otherwise, @a ROOT_URL might contain a
+ * root stub URI, or it might contain a VCC URI, depending on the
+ * capabilities of the server.
+ * ### FIXME:  This flag matters only while coding HTTP v2 support ###
  *
  * @a REL_PATH may be NULL if the caller is not interested in the relative
  * path.
@@ -1043,8 +1049,9 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
  * All temporary allocations will be made in @a POOL.
  */
 svn_error_t *
-svn_ra_serf__discover_root(const char **vcc_url,
+svn_ra_serf__discover_root(const char **root_url,
                            const char **rel_path,
+                           svn_boolean_t vcc_only,
                            svn_ra_serf__session_t *session,
                            svn_ra_serf__connection_t *conn,
                            const char *orig_path,
