@@ -1273,22 +1273,20 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_boolean_t include_descendants,
                                          apr_pool_t *pool);
 
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   SERF_SESS->capabilities with the server's capabilities as read
+   from the response headers.  Use POOL only for temporary allocation. */
+svn_error_t *
+svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
+                                   apr_pool_t *pool);
+
 /* Implements the has_capability RA layer function. */
 svn_error_t *
 svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             svn_boolean_t *has,
                             const char *capability,
                             apr_pool_t *pool);
-
-/* Used by serf.c and options.c to track capabilities: */
-
-/* Both server and repository support the capability. */
-#define SERF_CAPABILITY_YES "yes"
-/* Either server or repository does not support the capability. */
-#define SERF_CAPABILITY_NO "no"
-/* Server supports the capability, but don't yet know if repository does. */
-#define SERF_CAPABILITY_SERVER_YES "server-yes"
-
 
 /* Implements the get_deleted_rev RA layer function. */
 svn_error_t *
