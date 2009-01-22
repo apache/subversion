@@ -244,7 +244,7 @@ CREATE TABLE LOCKS (
   /* ### make the following fields NOT NULL ? */
   lock_owner  TEXT,
   lock_comment  TEXT,
-  lock_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  lock_date  INTEGER   /* an APR date/time (usec since 1970) */
   );
 
 

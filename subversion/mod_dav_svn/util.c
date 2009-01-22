@@ -19,6 +19,7 @@
 #include <apr_xml.h>
 #include <apr_errno.h>
 #include <apr_uri.h>
+#include <apr_buckets.h>
 
 #include <mod_dav.h>
 
@@ -487,4 +488,38 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line)
                 svn_path_uri_encode(info->repos->fs_path, info->r->pool));
   apr_table_set(info->r->subprocess_env, "SVN-REPOS-NAME",
                 svn_path_uri_encode(info->repos->repo_basename, info->r->pool));
+}
+
+
+dav_error *
+dav_svn__final_flush_or_error(request_rec *r,
+                              apr_bucket_brigade *bb,
+                              ap_filter_t *output,
+                              dav_error *preferred_err,
+                              apr_pool_t *pool)
+{
+  dav_error *derr = preferred_err;
+  svn_boolean_t do_flush;
+
+  do_flush = r->sent_bodyct > 0 ? TRUE : FALSE;
+  if (! do_flush)
+    {
+      /* Ask about the length of the bucket brigade, ignoring errors. */
+      apr_off_t len;
+      (void)apr_brigade_length(bb, FALSE, &len);
+      do_flush = (len != 0) ? TRUE : FALSE;
+    }
+
+  /* If there's something in the bucket brigade to flush, or we've
+     already started sending data down the wire, flush what we've
+     got.  We only keep any error retrieved from the flush if weren't
+     provided a more-important DERR, though. */
+  if (do_flush)
+    {
+      apr_status_t apr_err = ap_fflush(output, bb);
+      if (apr_err && (! derr))
+        derr = dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Error flushing brigade.");
+    }
+  return derr;
 }

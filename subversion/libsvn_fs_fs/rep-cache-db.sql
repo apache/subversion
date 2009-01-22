@@ -1,8 +1,8 @@
-/*
- * util.c:  FS utility routines
+/* rep-cache-db.sql -- schema for use in rep-caching
+ *   This is intentd for use with SQLite 3
  *
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,19 +16,11 @@
  * ====================================================================
  */
 
-#include <apr_pools.h>
-#include "svn_fs.h"
+pragma auto_vacuum = 1;
 
-svn_fs_path_change2_t *
-svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id, 
-                           svn_fs_path_change_kind_t change_kind,
-                           apr_pool_t *pool)
-{
-  svn_fs_path_change2_t *change;
-
-  change = apr_pcalloc(pool, sizeof(*change));
-  change->node_rev_id = node_rev_id;
-  change->change_kind = change_kind;
-
-  return change;
-}
+/* A table mapping representation hashes to locations in a rev file. */
+create table rep_cache (hash text not null primary key,
+                        revision integer not null,
+                        offset integer not null,
+                        size integer not null,
+                        expanded_size integer not null);

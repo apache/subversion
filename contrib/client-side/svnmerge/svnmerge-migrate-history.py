@@ -334,6 +334,9 @@ class Migrator:
     svn.repos.node_location_segments(self.repos, path, rev, rev, oldest_rev,
                                      _segment_receiver, _allow_all)
 
+    # Ensure oldest-to-youngest ordering of revision ranges.
+    location_segments.sort(lambda a, b: cmp(a.range_start, b.range_start))
+
     # Translate location segments into merge sources and ranges.
     mergeinfo = {}
     for segment in location_segments:

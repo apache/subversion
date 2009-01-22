@@ -919,7 +919,6 @@ dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t entry_is_empty = FALSE;
   svn_error_t *serr;
   dav_error *derr = NULL;
-  apr_status_t apr_err;
   const char *src_path = NULL;
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
@@ -1481,25 +1480,14 @@ dav_svn__update_report(const dav_resource *resource,
 
  cleanup:
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if ((! derr) && ((apr_err = ap_fflush(output, uc.bb))))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-
-  /* if an error was produced EITHER by the dir_delta drive or the
-     resource-walker... */
-  if (derr)
-    {
-      if (rbaton)
-        svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
-      return derr;
-    }
+  /* If an error was produced EITHER by the dir_delta drive or the
+     resource-walker, abort the report. */
+  if (derr && rbaton)
+    svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
 
   /* Destroy our subpool. */
   svn_pool_destroy(subpool);
 
-  return NULL;
+  return dav_svn__final_flush_or_error(resource->info->r, uc.bb, output,
+                                       derr, resource->pool);
 }

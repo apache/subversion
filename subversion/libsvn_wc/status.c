@@ -266,6 +266,9 @@ assemble_status(svn_wc_status2_t **status,
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
   enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
+  /* And some intermediate results */
+  enum svn_wc_status_kind pristine_text_status = svn_wc_status_none;
+  enum svn_wc_status_kind pristine_prop_status = svn_wc_status_none;
 
   svn_lock_t *repos_lock = NULL;
 
@@ -399,6 +402,10 @@ assemble_status(svn_wc_status2_t **status,
       SVN_ERR(svn_wc_props_modified_p(&prop_modified_p, path, adm_access,
                                       pool));
 
+      /* Record actual property status */
+      pristine_prop_status = prop_modified_p ? svn_wc_status_modified
+                                             : svn_wc_status_normal;
+
 #ifdef HAVE_SYMLINK
       if (has_props)
         SVN_ERR(svn_wc__get_special(&wc_special, path, adm_access, pool));
@@ -412,8 +419,14 @@ assemble_status(svn_wc_status2_t **status,
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */
           )
-        SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
-                                       adm_access, pool));
+        {
+          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
+                                         adm_access, pool));
+                                         
+          /* Record actual text status */
+          pristine_text_status = text_modified_p ? svn_wc_status_modified
+                                                 : svn_wc_status_normal;
+        }
 
       if (text_modified_p)
         final_text_status = svn_wc_status_modified;
@@ -539,6 +552,8 @@ assemble_status(svn_wc_status2_t **status,
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
   stat->tree_conflict = tree_conflict;
+  stat->pristine_text_status = pristine_text_status;
+  stat->pristine_prop_status = pristine_prop_status;
 
   *status = stat;
 
