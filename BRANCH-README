@@ -1,0 +1,6 @@
+This branch exists as a place to stash patches and get review on WC-NG work
+prior to the 1.6.x branch.  Shortly after that branch is created, this branch
+will be merged back to trunk and disappear.
+
+For more information about WC-NG, including a proposed implementation plan,
+see: http://svn.collab.net/repos/svn/trunk/notes/wc-ng-design
