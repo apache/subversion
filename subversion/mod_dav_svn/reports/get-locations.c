@@ -175,13 +175,6 @@ dav_svn__get_locations_report(const dav_resource *resource,
                                 "Error writing REPORT response.",
                                 resource->pool);
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

@@ -14,21 +14,19 @@ Blocker:
    See: <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1019712>.
 
  * #3354: update fails when file with local mods is moved and modified.
-   The bug has been fixed, but the regression test for the issue seems
-   to have problems.
+   The bug has been fixed when interactively resolving conflicts, but still
+   occurs otherwise.
 
  * Review the new "svn_dirent/svn_uri" API and ensure we aren't putting
    functions into the public name space that we won't want to support.
    See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1010183>.
 
+ * #3209: Tests XFAIL due to changed tree-conflicts behaviour
+     http://svn.haxx.se/dev/archive-2009-01/0538.shtml summarizes the tests
+     that are failing because of real differences in pre-TC vs. post-TC
+     functionality.
+
 Optional:
-
- * Merge the sparse-directories deselection branch, as noted by kfogel:
-   http://svn.haxx.se/dev/archive-2008-10/1001.shtml
-
- * Tree conflicts - essential issues:
-
-   - #3209: Tests XFAIL due to changed tree-conflicts behaviour
 
  * Tree conflicts - non-essential issues:
 

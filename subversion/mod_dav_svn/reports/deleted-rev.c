@@ -109,8 +109,8 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   apr_err = ap_fprintf(output, bb,
                        DAV_XML_HEADER DEBUG_CR
-                       "<S:get-deleted-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-                       "xmlns:D=\"DAV:\">" DEBUG_CR
+                       "<S:get-deleted-rev-report xmlns:S=\""
+                       SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">" DEBUG_CR
                        "<D:" SVN_DAV__VERSION_NAME ">%ld</D:"
                        SVN_DAV__VERSION_NAME ">""</S:get-deleted-rev-report>",
                        deleted_rev);
@@ -120,13 +120,6 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 "Error writing REPORT response.",
                                 resource->pool);
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }
