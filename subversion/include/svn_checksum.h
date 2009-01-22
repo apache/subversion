@@ -200,7 +200,7 @@ svn_checksum_final(svn_checksum_t **checksum,
  * @since New in 1.6.
  */
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum);
+svn_checksum_size(const svn_checksum_t *checksum);
 
 
 /**

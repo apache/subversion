@@ -80,7 +80,7 @@ svn_fs_bdb__put_txn(svn_fs_t *fs,
                     apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *txn_skel;
+  svn_skel_t *txn_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
@@ -196,7 +196,7 @@ svn_fs_bdb__get_txn(transaction_t **txn_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
-  skel_t *skel;
+  svn_skel_t *skel;
   transaction_t *transaction;
 
   /* Only in the context of this function do we know that the DB call
@@ -259,7 +259,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
                                 DB_NEXT))
     {
       transaction_t *txn;
-      skel_t *txn_skel;
+      svn_skel_t *txn_skel;
       svn_error_t *err;
 
       /* Clear the per-iteration subpool */

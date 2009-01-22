@@ -1630,7 +1630,7 @@ merging_commit(const char **msg,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+    SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -1681,7 +1681,7 @@ merging_commit(const char **msg,
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
       SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
       SVN_ERR(svn_fs_make_dir(txn_root, "A/D/H", pool));
-      SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+      SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
       revisions[revision_count++] = after_rev;
 
       /*********************************************************************/
@@ -1693,7 +1693,6 @@ merging_commit(const char **msg,
         SVN_ERR(svn_fs_begin_txn
                 (&txn, fs, revisions[revision_count - 1], pool));
         SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-        SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
         SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
         revisions[revision_count++] = after_rev;
       }
@@ -3575,8 +3574,8 @@ get_file_checksum(svn_checksum_t **checksum,
 
   /* Get a checksummed stream for the contents. */
   *checksum = svn_checksum_create(checksum_kind, pool);
-  checksum_stream = svn_stream_checksummed2(stream, checksum, checksum_kind,
-                                            NULL, svn_checksum_md5, TRUE, pool);
+  checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
+                                            checksum_kind, TRUE, pool);
 
   /* Close the stream, forcing a complete read and copy the digest. */
   SVN_ERR(svn_stream_close(checksum_stream));
@@ -4942,8 +4941,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(fetch_youngest_rev),
     SVN_TEST_PASS(basic_commit),
     SVN_TEST_PASS(test_tree_node_validation),
-    SVN_TEST_XFAIL(merging_commit), /* Needs to be written to match new
-                                        merge() algorithm expectations */
+    SVN_TEST_PASS(merging_commit),
     SVN_TEST_PASS(copy_test),
     SVN_TEST_PASS(commit_date),
     SVN_TEST_PASS(check_old_revisions),

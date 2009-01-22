@@ -79,8 +79,9 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
    If CATALOG is empty or NULL then *OUTPUT->DATA is set to "\n".  If SVN_DEBUG
    is true, then a NULL or empty CATALOG causes *OUTPUT to be set to an
    appropriate newline terminated string.  If KEY_PREFIX is not NULL then
-   KEY_PREFIX to each key (path) in *OUTPUT.  if VAL_PREFIX is not NULL then
-   prepend VAL_PREFIX to each merge source:rangelist line in *OUTPUT. */
+   prepend KEY_PREFIX to each key (path) in *OUTPUT.  if VAL_PREFIX is not
+   NULL then prepend VAL_PREFIX to each merge source:rangelist line in
+   *OUTPUT. */
 svn_error_t *
 svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
                                            svn_mergeinfo_catalog_t catalog,
@@ -114,7 +115,7 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
    then filter that path as well.  If all paths are filtered or MERGEINFO is 
    empty or NULL then *FILTERED_MERGEINFO is set to an empty hash. */
 svn_error_t *
-svn_mergeinfo__filter_mergefino_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
+svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           svn_mergeinfo_t mergeinfo,
                                           svn_revnum_t youngest_rev,
                                           svn_revnum_t oldest_rev,

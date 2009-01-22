@@ -189,8 +189,6 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
  * Copy and translate the data in stream @a src into stream @a dst.  It is
  * assumed that @a src is a readable stream and @a dst is a writable stream.
  *
- * @since New in 1.3.
- *
  * If @a eol_str is non-@c NULL, replace whatever bytestring @a src uses to
  * denote line endings with @a eol_str in the output.  If @a src has an
  * inconsistent line ending style, then: if @a repair is @c FALSE, return
@@ -219,21 +217,63 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
  *
  * See svn_wc__get_keywords() and svn_wc__get_eol_style() for a
  * convenient way to get @a eol_str and @a keywords if in libsvn_wc.
+ *
+ * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ *   Callers should use svn_subst_stream_translated() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
-svn_subst_translate_stream3(svn_stream_t *src,
-                            svn_stream_t *dst,
+svn_subst_translate_stream3(svn_stream_t *src_stream,
+                            svn_stream_t *dst_stream,
                             const char *eol_str,
                             svn_boolean_t repair,
                             apr_hash_t *keywords,
                             svn_boolean_t expand,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_subst_translate_stream3() except relies upon a
+ * @c svn_subst_keywords_t struct instead of a hash for the keywords.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_subst_translate_stream2(svn_stream_t *src_stream,
+                            svn_stream_t *dst_stream,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            const svn_subst_keywords_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *scratch_pool);
+
+
+/**
+ * Same as svn_subst_translate_stream2(), but does not take a @a pool
+ * argument, instead creates a temporary subpool of the global pool, and
+ * destroys it before returning.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_subst_translate_stream(svn_stream_t *src_stream,
+                           svn_stream_t *dst_stream,
+                           const char *eol_str,
+                           svn_boolean_t repair,
+                           const svn_subst_keywords_t *keywords,
+                           svn_boolean_t expand);
+
 
 /** Return a stream which performs eol translation and keyword
  * expansion when read from or written to.  The stream @a stream
- * is used to read and write all data.  Make sure you call
- * svn_stream_close() on @a stream to make sure all data are flushed
- * and cleaned up.
+ * is used to read and write all data.
+ *
+ * Make sure you call svn_stream_close() on the returned stream to
+ * ensure all data is flushed and cleaned up (this will also close
+ * the provided @a stream).
  *
  * Read operations from and write operations to the stream
  * perform the same operation: if @a expand is @c FALSE, both
@@ -252,11 +292,14 @@ svn_subst_stream_translated(svn_stream_t *stream,
                             svn_boolean_t expand,
                             apr_pool_t *pool);
 
+
 /** Return a stream which performs eol translation and keyword
  * expansion when read from or written to.  The stream @a stream
  * is used to read and write all data.  Make sure you call
  * svn_stream_close() on @a stream to make sure all data are flushed
  * and cleaned up.
+ *
+ * When @a stream is closed, then @a source will be closed.
  *
  * Read and write operations perform the same transformation:
  * all data is translated to normal form.
@@ -275,50 +318,51 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
                                            apr_pool_t *pool);
 
 
+/** Returns a readable stream in @a *stream containing the "normal form"
+ * of the special file located at @a path. The stream will be allocated
+ * in @a result_pool, and any temporary allocations will be made in
+ * @a scratch_pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_subst_read_specialfile(svn_stream_t **stream,
+                           const char *path,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+
+/** Returns a writeable stream in @a *stream that accepts content in
+ * the "normal form" for a special file, to be located at @a path, and
+ * will create that file when the stream is closed. The stream will be
+ * allocated in @a result_pool, and any temporary allocations will be
+ * made in @a scratch_pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_subst_create_specialfile(svn_stream_t **stream,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
 /** Returns a stream which translates the special file at @a path to
  * the internal representation for special files when read from.  When
  * written to, it does the reverse: creating a special file when the
  * stream is closed.
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ *   Callers should use svn_subst_read_specialfile or
+ *   svn_subst_create_specialfile as appropriate.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_stream_from_specialfile(svn_stream_t **stream,
                                   const char *path,
                                   apr_pool_t *pool);
-
-
-/** Similar to svn_subst_translate_stream3() except relies upon a
- * @c svn_subst_keywords_t struct instead of a hash for the keywords.
- *
- * @deprecated Provided for backward compatibility with the 1.2 API.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_subst_translate_stream2(svn_stream_t *src,
-                            svn_stream_t *dst,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            const svn_subst_keywords_t *keywords,
-                            svn_boolean_t expand,
-                            apr_pool_t *pool);
-
-
-/**
- * Same as svn_subst_translate_stream2(), but does not take a @a pool
- * argument, instead creates a temporary subpool of the global pool, and
- * destroys it before returning.
- *
- * @deprecated Provided for backward compatibility with the 1.1 API.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_subst_translate_stream(svn_stream_t *src,
-                           svn_stream_t *dst,
-                           const char *eol_str,
-                           svn_boolean_t repair,
-                           const svn_subst_keywords_t *keywords,
-                           svn_boolean_t expand);
 
 
 /**
@@ -505,7 +549,11 @@ svn_subst_translate_to_normal_form(const char *src,
  *
  * @since New in 1.4.
  *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ *   Use svn_subst_stream_from_specialfile if the source is special;
+ *   otherwise, use svn_subst_stream_translated_to_normal_form.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_stream_detranslated(svn_stream_t **stream_p,
                               const char *src,
@@ -538,22 +586,6 @@ svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           const svn_string_t *value,
                                           svn_boolean_t for_output,
                                           apr_pool_t *pool);
-
-
-/** Get a stream that contains the (detranslated) "normal form" of the
- * file located at @a path. If the file is not special, then a normal,
- * readonly stream is opened up on it.
- *
- * The stream is allocated in @a result_pool, and all temporary allocations
- * are performed in @a scratch_pool.
- *
- * @since New in 1.6
- */
-svn_error_t *
-svn_subst_get_detranslated_stream(svn_stream_t **stream,
-                                  const char *path,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

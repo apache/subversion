@@ -211,11 +211,6 @@ class SvnDeltaTest < Test::Unit::TestCase
     dir1_svn_path = dir1
     dir2_svn_path = dir2
 
-    log = "added 3 dirs\nanded 5 files"
-    ctx = make_context(log)
-
-    ctx.mkdir([dir_path, dir1_path, dir2_path])
-
     file1 = "changed1.txt"
     file2 = "changed2.txt"
     file3 = "changed3.txt"
@@ -231,105 +226,114 @@ class SvnDeltaTest < Test::Unit::TestCase
     file3_svn_path = file3
     file4_svn_path = [dir_svn_path, file4].join("/")
     file5_svn_path = file5
-    FileUtils.touch(file1_path)
-    FileUtils.touch(file2_path)
-    FileUtils.touch(file3_path)
-    FileUtils.touch(file4_path)
-    FileUtils.touch(file5_path)
-    ctx.add(file1_path)
-    ctx.add(file2_path)
-    ctx.add(file3_path)
-    ctx.add(file4_path)
-    ctx.add(file5_path)
 
-    commit_info = ctx.commit(@wc_path)
-    first_rev = commit_info.revision
+    first_rev = nil
 
-    editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
-    assert_equal([
-                   file1_svn_path, file2_svn_path,
-                   file3_svn_path, file4_svn_path,
-                   file5_svn_path,
-                 ].sort,
-                 editor.added_files)
-    assert_equal([], editor.updated_files)
-    assert_equal([], editor.deleted_files)
-    assert_equal([].sort, editor.updated_dirs)
-    assert_equal([].sort, editor.deleted_dirs)
-    assert_equal([
-                   "#{dir_svn_path}/",
-                   "#{dir1_svn_path}/",
-                   "#{dir2_svn_path}/"
-                 ].sort,
-                 editor.added_dirs)
+    log = "added 3 dirs\nanded 5 files"
+    make_context(log) do |ctx|
 
+      ctx.mkdir([dir_path, dir1_path, dir2_path])
+
+      FileUtils.touch(file1_path)
+      FileUtils.touch(file2_path)
+      FileUtils.touch(file3_path)
+      FileUtils.touch(file4_path)
+      FileUtils.touch(file5_path)
+      ctx.add(file1_path)
+      ctx.add(file2_path)
+      ctx.add(file3_path)
+      ctx.add(file4_path)
+      ctx.add(file5_path)
+
+      commit_info = ctx.commit(@wc_path)
+      first_rev = commit_info.revision
+
+      editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
+      assert_equal([
+                     file1_svn_path, file2_svn_path,
+                     file3_svn_path, file4_svn_path,
+                     file5_svn_path,
+                   ].sort,
+                   editor.added_files)
+      assert_equal([], editor.updated_files)
+      assert_equal([], editor.deleted_files)
+      assert_equal([].sort, editor.updated_dirs)
+      assert_equal([].sort, editor.deleted_dirs)
+      assert_equal([
+                     "#{dir_svn_path}/",
+                     "#{dir1_svn_path}/",
+                     "#{dir2_svn_path}/"
+                   ].sort,
+                   editor.added_dirs)
+    end
 
     log = "deleted 2 dirs\nchanged 3 files\ndeleted 2 files\nadded 3 files"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    dir3 = "changed_dir3"
-    dir4 = "changed_dir4"
-    dir3_path = File.join(dir_path, dir3)
-    dir4_path = File.join(@wc_path, dir4)
-    dir3_svn_path = [dir_svn_path, dir3].join("/")
-    dir4_svn_path = dir4
+      dir3 = "changed_dir3"
+      dir4 = "changed_dir4"
+      dir3_path = File.join(dir_path, dir3)
+      dir4_path = File.join(@wc_path, dir4)
+      dir3_svn_path = [dir_svn_path, dir3].join("/")
+      dir4_svn_path = dir4
 
-    file6 = "changed6.txt"
-    file7 = "changed7.txt"
-    file8 = "changed8.txt"
-    file9 = "changed9.txt"
-    file10 = "changed10.txt"
-    file6_path = File.join(dir_path, file6)
-    file7_path = File.join(@wc_path, file7)
-    file8_path = File.join(dir_path, file8)
-    file9_path = File.join(dir_path, file9)
-    file10_path = File.join(dir_path, file10)
-    file6_svn_path = [dir_svn_path, file6].join("/")
-    file7_svn_path = file7
-    file8_svn_path = [dir_svn_path, file8].join("/")
-    file9_svn_path = [dir_svn_path, file9].join("/")
-    file10_svn_path = [dir_svn_path, file10].join("/")
+      file6 = "changed6.txt"
+      file7 = "changed7.txt"
+      file8 = "changed8.txt"
+      file9 = "changed9.txt"
+      file10 = "changed10.txt"
+      file6_path = File.join(dir_path, file6)
+      file7_path = File.join(@wc_path, file7)
+      file8_path = File.join(dir_path, file8)
+      file9_path = File.join(dir_path, file9)
+      file10_path = File.join(dir_path, file10)
+      file6_svn_path = [dir_svn_path, file6].join("/")
+      file7_svn_path = file7
+      file8_svn_path = [dir_svn_path, file8].join("/")
+      file9_svn_path = [dir_svn_path, file9].join("/")
+      file10_svn_path = [dir_svn_path, file10].join("/")
 
-    File.open(file1_path, "w") {|f| f.puts "changed"}
-    File.open(file2_path, "w") {|f| f.puts "changed"}
-    File.open(file3_path, "w") {|f| f.puts "changed"}
-    ctx.rm_f([file4_path, file5_path])
-    FileUtils.touch(file6_path)
-    FileUtils.touch(file7_path)
-    FileUtils.touch(file8_path)
-    ctx.add(file6_path)
-    ctx.add(file7_path)
-    ctx.add(file8_path)
-    ctx.cp(file1_path, file9_path)
-    ctx.cp(file2_path, file10_path)
-    ctx.mv(dir2_path, dir3_path)
-    ctx.cp(dir1_path, dir4_path)
-    ctx.rm(dir1_path)
+      File.open(file1_path, "w") {|f| f.puts "changed"}
+      File.open(file2_path, "w") {|f| f.puts "changed"}
+      File.open(file3_path, "w") {|f| f.puts "changed"}
+      ctx.rm_f([file4_path, file5_path])
+      FileUtils.touch(file6_path)
+      FileUtils.touch(file7_path)
+      FileUtils.touch(file8_path)
+      ctx.add(file6_path)
+      ctx.add(file7_path)
+      ctx.add(file8_path)
+      ctx.cp(file1_path, file9_path)
+      ctx.cp(file2_path, file10_path)
+      ctx.mv(dir2_path, dir3_path)
+      ctx.cp(dir1_path, dir4_path)
+      ctx.rm(dir1_path)
 
-    commit_info = ctx.commit(@wc_path)
-    second_rev = commit_info.revision
+      commit_info = ctx.commit(@wc_path)
+      second_rev = commit_info.revision
 
-    editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
-    assert_equal([file1_svn_path, file2_svn_path, file3_svn_path].sort,
-                 editor.updated_files)
-    assert_equal([file4_svn_path, file5_svn_path].sort,
-                 editor.deleted_files)
-    assert_equal([file6_svn_path, file7_svn_path, file8_svn_path].sort,
-                 editor.added_files)
-    assert_equal([].sort, editor.updated_dirs)
-    assert_equal([
-                   [file9_svn_path, file1_svn_path, first_rev],
-                   [file10_svn_path, file2_svn_path, first_rev],
-                 ].sort_by{|x| x[0]},
-                 editor.copied_files)
-    assert_equal([
-                   ["#{dir3_svn_path}/", "#{dir2_svn_path}/", first_rev],
-                   ["#{dir4_svn_path}/", "#{dir1_svn_path}/", first_rev],
-                 ].sort_by{|x| x[0]},
-                 editor.copied_dirs)
-    assert_equal(["#{dir1_svn_path}/", "#{dir2_svn_path}/"].sort,
-                 editor.deleted_dirs)
-    assert_equal([].sort, editor.added_dirs)
+      editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
+      assert_equal([file1_svn_path, file2_svn_path, file3_svn_path].sort,
+                   editor.updated_files)
+      assert_equal([file4_svn_path, file5_svn_path].sort,
+                   editor.deleted_files)
+      assert_equal([file6_svn_path, file7_svn_path, file8_svn_path].sort,
+                   editor.added_files)
+      assert_equal([].sort, editor.updated_dirs)
+      assert_equal([
+                     [file9_svn_path, file1_svn_path, first_rev],
+                     [file10_svn_path, file2_svn_path, first_rev],
+                   ].sort_by{|x| x[0]},
+                   editor.copied_files)
+      assert_equal([
+                     ["#{dir3_svn_path}/", "#{dir2_svn_path}/", first_rev],
+                     ["#{dir4_svn_path}/", "#{dir1_svn_path}/", first_rev],
+                   ].sort_by{|x| x[0]},
+                   editor.copied_dirs)
+      assert_equal(["#{dir1_svn_path}/", "#{dir2_svn_path}/"].sort,
+                   editor.deleted_dirs)
+      assert_equal([].sort, editor.added_dirs)
+    end
   end
 
   def test_change_prop
@@ -340,60 +344,62 @@ class SvnDeltaTest < Test::Unit::TestCase
     dir_path = File.join(@wc_path, dir)
     dir_svn_path = dir
 
-    log = "added 1 dirs\nanded 2 files"
-    ctx = make_context(log)
-
-    ctx.mkdir([dir_path])
-
     file1 = "file1.txt"
     file2 = "file2.txt"
     file1_path = File.join(@wc_path, file1)
     file2_path = File.join(dir_path, file2)
-    file1_svn_path = file1
-    file2_svn_path = [dir_svn_path, file2].join("/")
-    FileUtils.touch(file1_path)
-    FileUtils.touch(file2_path)
-    ctx.add(file1_path)
-    ctx.add(file2_path)
 
-    ctx.propset(prop_name, prop_value, dir_path)
+    log = "added 1 dirs\nanded 2 files"
+    make_context(log) do |ctx|
 
-    commit_info = ctx.commit(@wc_path)
+      ctx.mkdir([dir_path])
 
-    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
-    assert_equal(["", dir_svn_path].collect{|path| "#{path}/"}.sort,
-                 editor.changed_dirs)
+      file1_svn_path = file1
+      file2_svn_path = [dir_svn_path, file2].join("/")
+      FileUtils.touch(file1_path)
+      FileUtils.touch(file2_path)
+      ctx.add(file1_path)
+      ctx.add(file2_path)
 
+      ctx.propset(prop_name, prop_value, dir_path)
+
+      commit_info = ctx.commit(@wc_path)
+
+      editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+      assert_equal(["", dir_svn_path].collect{|path| "#{path}/"}.sort,
+                   editor.changed_dirs)
+    end
 
     log = "prop changed"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    ctx.propdel(prop_name, dir_path)
+      ctx.propdel(prop_name, dir_path)
 
-    commit_info = ctx.commit(@wc_path)
+      commit_info = ctx.commit(@wc_path)
 
-    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
-    assert_equal([dir_svn_path].collect{|path| "#{path}/"}.sort,
-                 editor.changed_dirs)
-
-
-    ctx.propset(prop_name, prop_value, file1_path)
-
-    commit_info = ctx.commit(@wc_path)
-
-    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
-    assert_equal([""].collect{|path| "#{path}/"}.sort,
-                 editor.changed_dirs)
+      editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+      assert_equal([dir_svn_path].collect{|path| "#{path}/"}.sort,
+                   editor.changed_dirs)
 
 
-    ctx.propdel(prop_name, file1_path)
-    ctx.propset(prop_name, prop_value, file2_path)
+      ctx.propset(prop_name, prop_value, file1_path)
 
-    commit_info = ctx.commit(@wc_path)
+      commit_info = ctx.commit(@wc_path)
 
-    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
-    assert_equal(["", dir_svn_path].collect{|path| "#{path}/"}.sort,
-                 editor.changed_dirs)
+      editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+      assert_equal([""].collect{|path| "#{path}/"}.sort,
+                   editor.changed_dirs)
+
+
+      ctx.propdel(prop_name, file1_path)
+      ctx.propset(prop_name, prop_value, file2_path)
+
+      commit_info = ctx.commit(@wc_path)
+
+      editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+      assert_equal(["", dir_svn_path].collect{|path| "#{path}/"}.sort,
+                   editor.changed_dirs)
+    end
   end
 
   def test_deep_copy
@@ -404,71 +410,74 @@ class SvnDeltaTest < Test::Unit::TestCase
     dir1_svn_path = dir1
     dir2_svn_path = [dir1, dir2].join("/")
 
+    first_rev = nil
+
     log = "added 2 dirs\nanded 3 files"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    ctx.mkdir([dir1_path, dir2_path])
+      ctx.mkdir([dir1_path, dir2_path])
 
-    file1 = "file1.txt"
-    file2 = "file2.txt"
-    file3 = "file3.txt"
-    file1_path = File.join(@wc_path, file1)
-    file2_path = File.join(dir1_path, file2)
-    file3_path = File.join(dir2_path, file3)
-    file1_svn_path = file1
-    file2_svn_path = [dir1_svn_path, file2].join("/")
-    file3_svn_path = [dir2_svn_path, file3].join("/")
-    FileUtils.touch(file1_path)
-    FileUtils.touch(file2_path)
-    FileUtils.touch(file3_path)
-    ctx.add(file1_path)
-    ctx.add(file2_path)
-    ctx.add(file3_path)
+      file1 = "file1.txt"
+      file2 = "file2.txt"
+      file3 = "file3.txt"
+      file1_path = File.join(@wc_path, file1)
+      file2_path = File.join(dir1_path, file2)
+      file3_path = File.join(dir2_path, file3)
+      file1_svn_path = file1
+      file2_svn_path = [dir1_svn_path, file2].join("/")
+      file3_svn_path = [dir2_svn_path, file3].join("/")
+      FileUtils.touch(file1_path)
+      FileUtils.touch(file2_path)
+      FileUtils.touch(file3_path)
+      ctx.add(file1_path)
+      ctx.add(file2_path)
+      ctx.add(file3_path)
 
-    commit_info = ctx.commit(@wc_path)
-    first_rev = commit_info.revision
+      commit_info = ctx.commit(@wc_path)
+      first_rev = commit_info.revision
 
-    editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
-    assert_equal([
-                   file1_svn_path, file2_svn_path,
-                   file3_svn_path,
-                 ].sort,
-                 editor.added_files)
-    assert_equal([].sort, editor.updated_files)
-    assert_equal([].sort, editor.deleted_files)
-    assert_equal([].sort, editor.updated_dirs)
-    assert_equal([].sort, editor.deleted_dirs)
-    assert_equal([
-                   "#{dir1_svn_path}/",
-                   "#{dir2_svn_path}/",
-                 ].sort,
-                 editor.added_dirs)
-
+      editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
+      assert_equal([
+                     file1_svn_path, file2_svn_path,
+                     file3_svn_path,
+                   ].sort,
+                   editor.added_files)
+      assert_equal([].sort, editor.updated_files)
+      assert_equal([].sort, editor.deleted_files)
+      assert_equal([].sort, editor.updated_dirs)
+      assert_equal([].sort, editor.deleted_dirs)
+      assert_equal([
+                     "#{dir1_svn_path}/",
+                     "#{dir2_svn_path}/",
+                   ].sort,
+                   editor.added_dirs)
+    end
 
     log = "copied top dir"
-    ctx = make_context(log)
+    make_context(log) do |ctx|
 
-    dir3 = "dir3"
-    dir3_path = File.join(@wc_path, dir3)
-    dir3_svn_path = dir3
+      dir3 = "dir3"
+      dir3_path = File.join(@wc_path, dir3)
+      dir3_svn_path = dir3
 
-    ctx.cp(dir1_path, dir3_path)
+      ctx.cp(dir1_path, dir3_path)
 
-    commit_info = ctx.commit(@wc_path)
-    second_rev = commit_info.revision
+      commit_info = ctx.commit(@wc_path)
+      second_rev = commit_info.revision
 
-    editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
-    assert_equal([].sort, editor.updated_files)
-    assert_equal([].sort, editor.deleted_files)
-    assert_equal([].sort, editor.added_files)
-    assert_equal([].sort, editor.updated_dirs)
-    assert_equal([].sort, editor.copied_files)
-    assert_equal([
-                   ["#{dir3_svn_path}/", "#{dir1_svn_path}/", first_rev]
-                 ].sort_by{|x| x[0]},
-                 editor.copied_dirs)
-    assert_equal([].sort, editor.deleted_dirs)
-    assert_equal([].sort, editor.added_dirs)
+      editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
+      assert_equal([].sort, editor.updated_files)
+      assert_equal([].sort, editor.deleted_files)
+      assert_equal([].sort, editor.added_files)
+      assert_equal([].sort, editor.updated_dirs)
+      assert_equal([].sort, editor.copied_files)
+      assert_equal([
+                     ["#{dir3_svn_path}/", "#{dir1_svn_path}/", first_rev]
+                   ].sort_by{|x| x[0]},
+                   editor.copied_dirs)
+      assert_equal([].sort, editor.deleted_dirs)
+      assert_equal([].sort, editor.added_dirs)
+    end
   end
 
   private

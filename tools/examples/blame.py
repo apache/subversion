@@ -31,8 +31,8 @@ def blame(path, filename, rev=None):
     if fs.check_path(root, filename) != core.svn_node_none:
       first = i
       break
-  print "First revision is %d" % first
-  print "Last revision is %d" % rev
+  print("First revision is %d" % first)
+  print("Last revision is %d" % rev)
   for i in range(first, rev+1):
     previousroot = root
     root = fs.revision_root(fsob, i)
@@ -49,7 +49,7 @@ def blame(path, filename, rev=None):
         break
       filedata = filedata + data
 
-    print "Current revision is %d" % i
+    print("Current revision is %d" % i)
     diffresult = difflib.ndiff(previousdata.splitlines(1),
                                filedata.splitlines(1))
     #    print ''.join(diffresult)
@@ -76,7 +76,7 @@ def blame(path, filename, rev=None):
                                                annotresult[x][1]))
 
 def usage():
-  print "USAGE: blame.py [-r REV] repos-path file"
+  print("USAGE: blame.py [-r REV] repos-path file")
   sys.exit(1)
 
 def main():

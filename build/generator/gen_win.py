@@ -11,10 +11,15 @@ import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
 
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  try:
+    from cStringIO import StringIO
+  except ImportError:
+    from StringIO import StringIO
 
 import gen_base
 import ezt
@@ -206,6 +211,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find APR and APR-util version
     self._find_apr()
     self._find_apr_util()
+
+    # Create Sqlite header
+    self._create_sqlite_header()
 
     # Find Sqlite
     self._find_sqlite()
@@ -1371,6 +1379,14 @@ class WinGeneratorBase(GeneratorBase):
 
     sys.stderr.write(msg % self.sqlite_version)
 
+  def _create_sqlite_header(self):
+    "Transform sql files into header files"
+    
+    import transform_sql
+    rep_cache_db_sql = os.path.join(
+      'subversion', 'libsvn_fs_fs', 'rep-cache-db.sql')
+    transform_sql.main(rep_cache_db_sql, rep_cache_db_sql + '.h')
+    
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):

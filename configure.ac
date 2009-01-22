@@ -6,8 +6,8 @@ AC_PREREQ(2.58)
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
-        [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
-        [http://subversion.tigris.org/])
+     [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
+     [http://subversion.tigris.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR([build])
@@ -68,6 +68,9 @@ APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
+dnl Search for pkg-config
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
@@ -111,10 +114,10 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_ALLOWED_PATTERN="(3\.4|3\.5|3\.6)($|\..*)"
-SQLITE_RECOMMENDED_VER="3.5.9"
-SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
-SVN_LIB_SQLITE(${SQLITE_ALLOWED_PATTERN}, ${SQLITE_RECOMMENDED_VER},
+SQLITE_MINIMUM_VER="3.4.0"
+SQLITE_RECOMMENDED_VER="3.6.10"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
 
 dnl Set up a number of directories ---------------------
@@ -264,6 +267,9 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
 
+AC_SUBST(SVN_DB_INCLUDES)
+AC_SUBST(SVN_DB_LIBS)
+
 SVN_LIB_SASL
 
 if test "$svn_lib_sasl" = "yes"; then
@@ -324,11 +330,6 @@ AC_PREPROC_IFELSE([
   APR_HAS_DSO="no"
   AC_MSG_RESULT([no]))
 CPPFLAGS="$old_CPPFLAGS"
-
-
-dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
-
-AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
 
 
 dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------
@@ -492,104 +493,12 @@ AC_SUBST(MSGFMTFLAGS)
 
 
 dnl KWallet -------------------
+SVN_LIB_KWALLET
 
-AC_ARG_WITH(kwallet,
-  [AS_HELP_STRING([[--with-kwallet[=PATH]]],
-                  [Enable use of KWallet (KDE 4) for auth credentials])],
-                  [with_kwallet="$withval"],
-                  [with_kwallet=no])
-
-AC_MSG_CHECKING([whether to look for KWallet])
-if test "$with_kwallet" != "no"; then
-  AC_MSG_RESULT([yes])
-  if test "$enable_shared" = "yes"; then
-    if test "$APR_HAS_DSO" = "yes"; then
-      if test "$USE_NLS" = "yes"; then
-        if test "$HAVE_PKG_CONFIG" = "yes"; then
-          if test "$HAVE_DBUS" = "yes"; then
-            AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
-            if pkg-config --exists QtCore QtDBus QtGui; then
-              AC_MSG_RESULT([yes])
-              if test "$with_kwallet" != "yes"; then
-                AC_MSG_CHECKING([for kde4-config])
-                kde4_config="$with_kwallet/bin/kde4-config"
-                if test -f "$kde4_config" && test -x "$kde4_config"; then
-                  HAVE_KDE4_CONFIG="yes"
-                  AC_MSG_RESULT([yes])
-                else
-                  AC_MSG_RESULT([no])
-                fi
-              else
-                AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
-                kde4_config="kde4-config"
-              fi
-              if test "$HAVE_KDE4_CONFIG" = "yes"; then
-                AC_MSG_CHECKING([for KWallet])
-                old_CXXFLAGS="$CXXFLAGS"
-                old_LDFLAGS="$LDFLAGS"
-                old_LIBS="$LIBS"
-                for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
-                  CPPFLAGS="$CPPFLAGS $d"
-                done
-                qt_include_dirs=""
-                for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
-                  qt_include_dirs="$qt_include_dirs $i"
-                done
-                qt_include_dirs="${qt_include_dirs## }"
-                kde_dir="`$kde4_config --prefix`"
-                SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
-                SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
-                CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
-                LIBS="$LIBS $SVN_KWALLET_LIBS"
-                qt_lib_dirs=""
-                for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
-                  qt_lib_dirs="$qt_lib_dirs $l"
-                done
-                qt_lib_dirs="${qt_lib_dirs## }"
-                LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
-                AC_LANG(C++)
-                AC_LINK_IFELSE([
-#include <kwallet.h>
-int main()
-{KWallet::Wallet::walletList();}], with_kwallet="yes", with_kwallet="no")
-                AC_LANG(C)
-                if test "$with_kwallet" = "yes"; then
-                  AC_DEFINE([SVN_HAVE_KWALLET], [1],
-                            [Is KWallet support enabled?])
-                  AC_MSG_RESULT([yes])
-                  CXXFLAGS="$old_CXXFLAGS"
-                  LIBS="$old_LIBS"
-                else
-                  AC_MSG_RESULT([no])
-                  AC_MSG_ERROR([cannot find KWallet])
-                fi
-              else
-                AC_MSG_ERROR([cannot find kde4-config])
-              fi
-            else
-              AC_MSG_RESULT([no])
-              AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
-            fi
-          else
-            AC_MSG_ERROR([cannot find D-Bus])
-          fi
-        else
-          AC_MSG_ERROR([cannot find pkg-config])
-        fi
-      else
-        AC_MSG_ERROR([missing support for internationalization])
-      fi
-    else
-      AC_MSG_ERROR([APR does not have support for DSOs])
-    fi
-  else
-    AC_MSG_ERROR([--with-kwallet conflicts with --disable-shared])
-  fi
-else
-  AC_MSG_RESULT([no])
+if test "$svn_lib_kwallet" = "yes"; then
+  AC_DEFINE([SVN_HAVE_KWALLET], 1,
+            [Defined if KWallet support is enabled])
 fi
-AC_SUBST(SVN_KWALLET_INCLUDES)
-AC_SUBST(SVN_KWALLET_LIBS)
 
 
 dnl Build and install rules -------------------
@@ -619,7 +528,7 @@ if test "$svn_lib_serf" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-serf-lib"
 fi
 
-if test "$with_kwallet" = "yes"; then
+if test "$svn_lib_kwallet" = "yes"; then
   BUILD_RULES="$BUILD_RULES kwallet-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-kwallet-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
@@ -715,28 +624,32 @@ AS_HELP_STRING([--enable-maintainer-mode],
       enable_debugging=yes
       if test "$GCC" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -ansi -std=c99 -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long"
-        CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        dnl Enable some extra warnings. Put these before the user's flags
+        dnl so the user can specify flags that override these.
+        CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl CFLAGS="$CFLAGS -Wswitch-enum -Wswitch-default"
+        dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
+
+        dnl Add each of the following flags only if the compiler accepts it.
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
 
-        CFLAGS="$CFLAGS_KEEP -Wextra-tokens"
+        CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wnewline-eof"
+        CFLAGS="-Wnewline-eof $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wshorten-64-to-32"
+        CFLAGS="-Wshorten-64-to-32 $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
-        CFLAGS="$CFLAGS_KEEP -Wold-style-definition"
+        CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         AC_LANG_POP([C])
@@ -832,7 +745,7 @@ AS_HELP_STRING([--enable-gprof],
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.2 or later is required to run the testsuite])
+  AC_MSG_WARN([Python 2.4 or later is required to run the testsuite])
   AC_MSG_WARN([or to use the Subversion Python bindings])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])

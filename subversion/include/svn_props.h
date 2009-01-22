@@ -89,6 +89,15 @@ apr_array_header_t *
 svn_prop_hash_to_array(apr_hash_t *hash,
                        apr_pool_t *pool);
 
+/**
+ * Creates a deep copy of @a hash (keys <tt>const char *</tt> and
+ * values <tt>const svn_string_t</tt>) in @a pool.
+ *
+ * @since New in 1.6.
+ */
+apr_hash_t *
+svn_prop_hash_dup(apr_hash_t *hash,
+                  apr_pool_t *pool);
 
 /**
  * Subversion distinguishes among several kinds of properties,

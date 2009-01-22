@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -239,6 +239,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"propget", subcommand_pget, {"pget", "pg"},
    N_("usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
       "                    "
+      /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n\n"
       "Print the raw value of a property on a path in the repository.\n"
       "With --revprop, print the raw value of a revision property.\n"),
@@ -247,6 +248,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"proplist", subcommand_plist, {"plist", "pl"},
    N_("usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
       "                      "
+      /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook proplist --revprop REPOS_PATH\n\n"
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
@@ -2240,7 +2242,7 @@ main(int argc, const char *argv[])
     SVN_INT_ERR(svn_error_create
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("The '--transaction' (-t) and '--revision' (-r) arguments "
-                   "can not co-exist")));
+                   "cannot co-exist")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're

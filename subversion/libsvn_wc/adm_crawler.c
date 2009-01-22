@@ -825,11 +825,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   svn_checksum_t *verify_checksum = NULL;
   svn_checksum_t *local_checksum;
   svn_error_t *err;
-  const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
-
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
 
   /* Translated input */
   SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
@@ -863,8 +860,12 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   if (! fulltext)
     {
+      const svn_wc_entry_t *ent;
+
       /* Compute delta against the pristine contents */
       SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
+
+      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
 
       /* ### We want ent->checksum to ALWAYS be present, but on old
          ### working copies maybe it won't be (unclear?). If it is there,
@@ -878,8 +879,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
           /* Compute a checksum for what is *actually* found */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
-                                                svn_checksum_md5, NULL,
-                                                svn_checksum_md5, TRUE, pool);
+                                                NULL, svn_checksum_md5, TRUE,
+                                                pool);
         }
       else
         {
@@ -888,8 +889,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc_get_pristine_contents(&p_stream, path, pool, pool));
           p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
-                                             svn_checksum_md5, NULL,
-                                             svn_checksum_md5, TRUE, pool);
+                                             NULL, svn_checksum_md5, TRUE,
+                                             pool);
 
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));

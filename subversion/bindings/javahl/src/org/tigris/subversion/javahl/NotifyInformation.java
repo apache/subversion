@@ -125,7 +125,7 @@ public class NotifyInformation extends EventObject
                       String changelistName, RevisionRange mergeRange,
                       String pathPrefix)
     {
-        super(path);
+        super(path == null ? "" : path);
         this.action = action;
         this.kind = kind;
         this.mimeType = mimeType;

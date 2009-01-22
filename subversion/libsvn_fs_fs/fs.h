@@ -52,8 +52,8 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
-#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Youngest revision which
-                                                    has been packed. */
+#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
+                                                    has not been packed. */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -108,6 +108,9 @@ extern "C" {
 
 /* The minimum format number that supports packed shards. */
 #define SVN_FS_FS__MIN_PACKED_FORMAT 4
+
+/* The minimum format number that stores node kinds in changed-paths lists. */
+#define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -173,19 +176,6 @@ typedef struct
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
-/* Rep cache sqlite database and prepared statements. */
-struct rep_cache_t
-{
-  /* Prepared statements. */
-  svn_sqlite__stmt_t *get_rep_stmt;
-  svn_sqlite__stmt_t *set_rep_stmt;
-  svn_sqlite__stmt_t *inc_select_stmt;
-  svn_sqlite__stmt_t *inc_update_stmt;
-
-  /* The sqlite database handle. */
-  svn_sqlite__db_t *db;
-};
-
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
@@ -231,7 +221,7 @@ typedef struct
   fs_fs_shared_data_t *shared;
 
   /* The sqlite database used for rep caching. */
-  struct rep_cache_t rep_cache;
+  svn_sqlite__db_t *rep_cache_db;
 
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
@@ -298,7 +288,10 @@ typedef struct
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content. */
+     intra-node uniqification content.
+     
+     May be NULL, in which case, it is considered to match other NULL
+     values.*/
   const char *uniquifier;
 } representation_t;
 
@@ -370,6 +363,9 @@ typedef struct
   /* Text or property mods? */
   svn_boolean_t text_mod;
   svn_boolean_t prop_mod;
+
+  /* Node kind (possibly svn_node_unknown). */
+  svn_node_kind_t node_kind;
 
   /* Copyfrom revision and path. */
   svn_revnum_t copyfrom_rev;

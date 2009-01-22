@@ -872,7 +872,10 @@ base_bdb_recover(svn_fs_t *fs,
 }
 
 static svn_error_t *
-base_bdb_pack(const char *path,
+base_bdb_pack(svn_fs_t *fs,
+              const char *path,
+              svn_fs_pack_notify_t notify_func,
+              void *notify_baton,
               svn_cancel_func_t cancel,
               void *cancel_baton,
               apr_pool_t *pool)

@@ -836,8 +836,23 @@ typedef enum svn_wc_notify_action_t
   /** Replace notification. @since New in 1.5. */
   svn_wc_notify_update_replace,
 
+  /** Property added. @since New in 1.6. */
+  svn_wc_notify_property_added,
+
   /** Property updated. @since New in 1.6. */
-  svn_wc_notify_property_updated,
+  svn_wc_notify_property_modified,
+
+  /** Property deleted. @since New in 1.6. */
+  svn_wc_notify_property_deleted,
+
+  /** Nonexistent property deleted. @since New in 1.6. */
+  svn_wc_notify_property_deleted_nonexistent,
+
+  /** Revprop set. @since New in 1.6. */
+  svn_wc_notify_revprop_set,
+
+  /** Revprop deleted. @since New in 1.6. */
+  svn_wc_notify_revprop_deleted,
 
   /** The last notification in a merge. @since New in 1.6. */
   svn_wc_notify_merge_completed,
@@ -845,7 +860,11 @@ typedef enum svn_wc_notify_action_t
   /** The path is a tree-conflict victim of the intended action (*not*
    * a persistent tree-conflict from an earlier operation, but *this*
    * operation caused the tree-conflict). @since New in 1.6. */
-  svn_wc_notify_tree_conflict
+  svn_wc_notify_tree_conflict,
+
+  /** The path is a subdirectory referenced in an externals definition
+   * which is unable to be operated on.  @since New in 1.6. */
+  svn_wc_notify_failed_external
 
 } svn_wc_notify_action_t;
 
@@ -921,14 +940,17 @@ typedef enum svn_wc_notify_lock_state_t
  * give a less informative notification).
  *
  * @note Callers of notification functions should use svn_wc_create_notify()
- * to create structures of this type to allow for extensibility.
+ * or svn_wc_create_notify_url() to create structures of this type to allow
+ * for extensibility.
  *
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
 
   /** Path, either absolute or relative to the current working directory
-   * (i.e., not relative to an anchor). */
+   * (i.e., not relative to an anchor).@c path is "." or another valid path
+   * value for compatibilty reasons when the real target is an url that 
+   * is available in @c url. */
   const char *path;
 
   /** Action that describes what happened to @c path. */
@@ -947,7 +969,8 @@ typedef struct svn_wc_notify_t {
   const svn_lock_t *lock;
 
   /** Points to an error describing the reason for the failure when @c
-   * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
+   * action is one of the following: @c svn_wc_notify_failed_lock, @c
+   * svn_wc_notify_failed_unlock, @c svn_wc_notify_failed_external.
    * Is @c NULL otherwise. */
   svn_error_t *err;
 
@@ -975,11 +998,23 @@ typedef struct svn_wc_notify_t {
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
 
+  /** Similar to @c path, but if non-NULL the notification is about a url.
+   * @since New in 1.6 */
+  const char *url;
+
   /** If non-NULL, specifies an absolute path prefix that can be subtracted
-   * from the start of the absolute path in @c path.  Its purpose is to
-   * allow notification to remove a common prefix from all the paths
+   * from the start of the absolute path in @c path or @c url.  Its purpose 
+   * is to allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
+
+  /** If @c action relates to properties, specifies the name of the property.
+   * @since New in 1.6 */
+  const char *prop_name;
+
+  /** If @c action is @c svn_wc_notify_blame_revision, contains a list of
+   * revision properties for the specified revision */
+  apr_hash_t *rev_props;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1001,6 +1036,22 @@ svn_wc_notify_t *
 svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool);
+
+/**
+ * Allocate an @c svn_wc_notify_t structure in @a pool, initialize and return
+ * it.
+ *
+ * Set the @c url field of the created struct to @a url, @c action to, @c path
+ * to "." and @a action.  Set all other fields to their @c _unknown, @c NULL or
+ * invalid value, respectively. Make only a shallow copy of the pointer
+ * @a url.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool);
 
 /**
  * Return a deep copy of @a notify, allocated in @a pool.
@@ -2021,16 +2072,20 @@ typedef struct svn_wc_entry_t
   /** copyfrom revision */
   svn_revnum_t copyfrom_rev;
 
-  /** old version of conflicted file */
+  /** old version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_old;
 
-  /** new version of conflicted file */
+  /** new version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_new;
 
-  /** working version of conflicted file */
+  /** working version of conflicted file. A file basename, relative to the
+   * user's directory that the THIS_DIR entry refers to. */
   const char *conflict_wrk;
 
-  /** property reject file */
+  /** property reject file. A file basename, relative to the user's
+   * directory that the THIS_DIR entry refers to. */
   const char *prejfile;
 
   /** last up-to-date time for text contents (0 means no information available)
@@ -2271,23 +2326,22 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a path in a dir under version control, decide if it is in
+/** Given a @a path in a dir under version control, decide if it is in a
  * state of conflict; return the answers in @a *text_conflicted_p, @a
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
- * answers are uninteresting, simply pass @c NULL pointers.
+ * answers are uninteresting, simply pass @c NULL pointers for those.
  *
  * If @a path is unversioned or does not exist, @a *text_conflicted_p and
  * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
  * @a adm_access is the admin access baton of the parent directory.
  *
- * If the @a path has a corresponding text conflict file (with suffix
- * .mine, .theirs, etc.) that cannot be found, assume that the text
- * conflict has been resolved by the user and return @c FALSE in @a
- * *text_conflicted_p.
+ * If the @a path has corresponding text conflict files (with suffix .mine,
+ * .theirs, etc.) that cannot be found, assume that the text conflict has
+ * been resolved by the user and return @c FALSE in @a *text_conflicted_p.
  *
- * Similarly, if a property conflicts file (.prej suffix) exists, but
- * it cannot be found, assume that the property conflicts have been
+ * Similarly, if a property conflicts file (.prej suffix) is said to exist,
+ * but it cannot be found, assume that the property conflicts have been
  * resolved by the user and return @c FALSE in @a *prop_conflicted_p.
  *
  * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
@@ -2303,8 +2357,20 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
-/** Like svn_wc_conflicted_p2, but without the capability to
- * detect tree conflicts.
+/** Given a @a dir_path under version control, decide if one of its entries
+ * (@a entry) is in a state of conflict; return the answers in @a
+ * text_conflicted_p and @a prop_conflicted_p. These pointers must not be
+ * null.
+ *
+ * If the @a entry mentions that text conflict files (with suffix .mine,
+ * .theirs, etc.) exist, but they cannot be found, assume the text conflict
+ * has been resolved by the user and return FALSE in @a *text_conflicted_p.
+ *
+ * Similarly, if the @a entry mentions that a property conflicts file (.prej
+ * suffix) exists, but it cannot be found, assume the property conflicts
+ * have been resolved by the user and return FALSE in @a *prop_conflicted_p.
+ *
+ * The @a entry is not updated.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -2401,8 +2467,7 @@ typedef struct svn_wc_entry_callbacks_t
 svn_error_t *
 svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks2_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_depth_t depth,
                      svn_boolean_t show_hidden,
@@ -2421,8 +2486,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2438,8 +2502,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    const svn_wc_entry_callbacks_t
-                    *walk_callbacks,
+                    const svn_wc_entry_callbacks_t *walk_callbacks,
                     void *walk_baton,
                     svn_boolean_t show_hidden,
                     apr_pool_t *pool);
@@ -2713,9 +2776,27 @@ typedef struct svn_wc_status2_t
   svn_wc_conflict_description_t *tree_conflict;
 
   /** If the item is a file that was added to the working copy with an
-      svn:externals; if file_external is TRUE, then switched is always
-      FALSE. */
+   * svn:externals; if file_external is TRUE, then switched is always
+   * FALSE. 
+   * @since New in 1.6
+   */
   svn_boolean_t file_external;
+  
+  /** The actual status of the text compared to the pristine base of the
+   * file. This value isn't masked by other working copy statuses.
+   * @c pristine_text_status is @c svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind pristine_text_status;
+  
+  /** The actual status of the properties compared to the pristine base of 
+   * the node. This value isn't masked by other working copy statuses.
+   * @c pristine_prop_status is @c svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind pristine_prop_status;
 
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
@@ -4243,10 +4324,31 @@ svn_wc_prop_get(const svn_string_t **value,
  * entry property, return the error @c SVN_ERR_BAD_PROP_KIND, even if
  * @a skip_checks is TRUE.
  *
+ * For each file or directory operated on, @a notify_func will be called
+ * with its path and the @a notify_baton.  @a notify_func may be @c NULL
+ * if you are not interested in this information.
+ *
  * Use @a pool for temporary allocation.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_prop_set3(const char *name,
+                 const svn_string_t *value,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t skip_checks,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *pool);
+
+
+/**
+ * Like svn_wc_prop_set3(), but without the notification callbacks.
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_set2(const char *name,
                  const svn_string_t *value,
@@ -5407,8 +5509,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 /**
  * Set @a path's entry's 'changelist' attribute to @a changelist iff
  * @a changelist is not @c NULL; otherwise, remove any current
- * changelist assignment from @a path.  @a adm_access is an access
- * baton set that contains @a path.
+ * changelist assignment from @a path.  @a changelist may not be the
+ * empty string.  @a adm_access is an access baton set that contains
+ * @a path.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
  * determine if the client has cancelled the operation.

@@ -50,6 +50,8 @@ def _usage_exit():
   print("  --httpd-dir            : location where Apache HTTPD is installed")
   print("  --httpd-port           : port for Apache HTTPD; random port number")
   print("                           will be used, if not specified")
+  print("  --httpd-daemon         : Run Apache httpd as daemon")
+  print("  --httpd-service        : Run Apache httpd as Windows service (default)")
   print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --list                 : print test doc strings only")
   print("  --enable-sasl          : enable Cyrus SASL authentication for")
@@ -58,6 +60,8 @@ def _usage_exit():
   print("  --server-minor-version : the minor version of the server being")
   print("                           tested")
   print(" --config-file           : Configuration file for tests")
+  print(" --fsfs-sharding         : Specify shard size (for fsfs)")
+  print(" --fsfs-packing          : Run 'svnadmin pack' automatically")
 
   sys.exit(0)
 
@@ -86,7 +90,9 @@ for section in gen_obj.sections.values():
 opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'http-library=', 'help',
+                        'httpd-dir=', 'httpd-port=', 'httpd-daemon',
+                        'httpd-server', 'http-library=', 'help',
+                        'fsfs-packing', 'fsfs-sharding=',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version='])
 if len(args) > 1:
@@ -101,11 +107,14 @@ run_svnserve = None
 svnserve_args = None
 run_httpd = None
 httpd_port = None
+httpd_service = None
 http_library = 'neon'
 list_tests = None
 enable_sasl = None
 svn_bin = None
 parallel = None
+fsfs_sharding = None
+fsfs_packing = None
 server_minor_version = None
 config_file = None
 
@@ -134,8 +143,16 @@ for opt, val in opts:
     run_httpd = 1
   elif opt == '--httpd-port':
     httpd_port = int(val)
+  elif opt == '--httpd-daemon':
+    httpd_service = 0
+  elif opt == '--httpd-service':
+    httpd_service = 1
   elif opt == '--http-library':
     http_library = val
+  elif opt == '--fsfs-sharding':
+    fsfs_sharding = int(val)
+  elif opt == '--fsfs-packing':
+    fsfs_packing = 1
   elif opt == '--list':
     list_tests = 1
   elif opt == '--enable-sasl':
@@ -342,10 +359,12 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for DAV tests"
-  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port, service):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
+    self.service = service
+    self.proc_handle = None
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
 
     if not os.path.exists(self.path):
@@ -365,8 +384,12 @@ class Httpd:
     self.abs_builddir = abs_builddir
     self.abs_objdir = abs_objdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
-    self.httpd_args = [self.name, '-n', self._quote(self.service_name),
-                       '-f', self._quote(self.httpd_config)]
+
+    if self.service:
+      self.httpd_args = [self.name, '-n', self._quote(self.service_name),
+                         '-f', self._quote(self.httpd_config)]
+    else:
+      self.httpd_args = [self.name, '-f', self._quote(self.httpd_config)]
 
     create_target_dir(self.root_dir)
 
@@ -471,16 +494,55 @@ class Httpd:
       '</Location>\n'
 
   def start(self):
+    if self.service:
+      self._start_service()
+    else:
+      self._start_daemon()
+
+  def stop(self):
+    if self.service:
+      self._stop_service()
+    else:
+      self._stop_daemon()
+
+  def _start_service(self):
     "Install and start HTTPD service"
     print('Installing service %s' % self.service_name)
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'install'])
     print('Starting service %s' % self.service_name)
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'start'])
 
-  def stop(self):
-    "Stop and unintall HTTPD service"
+  def _stop_service(self):
+    "Stop and uninstall HTTPD service"
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'stop'])
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'uninstall'])
+
+  def _start_daemon(self):
+    "Start HTTPD as daemon"
+    print('Starting httpd as daemon')
+    print(self.httpd_args)
+    try:
+      import win32process
+      import win32con
+      self.proc_handle = (
+        win32process.CreateProcess(self._quote(self.path), self.httpd_args,
+                                   None, None, 0,
+                                   win32con.CREATE_NEW_CONSOLE,
+                                   None, None, win32process.STARTUPINFO()))[0]
+    except ImportError:
+      os.spawnv(os.P_NOWAIT, self.path, self.httpd_args)
+
+  def _stop_daemon(self):
+    "Stop the HTTPD daemon"
+    if self.proc_handle is not None:
+      try:
+        import win32process
+        print('Stopping %s' % self.name)
+        win32process.TerminateProcess(self.proc_handle, 0)
+        return
+      except ImportError:
+        pass
+    print('Httpd.stop_daemon not implemented')
 
 # Move the binaries to the test directory
 locate_libs()
@@ -508,7 +570,8 @@ if run_svnserve:
   daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
 if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port)
+  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
+                 httpd_service)
 
 # Start service daemon, if any
 if daemon:
@@ -521,8 +584,9 @@ th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, http_library,
                            server_minor_version, 1, cleanup,
-                           enable_sasl, parallel, config_file, list_tests,
-                           svn_bin)
+                           enable_sasl, parallel, config_file,
+                           fsfs_sharding, fsfs_packing,
+                           list_tests, svn_bin)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)

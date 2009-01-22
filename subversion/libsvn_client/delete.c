@@ -144,7 +144,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
-          item = svn_client_commit_item_create2(pool);
+          item = svn_client_commit_item3_create(pool);
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;

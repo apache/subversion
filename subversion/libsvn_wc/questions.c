@@ -252,14 +252,9 @@ compare_and_verify(svn_boolean_t *modified_p,
                               adm_access, NULL, pool));
   SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
-
   need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                     keywords, special, TRUE);
-  /* Special files can only be compared through their text bases:
-     they have no working copy representation
-     for example: symlinks aren't guaranteed to be valid, nor does
-                  it make sense to compare with the linked file-or-directory. */
-  compare_textbases |= special;
+
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
@@ -278,29 +273,33 @@ compare_and_verify(svn_boolean_t *modified_p,
                                          TRUE, pool));
 
           if (entry->checksum)
-            b_stream = svn_stream_checksummed2(b_stream, &checksum,
-                                               svn_checksum_md5, NULL,
+            b_stream = svn_stream_checksummed2(b_stream, &checksum, NULL,
                                                svn_checksum_md5, TRUE, pool);
         }
 
-      if (compare_textbases && need_translation)
+      if (special)
         {
-          /* Create stream for detranslate versioned file to normal form. */
-          SVN_ERR(svn_subst_stream_detranslated(&v_stream,
-                                                versioned_file,
-                                                eol_style,
-                                                eol_str, TRUE,
-                                                keywords, special,
-                                                pool));
+          SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file,
+                                             pool, pool));
         }
       else
         {
           SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file,
                                            pool, pool));
 
-          if (need_translation)
+          if (compare_textbases && need_translation)
             {
-              /* Translate text-base to working copy form. */
+              /* Wrap file stream to detranslate into normal form. */
+              SVN_ERR(svn_subst_stream_translated_to_normal_form(&v_stream,
+                                                                 v_stream,
+                                                                 eol_style,
+                                                                 eol_str, TRUE,
+                                                                 keywords,
+                                                                 pool));
+            }
+          else if (need_translation)
+            {
+              /* Wrap base stream to translate into working copy form. */
               b_stream = svn_subst_stream_translated(b_stream, eol_str,
                                                      FALSE, keywords, TRUE,
                                                      pool);
@@ -336,9 +335,8 @@ compare_and_verify(svn_boolean_t *modified_p,
                                            pool));
     }
 
-
-
   *modified_p = (! same);
+
   return SVN_NO_ERROR;
 }
 
@@ -615,6 +613,9 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
 {
   svn_node_kind_t kind;
   const char *path;
+
+  *text_conflicted_p = FALSE;
+  *prop_conflicted_p = FALSE;
 
   if (entry->conflict_old)
     {

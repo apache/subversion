@@ -119,8 +119,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 {
   struct notify_baton *nb = baton;
   char statchar_buf[5] = "    ";
-  const char *path_local = n->path;
+  const char *path_local;
   svn_error_t *err;
+
+  if (n->url)
+    path_local = n->url;
+  else
+    path_local = n->path;
 
   if (n->path_prefix)
     {
@@ -315,6 +320,37 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_failed_external:
+      /* If we are currently inside the handling of an externals
+         definition, then we can simply present n->err as a warning
+         and feel confident that after this, we aren't handling that
+         externals definition any longer. */
+      if (nb->in_external)
+        {
+          svn_handle_warning2(stderr, n->err, "svn: ");
+          nb->in_external = FALSE;
+          nb->ext_text_conflicts = nb->ext_prop_conflicts
+            = nb->ext_tree_conflicts = nb->ext_skipped_paths = 0;
+          if ((err = svn_cmdline_printf(pool, "\n")))
+            goto print_error;
+        }
+      /* Otherwise, we'll just print two warnings.  Why?  Because
+         svn_handle_warning2() only shows the single "best message",
+         but we have two pretty important ones: that the external at
+         '/some/path' didn't pan out, and then the more specific
+         reason why (from n->err). */
+      else
+        {
+          svn_error_t *warn_err =
+            svn_error_createf(SVN_ERR_BASE, NULL,
+                              _("Error handling externals definition for '%s':"),
+                              path_local);
+          svn_handle_warning2(stderr, warn_err, "svn: ");
+          svn_error_clear(warn_err);
+          svn_handle_warning2(stderr, n->err, "svn: ");
+        }
+      break;
+      
     case svn_wc_notify_update_completed:
       {
         if (! nb->suppress_final_line)
@@ -585,6 +621,39 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                       : nb->tree_conflicts++;
       if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
         goto print_error;
+      break;
+
+    case svn_wc_notify_property_modified:
+    case svn_wc_notify_property_added:
+        err = svn_cmdline_printf(pool,
+                                 _("property '%s' set on '%s'\n"),
+                                 n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_property_deleted:
+        err = svn_cmdline_printf(pool,
+                                 _("property '%s' deleted from '%s'.\n"),
+                                 n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_revprop_set:
+        err = svn_cmdline_printf(pool,
+                          _("property '%s' set on repository revision %ld\n"),
+                          n->prop_name, n->revision);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_revprop_deleted:
+        err = svn_cmdline_printf(pool,
+                     _("property '%s' deleted from repository revision %ld\n"),
+                     n->prop_name, n->revision);
+        if (err)
+          goto print_error;
       break;
 
     default:

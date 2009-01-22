@@ -890,26 +890,6 @@ static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-static const char *kind_word(svn_node_kind_t kind)
-{
-  switch (kind)
-    {
-    case svn_node_none:
-      return "none";
-    case svn_node_file:
-      return "file";
-    case svn_node_dir:
-      return "dir";
-    case svn_node_unknown:
-      return "unknown";
-    default:
-      abort();
-    }
-
-  /* Make the compiler happy */
-  return NULL;
-}
-
 /* ### This really belongs in libsvn_repos. */
 /* Get the properties for a path, with hardcoded committed-info values. */
 static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
@@ -1520,7 +1500,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           cdate = (entry->time == (time_t) -1) ? NULL
             : svn_time_to_cstring(entry->time, pool);
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
-                                         kind_word(entry->kind),
+                                         svn_node_kind_to_word(entry->kind),
                                          (apr_uint64_t) entry->size,
                                          entry->has_props, entry->created_rev,
                                          cdate, entry->last_author));
@@ -1810,7 +1790,7 @@ static svn_error_t *log_receiver(void *baton,
   const void *key;
   void *val;
   const char *path;
-  svn_log_changed_path_t *change;
+  svn_log_changed_path2_t *change;
   svn_boolean_t invalid_revnum = FALSE;
   char action[2];
   const char *author, *date, *message;
@@ -1831,9 +1811,9 @@ static svn_error_t *log_receiver(void *baton,
     }
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
-  if (log_entry->changed_paths)
+  if (log_entry->changed_paths2)
     {
-      for (h = apr_hash_first(pool, log_entry->changed_paths); h;
+      for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
                                                         h = apr_hash_next(h))
         {
           apr_hash_this(h, &key, NULL, &val);
@@ -1841,9 +1821,11 @@ static svn_error_t *log_receiver(void *baton,
           change = val;
           action[0] = change->action;
           action[1] = '\0';
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw(?cr)", path, action,
-                                         change->copyfrom_path,
-                                         change->copyfrom_rev));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw(?cr)(?c)", path,
+                                         action, change->copyfrom_path,
+                                         change->copyfrom_rev,
+                                         svn_node_kind_to_word(
+                                                          change->node_kind)));
         }
     }
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
@@ -1992,7 +1974,8 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
   SVN_CMD_ERR(svn_fs_check_path(&kind, root, full_path, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "w", kind_word(kind)));
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "w",
+                                        svn_node_kind_to_word(kind)));
   return SVN_NO_ERROR;
 }
 
@@ -2035,7 +2018,7 @@ static svn_error_t *stat(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     : svn_time_to_cstring(dirent->time, pool);
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "((wnbr(?c)(?c)))",
-                                        kind_word(dirent->kind),
+                                        svn_node_kind_to_word(dirent->kind),
                                         (apr_uint64_t) dirent->size,
                                         dirent->has_props, dirent->created_rev,
                                         cdate, dirent->last_author));

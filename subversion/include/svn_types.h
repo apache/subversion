@@ -121,6 +121,25 @@ typedef enum
   svn_node_unknown
 } svn_node_kind_t;
 
+/** Return a constant string expressing @a kind as an English word, e.g.,
+ * "file", "dir", etc.  The string is not localized, as it may be used for
+ * client<->server communications.  If the kind is not recognized, return
+ * "unknown".
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_node_kind_to_word(svn_node_kind_t kind);
+
+/** Return the appropriate node_kind for @a word.  @a word is as
+ * returned from svn_node_kind_to_word().  If @a word does not
+ * represent a recognized kind or is @c NULL, return @c svn_node_unknown.
+ *
+ * @since New in 1.6.
+ */
+svn_node_kind_t
+svn_node_kind_from_word(const char *word);
+
 /** About Special Files in Subversion
  *
  * Subversion denotes files that cannot be portably created or
@@ -499,6 +518,10 @@ svn_dirent_dup(const svn_dirent_t *dirent,
 /** A compressed combination of the other four keywords. */
 #define SVN_KEYWORD_ID               "Id"
 
+/** A full combination of the first four keywords.
+ * @since New in 1.6. */
+#define SVN_KEYWORD_HEADER           "Header"
+
 /** @} */
 
 
@@ -554,7 +577,62 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
                     apr_pool_t *pool);
 
 
-/** A structure to represent a path that changed for a log entry. */
+/**
+ * A structure to represent a path that changed for a log entry.
+ *
+ * @note To allow for extending the @c svn_log_changed_path2_t structure in
+ * future releases, always use svn_log_changed_path2_create() to allocate
+ * the structure.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_log_changed_path2_t
+{
+  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
+  char action;
+
+  /** Source path of copy (if any). */
+  const char *copyfrom_path;
+
+  /** Source revision of copy (if any). */
+  svn_revnum_t copyfrom_rev;
+
+  /** The type of the node, may be svn_node_unknown. */
+  svn_node_kind_t node_kind;
+
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update 
+     svn_log_changed_path2_dup(). */
+} svn_log_changed_path2_t;
+
+/**
+ * Returns an @c svn_log_changed_path2_t, allocated in @a pool with all fields
+ * initialized to NULL, None or empty values.
+ *
+ * @note To allow for extending the @c svn_log_changed_path2_t structure in
+ * future releases, this function should always be used to allocate the 
+ * structure.
+ *
+ * @since New in 1.6.
+ */
+svn_log_changed_path2_t *
+svn_log_changed_path2_create(apr_pool_t *pool);
+
+/**
+ * Return a deep copy of @a changed_path, allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_log_changed_path2_t *
+svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
+                          apr_pool_t *pool);
+
+/**
+ * A structure to represent a path that changed for a log entry.  Same as
+ * @c svn_log_changed_path2_t, but without the node kind.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
 typedef struct svn_log_changed_path_t
 {
   /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
@@ -573,7 +651,9 @@ typedef struct svn_log_changed_path_t
  * Return a deep copy of @a changed_path, allocated in @a pool.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
                          apr_pool_t *pool);
@@ -583,18 +663,18 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
  *
  * @note To allow for extending the @c svn_log_entry_t structure in future
  * releases, always use svn_log_entry_create() to allocate the structure.
+ *
+ * @since New in 1.5.
  */
 typedef struct svn_log_entry_t
 {
   /** A hash containing as keys every path committed in @a revision; the
    * values are (@c svn_log_changed_path_t *) stuctures.
    *
-   * ### The only reason @a changed_paths is not qualified with `const' is
-   * that we usually want to loop over it, and apr_hash_first() doesn't
-   * take a const hash, for various reasons.  I'm not sure that those
-   * "various reasons" are actually even relevant anymore, and if
-   * they're not, it might be nice to change apr_hash_first() so
-   * read-only uses of hashes can be protected via the type system.
+   * The subversion core libraries will always set this field to the same 
+   * value as changed_paths2 for compatibity reasons.
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
    */
   apr_hash_t *changed_paths;
 
@@ -622,6 +702,24 @@ typedef struct svn_log_entry_t
    * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
    */
   svn_boolean_t has_children;
+
+  /** A hash containing as keys every path committed in @a revision; the
+   * values are (@c svn_log_changed_path2_t *) stuctures.
+   *
+   * If this value is not @c NULL, it MUST have the same value as 
+   * changed_paths or svn_log_entry_dup() will not create an identical copy.
+   *
+   * The subversion core libraries will always set this field to the same 
+   * value as changed_paths for compatibity with users assuming an older
+   * version.
+   *
+   * @since New in 1.6.
+   */
+  apr_hash_t *changed_paths2;
+
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update 
+     svn_log_entry_dup(). */
 } svn_log_entry_t;
 
 /**
@@ -635,6 +733,17 @@ typedef struct svn_log_entry_t
  */
 svn_log_entry_t *
 svn_log_entry_create(apr_pool_t *pool);
+
+/** Return a deep copy of @a log_entry, allocated in @a pool.
+ *
+ * The resulting svn_log_entry_t has @c changed_paths set to the same
+ * value as @c changed_path2. @c changed_paths will be @c NULL if
+ * @c changed_paths2 was @c NULL.
+ *
+ * @since New in 1.6.
+ */
+svn_log_entry_t *
+svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool);
 
 /** The callback invoked by log message loopers, such as
  * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().

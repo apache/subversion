@@ -19,16 +19,16 @@ def main():
     sys.stderr.write("Usage: %s <bdb-svn-repository>\n" % sys.argv[0])
     sys.exit(1)
 
-  print "WARNING!: This program will destroy all text data in the subversion"
-  print "repository '%s'" % sys.argv[1]
-  print "Do not proceed unless this is a *COPY* of your real repository"
-  print "If this is really what you want to do, " \
-      "type 'YESERASE' and press Return"
+  print("WARNING!: This program will destroy all text data in the subversion")
+  print("repository '%s'" % sys.argv[1])
+  print("Do not proceed unless this is a *COPY* of your real repository")
+  print("If this is really what you want to do, " \
+      "type 'YESERASE' and press Return")
   confirmation = raw_input("Confirmation string> ")
   if confirmation != "YESERASE":
-    print "Cancelled - confirmation string not matched"
+    print("Cancelled - confirmation string not matched")
     sys.exit(0)
-  print "Opening database environment..."
+  print("Opening database environment...")
   cur = None
   ctx = svnfs.Ctx(dbhome)
   try:
@@ -43,7 +43,7 @@ def main():
     while rec:
       if rec[0] != "next-key":
         if (nodecount % 10000 == 0) and nodecount != 0:
-          print "Processed %d nodes..." % nodecount
+          print("Processed %d nodes..." % nodecount)
         nodecount += 1
         node = skel.Node(rec[1])
         if node.kind == "file":
@@ -58,12 +58,12 @@ def main():
                 del ctx.strings_db[w.str]
             ctx.reps_db[node.datarep] = empty_fulltext_rep_skel
       rec = cur.next()
-    print "Processed %d nodes" % nodecount
+    print("Processed %d nodes" % nodecount)
   finally:
     if cur:
       cur.close()
     ctx.close()
-  print "Done"
+  print("Done")
 
 if __name__ == '__main__':
   main()

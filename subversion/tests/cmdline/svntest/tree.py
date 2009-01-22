@@ -18,6 +18,12 @@
 import re
 import os
 import sys
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
@@ -270,8 +276,7 @@ class SVNTreeNode:
 
 
   def __str__(self):
-    import StringIO
-    s = StringIO.StringIO()
+    s = StringIO()
     self.pprint(s)
     return s.getvalue()
 

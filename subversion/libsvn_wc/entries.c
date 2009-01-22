@@ -1528,111 +1528,6 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
 }
 
 
-#if 0
-/* This is #if 0'd out until I decide where to use it. --cmpilato */
-
-/* Run a simple validity check on the ENTRIES (the list of entries
-   associated with the directory PATH). */
-static svn_error_t *
-check_entries(apr_hash_t *entries,
-              const char *path,
-              apr_pool_t *pool)
-{
-  svn_wc_entry_t *default_entry;
-  apr_hash_index_t *hi;
-
-  default_entry = apr_hash_get(entries,
-                               SVN_WC_ENTRY_THIS_DIR,
-                               APR_HASH_KEY_STRING);
-  if (! default_entry)
-    return svn_error_createf
-      (SVN_ERR_WC_CORRUPT, NULL,
-       _("Corrupt working copy: '%s' has no default entry"),
-       svn_path_local_style(path, pool));
-
-  /* Validate DEFAULT_ENTRY's current schedule. */
-  switch (default_entry->schedule)
-    {
-    case svn_wc_schedule_normal:
-    case svn_wc_schedule_add:
-    case svn_wc_schedule_delete:
-    case svn_wc_schedule_replace:
-      /* These are all valid states */
-      break;
-
-    default:
-      /* This is an invalid state */
-      return svn_error_createf
-        (SVN_ERR_WC_CORRUPT, NULL,
-         _("Corrupt working copy: directory '%s' has an invalid schedule"),
-         svn_path_local_style(path, pool));
-    }
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      const char *name;
-      void *val;
-      svn_wc_entry_t *this_entry;
-
-      /* Get the entry */
-      apr_hash_this(hi, &key, NULL, &val);
-      this_entry = val;
-      name = key;
-
-      /* We've already checked the "this dir" entry */
-      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
-
-      /* Validate THIS_ENTRY's current schedule. */
-      switch (this_entry->schedule)
-        {
-        case svn_wc_schedule_normal:
-        case svn_wc_schedule_add:
-        case svn_wc_schedule_delete:
-        case svn_wc_schedule_replace:
-          /* These are all valid states */
-          break;
-
-        default:
-          /* This is an invalid state */
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT, NULL,
-             _("Corrupt working copy: "
-               "'%s' in directory '%s' has an invalid schedule"),
-             name, svn_path_local_style(path, pool));
-        }
-
-      if ((default_entry->schedule == svn_wc_schedule_add)
-          && (this_entry->schedule != svn_wc_schedule_add))
-        return svn_error_createf
-          (SVN_ERR_WC_CORRUPT, NULL,
-           _("Corrupt working copy: '%s' in directory '%s' (which is "
-             "scheduled for addition) is not itself scheduled for addition"),
-           name, svn_path_local_style(path, pool));
-
-      if ((default_entry->schedule == svn_wc_schedule_delete)
-          && (this_entry->schedule != svn_wc_schedule_delete))
-        return svn_error_createf
-          (SVN_ERR_WC_CORRUPT, NULL,
-           _("Corrupt working copy: '%s' in directory '%s' (which is "
-             "scheduled for deletion) is not itself scheduled for deletion"),
-           name, svn_path_local_style(path, pool));
-
-      if ((default_entry->schedule == svn_wc_schedule_replace)
-          && (this_entry->schedule == svn_wc_schedule_normal))
-        return svn_error_createf
-          (SVN_ERR_WC_CORRUPT, NULL,
-           _("Corrupt working copy: '%s' in directory '%s' (which is "
-             "scheduled for replacement) has an invalid schedule"),
-           name, svn_path_local_style(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif /* 0 */
-
-
 svn_error_t *
 svn_wc_entries_read(apr_hash_t **entries,
                     svn_wc_adm_access_t *adm_access,
@@ -3377,8 +3272,7 @@ visit_tc_too_found_entry(const char *path,
        * in case of svn_depth_files, don't visit directories. */
 
       svn_wc_adm_access_t *adm_access = NULL;
-      apr_array_header_t *conflicts
-        = apr_array_make(pool, 0, sizeof(svn_wc_conflict_description_t *));
+      apr_array_header_t *conflicts;
       int i;
 
       /* Loop through all the tree conflict victims */

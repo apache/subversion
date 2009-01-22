@@ -224,7 +224,6 @@ dav_svn__file_revs_report(const dav_resource *resource,
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
-  apr_status_t apr_err;
   apr_xml_elem *child;
   int ns;
   struct file_rev_baton frb;
@@ -329,12 +328,6 @@ dav_svn__file_revs_report(const dav_resource *resource,
                                                   include_merged_revisions,
                                                   resource->pool));
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (((apr_err = ap_fflush(output, frb.bb))) && (! derr))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade",
-                                resource->pool);
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, frb.bb, output,
+                                       derr, resource->pool);
 }

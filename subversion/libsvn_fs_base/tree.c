@@ -1747,7 +1747,7 @@ deltify_mutable(svn_fs_t *fs,
        not as blindingly so.)
 
        For 1.6 and beyond, we just deltify the current node against its
-       predecessors, using skip deltas similar to the was FSFS does.*/
+       predecessors, using skip deltas similar to the way FSFS does.  */
 
     int pred_count, nlevels, lev, count;
     const svn_fs_id_t *pred_id;
@@ -2484,7 +2484,7 @@ verify_locks(const char *txn_name,
   for (i = 0; i < changed_paths->nelts; i++)
     {
       const char *path;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t recurse = TRUE;
 
       svn_pool_clear(subpool);
@@ -3577,10 +3577,16 @@ static svn_error_t *
 txn_body_txdelta_finalize_edits(void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  return svn_fs_base__dag_finalize_edits(tb->node,
-                                         tb->result_checksum,
-                                         tb->root->txn,
-                                         trail, trail->pool);
+  SVN_ERR(svn_fs_base__dag_finalize_edits(tb->node,
+                                          tb->result_checksum,
+                                          tb->root->txn,
+                                          trail, trail->pool));
+
+  /* Make a record of this modification in the changes table. */
+  return add_change(tb->root->fs, tb->root->txn, tb->path,
+                    svn_fs_base__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, trail,
+                    trail->pool);
 }
 
 
@@ -3731,11 +3737,7 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
                     &(tb->interpreter),
                     &(tb->interpreter_baton));
 
-  /* Make a record of this modification in the changes table. */
-  return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_base__dag_get_id(tb->node),
-                    svn_fs_path_change_modify, TRUE, FALSE, trail,
-                    trail->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3814,10 +3816,16 @@ static svn_error_t *
 txn_body_fulltext_finalize_edits(void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
-  return svn_fs_base__dag_finalize_edits(tb->node,
-                                         tb->result_checksum,
-                                         tb->root->txn,
-                                         trail, trail->pool);
+  SVN_ERR(svn_fs_base__dag_finalize_edits(tb->node,
+                                          tb->result_checksum,
+                                          tb->root->txn,
+                                          trail, trail->pool));
+
+  /* Make a record of this modification in the changes table. */
+  return add_change(tb->root->fs, tb->root->txn, tb->path,
+                    svn_fs_base__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, trail,
+                    trail->pool);
 }
 
 /* Write function for the publically returned stream. */
@@ -3881,11 +3889,7 @@ txn_body_apply_text(void *baton, trail_t *trail)
   svn_stream_set_write(tb->stream, text_stream_writer);
   svn_stream_set_close(tb->stream, text_stream_closer);
 
-  /* Make a record of this modification in the changes table. */
-  return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_base__dag_get_id(tb->node),
-                    svn_fs_path_change_modify, TRUE, FALSE, trail,
-                    trail->pool);
+  return SVN_NO_ERROR;
 }
 
 

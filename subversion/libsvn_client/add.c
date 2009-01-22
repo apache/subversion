@@ -234,10 +234,10 @@ add_file(const char *path,
 
   if (is_special)
     /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set2
+    SVN_ERR(svn_wc_prop_set3
             (SVN_PROP_SPECIAL,
              svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
-             path, adm_access, FALSE, pool));
+             path, adm_access, FALSE, NULL, NULL, pool));
   else if (properties)
     {
       /* loop through the hashtable and add the properties */
@@ -251,8 +251,8 @@ add_file(const char *path,
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set2(pname, pval, path,
-                                   adm_access, FALSE, pool));
+          SVN_ERR(svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
+                                   NULL, NULL, pool));
         }
     }
 
@@ -467,18 +467,23 @@ add_parent_dirs(const char *path,
 
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
+      svn_error_clear(err);
       if (svn_dirent_is_root(path, strlen(path)))
         {
-          svn_error_clear(err);
-
           return svn_error_create
             (SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
+        }
+      else if (svn_wc_is_adm_dir(svn_dirent_basename(path, pool), pool))
+        {
+          return svn_error_createf
+            (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
+             _("'%s' ends in a reserved name"), 
+             svn_path_local_style(path, pool));
         }
       else
         {
           const char *parent_path = svn_path_dirname(path, pool);
 
-          svn_error_clear(err);
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
                                       pool));
@@ -689,7 +694,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
-          item = svn_client_commit_item_create2(pool);
+          item = svn_client_commit_item3_create(pool);
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;

@@ -43,7 +43,12 @@ try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
-from urllib import quote as url_encode
+try:
+  # Python >=3.0
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  from urllib import quote as urllib_parse_quote
 
 # Pretend we have true booleans on older python versions
 try:
@@ -315,7 +320,7 @@ class Contributor:
       retval = ''.join(self.real_name.lower().split(' '))
     if retval is None:
       complain('Unable to construct a canonical name for Contributor.', True)
-    return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
+    return urllib_parse_quote(retval, safe="!#$&'()+,;<=>@[]^`{}~")
 
   def big_name(self, html=False, html_eo=False):
     """Return as complete a name as possible for this contributor.
@@ -674,7 +679,7 @@ def drop(revision_url_pattern):
           urlpath = "%s/%s.html" % (detail_subdir, c.canonical_name())
           fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
           index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
-                      % (url_encode(urlpath),
+                      % (urllib_parse_quote(urlpath),
                          c.big_name(html=True),
                          c.score_str(), committerness))
           c.html_out(revision_url_pattern, fname)
@@ -714,26 +719,26 @@ def process_committers(committers):
 
 
 def usage():
-  print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
-        % os.path.basename(sys.argv[0])
-  print ''
-  print 'Create HTML files in the current directory, rooted at index.html,'
-  print 'in which you can browse to see who contributed what.'
-  print ''
-  print 'The log input should use the contribution-tracking format defined'
-  print 'in http://subversion.tigris.org/hacking.html#crediting.'
-  print ''
-  print 'Options:'
-  print ''
-  print '  -h, -H, -?, --help   Print this usage message and exit'
-  print '  -C FILE              Use FILE as the COMMITTERS file'
-  print '  -U URL               Use URL as a Python interpolation pattern to'
-  print '                       generate URLs to link revisions to some kind'
-  print '                       of web-based viewer (e.g. ViewCVS).  The'
-  print '                       interpolation pattern should contain exactly'
-  print '                       one format specifier, \'%s\', which will be'
-  print '                       replaced with the revision number.'
-  print ''
+  print('USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
+        % os.path.basename(sys.argv[0]))
+  print('')
+  print('Create HTML files in the current directory, rooted at index.html,')
+  print('in which you can browse to see who contributed what.')
+  print('')
+  print('The log input should use the contribution-tracking format defined')
+  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('')
+  print('Options:')
+  print('')
+  print('  -h, -H, -?, --help   Print this usage message and exit')
+  print('  -C FILE              Use FILE as the COMMITTERS file')
+  print('  -U URL               Use URL as a Python interpolation pattern to')
+  print('                       generate URLs to link revisions to some kind')
+  print('                       of web-based viewer (e.g. ViewCVS).  The')
+  print('                       interpolation pattern should contain exactly')
+  print('                       one format specifier, \'%s\', which will be')
+  print('                       replaced with the revision number.')
+  print('')
 
 
 def main():

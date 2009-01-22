@@ -1226,8 +1226,8 @@ log_do_committed(struct log_runner *loggy,
                                 remove_deleted_entry, loggy, pool));
     }
 
-  SVN_ERR(svn_wc__has_prop_mods(&prop_mods,
-                                full_path, loggy->adm_access, pool));
+  SVN_ERR(svn_wc_props_modified_p(&prop_mods, full_path, loggy->adm_access,
+                                  pool));
   if (prop_mods)
     {
       if (entry->kind == svn_node_file)
@@ -1508,30 +1508,28 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   const char *dir_path = svn_wc_adm_access_path(loggy->adm_access);
 
   /* Convert the text data to a conflict. */
-  new_conflicts = apr_array_make(loggy->pool, 1,
-                                 sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&new_conflicts,
                             svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts),
                                       dir_path, loggy->pool));
   new_conflict = APR_ARRAY_IDX(new_conflicts, 0,
                                svn_wc_conflict_description_t *);
 
-  /* Re-adding an existing tree conflict victim is an error. */
-  if (svn_wc__tree_conflict_exists(loggy->tree_conflicts,
-                                   svn_path_basename(new_conflict->path,
-                                                     loggy->pool),
-                                   loggy->pool))
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                         _("Attempt to add tree conflict that already exists"));
+  /* Ignore any attempt to re-add an existing tree conflict, as loggy
+     operations are idempotent. */
+  if (! svn_wc__tree_conflict_exists(loggy->tree_conflicts,
+                                     svn_path_basename(new_conflict->path,
+                                                       loggy->pool),
+                                     loggy->pool))
+    {
+      /* Copy the new conflict to the result pool.  Add its pointer to
+         the array of existing conflicts. */
+      APR_ARRAY_PUSH(loggy->tree_conflicts,
+                     const svn_wc_conflict_description_t *) =
+                        svn_wc__conflict_description_dup(new_conflict,
+                                                         loggy->result_pool);
 
-  /* Copy the new conflict to the result pool.  Add its pointer to
-     the array of existing conflicts. */
-  APR_ARRAY_PUSH(loggy->tree_conflicts,
-                 const svn_wc_conflict_description_t *) = 
-                    svn_wc__conflict_description_dup(new_conflict,
-                                                     loggy->result_pool);
-
-  loggy->tree_conflicts_added = TRUE;
+      loggy->tree_conflicts_added = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1763,6 +1761,7 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
 }
 
 
+/* #define RERUN_LOG_FILES */
 /* Run a sequence of log files. */
 static svn_error_t *
 run_log(svn_wc_adm_access_t *adm_access,
@@ -1802,8 +1801,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
   loggy->tree_conflicts_added = FALSE;
-  loggy->tree_conflicts = apr_array_make(pool, 0,
-                                      sizeof(svn_wc_conflict_description_t *));
 
   /* Populate the tree conflict array with the existing tree conflicts. */
   SVN_ERR(svn_wc_entry(&entry, svn_wc_adm_access_path(adm_access), adm_access,
@@ -1858,23 +1855,15 @@ run_log(svn_wc_adm_access_t *adm_access,
 
   svn_xml_free_parser(parser);
 
-#ifdef RERUN_LOG_FILES
-  rerun = TRUE;
-  if (--rerun_counter)
-    goto rerun;
-#endif
-
   /* If the logs included tree conflicts, write them to the entry. */
   if (loggy->tree_conflicts_added)
     {
-      char *conflict_data;
       svn_wc_entry_t tmp_entry;
       svn_error_t *err;
 
-      SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data,
+      SVN_ERR(svn_wc__write_tree_conflicts(&tmp_entry.tree_conflict_data,
                                            loggy->tree_conflicts, pool));
 
-      tmp_entry.tree_conflict_data = apr_pstrdup(pool, conflict_data);
       err = svn_wc__entry_modify(adm_access, SVN_WC_ENTRY_THIS_DIR,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
@@ -1886,6 +1875,13 @@ run_log(svn_wc_adm_access_t *adm_access,
 
       loggy->entries_modified = TRUE;
     }
+
+#ifdef RERUN_LOG_FILES
+  rerun = TRUE;
+  if (--rerun_counter)
+    goto rerun;
+#endif
+
   if (loggy->entries_modified)
     {
       apr_hash_t *entries;
@@ -2465,7 +2461,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
-  char *conflict_data;
+  const char *conflict_data;
   apr_array_header_t *conflicts;
 
   /* ### TODO: implement write_one_tree_conflict(). */

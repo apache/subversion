@@ -150,6 +150,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 {
   int len;
   int i;
+  unsigned char is_zeros = '\0';
 
   if (hex == NULL)
     {
@@ -170,7 +171,11 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
       ((unsigned char *)(*checksum)->digest)[i] =
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+      is_zeros |= (*checksum)->digest[i];
     }
+
+  if (is_zeros == '\0')
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -343,7 +348,7 @@ svn_checksum_final(svn_checksum_t **checksum,
 }
 
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum)
+svn_checksum_size(const svn_checksum_t *checksum)
 {
   return DIGESTSIZE(checksum->kind);
 }

@@ -62,6 +62,7 @@ typedef enum {
   opt_autoprops,
   opt_changelist,
   opt_config_dir,
+  opt_config_options,
   opt_diff_cmd,
   opt_dry_run,
   opt_editor_cmd,
@@ -188,7 +189,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"set-depth",     opt_set_depth, 1,
                     N_("set new working copy depth to ARG ('empty',\n"
                        "                            "
-                       "'files', 'immediates', or 'infinity')")},
+                       "'exclude', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
@@ -225,6 +226,14 @@ const apr_getopt_option_t svn_cl__options[] =
   {"relocate",      opt_relocate, 0, N_("relocate via URL-rewriting")},
   {"config-dir",    opt_config_dir, 1,
                     N_("read user configuration files from directory ARG")},
+  {"config-option", opt_config_options, 1,
+                    N_("set user configuration option in the format:\n"
+                       "                             "
+                       "    FILE:SECTION:OPTION=[VALUE]\n"
+                       "                             "
+                       "For example:\n"
+                       "                             "
+                       "    servers:global:http-library=serf\n")},
   {"auto-props",    opt_autoprops, 0, N_("enable automatic properties")},
   {"no-auto-props", opt_no_autoprops, 0, N_("disable automatic properties")},
   {"native-eol",    opt_native_eol, 1,
@@ -307,7 +316,7 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_trust_server_cert, opt_config_dir, 0
+  opt_trust_server_cert, opt_config_dir, opt_config_options, 0
 };
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -558,6 +567,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     the URL is looked up in HEAD, and the default revision range is\n"
      "     HEAD:1.\n"
      "\n"
+     "  Multiple '-c' or '-r' options may be specified (but not a\n"
+     "  combination of '-c' and '-r' options), and mixing of forward and\n"
+     "  reverse ranges is allowed.\n"
+     "\n"
      "  With -v, also print all affected paths with each log message.\n"
      "  With -q, don't print the log message body itself (note that this is\n"
      "  compatible with -v).\n"
@@ -598,7 +611,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
      "     specified, the default range of 0:REV is used.  Multiple '-c'\n"
-     "     and/or '-r' instances may be specified, and mixing of forward\n"
+     "     and/or '-r' options may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
@@ -734,6 +747,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      LastChangedRevision\n"
      "      Id                       - A compressed summary of the previous\n"
      "                                   4 keywords.\n"
+     "      Header                   - Similar to Id but includes the full URL.\n"
      "    svn:executable - If present, make the file executable.  Use\n"
      "      'svn propdel svn:executable PATH...' to clear.\n"
      "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
@@ -1023,6 +1037,49 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
+typedef struct config_option_t
+{
+  const char *file;
+  const char *section;
+  const char *option;
+  const char *value;
+} config_option_t;
+
+/* Parse argument of '--config-option'. */
+static svn_error_t *
+parse_config_option(apr_array_header_t **config_options,
+                    const char *opt_arg,
+                    apr_pool_t *pool)
+{
+  config_option_t *config_option;
+  const char *first_colon, *second_colon, *equals_sign;
+  apr_size_t len = strlen(opt_arg);
+  if ((first_colon = strchr(opt_arg, ':')) && (first_colon != opt_arg))
+    {
+      if ((second_colon = strchr(first_colon + 1, ':')) && (second_colon != first_colon + 1))
+        {
+          if ((equals_sign = strchr(second_colon + 1, '=')) && (equals_sign != second_colon + 1))
+            {
+              config_option = apr_pcalloc(pool, sizeof(config_option_t));
+              config_option->file = apr_pstrndup(pool, opt_arg, first_colon - opt_arg);
+              config_option->section = apr_pstrndup(pool, first_colon + 1, second_colon - first_colon - 1);
+              config_option->option = apr_pstrndup(pool, second_colon + 1, equals_sign - second_colon - 1);
+              if (! (strchr(config_option->option, ':')))
+                {
+                  config_option->value = apr_pstrndup(pool, equals_sign + 1, opt_arg + len - equals_sign - 1);
+                  if (! *config_options)
+                    {
+                      *config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
+                    }
+                  APR_ARRAY_PUSH(*config_options, config_option_t *) = config_option;
+                  return SVN_NO_ERROR;
+                }
+            }
+        }
+    }
+  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          _("Invalid syntax of argument of --config-option"));
+}
 
 
 /*** Main. ***/
@@ -1045,7 +1102,7 @@ main(int argc, const char *argv[])
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
-  svn_config_t *cfg;
+  svn_config_t *cfg_config, *cfg_servers;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
   apr_hash_t *changelists;
@@ -1226,6 +1283,7 @@ main(int argc, const char *argv[])
         }
         break;
       case 'r':
+        opt_state.used_revision_arg = TRUE;
         if (svn_opt_parse_revision_to_range(opt_state.revision_ranges,
                                             opt_arg, pool) != 0)
           {
@@ -1427,6 +1485,15 @@ main(int argc, const char *argv[])
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
         opt_state.config_dir = svn_path_canonicalize(path_utf8, pool);
         break;
+      case opt_config_options:
+        {
+          err = parse_config_option(&opt_state.config_options, opt_arg, pool);
+          if (err)
+            {
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+        }
+        break;
       case opt_autoprops:
         opt_state.autoprops = TRUE;
         break;
@@ -1459,6 +1526,12 @@ main(int argc, const char *argv[])
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        if (opt_state.changelist[0] == '\0')
+          {
+            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Changelist names must not be empty"));
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;
@@ -1628,7 +1701,8 @@ main(int argc, const char *argv[])
     }
 
   /* Only merge supports multiple revisions/revision ranges. */
-  if (subcommand->cmd_func != svn_cl__merge)
+  if (subcommand->cmd_func != svn_cl__merge
+      && subcommand->cmd_func != svn_cl__log)
     {
       if (opt_state.revision_ranges->nelts > 1)
         {
@@ -1841,17 +1915,45 @@ main(int argc, const char *argv[])
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
-  cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                     APR_HASH_KEY_STRING);
+  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                            APR_HASH_KEY_STRING);
+  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
+                             APR_HASH_KEY_STRING);
 
   /* Update the options in the config */
+  if (opt_state.config_options)
+    {
+      for (i = 0; i < opt_state.config_options->nelts; i++)
+        {
+          config_option_t *config_option = APR_ARRAY_IDX(opt_state.config_options,
+                                                         i, config_option_t *);
+          if (strcmp(config_option->file, "config") == 0)
+            {
+              svn_config_set(cfg_config, config_option->section,
+                             config_option->option, config_option->value);
+            }
+          else if (strcmp(config_option->file, "servers") == 0)
+            {
+              svn_config_set(cfg_servers, config_option->section,
+                             config_option->option, config_option->value);
+            }
+          else
+            {
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Unrecognized file in argument of --config-option"));
+              svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(err);
+            }
+        }
+    }
+
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
   if (opt_state.diff_cmd)
-    svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
+    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff_cmd);
   if (opt_state.merge_cmd)
-    svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
+    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
 
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
@@ -1900,7 +2002,7 @@ main(int argc, const char *argv[])
       || subcommand->cmd_func == svn_cl__import)
     {
       const char *mimetypes_file;
-      svn_config_get(cfg, &mimetypes_file,
+      svn_config_get(cfg_config, &mimetypes_file,
                      SVN_CONFIG_SECTION_MISCELLANY,
                      SVN_CONFIG_OPTION_MIMETYPES_FILE, FALSE);
       if (mimetypes_file && *mimetypes_file)
@@ -1912,19 +2014,19 @@ main(int argc, const char *argv[])
 
       if (opt_state.autoprops)
         {
-          svn_config_set_bool(cfg, SVN_CONFIG_SECTION_MISCELLANY,
+          svn_config_set_bool(cfg_config, SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, TRUE);
         }
       if (opt_state.no_autoprops)
         {
-          svn_config_set_bool(cfg, SVN_CONFIG_SECTION_MISCELLANY,
+          svn_config_set_bool(cfg_config, SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, FALSE);
         }
     }
 
   /* Update the 'keep-locks' runtime option */
   if (opt_state.no_unlock)
-    svn_config_set_bool(cfg, SVN_CONFIG_SECTION_MISCELLANY,
+    svn_config_set_bool(cfg_config, SVN_CONFIG_SECTION_MISCELLANY,
                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
@@ -1965,7 +2067,7 @@ main(int argc, const char *argv[])
                                            opt_state.config_dir,
                                            opt_state.no_auth_cache,
                                            opt_state.trust_server_cert,
-                                           cfg,
+                                           cfg_config,
                                            ctx->cancel_func,
                                            ctx->cancel_baton,
                                            pool)))
@@ -1974,7 +2076,7 @@ main(int argc, const char *argv[])
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
-  if ((err = svn_config_get_bool(cfg, &interactive_conflicts,
+  if ((err = svn_config_get_bool(cfg_config, &interactive_conflicts,
                                  SVN_CONFIG_SECTION_MISCELLANY,
                                  SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
                                  TRUE)))  /* ### interactivity on by default.

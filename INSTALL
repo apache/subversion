@@ -520,11 +520,11 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      10.  Python 2.2 or newer (http://www.python.org/)  (OPTIONAL)
+      10.  Python 2.4 or newer (http://www.python.org/)  (OPTIONAL)
 
       If you want to run "make check" or build from the latest source
       under Unix as described in section II.B and III.D, install
-      Python 2.2 or higher on your system. The majority of the test
+      Python 2.4 or higher on your system. The majority of the test
       suite is written in Python, as is part of Subversion's build
       system.
 
@@ -552,7 +552,20 @@ I.    INTRODUCTION
       version if MASM is not compatible with MSVC 6).
 
 
-      13. SQLite 3.4.x, 3.5.x or 3.6.x
+      13. SQLite
+
+      Subversion (starting with version 1.6) requires SQLite version
+      3.4.0 or above, and you can meet this dependency several ways:
+        * Use an SQLite amalgamation file.
+        * Specify an SQLite installation to use.
+        * Let Subversion find an installed SQLite.
+      
+      To use an SQLite-provided amalgamation, just drop sqlite3.c into
+      Subversion's sqlite-amalgamation/ directory, or point to it with the
+      --with-sqlite configure option.  This file also ships with the Subversion
+      dependencies distribution, or you can download it from SQLite:
+
+          http://www.sqlite.org/download.html
 
 
   D. Documentation
@@ -789,11 +802,12 @@ II.   INSTALLATION
       * Visual Studio 6 and service pack. It can be built with later versions
         of Visual Studio (Visual Studio.NET 2002, 2003, 2005 and Visual C++
         Express 2005) but these instructions assume VS6.
-      * A recent Windows SDK if you are using Visual Studio 6.
-        You can get it from MSDN if you have it or from
-        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/ if you
-        don't.
-      * Python 2.2 or higher, downloaded from http://www.python.org/ which is
+      * A recent Windows SDK.
+        If you are using Visual Studio 6, you need the latest SDK which
+        is compatible with VC6, which is the one from february 2003.
+        You can get it from MSDN:
+        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
+      * Python 2.4 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
       * Awk (from http://cm.bell-labs.com/cm/cs/who/bwk/awk95.exe) is

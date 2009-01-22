@@ -138,7 +138,7 @@ svn_fs_base__id_to_dbt(DBT *dbt,
 /* Set DBT to the unparsed form of SKEL; allocate memory from POOL.  */
 DBT *
 svn_fs_base__skel_to_dbt(DBT *dbt,
-                         skel_t *skel,
+                         svn_skel_t *skel,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *unparsed_skel = svn_skel__unparse(skel, pool);
