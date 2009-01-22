@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
-#include <apr_md5.h>
 
 #include "../svn_test.h"
 
@@ -37,6 +36,12 @@
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
 
 
 static svn_error_t *
@@ -1119,43 +1124,21 @@ static svn_error_t *
 authz_get_handle(svn_authz_t **authz_p, const char *authz_contents,
                  apr_pool_t *pool)
 {
-  apr_file_t *authz_file;
-  apr_status_t apr_err;
   const char *authz_file_path;
-  svn_error_t *err;
 
-  /* Create a temporary file, and fetch its name. */
-  SVN_ERR_W(svn_io_open_unique_file2(&authz_file, &authz_file_path,
-                                     "authz_file", "tmp",
-                                     svn_io_file_del_none, pool),
-            "Opening temporary file");
-
-  /* Write the authz ACLs to the file. */
-  if ((apr_err = apr_file_write_full(authz_file, authz_contents,
-                                     strlen(authz_contents), NULL)))
-    {
-      (void) apr_file_close(authz_file);
-      (void) apr_file_remove(authz_file_path, pool);
-      return svn_error_wrap_apr(apr_err, "Writing test authz file");
-    }
-
-  /* Close the temporary descriptor. */
-  if ((apr_err = apr_file_close(authz_file)))
-    {
-      (void) apr_file_remove(authz_file_path, pool);
-      return svn_error_wrap_apr(apr_err, "Closing test authz file");
-    }
+  /* Create a temporary file. */
+  SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
+                                authz_contents, strlen(authz_contents),
+                                svn_io_file_del_on_pool_cleanup, pool),
+            "Writing temporary authz file");
 
   /* Read the authz configuration back and start testing. */
-  if ((err = svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool)))
-    {
-      (void) apr_file_remove(authz_file_path, pool);
-      return svn_error_quick_wrap(err, "Opening test authz file");
-    }
+  SVN_ERR_W(svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool),
+            "Opening test authz file");
 
-  /* Delete the file, but ignore the error if we've a more important one. */
-  if ((apr_err = apr_file_remove(authz_file_path, pool)))
-    return svn_error_wrap_apr(apr_err, "Removing test authz file");
+  /* Done with the file. */
+  SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
+            "Removing test authz file");
 
   return SVN_NO_ERROR;
 }
@@ -1818,6 +1801,11 @@ node_location_segments(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "bdb") == 0) 
+      && (opts->server_minor_version == 4))
+    return SVN_NO_ERROR;
+
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
                                  opts, pool));
@@ -2126,11 +2114,11 @@ reporter_depth_exclude(const char **msg,
                                     entries,
                                     sizeof(entries)/sizeof(entries[0]),
                                     subpool));
-    svn_pool_clear(subpool);
   }
 
   /* Clean up after ourselves. */
   svn_error_clear(svn_fs_abort_txn(txn, subpool));
+  svn_pool_clear(subpool);
 
   /* Expect an error on an illegal report for r1 to r2.  The illegal
      sequence is that we exclude A/D, then set_path() below A/D. */
@@ -2338,6 +2326,105 @@ prop_validation(const char **msg,
 
 
 
+/* Tests for svn_repos_get_logsN() */
+
+/* Log receiver which simple increments a counter. */
+static svn_error_t *
+log_receiver(void *baton,
+             svn_log_entry_t *log_entry,
+             apr_pool_t *pool)
+{
+  int *count = baton;
+  (*count)++;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+get_logs(const char **msg,
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
+         apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t start, end, youngest_rev = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  *msg = "test svn_repos_get_logs ranges and limits";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-get-logs",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Add the Greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+
+  /* Revision 2:  Tweak A/mu and A/B/E/alpha. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu",
+                                      "Revision 2", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha",
+                                      "Revision 2", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+
+  /* Revision 3:  Tweak A/B/E/alpha and A/B/E/beta. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha",
+                                      "Revision 3", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/beta",
+                                      "Revision 3", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+
+
+  for (start = 0; start <= youngest_rev; start++)
+    {
+      for (end = 0; end <= youngest_rev; end++)
+        {
+          svn_revnum_t start_arg = start ? start : SVN_INVALID_REVNUM;
+          svn_revnum_t end_arg   = end ? end : SVN_INVALID_REVNUM;
+          svn_revnum_t eff_start = start ? start : youngest_rev;
+          svn_revnum_t eff_end   = end ? end : youngest_rev;
+          int limit, max_logs =
+            MAX(eff_start, eff_end) + 1 - MIN(eff_start, eff_end);
+          int num_logs;
+
+          for (limit = 0; limit <= max_logs; limit++)
+            {
+              int num_expected = limit ? limit : max_logs;
+
+              svn_pool_clear(subpool);
+              num_logs = 0;
+              SVN_ERR(svn_repos_get_logs4(repos, NULL, start_arg, end_arg,
+                                          limit, FALSE, FALSE, FALSE, NULL,
+                                          NULL, NULL, log_receiver, &num_logs,
+                                          subpool));
+              if (num_logs != num_expected)
+                return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                         "Log with start=%ld,end=%ld,limit=%d "
+                                         "returned %d entries (expected %d)",
+                                         start_arg, end_arg, limit,
+                                         num_logs, max_logs);
+            }
+        }
+    }
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2355,5 +2442,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(node_location_segments),
     SVN_TEST_PASS(reporter_depth_exclude),
     SVN_TEST_PASS(prop_validation),
+    SVN_TEST_PASS(get_logs),
     SVN_TEST_NULL
   };

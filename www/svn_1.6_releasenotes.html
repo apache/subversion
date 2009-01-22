@@ -22,11 +22,6 @@ of this page will become the release notes.  Until then, this page
 describes what is planned for the release.</p>
 </div>
 
-<div class="warningmessage">
-<p>[BRANCH] means that given feature probably will be included in Subversion
-1.6, but currently is still on a separate branch.</p>
-</div>
-
 <h1 style="text-align: center">Subversion 1.6 Release Notes</h1>
 
 <div class="h2" id="news" title="news">
@@ -39,18 +34,18 @@ describes what is planned for the release.</p>
       >Repository root relative URLs</a></li>
   <li><a href="#file-externals"
       >Support for files in <tt>svn:externals</tt></a></li>
-  <li><a href="#svn-patch"
-      >[BRANCH] svn patch</a></li>
   <li><a href="#tree-conflicts"
       >Improved handling of tree conflicts</a></li>
-  <li><a href="#fsfs-memcached"
-      >FSFS repositories: Support for Memcached</a></li>
-  <li><a href="#bdb-reverse-deltas"
-      >BDB repositories: Reverse deltas</a></li>
+  <li><a href="#filesystem-improvements"
+      >Filesystem storage improvements</a></li>
   <li><a href="#ctypes-python-bindings"
-      >[BRANCH] Ctypes Python Bindings</a></li>
+      >Ctypes Python Bindings</a></li>
   <li><a href="#improved-interactive-conflict-resolution"
       >Improved interactive conflict resolution</a></li>
+  <li><a href="#svnserve-logging"
+      >Logging support for svnserve</a></li>
+  <li><a href="#cmdline"
+      >Command-line client improvements</a></li>
   <li><a href="#apis"
       >API changes, improvements, and much language bindings work</a></li>
   <li><a href="#bug-fixes"
@@ -61,8 +56,13 @@ describes what is planned for the release.</p>
 and is considered the current "best" release.  Any feature or bugfix
 in 1.0.x through 1.5.x is also in 1.6, but 1.6 contains features and
 bugfixes not present in any earlier release.  The new features will
-eventually be documented in a 1.6 version of the free Subversion book,
-see <a href="http://svnbook.red-bean.com" >svnbook.red-bean.com</a>.</p>
+eventually be documented in a 1.6 version of the free Subversion book
+(<a href="http://svnbook.red-bean.com" >svnbook.red-bean.com</a>).</p>
+
+<p>This page describes only major changes.  For a complete list of
+changes, see the 1.6 section of the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES" >CHANGES</a>
+file.</p>
 
 </div>  <!-- news -->
 
@@ -114,24 +114,24 @@ cannot necessarily compile or run against older libraries.</p>
 
 </div>  <!-- new-feature-compatibility-table -->
 
-<div class="h3" id="wc-and-repos-format-change"
-             title="wc-and-repos-format-change">
-<h3>Working Copy and Repository Format Changes</h3>
+<div class="h3" id="wc-and-fs-format-change"
+             title="wc-and-fs-format-change">
+<h3>Working Copy and Repository Filesystem Format Changes</h3>
 
 <p>The working copy format has been upgraded.  This means that 1.5 and
 older Subversion clients will <em>not</em> be able to work with
 working copies produced by Subversion 1.6.  Working copies are <a
 href="#wc-upgrades" >upgraded automatically</a>.</p>
 
-<p>XXX(Only BDB repositories) Similarly, the repository format has changed, meaning that 1.5 and
-older versions of Subversion tools that normally access a repository
-directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
+<p>Similarly, the repository filesystem formats have changed, meaning
+that 1.5 and older versions of Subversion tools that normally access
+a repository directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
 <tt>svnadmin</tt>) won't be able to read a repository created by
 Subversion 1.6.  But, repositories are <a href="#repos-upgrades"
 ><strong>not</strong> upgraded automatically</a>.</p>
 
 <div class="h4" id="wc-upgrades" title="wc-upgrades">
-<h4>[BRANCH] Working Copy Upgrades</h4>
+<h4>Working Copy Upgrades</h4>
 
 <p><strong>WARNING:</strong> if a Subversion 1.6 client encounters a
 pre-1.6 working copy, it will <em>automatically</em> upgrade the
@@ -164,12 +164,12 @@ that some of the new 1.6 features will not become available simply by
 upgrading your server: you will also have to upgrade your
 repositories.  (We decided not to auto-upgrade repositories because we
 didn't want 1.6 to silently make repositories unusable by
-1.4&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
+1.5&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
 part of the repository admin.)</p>
 
 </div>  <!-- repos-upgrades -->
 
-</div>  <!-- wc-and-repos-format-change -->
+</div>  <!-- wc-and-fs-format-change -->
 
 <div class="h3" id="output-changes" title="output-changes">
 <h3>Command Line Output Changes</h3>
@@ -177,9 +177,7 @@ part of the repository admin.)</p>
 <p>Although we try hard to keep output from the command line programs
 compatible between releases, new information sometimes has to be
 added.  This can break scripts that rely on the exact format of the
-output.  Unfortunately, we are not able to enumerate all of the output
-changes in 1.6, but one of them is that the output of <code>svn proplist
---verbose</code> was improved.</p>
+output.</p>
 
 <div class="h4" id="proplist-verbose" title="proplist-verbose">
 <h4>Improved output of <code>svn proplist --verbose</code></h4>
@@ -204,7 +202,24 @@ improved.</p>
 <div class="h4" id="svn-status" title="svn-status">
 <h4>Changed output of <code>svn status</code></h4>
 
-<p>XXX(r33247)</p>
+<p>The output of <code>svn status</code> contains the additional seventh
+column which informs whether the item is the victim of a tree conflict.
+An additional line with more detailed description of a tree conflict is
+displayed after each item remaining in tree conflict.</p>
+
+<pre>
+   $ svn status
+   M       Makefile.in
+   A     C src/error.c
+         >   local add, incoming add upon update
+   M       src/log.c
+   M     C src/path.c
+         >   local edit, incoming delete upon update
+   D     C src/properties.c
+         >   local delete, incoming edit upon merge
+   M     C src/time.c
+   $ 
+</pre>
 
 </div>  <!-- svn-status -->
 
@@ -275,7 +290,7 @@ title="auth-related-improvements-ssl-client-certificate-passphrases">
 <h4>Support for storing SSL client certificate passphrases</h4>
 
 <p>SSL client certificate passphrases can be stored in KWallet, GNOME
-Keyring, Mac OS Keychain, or in plaintext form.</p>
+Keyring, Mac OS Keychain, a Windows CryptoAPI encrypted form or in plaintext form.</p>
 
 </div> <!-- auth-related-improvements-ssl-client-certificate-passphrases -->
 
@@ -360,13 +375,6 @@ href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
 
 </div>  <!-- file-externals -->
 
-<div class="h3" id="svn-patch" title="svn-patch">
-<h3>[BRANCH] svn patch (<em>client</em>)</h3>
-
-<p><code>svn diff --svnpatch</code> and <code>svn patch</code>.</p>
-
-</div>  <!-- svn-patch -->
-
 <div class="h3" id="tree-conflicts" title="tree-conflicts">
 <h3>Improved handling of tree conflicts (<em>client</em>)</h3>
 
@@ -374,8 +382,55 @@ href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
 
 </div>  <!-- tree-conflicts -->
 
-<div class="h3" id="fsfs-memcached" title="fsfs-memcached">
-<h3>FSFS repositories: Support for Memcached (<em>server</em>)</h3>
+<div class="h3" id="filesystem-improvements" title="filesystem-improvements">
+<h3>Filesystem Storage Improvements</h3>
+
+<p>Subversion 1.6 contains several improvements to both the Berkeley DB and FSFS
+backends.  These are designed to improve storage space, and can result in
+drastically smaller repositories.  These changes include:</p>
+<ul>
+  <li><a href="#rep-sharing"
+      >Representation sharing</a></li>
+  <li><a href="#fsfs-packing"
+      >FSFS inode packing</a></li>
+  <li><a href="#fsfs-memcached"
+      >FSFS repositories: Support for Memcached</a></li>
+  <li><a href="#bdb-reverse-deltas"
+      >BDB repositories: Reverse deltas</a></li>
+</ul>
+
+<div class="h4" id="rep-sharing" title="rep-sharing">
+<h4>Sharing multiple common representations
+  (<em><a href="/issues/show_bug.cgi?id=2286">issue 2286</a></em>,
+   <em>server</em>)</h4>
+<p>XXX:When using many branches and merging between them often, it is common to
+have files with similar lines of history which contain the exact same content.
+In the past, Subversion has stored these files as deltas against previous
+versions of the file.  Subversion 1.6 will now use existing representations in
+the filesystem for duplicate storage.  Depending on the size of the repository,
+and the degree of branching and merging, this can cause an up to 20% space
+reduction for Berkeley DB repositories and a 15% reduction for FSFS
+repositories.</p>
+
+</div> <!-- rep-sharing -->
+
+<div class="h4" id="fsfs-packing" title="fsfs-memcached">
+<h4>FSFS repositories: Packing completed shards (<em>server</em>)</h4>
+
+<p>XXX: Subversion 1.5 introduced the ability for FSFS repositories to be
+<em><a href="svn_1.5_releasenotes.html#fsfs-sharding">sharded</a></em> into
+multiple directories for revision and revprop files.  Subversion 1.6 takes
+the sharding concept further, and allows full shard directory to be
+<em>packed</em> into one file.  Packed FSFS repositories have significant
+space savings over their unpacked counterparts, especially repositories which
+contain many small commits.</p>
+
+<p>See <code>svnadmin pack</code> for more details.</p>
+
+</div> <!-- fs-packing -->
+
+<div class="h4" id="fsfs-memcached" title="fsfs-memcached">
+<h4>FSFS repositories: Support for Memcached (<em>server</em>)</h4>
 
 <p>XXX: <a href="http://www.danga.com/memcached/">Memcached</a> can cache
 data of FSFS repositories.</p>
@@ -385,15 +440,17 @@ data of FSFS repositories.</p>
 
 </div> <!-- fsfs-memcached -->
 
-<div class="h3" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
-<h3>BDB repositories: Reverse deltas (<em>server</em>)</h3>
+<div class="h4" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
+<h4>BDB repositories: Reverse deltas (<em>server</em>)</h4>
 
 <p>XXX</p>
 
 </div> <!-- bdb-reverse-deltas -->
 
+</div> <!-- filesystem-improvements -->
+
 <div class="h3" id="ctypes-python-bindings" title="ctypes-python-bindings">
-<h3>[BRANCH] Ctypes Python Bindings</h3>
+<h3>Ctypes Python Bindings</h3>
 
 <p>XXX</p>
 
@@ -444,6 +501,14 @@ data of FSFS repositories.</p>
 </pre>
 
 </div>  <!-- improved-interactive-conflict-resolution -->
+
+<div class="h3" id="svnserve-logging"
+             title="svnserve-logging">
+<h3>Logging support for svnserve (<em>server</em>)</h3>
+
+<p>XXX</p>
+
+</div>  <!-- svnserve-logging -->
 
 <div class="h3" id="cmdline" title="cmdline">
 <h3>Command-line client improvements (<em>client</em>)</h3>
@@ -516,55 +581,14 @@ security or data-loss bugs.</p>
 
 </div>  <!-- svn-1.4-deprecation -->
 
-<div class="h2" id="deps" title="deps">
-<h2>Subversion Dependencies Distribution: Binary Compatibility Issues</h2>
+<div class="h2" id="sqlite" title="sqlite">
+<h2>New Dependency: SQLite</h2>
 
-<div class="h3" id="deps-background" title="deps-background">
-<h3>Background</h3>
+<p>XXX: We now require <a href="http://www.sqlite.org/">SQLite</a> for both
+the server and client.  We recommend 3.5.9 or greater, but work with anything
+better than 3.4.0.</p>
 
-<p>APR 0.9.x and 1.x are binary-incompatible.  This means if you are
-already using Subversion with APR 0.9.x, and then upgrade your libapr
-to 1.X <em>without rebuilding Subversion</em>, things will break.
-Things will also break if your Subversion server libraries are linked
-to one version of APR but your Apache HTTPD server is linked to a
-different version.</p>
-
-<p>For a long time, Subversion's main source distribution included APR
-0.9.x, which was the latest available at the time, along with a few
-other things (e.g., Neon, zlib) that weren't yet widespread on
-installation systems.</p>
-
-</div> <!-- deps-background -->
-
-<div class="h3" id="deps-now" title="deps-now">
-<h3>Subversion 1.6.0 Dependencies Distribution</h3>
-
-<p>Today, these dependencies are no longer exotic, so our source
-distribution contains just Subversion itself.  Those building
-Subversion are expected to have the necessary libraries already
-installed, or to be able to fetch them easily.  But for convenience,
-we still offer a "deps" distribution: it doesn't contain Subversion,
-it just has source code for those third-party libraries.</p>
-
-<p>Until Subversion 1.5.0, the deps distribution contained APR 0.9.x,
-but as of 1.5.0, we're finally upgrading it to APR 1.x.  This is
-because by now there are very few systems that will have binary
-compatibility issues, and of those, few are likely to build using the
-"deps" dist.</p>
-
-<p>If you already have a Subversion installation using APR 0.9.x, it's
-still possible to move to APR 1.x safely (although you are not
-required to, unless you use the deps dist).  Just be sure to recompile
-Subversion, and Apache httpd if necessary, after upgrading APR.</p>
-
-<p>Note that it's perfectly safe to use APR 1.x from the beginning.
-In fact, we recommend it.  If you're building Subversion for the first
-time, there's no compatibility issue to worry about, so just grab the
-latest version of APR (or use our deps dist).</p>
-
-</div> <!-- deps-now -->
-
-</div>  <!-- deps -->
+</div>  <!-- sqlite -->
 
 </div>  <!-- app -->
 </body>

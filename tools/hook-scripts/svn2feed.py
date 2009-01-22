@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -71,15 +72,21 @@ Options:
 
 import sys
 
-# Python 2.3 is required for datetime
-if sys.version_info < (2, 3):
-    sys.stderr.write("Error: Python 2.3 or higher required.\n")
+# Python 2.4 is required for subprocess
+if sys.version_info < (2, 4):
+    sys.stderr.write("Error: Python 2.4 or higher required.\n")
+    sys.stderr.flush()
     sys.exit(1)
 
 import getopt
 import os
 import subprocess
-import cPickle as pickle
+try:
+  # Python <3.0
+  import cPickle as pickle
+except ImportError:
+  # Python >=3.0
+  import pickle
 import datetime
 import time
 
@@ -93,9 +100,11 @@ def usage_and_exit(errmsg=None):
         stream = sys.stdout
     else:
         stream = sys.stderr
-    print >> stream, __doc__
+    stream.write("%s\n" % __doc__)
+    stream.flush()
     if errmsg:
-        print >> stream, "\nError: %s" % (errmsg)
+        stream.write("\nError: %s\n" % errmsg)
+	stream.flush()
         sys.exit(2)
     sys.exit(0)
 
@@ -430,7 +439,7 @@ def main():
                     tmp = start
                     start = end
                     end = tmp
-                revisions = range(start, end + 1)[-max_items:]
+                revisions = list(range(start, end + 1)[-max_items:])
             else:
                 raise ValueError()
         except ValueError, msg:

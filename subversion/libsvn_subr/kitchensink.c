@@ -139,3 +139,38 @@ svn_inheritance_from_word(const char *word)
     return svn_mergeinfo_nearest_ancestor;
   return svn_mergeinfo_explicit;
 }
+
+const char *
+svn_node_kind_to_word(svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_none:
+      return "none";
+    case svn_node_file:
+      return "file";
+    case svn_node_dir:
+      return "dir";
+    case svn_node_unknown:
+    default:
+      return "unknown";
+    }
+}
+
+
+svn_node_kind_t
+svn_node_kind_from_word(const char *word)
+{
+  if (word == NULL)
+    return svn_node_unknown;
+
+  if (strcmp(word, "none") == 0)
+    return svn_node_none;
+  else if (strcmp(word, "file") == 0)
+    return svn_node_file;
+  else if (strcmp(word, "dir") == 0)
+    return svn_node_dir;
+  else 
+    /* This also handles word == "unknown" */
+    return svn_node_unknown;
+}

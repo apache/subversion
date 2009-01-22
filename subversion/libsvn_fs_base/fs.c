@@ -56,6 +56,8 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
+#include "bdb/miscellaneous-table.h"
+#include "bdb/checksum-reps-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
@@ -169,7 +171,8 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
-  SVN_ERR(cleanup_fs_db(fs, &bfd->metadata, "metadata"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->checksum_reps, "checksum-reps"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->miscellaneous, "miscellaneous"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -619,15 +622,24 @@ open_databases(svn_fs_t *fs,
                                                            create)));
     }
 
-
-  if (format >= SVN_FS_BASE__MIN_METADATA_FORMAT)
+  if (format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
-                            ? "creating 'metadata' table"
-                            : "opening 'matadata' table"),
-                       svn_fs_bdb__open_metadata_table(&bfd->metadata,
-                                                       bfd->bdb->env,
-                                                       create)));
+                            ? "creating 'miscellaneous' table"
+                            : "opening 'miscellaneous' table"),
+                       svn_fs_bdb__open_miscellaneous_table(&bfd->miscellaneous,
+                                                            bfd->bdb->env,
+                                                            create)));
+    }
+
+  if (format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
+    {
+      SVN_ERR(BDB_WRAP(fs, (create
+                            ? "creating 'checksum-reps' table"
+                            : "opening 'checksum-reps' table"),
+                       svn_fs_bdb__open_checksum_reps_table(&bfd->checksum_reps,
+                                                            bfd->bdb->env,
+                                                            create)));
     }
 
   return SVN_NO_ERROR;
@@ -640,6 +652,11 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   svn_error_t *svn_err;
+
+  /* See if we had an explicitly specified pre-1.5-compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                                 APR_HASH_KEY_STRING))
+    format = 3;
 
   /* See if we had an explicitly specified pre-1.5-compatible.  */
   if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
@@ -696,23 +713,15 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 static svn_error_t *
 check_format(int format)
 {
-  /* We support format 1, 2, 3 and 4 simultaneously.  */
-  if (format == 1 && SVN_FS_BASE__FORMAT_NUMBER == 2)
-    return SVN_NO_ERROR;
-  if ((format == 1 || format == 2) && SVN_FS_BASE__FORMAT_NUMBER == 3)
-    return SVN_NO_ERROR;
-  if ((format >= 1 && format <= 3) && SVN_FS_BASE__FORMAT_NUMBER == 4)
+  /* We currently support any format less than the compiled format number
+     simultaneously.  */
+  if (format <= SVN_FS_BASE__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
-  if (format != SVN_FS_BASE__FORMAT_NUMBER)
-    {
-      return svn_error_createf
-        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-         _("Expected FS format '%d'; found format '%d'"),
-         SVN_FS_BASE__FORMAT_NUMBER, format);
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_createf(
+        SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+        _("Expected FS format '%d'; found format '%d'"),
+        SVN_FS_BASE__FORMAT_NUMBER, format);
 }
 
 static svn_error_t *
@@ -730,10 +739,12 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
       /* Pre-1.2 filesystems did not have a format file (you could say
-         they were format "0"), so they get upgraded on the fly. */
+         they were format "0"), so they get upgraded on the fly.
+         However, we stopped "upgrading on the fly" in 1.5, so older
+         filesystems should only be bumped to 1.3, which is format "1". */
       svn_error_clear(svn_err);
       svn_err = SVN_NO_ERROR;
-      format = SVN_FS_BASE__FORMAT_NUMBER;
+      format = 1;
       write_format_file = TRUE;
     }
   else if (svn_err)
@@ -810,7 +821,7 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   const char *version_file_path;
   int old_format_number;
-  
+
   version_file_path = svn_path_join(path, FORMAT_FILE, pool);
 
   /* Read the old number so we've got it on hand later on. */
@@ -841,9 +852,9 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       /* Fetch the youngest rev, and record it */
       SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
       value = apr_psprintf(subpool, "%ld", youngest_rev);
-      SVN_ERR(svn_fs_base__metadata_set(fs,
-                                  SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
-                                  value, subpool));
+      SVN_ERR(svn_fs_base__miscellaneous_set
+              (fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE,
+               value, subpool));
       svn_pool_destroy(subpool);
     }
 
@@ -858,6 +869,19 @@ base_bdb_recover(svn_fs_t *fs,
   /* The fs pointer is a fake created in base_open_for_recovery above.
      We only care about the path. */
   return bdb_recover(fs->path, FALSE, pool);
+}
+
+static svn_error_t *
+base_bdb_pack(svn_fs_t *fs,
+              const char *path,
+              svn_fs_pack_notify_t notify_func,
+              void *notify_baton,
+              svn_cancel_func_t cancel,
+              void *cancel_baton,
+              apr_pool_t *pool)
+{
+  /* Packing is currently a no op for BDB. */
+  return SVN_NO_ERROR;
 }
 
 
@@ -1200,6 +1224,10 @@ base_hotcopy(const char *src_path,
                               "lock-tokens", pagesize, TRUE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
                               "node-origins", pagesize, TRUE, pool));
+  SVN_ERR(copy_db_file_safely(src_path, dest_path,
+                              "checksum-reps", pagesize, TRUE, pool));
+  SVN_ERR(copy_db_file_safely(src_path, dest_path,
+                              "miscellaneous", pagesize, TRUE, pool));
 
   {
     apr_array_header_t *logfiles;
@@ -1306,6 +1334,7 @@ static fs_library_vtable_t library_vtable = {
   base_hotcopy,
   base_get_description,
   base_bdb_recover,
+  base_bdb_pack,
   base_bdb_logfiles,
   svn_fs_base__id_parse
 };

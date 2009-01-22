@@ -2,7 +2,7 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,7 +32,6 @@
 #include "svn_pools.h"
 #include "svn_subst.h"
 #include "svn_time.h"
-#include "svn_md5.h"
 #include "svn_props.h"
 #include "client.h"
 
@@ -102,11 +101,11 @@ copy_one_versioned_file(const char *from,
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
-  const char *base;
   svn_string_t *eol_style, *keywords, *executable, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
+  svn_stream_t *source;
 
   SVN_ERR(svn_wc_entry(&entry, from, adm_access, FALSE, pool));
 
@@ -125,20 +124,17 @@ copy_one_versioned_file(const char *from,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_copy_path(from, &base,
-                                            pool));
-      SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, from,
-                                    adm_access, pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&source, from, pool, pool));
+      SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, from, adm_access, pool));
     }
   else
     {
       svn_wc_status2_t *status;
 
-      base = from;
-      SVN_ERR(svn_wc_prop_list(&props, from,
-                               adm_access, pool));
-      SVN_ERR(svn_wc_status2(&status, from,
-                             adm_access, pool));
+      SVN_ERR(svn_subst_read_specialfile(&source, from, pool, pool));
+
+      SVN_ERR(svn_wc_prop_list(&props, from, adm_access, pool));
+      SVN_ERR(svn_wc_status2(&status, from, adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
@@ -192,13 +188,12 @@ copy_one_versioned_file(const char *from,
                entry->url, tm, author, pool));
     }
 
-  SVN_ERR(svn_subst_copy_and_translate3(base, to, eol, FALSE,
-                                        kw, TRUE,
-                                        special ? TRUE : FALSE,
-                                        pool));
+  SVN_ERR(svn_subst_create_translated(source, to, eol, FALSE,
+                                      kw, TRUE,
+                                      special ? TRUE : FALSE,
+                                      pool));
   if (executable)
-    SVN_ERR(svn_io_set_file_executable(to, TRUE,
-                                       FALSE, pool));
+    SVN_ERR(svn_io_set_file_executable(to, TRUE, FALSE, pool));
 
   if (! special)
     SVN_ERR(svn_io_set_file_affected_time(tm, to, pool));
@@ -223,7 +218,6 @@ copy_versioned_files(const char *from,
   apr_pool_t *iterpool;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  apr_finfo_t finfo;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, from, FALSE,
                                  0, ctx->cancel_func, ctx->cancel_baton,
@@ -249,14 +243,15 @@ copy_versioned_files(const char *from,
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
-         
-      /* Skip retrieving the umask on windows. Apr does not implement setting 
-         filesystem privileges on Windows. 
-         Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER 
+
+      /* Skip retrieving the umask on windows. Apr does not implement setting
+         filesystem privileges on Windows.
+         Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER
          is documented to be 'incredibly expensive' */
-#ifdef WIN32      
-      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);      
+#ifdef WIN32
+      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);
 #else
+      apr_finfo_t finfo;
       SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
       err = svn_io_dir_make(to, finfo.protection, pool);
 #endif
@@ -381,7 +376,7 @@ copy_versioned_files(const char *from,
                                       native_eol, pool));
     }
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -465,7 +460,7 @@ struct file_baton
 
   /* We need to keep this around so we can explicitly close it in close_file,
      thus flushing its output to disk so we can copy and translate it. */
-  apr_file_t *tmp_file;
+  svn_stream_t *tmp_stream;
 
   /* The MD5 digest of the file's fulltext.  This is all zeros until
      the last textdelta window handler call returns. */
@@ -613,7 +608,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      apr_file_remove(hb->tmppath, hb->pool);
+      svn_error_clear(svn_io_remove_file(hb->tmppath, hb->pool));
     }
 
   return err;
@@ -632,15 +627,21 @@ apply_textdelta(void *file_baton,
   struct file_baton *fb = file_baton;
   struct handler_baton *hb = apr_palloc(pool, sizeof(*hb));
 
-  SVN_ERR(svn_io_open_unique_file2(&fb->tmp_file, &(fb->tmppath),
-                                   fb->path, ".tmp",
-                                   svn_io_file_del_none, fb->pool));
+  /* Create a temporary file in the same directory as the file. We're going
+     to rename the thing into place when we're done. */
+  SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
+                                 svn_path_dirname(fb->path, pool),
+                                 svn_io_file_del_none, fb->pool, fb->pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
 
+  /* svn_txdelta_apply() closes the stream, but we want to close it in the
+     close_file() function, so disown it here. */
+  /* ### contrast to when we call svn_ra_get_file() which does NOT close the
+     ### tmp_stream. we *should* be much more consistent! */
   svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_stream_from_aprfile2(fb->tmp_file, TRUE, pool),
+                    svn_stream_disown(fb->tmp_stream, pool),
                     fb->text_digest, NULL, pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -717,15 +718,14 @@ close_file(void *file_baton,
   if (! fb->tmppath)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_io_file_close(fb->tmp_file, fb->pool));
+  SVN_ERR(svn_stream_close(fb->tmp_stream));
 
   if (text_checksum)
     {
-      const char *actual_checksum;
-      svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
-      checksum->digest = fb->text_digest;
-
-      actual_checksum = svn_checksum_to_cstring(checksum, pool);
+      const char *actual_checksum =
+        svn_checksum_to_cstring(svn_checksum__from_digest(fb->text_digest,
+                                                          svn_checksum_md5,
+                                                          pool), pool);
 
       if (actual_checksum && (strcmp(text_checksum, actual_checksum) != 0))
         {
@@ -858,15 +858,16 @@ svn_client_export4(svn_revnum_t *result_rev,
           fb->pool = pool;
 
           /* Copied from apply_textdelta(). */
-          SVN_ERR(svn_io_open_unique_file2(&fb->tmp_file, &(fb->tmppath),
-                                           fb->path, ".tmp",
-                                           svn_io_file_del_none, fb->pool));
+          SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
+                                         svn_path_dirname(fb->path, pool),
+                                         svn_io_file_del_none,
+                                         fb->pool, fb->pool));
 
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
+          /* ### note: the stream will not be closed */
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
-                                  svn_stream_from_aprfile2(fb->tmp_file, TRUE,
-                                                           pool),
+                                  fb->tmp_stream,
                                   NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton
@@ -980,56 +981,4 @@ svn_client_export4(svn_revnum_t *result_rev,
     *result_rev = edit_revision;
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_export3(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
-                   const svn_opt_revision_t *peg_revision,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t overwrite,
-                   svn_boolean_t ignore_externals,
-                   svn_boolean_t recurse,
-                   const char *native_eol,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_export4(result_rev, from, to, peg_revision, revision,
-                            overwrite, ignore_externals,
-                            SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                            native_eol, ctx, pool);
-}
-
-svn_error_t *
-svn_client_export2(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
-                   svn_opt_revision_t *revision,
-                   svn_boolean_t force,
-                   const char *native_eol,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  svn_opt_revision_t peg_revision;
-
-  peg_revision.kind = svn_opt_revision_unspecified;
-
-  return svn_client_export3(result_rev, from, to, &peg_revision,
-                            revision, force, FALSE, TRUE,
-                            native_eol, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_export(svn_revnum_t *result_rev,
-                  const char *from,
-                  const char *to,
-                  svn_opt_revision_t *revision,
-                  svn_boolean_t force,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_export2(result_rev, from, to, revision, force, NULL, ctx,
-                            pool);
 }

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -102,6 +102,7 @@ svn_client_version(void);
  * default arguments when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_simple_prompt_provider() instead.
@@ -126,6 +127,7 @@ svn_client_get_simple_prompt_provider
  * default argument when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_username_prompt_provider() instead.
@@ -160,7 +162,7 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -187,7 +189,7 @@ SVN_DEPRECATED
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
@@ -284,6 +286,7 @@ svn_client_get_ssl_server_trust_prompt_provider
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
  * a server.  The prompt will be retried @a retry_limit times.
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_ssl_client_cert_prompt_provider() instead.
@@ -304,7 +307,8 @@ svn_client_get_ssl_client_cert_prompt_provider
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
  * client certificate is protected by a passphrase.  The prompt will
- * be retried @a retry_limit times.
+ * be retried @a retry_limit times. For infinite retries, set @a retry_limit
+ * to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  * Use svn_auth_get_ssl_client_cert_pw_prompt_provider() instead.
@@ -406,7 +410,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create() to allocate and intialize this
+ * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -525,18 +529,23 @@ typedef struct svn_client_commit_item_t
 
 } svn_client_commit_item_t;
 
-/** Initialize a commit item.
- * Set @a *item to a commit item object, allocated in @a pool.
+/** Return a new commit item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
- * is used to intialize and allocate the @c svn_client_commit_item3_t
+ * is used to initialize and allocate the @c svn_client_commit_item3_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *
- * The current implementation never returns error, but callers should
- * still check for error, for compatibility with future versions.
+ * @since New in 1.6.
+ */
+svn_client_commit_item3_t *
+svn_client_commit_item3_create(apr_pool_t *pool);
+
+/** Like svn_client_commit_item_create2() but with a stupid "const"
+ * qualifier on the returned structure, and it returns an error that
+ * will never happen.
  *
- * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
@@ -803,7 +812,7 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
  * batons, serves as a cache for configuration options, and other various
  * and sundry things.  In order to avoid backwards compatibility problems
  * clients should use svn_client_create_context() to allocate and
- * intialize this structure instead of doing so themselves.
+ * initialize this structure instead of doing so themselves.
  */
 typedef struct svn_client_ctx_t
 {
@@ -902,7 +911,7 @@ typedef struct svn_client_ctx_t
  * represents a particular instance of an svn client.
  *
  * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
+ * use this function to initialize and allocate the
  * @c svn_client_ctx_t structure rather than doing so themselves, as
  * the size of this structure may change in the future.
  *
@@ -1720,7 +1729,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
  * @a changelist_name, FALSE for @a keep_changelist, NULL for @a
  * revprop_table, and @a depth set according to @a recurse: if @a
  * recurse is TRUE, use @c svn_depth_infinity, else @c
- * svn_depth_files.
+ * svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -1902,9 +1911,52 @@ svn_client_status(svn_revnum_t *result_rev,
  */
 
 /**
- * Invoke @a receiver with @a receiver_baton on each log message from @a
- * start to @a end in turn, inclusive (but never invoke @a receiver on a
- * given log message more than once).
+ * A structure to optional arguments for svn_client_log5().  It can grow
+ * as needed to avoid rev'ing the API.  Never allocate this structure directly,
+ * as its size may change in future versions of Subversion.  Use
+ * svn_client_log_args_create() instead.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_client_log_args_t
+{
+  /** If non-zero only invoke the reciever on the first @a limit logs. */
+  int limit;
+
+  /** If set, then the `@a changed_paths' argument to the receiver will be
+   * passed on each invocation. */
+  svn_boolean_t discover_changed_paths;
+
+  /** If set, copy history (if any exists) will not be traversed while
+   * harvesting revision logs for each target. */
+  svn_boolean_t strict_node_history;
+
+
+  /** If set, log information for revisions which have been merged to the
+   * log targets will also be returned. */
+  svn_boolean_t include_merged_revisions;
+
+  /* Add new members here, and update svn_client_log_args_create(). */
+} svn_client_log_args_t;
+
+/**
+ * Create a @c svn_client_log_args_t structure, for use with svn_client_log5().
+ * Values of structure members are as follows:
+ *   @c limit: 0
+ *   @c discover_changed_paths: FALSE
+ *   @c strict_node_history: FALSE
+ *   @c include_merged_revisions: FALSE
+ *
+ * @since New in 1.6.
+ */
+svn_client_log_args_t *
+svn_client_log_args_create(apr_pool_t *pool);
+
+/**
+ * Invoke @a receiver with @a receiver_baton on each log message from
+ * each start/end revision pair in the @a revision_ranges in turn,
+ * inclusive (but never invoke @a receiver on a given log message more
+ * than once).
  *
  * @a targets contains either a URL followed by zero or more relative
  * paths, or 1 working copy path, as <tt>const char *</tt>, for which log
@@ -1914,17 +1966,7 @@ svn_client_status(svn_revnum_t *result_rev,
  * @c svn_opt_revision_unspecified, it defaults to @c svn_opt_revision_head
  * for URLs or @c svn_opt_revision_working for WC paths.
  *
- * If @a limit is non-zero only invoke @a receiver on the first @a limit
- * logs.
- *
- * If @a discover_changed_paths is set, then the `@a changed_paths' argument
- * to @a receiver will be passed on each invocation.
- *
- * If @a strict_node_history is set, copy history (if any exists) will
- * not be traversed while harvesting revision logs for each target.
- *
- * If @a include_merged_revisions is set, log information for revisions
- * which have been merged to @a targets will also be returned.
+ * Use additional argument values as defined in @a args.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -1944,9 +1986,27 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_client_log5(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                const apr_array_header_t *revprops,
+                const svn_client_log_args_t *args,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log5(), but takes explicit start and end parameters
+ * instead of an array of revision ranges.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
  * @since New in 1.5.
  */
-
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -3002,6 +3062,8 @@ svn_client_resolved(const char *path,
  * all its immediate conflicted children (both files and directories,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
@@ -3491,6 +3553,10 @@ svn_client_propset(const char *propname,
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
  * and the like.  Be careful:  it's a lossy operation.
+
+ * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
+ * functions and baton which are called upon successful setting of the
+ * property.
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
@@ -4266,6 +4332,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  */
 
 /** The size of the file is unknown.
+ * Used as value in fields of type @c apr_size_t.
  *
  * @since New in 1.5
  */
@@ -4337,32 +4404,47 @@ typedef struct svn_info_t
   svn_depth_t depth;
 
   /**
-   * The size of the file after being translated into its local
-   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
-   * unknown.  Not applicable for directories.
-   * @since New in 1.5.
+   * Similar to working_size64, but will be @c SVN_INFO_SIZE_UNKNOWN when
+   * its value would overflow apr_size_t (so when size >= 4 GB - 1 byte).
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
    */
   apr_size_t working_size;
 
   /** @} */
 
   /**
-   * The size of the file in the repository (untranslated,
-   * e.g. without adjustment of line endings and keyword
-   * expansion). Only applicable for file -- not directory -- URLs.
-   * For working copy paths, size will be @c SVN_INFO_SIZE_UNKNOWN.
-   * @since New in 1.5.
+   * Similar to size64, but size will be @c SVN_INFO_SIZE_UNKNOWN when
+   * its value would overflow apr_size_t (so when size >= 4 GB - 1 byte).
+   *
+   * @deprecated Provided for backward compatibility with the 1.5 API.
    */
   apr_size_t size;
 
   /**
-   * For a directory only, all tree-conflicted children, stored
-   * in an array of @c svn_wc_conflict_description_t, 
+   * The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, size64 will be @c SVN_INVALID_FILESIZE.
+   * @since New in 1.6.
+   */
+  svn_filesize_t size64;
+
+  /**
+   * The size of the file after being translated into its local
+   * representation, or @c SVN_INVALID_FILESIZE if unknown.
+   * Not applicable for directories.
    * @since New in 1.6.
    * @name Working-copy path fields
    * @{
    */
-  apr_array_header_t *tree_conflicts;
+  svn_filesize_t working_size64;
+
+  /**
+   * Info on any tree conflict of which this node is a victim. Otherwise NULL.
+   * @since New in 1.6.
+   */
+  svn_wc_conflict_description_t *tree_conflict;
 
   /** @} */
 
@@ -4527,13 +4609,14 @@ svn_client_uuid_from_url(const char **uuid,
 
 /** Return the repository @a uuid for working-copy @a path, allocated
  * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
- * entry; if not present in the entry, then call
- * svn_client_uuid_from_url() to retrieve, using the entry's URL.  @a
- * ctx is required for possible repository authentication.
+ * entry; if not present in the entry, then look in its parents. If not
+ * present in the workingcopy call svn_client_uuid_from_url() to
+ * retrieve, using the entry's URL.  @a ctx is required for possible
+ * repository authentication.
  *
  * @note The only reason this function falls back on
- * svn_client_uuid_from_url() is for compatibility purposes.  Old
- * working copies may not have uuids in the entries file.
+ * svn_client_uuid_from_url() is for compatibility purposes.  Old and
+ * detached working copies may not have uuids in the entries file.
  */
 svn_error_t *
 svn_client_uuid_from_path(const char **uuid,

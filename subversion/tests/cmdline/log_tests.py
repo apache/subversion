@@ -202,8 +202,7 @@ def guarantee_repos_and_wc(sbox):
 
 def merge_history_repos(sbox):
   """Make a repos with varied and interesting merge history, similar
-to the repos found at:
-http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=c2__Sample%20repository"""
+  to the repos found at: log_tests_data/merge_history_dump.png"""
 
   upsilon_path = os.path.join('A', 'upsilon')
   omicron_path = os.path.join('blocked', 'omicron')
@@ -391,8 +390,9 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                           "This is yet more content in 'mu'.",
                           "wb")
   # Resolve conflicts, and commit
-  svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
-  svntest.main.run_svn(None, 'resolved', 'A')
+  svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),
+                                           os.path.join('A', 'xi'),
+                                           os.path.join('A', 'upsilon')])
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",
@@ -530,7 +530,7 @@ def parse_log_output(log_lines):
         this_item['msg'] = msg
         chain.append(this_item)
     else:  # if didn't see separator now, then something's wrong
-      print this_line
+      print(this_line)
       raise SVNLogParseError("trailing garbage after log message")
 
   return chain
@@ -652,7 +652,7 @@ def plain_log(sbox):
                                                               'log')
 
   log_chain = parse_log_output(output)
-  check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
+  check_log_chain(log_chain, list(range(max_revision, 1 - 1, -1)))
 
 
 #----------------------------------------------------------------------
@@ -1024,7 +1024,7 @@ def log_verbose(sbox):
 
   log_chain = parse_log_output(output)
   path_counts = [2, 2, 1, 2, 2, 2, 4, 1, 20]
-  check_log_chain(log_chain, range(max_revision, 1 - 1, -1), path_counts)
+  check_log_chain(log_chain, list(range(max_revision, 1 - 1, -1)), path_counts)
 
 
 def log_parser(sbox):
@@ -1612,7 +1612,7 @@ def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   svntest.main.run_svn(None, 'ci', '-m',
                        'Set property "foo" to "bar" on A_COPY/D/H/psi', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
-  
+
   # Check that log -g -r7 on wc_dir/A_COPY and parents show merges of r3-r6.
   def run_log_g_r7(log_target):
     expected_merges = {
@@ -1671,7 +1671,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               log_single_change,
               XFail(log_changes_range),
-              XFail(log_changes_list),
+              log_changes_list,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,

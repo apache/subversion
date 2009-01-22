@@ -42,13 +42,80 @@
    the OS! */
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
-/* Labels for some commonly used constants */
-#define URI TRUE
-#define DIRENT FALSE
+/* Path type definition. Used only by internal functions. */
+typedef enum {
+  type_uri,
+  type_dirent,
+} path_type_t;
 
 
 /**** Internal implementation functions *****/
 
+/* Return an internal-style new path based on PATH, allocated in POOL.
+ * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
+ * is a regular path.
+ *
+ * "Internal-style" means that separators are all '/', and the new
+ * path is canonicalized.
+ */
+static const char *
+internal_style(path_type_t type, const char *path, apr_pool_t *pool)
+{
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
+    {
+      char *p = apr_pstrdup(pool, path);
+      path = p;
+
+      /* Convert all local-style separators to the canonical ones. */
+      for (; *p != '\0'; ++p)
+        if (*p == SVN_PATH_LOCAL_SEPARATOR)
+          *p = '/';
+    }
+#endif
+
+  return type == type_uri ? svn_uri_canonicalize(path, pool)
+                          : svn_dirent_canonicalize(path, pool);
+  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+}
+
+/* Return a local-style new path based on PATH, allocated in POOL.
+ * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
+ * is a regular path.
+ *
+ * "Local-style" means a path that looks like what users are
+ * accustomed to seeing, including native separators.  The new path
+ * will still be canonicalized.
+ */
+static const char *
+local_style(path_type_t type, const char *path, apr_pool_t *pool)
+{
+  path = type == type_uri ? svn_uri_canonicalize(path, pool)
+                          : svn_dirent_canonicalize(path, pool);
+  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+
+  /* Internally, Subversion represents the current directory with the
+     empty string.  But users like to see "." . */
+  if (SVN_PATH_IS_EMPTY(path))
+    return ".";
+
+  /* If PATH is a URL, the "local style" is the same as the input. */
+  if (type == type_uri && svn_path_is_url(path))
+    return apr_pstrdup(pool, path);
+
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
+    {
+      char *p = apr_pstrdup(pool, path);
+      path = p;
+
+      /* Convert all canonical separators to the local-style ones. */
+      for (; *p != '\0'; ++p)
+        if (*p == '/')
+          *p = SVN_PATH_LOCAL_SEPARATOR;
+    }
+#endif
+
+  return path;
+}
 
 /* Return the length of substring necessary to encompass the entire
  * previous dirent segment in DIRENT, which should be a LEN byte string.
@@ -79,52 +146,117 @@ dirent_previous_segment(const char *dirent,
     return len;
 }
 
+/* Return the length of substring necessary to encompass the entire
+ * previous uri segment in URI, which should be a LEN byte string.
+ *
+ * A trailing slash will not be included in the returned length except
+ * in the case in which URI is absolute and there are no more
+ * previous segments.
+ */
+static apr_size_t
+uri_previous_segment(const char *uri,
+                     apr_size_t len)
+{
+  /* ### Still the old path segment code, should start checking scheme specific format */
+  if (len == 0)
+    return 0;
 
+  --len;
+  while (len > 0 && uri[len] != '/')
+    --len;
+
+  /* check if the remaining segment including trailing '/' is a root dirent */
+  if (svn_uri_is_root(uri, len + 1))
+    return len + 1;
+  else
+    return len;
+}
+
+/* Return the canonicalized version of PATH, allocated in POOL.
+ * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
+ * is a regular path.
+ */
 static const char *
-canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
+canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 {
   char *canon, *dst;
   const char *src;
   apr_size_t seglen;
+  apr_size_t schemelen = 0;
   apr_size_t canon_segments = 0;
-  apr_uri_t host_uri;
+  svn_boolean_t url = FALSE;
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
-  if (! *path)
+  if (SVN_PATH_IS_EMPTY(path))
     return path;
 
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
   /* Try to parse the path as an URI. */
-  if (uri && apr_uri_parse(pool, path, &host_uri) == APR_SUCCESS &&
-      host_uri.scheme && host_uri.hostname)
+  url = FALSE;
+  src = path;
+
+  if (type == type_uri && *src != '/')
     {
-      /* convert scheme and hostname to lowercase */
-      apr_size_t offset;
-      int i;
+      while (*src && (*src != '/') && (*src != ':'))
+        src++;
 
-      for(i = 0; host_uri.scheme[i]; i++)
-        host_uri.scheme[i] = tolower(host_uri.scheme[i]);
-      for(i = 0; host_uri.hostname[i]; i++)
-        host_uri.hostname[i] = tolower(host_uri.hostname[i]);
+      if (*src == ':' && *(src+1) == '/' && *(src+2) == '/')
+        {
+          const char *seg;
 
-      /* path will be pointing to a new memory location, so update src to
-       * point to the new location too. */
-      offset = strlen(host_uri.scheme) + 3; /* "(scheme)://" */
-      path = apr_uri_unparse(pool, &host_uri, APR_URI_UNP_REVEALPASSWORD);
+          url = TRUE;
 
-      /* skip 3rd '/' in file:/// uri */
-      if (path[offset] == '/')
-        offset++;
+          /* Found a scheme, convert to lowercase and copy to dst. */
+          src = path;
+          while (*src != ':')
+            {
+              *(dst++) = tolower((*src++));
+              schemelen++;
+            }
+          *(dst++) = ':';
+          *(dst++) = '/';
+          *(dst++) = '/';
+          src += 3;
+          schemelen += 3;
 
-      /* copy src to dst */
-      memcpy(dst, path, offset);
-      dst += offset;
+          /* This might be the hostname */
+          seg = src;
+          while (*src && (*src != '/') && (*src != '@'))
+            src++;
 
-      src = path + offset;
+          if (*src == '@')
+            {
+              /* Copy the username & password. */
+              seglen = src - seg + 1;
+              memcpy(dst, seg, seglen);
+              dst += seglen;
+              src++;
+            }
+          else
+            src = seg;
+
+          /* Found a hostname, convert to lowercase and copy to dst. */
+          while (*src && (*src != '/'))
+            *(dst++) = tolower((*src++));
+
+          /* Copy trailing slash, or null-terminator. */
+          *(dst) = *(src);
+
+          /* Move src and dst forward only if we are not
+           * at null-terminator yet. */
+          if (*src)
+            {
+              src++;
+              dst++;
+            }
+
+          canon_segments = 1;
+        }
     }
-  else
+
+  if (! url)
     {
       src = path;
       /* If this is an absolute path, then just copy over the initial
@@ -136,7 +268,7 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
           /* On Windows permit two leading separator characters which means an
            * UNC path. */
-          if (*src == '/')
+          if ((type == type_dirent) && *src == '/')
             *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
         }
@@ -158,9 +290,9 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
-      else if (uri && canon_segments == 0 && seglen == 2 &&
-          strcmp(host_uri.scheme, "file") == 0 &&
-          src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
+      else if (url && canon_segments == 1 && seglen == 2 &&
+               (strncmp(canon, "file:", 5) == 0) &&
+               src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
         {
           *(dst++) = toupper(src[0]);
           *(dst++) = ':';
@@ -185,17 +317,16 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
         src++;
     }
 
-  /* Remove the trailing slash if necessary. */
-  if (*(dst - 1) == '/')
+  /* Remove the trailing slash if there was at least one
+   * canonical segment and the last segment ends with a slash.
+   *
+   * But keep in mind that, for URLs, the scheme counts as a
+   * canonical segment -- so if path is ONLY a scheme (such
+   * as "https://") we should NOT remove the trailing slash. */
+  if ((canon_segments > 0 && *(dst - 1) == '/')
+      && ! (url && path[schemelen] == '\0'))
     {
-      /* If we had any path components, we always remove the trailing slash. */
-      if (canon_segments > 0)
-        dst --;
-      /* Otherwise, make sure to strip the third slash from URIs which
-       * have an empty hostname part, such as http:/// or file:/// */
-      else if (uri && host_uri.hostname[0] == '\0' &&
-               host_uri.path && host_uri.path[0] == '/')
-              dst--;
+      dst --;
     }
 
   *dst = '\0';
@@ -203,15 +334,15 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Skip leading double slashes when there are less than 2
    * canon segments. UNC paths *MUST* have two segments. */
-  if (canon[0] == '/' && canon[1] == '/')
+  if ((type == type_dirent) && canon[0] == '/' && canon[1] == '/')
     {
       if (canon_segments < 2)
         return canon + 1;
       else
         {
-          /* Now we're sure this is a valid UNC path, convert the server name 
+          /* Now we're sure this is a valid UNC path, convert the server name
              (the first path segment) to lowercase as Windows treats it as case
-             insensitive. 
+             insensitive.
              Note: normally the share name is treated as case insensitive too,
              but it seems to be possible to configure Samba to treat those as
              case sensitive, so better leave that alone. */
@@ -226,15 +357,15 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 }
 
 /* Return the string length of the longest common ancestor of PATH1 and PATH2.
+ * Pass type_uri for TYPE if PATH1 and PATH2 are URIs, and type_dirent if
+ * PATH1 and PATH2 are regular paths.
  *
- * This function handles dirents (URIS is FALSE) and uris (URIS is TRUE),
- * but not URLs.
  * If the two paths do not share a common ancestor, return 0.
  *
  * New strings are allocated in POOL.
  */
 static apr_size_t
-get_longest_ancestor_length(svn_boolean_t uris,
+get_longest_ancestor_length(path_type_t types,
                             const char *path1,
                             const char *path2,
                             apr_pool_t *pool)
@@ -242,7 +373,9 @@ get_longest_ancestor_length(svn_boolean_t uris,
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
+#if defined(WIN32) || defined(__CYGWIN__)
   svn_boolean_t unc = FALSE;
+#endif
 
   path1_len = strlen(path1);
   path2_len = strlen(path2);
@@ -266,14 +399,15 @@ get_longest_ancestor_length(svn_boolean_t uris,
   /* two special cases:
      1. '/' is the longest common ancestor of '/' and '/foo' */
   if (i == 1 && path1[0] == '/' && path2[0] == '/')
-      return 1;
-  /* 2. '' is the longest common ancestor of 'foo' and 'bar' */
-  if (! uris && i == 0)
-      return 0;
+    return 1;
+  /* 2. '' is the longest common ancestor of any non-matching
+   * strings 'foo' and 'bar' */
+  if (types == type_dirent && i == 0)
+    return 0;
 
   /* Handle some windows specific cases */
 #if defined(WIN32) || defined(__CYGWIN__)
-  if (! uris)
+  if (types == type_dirent)
     {
       /* don't count the '//' from UNC paths */
       if (last_dirsep == 1 && path1[0] == '/' && path1[1] == '/')
@@ -285,6 +419,13 @@ get_longest_ancestor_length(svn_boolean_t uris,
       /* X:/ and X:/foo */
       if (i == 3 && path1[2] == '/' && path1[1] == ':')
         return i;
+
+      /* Cannot use SVN_ERR_ASSERT here, so we'll have to crash, sorry.
+       * Note that this assertion triggers only if the code above has
+       * been broken. The code below relies on this assertion, because
+       * it uses [i - 1] as index. */
+      assert(i > 0);
+
       /* X: and X:/ */
       if ((path1[i - 1] == ':' && path2[i] == '/') ||
           (path2[i - 1] == ':' && path1[i] == '/'))
@@ -297,33 +438,59 @@ get_longest_ancestor_length(svn_boolean_t uris,
 
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
-     that non-matching byte.
+     that non-matching byte, and is guaranteed to be <= the length of
+     whichever path is shorter.
      If one of the paths is the common part return that. */
   if (((i == path1_len) && (path2[i] == '/'))
            || ((i == path2_len) && (path1[i] == '/'))
            || ((i == path1_len) && (i == path2_len)))
     return i;
   else
+    {
       /* Nothing in common but the root folder '/' or 'X:/' for Windows
          dirents. */
+#if defined(WIN32) || defined(__CYGWIN__)
       if (! unc)
         {
-          if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
-            return 1;
-#if defined(WIN32) || defined(__CYGWIN__)
           /* X:/foo and X:/bar returns X:/ */
-          if (!uris &&
+          if ((types == type_dirent) &&
               last_dirsep == 2 && path1[1] == ':' && path1[2] == '/'
                                && path2[1] == ':' && path2[2] == '/')
             return 3;
-#endif /* WIN32 or Cygwin */
+#endif
+          if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
+            return 1;
+#if defined(WIN32) || defined(__CYGWIN__)
         }
+#endif
+    }
 
   return last_dirsep;
 }
 
+/* Determine whether PATH2 is a child of PATH1.
+ *
+ * PATH2 is a child of PATH1 if
+ * 1) PATH1 is empty, and PATH2 is not empty and not an absolute path.
+ * or
+ * 2) PATH2 is has n components, PATH1 has x < n components,
+ *    and PATH1 matches PATH2 in all its x components.
+ *    Components are separated by a slash, '/'.
+ *
+ * Pass type_uri for TYPE if PATH1 and PATH2 are URIs, and type_dirent if
+ * PATH1 and PATH2 are regular paths.
+ *
+ * If PATH2 is not a child of PATH1, return NULL.
+ *
+ * If PATH2 is a child of PATH1, and POOL is not NULL, allocate a copy
+ * of the child part of PATH2 in POOL and return a pointer to the
+ * newly allocated child part.
+ *
+ * If PATH2 is a child of PATH1, and POOL is NULL, return a pointer
+ * pointing to the child part of PATH2.
+ * */
 static const char *
-is_child(svn_boolean_t uri, const char *path1, const char *path2,
+is_child(path_type_t type, const char *path1, const char *path2,
          apr_pool_t *pool)
 {
   apr_size_t i;
@@ -335,8 +502,8 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2,
         return NULL;
 
       /* check if this is an absolute path */
-      if ((uri && svn_uri_is_absolute(path2, strlen(path2))) ||
-         (! uri && svn_dirent_is_absolute(path2, strlen(path2))))
+      if ((type == type_uri && svn_uri_is_absolute(path2)) ||
+          (type == type_dirent && svn_dirent_is_absolute(path2)))
         return NULL;
       else
         /* everything else is child */
@@ -347,10 +514,14 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2,
      things like path1:"foo///bar" and path2:"foo/bar/baz"?  It doesn't
      appear to arise in the current Subversion code, it's not clear to me
      if they should be parent/child or not. */
+  /* Hmmm... aren't paths assumed to be canonical in this function?
+   * How can "foo///bar" even happen if the paths are canonical? */
   for (i = 0; path1[i] && path2[i]; i++)
     if (path1[i] != path2[i])
       return NULL;
 
+  /* FIXME: This comment does not really match
+   * the checks made in the code it refers to: */
   /* There are two cases that are parent/child
           ...      path1[i] == '\0'
           .../foo  path2[i] == '/'
@@ -368,23 +539,96 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2,
     {
       if (path1[i - 1] == '/'
 #if defined(WIN32) || defined(__CYGWIN__)
-          || (! uri && path1[i - 1] == ':')
+          || ((type == type_dirent) && path1[i - 1] == ':')
 #endif /* WIN32 or Cygwin */
            )
-        if (path2[i] == '/')
-          return NULL;
-        else
-          return pool ? apr_pstrdup(pool, path2 + i) : path2 + i;
+        {
+          if (path2[i] == '/')
+            /* .../
+             * ..../
+             *     i   */
+            return NULL;
+          else
+            /* .../
+             * .../foo
+             *     i    */
+            return pool ? apr_pstrdup(pool, path2 + i) : path2 + i;
+        }
       else if (path2[i] == '/')
-        return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
+        {
+          if (path2[i + 1])
+            /* ...
+             * .../foo
+             *    i    */
+            return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
+          else
+            /* ...
+             * .../
+             *    i    */
+            return NULL;
+        }
     }
 
   /* Otherwise, path2 isn't a child. */
   return NULL;
 }
 
+/* FIXME: no doc string */
+static svn_boolean_t
+is_ancestor(path_type_t type, const char *path1, const char *path2)
+{
+  apr_size_t path1_len;
+
+  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
+  if (SVN_PATH_IS_EMPTY(path1))
+    {
+      return type == type_uri ? ! svn_uri_is_absolute(path2)
+                              : ! svn_dirent_is_absolute(path2);
+    }
+
+  /* If path1 is a prefix of path2, then:
+     - If path1 ends in a path separator,
+     - If the paths are of the same length
+     OR
+     - path2 starts a new path component after the common prefix,
+     then path1 is an ancestor. */
+  path1_len = strlen(path1);
+  if (strncmp(path1, path2, path1_len) == 0)
+    return path1[path1_len - 1] == '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+      || ((type == type_dirent) && path1[path1_len - 1] == ':')
+#endif /* WIN32 or Cygwin */
+      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
+
+  return FALSE;
+}
+
 
 /**** Public API functions ****/
+
+const char *
+svn_dirent_internal_style(const char *dirent, apr_pool_t *pool)
+{
+  return internal_style(type_dirent, dirent, pool);
+}
+
+const char *
+svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
+{
+  return local_style(type_dirent, dirent, pool);
+}
+
+const char *
+svn_uri_internal_style(const char *uri, apr_pool_t *pool)
+{
+  return internal_style(type_uri, uri, pool);
+}
+
+const char *
+svn_uri_local_style(const char *uri, apr_pool_t *pool)
+{
+  return local_style(type_uri, uri, pool);
+}
 
 /* We decided against using apr_filepath_root here because of the negative
    performance impact (creating a pool and converting strings ). */
@@ -405,7 +649,7 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
       (len == 2 || (dirent[2] == '/' && len == 3)))
     return TRUE;
 
-  /* On Windows and Cygwin, both //drive and //drive//share are root
+  /* On Windows and Cygwin, both //drive and //server/share are root
      directories */
   if (len >= 2 && dirent[0] == '/' && dirent[1] == '/'
       && dirent[len - 1] != '/')
@@ -451,7 +695,7 @@ char *svn_dirent_join(const char *base,
   assert(svn_dirent_is_canonical(component, pool));
 
   /* If the component is absolute, then return it.  */
-  if (svn_dirent_is_absolute(component, clen))
+  if (svn_dirent_is_absolute(component))
     return apr_pmemdup(pool, component, clen + 1);
 
   /* If either is empty return the other */
@@ -499,7 +743,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
 
   /* if last character of base is already a separator, don't add a '/' */
   add_separator = 1;
-  if (total_len == 0 
+  if (total_len == 0
        || base[total_len - 1] == '/'
 #if defined(WIN32) || defined(__CYGWIN__)
        || base[total_len - 1] == ':'
@@ -525,7 +769,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (svn_dirent_is_absolute(s, len))
+      if (svn_dirent_is_absolute(s))
         {
           /* an absolute dirent. skip all components to this point and reset
              the total length. */
@@ -657,13 +901,61 @@ svn_dirent_split(const char *dirent,
 }
 
 char *
+svn_uri_dirname(const char *uri, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(uri);
+
+  assert(svn_uri_is_canonical(uri, pool));
+
+  if (svn_uri_is_root(uri, len))
+    return apr_pstrmemdup(pool, uri, len);
+  else
+    return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
+}
+
+char *
+svn_uri_basename(const char *uri, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(uri);
+  apr_size_t start;
+
+  assert(svn_uri_is_canonical(uri, pool));
+
+  if (svn_uri_is_root(uri, len))
+    start = 0;
+  else
+    {
+      start = len;
+      while (start > 0 && uri[start - 1] != '/')
+        --start;
+    }
+
+  return apr_pstrmemdup(pool, uri + start, len - start);
+}
+
+void
+svn_uri_split(const char *uri,
+              const char **dirpath,
+              const char **base_name,
+              apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_uri_dirname(uri, pool);
+
+  if (base_name)
+    *base_name = svn_uri_basename(uri, pool);
+}
+
+char *
 svn_dirent_get_longest_ancestor(const char *dirent1,
                                 const char *dirent2,
                                 apr_pool_t *pool)
 {
   return apr_pstrndup(pool, dirent1,
-                      get_longest_ancestor_length(DIRENT, dirent1, dirent2,
-                                                  pool));
+                      get_longest_ancestor_length(type_dirent, dirent1, 
+                                                  dirent2, pool));
 }
 
 char *
@@ -699,8 +991,8 @@ svn_uri_get_longest_ancestor(const char *uri1,
 
       i += 3;  /* Advance past '://' */
 
-      uri_ancestor_len = get_longest_ancestor_length(URI, uri1 + i, uri2 + i,
-                                                     pool);
+      uri_ancestor_len = get_longest_ancestor_length(type_uri, uri1 + i, 
+                                                     uri2 + i, pool);
 
       if (uri_ancestor_len == 0 ||
           (uri_ancestor_len == 1 && (uri1 + i)[0] == '/'))
@@ -712,7 +1004,8 @@ svn_uri_get_longest_ancestor(const char *uri1,
   else if ((! uri1_is_url) && (! uri2_is_url))
     {
       return apr_pstrndup(pool, uri1,
-                          get_longest_ancestor_length(URI, uri1, uri2, pool));
+                          get_longest_ancestor_length(type_uri, uri1, uri2,
+                                                      pool));
     }
 
   else
@@ -727,7 +1020,7 @@ svn_dirent_is_child(const char *dirent1,
                     const char *dirent2,
                     apr_pool_t *pool)
 {
-  return is_child(DIRENT, dirent1, dirent2, pool);
+  return is_child(type_dirent, dirent1, dirent2, pool);
 }
 
 const char *
@@ -735,37 +1028,52 @@ svn_uri_is_child(const char *uri1,
                  const char *uri2,
                  apr_pool_t *pool)
 {
-  return is_child(URI, uri1, uri2, pool);
+  return is_child(type_uri, uri1, uri2, pool);
 }
 
 svn_boolean_t
-svn_dirent_is_absolute(const char *dirent, apr_size_t len)
+svn_dirent_is_ancestor(const char *dirent1, const char *dirent2)
 {
+  return is_ancestor(type_dirent, dirent1, dirent2);
+}
+
+svn_boolean_t
+svn_uri_is_ancestor(const char *uri1, const char *uri2)
+{
+  return is_ancestor(type_uri, uri1, uri2);
+}
+
+svn_boolean_t
+svn_dirent_is_absolute(const char *dirent)
+{
+  if (! dirent)
+    return FALSE;
+
   /* dirent is absolute if it starts with '/' */
-  if (len > 0 && dirent[0] == '/')
+  if (dirent[0] == '/')
     return TRUE;
- 
-  /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/' 
+
+  /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/'
      where 'H' is any letter. */
 #if defined(WIN32) || defined(__CYGWIN__)
-  if (len >= 2 && 
-      (dirent[1] == ':') &&
-      ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
-       (dirent[0] >= 'a' && dirent[0] <= 'z')))
+  if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
+       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
+      (dirent[1] == ':'))
      return TRUE;
 #endif /* WIN32 or Cygwin */
- 
+
   return FALSE;
 }
 
 svn_boolean_t
-svn_uri_is_absolute(const char *uri, apr_size_t len)
+svn_uri_is_absolute(const char *uri)
 {
   /* uri is absolute if it starts with '/' */
-  if (uri > 0 && uri[0] == '/')
+  if (uri && uri[0] == '/')
     return TRUE;
 
-  return FALSE;
+  /* URLs are absolute. */
+  return svn_path_is_url(uri);
 }
 
 svn_error_t *
@@ -782,8 +1090,7 @@ svn_dirent_get_absolute(const char **pabsolute,
 
   apr_err = apr_filepath_merge(&buffer, NULL,
                                path_apr,
-                               APR_FILEPATH_NOTRELATIVE
-                               | APR_FILEPATH_TRUENAME,
+                               APR_FILEPATH_NOTRELATIVE,
                                pool);
   if (apr_err)
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
@@ -796,12 +1103,18 @@ svn_dirent_get_absolute(const char **pabsolute,
 }
 
 const char *
+svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
+{
+  return canonicalize(type_uri, uri, pool);;
+}
+
+const char *
 svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
-  const char *dst = canonicalize(DIRENT, dirent, pool);;
+  const char *dst = canonicalize(type_dirent, dirent, pool);;
 
 #if defined(WIN32) || defined(__CYGWIN__)
-  /* Handle a specific case on Windows where path == "X:/". Here we have to 
+  /* Handle a specific case on Windows where path == "X:/". Here we have to
      append the final '/', as svn_path_canonicalize will chop this of. */
   if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
         (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
@@ -825,4 +1138,111 @@ svn_boolean_t
 svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 {
   return (strcmp(dirent, svn_dirent_canonicalize(dirent, pool)) == 0);
+}
+
+svn_boolean_t
+svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
+{
+  const char *ptr = uri, *seg = uri;
+
+  /* URI is canonical if it has:
+   *  - no '.' segments
+   *  - no closing '/', unless for the root path '/' itself
+   *  - no '//'
+   *  - lowercase URL scheme
+   *  - lowercase URL hostname
+   */
+
+  if (*uri == '\0')
+    return TRUE;
+
+  /* Maybe parse hostname and scheme. */
+  if (*ptr != '/')
+    {
+      while (*ptr && (*ptr != '/') && (*ptr != ':'))
+        ptr++;
+
+      if (*ptr == ':' && *(ptr+1) == '/' && *(ptr+2) == '/')
+        {
+          /* Found a scheme, check that it's all lowercase. */
+          ptr = uri;
+          while (*ptr != ':')
+            {
+              if (*ptr >= 'A' && *ptr <= 'Z')
+                return FALSE;
+              ptr++;
+            }
+          /* Skip :// */
+          ptr += 3;
+
+          /* This might be the hostname */
+          seg = ptr;
+          while (*ptr && (*ptr != '/') && (*ptr != '@'))
+            ptr++;
+
+          if (! *ptr)
+            return TRUE;
+
+          if (*ptr == '@')
+            seg = ptr + 1;
+
+          /* Found a hostname, check that it's all lowercase. */
+          ptr = seg;
+          while (*ptr && *ptr != '/')
+            {
+              if (*ptr >= 'A' && *ptr <= 'Z')
+                return FALSE;
+              ptr++;
+            }
+        }
+      else
+        {
+          /* Didn't find a scheme; finish the segment. */
+          while (*ptr && *ptr != '/')
+            ptr++;
+        }
+    }
+
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (*ptr == '/')
+    {
+      /* If this is a file url, ptr now points to the third '/' in
+         file:///C:/path. Check that if we have such a URL the drive
+         letter is in uppercase. */
+      if (strncmp(uri, "file:", 5) == 0 &&
+          ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
+          *(ptr+2) == ':')
+        return FALSE;
+      /* if this is an UNC path, we have two '/' here */
+      if (*(ptr+1) == '/')
+        ptr++;
+    }
+#endif /* WIN32 or Cygwin */
+
+  /* Now validate the rest of the URI. */
+  while(1)
+    {
+      int seglen = ptr - seg;
+
+      if (seglen == 1 && *seg == '.')
+        return FALSE;  /*  /./   */
+
+      if (*ptr == '/' && *(ptr+1) == '/')
+        return FALSE;  /*  //    */
+
+      if (! *ptr && *(ptr - 1) == '/' && ptr - 1 != uri)
+        return FALSE;  /* foo/  */
+
+      if (! *ptr)
+        break;
+
+      if (*ptr == '/')
+        ptr++;
+      seg = ptr;
+
+      while (*ptr && (*ptr != '/'))
+        ptr++;
+    }
+
+  return TRUE;
 }

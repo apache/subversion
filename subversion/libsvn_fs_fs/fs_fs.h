@@ -60,12 +60,13 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
-/* Write the node-revision NODEREV into the stream OUTFILE.  Only write
-   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
-   allocations are from POOL. */
+/* Write the node-revision NODEREV into the stream OUTFILE, compatible with
+   filesystem format FORMAT.  Only write mergeinfo-related metadata if
+   INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
+                         int format,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
@@ -91,15 +92,15 @@ svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      apr_pool_t *pool);
 
 /* Serialize a directory contents hash.
-   Implements svn_cache_serialize_func_t */
+   Implements svn_cache__serialize_func_t */
 svn_error_t *
 svn_fs_fs__dir_entries_serialize(char **data,
                                  apr_size_t *data_len,
                                  void *in,
                                  apr_pool_t *pool);
 
-/* Deserialize a directory contents hash. 
-   Implements svn_cache_deserialize_func_t */
+/* Deserialize a directory contents hash.
+   Implements svn_cache__deserialize_func_t */
 svn_error_t *
 svn_fs_fs__dir_entries_deserialize(void **out,
                                    const char *data,
@@ -172,11 +173,12 @@ representation_t *svn_fs_fs__rep_copy(representation_t *rep,
                                       apr_pool_t *pool);
 
 
-/* Return the recorded checksum of the text representation of NODREV
-   into CHECKSUM, allocating from POOL.  If no stored checksum is
+/* Return the recorded checksum of type KIND for the text representation
+   of NODREV into CHECKSUM, allocating from POOL.  If no stored checksum is
    available, put all NULL into CHECKSUM. */
 svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                                       node_revision_t *noderev,
+                                      svn_checksum_kind_t kind,
                                       apr_pool_t *pool);
 
 /* Find the paths which were changed in revision REV of filesystem FS
@@ -212,14 +214,6 @@ svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
-
-/* Sets *CONFIG to the parsed version of FS's fsfs.conf, allocated
-   in FS->pool.  POOL is used for temporary allocations. */
-svn_error_t *
-svn_fs_fs__get_config(svn_config_t **config,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool);
-
 
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
@@ -276,6 +270,7 @@ svn_error_t *svn_fs_fs__add_change(svn_fs_t *fs,
                                    svn_fs_path_change_kind_t change_kind,
                                    svn_boolean_t text_mod,
                                    svn_boolean_t prop_mod,
+                                   svn_node_kind_t node_kind,
                                    svn_revnum_t copyfrom_rev,
                                    const char *copyfrom_path,
                                    apr_pool_t *pool);
@@ -382,13 +377,11 @@ svn_error_t *svn_fs_fs__delete_node_revision(svn_fs_t *fs,
 
 
 /* Find the paths which were changed in transaction TXN_ID of
-   filesystem FS and store them in *CHANGED_PATHS_P.  Cached copyfrom
-   information will be stored in COPYFROM_CACHE if it is non-NULL.
+   filesystem FS and store them in *CHANGED_PATHS_P.
    Get any temporary allocations from POOL. */
 svn_error_t *svn_fs_fs__txn_changes_fetch(apr_hash_t **changes,
                                           svn_fs_t *fs,
                                           const char *txn_id,
-                                          apr_hash_t *copyfrom_cache,
                                           apr_pool_t *pool);
 
 
@@ -407,11 +400,13 @@ svn_error_t *svn_fs_fs__dup_perms(const char *filename,
                                   const char *perms_reference,
                                   apr_pool_t *pool);
 
-/* Return the path to the file containing revision REV in FS.
-   Allocate the new char * from POOL. */
-const char *svn_fs_fs__path_rev(svn_fs_t *fs,
-                                svn_revnum_t rev,
-                                apr_pool_t *pool);
+/* Sets *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate in POOL. */
+svn_error_t *
+svn_fs_fs__path_rev_absolute(const char **path,
+                             svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
 
 /* Return the path to the 'current' file in FS.
    Perform allocation in POOL. */
@@ -510,10 +505,24 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            apr_pool_t *pool);
 
 
-/* Sets up the svn_cache_t structures in FS.  POOL is used for
+/* Sets up the svn_cache__t structures in FS.  POOL is used for
    temporary allocations. */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
+
+
+/* Possibly pack the repository at PATH.  This just take full shards, and
+   combines all the revision files into a single one, with a manifest header.
+   Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
+
+   Existing filesystem references need not change.  */
+svn_error_t *
+svn_fs_fs__pack(svn_fs_t *fs,
+                svn_fs_pack_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool);
 
 
 #endif

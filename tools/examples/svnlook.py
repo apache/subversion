@@ -4,7 +4,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -44,14 +44,14 @@ class SVNLook:
   def cmd_author(self):
     # get the author property, or empty string if the property is not present
     author = self._get_property(core.SVN_PROP_REVISION_AUTHOR) or ''
-    print author
+    print(author)
 
   def cmd_changed(self):
     self._print_tree(ChangedEditor, pass_root=1)
 
   def cmd_date(self):
     if self.txn_ptr:
-      print
+      print("")
     else:
       date = self._get_property(core.SVN_PROP_REVISION_DATE)
       if date:
@@ -62,9 +62,9 @@ class SVNLook:
 
         # assume secs in local TZ, convert to tuple, and format
         ### we don't really know the TZ, do we?
-        print time.strftime('%Y-%m-%d %H:%M', time.localtime(secs))
+        print(time.strftime('%Y-%m-%d %H:%M', time.localtime(secs)))
       else:
-        print
+        print("")
 
   def cmd_diff(self):
     self._print_tree(DiffEditor, pass_root=1)
@@ -84,8 +84,8 @@ class SVNLook:
     # get the log property, or empty string if the property is not present
     log = self._get_property(core.SVN_PROP_REVISION_LOG) or ''
     if print_size:
-      print len(log)
-    print log
+      print(len(log))
+    print(log)
 
   def cmd_tree(self):
     self._print_tree(Editor, base_rev=0)
@@ -136,12 +136,12 @@ class Editor(delta.Editor):
     self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
-    print '/' + self._get_id('/')
+    print('/' + self._get_id('/'))
     self.indent = self.indent + ' '    # indent one space
 
   def add_directory(self, path, *args):
     id = self._get_id(path)
-    print self.indent + _basename(path) + '/' + id
+    print(self.indent + _basename(path) + '/' + id)
     self.indent = self.indent + ' '    # indent one space
 
   # we cheat. one method implementation for two entry points.
@@ -154,7 +154,7 @@ class Editor(delta.Editor):
 
   def add_file(self, path, *args):
     id = self._get_id(path)
-    print self.indent + _basename(path) + id
+    print(self.indent + _basename(path) + id)
 
   # we cheat. one method implementation for two entry points.
   open_file = add_file
@@ -194,7 +194,7 @@ class DirsChangedEditor(delta.Editor):
   def _dir_changed(self, baton):
     if baton[0]:
       # the directory hasn't been printed yet. do it.
-      print baton[1] + '/'
+      print(baton[1] + '/')
       baton[0] = 0
 
 class ChangedEditor(delta.Editor):
@@ -208,13 +208,13 @@ class ChangedEditor(delta.Editor):
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if fs.is_dir(self.base_root, '/' + path):
-      print 'D   ' + path + '/'
+      print('D   ' + path + '/')
     else:
-      print 'D   ' + path
+      print('D   ' + path)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    print 'A   ' + path + '/'
+    print('A   ' + path + '/')
     return [ 0, path ]
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
@@ -223,12 +223,12 @@ class ChangedEditor(delta.Editor):
   def change_dir_prop(self, dir_baton, name, value, pool):
     if dir_baton[0]:
       # the directory hasn't been printed yet. do it.
-      print '_U  ' + dir_baton[1] + '/'
+      print('_U  ' + dir_baton[1] + '/')
       dir_baton[0] = 0
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    print 'A   ' + path
+    print('A   ' + path)
     return [ '_', ' ', None ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
@@ -250,7 +250,7 @@ class ChangedEditor(delta.Editor):
       status = text_mod + prop_mod
       # was there some kind of change?
       if status != '_ ':
-        print status + '  ' + path
+        print(status + '  ' + path)
 
 
 class DiffEditor(delta.Editor):
@@ -261,16 +261,16 @@ class DiffEditor(delta.Editor):
 
   def _do_diff(self, base_path, path):
     if base_path is None:
-      print "Added: " + path
+      print("Added: " + path)
       label = path
     elif path is None:
-      print "Removed: " + base_path
+      print("Removed: " + base_path)
       label = base_path
     else:
-      print "Modified: " + path
+      print("Modified: " + path)
       label = path
-    print "===============================================================" + \
-          "==============="
+    print("===============================================================" + \
+          "===============")
     args = []
     args.append("-L")
     args.append(label + "\t(original)")
@@ -284,13 +284,13 @@ class DiffEditor(delta.Editor):
       line = pobj.readline()
       if not line:
         break
-      print line,
-    print ""
+      sys.stdout.write("%s " % line)
+    print("")
 
   def _do_prop_diff(self, path, prop_name, prop_val, pool):
-    print "Property changes on: " + path
-    print "_______________________________________________________________" + \
-          "_______________"
+    print("Property changes on: " + path)
+    print("_______________________________________________________________" + \
+          "_______________")
 
     old_prop_val = None
 
@@ -301,17 +301,17 @@ class DiffEditor(delta.Editor):
 
     if old_prop_val:
       if prop_val:
-        print "Modified: " + prop_name
-        print "   - " + str(old_prop_val)
-        print "   + " + str(prop_val)
+        print("Modified: " + prop_name)
+        print("   - " + str(old_prop_val))
+        print("   + " + str(prop_val))
       else:
-        print "Deleted: " + prop_name
-        print "   - " + str(old_prop_val)
+        print("Deleted: " + prop_name)
+        print("   - " + str(old_prop_val))
     else:
-      print "Added: " + prop_name
-      print "   + " + str(prop_val)
+      print("Added: " + prop_name)
+      print("   + " + str(prop_val))
 
-    print ""
+    print("")
 
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
@@ -329,7 +329,7 @@ class DiffEditor(delta.Editor):
 
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
-  
+
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
     return [ 1, path ]
 

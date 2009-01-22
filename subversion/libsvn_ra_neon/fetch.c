@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,7 +26,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include <apr_md5.h>
 #include <apr_xml.h>
 
 #include <ne_basic.h>
@@ -35,7 +34,6 @@
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -2379,6 +2377,9 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   if ((err = svn_ra_neon__get_vcc(&vcc, rb->ras,
                                   rb->ras->url->data, pool)))
     {
+      /* We're done with the file.  this should delete it. Note: it
+         isn't a big deal if this line is never executed -- the pool
+         will eventually get it. We're just being proactive here. */
       (void) apr_file_close(rb->tmpfile);
       return err;
     }
@@ -2393,7 +2394,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                     request_headers, NULL,
                                     rb->spool_response, pool);
 
-  /* we're done with the file */
+  /* We're done with the file. Proactively close/delete the thing. */
   (void) apr_file_close(rb->tmpfile);
 
   SVN_ERR(err);
@@ -2544,9 +2545,12 @@ make_reporter(svn_ra_session_t *session,
      work.
   */
 
-  /* Use the client callback to create a tmpfile. */
-  SVN_ERR(ras->callbacks->open_tmp_file(&rb->tmpfile, ras->callback_baton,
-                                        pool));
+  /* Create a temp file in the system area to hold the contents. Note that
+     we need a file since we will be rewinding it. The file will be closed
+     and deleted when the pool is cleaned up. */
+  SVN_ERR(svn_io_open_unique_file3(&rb->tmpfile, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool));
 
   /* prep the file */
   s = apr_psprintf(pool, "<S:update-report send-all=\"%s\" xmlns:S=\""

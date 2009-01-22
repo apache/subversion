@@ -98,10 +98,10 @@ module SvnTestUtil
   end
 
   def setup_repository(path=@repos_path, config={}, fs_config={})
+    require "svn/repos"
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
-    Svn::Repos.create(path, config, fs_config)
-    @repos = Svn::Repos.open(@repos_path)
+    @repos = Svn::Repos.create(path, config, fs_config)
     @fs = @repos.fs
   end
 
@@ -176,7 +176,12 @@ realm = #{@realm}
       cred.may_save = false
     end
     setup_auth_baton(ctx.auth_baton)
-    ctx
+    return ctx unless block_given?
+    begin
+      yield ctx
+    ensure
+      ctx.destroy
+    end
   end
 
   def setup_auth_baton(auth_baton)

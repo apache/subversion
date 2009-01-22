@@ -36,7 +36,11 @@ AC_DEFUN(SVN_LIB_NEON,
               look for neon-config in $PATH.]),
   [
     if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-neon requires an argument.])
+      if test "$HAVE_PKG_CONFIG" = "yes" && pkg-config neon --exists ; then
+        NEON_PKG_CONFIG="yes"
+      else
+        AC_MSG_ERROR([--with-neon requires an argument.])
+      fi
     else
       neon_config="$withval/bin/neon-config"
     fi
@@ -113,7 +117,11 @@ dnl Configure neon --------------------------
 
     else
       # no --with-neon switch, and no neon subdir, look in PATH
-      AC_PATH_PROG(neon_config,neon-config)
+      if test "$HAVE_PKG_CONFIG" = "yes" && pkg-config neon --exists ; then
+        NEON_PKG_CONFIG="yes"
+      else
+        AC_PATH_PROG(neon_config,neon-config)
+      fi
       SVN_NEON_CONFIG()
     fi
 
@@ -127,10 +135,14 @@ dnl SVN_NEON_CONFIG()
 dnl neon-config found, gather relevant information from it
 AC_DEFUN(SVN_NEON_CONFIG,
 [
-  if test -f "$neon_config"; then
-    if test "$neon_config" != ""; then
+  if test "$NEON_PKG_CONFIG" = "yes" || test -f "$neon_config"; then
+    if test "$NEON_PKG_CONFIG" = "yes" || test "$neon_config" != ""; then
       AC_MSG_CHECKING([neon library version])
-      NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
+      if test "$NEON_PKG_CONFIG" = "yes" ; then
+        NEON_VERSION=`pkg-config neon --modversion`
+      else
+        NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
+      fi
       AC_MSG_RESULT([$NEON_VERSION])
 
       if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[6-9]\.'`"] ; then
@@ -152,9 +164,32 @@ AC_DEFUN(SVN_NEON_CONFIG,
         if test -n "`echo "$NEON_VERSION" | grep "^$svn_allowed_neon"`" ||
            test "$svn_allowed_neon" = "any"; then
             svn_allowed_neon_on_system="yes"
-            SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
-            NEON_LIBS=`$neon_config --la-file`
-            CFLAGS=["$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"]
+            if test "$NEON_PKG_CONFIG" = "yes"; then
+              SVN_NEON_INCLUDES=[`pkg-config neon --cflags | sed -e 's/-D[^ ]*//g'`]
+              CFLAGS=["$CFLAGS `pkg-config neon --cflags | sed -e 's/-I[^ ]*//g'`"]
+              old_CFLAGS="$CFLAGS"
+              old_LIBS="$LIBS"
+              NEON_LIBS=`pkg-config neon --libs`
+              CFLAGS="$CFLAGS $SVN_NEON_INCLUDES"
+              LIBS="$LIBS $NEON_LIBS"
+              neon_test_code="
+#include <ne_compress.h>
+#include <ne_xml.h>
+int main()
+{ne_xml_create(); ne_decompress_destroy(NULL);}"
+              AC_LINK_IFELSE([$neon_test_code], shared_linking="yes", shared_linking="no")
+              if test "$shared_linking" = "no"; then
+                NEON_LIBS=`pkg-config neon --libs --static`
+                LIBS="$LIBS $NEON_LIBS"
+                AC_LINK_IFELSE([$neon_test_code], , AC_MSG_ERROR([cannot find Neon]))
+              fi
+              CFLAGS="$old_CFLAGS"
+              LIBS="$old_LIBS"
+            else
+              SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
+              CFLAGS=["$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"]
+              NEON_LIBS=`$neon_config --libs`
+            fi
             svn_lib_neon="yes"
             break
         fi

@@ -92,6 +92,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
+  /* Do not support the situation of both exclude and switch a target. */
+  if (depth_is_sticky && depth == svn_depth_exclude)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Cannot both exclude and switch a path"));
+
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
@@ -128,7 +133,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                      ctx->cancel_baton, pool));
       anchor = svn_wc_adm_access_path(adm_access);
       dir_access_path = svn_wc_adm_access_path(dir_access);
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, a, anchor, pool));
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, a, dir_access_path, pool));
@@ -166,6 +171,15 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
          "is not the same repository as\n"
          "'%s'"), URL, source_root);
 
+  /* We may need to crop the tree if the depth is sticky */
+  if (depth_is_sticky && depth < svn_depth_infinity)
+    {
+      SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+    }
+
   SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
@@ -196,8 +210,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */
-  err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! server_supports_depth),
+  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
+                                TRUE, depth, (! depth_is_sticky),
+                                (! server_supports_depth),
                                 use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 NULL, /* no traversal info */
@@ -207,7 +222,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(path, pool);
       return err;
     }
   *use_sleep = TRUE;
@@ -223,14 +238,14 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
   if (sleep_here)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(path, pool);
 
   /* Return errors we might have sustained. */
   if (err)
     return err;
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

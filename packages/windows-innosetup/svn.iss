@@ -1,6 +1,6 @@
 [Setup]
 ;# Version parameters #########################################################
-#define svn_cpr "Copyright ©2000-2008 CollabNet"
+#define svn_cpr "Copyright ©2000-2009 CollabNet"
 
 ; Version and release info:
 #include "svn_version.iss"

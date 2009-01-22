@@ -41,7 +41,7 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
 }
 
-#define MAX_NBR_RANGES 3
+#define MAX_NBR_RANGES 5
 
 /* Verify that INPUT is parsed properly, and returns an error if
    parsing fails, or incorret parsing is detected.  Assumes that INPUT
@@ -110,7 +110,8 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2;
 
-#define NBR_MERGEINFO_VALS 5
+#define NBR_MERGEINFO_VALS 13
+
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
   {
@@ -118,7 +119,15 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/trunk/foo:1-6",
     "/trunk: 5,7-9,10,11,13,14",
     "/trunk: 3-10,11*,13,14",
-    "/branch: 1,2-18*,33*"
+    "/branch: 1,2-18*,33*",
+    "patch-common::netasq-bpf.c:25381",
+    "patch-common_netasq-bpf.c::25381",
+    ":patch:common:netasq:bpf.c:25381",
+    "/trunk:3-6,15,18,9,22",
+    "/trunk:5,3",
+    "/trunk:3-6*,15*,18*,9,22*",
+    "/trunk:5,3*",
+    "/trunk:100,3-7,50,99,1-2"
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -127,7 +136,15 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/trunk/foo",
     "/trunk",
     "/trunk",
-    "/branch"
+    "/branch",
+    "patch-common::netasq-bpf.c",
+    "patch-common_netasq-bpf.c:",
+    ":patch:common:netasq:bpf.c",
+    "/trunk",
+    "/trunk",
+    "/trunk",
+    "/trunk",
+    "/trunk"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -136,7 +153,17 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 6,  TRUE} },
     { {4, 5,  TRUE}, { 6, 11, TRUE }, {12, 14, TRUE } },
     { {2, 10, TRUE}, {10, 11, FALSE}, {12, 14, TRUE } },
-    { {0, 1,  TRUE}, { 1, 18, FALSE}, {32, 33, FALSE} }
+    { {0, 1,  TRUE}, { 1, 18, FALSE}, {32, 33, FALSE} },
+    { {25380, 25381, TRUE } },
+    { {25380, 25381, TRUE } },
+    { {25380, 25381, TRUE } },
+    { {2, 6, TRUE}, {8, 9, TRUE}, {14, 15, TRUE}, {17, 18, TRUE},
+      {21, 22, TRUE} },
+    { {2, 3, TRUE}, {4, 5, TRUE} },
+    { {2, 6, FALSE}, {8, 9, TRUE}, {14, 15, FALSE}, {17, 18, FALSE},
+      {21, 22, FALSE} },
+    { {2, 3, FALSE}, {4, 5, TRUE} },
+    { {0, 7, TRUE}, {49, 50, TRUE}, {98, 100, TRUE} }
   };
 
 static svn_error_t *
@@ -246,7 +273,7 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 38
+#define NBR_BROKEN_MERGEINFO_VALS 35
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -255,11 +282,6 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk: 5,7-9,10,11,13,14,",
     "/trunk 5,7-9,10,11,13,14",
     "/trunk:5 7--9 10 11 13 14",
-    /* Unordered revs   */
-    "/trunk:3-6,15,18,9,22",
-    "/trunk:5,3",
-    "/trunk:3-6*,15*,18*,9,22*",
-    "/trunk:5,3*",
     /* Overlapping revs differing inheritability */
     "/trunk:5-9*,9",
     "/trunk:5,5-9*",
@@ -291,6 +313,7 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     /* path mapped to range with no revisions */
     "/trunk:",
     "/trunk:2-9\n/branch:",
+    "::",
     /* No path */
     ":1-3",
     /* Invalid revisions */
@@ -621,9 +644,9 @@ test_merge_mergeinfo(const char **msg,
                         {12, 13, TRUE}, {13, 22, FALSE} } } } },
 
       /* Two paths all inheritable ranges */
-      { "/trunk: 3,5,7-9,10,11,13,14\n/fred:8-10",
-        "/trunk: 1-4,6\n/fred:9-12", 2,
-        { {"/trunk", { {0, 11, TRUE}, {12, 14, TRUE} } },
+      { "/trunk::1: 3,5,7-9,10,11,13,14\n/fred:8-10",
+        "/trunk::1: 1-4,6\n/fred:9-12", 2,
+        { {"/trunk::1", { {0, 11, TRUE}, {12, 14, TRUE} } },
           {"/fred",  { {7, 12, TRUE} } } } },
 
       /* Two paths all non-inheritable ranges */
@@ -641,11 +664,11 @@ test_merge_mergeinfo(const char **msg,
 
       /* A slew of different paths but no ranges to be merged */
       { "/trunk: 3,5-9*\n/betty: 2-4",
-        "/fred: 1-18\n/barney: 1,3-43", 4,
-        { {"/trunk",  { {2,  3, TRUE}, {4,  9, FALSE} } },
-          {"/betty",  { {1,  4, TRUE} } },
-          {"/barney", { {0,  1, TRUE}, {2, 43, TRUE} } },
-          {"/fred",   { {0, 18, TRUE} } } } }
+        "/fred: 1-18\n/:barney: 1,3-43", 4,
+        { {"/trunk",   { {2,  3, TRUE}, {4,  9, FALSE} } },
+          {"/betty",   { {1,  4, TRUE} } },
+          {"/:barney", { {0,  1, TRUE}, {2, 43, TRUE} } },
+          {"/fred",    { {0, 18, TRUE} } } } }
     };
 
   *msg = "merging of mergeinfo hashs";

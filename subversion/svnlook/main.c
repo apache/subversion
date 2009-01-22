@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -239,6 +239,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"propget", subcommand_pget, {"pget", "pg"},
    N_("usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
       "                    "
+      /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n\n"
       "Print the raw value of a property on a path in the repository.\n"
       "With --revprop, print the raw value of a revision property.\n"),
@@ -247,6 +248,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"proplist", subcommand_plist, {"plist", "pl"},
    N_("usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
       "                      "
+      /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook proplist --revprop REPOS_PATH\n\n"
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
@@ -610,17 +612,23 @@ print_changed_tree(svn_repos_node_t *node,
 
 
 static svn_error_t *
-dump_contents(apr_file_t *fh,
+dump_contents(svn_stream_t *stream,
               svn_fs_root_t *root,
               const char *path /* UTF-8! */,
               apr_pool_t *pool)
 {
-  svn_stream_t *contents, *file_stream;
+  if (root == NULL)
+    SVN_ERR(svn_stream_close(stream));  /* leave an empty file */
+  else
+    {
+      svn_stream_t *contents;
 
-  /* Grab the contents and copy them into fh. */
-  SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-  file_stream = svn_stream_from_aprfile2(fh, TRUE, pool);
-  return svn_stream_copy2(contents, file_stream, NULL, NULL, pool);
+      /* Grab the contents and copy them into the given stream. */
+      SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
+      SVN_ERR(svn_stream_copy3(contents, stream, NULL, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -648,7 +656,7 @@ prepare_tmpfiles(const char **tmpfile1,
                  apr_pool_t *pool)
 {
   svn_string_t *mimetype;
-  apr_file_t *fh;
+  svn_stream_t *stream;
 
   /* Init the return values. */
   *tmpfile1 = NULL;
@@ -682,19 +690,17 @@ prepare_tmpfiles(const char **tmpfile1,
 
   /* Now, prepare the two temporary files, each of which will either
      be empty, or will have real contents.  */
-  SVN_ERR(svn_io_open_unique_file2(&fh, tmpfile2,
-                                   apr_psprintf(pool, "%s/diff", tmpdir),
-                                   ".tmp", svn_io_file_del_none, pool));
-  if (root2)
-    SVN_ERR(dump_contents(fh, root2, path2, pool));
-  apr_file_close(fh);
+  SVN_ERR(svn_stream_open_unique(&stream, tmpfile1,
+                                 tmpdir,
+                                 svn_io_file_del_none,
+                                 pool, pool));
+  SVN_ERR(dump_contents(stream, root1, path1, pool));
 
-  /* The second file is constructed from the first one's path. */
-  SVN_ERR(svn_io_open_unique_file2(&fh, tmpfile1, *tmpfile2,
-                                   ".tmp", svn_io_file_del_none, pool));
-  if (root1)
-    SVN_ERR(dump_contents(fh, root1, path1, pool));
-  apr_file_close(fh);
+  SVN_ERR(svn_stream_open_unique(&stream, tmpfile2,
+                                 tmpdir,
+                                 svn_io_file_del_none,
+                                 pool, pool));
+  SVN_ERR(dump_contents(stream, root2, path2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -960,8 +966,8 @@ print_diff_tree(svn_fs_root_t *root,
       if (binary)
         {
           svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
-          SVN_ERR(svn_cmdline_printf(pool, header->data));
-        }          
+          SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
+        }
       else
         {
           svn_diff_t *diff;
@@ -979,7 +985,7 @@ print_diff_tree(svn_fs_root_t *root,
               const char *orig_label, *new_label;
 
               /* Print diff header. */
-              SVN_ERR(svn_cmdline_printf(pool, header->data));
+              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
 
               /* This fflush() might seem odd, but it was added to deal
                  with this bug report:
@@ -1929,9 +1935,9 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
       SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
       SVN_ERR(svn_cmdline_printf(pool,
-                                 (comment_lines != 1)
-                                 ? _("Comment (%i lines):\n%s\n")
-                                 : _("Comment (%i line):\n%s\n"),
+                                 Q_("Comment (%i line):\n%s\n",
+                                    "Comment (%i lines):\n%s\n",
+                                    comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }
@@ -2236,7 +2242,7 @@ main(int argc, const char *argv[])
     SVN_INT_ERR(svn_error_create
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("The '--transaction' (-t) and '--revision' (-r) arguments "
-                   "can not co-exist")));
+                   "cannot co-exist")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're

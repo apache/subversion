@@ -40,7 +40,7 @@ class HistoryChecker:
         return 1
       if path == '/':
         return 0
-      idx = string.rfind(path, '/')
+      idx = path.rfind('/')
       if idx != -1:
         path = path[:idx]
       else:
@@ -48,9 +48,9 @@ class HistoryChecker:
 
   def add_history(self, path, revision, pool=None):
     if not self._check_history(path, revision):
-      print "**WRONG** %8d %s" % (revision, path)
+      print("**WRONG** %8d %s" % (revision, path))
     else:
-      print "          %8d %s" % (revision, path)
+      print("          %8d %s" % (revision, path))
 
 
 def check_history(fs_ptr, path, revision):
@@ -62,7 +62,7 @@ def check_history(fs_ptr, path, revision):
 def main():
   argc = len(sys.argv)
   if argc < 3 or argc > 4:
-    print "Usage: %s PATH-TO-REPOS PATH-IN-REPOS [REVISION]" % sys.argv[0]
+    print("Usage: %s PATH-TO-REPOS PATH-IN-REPOS [REVISION]" % sys.argv[0])
     sys.exit(1)
 
   fs_ptr = repos.fs(repos.open(sys.argv[1]))

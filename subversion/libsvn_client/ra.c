@@ -38,36 +38,13 @@
 
 
 static svn_error_t *
-open_admin_tmp_file(apr_file_t **fp,
-                    void *callback_baton,
-                    apr_pool_t *pool)
-{
-  svn_client__callback_baton_t *cb = callback_baton;
-
-  return svn_wc_create_tmp_file2(fp, NULL, cb->base_dir,
-                                 svn_io_file_del_on_close, pool);
-}
-
-
-static svn_error_t *
 open_tmp_file(apr_file_t **fp,
               void *callback_baton,
               apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = callback_baton;
-  const char *truepath;
-
-  if (cb->base_dir && ! cb->read_only_wc)
-    truepath = apr_pstrdup(pool, cb->base_dir);
-  else
-    SVN_ERR(svn_io_temp_dir(&truepath, pool));
-
-  /* Tack on a made-up filename. */
-  truepath = svn_path_join(truepath, "tempfile", pool);
-
-  /* Open a unique file;  use APR_DELONCLOSE. */
-  return svn_io_open_unique_file2(fp, NULL, truepath, ".tmp",
-                                  svn_io_file_del_on_close, pool);
+  return svn_io_open_unique_file3(fp, NULL, NULL,
+                                  svn_io_file_del_on_pool_cleanup,
+                                  pool, pool);
 }
 
 
@@ -190,7 +167,8 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_wc_prop_set2(name, value, full_path, adm_access, TRUE, pool);
+  return svn_wc_prop_set3(name, value, full_path, adm_access, TRUE, NULL, NULL,
+                          pool);
 }
 
 
@@ -222,8 +200,8 @@ invalidate_wcprop_for_entry(const char *path,
                               pool));
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
-  return svn_wc_prop_set2(wb->prop_name, NULL, path, entry_access,
-                          FALSE, pool);
+  return svn_wc_prop_set3(wb->prop_name, NULL, path, entry_access,
+                          FALSE, NULL, NULL, pool);
 }
 
 
@@ -286,7 +264,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   svn_client__callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
-  cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
+  cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
@@ -361,6 +339,7 @@ svn_client_uuid_from_path(const char **uuid,
                           apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  svn_boolean_t is_root;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
                                   TRUE,  /* show deleted */ pool));
@@ -368,34 +347,63 @@ svn_client_uuid_from_path(const char **uuid,
   if (entry->uuid)
     {
       *uuid = entry->uuid;
+      return SVN_NO_ERROR;
     }
-  else if (entry->url)
+
+  /* ## Probably never reached after the 1.6/1.7 WC rewrite */
+
+  SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
+
+  if (!is_root)
     {
+      /* Workingcopies have a single uuid, as all contents is from a single
+         repository */
+
+      svn_error_t *err;
+      svn_wc_adm_access_t *parent_access;
+      const char *parent = svn_path_dirname(path, pool);
+
+      /* Open the parents administrative area to fetch the uuid.
+         Subversion 1.0 and later have the uuid in every checkout root */
+
+      SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
+                               ctx->cancel_func, ctx->cancel_baton, pool));
+
+      err = svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
+                                      parent_access, ctx, pool);
+
+      svn_error_clear(svn_wc_adm_close2(parent_access, pool));
+
+      return err;
+    }
+
+  /* We may have a workingcopy without uuid */
+  if (entry->url)
+    {
+      /* You can enter this case by copying a new subdirectory with 1.0-1.5
+       * # svn mkdir newdir
+       * # cp newdir /tmp/new-wc
+       * and then check /tmp/new-wc
+       *
+       * See also:
+       * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=101831
+       * Message-ID: <877jgjtkus.fsf@debian2.lan> */
+
       /* fallback to using the network. */
       SVN_ERR(svn_client_uuid_from_url(uuid, entry->url, ctx, pool));
     }
   else
     {
-      /* Try the parent if it's the same working copy.  It's not
-         entirely clear how this happens (possibly an old wc?) but it
-         has been triggered by TSVN, see
-         http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=101831
-         Message-ID: <877jgjtkus.fsf@debian2.lan> */
-      svn_boolean_t is_root;
-      SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
-      if (is_root)
-        return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                 _("'%s' has no URL"),
-                                 svn_path_local_style(path, pool));
-      else
-        return svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
-                                         adm_access, ctx, pool);
+      /* Excluded path will fall into this code branch, since the missed
+         fields in the entry for excluded path is not filled. But it is just
+         ok. */
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("'%s' has no URL"),
+                               svn_path_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 
@@ -607,7 +615,7 @@ svn_client__repos_locations(const char **start_url,
                                      FALSE, 0, ctx->cancel_func,
                                      ctx->cancel_baton, pool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
         {
           url = entry->copyfrom_url;

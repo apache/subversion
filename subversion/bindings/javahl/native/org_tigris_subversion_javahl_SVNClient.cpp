@@ -256,7 +256,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setPrompt
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
+ jobjectArray jranges, jboolean jstopOnCopy,
  jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
  jobjectArray jrevProps, jlong jlimit, jobject jlogMessageCallback)
 {
@@ -271,14 +271,6 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Revision revisionStart(jrevisionStart, false, true);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  Revision revisionEnd(jrevisionEnd, true);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -289,7 +281,31 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
+  // Build the revision range vector from the Java array.
+  std::vector<RevisionRange> revisionRanges;
+
+  jint arraySize = env->GetArrayLength(jranges);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  for (int i = 0; i < arraySize; ++i)
+    {
+      jobject elem = env->GetObjectArrayElement(jranges, i);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      RevisionRange revisionRange(elem);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      revisionRanges.push_back(revisionRange);
+    }
+
+  cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
                   revProps, jlimit, &callback);
@@ -1051,7 +1067,7 @@ Java_org_tigris_subversion_javahl_SVNClient_revProperties
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
- jstring jvalue, jboolean jforce)
+ jstring jvalue, jstring joriginalValue, jboolean jforce)
 {
   JNIEntry(SVNClient, setRevProperty);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1076,7 +1092,11 @@ Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setRevProperty(jthis, path, name, revision, value,
+  JNIStringHolder original_value(joriginalValue);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->setRevProperty(jthis, path, name, revision, value, original_value,
                      jforce ? true: false);
 }
 

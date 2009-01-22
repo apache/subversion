@@ -65,8 +65,8 @@ svn_error__locate(const char *file, long line)
 static apr_status_t err_abort(void *data)
 {
   svn_error_t *err = data;  /* For easy viewing in a debugger */
+  err = err; /* Fake a use for the variable to avoid compiler warnings */
   abort();
-  err = err; /* Fake a use for the variable */
 }
 #endif
 
@@ -187,6 +187,19 @@ svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
   return svn_error_create(child->apr_err,
                           child,
                           new_msg);
+}
+
+
+svn_error_t *
+svn_error_compose_create(svn_error_t *err1,
+                         svn_error_t *err2)
+{
+  if (err1 && err2)
+    {
+      svn_error_compose(err1, err2);
+      return err1;
+    }
+  return err1 ? err1 : err2;
 }
 
 
@@ -483,8 +496,13 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 }
 
 svn_error_t *
-svn_error_raise_on_malfunction(const char *file, int line, const char *expr)
+svn_error_raise_on_malfunction(svn_boolean_t can_return,
+                               const char *file, int line,
+                               const char *expr)
 {
+  if (!can_return)
+    abort(); /* Nothing else we can do as a library */
+
   if (expr)
     return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
                              _("In file '%s' line %d: assertion failed (%s)"),
@@ -496,11 +514,14 @@ svn_error_raise_on_malfunction(const char *file, int line, const char *expr)
 }
 
 svn_error_t *
-svn_error_abort_on_malfunction(const char *file, int line, const char *expr)
+svn_error_abort_on_malfunction(svn_boolean_t can_return,
+                               const char *file, int line,
+                               const char *expr)
 {
-  svn_error_t *err = svn_error_raise_on_malfunction(file, line, expr);
+  svn_error_t *err = svn_error_raise_on_malfunction(TRUE, file, line, expr);
 
-  svn_handle_error2(err, stderr, TRUE, "svn: ");
+  svn_handle_error2(err, stderr, FALSE, "svn: ");
+  abort();
   return err;  /* Not reached. */
 }
 
@@ -519,7 +540,9 @@ svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func)
 }
 
 svn_error_t *
-svn_error__malfunction(const char *file, int line, const char *expr)
+svn_error__malfunction(svn_boolean_t can_return,
+                       const char *file, int line,
+                       const char *expr)
 {
-  return malfunction_handler(file, line, expr);
+  return malfunction_handler(can_return, file, line, expr);
 }

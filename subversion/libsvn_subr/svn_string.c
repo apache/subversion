@@ -4,7 +4,7 @@
  *
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,7 +22,6 @@
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
-#include <apr_md5.h>
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
@@ -570,7 +569,7 @@ int svn_cstring_count_newlines(const char *msg)
 }
 
 char *
-svn_cstring_join(apr_array_header_t *strings,
+svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool)
 {

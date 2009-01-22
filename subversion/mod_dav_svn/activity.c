@@ -23,9 +23,9 @@
 #include <httpd.h>
 #include <mod_dav.h>
 
+#include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -41,9 +41,10 @@
 static const char *
 escape_activity(const char *activity_id, apr_pool_t *pool)
 {
-  unsigned char digest[APR_MD5_DIGESTSIZE];
-  apr_md5(digest, activity_id, strlen(activity_id));
-  return svn_md5_digest_to_cstring_display(digest, pool);
+  svn_checksum_t *checksum;
+  svn_error_clear(svn_checksum(&checksum, svn_checksum_md5, activity_id,
+                               strlen(activity_id), pool));
+  return svn_checksum_to_cstring_display(checksum, pool);
 }
 
 /* Return filename for ACTIVITY_ID under the repository in REPOS. */
@@ -213,9 +214,10 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *activity_id,
                         const char *txn_name)
 {
-  const char *final_path, *tmp_path, *activity_contents;
+  const char *final_path;
+  const char *tmp_path;
+  const char *activity_contents;
   svn_error_t *err;
-  apr_file_t *activity_file;
 
   /* Create activities directory if it does not yet exist. */
   err = svn_io_make_dir_recursively(repos->activities_db, repos->pool);
@@ -225,39 +227,23 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                                 repos->pool);
 
   final_path = activity_pathname(repos, activity_id);
-  err = svn_io_open_unique_file2(&activity_file, &tmp_path, final_path,
-                                 ".tmp", svn_io_file_del_none, repos->pool);
-  if (err)
-    {
-      svn_error_t *serr = svn_error_quick_wrap(err, "Can't open activity db");
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not open files.",
-                                  repos->pool);
-    }
 
   activity_contents = apr_psprintf(repos->pool, "%s\n%s\n",
                                    txn_name, activity_id);
-  err = svn_io_file_write_full(activity_file, activity_contents,
-                               strlen(activity_contents), NULL, repos->pool);
+
+  /* ### is there another directory we already have and can write to? */
+  err = svn_io_write_unique(&tmp_path,
+                            svn_path_dirname(final_path, repos->pool),
+                            activity_contents, strlen(activity_contents),
+                            svn_io_file_del_none, repos->pool);
   if (err)
     {
       svn_error_t *serr = svn_error_quick_wrap(err,
-                                               "Can't write to activity db");
+                                               "Can't write activity db");
 
       /* Try to remove the tmp file, but we already have an error... */
-      svn_error_clear(svn_io_file_close(activity_file, repos->pool));
-      svn_error_clear(svn_io_remove_file(tmp_path, repos->pool));
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "could not write files.",
-                                  repos->pool);
-    }
-
-  err = svn_io_file_close(activity_file, repos->pool);
-  if (err)
-    {
-      svn_error_clear(svn_io_remove_file(tmp_path, repos->pool));
-      return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not close files.",
                                   repos->pool);
     }
 
@@ -283,8 +269,12 @@ dav_svn__create_activity(const dav_svn_repos *repos,
   svn_fs_txn_t *txn;
   svn_error_t *serr;
   apr_hash_t *revprop_table = apr_hash_make(pool);
-  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               svn_string_create(repos->username, pool));
+
+  if (repos->username)
+    {
+      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+                   svn_string_create(repos->username, pool));
+    }
 
   serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
   if (serr != NULL)

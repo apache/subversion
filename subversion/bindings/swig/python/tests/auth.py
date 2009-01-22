@@ -1,4 +1,4 @@
-import unittest, os, setup_path
+import unittest, os, setup_path, sys
 
 from svn import core
 

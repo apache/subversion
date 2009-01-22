@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -72,9 +72,13 @@ class State:
     return State(new_root, desc)
 
   def tweak(self, *args, **kw):
-    """Tweak the items' values, optional restricting based on a filter.
+    """Tweak the items' values.
 
-    The general form of this method is .tweak(paths..., key=value). If
+    Each argument in ARGS is the path of a StateItem that already exists in
+    this State. Each keyword argument in KW is a modifiable property of
+    StateItem.
+
+    The general form of this method is .tweak([paths...,] key=value...). If
     one or more paths are provided, then those items' values are
     modified.  If no paths are given, then all items are modified.
     """
@@ -87,16 +91,16 @@ class State:
         except KeyError, e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
-        apply(path_ref.tweak, (), kw)
+        path_ref.tweak(**kw)
     else:
       for item in self.desc.values():
-        apply(item.tweak, (), kw)
+        item.tweak(**kw)
 
   def tweak_some(self, filter, **kw):
     "Tweak the items for which the filter returns true."
     for path, item in self.desc.items():
-      if filter(path, item):
-        apply(item.tweak, (), kw)
+      if list(filter(path, item)):
+        item.tweak(**kw)
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree

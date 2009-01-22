@@ -90,6 +90,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 32
 Text-content-md5: 8ac35a19435b31b928de300b32e930cd
+Text-content-sha1: b3f85be4422626e7443b6ddcf60bb451dc7f0560
 Content-length: 42
 
 PROPS-END
@@ -102,6 +103,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 31
 Text-content-md5: de856b65f58804c29698ac73c77afca0
+Text-content-sha1: 9fd481a7c856d5e99c912b14df12ca436ec87ab8
 Content-length: 41
 
 PROPS-END
@@ -123,6 +125,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 31
 Text-content-md5: 74465fc532ca0c4a59782434fef78950
+Text-content-sha1: 4806e0b7d66e8de981613285ba82f1074419ac12
 Content-length: 41
 
 PROPS-END
@@ -162,6 +165,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 29
 Text-content-md5: 9f6400f63c4dcd2e4f140b3eef1a323a
+Text-content-sha1: 76ca412fe5b6de13ab0ae4afa9b0c4b5722cdf41
 Content-length: 39
 
 PROPS-END
@@ -174,6 +178,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 30
 Text-content-md5: 14d1e17286af96fd468e68aea4b9148a
+Text-content-sha1: c6727fc45f4251276a957ff3e4b089ee3cc89a0e
 Content-length: 40
 
 PROPS-END
@@ -186,6 +191,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 30
 Text-content-md5: 2c41dafbd4d5735e1065b49b009ef0fd
+Text-content-sha1: 25e0fbfcac72ddc25bb5c677aea6676329cb9fac
 Content-length: 40
 
 PROPS-END
@@ -207,6 +213,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 30
 Text-content-md5: 1d434602d24db956f1c481397340798f
+Text-content-sha1: 9b8aba1e49297c4842b87dca754a1692d58f8c96
 Content-length: 40
 
 PROPS-END
@@ -219,6 +226,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 32
 Text-content-md5: 60561894aaf380df0d211aba60149262
+Text-content-sha1: 521fe6f78f95558a5069cbc65e75185f20a5792c
 Content-length: 42
 
 PROPS-END
@@ -231,6 +239,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 30
 Text-content-md5: f70dc430061ce3e0ddd98783ff0b451a
+Text-content-sha1: e2ca5cc8621b52accf604fbf1ef27144bdf89542
 Content-length: 40
 
 PROPS-END
@@ -243,6 +252,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 30
 Text-content-md5: f626c0bd25c0aed96c78917a653ed5c1
+Text-content-sha1: 9ca20fa69244b6352a4785b7e8dc9a76bdd61fa3
 Content-length: 40
 
 PROPS-END
@@ -255,6 +265,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 25
 Text-content-md5: cbf47443741fa5692f3fe90a9e6532a6
+Text-content-sha1: 3c685125ea46ecb8b1f993f328a753fb2bd75b06
 Content-length: 35
 
 PROPS-END
@@ -267,6 +278,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 25
 Text-content-md5: 2d18c5e57e84c5b8a5e9a6e13fa394dc
+Text-content-sha1: 2c0aa9014a0cd07f01795a333d82485ef6d083e2
 Content-length: 35
 
 PROPS-END
@@ -296,6 +308,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 48
 Text-content-md5: 25969dfd7f76f630537591ab115d3188
+Text-content-sha1: 14640f53cbdfb55706234cbaa2b3d244ad56c2a7
 Content-length: 48
 
 This is the file 'A/D/H/psi'.

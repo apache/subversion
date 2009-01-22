@@ -36,7 +36,9 @@ except:
 ### 1.3 and lower.  It could be rolled into this script.
 
 LATEST_FORMATS = { "1.4" : 8,
-                   "1.5" : 9 }
+                   "1.5" : 9,
+                   "1.6" : 10,
+                 }
 
 def usage_and_exit(error_msg=None):
   """Write usage information and exit.  If ERROR_MSG is provide, that
@@ -47,8 +49,8 @@ def usage_and_exit(error_msg=None):
 
   stream = error_msg and sys.stderr or sys.stdout
   if error_msg:
-    print >> stream, "ERROR: %s\n" % error_msg
-  print >> stream, """\
+    stream.write("ERROR: %s\n\n" % error_msg)
+  stream.write("""\
 usage: %s WC_PATH SVN_VERSION [--verbose] [--force] [--skip-unknown-format]
        %s --help
 
@@ -56,7 +58,9 @@ Change the format of a Subversion working copy to that of SVN_VERSION.
 
   --skip-unknown-format    : skip directories with unknown working copy
                              format and continue the update
-""" % (progname, progname)
+
+""" % (progname, progname))
+  stream.flush()
   sys.exit(error_msg and 1 or 0)
 
 def get_adm_dir():
@@ -79,42 +83,40 @@ class WCFormatConverter:
     mode, and unconvertable WC data is encountered."""
 
     # Avoid iterating in unversioned directories.
-    if not get_adm_dir() in paths:
+    if not (get_adm_dir() in paths):
       del paths[:]
       return
 
-    for path in paths:
-      # Process the entries file for this versioned directory.
-      if path == get_adm_dir():
-        if self.verbosity:
-          print "Processing directory '%s'" % dirname
-        entries = Entries(os.path.join(dirname, path, "entries"))
+    # Process the entries file for this versioned directory.
+    if self.verbosity:
+      print("Processing directory '%s'" % dirname)
+    entries = Entries(os.path.join(dirname, get_adm_dir(), "entries"))
 
-        if self.verbosity:
-          print "Parsing file '%s'" % entries.path
-        try:
-          entries.parse(self.verbosity)
-        except UnrecognizedWCFormatException, e:
-          if self.error_on_unrecognized:
-            raise
-          print >>sys.stderr, "%s, skipping" % (e,)
+    if self.verbosity:
+      print("Parsing file '%s'" % entries.path)
+    try:
+      entries.parse(self.verbosity)
+    except UnrecognizedWCFormatException, e:
+      if self.error_on_unrecognized:
+        raise
+      sys.stderr.write("%s, skipping\n" % e)
+      sys.stderr.flush()
 
-        if self.verbosity:
-          print "Checking whether WC format can be converted"
-        try:
-          entries.assert_valid_format(format_nbr, self.verbosity)
-        except LossyConversionException, e:
-          # In --force mode, ignore complaints about lossy conversion.
-          if self.force:
-            print "WARNING: WC format conversion will be lossy. Dropping "\
-                  "field(s) %s " % ", ".join(e.lossy_fields)
-          else:
-            raise
+    if self.verbosity:
+      print("Checking whether WC format can be converted")
+    try:
+      entries.assert_valid_format(format_nbr, self.verbosity)
+    except LossyConversionException, e:
+      # In --force mode, ignore complaints about lossy conversion.
+      if self.force:
+        print("WARNING: WC format conversion will be lossy. Dropping "\
+              "field(s) %s " % ", ".join(e.lossy_fields))
+      else:
+        raise
 
-        if self.verbosity:
-          print "Writing WC format"
-        entries.write_format(format_nbr)
-        break
+    if self.verbosity:
+      print("Writing WC format")
+    entries.write_format(format_nbr)
 
   def change_wc_format(self, format_nbr):
     """Walk all paths in a WC tree, and change their format to
@@ -164,7 +166,17 @@ class Entries:
     "keep-local",
     "working-size",
     "depth",
+    "tree-conflicts",
+    "file-external",
   )
+
+  # The format number.
+  format_nbr = -1
+
+  # How many bytes the format number takes in the file.  (The format number
+  # may have leading zeroes after using this script to convert format 10 to
+  # format 9 -- which would write the format number as '09'.)
+  format_nbr_bytes = -1
 
   def __init__(self, path):
     self.path = path
@@ -176,15 +188,17 @@ class Entries:
 
     input = open(self.path, "r")
 
-    # Read and discard WC format number from INPUT.  Validate that it
+    # Read WC format number from INPUT.  Validate that it
     # is a supported format for conversion.
     format_line = input.readline()
     try:
-      format_nbr = int(format_line)
+      self.format_nbr = int(format_line)
+      self.format_nbr_bytes = len(format_line.rstrip()) # remove '\n'
     except ValueError:
-      format_nbr = -1
-    if not format_nbr in LATEST_FORMATS.values():
-      raise UnrecognizedWCFormatException(format_nbr, self.path)
+      self.format_nbr = -1
+      self.format_nbr_bytes = -1
+    if not self.format_nbr in LATEST_FORMATS.values():
+      raise UnrecognizedWCFormatException(self.format_nbr, self.path)
 
     # Parse file into individual entries, to later inspect for
     # non-convertable data.
@@ -199,16 +213,16 @@ class Entries:
 
   def assert_valid_format(self, format_nbr, verbosity=0):
     if verbosity >= 2:
-      print "Validating format for entries file '%s'" % self.path
+      print("Validating format for entries file '%s'" % self.path)
     for entry in self.entries:
       if verbosity >= 3:
-        print "Validating format for entry '%s'" % entry.get_name()
+        print("Validating format for entry '%s'" % entry.get_name())
       try:
         entry.assert_valid_format(format_nbr)
       except LossyConversionException:
         if verbosity >= 3:
-          print >> sys.stderr, "Offending entry:"
-          print >> sys.stderr, str(entry)
+          sys.stderr.write("Offending entry:\n%s\n" % entry)
+          sys.stderr.flush()
         raise
 
   def parse_entry(self, input, verbosity=0):
@@ -229,22 +243,34 @@ class Entries:
 
     if entry is not None and verbosity >= 3:
       sys.stdout.write(str(entry))
-      print "-" * 76
+      print("-" * 76)
     return entry
 
   def write_format(self, format_nbr):
+    # Overwrite all bytes of the format number (which are the first bytes in
+    # the file).  Overwrite format '10' by format '09', which will be converted
+    # to '9' by Subversion when it rewrites the file.  (Subversion 1.4 and later
+    # ignore leading zeroes in the format number.)
+    assert len(str(format_nbr)) <= self.format_nbr_bytes
+    format_string = '%0' + str(self.format_nbr_bytes) + 'd'
+
     os.chmod(self.path, 0600)
     output = open(self.path, "r+", 0)
-    output.write("%d" % format_nbr)
+    output.write(format_string % format_nbr)
     output.close()
     os.chmod(self.path, 0400)
 
 class Entry:
   "Describes an entry in a WC."
 
-  # The list of field indices within an entry's record which must be
-  # retained for 1.5 -> 1.4 migration (changelist, keep-local, and depth).
-  must_retain_fields = (30, 31, 33)
+  # Maps format numbers to indices of fields within an entry's record that must
+  # be retained when downgrading to that format.
+  must_retain_fields = {
+      # Not in 1.4: changelist, keep-local, depth, tree-conflicts, file-externals
+      8  : (30, 31, 33, 34, 35),
+      # Not in 1.5: tree-conflicts, file-externals
+      9  : (34, 35),
+      }
 
   def __init__(self):
     self.fields = []
@@ -254,7 +280,7 @@ class Entry:
 
     # Check whether lossy conversion is being attempted.
     lossy_fields = []
-    for field_index in self.must_retain_fields:
+    for field_index in self.must_retain_fields[format_nbr]:
       if len(self.fields) - 1 >= field_index and self.fields[field_index]:
         lossy_fields.append(Entries.entry_fields[field_index])
     if lossy_fields:
@@ -342,11 +368,12 @@ def main():
   except LocalException, e:
     if debug:
       raise
-    print >> sys.stderr, str(e)
+    sys.stderr.write("%s\n" % e)
+    sys.stderr.flush()
     sys.exit(1)
 
-  print "Converted WC at '%s' into format %d for Subversion %s" % \
-        (converter.root_path, new_format_nbr, svn_version)
+  print("Converted WC at '%s' into format %d for Subversion %s" % \
+        (converter.root_path, new_format_nbr, svn_version))
 
 if __name__ == "__main__":
   main()

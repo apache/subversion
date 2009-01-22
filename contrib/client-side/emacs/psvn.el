@@ -936,7 +936,7 @@ If POS is nil, use current buffer location."
 (defun svn-substring-no-properties (string &optional from to)
   (if (fboundp 'substring-no-properties)
       (substring-no-properties string from to)
-    (substring string from to)))
+    (substring string (or from 0) to)))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
@@ -1167,7 +1167,7 @@ If there is no .svn directory, examine if there is CVS and run
             svn-status-remote (when arg t))
       (set-buffer cur-buf)
       (if want-edit
-          (let (svn-status-edit-svn-command t)
+          (let ((svn-status-edit-svn-command t))
             (svn-run t t 'status "status" svn-status-default-status-arguments status-option))
         (svn-run t t 'status "status" svn-status-default-status-arguments status-option)))))
 
@@ -1452,17 +1452,28 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (while (accept-process-output process 0 100))
            ;; find last error message and show it.
            (goto-char (point-max))
-           (if (re-search-backward "^svn: \\(.*\\)" nil t)
-               (svn-process-handle-error (match-string 1))
+           (if (re-search-backward "^svn: " nil t)
+               (let ((error-strings))
+                 (while (looking-at "^svn: ")
+                   (setq error-strings (append error-strings (list (buffer-substring-no-properties (+ 5 (svn-point-at-bol)) (svn-point-at-eol)))))
+                   (forward-line -1))
+                 (svn-process-handle-error (mapconcat 'identity (reverse error-strings) "\n")))
              (message "svn failed: %s" event)))
           (t
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-output nil t))))
 
 (defvar svn-process-handle-error-msg nil)
+(defvar svn-handle-error-function nil
+  "A function that will be called with an error string received from the svn client.
+When this function resets `svn-process-handle-error-msg' to nil, the default error handling
+(just show the error message) is not executed.")
 (defun svn-process-handle-error (error-msg)
   (let ((svn-process-handle-error-msg error-msg))
-    (electric-helpify 'svn-process-help-with-error-msg)))
+    (when (functionp svn-handle-error-function)
+      (funcall svn-handle-error-function error-msg))
+    (when svn-process-handle-error-msg
+      (electric-helpify 'svn-process-help-with-error-msg))))
 
 (defun svn-process-help-with-error-msg ()
   (interactive)
@@ -1473,7 +1484,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
         (save-excursion
           (with-output-to-temp-buffer (help-buffer)
             (princ (format "svn failed: %s\n\n%s" svn-process-handle-error-msg help-msg))))
-      (message "svn failed: %s" svn-process-handle-error-msg))))
+      (message "svn failed:\n%s" svn-process-handle-error-msg))))
 
 
 (defun svn-process-filter (process str)
@@ -3742,7 +3753,7 @@ When called with a prefix argument, ask the user for the revision."
          (rev-arg (concat lower-rev ":" upper-rev)))
     (when user-confirmation
       (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
-    (svn-run nil t 'diff "diff" (concat "-r" rev-arg))
+    (svn-run nil t 'diff "diff" svn-status-default-diff-arguments (concat "-r" rev-arg))
     (svn-status-activate-diff-mode)))
 
 (defun svn-status-show-svn-diff-internal (line-infos recursive revision)
@@ -5803,22 +5814,32 @@ The optional prefix argument ARG determines which switches are passed to `svn lo
   "Show statistics for the current blame buffer."
   (interactive)
   (let ((author-map (make-hash-table :test 'equal))
+        (revision-map (make-hash-table :test 'equal))
+        (rev-info)
         (author-list)
-        (author))
+        (author)
+        (revision-list)
+        (revision))
     (save-excursion
       (goto-char (point-min))
       (while (not (eobp))
         (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
           (when (overlay-get ov 'svn-blame-line-info)
-            (setq author (cadr (overlay-get ov 'rev-info)))
-            (svn-puthash author
-                         (+ (gethash author author-map 0) 1)
-                         author-map)))
+            (setq rev-info (overlay-get ov 'rev-info))
+            (setq author (cadr rev-info))
+            (setq revision (string-to-number (car rev-info)))
+            (svn-puthash author (+ (gethash author author-map 0) 1) author-map)
+            (svn-puthash revision (+ (gethash revision revision-map 0) 1) revision-map)))
         (forward-line))
       (maphash '(lambda (key value) (add-to-list 'author-list (list key value))) author-map)
+      (maphash '(lambda (key value) (add-to-list 'revision-list (list key value))) revision-map)
       (pop-to-buffer (get-buffer-create (replace-regexp-in-string "svn-blame:" "svn-blame-statistics:" (buffer-name))))
       (erase-buffer)
+      (insert (propertize "Authors:\n" 'face 'font-lock-function-name-face))
       (dolist (line (sort author-list '(lambda (v1 v2) (> (cadr v1) (cadr v2)))))
+        (insert (format "%s: %s line%s\n" (car line) (cadr line) (if (eq (cadr line) 1) "" "s"))))
+      (insert (propertize "\nRevisions:\n" 'face 'font-lock-function-name-face))
+      (dolist (line (sort revision-list '(lambda (v1 v2) (< (car v1) (car v2)))))
         (insert (format "%s: %s line%s\n" (car line) (cadr line) (if (eq (cadr line) 1) "" "s"))))
       (goto-char (point-min)))))
 

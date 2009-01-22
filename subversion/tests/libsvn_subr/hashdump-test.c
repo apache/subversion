@@ -122,6 +122,8 @@ test2(const char **msg,
 
   apr_file_close(f);
 
+  apr_file_remove("hashdump.out", pool);
+
   return result;
 }
 

@@ -147,8 +147,7 @@ def copy_replace_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   if wc_copy:
-    props = { SVN_PROP_MERGEINFO : '',
-              'phony-prop' : '*'}
+    props = { 'phony-prop' : '*'}
   else:
     props = { 'phony-prop' : '*'}
 
@@ -789,7 +788,7 @@ def copy_preserve_executable_bit(sbox):
   mode2 = os.stat(newpath1)[stat.ST_MODE]
 
   if mode1 == mode2:
-    print "setting svn:executable did not change file's permissions"
+    print("setting svn:executable did not change file's permissions")
     raise svntest.Failure
 
   # Commit the file
@@ -804,7 +803,7 @@ def copy_preserve_executable_bit(sbox):
 
   # The mode on the original and copied file should be identical
   if mode2 != mode3:
-    print "permissions on the copied file are not identical to original file"
+    print("permissions on the copied file are not identical to original file")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -918,13 +917,13 @@ def repos_to_wc(sbox):
   # Modification will only show up if timestamps differ
   exit_code, out, err = svntest.main.run_svn(None, 'diff', pi_path)
   if err or not out:
-    print "diff failed"
+    print("diff failed")
     raise svntest.Failure
   for line in out:
     if line == '+zig\n': # Crude check for diff-like output
       break
   else:
-    print "diff output incorrect", out
+    print("diff output incorrect %s" % out)
     raise svntest.Failure
 
   # Revert everything and verify.
@@ -1340,7 +1339,7 @@ def revision_kinds_local_source(sbox):
       if line.rstrip() == "Copied From Rev: " + str(from_rev):
         break
     else:
-      print dst, "should have been copied from revision", from_rev
+      print("%s should have been copied from revision %s" % (dst, from_rev))
       raise svntest.Failure
 
   # Check that the new files have the right contents
@@ -1611,7 +1610,7 @@ def url_to_non_existent_url_path(sbox):
     if re.match (msg, err_line):
       break
   else:
-    print "message \"" + msg + "\" not found in error output: ", err
+    print("message \"%s\" not found in error output: %s" % (msg, err))
     raise svntest.Failure
 
 
@@ -2604,11 +2603,9 @@ def copy_added_paths_with_props(sbox):
 
   # Tweak expected disk tree
   expected_disk.add({
-    'A/C/upsilon' : Item(props={ 'foo' : 'bar',
-                                 SVN_PROP_MERGEINFO : '' },
+    'A/C/upsilon' : Item(props={ 'foo' : 'bar'},
                          contents="This is the file 'upsilon'\n"),
-    'A/C/I'       : Item(props={ 'foo' : 'bar',
-                                 SVN_PROP_MERGEINFO : '' }),
+    'A/C/I'       : Item(props={ 'foo' : 'bar'}),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -3231,8 +3228,8 @@ def copy_peg_rev_local_files(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGEINFO : ''}),
-    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGEINFO : ''}),
+    'iota'      : Item(contents=psi_text),
+    'A/D/H/psi' : Item(contents=iota_text),
     'sigma'     : Item(contents=psi_text, props={}),
     })
 
@@ -3307,13 +3304,13 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
-    'A/B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
+    'A/B/E'       : Item(),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
-    'A/D/G'       : Item(props={SVN_PROP_MERGEINFO : ''}),
+    'A/D/G'       : Item(),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
-    'A/J'         : Item(props={}),
+    'A/J'         : Item(),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -3946,12 +3943,12 @@ def find_copyfrom_information_upstairs(sbox):
   "renaming inside a copied subtree shouldn't hang"
 
   # The final command in this series would cause the client to hang...
-  # 
+  #
   #    ${SVN} cp A A2
   #    cd A2/B
   #    ${SVN} mkdir blah
   #    ${SVN} mv lambda blah
-  # 
+  #
   # ...because it wouldn't walk up past "" to find copyfrom information
   # (which would be in A2/.svn/entries, not on A2/B/.svn/entries).
   # Instead, it would keep thinking the parent of "" is "", and so
@@ -3991,16 +3988,16 @@ def find_copyfrom_information_upstairs(sbox):
 
 def change_case_of_hostname(input):
   "Change the case of the hostname, try uppercase first"
-  
+
   m = re.match(r"^(.*://)([^/]*)(.*)", input)
   if m:
     scheme = m.group(1)
     host = upper(m.group(2))
     if host == m.group(2):
       host = lower(m.group(2))
-      
+
     path = m.group(3)
-    
+
   return scheme + host + path
 
 # regression test for issue #2475 - move file and folder
@@ -4009,7 +4006,7 @@ def path_move_and_copy_between_wcs_2475(sbox):
   sbox.build()
 
   # checkout a second working copy, use repository url with different case
-  wc2_dir = sbox.wc_dir + '2'
+  wc2_dir = sbox.add_wc_path('2')
   repo_url2 = change_case_of_hostname(sbox.repo_url)
 
   expected_output = svntest.main.greek_state.copy()
@@ -4174,9 +4171,7 @@ test_list = [ None,
               unneeded_parents,
               double_parents_with_url,
               copy_into_absent_dir,
-              # svn_path_is_ancestor() is broken; see r33211.
-              XFail(find_copyfrom_information_upstairs,
-                    svntest.main.is_os_windows),
+              find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
              ]

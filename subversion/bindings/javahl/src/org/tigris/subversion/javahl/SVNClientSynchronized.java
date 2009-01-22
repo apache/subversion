@@ -339,6 +339,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #logMessages(String, Revision, RevisionRange[],
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      * @since 1.5
      */
     public void logMessages(String path, Revision pegRevision,
@@ -356,6 +359,25 @@ public class SVNClientSynchronized implements SVNClientInterface
                                revisionEnd, stopOnCopy, discoverPath,
                                includeMergedRevisions, revProps,
                                limit, callback);
+        }
+    }
+
+    /**
+     * @since 1.6
+     */
+    public void logMessages(String path, Revision pegRevision,
+                            RevisionRange[] revisionRanges, boolean stopOnCopy,
+                            boolean discoverPath,
+                            boolean includeMergedRevisions,
+                            String[] revProps, long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.logMessages(path, pegRevision, revisionRanges,
+                               stopOnCopy, discoverPath, includeMergedRevisions,
+                               revProps, limit, callback);
         }
     }
 
@@ -1434,6 +1456,20 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.setRevProperty(path, name, rev, value, force);
+        }
+    }
+
+    /**
+     * @since 1.6
+     */
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, String originalValue,
+                               boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.setRevProperty(path, name, rev, value, originalValue, force);
         }
     }
 

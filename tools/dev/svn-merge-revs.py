@@ -6,8 +6,8 @@ import os
 progname = os.path.basename(sys.argv[0])
 
 def usage():
-  print "Usage: %s SOURCEURL WCPATH [r]REVNUM[,] [...]" % progname
-  print "Try '%s --help' for more information" % progname
+  print("Usage: %s SOURCEURL WCPATH [r]REVNUM[,] [...]" % progname)
+  print("Try '%s --help' for more information" % progname)
 
 def help():
   val = """This script is meant to ease the pain of merging and
@@ -29,7 +29,7 @@ Examples:
 
   %s http://svn.collab.net/repos/svn/trunk svn-1.2.x-branch \
     14041 14149 14186 14194 14238 14273""" % (progname, progname)
-  print val
+  print(val)
 
 
 if len(sys.argv) > 1 and sys.argv[1] == '--help':
@@ -56,13 +56,13 @@ for rev in sys.argv[3:]:
   try:
     rev = int(rev)
   except ValueError:
-    print "Encountered non integer revision '%s'" % orig_rev
+    print("Encountered non integer revision '%s'" % orig_rev)
     usage()
     sys.exit(254)
   revs.append(rev)
 
 # Make an easily reviewable logfile
-logfile = "-".join(map(lambda x: str(x), revs)) + ".log"
+logfile = "-".join([str(x) for x in revs]) + ".log"
 log = open(logfile, 'w')
 
 for rev in revs:
@@ -99,4 +99,4 @@ for rev in revs:
 
 
 log.close()
-print "\nYour logfile is '%s'" % logfile
+print("\nYour logfile is '%s'" % logfile)

@@ -52,6 +52,28 @@ def die(msg):
 
 _svnmucc_re = re.compile('^(r[0-9]+) committed by svnmuccuser at (.*)$')
 _log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
+_err_re = re.compile('^svnmucc: (.*)$')
+
+def xrun_svnmucc(expected_errors, *varargs):
+  """Run svnmucc with the list of SVNMUCC_ARGS arguments.  Verify that
+  its run results match the list of EXPECTED_ERRORS."""
+
+  # First, run svnmucc.
+  exit_code, outlines, errlines = \
+    svntest.main.run_command(svnmucc_binary, 1, 0,
+                             '-U', repos_url,
+                             '-u', 'svnmuccuser',
+                             '-p', 'svnmuccpass',
+                             '--config-dir', 'dummy',
+                             *varargs)
+  errors = []
+  for line in errlines:
+    match = _err_re.match(line)
+    if match:
+      errors.append(line.rstrip('\n\r'))
+  if errors != expected_errors:
+    raise svntest.main.SVNUnmatchedError(str(errors))
+
 
 def run_svnmucc(expected_path_changes, *varargs):
   """Run svnmucc with the list of SVNMUCC_ARGS arguments.  Verify that
@@ -232,6 +254,33 @@ def main():
   # revision 17
   run_svnmucc(['M /foo/bar'], #---------
               'propdel', 'testprop', 'foo/bar')
+
+  # Expected missing revision error
+  xrun_svnmucc(['svnmucc: \'a\' is not a revision'
+                ], #---------
+              'cp', 'a', 'b')
+
+  # Expected cannot be younger error
+  xrun_svnmucc(['svnmucc: Copy source revision cannot be younger ' +
+                'than base revision',
+                ], #---------
+              'cp', '42', 'a', 'b')
+
+  # Expected already exists error
+  xrun_svnmucc(["svnmucc: 'foo' already exists",
+                ], #---------
+              'cp', '17', 'a', 'foo')
+
+  # Expected copy_src already exists error
+  xrun_svnmucc(["svnmucc: 'a/bar' (from 'foo/bar:17') already exists",
+                ], #---------
+              'cp', '17', 'foo', 'a',
+              'cp', '17', 'foo/foo', 'a/bar')
+
+  # Expected not found error
+  xrun_svnmucc(['svnmucc: \'a\' not found',
+                ], #---------
+              'cp', '17', 'a', 'b')
 
 if __name__ == "__main__":
   try:

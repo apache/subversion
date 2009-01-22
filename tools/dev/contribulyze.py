@@ -43,7 +43,12 @@ try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
-from urllib import quote as url_encode
+try:
+  # Python >=3.0
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  from urllib import quote as urllib_parse_quote
 
 # Pretend we have true booleans on older python versions
 try:
@@ -315,7 +320,7 @@ class Contributor:
       retval = ''.join(self.real_name.lower().split(' '))
     if retval is None:
       complain('Unable to construct a canonical name for Contributor.', True)
-    return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
+    return urllib_parse_quote(retval, safe="!#$&'()+,;<=>@[]^`{}~")
 
   def big_name(self, html=False, html_eo=False):
     """Return as complete a name as possible for this contributor.
@@ -364,7 +369,7 @@ class Contributor:
                           self.big_name(html=True), True))
     unique_logs = { }
 
-    sorted_activities = self.activities.keys()
+    sorted_activities = list(self.activities.keys())
     sorted_activities.sort()
 
     out.write('<div class="h2" id="activities" title="activities">\n\n')
@@ -389,7 +394,7 @@ class Contributor:
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = unique_logs.keys()
+    sorted_logs = list(unique_logs.keys())
     sorted_logs.sort()
     for log in sorted_logs:
       out.write('<hr />\n')
@@ -545,6 +550,7 @@ def graze(input):
           log = LogMessage(m.group(1), m.group(2), m.group(3))
           num_lines = int(m.group(4))
           just_saw_separator = False
+          saw_patch = False
           line = input.readline()
           # Handle 'svn log -v' by waiting for the blank line.
           while line != '\n':
@@ -574,6 +580,8 @@ def graze(input):
                   user = log.committer
                 c = Contributor.get(user, real, email)
                 c.add_activity(field.name, log)
+                if (field.name == 'Patch'):
+                  saw_patch = True
                 field.add_contributor(c)
                 line = input.readline()
                 if line == log_separator:
@@ -596,6 +604,9 @@ def graze(input):
                   log.add_field(field)
                   field = None
             num_lines -= 1
+          if not saw_patch and log.committer != '(no author)':
+            c = Contributor.get(log.committer, None, None)
+            c.add_activity('Patch', log)
         continue
 
 index_introduction = '''
@@ -652,7 +663,7 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = Contributor.all_contributors.values()
+  sorted_contributors = list(Contributor.all_contributors.values())
   sorted_contributors.sort()
   for c in sorted_contributors:
     if c not in seen_contributors:
@@ -668,7 +679,7 @@ def drop(revision_url_pattern):
           urlpath = "%s/%s.html" % (detail_subdir, c.canonical_name())
           fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
           index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
-                      % (url_encode(urlpath),
+                      % (urllib_parse_quote(urlpath),
                          c.big_name(html=True),
                          c.score_str(), committerness))
           c.html_out(revision_url_pattern, fname)
@@ -696,7 +707,7 @@ def process_committers(committers):
     if line == 'Committers who have asked to be listed as dormant:\n':
       in_full_committers = True
     elif line.find('@') >= 0:
-      line = line.strip()
+      line = line.lstrip()
       m = matcher.match(line)
       user = m.group(1)
       real_and_email = m.group(2).strip()
@@ -708,26 +719,26 @@ def process_committers(committers):
 
 
 def usage():
-  print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
-        % os.path.basename(sys.argv[0])
-  print ''
-  print 'Create HTML files in the current directory, rooted at index.html,'
-  print 'in which you can browse to see who contributed what.'
-  print ''
-  print 'The log input should use the contribution-tracking format defined'
-  print 'in http://subversion.tigris.org/hacking.html#crediting.'
-  print ''
-  print 'Options:'
-  print ''
-  print '  -h, -H, -?, --help   Print this usage message and exit'
-  print '  -C FILE              Use FILE as the COMMITTERS file'
-  print '  -U URL               Use URL as a Python interpolation pattern to'
-  print '                       generate URLs to link revisions to some kind'
-  print '                       of web-based viewer (e.g. ViewCVS).  The'
-  print '                       interpolation pattern should contain exactly'
-  print '                       one format specifier, \'%s\', which will be'
-  print '                       replaced with the revision number.'
-  print ''
+  print('USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
+        % os.path.basename(sys.argv[0]))
+  print('')
+  print('Create HTML files in the current directory, rooted at index.html,')
+  print('in which you can browse to see who contributed what.')
+  print('')
+  print('The log input should use the contribution-tracking format defined')
+  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('')
+  print('Options:')
+  print('')
+  print('  -h, -H, -?, --help   Print this usage message and exit')
+  print('  -C FILE              Use FILE as the COMMITTERS file')
+  print('  -U URL               Use URL as a Python interpolation pattern to')
+  print('                       generate URLs to link revisions to some kind')
+  print('                       of web-based viewer (e.g. ViewCVS).  The')
+  print('                       interpolation pattern should contain exactly')
+  print('                       one format specifier, \'%s\', which will be')
+  print('                       replaced with the revision number.')
+  print('')
 
 
 def main():

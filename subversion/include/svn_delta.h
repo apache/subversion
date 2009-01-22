@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_version.h"
+#include "svn_checksum.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -232,6 +233,37 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
  */
 typedef svn_error_t *(*svn_txdelta_window_handler_t)
   (svn_txdelta_window_t *window, void *baton);
+
+
+/** This function will generate delta windows that turn @a source into
+ * @a target, and pushing these windows into the @a handler window handler
+ * callback (passing @a handler_baton to each invocation).
+ *
+ * If @a checksum is not NULL, then a checksum (of kind @a checksum_kind)
+ * will be computed for the target stream, and placed into *checksum.
+ *
+ * If @a cancel_func is not NULL, then it should refer to a cancellation
+ * function (along with @a cancel_baton).
+ *
+ * Results (the checksum) will be allocated from @a result_pool, and all
+ * temporary allocations will be performed in @a scratch_pool.
+ *
+ * Note: this function replaces the combination of svn_txdelta() and
+ *   svn_txdelta_send_txstream().
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_txdelta_run(svn_stream_t *source,
+                svn_stream_t *target,
+                svn_txdelta_window_handler_t handler,
+                void *handler_baton,
+                svn_checksum_kind_t checksum_kind,
+                svn_checksum_t **checksum,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
 
 
 /** A delta stream --- this is the hat from which we pull a series of
@@ -718,6 +750,11 @@ typedef struct svn_delta_editor_t
 {
   /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.
+   *
+   * @note This is typically used only for server->client update-type
+   * operations.  It doesn't really make much sense for commit-type
+   * operations, because the revision of a commit isn't known until
+   * the commit is finalized.
    */
   svn_error_t *(*set_target_revision)(void *edit_baton,
                                       svn_revnum_t target_revision,
@@ -747,6 +784,14 @@ typedef struct svn_delta_editor_t
    * are really removing the revision of @a path that you think you are.
    *
    * All allocations should be performed in @a pool.
+   *
+   * @note The @a revision parameter is typically used only for
+   * client->server commit-type operations, allowing the server to
+   * verify that it is deleting what the client thinks it should be
+   * deleting.  It only really makes sense in the opposite direction
+   * (during server->client update-type operations) when the trees
+   * whose delta is being described are ancestrally related (that is,
+   * one tree is an ancestor of the other).
    */
   svn_error_t *(*delete_entry)(const char *path,
                                svn_revnum_t revision,

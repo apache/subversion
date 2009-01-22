@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -72,7 +72,7 @@ def get_txns(repo_dir):
 
   exit_code, output_lines, error_lines = svntest.main.run_svnadmin('lstxns',
                                                                    repo_dir)
-  txns = map(output_lines.strip, output_lines)
+  txns = list(map(output_lines.strip, output_lines))
 
   # sort, just in case
   txns.sort()
@@ -113,7 +113,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
 
   if revs:
     # verify revs as wc states
-    for rev in xrange(len(revs)):
+    for rev in range(len(revs)):
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
                                          svntest.verify.AnyOutput, [],
                                          "update", "-r%s" % (rev+1),
@@ -369,7 +369,7 @@ def hotcopy_format(sbox):
                                                         sbox.repo_dir,
                                                         backup_dir)
   if errput:
-    print "Error: hotcopy failed"
+    print("Error: hotcopy failed")
     raise svntest.Failure
 
   # verify that the db/format files are the same
@@ -382,7 +382,7 @@ def hotcopy_format(sbox):
   fp2.close()
 
   if contents1 != contents2:
-    print "Error: db/format file contents do not match after hotcopy"
+    print("Error: db/format file contents do not match after hotcopy")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -399,7 +399,7 @@ def setrevprop(sbox):
                                                         "--bypass-hooks",
                                                         iota_path)
   if errput:
-    print "Error: 'setlog' failed"
+    print("Error: 'setlog' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -418,7 +418,7 @@ def setrevprop(sbox):
                                                         "-r0", "svn:author",
                                                         foo_path)
   if errput:
-    print "Error: 'setrevprop' failed"
+    print("Error: 'setrevprop' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -454,7 +454,21 @@ def verify_windows_paths_in_repos(sbox):
 # using a sharded repository.
 def fsfs_file(repo_dir, kind, rev):
   if svntest.main.server_minor_version >= 5:
-    return os.path.join(repo_dir, 'db', kind, '0', rev)
+    if svntest.main.fsfs_sharding is None:
+      return os.path.join(repo_dir, 'db', kind, '0', rev)
+    else:
+      shard = int(rev) // svntest.main.fsfs_sharding
+      path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
+
+      if svntest.main.fsfs_packing is None or kind == 'revprops':
+        # we don't pack revprops
+        return path
+      elif os.path.exists(path):
+        # rev exists outside a pack file.
+        return path
+      else:
+        # didn't find the plain file; assume it's in a pack file
+        return os.path.join(repo_dir, 'db', kind, ('%d.pack' % shard), 'pack')
   else:
     return os.path.join(repo_dir, 'db', kind, rev)
 
@@ -476,6 +490,9 @@ def verify_incremental_fsfs(sbox):
   # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  if r2.endswith('pack'):
+    raise svntest.Skip
+
   fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
 type: dir
@@ -587,7 +604,7 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Missing id field in node-rev")
+    expected_stderr=".*Found malformed header in revision file")
 
 #----------------------------------------------------------------------
 
@@ -729,7 +746,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
-    print "Error: new UUID matches the original one"
+    print("Error: new UUID matches the original one")
     raise svntest.Failure
 
   # Now, try setting the UUID back to the original value.
@@ -740,7 +757,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
-    print "Error: new UUID doesn't match the original one"
+    print("Error: new UUID doesn't match the original one")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -804,7 +821,7 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
 
   rev_3 = fsfs_file(sbox.repo_dir, 'revs', '3')
-  rev_was_3 = fsfs_file(sbox.repo_dir, 'revs', 'was_3')
+  rev_was_3 = rev_3 + '.was'
 
   # Move aside the revs file for r3.
   os.rename(rev_3, rev_was_3)
@@ -816,14 +833,17 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin recover' is unexpected.", None, errput, None,
-    ".*Expected current rev to be <= 2 but found 3"):
+    ".*Expected current rev to be <= %s but found 3"
+    # For example, if svntest.main.fsfs_sharding == 2, then rev_3 would
+    # be the pack file for r2:r3, and the error message would report "<= 1".
+    % (rev_3.endswith('pack') and '[012]' or '2')):
     raise svntest.Failure
 
   # Restore the r3 revs file, thus repairing the repository.
   os.rename(rev_was_3, rev_3)
 
   revprop_3 = fsfs_file(sbox.repo_dir, 'revprops', '3')
-  revprop_was_3 = fsfs_file(sbox.repo_dir, 'revprops', 'was_3')
+  revprop_was_3 = revprop_3 + '.was'
 
   # Move aside the revprops file for r3.
   os.rename(revprop_3, revprop_was_3)

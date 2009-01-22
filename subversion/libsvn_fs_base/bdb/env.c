@@ -83,12 +83,21 @@ struct bdb_env_t
   /**************************************************************************/
   /* Error Reporting */
 
-  /* Berkeley DB returns extended error info by callback before returning
-     an error code from the failing function.  The callback baton type is a
-     string, not an arbitrary struct, so we prefix our struct with a valid
-     string, to avoid problems should BDB ever try to interpret our baton as
-     a string.  Initializers of this structure must strcpy the value of
-     BDB_ERRPFX_STRING into this array.  */
+  /* A (char *) casted pointer to this structure is passed to BDB's
+     set_errpfx(), which treats it as a NUL-terminated character
+     string to prefix all BDB error messages.  However, svn also
+     registers bdb_error_gatherer() as an error handler with
+     set_errcall() which turns off BDB's default printing of errors to
+     stderr and anytime thereafter when BDB reports an error and
+     before the BDB function returns, it calls bdb_error_gatherer()
+     and passes the same error prefix (char *) pointer given to
+     set_errpfx().  The bdb_error_gatherer() callback casts the
+     (char *) it back to a (bdb_env_t *).
+
+     To avoid problems should BDB ever try to interpret our baton as a
+     string, the first field in the structure is a char
+     errpfx_string[].  Initializers of this structure must strcpy the
+     value of BDB_ERRPFX_STRING into this array.  */
   char errpfx_string[sizeof(BDB_ERRPFX_STRING)];
 
   /* Extended error information. */
@@ -205,6 +214,8 @@ convert_bdb_error(bdb_env_t *bdb, int db_err)
 static void
 bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 {
+  /* See the documentation at bdb_env_t's definition why the
+     (bdb_env_t *) cast is safe and why it is done. */
   bdb_error_info_t *error_info = get_error_info((bdb_env_t *) baton);
   svn_error_t *new_err;
 
@@ -246,7 +257,7 @@ cleanup_env(void *data)
 /* This cleanup is the fall back plan.  If the thread exits and the
    environment hasn't been closed it's responsible for cleanup of the
    thread local error info variable, which would otherwise be leaked.
-   Normally it will not be called, because svn_fs_base__close will
+   Normally it will not be called, because svn_fs_bdb__close will
    set the thread's error info to NULL after cleaning it up. */
 static void
 cleanup_error_info(void *baton)
@@ -311,7 +322,10 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   db_err = db_env_create(&(bdb->env), 0);
   if (!db_err)
     {
+      /* See the documentation at bdb_env_t's definition why the
+         (char *) cast is safe and why it is done. */
       bdb->env->set_errpfx(bdb->env, (char *) bdb);
+
       /* bdb_error_gatherer is in parens to stop macro expansion. */
       bdb->env->set_errcall(bdb->env, (bdb_error_gatherer));
 
@@ -534,9 +548,11 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 
       /* If the environment is panicked and automatic recovery is not
          enabled, return an appropriate error. */
-      if (!SVN_BDB_AUTO_RECOVER && svn_atomic_read(&bdb->panic))
+#if !SVN_BDB_AUTO_RECOVER
+      if (svn_atomic_read(&bdb->panic))
         err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
                                db_strerror(DB_RUNRECOVERY));
+#endif
     }
   else
     {

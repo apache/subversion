@@ -165,16 +165,18 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      APR_INT64_C(0x0000000400000000)
 /* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 
-/* ...ORed together with this to mean "I really mean this, don't be
-   trying to protect me from myself on this one." */
+/* ...ORed together with this to mean: just set the schedule to the new
+   value, instead of treating the new value as a change of state to be
+   merged with the current schedule. */
 #define SVN_WC__ENTRY_MODIFY_FORCE              APR_INT64_C(0x4000000000000000)
 
 
 /* Modify an entry for NAME in access baton ADM_ACCESS by folding in
    ("merging") changes, and sync those changes to disk.  New values
    for the entry are pulled from their respective fields in ENTRY, and
-   MODIFY_FLAGS is a bitmask to specify which of those field to pay
-   attention to.  ADM_ACCESS must hold a write lock.
+   MODIFY_FLAGS is a bitmask to specify which of those fields to pay
+   attention to, formed from the values SVN_WC__ENTRY_MODIFY_....
+   ADM_ACCESS must hold a write lock.
 
    NAME can be NULL to specify that the caller wishes to modify the
    "this dir" entry in ADM_ACCESS.
@@ -184,6 +186,15 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
    the entries file.  Be careful when setting DO_SYNC to FALSE: if there
    is no subsequent svn_wc__entries_write call the modifications will be
    lost when the access baton is closed.
+
+   "Folding in" a change means, in most cases, simply replacing the field
+   with the new value. However, for the "schedule" field, unless
+   MODIFY_FLAGS includes SVN_WC__ENTRY_MODIFY_FORCE (in which case just take
+   the new schedule from ENTRY), it means to determine the schedule that the
+   entry should end up with if the "schedule" value from ENTRY represents a
+   change/add/delete/replace being made to the
+     ### base / working / base and working version(s) ?
+   of the node.
 
    Perform all allocations in POOL.
 

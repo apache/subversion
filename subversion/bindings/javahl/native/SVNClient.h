@@ -147,8 +147,7 @@ class SVNClient :public SVNBase
                  Revision &revision, Revision &pegRevsion, svn_depth_t depth,
                  bool ignoreExternals, bool allowUnverObstructions);
   void logMessages(const char *path, Revision &pegRevision,
-                   Revision &revisionStart,
-                   Revision &revisionEnd, bool stopOnCopy,
+                   std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
                    StringArray &revProps,
                    long limit, LogMessageCallback *callback);
@@ -173,7 +172,8 @@ class SVNClient :public SVNBase
   jobject revProperty(jobject jthis, const char *path, const char *name,
                       Revision &rev);
   void setRevProperty(jobject jthis, const char *path, const char *name,
-                      Revision &rev, const char *value, bool force);
+                      Revision &rev, const char *value,
+                      const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
   jobject propertyGet(jobject jthis, const char *path, const char *name,

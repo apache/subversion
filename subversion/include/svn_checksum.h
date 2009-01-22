@@ -51,7 +51,7 @@ typedef enum
 typedef struct svn_checksum_t
 {
   /** The bytes of the checksum. */
-  unsigned char *digest;
+  const unsigned char *digest;
 
   /** The type of the checksum.  This should never be changed by consumers
       of the APIs. */
@@ -113,7 +113,7 @@ svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
 
 /** Return the hex representation of @a checksum, allocating the
  * string in @a pool.  If @a checksum->digest is all zeros (that is,
- * 0, not '0'), then return NULL. 
+ * 0, not '0'), then return NULL.
  *
  * @since New in 1.6.
  */
@@ -200,7 +200,18 @@ svn_checksum_final(svn_checksum_t **checksum,
  * @since New in 1.6.
  */
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum);
+svn_checksum_size(const svn_checksum_t *checksum);
+
+
+/**
+ * Internal function for creating a checksum from a binary digest.
+ *
+ * @since New in 1.6
+ */
+svn_checksum_t *
+svn_checksum__from_digest(const unsigned char *digest,
+                          svn_checksum_kind_t kind,
+                          apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

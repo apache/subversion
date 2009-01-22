@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -24,7 +24,16 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
-import Queue
+try:
+  # Python >=3.0
+  import queue
+  from urllib.parse import quote as urllib_parse_quote
+  from urllib.parse import unquote as urllib_parse_unquote
+except ImportError:
+  # Python <3.0
+  import Queue as queue
+  from urllib import quote as urllib_parse_quote
+  from urllib import unquote as urllib_parse_unquote
 
 import getopt
 try:
@@ -97,13 +106,23 @@ else:
   _bat = ''
 
 try:
-  from popen2 import Popen3
-  platform_with_popen3_class = True
+  # Python >=2.4
+  import subprocess
+  platform_with_subprocess = True
 except ImportError:
-  platform_with_popen3_class = False
+  # Python <2.4
+  platform_with_subprocess = False
+
+if not platform_with_subprocess:
+  # Python <2.4
+  try:
+    from popen2 import Popen3
+    platform_with_popen3_class = True
+  except ImportError:
+    platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
-if sys.platform == 'win32':
+if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
@@ -118,6 +137,20 @@ wc_author2 = 'jconstant' # use the same password as wc_author
 
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
+
+# This function mimics the Python 2.3 urllib function of the same name.
+def pathname2url(path):
+  """Convert the pathname PATH from the local syntax for a path to the form
+  used in the path component of a URL. This does not produce a complete URL.
+  The return value will already be quoted using the quote() function."""
+  return urllib_parse_quote(path.replace('\\', '/'))
+
+# This function mimics the Python 2.3 urllib function of the same name.
+def url2pathname(path):
+  """Convert the path component PATH from an encoded URL to the local syntax
+  for a path. This does not accept a complete URL. This function uses
+  unquote() to decode PATH."""
+  return os.path.normpath(urllib_parse_unquote(path))
 
 ######################################################################
 # Global variables set during option parsing.  These should not be used
@@ -159,6 +192,13 @@ use_jsvn = False
 # ('neon', 'serf')
 http_library = None
 
+# Global variable: Number of shards to use in FSFS
+# 'None' means "use FSFS's default"
+fsfs_sharding = None
+
+# Global variable: automatically pack FSFS repositories after every commit
+fsfs_packing = None
+
 # Configuration file (copied into FSFS fsfs.conf).
 config_file = None
 
@@ -171,9 +211,7 @@ server_minor_version = 5
 is_child_process = False
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
-if windows:
-  test_area_url = test_area_url.replace('\\', '/')
+test_area_url = file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd()))
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -250,9 +288,9 @@ def wrap_ex(func):
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
-          print 'EXCEPTION:', ex.__class__.__name__
+          print('EXCEPTION: %s' % ex.__class__.__name__)
   return w
 
 def setup_development_mode():
@@ -318,6 +356,11 @@ def get_fsfs_conf_file_path(repo_dir):
 
   return os.path.join(repo_dir, "db", "fsfs.conf")
 
+def get_fsfs_format_file_path(repo_dir):
+  "Return the path of the format file in REPO_DIR."
+
+  return os.path.join(repo_dir, "db", "format")
+
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return exit code as int; stdout, stderr
@@ -358,12 +401,51 @@ def open_pipe(command, mode):
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
+  # Quote only the arguments, neither Popen3() or os.popen3
+  # work if the command itself is quoted.
+  args = command[1:]
+  args = ' '.join([_quote_arg(x) for x in args])
+  command = command[0] + ' ' + args
   if platform_with_popen3_class:
     kid = Popen3(command, True)
     return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
   else:
     inf, outf, errf = os.popen3(command, mode)
     return inf, outf, errf, None
+
+def open_pipe2(command, stdin=None, stdout=None, stderr=None):
+  """Opens a subprocess.Popen pipe to COMMAND using STDIN,
+  STDOUT, and STDERR.  For use with Python > 2.4 only.
+
+  Returns (infile, outfile, errfile, waiter); waiter
+  should be passed to wait_on_pipe2."""
+  command = [str(x) for x in command]
+
+  # On Windows subprocess.Popen() won't accept a Python script as
+  # a valid program to execute, rather it wants the Python executable.
+  if (sys.platform == 'win32') and (command[0].endswith('.py')):
+    command.insert(0, sys.executable)
+
+  # Quote only the arguments on Windows.  Later versions of subprocess,
+  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
+  if (sys.platform == 'win32'):
+    args = command[1:]
+    args = ' '.join([_quote_arg(x) for x in args])
+    command = command[0] + ' ' + args
+ 
+  if not stdin:
+    stdin = subprocess.PIPE
+  if not stdout:
+    stdout = subprocess.PIPE
+  if not stderr:
+    stderr = subprocess.PIPE
+    
+  p = subprocess.Popen(command,
+                       stdin=stdin,
+                       stdout=stdout,
+                       stderr=stderr,
+                       close_fds=not windows)
+  return p.stdin, p.stdout, p.stderr, (p, command)
 
 def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   """Waits for KID (opened with open_pipe) to finish, dying
@@ -372,8 +454,7 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   if waiter is None:
     return
 
-  kid, command = waiter
-
+  kid, command = waiter    
   wait_code = kid.wait()
 
   if os.WIFSIGNALED(wait_code):
@@ -385,41 +466,87 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
     if verbose_mode:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (command, exit_signal))
+                       % (' '.join(command), exit_signal))
     raise SVNProcessTerminatedBySignal
   else:
     exit_code = os.WEXITSTATUS(wait_code)
     if exit_code and verbose_mode:
-      sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+      sys.stderr.write("CMD: %s exited with %d\n"
+                       % (' '.join(command), exit_code))
     return exit_code
+
+def wait_on_pipe2(waiter, binary_mode, stdin=None):
+  """Waits for KID (opened with open_pipe2) to finish, dying
+  if it does.  If kid fails create an error message containing
+  any stdout and stderr from the kid.  Returns kid's exit code,
+  stdout and stderr (the latter two as lists).
+  For use with Python > 2.4 only."""
+  if waiter is None:
+    return
+  
+  kid, command = waiter
+  stdout, stderr = kid.communicate(stdin)
+  exit_code = kid.returncode
+  
+  # Normalize Windows line endings if in text mode.
+  if windows and not binary_mode:
+    stdout = stdout.replace('\r\n', '\n')
+    stderr = stderr.replace('\r\n', '\n')
+
+  # Convert output strings to lists.  
+  stdout_lines = stdout.splitlines(True) 
+  stderr_lines = stderr.splitlines(True)
+
+  if exit_code < 0:
+    exit_signal = os.WTERMSIG(-exit_code)
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
+    if verbose_mode:
+      # show the whole path to make it easier to start a debugger
+      sys.stderr.write("CMD: %s terminated by signal %d\n"
+                       % (' '.join(command), exit_signal))
+    raise SVNProcessTerminatedBySignal
+  else:
+    if exit_code and verbose_mode:
+      sys.stderr.write("CMD: %s exited with %d\n"
+                       % (' '.join(command), exit_code))
+    return stdout_lines, stderr_lines, exit_code
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
-  args = ' '.join(map(_quote_arg, varargs))
-
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
-    print 'CMD:', os.path.basename(command) + ' ' + args,
+    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
+                                      ' '.join([_quote_arg(x) for x in varargs])))
+    sys.stdout.flush()
 
   if binary_mode:
     mode = 'b'
   else:
     mode = 't'
 
-  infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
+  if platform_with_subprocess:
+    infile, outfile, errfile, kid = open_pipe2([command] + list(varargs))
+  else:
+    infile, outfile, errfile, kid = open_pipe([command] + list(varargs), mode)
 
   if stdin_lines:
-    map(infile.write, stdin_lines)
+    for x in stdin_lines:
+      infile.write(x)
 
-  infile.close()
-
-  stdout_lines = outfile.readlines()
-  stderr_lines = errfile.readlines()
+  if platform_with_subprocess:
+    stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
+    infile.close()
+  else:
+    infile.close()
+    stdout_lines = outfile.readlines()
+    stderr_lines = errfile.readlines()
+    exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   outfile.close()
   errfile.close()
-
-  exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -443,13 +570,16 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   if verbose_mode:
     stop = time.time()
-    print '<TIME = %.6f>' % (stop - start)
-    map(sys.stdout.write, stdout_lines)
-    map(sys.stdout.write, stderr_lines)
+    print('<TIME = %.6f>' % (stop - start))
+    for x in stdout_lines:
+      sys.stdout.write(x)
+    for x in stderr_lines:
+      sys.stdout.write(x)
 
   if (not error_expected) and (stderr_lines):
     if not verbose_mode:
-      map(sys.stdout.write, stderr_lines)
+      for x in stderr_lines:
+        sys.stdout.write(x)
     raise Failure
 
   return exit_code, stdout_lines, stderr_lines
@@ -469,6 +599,9 @@ def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   if config_contents is None:
     config_contents = """
 #
+[auth]
+password-stores =
+
 [miscellany]
 interactive-conflicts = false
 """
@@ -643,8 +776,46 @@ def create_repos(path):
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
-  if config_file is not None and (fs_type is None or fs_type == 'fsfs'):
-    shutil.copy(config_file, get_fsfs_conf_file_path(path))
+  if fs_type is None or fs_type == 'fsfs':
+    # fsfs.conf file
+    if config_file is not None:
+      shutil.copy(config_file, get_fsfs_conf_file_path(path))
+
+    # format file
+    if fsfs_sharding is not None:
+      def transform_line(line):
+        if line.startswith('layout '):
+          if fsfs_sharding > 0:
+            line = 'layout sharded %d' % fsfs_sharding
+          else:
+            line = 'layout linear'
+        return line
+
+      # read it
+      format_file_path = get_fsfs_format_file_path(path)
+      contents = file_read(format_file_path, 'rb')
+
+      # tweak it
+      new_contents = "".join([transform_line(line) + "\n"
+                              for line in contents.split("\n")])
+      if new_contents[-1] == "\n":
+        # we don't currently allow empty lines (\n\n) in the format file.
+        new_contents = new_contents[:-1]
+
+      # replace it
+      os.chmod(format_file_path, 0666)
+      file_write(format_file_path, new_contents, 'wb')
+
+    # post-commit
+    # Note that some tests (currently only commit_tests) create their own
+    # post-commit hooks, which would override this one. :-(
+    if fsfs_packing:
+      create_python_hook_script(get_post_commit_hook_path(path), 
+          "import subprocess\n"
+          "import sys\n"
+          "command = %s\n"
+          "sys.exit(subprocess.Popen(command).wait())\n"
+          % repr([svnadmin_binary, 'pack', path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
@@ -656,65 +827,93 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
   create_repos(dst_path)
-  dump_args = ' dump "' + src_path + '"'
-  load_args = ' load "' + dst_path + '"'
+  dump_args = ['dump', src_path]
+  load_args = ['load', dst_path]
 
   if ignore_uuid:
-    load_args = load_args + " --ignore-uuid"
+    load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
-    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-          '|', os.path.basename(svnadmin_binary) + load_args,
+    sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary),
+                                            ' '.join(dump_args),
+                                            os.path.basename(svnadmin_binary),
+                                            ' '.join(load_args)))
+    sys.stdout.flush()
   start = time.time()
 
-  dump_in, dump_out, dump_err, dump_kid = \
-           open_pipe(svnadmin_binary + dump_args, 'b')
-  dump_in.close()
-  load_in, load_out, load_err, load_kid = \
-           open_pipe(svnadmin_binary + load_args, 'b')
-  stop = time.time()
-  if verbose_mode:
-    print '<TIME = %.6f>' % (stop - start)
+  if platform_with_subprocess:
+    dump_in, dump_out, dump_err, dump_kid = open_pipe2(
+      [svnadmin_binary] + dump_args)
+    load_in, load_out, load_err, load_kid = open_pipe2(
+      [svnadmin_binary] + load_args,
+      stdin=dump_out) # Attached to dump_kid
 
-  while 1:
-    data = dump_out.read(1024*1024)  # Arbitrary buffer size
-    if data == "":
-      break
-    load_in.write(data)
-  load_in.close() # Tell load we are done
+    stop = time.time()
+    if verbose_mode:
+      print('<TIME = %.6f>' % (stop - start))
 
-  dump_lines = dump_err.readlines()
-  load_lines = load_out.readlines()
-  dump_out.close()
-  dump_err.close()
-  load_out.close()
-  load_err.close()
-  # Wait on the pipes; ignore return code.
-  wait_on_pipe(dump_kid, None, dump_lines)
-  wait_on_pipe(load_kid, load_lines, None)
+    load_stdout, load_stderr, load_exit_code = wait_on_pipe2(load_kid, 'b')
+    dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe2(dump_kid, 'b')
+    
+    dump_in.close()
+    dump_out.close()
+    dump_err.close()
+    #load_in is dump_out so it's already closed.
+    load_out.close()
+    load_err.close()
+  else:
+    # Python < 2.4
+    dump_in, dump_out, dump_err, dump_kid = \
+             open_pipe([svnadmin_binary] + dump_args, 'b')
+    dump_in.close()
+    load_in, load_out, load_err, load_kid = \
+             open_pipe([svnadmin_binary] + load_args, 'b')
+    stop = time.time()
+    if verbose_mode:
+      print('<TIME = %.6f>' % (stop - start))
+
+    while 1:
+      data = dump_out.read(1024*1024)  # Arbitrary buffer size
+      if data == "":
+        break
+      load_in.write(data)
+    load_in.close() # Tell load we are done
+
+    dump_stderr = dump_err.readlines()
+    load_stdout = load_out.readlines()
+    dump_out.close()
+    dump_err.close()
+    load_out.close()
+    load_err.close()
+    
+    # Wait on the pipes; ignore return code.
+    wait_on_pipe(dump_kid, None, dump_stderr)
+    wait_on_pipe(load_kid, load_stdout, None)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
-  for dump_line in dump_lines:
+  for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      print 'ERROR:  dump failed:', dump_line,
+      sys.stdout.write('ERROR:  dump failed: %s ' % dump_line)
+      sys.stdout.flush()
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
-    print 'ERROR:  dump failed; did not see revision', head_revision
+    print('ERROR:  dump failed; did not see revision %s' % head_revision)
     raise SVNRepositoryCopyFailure
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
   expect_revision = 1
-  for load_line in load_lines:
+  for load_line in load_stdout:
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        print 'ERROR:  load failed:', load_line,
+        sys.stdout.write('ERROR:  load failed: %s ' % load_line)
+        sys.stdout.flush()
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
-    print 'ERROR:  load failed; did not see revision', head_revision
+    print('ERROR:  load failed; did not see revision %s' % head_revision)
     raise SVNRepositoryCopyFailure
 
 
@@ -733,7 +932,7 @@ def create_python_hook_script (hook_path, hook_script_code):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
-  if sys.platform == 'win32':
+  if windows:
     # Use an absolute path since the working directory is not guaranteed
     hook_path = os.path.abspath(hook_path)
     # Fill the python file.
@@ -914,7 +1113,7 @@ class Sandbox:
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     if not read_only:
       self.repo_dir = os.path.join(general_repo_dir, self.name)
-      self.repo_url = test_area_url + '/' + self.repo_dir
+      self.repo_url = test_area_url + '/' + pathname2url(self.repo_dir)
     else:
       self.repo_dir = pristine_dir
       self.repo_url = pristine_url
@@ -936,8 +1135,6 @@ class Sandbox:
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
-    if windows:
-      self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def clone_dependent(self, copy_wc=False):
@@ -970,9 +1167,7 @@ class Sandbox:
 
   def add_repo_path(self, suffix, remove=1):
     path = os.path.join(general_repo_dir, self.name)  + '.' + suffix
-    url  = test_area_url + '/' + path
-    if windows:
-      url = url.replace('\\', '/')
+    url  = test_area_url + '/' + pathname2url(path)
     self.add_test_path(path, remove)
     return path, url
 
@@ -1004,14 +1199,14 @@ def _cleanup_deferred_test_paths():
 def _cleanup_test_path(path, retrying=None):
   if verbose_mode:
     if retrying:
-      print "CLEANUP: RETRY:", path
+      print("CLEANUP: RETRY: %s" % path)
     else:
-      print "CLEANUP:", path
+      print("CLEANUP: %s" % path)
   try:
     safe_rmtree(path)
   except:
     if verbose_mode:
-      print "WARNING: cleanup failed, will try again later"
+      print("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)
 
 class TestSpawningThread(threading.Thread):
@@ -1027,7 +1222,7 @@ class TestSpawningThread(threading.Thread):
     while True:
       try:
         next_index = self.queue.get_nowait()
-      except Queue.Empty:
+      except queue.Empty:
         return
 
       self.run_one(next_index)
@@ -1056,8 +1251,7 @@ class TestSpawningThread(threading.Thread):
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # "result" will be None on platforms without Popen3 (e.g. Windows)
-    if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '),
-              stdout_lines):
+    if [x for x in stdout_lines if x.startswith('FAIL: ') or x.startswith('XPASS: ')]:
       result = 1
     self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
@@ -1072,14 +1266,14 @@ class TestRunner:
     self.index = index
 
   def list(self):
-    print " %2d     %-5s  %s" % (self.index,
+    print(" %2d     %-5s  %s" % (self.index,
                                  self.pred.list_mode(),
-                                 self.pred.get_description())
+                                 self.pred.get_description()))
     self.pred.check_description()
 
   def _print_name(self):
-    print os.path.basename(sys.argv[0]), str(self.index) + ":", \
-          self.pred.get_description()
+    print("%s %s: %s" % (os.path.basename(sys.argv[0]), str(self.index),
+          self.pred.get_description()))
     self.pred.check_description()
 
   def run(self):
@@ -1113,11 +1307,12 @@ class TestRunner:
 
     saved_dir = os.getcwd()
     try:
-      rc = apply(self.pred.run, (), kw)
+      rc = self.pred.run(**kw)
       if rc is not None:
-        print 'STYLE ERROR in',
+        sys.stdout.write('STYLE ERROR in ')
+        sys.stdout.flush()
         self._print_name()
-        print 'Test driver returned a status code.'
+        print('Test driver returned a status code.')
         sys.exit(255)
       result = 0
     except Skip, ex:
@@ -1131,28 +1326,30 @@ class TestRunner:
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
-          print 'EXCEPTION:', ex.__class__.__name__
+          print('EXCEPTION: %s' % ex.__class__.__name__)
       traceback.print_exc(file=sys.stdout)
     except KeyboardInterrupt:
-      print 'Interrupted'
+      print('Interrupted')
       sys.exit(0)
     except SystemExit, ex:
-      print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
-      print ex.code and 'FAIL: ' or 'PASS: ',
+      print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
+      sys.stdout.write(ex.code and 'FAIL:  ' or 'PASS:  ')
+      sys.stdout.flush()
       self._print_name()
       raise
     except:
       result = 1
-      print 'UNEXPECTED EXCEPTION:'
+      print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
 
     os.chdir(saved_dir)
     result = self.pred.convert_result(result)
     (result_text, result_benignity) = self.pred.run_text(result)
     if not (quiet_mode and result_benignity):
-      print result_text,
+      sys.stdout.write("%s " % result_text)
+      sys.stdout.flush()
       self._print_name()
       sys.stdout.flush()
     if sandbox is not None and result != 1 and cleanup_mode:
@@ -1176,7 +1373,7 @@ def run_one_test(n, test_list, parallel = 0, finished_tests = None):
   """
 
   if (n < 1) or (n > len(test_list) - 1):
-    print "There is no test", repr(n) + ".\n"
+    print("There is no test %s.\n" % n)
     return 1
 
   # Run the test.
@@ -1205,7 +1402,7 @@ def _internal_run_tests(test_list, testnums, parallel):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
   else:
-    number_queue = Queue.Queue()
+    number_queue = queue.Queue()
     for num in testnums:
       number_queue.put(num)
 
@@ -1223,7 +1420,7 @@ def _internal_run_tests(test_list, testnums, parallel):
     results.sort()
 
     # terminate the line of dots
-    print
+    print("")
 
     # all tests are finished, find out the result and print the logs.
     for (index, result, stdout_lines, stderr_lines) in results:
@@ -1242,36 +1439,39 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
-        prog_name
-  print "%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
-      % (" " * len(prog_name))
-  print "%s " % (" " * len(prog_name))
-  print "%s [--list] [<test> ...]\n" % prog_name
-  print "Arguments:"
-  print " test          The number of the test to run (multiple okay), " \
-        "or all tests\n"
-  print "Options:"
-  print " --list          Print test doc strings instead of running them"
-  print " --fs-type       Subversion file system type (fsfs or bdb)"
-  print " --http-library  DAV library to use (neon or serf)"
-  print " --url           Base url to the repos (e.g. svn://localhost)"
-  print " --verbose       Print binary command-lines (not with --quiet)"
-  print " --quiet         Print only unexpected results (not with --verbose)"
-  print " --cleanup       Whether to clean up"
-  print " --enable-sasl   Whether to enable SASL authentication"
-  print " --parallel      Run the tests in parallel"
-  print " --bin           Use the svn binaries installed in this path"
-  print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
-        "                 combined with --bin to point to a specific path"
-  print " --development   Test development mode: provides more detailed test\n"\
-        "                 output and ignores all exceptions in the \n"  \
-        "                 run_and_verify* functions. This option is only \n" \
-        "                 useful during test development!"
-  print " --server-minor-version  Set the minor version for the server.\n" \
-        "                 Supports version 4 or 5."
-  print " --config-file   Configuration file for tests."
-  print " --help          This information"
+  print("%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" %
+        prog_name)
+  print("%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]"
+      % (" " * len(prog_name)))
+  print("%s " % (" " * len(prog_name)))
+  print("%s [--list] [<test> ...]\n" % prog_name)
+  print("Arguments:")
+  print(" <test>  The number of the test to run, or a range of test\n"
+        "         numbers, like 10:12 or 10-12. Multiple numbers and\n"
+        "         ranges are ok. If you supply none, all tests are run.\n")
+  print("Options:")
+  print(" --list          Print test doc strings instead of running them")
+  print(" --fs-type       Subversion file system type (fsfs or bdb)")
+  print(" --http-library  DAV library to use (neon or serf)")
+  print(" --url           Base url to the repos (e.g. svn://localhost)")
+  print(" --verbose       Print binary command-lines (not with --quiet)")
+  print(" --quiet         Print only unexpected results (not with --verbose)")
+  print(" --cleanup       Whether to clean up")
+  print(" --enable-sasl   Whether to enable SASL authentication")
+  print(" --parallel      Run the tests in parallel")
+  print(" --bin           Use the svn binaries installed in this path")
+  print(" --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n"
+        "                 combined with --bin to point to a specific path")
+  print(" --development   Test development mode: provides more detailed test\n"
+        "                 output and ignores all exceptions in the \n"
+        "                 run_and_verify* functions. This option is only \n"
+        "                 useful during test development!")
+  print(" --server-minor-version  Set the minor version for the server.\n"
+        "                 Supports version 4 or 5.")
+  print(" --fsfs-sharding Default shard size (for fsfs)\n"
+        " --fsfs-packing  Run 'svnadmin pack' automatically")
+  print(" --config-file   Configuration file for tests.")
+  print(" --help          This information")
 
 
 # Main func.  This is the "entry point" that all the test scripts call
@@ -1301,6 +1501,8 @@ def run_tests(test_list, serial_only = False):
   global svnversion_binary
   global command_line_parsed
   global http_library
+  global fsfs_sharding
+  global fsfs_packing
   global config_file
   global server_minor_version
   global use_jsvn
@@ -1319,9 +1521,10 @@ def run_tests(test_list, serial_only = False):
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=',
+                            'fsfs-packing', 'fsfs-sharding=',
                             'use-jsvn', 'development', 'config-file='])
   except getopt.GetoptError, e:
-    print "ERROR: %s\n" % e
+    print("ERROR: %s\n" % e)
     usage()
     sys.exit(1)
 
@@ -1332,10 +1535,36 @@ def run_tests(test_list, serial_only = False):
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
+      appended = False
       try:
         testnums.append(int(arg))
+        appended = True
       except ValueError:
-        print "ERROR:  invalid test number '%s'\n" % arg
+        # Do nothing for now.
+        appended = False
+
+      if not appended:
+        try:
+          # Check if the argument is a range
+          numberstrings = arg.split(':');
+          if len(numberstrings) != 2:
+            numberstrings = arg.split('-');
+            if len(numberstrings) != 2:
+              raise ValueError
+          left = int(numberstrings[0])
+          right = int(numberstrings[1])
+          if left > right:
+            raise ValueError
+
+          for nr in range(left,right+1):
+            testnums.append(nr)
+          else:
+            appended = True
+        except ValueError:
+          appended = False
+
+      if not appended:
+        print("ERROR: invalid test number or range '%s'\n" % arg)
         usage()
         sys.exit(1)
 
@@ -1377,10 +1606,15 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--http-library':
       http_library = val
 
+    elif opt == '--fsfs-sharding':
+      fsfs_sharding = int(val)
+    elif opt == '--fsfs-packing':
+      fsfs_packing = 1
+
     elif opt == '--server-minor-version':
       server_minor_version = int(val)
       if server_minor_version < 4 or server_minor_version > 6:
-        print "ERROR: test harness only supports server minor version 4 or 5"
+        print("ERROR: test harness only supports server minor version 4 or 5")
         sys.exit(1)
 
     elif opt == '--use-jsvn':
@@ -1392,6 +1626,9 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--config-file':
       config_file = val
 
+  if fsfs_packing is not None and fsfs_sharding is None:
+    raise Exception('--fsfs-packing requires --fsfs-sharding')
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
@@ -1400,9 +1637,7 @@ def run_tests(test_list, serial_only = False):
     sys.exit(1)
 
   # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pristine_dir
-  if windows:
-    pristine_url = pristine_url.replace('\\', '/')
+  pristine_url = test_area_url + '/' + pathname2url(pristine_dir)
 
   if use_jsvn:
     if svn_bin is None:
@@ -1433,11 +1668,11 @@ def run_tests(test_list, serial_only = False):
 
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
-    testnums = range(1, len(test_list))
+    testnums = list(range(1, len(test_list)))
 
   if list_tests:
-    print "Test #  Mode   Test Description"
-    print "------  -----  ----------------"
+    print("Test #  Mode   Test Description")
+    print("------  -----  ----------------")
     for testnum in testnums:
       TestRunner(test_list[testnum], testnum).list()
 
@@ -1449,11 +1684,11 @@ def run_tests(test_list, serial_only = False):
   if serial_only or len(testnums) < 2:
     parallel = 0
 
-  # Setup the pristine repository
-  actions.setup_pristine_repository()
-
   # Build out the default configuration directory
   create_config_dir(default_config_dir)
+
+  # Setup the pristine repository
+  actions.setup_pristine_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, parallel)

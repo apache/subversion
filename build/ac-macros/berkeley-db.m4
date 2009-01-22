@@ -42,7 +42,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl      for headers in HEADER and libraries in LIB.
 
   AC_ARG_WITH(berkeley-db, [AS_HELP_STRING(
-                                           [--with-berkeley-db=PATH], [
+                                           [[--with-berkeley-db=[INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
                           The Subversion Berkeley DB based filesystem library 
                           requires Berkeley DB $db_version or newer.  If you
                           specify `--without-berkeley-db', that library will
@@ -64,7 +64,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   [
     if test "$withval" = "no"; then
       status=skip
-    else
+    elif test "$withval" = "yes"; then
       apu_db_version="`$apu_config --db-version`"
       if test $? -ne 0; then
         AC_MSG_ERROR([Can't determine whether apr-util is linked against a
@@ -86,11 +86,27 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
                         possible to use the specified Berkeley DB: $withval])
         fi
 
-        AC_MSG_WARN([APR-UTIL may or may not be using the specified
-                     Berkeley DB at `$withval'.  Using the Berkeley DB
-                     supplied by APR-UTIL.])
+        status=required
+      fi
+    else
+      if test -n "`echo "$withval" | $EGREP -o ":.*:"`"; then
+        SVN_DB_INCLUDES=""
+        for i in [`echo "$withval" | sed -e "s/\([^:]*\):.*/\1/"`]; do
+          SVN_DB_INCLUDES="$SVN_DB_INCLUDES -I$i"
+        done
+        SVN_DB_INCLUDES="${SVN_DB_INCLUDES## }"
+        for l in [`echo "$withval" | sed -e "s/.*:\([^:]*\):.*/\1/"`]; do
+          LDFLAGS="$LDFLAGS -L$l"
+        done
+        SVN_DB_LIBS=""
+        for l in [`echo "$withval" | sed -e "s/.*:\([^:]*\)/\1/"`]; do
+          SVN_DB_LIBS="$SVN_DB_LIBS -l$l"
+        done
+        SVN_DB_LIBS="${SVN_DB_LIBS## }"
 
         status=required
+      else
+        AC_MSG_ERROR([Invalid syntax of argument of --with-berkeley-db option])
       fi
     fi
   ],
@@ -125,7 +141,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       AC_MSG_RESULT([no])
       svn_lib_berkeley_db=no
       if test "$status" = "required"; then
-        AC_MSG_ERROR([Berkeley DB $db_version wasn't found.])
+        AC_MSG_ERROR([Berkeley DB $db_version or newer wasn't found.])
       fi
     fi
   fi
@@ -171,10 +187,10 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     # Or that it resides in a non-standard location which we would have
     # to compensate with using something like -R`$apu_config --prefix`/lib.
     #
-    svn_apu_bdb_lib=["`$apu_config --libs | sed -e 's/.*\(-ldb[^ ]*\).*/\1/'`"]
+    SVN_DB_LIBS=["${SVN_DB_LIBS-`$apu_config --libs | $EGREP -o -- '-ldb[^[:space:]]*'`}"]
 
-    CPPFLAGS="$SVN_APRUTIL_INCLUDES $CPPFLAGS" 
-    LIBS="`$apu_config --ldflags` $svn_apu_bdb_lib $LIBS"
+    CPPFLAGS="$SVN_APRUTIL_INCLUDES $SVN_DB_INCLUDES $CPPFLAGS" 
+    LIBS="`$apu_config --ldflags` $SVN_DB_LIBS $LIBS"
 
     AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>

@@ -1,7 +1,7 @@
 /* reps-strings.c : intepreting representations with respect to strings
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,14 +16,12 @@
  */
 
 #include <assert.h>
-#include <apr_md5.h>
 
 #define APU_WANT_DB
 #include <apu_want.h>
 
 #include "svn_fs.h"
 #include "svn_pools.h"
-#include "svn_md5.h"
 
 #include "fs.h"
 #include "err.h"
@@ -64,14 +62,19 @@ static svn_boolean_t rep_is_mutable(representation_t *rep,
  *
  * If STR_KEY is non-null, copy it into an allocation from POOL.
  *
- * If CHECKSUM is non-null, use it as the checksum for the new rep;
- * else initialize the rep with an all-zero (i.e., always successful)
- * checksum.
+ * If MD5_CHECKSUM is non-null, use it as the MD5 checksum for the new
+ * rep; else initialize the rep with an all-zero (i.e., always
+ * successful) MD5 checksum.
+ *
+ * If SHA1_CHECKSUM is non-null, use it as the SHA1 checksum for the new
+ * rep; else initialize the rep with an all-zero (i.e., always
+ * successful) SHA1 checksum.
  */
 static representation_t *
 make_fulltext_rep(const char *str_key,
                   const char *txn_id,
-                  svn_checksum_t *checksum,
+                  svn_checksum_t *md5_checksum,
+                  svn_checksum_t *sha1_checksum,
                   apr_pool_t *pool)
 
 {
@@ -79,9 +82,8 @@ make_fulltext_rep(const char *str_key,
   if (txn_id && *txn_id)
     rep->txn_id = apr_pstrdup(pool, txn_id);
   rep->kind = rep_kind_fulltext;
-
-  rep->checksum = svn_checksum_dup(checksum, pool);
-
+  rep->md5_checksum = svn_checksum_dup(md5_checksum, pool);
+  rep->sha1_checksum = svn_checksum_dup(sha1_checksum, pool);
   rep->contents.fulltext.string_key
     = str_key ? apr_pstrdup(pool, str_key) : NULL;
   return rep;
@@ -570,6 +572,8 @@ svn_fs_base__get_mutable_rep(const char **new_rep_key,
   rep = make_fulltext_rep(new_str, txn_id,
                           svn_checksum_empty_checksum(svn_checksum_md5,
                                                       pool),
+                          svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                      pool),
                           pool);
   return svn_fs_bdb__write_new_rep(new_rep_key, fs, rep, trail, pool);
 }
@@ -638,12 +642,19 @@ struct rep_read_baton
      trail's pool will be used.  Otherwise, see `pool' below.  */
   trail_t *trail;
 
-  /* Checksum context.  Initialized when the baton is created, updated as
+  /* MD5 checksum context.  Initialized when the baton is created, updated as
      we read data, and finalized when the stream is closed. */
-  svn_checksum_ctx_t *checksum_ctx;
+  svn_checksum_ctx_t *md5_checksum_ctx;
 
-  /* Final resting place of the checksum created by checksum context. */
-  svn_checksum_t *checksum;
+  /* Final resting place of the checksum created by md5_checksum_cxt. */
+  svn_checksum_t *md5_checksum;
+
+  /* SHA1 checksum context.  Initialized when the baton is created, updated as
+     we read data, and finalized when the stream is closed. */
+  svn_checksum_ctx_t *sha1_checksum_ctx;
+
+  /* Final resting place of the checksum created by sha1_checksum_cxt. */
+  svn_checksum_t *sha1_checksum;
 
   /* The length of the rep's contents (as fulltext, that is,
      independent of how the rep actually stores the data.)  This is
@@ -677,7 +688,8 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   struct rep_read_baton *b;
 
   b = apr_pcalloc(pool, sizeof(*b));
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
 
   if (rep_key)
     SVN_ERR(svn_fs_base__rep_contents_size(&(b->size), fs, rep_key,
@@ -742,16 +754,20 @@ svn_fs_base__rep_contents_size(svn_filesize_t *size_p,
 
 
 svn_error_t *
-svn_fs_base__rep_contents_checksum(svn_checksum_t **checksum,
-                                   svn_fs_t *fs,
-                                   const char *rep_key,
-                                   trail_t *trail,
-                                   apr_pool_t *pool)
+svn_fs_base__rep_contents_checksums(svn_checksum_t **md5_checksum,
+                                    svn_checksum_t **sha1_checksum,
+                                    svn_fs_t *fs,
+                                    const char *rep_key,
+                                    trail_t *trail,
+                                    apr_pool_t *pool)
 {
   representation_t *rep;
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
-  *checksum = svn_checksum_dup(rep->checksum, pool);
+  if (md5_checksum)
+    *md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
+  if (sha1_checksum)
+    *sha1_checksum = svn_checksum_dup(rep->sha1_checksum, pool);
 
   return SVN_NO_ERROR;
 }
@@ -796,19 +812,20 @@ svn_fs_base__rep_contents(svn_string_t *str,
   /* Just the standard paranoia. */
   {
     representation_t *rep;
-    svn_checksum_t *checksum;
-
-    SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, str->data, str->len,
-                         pool));
+    svn_checksum_t *checksum, *rep_checksum;
 
     SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
-    if (! svn_checksum_match(checksum, rep->checksum))
+    rep_checksum = rep->sha1_checksum ? rep->sha1_checksum : rep->md5_checksum;
+    SVN_ERR(svn_checksum(&checksum, rep_checksum->kind, str->data, str->len,
+                         pool));
+
+    if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          _("Checksum mismatch on rep '%s':\n"
            "   expected:  %s\n"
            "     actual:  %s\n"), rep_key,
-         svn_checksum_to_cstring_display(rep->checksum, pool),
+         svn_checksum_to_cstring_display(rep_checksum, pool),
          svn_checksum_to_cstring_display(checksum, pool));
   }
 
@@ -875,28 +892,49 @@ txn_body_read_rep(void *baton, trail_t *trail)
        */
       if (! args->rb->checksum_finalized)
         {
-          SVN_ERR(svn_checksum_update(args->rb->checksum_ctx, args->buf,
+          SVN_ERR(svn_checksum_update(args->rb->md5_checksum_ctx, args->buf,
+                                      *(args->len)));
+          SVN_ERR(svn_checksum_update(args->rb->sha1_checksum_ctx, args->buf,
                                       *(args->len)));
 
           if (args->rb->offset == args->rb->size)
             {
               representation_t *rep;
 
-              svn_checksum_final(&args->rb->checksum, args->rb->checksum_ctx,
-                                 trail->pool);
+              svn_checksum_final(&args->rb->md5_checksum,
+                                 args->rb->md5_checksum_ctx, trail->pool);
+              svn_checksum_final(&args->rb->sha1_checksum,
+                                 args->rb->sha1_checksum_ctx, trail->pool);
               args->rb->checksum_finalized = TRUE;
 
               SVN_ERR(svn_fs_bdb__read_rep(&rep, args->rb->fs,
                                            args->rb->rep_key,
                                            trail, trail->pool));
-              if (! svn_checksum_match(args->rb->checksum, rep->checksum))
+
+              if (rep->md5_checksum
+                  && (! svn_checksum_match(rep->md5_checksum,
+                                           args->rb->md5_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("Checksum mismatch on rep '%s':\n"
+                   _("MD5 checksum mismatch on rep '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
-                   svn_checksum_to_cstring_display(rep->checksum, trail->pool),
-                   svn_checksum_to_cstring_display(args->rb->checksum,
+                   svn_checksum_to_cstring_display(rep->md5_checksum,
+                                                   trail->pool),
+                   svn_checksum_to_cstring_display(args->rb->md5_checksum,
+                                                   trail->pool));
+
+              if (rep->sha1_checksum
+                  && (! svn_checksum_match(rep->sha1_checksum,
+                                           args->rb->sha1_checksum)))
+                return svn_error_createf
+                  (SVN_ERR_FS_CORRUPT, NULL,
+                   _("SHA1 checksum mismatch on rep '%s':\n"
+                     "   expected:  %s\n"
+                     "     actual:  %s\n"), args->rb->rep_key,
+                   svn_checksum_to_cstring_display(rep->sha1_checksum,
+                                                   trail->pool),
+                   svn_checksum_to_cstring_display(args->rb->sha1_checksum,
                                                    trail->pool));
             }
         }
@@ -966,11 +1004,13 @@ struct rep_write_baton
      pool.  Otherwise, see `pool' below.  */
   trail_t *trail;
 
-  /* MD5 checksum.  Initialized when the baton is created, updated as
-     we write data, and finalized and stored when the stream is
-     closed. */
-  svn_checksum_ctx_t *checksum_ctx;
-  svn_checksum_t *checksum;
+  /* SHA1 and MD5 checksums.  Initialized when the baton is created,
+     updated as we write data, and finalized and stored when the
+     stream is closed. */
+  svn_checksum_ctx_t *md5_checksum_ctx;
+  svn_checksum_t *md5_checksum;
+  svn_checksum_ctx_t *sha1_checksum_ctx;
+  svn_checksum_t *sha1_checksum;
   svn_boolean_t finalized;
 
   /* Used for temporary allocations, iff `trail' (above) is null.  */
@@ -989,7 +1029,8 @@ rep_write_get_baton(svn_fs_t *fs,
   struct rep_write_baton *b;
 
   b = apr_pcalloc(pool, sizeof(*b));
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
   b->fs = fs;
   b->trail = trail;
   b->pool = pool;
@@ -1069,8 +1110,11 @@ txn_body_write_rep(void *baton, trail_t *trail)
                     args->wb->txn_id,
                     trail,
                     trail->pool));
-
-  return svn_checksum_update(args->wb->checksum_ctx, args->buf, args->len);
+  SVN_ERR(svn_checksum_update(args->wb->md5_checksum_ctx,
+                              args->buf, args->len));
+  SVN_ERR(svn_checksum_update(args->wb->sha1_checksum_ctx,
+                              args->buf, args->len));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1123,7 +1167,8 @@ txn_body_write_close_rep(void *baton, trail_t *trail)
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, wb->fs, wb->rep_key,
                                trail, trail->pool));
-  rep->checksum = svn_checksum_dup(wb->checksum, trail->pool);
+  rep->md5_checksum = svn_checksum_dup(wb->md5_checksum, trail->pool);
+  rep->sha1_checksum = svn_checksum_dup(wb->sha1_checksum, trail->pool);
   return svn_fs_bdb__write_rep(wb->fs, wb->rep_key, rep,
                                trail, trail->pool);
 }
@@ -1149,7 +1194,10 @@ rep_write_close_contents(void *baton)
 
   if (! wb->finalized)
     {
-      SVN_ERR(svn_checksum_final(&wb->checksum, wb->checksum_ctx, wb->pool));
+      SVN_ERR(svn_checksum_final(&wb->md5_checksum, wb->md5_checksum_ctx,
+                                 wb->pool));
+      SVN_ERR(svn_checksum_final(&wb->sha1_checksum, wb->sha1_checksum_ctx,
+                                 wb->pool));
       wb->finalized = TRUE;
     }
 
@@ -1213,7 +1261,8 @@ rep_contents_clear(svn_fs_t *fs,
   if (str_key && *str_key)
     {
       SVN_ERR(svn_fs_bdb__string_clear(fs, str_key, trail, pool));
-      rep->checksum = NULL;
+      rep->md5_checksum = NULL;
+      rep->sha1_checksum = NULL;
       SVN_ERR(svn_fs_bdb__write_rep(fs, rep_key, rep, trail, pool));
     }
   return SVN_NO_ERROR;
@@ -1382,8 +1431,9 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
   /* TARGET's original string keys */
   apr_array_header_t *orig_str_keys;
 
-  /* The checksum for the representation's fulltext contents. */
-  svn_checksum_t *rep_checksum;
+  /* The checksums for the representation's fulltext contents. */
+  svn_checksum_t *rep_md5_checksum;
+  svn_checksum_t *rep_sha1_checksum;
 
   /* MD5 digest */
   const unsigned char *digest;
@@ -1510,8 +1560,9 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
     else /* unknown kind */
       return UNKNOWN_NODE_KIND(target);
 
-    /* Save the checksum, since the new rep needs it. */
-    rep_checksum = svn_checksum_dup(old_rep->checksum, pool);
+    /* Save the checksums, since the new rep needs them. */
+    rep_md5_checksum = svn_checksum_dup(old_rep->md5_checksum, pool);
+    rep_sha1_checksum = svn_checksum_dup(old_rep->sha1_checksum, pool);
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by
@@ -1525,8 +1576,9 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
     new_rep.kind = rep_kind_delta;
     new_rep.txn_id = NULL;
 
-    /* Migrate the old rep's checksum to the new rep. */
-    new_rep.checksum = svn_checksum_dup(rep_checksum, pool);
+    /* Migrate the old rep's checksums to the new rep. */
+    new_rep.md5_checksum = svn_checksum_dup(rep_md5_checksum, pool);
+    new_rep.sha1_checksum = svn_checksum_dup(rep_sha1_checksum, pool);
 
     chunks = apr_array_make(pool, windows->nelts, sizeof(chunk));
 

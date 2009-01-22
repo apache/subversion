@@ -390,6 +390,11 @@ txn_names_are_not_reused(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") == 0) 
+      && (opts->server_minor_version && (opts->server_minor_version < 5)))
+    return SVN_NO_ERROR;
+
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-txn-names-are-not-reused",
                               opts, pool));
 
@@ -1625,7 +1630,7 @@ merging_commit(const char **msg,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+    SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -1676,7 +1681,7 @@ merging_commit(const char **msg,
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
       SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
       SVN_ERR(svn_fs_make_dir(txn_root, "A/D/H", pool));
-      SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+      SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
       revisions[revision_count++] = after_rev;
 
       /*********************************************************************/
@@ -1688,7 +1693,6 @@ merging_commit(const char **msg,
         SVN_ERR(svn_fs_begin_txn
                 (&txn, fs, revisions[revision_count - 1], pool));
         SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-        SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
         SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
         revisions[revision_count++] = after_rev;
       }
@@ -3570,8 +3574,8 @@ get_file_checksum(svn_checksum_t **checksum,
 
   /* Get a checksummed stream for the contents. */
   *checksum = svn_checksum_create(checksum_kind, pool);
-  checksum_stream = svn_stream_checksummed2(stream, checksum, checksum_kind,
-                                            NULL, svn_checksum_md5, TRUE, pool);
+  checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
+                                            checksum_kind, TRUE, pool);
 
   /* Close the stream, forcing a complete read and copy the digest. */
   SVN_ERR(svn_stream_close(checksum_stream));
@@ -4845,21 +4849,24 @@ node_origin_rev(const char **msg,
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
-  /* Revision 7: Move A/D2 to A/D (replacing it), and tweak A/D/floop.  */
+  /* Revision 7: Move A/D2 to A/D (replacing it), Add a new file A/D2,
+     and tweak A/D/floop.  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_delete(txn_root, "A/D", subpool));
   SVN_ERR(svn_fs_copy(root, "A/D2", txn_root, "A/D", subpool));
   SVN_ERR(svn_fs_delete(txn_root, "A/D2", subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/D2", subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/floop", "7", subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
   /* Now test some origin revisions. */
   {
-    struct path_rev_t pathrevs[4] = { { "A/D",             1 },
+    struct path_rev_t pathrevs[5] = { { "A/D",             1 },
                                       { "A/D/floop",       3 },
+                                      { "A/D2",            7 },
                                       { "iota",            1 },
                                       { "A/B/E/alfalfa",   5 } };
 
@@ -4934,8 +4941,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(fetch_youngest_rev),
     SVN_TEST_PASS(basic_commit),
     SVN_TEST_PASS(test_tree_node_validation),
-    SVN_TEST_XFAIL(merging_commit), /* Needs to be written to match new
-                                        merge() algorithm expectations */
+    SVN_TEST_PASS(merging_commit),
     SVN_TEST_PASS(copy_test),
     SVN_TEST_PASS(commit_date),
     SVN_TEST_PASS(check_old_revisions),

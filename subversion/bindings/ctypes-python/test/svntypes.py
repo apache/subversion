@@ -4,9 +4,9 @@ import setup_path
 import unittest
 from csvn.core import *
 import csvn.types as _types
-            
+
 class TypesTestCase(unittest.TestCase):
-    
+
     def test_hash(self):
         self.pydict = {"bruce":"batman", "clark":"superman",
             "vic":"the question"}
@@ -17,7 +17,7 @@ class TypesTestCase(unittest.TestCase):
             self.pydict["vic"])
         self.assertNotEqual(self.svnhash["clark"].value,
             self.pydict["bruce"])
-        
+
     def test_array(self):
         self.pyarray = ["vini", "vidi", "vici"]
         self.svnarray = _types.Array(c_char_p, self.pyarray)

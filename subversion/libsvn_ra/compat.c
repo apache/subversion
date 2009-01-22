@@ -222,7 +222,7 @@ log_receiver(void *baton,
   const char *prev_path;
 
   /* No paths were changed in this revision.  Nothing to do. */
-  if (! log_entry->changed_paths)
+  if (! log_entry->changed_paths2)
     return SVN_NO_ERROR;
 
   /* If we've run off the end of the path's history, there's nothing
@@ -260,7 +260,7 @@ log_receiver(void *baton,
 
   /* Figure out at which repository path our object of interest lived
      in the previous revision. */
-  SVN_ERR(prev_log_path(&prev_path, NULL, NULL, log_entry->changed_paths,
+  SVN_ERR(prev_log_path(&prev_path, NULL, NULL, log_entry->changed_paths2,
                         current_path, lrb->kind, log_entry->revision, pool));
 
   /* Squirrel away our "next place to look" path (suffer the strcmp
@@ -454,7 +454,7 @@ gls_log_receiver(void *baton,
      in the previous revision, and if its current location is the
      result of copy since then. */
   SVN_ERR(prev_log_path(&prev_path, NULL, &copyfrom_rev,
-                        log_entry->changed_paths, current_path,
+                        log_entry->changed_paths2, current_path,
                         lrb->kind, log_entry->revision, pool));
 
   /* If we've run off the end of the path's history, we need to report
@@ -632,7 +632,7 @@ fr_log_message_receiver(void *baton,
     }
 
   return prev_log_path(&lmb->path, &lmb->action,
-                       &lmb->copyrev, log_entry->changed_paths,
+                       &lmb->copyrev, log_entry->changed_paths2,
                        lmb->path, svn_node_file, log_entry->revision,
                        lmb->pool);
 }
@@ -711,7 +711,6 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   for (rev = lmb.eldest; rev; rev = rev->next)
     {
       const char *temp_path;
-      const char *temp_dir;
       apr_pool_t *tmppool;
       apr_hash_t *props;
       apr_file_t *file;
@@ -725,16 +724,12 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
 
       /* Get the contents of the file from the repository, and put them in
          a temporary local file. */
-      SVN_ERR(svn_io_temp_dir(&temp_dir, currpool));
-      SVN_ERR(svn_io_open_unique_file2
-              (&file, &temp_path,
-               svn_path_join(temp_dir, "tmp", currpool), ".tmp",
-               svn_io_file_del_on_pool_cleanup, currpool));
-      stream = svn_stream_from_aprfile2(file, TRUE, currpool);
+      SVN_ERR(svn_stream_open_unique(&stream, &temp_path, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     currpool, currpool));
       SVN_ERR(svn_ra_get_file(ra_session, rev->path + 1, rev->revision,
                               stream, NULL, &props, currpool));
       SVN_ERR(svn_stream_close(stream));
-      SVN_ERR(svn_io_file_close(file, currpool));
 
       /* Open up a stream to the local file. */
       SVN_ERR(svn_io_file_open(&file, temp_path, APR_READ, APR_OS_DEFAULT,
@@ -776,4 +771,94 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
 
   /* Reparent the session back to the original URL. */
   return svn_ra_reparent(ra_session, session_url, pool);
+}
+
+
+/*** Fallback implementation of svn_ra_get_deleted_rev(). ***/
+
+/* svn_ra_get_log2() receiver_baton for svn_ra__get_deleted_rev_from_log(). */
+typedef struct log_path_del_rev_t
+{
+  /* Absolute repository path. */
+  const char *path;
+
+  /* Revision PATH was first deleted or replaced. */
+  svn_revnum_t revision_deleted;
+} log_path_del_rev_t;
+
+/* A svn_log_entry_receiver_t callback for finding the revision
+   ((log_path_del_rev_t *)BATON)->PATH was first deleted or replaced.
+   Stores that revision in ((log_path_del_rev_t *)BATON)->REVISION_DELETED.
+ */
+static svn_error_t *
+log_path_del_receiver(void *baton,
+                      svn_log_entry_t *log_entry,
+                      apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  
+  for (hi = apr_hash_first(pool, log_entry->changed_paths2);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      char *path;
+      svn_log_changed_path_t *log_item;
+
+      apr_hash_this(hi, (void *) &path, NULL, &val);
+      log_item = val;
+      if (svn_path_compare_paths(((log_path_del_rev_t *) baton)->path,
+                                 path) == 0
+                                 && (log_item->action == 'D'
+                                     || log_item->action == 'R'))
+        {
+          /* Found the first deletion or replacement, we are done. */
+          ((log_path_del_rev_t *) baton)->revision_deleted =
+            log_entry->revision;
+          break;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
+                                 const char *rel_deleted_path,
+                                 svn_revnum_t peg_revision,
+                                 svn_revnum_t end_revision,
+                                 svn_revnum_t *revision_deleted,
+                                 apr_pool_t *pool)
+{
+  const char *session_url, *source_root_url, *rel_path_url, *abs_del_path;
+  log_path_del_rev_t log_path_deleted_baton;
+
+  SVN_ERR_ASSERT(*rel_deleted_path != '/');
+
+  if (!SVN_IS_VALID_REVNUM(peg_revision))
+    return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             _("Invalid peg revision %ld"), peg_revision);
+  if (!SVN_IS_VALID_REVNUM(end_revision))
+    return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             _("Invalid end revision %ld"), end_revision);
+  if (end_revision <= peg_revision)
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Peg revision must precede end revision"));
+  
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &source_root_url, pool));
+  rel_path_url = svn_path_url_add_component(session_url, rel_deleted_path,
+                                            pool);
+  abs_del_path = svn_path_uri_decode(rel_path_url + strlen(source_root_url), pool);
+  log_path_deleted_baton.path = abs_del_path;
+  log_path_deleted_baton.revision_deleted = SVN_INVALID_REVNUM;
+
+  /* Examine the logs of SESSION's URL to find when DELETED_PATH was first
+     deleted or replaced. */
+  SVN_ERR(svn_ra_get_log2(session, NULL, peg_revision, end_revision, 0,
+                          TRUE, TRUE, FALSE,
+                          apr_array_make(pool, 0, sizeof(char *)),
+                          log_path_del_receiver, &log_path_deleted_baton,
+                          pool));
+  *revision_deleted = log_path_deleted_baton.revision_deleted;
+  return SVN_NO_ERROR;
 }

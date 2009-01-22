@@ -37,6 +37,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 15
 Text-content-md5: 26bb73556ceb32a5df30b733c5355ee5
+Text-content-sha1: 1c8c6df57252f0cc13dd2d763f4aef9affe1817c
 Content-length: 25
 
 PROPS-END
@@ -66,6 +67,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 38
 Text-content-md5: d9bf46ecc7a555936e5115241b93258b
+Text-content-sha1: 1586ddcffca1e5f724b0eea7bb9d6b41f67c7ba6
 Content-length: 38
 
 this is a file

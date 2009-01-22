@@ -20,6 +20,7 @@
 #include <string.h>
 #include <apr.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 #include <apr_thread_mutex.h>
 #include <apr_uuid.h>
 
@@ -31,7 +32,6 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
-#include "svn_md5.h"
 #include "svn_private_config.h"
 
 #include "private/svn_utf_private.h"
@@ -323,7 +323,7 @@ default_warning_func(void *baton, svn_error_t *err)
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
      processes, since those may both be equivalent to /dev/null.  */
-  abort();
+  SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
 /* Check whether PATH is valid for a filesystem, following (most of) the
@@ -488,6 +488,33 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
 }
 
 svn_error_t *
+svn_fs_pack(const char *path,
+            svn_fs_pack_notify_t notify_func,
+            void *notify_baton,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_error_t *err2;
+  fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  fs = fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->pack_fs(fs, path, notify_func, notify_baton,
+                        cancel_func, cancel_baton, pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
+}
+
+svn_error_t *
 svn_fs_recover(const char *path,
                svn_cancel_func_t cancel_func, void *cancel_baton,
                apr_pool_t *pool)
@@ -618,7 +645,7 @@ svn_error_t *
 svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
                  apr_pool_t *pool)
 {
-  return fs->vtable->begin_txn(txn_p, fs, rev, 0, pool);
+  return svn_fs_begin_txn2(txn_p, fs, rev, 0, pool);
 }
 
 svn_error_t *
@@ -753,10 +780,40 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
 }
 
 svn_error_t *
+svn_fs_paths_changed2(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
+                      apr_pool_t *pool)
+{
+  return root->vtable->paths_changed(changed_paths_p, root, pool);
+}
+
+svn_error_t *
 svn_fs_paths_changed(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
                      apr_pool_t *pool)
 {
-  return root->vtable->paths_changed(changed_paths_p, root, pool);
+  apr_hash_t *changed_paths_new_structs;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_paths_changed2(&changed_paths_new_structs, root, pool));
+  *changed_paths_p = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, changed_paths_new_structs);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *vkey;
+      apr_ssize_t klen;
+      void *vval;
+      svn_fs_path_change2_t *val;
+      svn_fs_path_change_t *change;
+      apr_hash_this(hi, &vkey, &klen, &vval);
+      val = vval;
+      change = apr_palloc(pool, sizeof(*change));
+      change->node_rev_id = val->node_rev_id;
+      change->change_kind = val->change_kind;
+      change->text_mod = val->text_mod;
+      change->prop_mod = val->prop_mod;
+      apr_hash_set(*changed_paths_p, vkey, klen, change);
+    }
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -941,16 +998,15 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
                      svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+  SVN_ERR(root->vtable->file_checksum(checksum, kind, root, path, pool));
 
   if (force && (*checksum == NULL || (*checksum)->kind != kind))
     {
       svn_stream_t *contents, *checksum_contents;
 
       SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-      checksum_contents = svn_stream_checksummed2(contents, checksum, kind,
-                                                  NULL, svn_checksum_md5,
-                                                  TRUE, pool);
+      checksum_contents = svn_stream_checksummed2(contents, checksum, NULL,
+                                                  kind, TRUE, pool);
 
       /* This will force a read of any remaining data (which is all of it in
          this case) and dump the checksum into checksum->digest. */
@@ -967,7 +1023,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
                          apr_pool_t *pool)
 {
   svn_checksum_t *md5sum;
-  
+
   SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
                                pool));
   memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);

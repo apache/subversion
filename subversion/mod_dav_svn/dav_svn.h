@@ -520,6 +520,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
+  { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { NULL, NULL },
 };
@@ -563,6 +564,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);
 
+dav_error *
+dav_svn__get_deleted_rev_report(const dav_resource *resource,
+                                const apr_xml_doc *doc,
+                                ap_filter_t *output);
 
 /*** authz.c ***/
 
@@ -753,6 +758,43 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
  * INFO->repos->fs_path, and "SVN-REPOS-NAME" to INFO->repos->repo_basename. */
 void
 dav_svn__operational_log(struct dav_resource_private *info, const char *line);
+
+/* Flush BB if it's okay and useful to do so, but treat PREFERRED_ERR
+ * as a more important error to return (if it is non-NULL).
+ *
+ * This is intended to be used at the end of response processing,
+ * probably called as a direct return generator, like so:
+ *
+ *   return dav_svn__final_flush_or_error(r, bb, output, derr, resource->pool);
+ *
+ * SOME BACKGROUND INFO:
+ * 
+ * We don't flush the brigade unless there's something in it to
+ * flush; that way, we have the opportunity to package a dav_error up
+ * for transmission back to the client.
+ *
+ * To understand this, see mod_dav.c:dav_method_report(): as long as
+ * it doesn't think we've sent anything to the client, it'll send
+ * the real error, which is what we'd prefer.  This situation is
+ * described in httpd-2.2.6/modules/dav/main/mod_dav.c, line 4066,
+ * in the comment in dav_method_report() that says:
+ *
+ *    If an error occurred during the report delivery, there's
+ *    basically nothing we can do but abort the connection and
+ *    log an error.  This is one of the limitations of HTTP; it
+ *    needs to "know" the entire status of the response before
+ *    generating it, which is just impossible in these streamy
+ *    response situations.
+ *
+ * In other words, flushing the brigade causes r->sent_bodyct (see
+ * dav_method_report()) to become non-zero, even if we hadn't tried to
+ * send any data to the brigade yet.  So we don't flush unless data
+ * was actually sent.
+ */
+dav_error *
+dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
+                              ap_filter_t *output, dav_error *preferred_err,
+                              apr_pool_t *pool);
 
 /*** mirror.c ***/
 

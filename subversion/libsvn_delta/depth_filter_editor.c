@@ -117,13 +117,13 @@ okay_to_edit(struct edit_baton *eb,
               || (kind == svn_node_file && effective_depth == 1));
     case svn_depth_immediates:
       return (effective_depth <= 1);
+    case svn_depth_unknown:
+    case svn_depth_exclude:
     case svn_depth_infinity:
-      return TRUE; /* Shouldn't reach; see svn_delta_depth_filter_editor() */
+      /* Shouldn't reach; see svn_delta_depth_filter_editor() */
     default:
-      break;
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
-  abort();
-  return FALSE;
 }
 
 

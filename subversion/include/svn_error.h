@@ -155,6 +155,17 @@ svn_error_quick_wrap(svn_error_t *child,
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
 
+/** Compose two errors, returning the composition as a brand new error
+ * and consuming the original errors.  Either or both of @a err1 and
+ * @a err2 may be @c SVN_NO_ERROR.  If both are not @c SVN_NO_ERROR,
+ * @a err2 will follow @a err1 in the chain of the returned error.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_error_compose_create(svn_error_t *err1,
+                         svn_error_t *err2);
+
 /** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err
  * chain will be copied into @a chain's pool and destroyed, so @a new_err
  * itself becomes invalid after this function.
@@ -338,8 +349,23 @@ svn_handle_warning(FILE *stream,
  *
  * @since New in 1.6.
  */
-#define SVN_ERR_MALFUNCTION()                               \
-  SVN_ERR(svn_error__malfunction(__FILE__, __LINE__, NULL))
+#define SVN_ERR_MALFUNCTION()                                      \
+  do {                                                             \
+    return svn_error__malfunction(TRUE, __FILE__, __LINE__, NULL); \
+  } while (0)
+
+/** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning 
+ * an error to the calling function.
+ *
+ * If possible you should use SVN_ERR_MALFUNCTION() instead.
+ *
+ * @since New in 1.6.
+ */
+#define SVN_ERR_MALFUNCTION_NO_RETURN()                      \
+  do {                                                       \
+    svn_error__malfunction(FALSE, __FILE__, __LINE__, NULL); \
+    abort();                                                 \
+  } while (1)
 
 /** Check that a condition is true: if not, report an error and possibly
  * terminate the program.
@@ -360,11 +386,27 @@ svn_handle_warning(FILE *stream,
  *
  * @since New in 1.6.
  */
-#define SVN_ERR_ASSERT(expr)                                \
-  do {                                                      \
-    if (!(expr))                                            \
-      SVN_ERR(svn_error__malfunction(__FILE__, __LINE__, #expr)); \
+#define SVN_ERR_ASSERT(expr)                                            \
+  do {                                                                  \
+    if (!(expr))                                                        \
+      SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
   } while (0)
+
+/** Similar to SVN_ERR_ASSERT(), but without the option of returning 
+ * an error to the calling function.
+ *
+ * If possible you should use SVN_ERR_ASSERT() instead.
+ *
+ * @since New in 1.6.
+ */
+#define SVN_ERR_ASSERT_NO_RETURN(expr)                          \
+  do {                                                          \
+    if (!(expr)) {                                              \
+      svn_error__malfunction(FALSE, __FILE__, __LINE__, #expr); \
+      abort();                                                  \
+    }                                                           \
+  } while (0)
+
 
 /** A helper function for the macros that report malfunctions. Handle a
  * malfunction by calling the current "malfunction handler" which may have
@@ -375,13 +417,15 @@ svn_handle_warning(FILE *stream,
  * source file @a file at line @a line, and was an assertion failure of the
  * expression @a expr, or, if @a expr is null, an unconditional error.
  *
- * If the malfunction handler returns, then return the error object that it
- * generated.
+ * If @a can_return is true, the handler can return an error object 
+ * that is returned by the caller. If @a can_return is false the 
+ * method should never return. (The caller will call abort())
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_error__malfunction(const char *file,
+svn_error__malfunction(svn_boolean_t can_return,
+                       const char *file,
                        int line,
                        const char *expr);
 
@@ -392,10 +436,12 @@ svn_error__malfunction(const char *file,
  * assertion failure of the expression @a expr, or, if @a expr is null, an
  * unconditional error.
  *
- * A function of this type must do one of:
+ * If @a can_return is false a function of this type must never return.
+ *
+ * If @a can_return is true a function of this type must do one of:
  *   - Return an error object describing the error, using an error code in
  *     the category SVN_ERR_MALFUNC_CATEGORY_START.
- *   - Never return.
+ *   - Never return. 
  *
  * The function may alter its behaviour according to compile-time
  * and run-time and even interactive conditions.
@@ -403,7 +449,7 @@ svn_error__malfunction(const char *file,
  * @since New in 1.6.
  */
 typedef svn_error_t *(*svn_error_malfunction_handler_t)
-  (const char *file, int line, const char *expr);
+  (svn_boolean_t can_return, const char *file, int line, const char *expr);
 
 /** Cause subsequent malfunctions to be handled by @a func.
  * Return the handler that was previously in effect.
@@ -421,12 +467,15 @@ svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func);
 
 /** Handle a malfunction by returning an error object that describes it.
  *
+ * When @a can_return is false, abort()
+ *
  * This function implements @c svn_error_malfunction_handler_t.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_error_raise_on_malfunction(const char *file,
+svn_error_raise_on_malfunction(svn_boolean_t can_return,
+                               const char *file,
                                int line,
                                const char *expr);
 
@@ -437,7 +486,8 @@ svn_error_raise_on_malfunction(const char *file,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_error_abort_on_malfunction(const char *file,
+svn_error_abort_on_malfunction(svn_boolean_t can_return,
+                               const char *file,
                                int line,
                                const char *expr);
 

@@ -19,8 +19,6 @@
 #ifndef SVN_SQLITE_H
 #define SVN_SQLITE_H
 
-#include <sqlite3.h>
-
 #include <apr_pools.h>
 
 #include "svn_types.h"
@@ -52,7 +50,7 @@ svn_error_t *
 svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 
 /* Steps the given statement; raises an SVN error (and finalizes the
-   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets 
+   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets
    *GOT_ROW to true iff it got SQLITE_ROW.
 */
 svn_error_t *
@@ -66,28 +64,53 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
 /* Open a connection in *DB to the database at PATH. Validate the schema,
    creating/upgrading to LATEST_SCHEMA if needed using the instructions
    in UPGRADE_SQL. The resulting DB is allocated in RESULT_POOL, and any
-   temporary allocations are made in SCRATCH_POOL. */
+   temporary allocations are made in SCRATCH_POOL.
+   
+   STATEMENTS is an array of strings which may eventually be executed, the
+   last element of which should be NULL.  These strings are not duplicated
+   internally, and should have a lifetime at least as long as RESULT_POOL.
+   STATEMENTS itself may be NULL, in which case it has no impact.
+   See svn_sqlite__get_statement() for how these strings are used. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
-                 svn_sqlite__mode_t mode,
+                 svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
+
+/* Returns the statement in *STMT which has been prepared from the
+   STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
+   pool as the DB, and will be cleaned up with DB is closed. */
+svn_error_t *
+svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
+                          int stmt_idx);
 
 /* Prepares TEXT as a statement in DB, returning a statement in *STMT,
    allocated in RESULT_POOL. */
 svn_error_t *
-svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db, 
+svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                     const char *text, apr_pool_t *result_pool);
+
+/* Bind values to arguments in STMT, according to FMT.  FMT may contain:
+
+   Spec  Argument type       Item type
+   ----  -----------------   ---------
+   i     apr_int64_t         Number
+   s     const char **       String
+
+  Each character in FMT maps to one argument, in the order they appear.
+*/
+svn_error_t *
+svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
 
 /* Error-handling wrapper around sqlite3_bind_int64. */
 svn_error_t *
-svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot, 
-                       sqlite_int64 val);
+svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
+                       apr_int64_t val);
 
 /* Error-handling wrapper around sqlite3_bind_text. VAL cannot contain
    zero bytes; we always pass SQLITE_TRANSIENT. */
 svn_error_t *
-svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt, int slot, 
+svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt, int slot,
                       const char *val);
 
 /* Wrapper around sqlite3_column_text. */
@@ -119,6 +142,17 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err);
 
+/* Wrapper around sqlite transaction handling. */
+svn_error_t *
+svn_sqlite__transaction_begin(svn_sqlite__db_t *db);
+
+/* Wrapper around sqlite transaction handling. */
+svn_error_t *
+svn_sqlite__transaction_commit(svn_sqlite__db_t *db);
+
+/* Wrapper around sqlite transaction handling. */
+svn_error_t *
+svn_sqlite__transaction_rollback(svn_sqlite__db_t *db);
 
 #ifdef __cplusplus
 }

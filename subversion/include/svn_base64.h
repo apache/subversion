@@ -22,8 +22,6 @@
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
-#include <apr_md5.h>
-
 #include "svn_io.h"
 #include "svn_types.h"
 
@@ -94,17 +92,6 @@ const svn_string_t *
 svn_base64_decode_string(const svn_string_t *str,
                          apr_pool_t *pool);
 
-
-/** Return a base64-encoded checksum for finalized @a checksum.
- * Allocate the returned checksum in @a pool.
- *
- * If @a checksum->kind is not recognized, return @c 0.
- *
- * @since New in 1.6.
- */
-svn_stringbuf_t *
-svn_base64_from_checksum(svn_checksum_t *checksum,
-                         apr_pool_t *pool);
 
 /** Return a base64-encoded checksum for finalized @c digest.
  *

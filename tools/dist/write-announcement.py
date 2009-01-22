@@ -107,17 +107,17 @@ ann_html = """\
 import sys, re
 
 def fmtsums_text(sumlist):
-    return "\n".join(map(lambda x: "    " + x, sumlist))
+    return "\n".join(["    " + x for x in sumlist])
 
 def fmtsums_html(sumlist):
-    return "\n".join(map(lambda x: "<dd>" + x + "</dd>", sumlist))
+    return "\n".join(["<dd>" + x + "</dd>" for x in sumlist])
 
 def main():
     global ann_text
     global ann_html
     version = sys.argv[1]
     if not re.compile(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$').match(version):
-        print "Did you really mean to use version '%s'?" % version
+        print("Did you really mean to use version '%s'?" % version)
         return
 
     md5sums = []

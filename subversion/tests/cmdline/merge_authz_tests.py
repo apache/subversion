@@ -127,7 +127,6 @@ def mergeinfo_and_skipped_paths(sbox):
   # directory A_COPY/D/H.
   expected_output = wc.State(A_COPY_path, {
     'D/G/rho'   : Item(status='U '),
-    'D/H'       : Item(status='C '),
     'D/H/psi'   : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_path, {
@@ -135,7 +134,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/psi'   : Item(status='M ', wc_rev=8),
     'D/H/omega' : Item(status='!M', wc_rev=8),
-    'D/H'       : Item(status='C ', wc_rev=8),
+    'D/H'       : Item(status='  ', wc_rev=8),
     'D/G/pi'    : Item(status='  ', wc_rev=8),
     'D/G/rho'   : Item(status='M ', wc_rev=8),
     'D/G/tau'   : Item(status='  ', wc_rev=8),
@@ -175,8 +174,8 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_path, {
-    'D/H/omega' : Item(),
     'B/E'       : Item(),
+    'D/H/omega' : Item(),
     })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
@@ -207,17 +206,16 @@ def mergeinfo_and_skipped_paths(sbox):
   # a missing child and the sibling of missing child, but the former always
   # takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
-    'D'         : Item(status='C '),
-    'D/H'       : Item(status='C '),
+    'D/G'       : Item(status='  ', treeconflict='C'),
     'D/H/omega' : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status=' M', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
-    'D/H'       : Item(status='CM', wc_rev=8),
+    'D/H'       : Item(status=' M', wc_rev=8),
     'D/gamma'   : Item(status=' M', wc_rev=8),
-    'D'         : Item(status='CM', wc_rev=8),
+    'D'         : Item(status=' M', wc_rev=8),
     'B/lambda'  : Item(status='  ', wc_rev=8),
     'B/E'       : Item(status=' M', wc_rev=8),
     'B/E/alpha' : Item(status='  ', wc_rev=8),
@@ -247,10 +245,8 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_2_path, {
-    'D/G'     : Item(),
-    'D/G/rho' : Item(),
-    'D/H/psi' : Item(),
     'B/E'     : Item(),
+    'D/H/psi'   : Item(),
     })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
@@ -331,11 +327,10 @@ def mergeinfo_and_skipped_paths(sbox):
   # but is a no-op, r8 get's merged next and is operative so the mergeinfo
   # should be updated to reflect both merges.
   expected_output = wc.State(A_COPY_2_H_path, {
-    ''      : Item(status='C '),
     'omega' : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_H_path, {
-    ''      : Item(status='CM', wc_rev=8),
+    ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status=' M', wc_rev=8),
     'omega' : Item(status='MM', wc_rev=8),
     })
@@ -346,7 +341,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'chi'   : Item("This is the file 'chi'.\n",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5,8'}),
     })
-  expected_skip = wc.State(A_COPY_2_H_path, {'psi' : Item()})
+  expected_skip = wc.State(A_COPY_2_H_path, {
+    'psi'   : Item(),
+    })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '5',
                                        sbox.repo_url + \

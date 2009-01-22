@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,13 +24,11 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_delta.h"
 #include "svn_path.h"
@@ -85,8 +83,8 @@ restore_file(const char *file_path,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc_resolved_conflict3(file_path, adm_access, TRUE, FALSE,
-                                    svn_depth_empty,
+  SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
+                                    FALSE, svn_depth_empty,
                                     svn_wc_conflict_choose_merged,
                                     NULL, NULL, NULL, NULL, pool));
 
@@ -181,6 +179,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                             void *notify_baton,
                             svn_boolean_t restore_files,
                             svn_depth_t depth,
+                            svn_boolean_t honor_depth_exclude,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
@@ -271,6 +270,39 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
              going to report it missing later anyway. */
           if (! report_everything)
             SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
+          continue;
+        }
+
+      if (current_entry->depth == svn_depth_exclude)
+        {
+          if (honor_depth_exclude)
+            {
+              /* Report the excluded path, no matter whether report_everything
+                 flag is set.  Because the report_everything flag indicates
+                 that the server will treate the wc as empty and thus push
+                 full content of the files/subdirs. But we want to prevent the
+                 server from pushing the full content of this_path at us. */
+
+              /* The server does not support link_path report on excluded
+                 path. We explicitly prohibit this situation in
+                 svn_wc_crop_tree(). */
+              SVN_ERR(reporter->set_path(report_baton,
+                                         this_path,
+                                         dir_rev,
+                                         svn_depth_exclude,
+                                         FALSE,
+                                         NULL,
+                                         iterpool));
+            }
+          else
+            {
+              /* We want to pull in the excluded target. So, report it as deleted,
+                 and server will respond properly. */
+              if (! report_everything)
+                SVN_ERR(reporter->delete_path(report_baton, 
+                                              this_path, iterpool));
+            }
+
           continue;
         }
 
@@ -454,6 +486,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                                 reporter, report_baton,
                                                 notify_func, notify_baton,
                                                 restore_files, depth,
+                                                honor_depth_exclude,
                                                 depth_compatibility_trick,
                                                 start_empty,
                                                 use_commit_times,
@@ -474,12 +507,13 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_crawl_revisions3(const char *path,
+svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
@@ -503,6 +537,16 @@ svn_wc_crawl_revisions3(const char *path,
   if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
                     && (entry->kind == svn_node_dir)))
     {
+      /* Don't check the exclude flag for the target.
+
+         If we report the target itself as excluded, the server will
+         send us nothing about the target -- but we want to permit
+         targets to be explicitly pulled in.  For example, 'svn up A'
+         should always work, even if its parent is svn_depth_empty or
+         svn_depth_files, or even if A was explicitly excluded from a
+         parent at svn_depth_immediates or svn_depth_infinity.
+         Whatever the case, we want A back now. */
+
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
       SVN_ERR(svn_wc__entry_versioned(&parent_entry,
@@ -584,6 +628,7 @@ svn_wc_crawl_revisions3(const char *path,
                                             reporter, report_baton,
                                             notify_func, notify_baton,
                                             restore_files, depth,
+                                            honor_depth_exclude,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
@@ -675,213 +720,33 @@ svn_wc_crawl_revisions3(const char *path,
   return err;
 }
 
-
-/*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
-     svn_ra_reporter3_t.
-
-     This code looks like it duplicates code in libsvn_ra/ra_loader.c,
-     but it does not.  That code makes an new thing look like an old
-     thing; this code makes an old thing look like a new thing. ***/
-
-struct wrap_3to2_report_baton {
-  const svn_ra_reporter2_t *reporter;
-  void *baton;
-};
-
-static svn_error_t *wrap_3to2_set_path(void *report_baton,
-                                       const char *path,
-                                       svn_revnum_t revision,
-                                       svn_depth_t depth,
-                                       svn_boolean_t start_empty,
-                                       const char *lock_token,
-                                       apr_pool_t *pool)
-{
-  struct wrap_3to2_report_baton *wrb = report_baton;
-
-  return wrb->reporter->set_path(wrb->baton, path, revision, start_empty,
-                                 lock_token, pool);
-}
-
-static svn_error_t *wrap_3to2_delete_path(void *report_baton,
-                                          const char *path,
-                                          apr_pool_t *pool)
-{
-  struct wrap_3to2_report_baton *wrb = report_baton;
-
-  return wrb->reporter->delete_path(wrb->baton, path, pool);
-}
-
-static svn_error_t *wrap_3to2_link_path(void *report_baton,
-                                        const char *path,
-                                        const char *url,
-                                        svn_revnum_t revision,
-                                        svn_depth_t depth,
-                                        svn_boolean_t start_empty,
-                                        const char *lock_token,
-                                        apr_pool_t *pool)
-{
-  struct wrap_3to2_report_baton *wrb = report_baton;
-
-  return wrb->reporter->link_path(wrb->baton, path, url, revision,
-                                  start_empty, lock_token, pool);
-}
-
-static svn_error_t *wrap_3to2_finish_report(void *report_baton,
-                                            apr_pool_t *pool)
-{
-  struct wrap_3to2_report_baton *wrb = report_baton;
-
-  return wrb->reporter->finish_report(wrb->baton, pool);
-}
-
-static svn_error_t *wrap_3to2_abort_report(void *report_baton,
-                                           apr_pool_t *pool)
-{
-  struct wrap_3to2_report_baton *wrb = report_baton;
-
-  return wrb->reporter->abort_report(wrb->baton, pool);
-}
-
-static const svn_ra_reporter3_t wrap_3to2_reporter = {
-  wrap_3to2_set_path,
-  wrap_3to2_delete_path,
-  wrap_3to2_link_path,
-  wrap_3to2_finish_report,
-  wrap_3to2_abort_report
-};
-
 svn_error_t *
-svn_wc_crawl_revisions2(const char *path,
+svn_wc_crawl_revisions3(const char *path,
                         svn_wc_adm_access_t *adm_access,
-                        const svn_ra_reporter2_t *reporter,
+                        const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
-  struct wrap_3to2_report_baton wrb;
-  wrb.reporter = reporter;
-  wrb.baton = report_baton;
-
-  return svn_wc_crawl_revisions3(path,
+  return svn_wc_crawl_revisions4(path,
                                  adm_access,
-                                 &wrap_3to2_reporter, &wrb,
+                                 reporter, report_baton,
                                  restore_files,
-                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                 depth,
                                  FALSE,
+                                 depth_compatibility_trick,
                                  use_commit_times,
                                  notify_func,
                                  notify_baton,
                                  traversal_info,
                                  pool);
 }
-
-
-/*** Compatibility wrapper: turns an svn_ra_reporter_t into an
-     svn_ra_reporter2_t.
-
-     This code looks like it duplicates code in libsvn_ra/ra_loader.c,
-     but it does not.  That code makes an new thing look like an old
-     thing; this code makes an old thing look like a new thing. ***/
-
-struct wrap_2to1_report_baton {
-  const svn_ra_reporter_t *reporter;
-  void *baton;
-};
-
-static svn_error_t *wrap_2to1_set_path(void *report_baton,
-                                       const char *path,
-                                       svn_revnum_t revision,
-                                       svn_boolean_t start_empty,
-                                       const char *lock_token,
-                                       apr_pool_t *pool)
-{
-  struct wrap_2to1_report_baton *wrb = report_baton;
-
-  return wrb->reporter->set_path(wrb->baton, path, revision, start_empty,
-                                 pool);
-}
-
-static svn_error_t *wrap_2to1_delete_path(void *report_baton,
-                                          const char *path,
-                                          apr_pool_t *pool)
-{
-  struct wrap_2to1_report_baton *wrb = report_baton;
-
-  return wrb->reporter->delete_path(wrb->baton, path, pool);
-}
-
-static svn_error_t *wrap_2to1_link_path(void *report_baton,
-                                        const char *path,
-                                        const char *url,
-                                        svn_revnum_t revision,
-                                        svn_boolean_t start_empty,
-                                        const char *lock_token,
-                                        apr_pool_t *pool)
-{
-  struct wrap_2to1_report_baton *wrb = report_baton;
-
-  return wrb->reporter->link_path(wrb->baton, path, url, revision,
-                                  start_empty, pool);
-}
-
-static svn_error_t *wrap_2to1_finish_report(void *report_baton,
-                                            apr_pool_t *pool)
-{
-  struct wrap_2to1_report_baton *wrb = report_baton;
-
-  return wrb->reporter->finish_report(wrb->baton, pool);
-}
-
-static svn_error_t *wrap_2to1_abort_report(void *report_baton,
-                                           apr_pool_t *pool)
-{
-  struct wrap_2to1_report_baton *wrb = report_baton;
-
-  return wrb->reporter->abort_report(wrb->baton, pool);
-}
-
-static const svn_ra_reporter2_t wrap_2to1_reporter = {
-  wrap_2to1_set_path,
-  wrap_2to1_delete_path,
-  wrap_2to1_link_path,
-  wrap_2to1_finish_report,
-  wrap_2to1_abort_report
-};
-
-svn_error_t *
-svn_wc_crawl_revisions(const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       const svn_ra_reporter_t *reporter,
-                       void *report_baton,
-                       svn_boolean_t restore_files,
-                       svn_boolean_t recurse,
-                       svn_boolean_t use_commit_times,
-                       svn_wc_notify_func_t notify_func,
-                       void *notify_baton,
-                       svn_wc_traversal_info_t *traversal_info,
-                       apr_pool_t *pool)
-{
-  struct wrap_2to1_report_baton wrb;
-  svn_wc__compat_notify_baton_t nb;
-
-  wrb.reporter = reporter;
-  wrb.baton = report_baton;
-
-  nb.func = notify_func;
-  nb.baton = notify_baton;
-
-  return svn_wc_crawl_revisions2(path, adm_access, &wrap_2to1_reporter, &wrb,
-                                 restore_files, recurse, use_commit_times,
-                                 svn_wc__compat_call_notify_func, &nb,
-                                 traversal_info,
-                                 pool);
-}
-
 
 /*** Copying stream ***/
 
@@ -953,38 +818,27 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                              void *file_baton,
                              apr_pool_t *pool)
 {
-  const char *tmp_base;
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
-  svn_txdelta_stream_t *txdelta_stream;
-  apr_file_t *basefile = NULL;
-  apr_file_t *tempbasefile;
-  const char *base_digest_hex = NULL;
-  svn_checksum_t *base_checksum = NULL;
-  svn_checksum_t *local_checksum = NULL;
+  const char *base_digest_hex;
+  svn_checksum_t *expected_checksum = NULL;
+  svn_checksum_t *verify_checksum = NULL;
+  svn_checksum_t *local_checksum;
   svn_error_t *err;
-  const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
-  apr_time_t wf_time;
-
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
-
-  /* Get timestamp of working file, to check for modifications during
-     commit. */
-  SVN_ERR(svn_io_file_affected_time(&wf_time, path, pool));
 
   /* Translated input */
   SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
                                    adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
 
-
-
-  tmp_base = svn_wc__text_base_path(path, TRUE, pool);
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up, if he asked for one. */
   if (tempfile)
     {
+      const char *tmp_base = svn_wc__text_base_path(path, TRUE, pool);
+      apr_file_t *tempbasefile;
+
       *tempfile = tmp_base;
 
       /* Make an untranslated copy of the working file in the
@@ -1006,41 +860,64 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   if (! fulltext)
     {
-      if (! ent->checksum)
+      const svn_wc_entry_t *ent;
+
+      /* Compute delta against the pristine contents */
+      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
+
+      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+
+      /* ### We want ent->checksum to ALWAYS be present, but on old
+         ### working copies maybe it won't be (unclear?). If it is there,
+         ### then we can use it as an expected value. If it is NOT there,
+         ### then we must compute it for the apply_textdelta() call. */
+      if (ent->checksum)
         {
-          /*### FIXME: The entries file should hold a checksum */
-          svn_checksum_t *tmp_checksum;
+          /* Convert MD5 hex checksum to a checksum structure */
+          SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                         ent->checksum, pool));
 
-          /* If there's no checksum in this entry, calculate one */
-          const char *tb = svn_wc__text_base_path (path, FALSE, pool);
-
-          SVN_ERR (svn_io_file_checksum2(&tmp_checksum, tb, svn_checksum_md5,
-                                         pool));
-          base_digest_hex = svn_checksum_to_cstring_display(tmp_checksum, pool);
+          /* Compute a checksum for what is *actually* found */
+          base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
+                                                NULL, svn_checksum_md5, TRUE,
+                                                pool);
         }
       else
-        base_digest_hex = ent->checksum;
+        {
+          svn_stream_t *p_stream;
 
-      SVN_ERR(svn_wc__open_text_base(&basefile, path, APR_READ, pool));
+          /* ### we should ALREADY have the checksum for pristine. */
+          SVN_ERR(svn_wc_get_pristine_contents(&p_stream, path, pool, pool));
+          p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
+                                             NULL, svn_checksum_md5, TRUE,
+                                             pool);
+
+          /* Closing this will cause a full read/checksum. */
+          SVN_ERR(svn_stream_close(p_stream));
+        }
+
+      /* apply_textdelta() is working against a base with this checksum */
+      base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
+                                                        pool);
+    }
+  else
+    {
+      /* Send a fulltext. */
+      base_stream = svn_stream_empty(pool);
+      base_digest_hex = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer and baton.  */
-  SVN_ERR(editor->apply_textdelta
-          (file_baton, base_digest_hex, pool, &handler, &wh_baton));
+  SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, pool,
+                                  &handler, &wh_baton));
 
-  /* Create a text-delta stream object that pulls
-     data out of the two files. */
-  base_stream = svn_stream_from_aprfile2(basefile, TRUE, pool);
-  if (! fulltext)
-    base_stream
-      = svn_stream_checksummed2(base_stream, &base_checksum, svn_checksum_md5,
-                                NULL, svn_checksum_md5, TRUE, pool);
-
-  svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
-
-  /* Pull windows from the delta stream and feed to the consumer. */
-  err = svn_txdelta_send_txstream(txdelta_stream, handler, wh_baton, pool);
+  /* Run diff processing, throwing windows at the handler. */
+  err = svn_txdelta_run(base_stream, local_stream,
+                        handler, wh_baton,
+                        svn_checksum_md5, &local_checksum,
+                        NULL, NULL,
+                        pool, pool);
 
   /* Close the two streams to force writing the digest,
      if we already have an error, ignore this one. */
@@ -1057,54 +934,42 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   /* If we have an error, it may be caused by a corrupt text base.
      Check the checksum and discard `err' if they don't match. */
-  if (! fulltext && ent->checksum && base_checksum)
+  if (expected_checksum && verify_checksum
+      && !svn_checksum_match(expected_checksum, verify_checksum))
     {
-      /*### FIXME: The entries file should hold a checksum,
-        meaning the above condition should not include ent->checksum */
+      /* The entry checksum does not match the actual text
+         base checksum.  Extreme badness. Of course,
+         theoretically we could just switch to
+         fulltext transmission here, and everything would
+         work fine; after all, we're going to replace the
+         text base with a new one in a moment anyway, and
+         we'd fix the checksum then.  But it's better to
+         error out.  People should know that their text
+         bases are getting corrupted, so they can
+         investigate.  Other commands could be affected,
+         too, such as `svn diff'.  */
 
-      base_digest_hex = svn_checksum_to_cstring_display(base_checksum, pool);
+      /* Deliberately ignore errors; the error about the
+         checksum mismatch is more important to return. */
+      svn_error_clear(err);
+      if (tempfile)
+        svn_error_clear(svn_io_remove_file(*tempfile, pool));
 
-      if (strcmp(base_digest_hex, ent->checksum) != 0)
-        {
-          /* The entry checksum does not match the actual text
-             base checksum.  Extreme badness. Of course,
-             theoretically we could just switch to
-             fulltext transmission here, and everything would
-             work fine; after all, we're going to replace the
-             text base with a new one in a moment anyway, and
-             we'd fix the checksum then.  But it's better to
-             error out.  People should know that their text
-             bases are getting corrupted, so they can
-             investigate.  Other commands could be affected,
-             too, such as `svn diff'.  */
-
-          /* Deliberately ignore errors; the error about the
-             checksum mismatch is more important to return. */
-          svn_error_clear(err);
-          svn_error_clear(svn_io_remove_file(tmp_base, pool));
-
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; "
-               "expected: '%s', actual: '%s'"),
-             svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                                   pool),
-             ent->checksum, base_digest_hex);
-        }
-   }
+      return svn_error_createf
+        (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+         _("Checksum mismatch for '%s'; "
+           "expected: '%s', actual: '%s'"),
+         svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
+                              pool),
+         svn_checksum_to_cstring_display(expected_checksum, pool),
+         svn_checksum_to_cstring_display(verify_checksum, pool));
+    }
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
                               svn_path_local_style(path, pool)));
-
-  /* Close base file, if it was opened. */
-  if (basefile)
-    SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
-
-  local_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  local_checksum->digest = svn_txdelta_md5_digest(txdelta_stream);
 
   if (digest)
     memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));

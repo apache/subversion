@@ -18,6 +18,14 @@
  *  else, in every Subversion .i file.
  */
 
+/* 
+ * Explicitly define SVN_DEPRECATED so SWIG doesn't have issues parsing
+ * our headers.
+ */
+#ifndef SVN_DEPRECATED
+#define SVN_DEPRECATED
+#endif
+
 %include typemaps.i
 %include constraints.i
 %include exception.i

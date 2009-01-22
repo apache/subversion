@@ -1018,10 +1018,14 @@ svn_ra_local__get_file(svn_ra_session_t *session,
          svn_fs_file_contents() directly, which already checks the
          stored checksum, and all we're doing here is writing bytes in
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
-         go over a network should confirm the checksum. */
-      SVN_ERR(svn_stream_copy2(contents, stream,
+         go over a network should confirm the checksum.
+
+         Note: we are not supposed to close the passed-in stream, so
+         disown the thing.
+      */
+      SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(stream, pool),
                                sess->callbacks
-                               ? sess->callbacks->cancel_func : NULL,
+                                 ? sess->callbacks->cancel_func : NULL,
                                sess->callback_baton,
                                pool));
     }
@@ -1393,6 +1397,27 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t peg_revision,
+                              svn_revnum_t end_revision,
+                              svn_revnum_t *revision_deleted,
+                              apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+
+  SVN_ERR(svn_repos_deleted_rev(sess->fs,
+                                abs_path,
+                                peg_revision,
+                                end_revision,
+                                revision_deleted,
+                                pool));
+
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -1438,7 +1463,8 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_locks,
   svn_ra_local__replay,
   svn_ra_local__has_capability,
-  svn_ra_local__replay_range
+  svn_ra_local__replay_range,
+  svn_ra_local__get_deleted_rev
 };
 
 

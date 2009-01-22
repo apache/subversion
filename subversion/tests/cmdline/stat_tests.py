@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -94,18 +94,11 @@ def status_update_with_nested_adds(sbox):
   # Now we go to the backup working copy, still at revision 1.
   # We will run 'svn st -u', and make sure that newdir/newfile is reported
   # as a nonexistent (but pending) path.
-
-  # Create expected status tree; all local revisions should be at 1,
-  # but newdir and newfile should be present with 'blank' attributes.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 1)
-
-  # Verify status.  Notice that we're running status *without* the
-  # --quiet flag, so the unversioned items will appear.
-  # Unfortunately, the regexp that we currently use to parse status
-  # output is unable to parse a line that has no working revision!  If
-  # an error happens, we'll catch it here.  So that's a good enough
-  # regression test for now.  Someday, though, it would be nice to
-  # positively match the mostly-empty lines.
+  expected_status.add({
+    'newdir'         : Item(status='  '),
+    'newdir/newfile' : Item(status='  '),
+    })
   svntest.actions.run_and_verify_unquiet_status(wc_backup,
                                                 expected_status)
 
@@ -564,7 +557,7 @@ def get_last_changed_date(path):
   for line in out:
     if re.match("^Last Changed Date", line):
       return line
-  print "Didn't find Last Changed Date for " + path
+  print("Didn't find Last Changed Date for " + path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -575,7 +568,7 @@ def get_text_timestamp(path):
   for line in out:
     if re.match("^Text Last Updated", line):
       return line
-  print "Didn't find text-time for " + path
+  print("Didn't find text-time for " + path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -822,7 +815,7 @@ def status_in_xml(sbox):
 
   for i in range(0, len(output)):
     if output[i] != template[i]:
-      print "ERROR: expected:", template[i], "actual:", output[i]
+      print("ERROR: expected: %s actual: %s" % (template[i], output[i]))
       raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1513,10 +1506,10 @@ def status_dash_u_type_change(sbox):
 #----------------------------------------------------------------------
 
 def status_with_tree_conflicts(sbox):
-  "status with tree conflicts" 
-  
+  "status with tree conflicts"
+
   # Status messages reflecting tree conflict status.
-  # These tests correspond to use cases 1-3 in 
+  # These tests correspond to use cases 1-3 in
   # notes/tree-conflicts/use-cases.txt.
 
   svntest.actions.build_greek_tree_conflicts(sbox)
@@ -1524,12 +1517,17 @@ def status_with_tree_conflicts(sbox):
   G = os.path.join(wc_dir, 'A', 'D', 'G')
   pi = os.path.join(G, 'pi')
   rho = os.path.join(G, 'rho')
+  tau = os.path.join(G, 'tau')
 
   # check status of G
+  # The expectation on 'rho' reflects partial progress on issue #3334.
   expected = svntest.verify.UnorderedOutput(
-         ["C       %s\n" % G,
-          "D     C %s\n" % pi,
-          "?     C %s\n" % rho,
+         ["D     C %s\n" % pi,
+          "      >   local delete, incoming edit upon update\n",
+          "A  +  C %s\n" % rho,
+          "      >   local edit, incoming delete upon update\n",
+          "D     C %s\n" % tau,
+          "      >   local delete, incoming delete upon update\n",
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1538,11 +1536,17 @@ def status_with_tree_conflicts(sbox):
                                      "status", G)
 
   # check status of G, with -v
+  # The expectation on 'rho' reflects partial progress on issue #3334.
   expected = svntest.verify.UnorderedOutput(
-         ["C                2        2 jrandom      %s\n" % G,
-          "D     C          2        2 jrandom      %s\n" % pi,
-          "?     C                                  %s\n" % rho,
+         ["                 2        2 jrandom      %s\n" % G,
+          "D     C          1        1 jrandom      %s\n" % pi,
+          "      >   local delete, incoming edit upon update\n",
+          "A  +  C          -        1 jrandom      %s\n" % rho,
+          "      >   local edit, incoming delete upon update\n",
+          "D     C          1        1 jrandom      %s\n" % tau,
+          "      >   local delete, incoming delete upon update\n",
           ])
+
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1550,36 +1554,43 @@ def status_with_tree_conflicts(sbox):
                                      "status", "-v", G)
 
   # check status of G, with -xml
-  exit_code, output, error = svntest.main.run_svn(None, 'status', G, '--xml')
+  exit_code, output, error = svntest.main.run_svn(None, 'status', G, '--xml',
+                                                  '-v')
 
-  template = ["<?xml version=\"1.0\"?>\n",
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % G,
-              "<entry\n",
-              "   path=\"%s\">\n" % G,
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   has-tree-conflicted-children=\"true\"\n",  # <-- true!
-              "   item=\"normal\"\n",
-              "   revision=\"2\">\n",
-              "<commit\n",
-              "   revision=\"2\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              "<date></date>\n", # will be ignored
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-             ]
+  should_be_victim = {
+    G:   False,
+    pi:  True,
+    rho: True,
+    tau: True,
+    }
 
-  for i in range(0, len(output)):
-    if output[i].startswith("<date>"):
-      continue # ignore <date>
-    if output[i] == "</entry>\n":
-      break # read only the first entry
-    if output[i] != template[i]:
-      print "ERROR: expected:", template[i], "actual:", output[i]
-      raise svntest.Failure
+  real_entry_count = 0
+  output_str = r"".join(output)
+  # skip the first string, which contains only 'status' and 'target' elements
+  entries = output_str.split("<entry")[1:]
+
+  for entry in entries:
+    # get the entry's path
+    m = re.search('path="([^"]+)"', entry)
+    if m:
+      real_entry_count += 1
+      path = m.group(1)
+      # check if the path should be a victim
+      m = re.search('tree-conflicted="true"', entry)
+      if (m is None) and should_be_victim[path]:
+        print("ERROR: expected '%s' to be a tree conflict victim." % path)
+        print("ACTUAL STATUS OUTPUT:")
+        print(output_str)
+        raise svntest.Failure
+      if m and not should_be_victim[path]:
+        print("ERROR: did NOT expect '%s' to be a tree conflict victim." % path)
+        print("ACTUAL STATUS OUTPUT:")
+        print(output_str)
+        raise svntest.Failure
+
+  if real_entry_count != len(should_be_victim):
+    print("ERROR: 'status --xml' output is incomplete.")
+    raise svntest.Failure
 
 
 ########################################################################

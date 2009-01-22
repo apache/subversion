@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #  hot-backup.py: perform a "hot" backup of a Subversion repository
 #                 and clean any old Berkeley DB logfiles after the
@@ -29,9 +30,9 @@
 
 ######################################################################
 
-import sys, os, getopt, stat, string, re, time, shutil
+import sys, os, getopt, stat, re, time, shutil
 
-# Try to import the subprocess mode.  It works better then os.popen3
+# Try to import the subprocess module.  It works better then os.popen3
 # and os.spawnl on Windows when spaces appear in any of the svnadmin,
 # svnlook or repository paths.  os.popen3 and os.spawnl are still used
 # to support Python 2.3 and older which do not provide the subprocess
@@ -122,7 +123,8 @@ try:
                                                       "num-backups=",
                                                       "help"])
 except getopt.GetoptError, e:
-  print >> sys.stderr, "ERROR: %s\n" % e
+  sys.stderr.write("ERROR: %s\n\n" % e)
+  sys.stderr.flush()
   usage(sys.stderr)
   sys.exit(2)
 
@@ -138,7 +140,8 @@ for o, a in opts:
     sys.exit()
 
 if len(args) != 2:
-  print >> sys.stderr, "ERROR: only two arguments allowed.\n"
+  sys.stderr.write("ERROR: only two arguments allowed.\n\n")
+  sys.stderr.flush()
   usage(sys.stderr)
   sys.exit(2)
 
@@ -160,7 +163,8 @@ if archive_type:
     # Additionally find files with the archive extension.
     ext_re = "(" + re.escape(archive_map[archive_type]) + ")?"
   else:
-    print >> sys.stderr, "Unknown archive type '%s'.\n\n" % archive_type
+    sys.stderr.write("Unknown archive type '%s'.\n\n\n" % archive_type)
+    sys.stderr.flush()
     usage(sys.stderr)
     sys.exit(2)
 
@@ -213,14 +217,14 @@ def get_youngest_revision():
 
   if stderr_lines:
     raise Exception("Unable to find the youngest revision for repository '%s'"
-                    ": %s" % (repo_dir, string.rstrip(stderr_lines[0])))
+                    ": %s" % (repo_dir, stderr_lines[0].rstrip()))
 
-  return string.strip(stdout_lines[0])
+  return stdout_lines[0].strip()
 
 ######################################################################
 # Main
 
-print "Beginning hot backup of '"+ repo_dir + "'."
+print("Beginning hot backup of '"+ repo_dir + "'.")
 
 
 ### Step 1: get the youngest revision.
@@ -228,10 +232,11 @@ print "Beginning hot backup of '"+ repo_dir + "'."
 try:
   youngest = get_youngest_revision()
 except Exception, e:
-  print >> sys.stderr, str(e)
+  sys.stderr.write("%s\n" % e)
+  sys.stderr.flush()
   sys.exit(1)
 
-print "Youngest revision is", youngest
+print("Youngest revision is %s" % youngest)
 
 
 ### Step 2: Find next available backup path
@@ -248,7 +253,7 @@ backup_subdir = os.path.join(backup_dir, repo + "-" + youngest)
 regexp = re.compile("^" + repo + "-" + youngest +
                     "(-(?P<increment>[0-9]+))?" + ext_re + "$")
 directory_list = os.listdir(backup_dir)
-young_list = filter(lambda x: regexp.search(x), directory_list)
+young_list = [x for x in directory_list if regexp.search(x)]
 if young_list:
   young_list.sort(comparator)
   increment = regexp.search(young_list.pop()).groupdict()['increment']
@@ -261,7 +266,7 @@ if young_list:
 ### Step 3: Ask subversion to make a hot copy of a repository.
 ###         copied last.
 
-print "Backing up repository to '" + backup_subdir + "'..."
+print("Backing up repository to '" + backup_subdir + "'...")
 if have_subprocess:
   err_code = subprocess.call([svnadmin, "hotcopy", repo_dir, 
                               backup_subdir, "--clean-logs"])
@@ -269,10 +274,11 @@ else:
   err_code = os.spawnl(os.P_WAIT, svnadmin, "svnadmin", "hotcopy", repo_dir, 
                        backup_subdir, "--clean-logs")
 if err_code != 0:
-  print >> sys.stderr, "Unable to backup the repository."
+  sys.stderr.write("Unable to backup the repository.\n")
+  sys.stderr.flush()
   sys.exit(err_code)
 else:
-  print "Done."
+  print("Done.")
 
 
 ### Step 4: Make an archive of the backup if required.
@@ -280,7 +286,7 @@ if archive_type:
   archive_path = backup_subdir + archive_map[archive_type]
   err_msg = ""
 
-  print "Archiving backup to '" + archive_path + "'..."
+  print("Archiving backup to '" + archive_path + "'...")
   if archive_type == 'gz' or archive_type == 'bz2':
     try:
       import tarfile
@@ -321,11 +327,11 @@ if archive_type:
 
 
   if err_code != 0:
-    print >> sys.stderr, \
-          "Unable to create an archive for the backup.\n" + err_msg
+    sys.stderr.write("Unable to create an archive for the backup.\n%s\n" % err_msg)
+    sys.stderr.flush()
     sys.exit(err_code)
   else:
-    print "Archive created, removing backup '" + backup_subdir + "'..."
+    print("Archive created, removing backup '" + backup_subdir + "'...")
     safe_rmtree(backup_subdir, 1)
 
 ### Step 5: finally, remove all repository backups other than the last
@@ -334,12 +340,12 @@ if archive_type:
 if num_backups > 0:
   regexp = re.compile("^" + repo + "-[0-9]+(-[0-9]+)?" + ext_re + "$")
   directory_list = os.listdir(backup_dir)
-  old_list = filter(lambda x: regexp.search(x), directory_list)
+  old_list = [x for x in directory_list if regexp.search(x)]
   old_list.sort(comparator)
   del old_list[max(0,len(old_list)-num_backups):]
   for item in old_list:
     old_backup_item = os.path.join(backup_dir, item)
-    print "Removing old backup: " + old_backup_item
+    print("Removing old backup: " + old_backup_item)
     if os.path.isdir(old_backup_item):
       safe_rmtree(old_backup_item, 1)
     else:

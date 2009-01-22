@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -39,8 +39,9 @@ def test_stderr(re_string, stderr):
     if exp_err_re.search(line):
       return
   if svntest.main.verbose_mode:
-    map(sys.stdout.write, stderr)
-    print "Expected stderr reg-ex: '" + re_string + "'"
+    for x in stderr:
+      sys.stdout.write(x)
+    print("Expected stderr reg-ex: '" + re_string + "'")
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------
@@ -451,9 +452,8 @@ def checkout_peg_rev_date(sbox):
   # note the current time to use it as peg revision date.
   current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
 
-  # sleep till the next minute.
-  current_sec = time.localtime().tm_sec
-  time.sleep(62-current_sec)
+  # sleep till the next second.
+  time.sleep(1.1)
 
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -492,7 +492,7 @@ def co_with_obstructing_local_adds(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Add files and dirs to the repos via the first WC.  Each of these
-  # will be added to the backup WC via an update:
+  # will be added to the backup WC via a checkout:
   #
   #  A/B/upsilon:   Identical to the file scheduled for addition in
   #                 the backup WC.
@@ -588,7 +588,7 @@ def co_with_obstructing_local_adds(sbox):
                        kappa_backup_path,
                        I_backup_path)
 
-  # Create expected output tree for an update of the wc_backup.
+  # Create expected output tree for a checkout of the wc_backup.
   expected_output = wc.State(wc_backup, {
     'A/B/upsilon'   : Item(status='E '),
     'A/C/nu'        : Item(status='A '),
@@ -601,7 +601,7 @@ def co_with_obstructing_local_adds(sbox):
     'A/D/kappa'     : Item(status='C '),
     })
 
-  # Create expected disk for update of wc_backup.
+  # Create expected disk for checkout of wc_backup.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/B/upsilon'   : Item("This is the file 'upsilon'\n"),
@@ -625,7 +625,7 @@ def co_with_obstructing_local_adds(sbox):
                                       ""])),
     })
 
-  # Create expected status tree for the update.  Since the obstructing
+  # Create expected status tree for the checkout.  Since the obstructing
   # kappa and upsilon differ from the repos, they should show as modified.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
   expected_status.add({
@@ -644,7 +644,7 @@ def co_with_obstructing_local_adds(sbox):
   extra_files = ['eta\.r0', 'eta\.r2', 'eta\.mine',
                  'kappa\.r0', 'kappa\.r2', 'kappa\.mine']
 
-  # Perform forced update and check the results in three ways.
+  # Perform the checkout and check the results in three ways.
   # We use --force here because run_and_verify_checkout() will delete
   # wc_backup before performing the checkout otherwise.
   svntest.actions.run_and_verify_checkout(sbox.repo_url, wc_backup,
@@ -658,7 +658,7 @@ def co_with_obstructing_local_adds(sbox):
   # Some obstructions are still not permitted:
   #
   # Test that file and dir obstructions scheduled for addition *with*
-  # history fail when update tries to add the same path.
+  # history fail when checkout tries to add the same path.
 
   # URL to URL copy of A/D/G to A/D/M.
   G_URL = sbox.repo_url + '/A/D/G'

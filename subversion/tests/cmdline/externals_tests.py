@@ -653,24 +653,24 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'C', 'F')
 
-  external_urls = external_url_for.values()
+  external_urls = list(external_url_for.values())
 
   externals_value_1 = "../foo"         + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_2 = "foo/bar/../baz" + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_3 = "foo/.."         + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_4 = "."              + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_5 = "./"             + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_6 = ".."             + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_7 = "././/.///."     + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
   externals_value_8 = "/foo"           + " " + external_urls.pop() + "\n"
-  if not external_urls: external_urls = external_url_for.values()
+  if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
   set_externals_for_path_expect_error(G_path, externals_value_2)
@@ -902,7 +902,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
-                                       '.*Invalid revision number found.*',
+                                       '.*Error parsing svn:externals.*',
                                        'propset',
                                        '-F',
                                        tmp_f,
@@ -972,13 +972,18 @@ def old_style_externals_ignore_peg_reg(sbox):
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A"), ext)
 
-  # Update the working copy.  This should fail because the URL with
-  # '@HEAD' does not exist.
-  svntest.actions.run_and_verify_svn("External '%s' used pegs" % ext.strip(),
-                                     None,
-                                     ".*URL .*/A/D/G@HEAD' .* doesn't exist",
-                                     'up',
-                                     wc_dir)
+  # Update the working copy.  This should succeed (exitcode 0) but
+  # should print warnings on the external because the URL with '@HEAD'
+  # does not exist.
+  expected_error = "|".join([".*Error handling externals definition.*",
+                             ".*URL .*/A/D/G@HEAD' .* doesn't exist.*",
+                             ])
+  svntest.actions.run_and_verify_svn2("External '%s' used pegs" % ext.strip(),
+                                      None,
+                                      expected_error,
+                                      0,
+                                      'up',
+                                      wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -1088,13 +1093,39 @@ def can_place_file_external_into_dir_external(sbox):
         "^/A/B/E/beta C/exdir_B/beta\n"
   change_external(os.path.join(wc_dir, 'A'), ext)
 
-  svntest.actions.run_and_verify_svn("Able to put file external in foreign wc",
-                                     None,
-                                     ".*Cannot insert a file external from "
-                                     ".*/beta' into a working copy "
-                                     ".*" + other_repo_url,
+  expected_error = "|".join([".*Error handling externals definition.*",
+                             ".*Cannot insert a file external from " \
+                             + ".*/beta' into a working copy " \
+                             + ".*" + other_repo_url,
+                             ])
+  svntest.actions.run_and_verify_svn2("Able to put file external in foreign wc",
+                                      None,
+                                      expected_error,
+                                      0,
+                                      'up',
+                                      repo_url, wc_dir)
+
+#----------------------------------------------------------------------
+
+# Issue #2461.
+def external_into_path_with_spaces(sbox):
+  "allow spaces in external local paths"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  ext = '^/A/D        "A/copy of D"\n' +\
+        '^/A/D        A/another\ copy\ of\ D'
+  change_external(wc_dir, ext)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'up',
                                      repo_url, wc_dir)
+  probe_paths_exist([
+      os.path.join(wc_dir, 'A', 'copy of D'),
+      os.path.join(wc_dir, 'A', 'another copy of D'),
+  ])
 
 ########################################################################
 # Run the tests
@@ -1118,6 +1149,7 @@ test_list = [ None,
               old_style_externals_ignore_peg_reg,
               cannot_move_or_remove_file_externals,
               can_place_file_external_into_dir_external,
+              external_into_path_with_spaces,
              ]
 
 if __name__ == '__main__':

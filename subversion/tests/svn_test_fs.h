@@ -42,10 +42,12 @@ svn_test__fs_new(svn_fs_t **fs_p, apr_pool_t *pool);
 
 
 /* Creates a filesystem which is always of type "bdb" in a subdir NAME
-   and return a new FS object which points to it. */
+   and return a new FS object which points to it.  (Ignores any
+   fs-type declaration in OPTS.)  */
 svn_error_t *
 svn_test__create_bdb_fs(svn_fs_t **fs_p,
                         const char *name,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool);
 
 

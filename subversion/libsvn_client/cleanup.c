@@ -50,6 +50,6 @@ svn_client_cleanup(const char *dir,
 
   err = svn_wc_cleanup2(dir, diff3_cmd, ctx->cancel_func, ctx->cancel_baton,
                         pool);
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(dir, pool);
   return err;
 }

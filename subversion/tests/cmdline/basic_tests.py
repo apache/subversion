@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -637,10 +637,7 @@ def basic_conflict(sbox):
   # So now mu and rho are both in a "conflicted" state.  Run 'svn
   # resolved' on them.
 
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
-                                     mu_path_backup,
-                                     rho_path_backup)
+  svntest.actions.run_and_verify_resolved([mu_path_backup, rho_path_backup])
 
   # See if they've changed back to plain old 'M' state.
   expected_status.tweak('A/mu', 'A/D/G/rho', status='M ')
@@ -750,17 +747,17 @@ def basic_revert(sbox):
   fp = open(beta_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n")):
-    print "Revert failed to restore original text."
+    print("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(iota_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n")):
-    print "Revert failed to restore original text."
+    print("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(rho_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n")):
-    print "Revert failed to restore original text."
+    print("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(zeta_path, 'r')
   lines = fp.readlines()
@@ -943,7 +940,7 @@ def verify_file_deleted(message, path):
   except IOError:
     return
   if message is not None:
-    print message
+    print(message)
   ###TODO We should raise a less generic error here. which?
   raise Failure
 
@@ -1115,17 +1112,17 @@ def basic_delete(sbox):
 
   # check versioned dir is not removed
   if not verify_dir_deleted(F_path):
-    print "Removed versioned dir"
+    print("Removed versioned dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
   # check unversioned and added dirs has been removed
   if verify_dir_deleted(Q_path):
-    print "Failed to remove unversioned dir"
+    print("Failed to remove unversioned dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
   if verify_dir_deleted(X_path):
-    print "Failed to remove added dir"
+    print("Failed to remove added dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -1612,8 +1609,8 @@ def basic_info(sbox):
       if line.startswith('Path: '):
         paths.append(line[6:].rstrip())
     if paths != expected_paths:
-      print "Reported paths:", paths
-      print "Expected paths:", expected_paths
+      print("Reported paths: %s" % paths)
+      print("Expected paths: %s" % expected_paths)
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1636,7 +1633,7 @@ def repos_root(sbox):
       if line == "Repository Root: " + sbox.repo_url + "\n":
         break
     else:
-      print "Bad or missing repository root"
+      print("Bad or missing repository root")
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1717,7 +1714,7 @@ def info_nonhead(sbox):
     if line.find("URL:") >= 0:
       got_url = 1
   if not got_url:
-    print "Info didn't output an URL."
+    print("Info didn't output an URL.")
     raise svntest.Failure
 
 
@@ -2396,6 +2393,23 @@ def basic_auth_test(sbox):
     svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
+def basic_add_svn_format_file(sbox):
+  'test add --parents .svn/format'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  entries_path = os.path.join(wc_dir, '.svn', 'format')
+
+  output = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # The .svn directory and the format file should not be added as this
+  # breaks the administrative area handling, so we expect some error here
+  svntest.actions.run_and_verify_svn(None, None, 
+                                     ".*reserved name.*",
+                                     'add', '--parents', entries_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, output)
 
 #----------------------------------------------------------------------
 
@@ -2450,6 +2464,7 @@ test_list = [ None,
               basic_relative_url_non_canonical,
               basic_relative_url_with_peg_revisions,
               basic_auth_test,
+              basic_add_svn_format_file,
              ]
 
 if __name__ == '__main__':

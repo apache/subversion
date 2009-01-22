@@ -17,7 +17,6 @@
  */
 
 #include "svn_wc.h"
-#include "wc_db.h"
 
 #include "svn_private_config.h"
 
@@ -25,94 +24,53 @@
 /* A baton for analyze_status(). */
 struct status_baton
 {
-  svn_wc__db_t *db;
   svn_wc_revision_status_t *result;           /* where to put the result */
   svn_boolean_t committed;           /* examine last committed revisions */
   const char *wc_path;               /* path whose URL we're looking for */
   const char *wc_url;    /* URL for the path whose URL we're looking for */
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
   apr_pool_t *pool;         /* pool in which to store alloc-needy things */
 };
 
-/* A walker_func_t callback function for analyzing WC status. */
+/* An svn_wc_status_func3_t callback function for analyzing status
+   structures. */
 static svn_error_t *
-analyze_status(const char *path,
-               void *baton,
-               apr_pool_t *scratch_pool)
+analyze_status(void *baton,
+               const char *path,
+               svn_wc_status2_t *status,
+               apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-  svn_revnum_t revision;
-  const char *url;
-  svn_wc__db_status_t status;
-  svn_boolean_t text_mod;
-  svn_boolean_t props_mod;
-  svn_revnum_t original_rev;
 
-  SVN_ERR((*sb->cancel_func)(sb->cancel_baton));
+  if (! status->entry)
+    return SVN_NO_ERROR;
 
-  /* ### if sb->committed, then we need to read last-changed information
-     ### from the base. need some API updates in wc_db.h for that. */
-
-  SVN_ERR(svn_wc__db_read_info(NULL, &revision, &url, NULL,
-                               &status, &text_mod, &props_mod, NULL, NULL,
-                               &original_rev, NULL, NULL, NULL, NULL, NULL,
-                               sb->db, path, scratch_pool, scratch_pool));
-
-  sb->result->modified |= text_mod | props_mod;
-
-  /* Added files have a revision of SVN_INVALID_REVNUM */
-  if (revision == SVN_INVALID_REVNUM)
+  /* Added files have a revision of no interest */
+  if (status->text_status != svn_wc_status_added)
     {
-      /* If it was copied or moved, then we'll use the revnum of the
-         original node (could be SVN_INVALID_REVNUM if not copied/moved). */
-      revision = original_rev;
-    }
+      svn_revnum_t item_rev = (sb->committed
+                               ? status->entry->cmt_rev
+                               : status->entry->revision);
 
-  if (revision != SVN_INVALID_REVNUM)
-    {
       if (sb->result->min_rev == SVN_INVALID_REVNUM
-          || revision < sb->result->min_rev)
-        sb->result->min_rev = revision;
+          || item_rev < sb->result->min_rev)
+        sb->result->min_rev = item_rev;
 
       if (sb->result->max_rev == SVN_INVALID_REVNUM
-          || revision > sb->result->max_rev)
-        sb->result->max_rev = revision;
+          || item_rev > sb->result->max_rev)
+        sb->result->max_rev = item_rev;
     }
 
-  if (!sb->result->sparse_checkout || !sb->result->switched)
-    {
-      svn_depth_t depth;
-      svn_boolean_t switched;
-      svn_error_t *err;
-
-      err = svn_wc__base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                  &depth, &switched, NULL, NULL,
-                                  sb->db, path, scratch_pool, scratch_pool);
-      if (err != NULL)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return err;
-          svn_error_clear(err);
-
-          /* This node is part of WORKING, but not BASE. Therefore, it does
-             not have a depth, nor can it be switched. */
-          /* ### hmm. really true? we could "svn move" a short-depth tree.
-             ### can we actually switch a schedule-add file/dir? */
-        }
-      else
-        {
-          if (depth != svn_depth_infinity)
-            sb->result->sparse_checkout = TRUE;
-          if (switched)
-            sb->result->switched = TRUE;
-        }
-    }
+  sb->result->switched |= status->switched;
+  sb->result->modified |= (status->text_status != svn_wc_status_normal);
+  sb->result->modified |= (status->prop_status != svn_wc_status_normal
+                           && status->prop_status != svn_wc_status_none);
+  sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
   if (sb->wc_path
-      && sb->wc_url == NULL
-      && strcmp(path, sb->wc_path) == 0)
-    sb->wc_url = apr_pstrdup(sb->pool, url);
+      && (! sb->wc_url)
+      && (strcmp(path, sb->wc_path) == 0)
+      && (status->entry))
+    sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
 
   return SVN_NO_ERROR;
 }
@@ -143,20 +101,12 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   result->sparse_checkout = FALSE;
 
   /* initialize walking baton */
-  sb.db = db;
   sb.result = result;
   sb.committed = committed;
   sb.wc_path = wc_path;
   sb.wc_url = NULL;
-  sb.cancel_func = cancel_func;
-  sb.cancel_baton = cancel_baton;
   sb.pool = pool;
 
-  /* ### pool as scratch_pool? we should probably update our signature */
-  SVN_ERR(generic_walker(db, wc_path, walker_mode_working,
-                         analyze_status, &sb, pool));
-
-#if 0
   SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
                                  wc_path, FALSE, -1,
                                  cancel_func, cancel_baton,
@@ -175,8 +125,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
-  SVN_ERR(svn_wc_adm_close(anchor_access));
-#endif
+  SVN_ERR(svn_wc_adm_close2(anchor_access, pool));
 
   if ((! result->switched) && (trail_url != NULL))
     {

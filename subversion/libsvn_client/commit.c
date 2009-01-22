@@ -2,7 +2,7 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -38,7 +38,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -75,6 +74,9 @@ typedef struct import_ctx_t
 
    Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
    at least APR_MD5_DIGESTSIZE bytes long. */
+
+/* ### how does this compare against svn_wc_transmit_text_deltas2() ??? */
+
 static svn_error_t *
 send_file_contents(const char *path,
                    void *file_baton,
@@ -87,7 +89,6 @@ send_file_contents(const char *path,
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
-  apr_file_t *f;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
   svn_boolean_t special = FALSE;
   svn_subst_eol_style_t eol_style;
@@ -124,17 +125,17 @@ send_file_contents(const char *path,
   else
     keywords = NULL;
 
+  /* ### bogus. we should open path as a stream, or we should get a
+     ### stream of the Normal Form. we should not use a temporary file. */
+
   /* If we have EOL styles or keywords to de-translate, do it.  */
   if (svn_subst_translation_required(eol_style, eol, keywords, special, TRUE))
     {
-      const char *temp_dir;
-
-      /* Now create a new tempfile, and open a stream to it. */
-      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &tmpfile_path,
-               svn_path_join(temp_dir, "svn-import", pool),
-               ".tmp", svn_io_file_del_on_pool_cleanup, pool));
+      /* Now create a new tempfile, and open a stream to it. The temp file
+         is removed by the pool cleanup run by the caller */
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmpfile_path, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
 
       SVN_ERR(svn_subst_translate_to_normal_form
               (path, tmpfile_path, eol_style, eol, FALSE,
@@ -143,17 +144,13 @@ send_file_contents(const char *path,
 
   /* Open our contents file, either the original path or the temporary
      copy we might have made above. */
-  SVN_ERR(svn_io_file_open(&f, tmpfile_path ? tmpfile_path : path,
-                           APR_READ, APR_OS_DEFAULT, pool));
-  contents = svn_stream_from_aprfile2(f, TRUE, pool);
+  SVN_ERR(svn_stream_open_readonly(&contents,
+                                   tmpfile_path ? tmpfile_path : path,
+                                   pool, pool));
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
-                                  digest, pool));
-
-  /* Close our contents file. */
-  return svn_io_file_close(f, pool);
-  /* The temp file is removed by the pool cleanup run by the caller */
+  return svn_txdelta_send_stream(contents, handler, handler_baton,
+                                 digest, pool);
 }
 
 
@@ -180,7 +177,6 @@ import_file(const svn_delta_editor_t *editor,
   void *file_baton;
   const char *mimetype = NULL;
   unsigned char digest[APR_MD5_DIGESTSIZE];
-  svn_checksum_t *checksum;
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
@@ -250,9 +246,9 @@ import_file(const svn_delta_editor_t *editor,
                              properties, digest, pool));
 
   /* Finally, close the file. */
-  checksum = svn_checksum_create(svn_checksum_md5, pool);
-  checksum->digest = digest;
-  text_checksum = svn_checksum_to_cstring(checksum, pool);
+  text_checksum =
+    svn_checksum_to_cstring(svn_checksum__from_digest(digest, svn_checksum_md5,
+                                                      pool), pool);
 
   return editor->close_file(file_baton, text_checksum, pool);
 }
@@ -593,7 +589,6 @@ import(const char *path,
 
 static svn_error_t *
 get_ra_editor(svn_ra_session_t **ra_session,
-              svn_revnum_t *latest_rev,
               const svn_delta_editor_t **editor,
               void **edit_baton,
               svn_client_ctx_t *ctx,
@@ -632,10 +627,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                  _("Path '%s' does not exist"),
                                  base_url);
     }
-
-  /* Fetch the latest revision if requested. */
-  if (latest_rev)
-    SVN_ERR(svn_ra_get_latest_revnum(*ra_session, latest_rev, pool));
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
@@ -688,8 +679,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
       apr_array_header_t *commit_items
         = apr_array_make(pool, 1, sizeof(item));
 
-      SVN_ERR(svn_client_commit_item_create
-              ((const svn_client_commit_item3_t **) &item, pool));
+      item = svn_client_commit_item3_create(pool);
       item->path = apr_pstrdup(pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -738,7 +728,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
           url = temp;
         }
     }
-  while ((err = get_ra_editor(&ra_session, NULL,
+  while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir,
                               NULL, log_msg, NULL, revprop_table,
                               commit_info_p, FALSE, NULL, TRUE, subpool)));
@@ -798,60 +788,13 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
 
   /* Transfer *COMMIT_INFO from the subpool to the callers pool */
   if (*commit_info_p)
-    {
-      svn_commit_info_t *tmp_commit_info;
-
-      tmp_commit_info = svn_create_commit_info(pool);
-      *tmp_commit_info = **commit_info_p;
-      if (tmp_commit_info->date)
-        tmp_commit_info->date = apr_pstrdup(pool, tmp_commit_info->date);
-      if (tmp_commit_info->author)
-        tmp_commit_info->author = apr_pstrdup(pool, tmp_commit_info->author);
-      if (tmp_commit_info->post_commit_err)
-        tmp_commit_info->post_commit_err
-          = apr_pstrdup(pool, tmp_commit_info->post_commit_err);
-      *commit_info_p = tmp_commit_info;
-    }
+    *commit_info_p = svn_commit_info_dup(*commit_info_p, pool);
 
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_client_import2(svn_commit_info_t **commit_info_p,
-                   const char *path,
-                   const char *url,
-                   svn_boolean_t nonrecursive,
-                   svn_boolean_t no_ignore,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_import3(commit_info_p,
-                            path, url,
-                            SVN_DEPTH_INFINITY_OR_FILES(! nonrecursive),
-                            no_ignore, FALSE, NULL, ctx, pool);
-}
-
-svn_error_t *
-svn_client_import(svn_client_commit_info_t **commit_info_p,
-                  const char *path,
-                  const char *url,
-                  svn_boolean_t nonrecursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_import2(&commit_info,
-                           path, url, nonrecursive,
-                           FALSE, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
 
 static svn_error_t *
 remove_tmpfiles(apr_hash_t *tempfiles,
@@ -1188,7 +1131,7 @@ struct post_commit_baton
   svn_wc_adm_access_t *base_dir_access;
   svn_boolean_t keep_changelists;
   svn_boolean_t keep_locks;
-  apr_hash_t *digests;
+  apr_hash_t *checksums;
 };
 
 static svn_error_t *
@@ -1240,13 +1183,13 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 
   /* Allocate the queue in a longer-lived pool than (iter)pool:
      we want it to survive the next iteration. */
-  return svn_wc_queue_committed
-          (&(btn->queue),
-           item->path, adm_access, loop_recurse,
-           item->incoming_prop_changes,
-           remove_lock, (! btn->keep_changelists),
-           apr_hash_get(btn->digests, item->path, APR_HASH_KEY_STRING),
-           subpool);
+  return svn_wc_queue_committed2(btn->queue, item->path, adm_access,
+                                 loop_recurse, item->incoming_prop_changes,
+                                 remove_lock, !btn->keep_changelists,
+                                 apr_hash_get(btn->checksums,
+                                              item->path,
+                                              APR_HASH_KEY_STRING),
+                                 subpool);
 }
 
 
@@ -1361,7 +1304,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_array_header_t *dirs_to_lock;
   apr_array_header_t *dirs_to_lock_recursive;
   svn_boolean_t lock_base_dir_recursive = FALSE;
-  apr_hash_t *committables, *lock_tokens, *tempfiles = NULL, *digests;
+  apr_hash_t *committables;
+  apr_hash_t *lock_tokens;
+  apr_hash_t *tempfiles = NULL;
+  apr_hash_t *checksums;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
@@ -1384,6 +1330,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   /* Condense the target list. */
   SVN_ERR(svn_path_condense_targets(&base_dir, &rel_targets, targets,
                                     depth == svn_depth_infinity, pool));
+
+  /* No targets means nothing to commit, so just return. */
+  if (! base_dir)
+    goto cleanup;
 
   /* When svn_path_condense_targets() was written, we didn't have real
    * depths, we just had recursive / nonrecursive.
@@ -1436,18 +1386,17 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
    */
   if (depth == svn_depth_files || depth == svn_depth_immediates)
     {
-      const char *rel_target;
       for (i = 0; i < rel_targets->nelts; ++i)
         {
-          rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          const char *rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+
           if (rel_target[0] == '\0')
-            lock_base_dir_recursive = TRUE;
+            {
+              lock_base_dir_recursive = TRUE;
+              break;
+            }
         }
     }
-
-  /* No targets means nothing to commit, so just return. */
-  if (! base_dir)
-    goto cleanup;
 
   /* Prepare an array to accumulate dirs to lock */
   dirs_to_lock = apr_array_make(pool, 1, sizeof(target));
@@ -1682,7 +1631,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                      pool)))
     goto cleanup;
 
-  if ((cmt_err = get_ra_editor(&ra_session, NULL,
+  if ((cmt_err = get_ra_editor(&ra_session,
                                &editor, &edit_baton, ctx,
                                base_url, base_dir, base_dir_access, log_msg,
                                commit_items, revprop_table, commit_info_p,
@@ -1703,7 +1652,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
                                   editor, edit_baton,
                                   notify_prefix,
-                                  &tempfiles, &digests, ctx, pool);
+                                  &tempfiles, &checksums, ctx, pool);
 
   /* Handle a successful commit. */
   if ((! cmt_err)
@@ -1717,7 +1666,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       btn.base_dir_access = base_dir_access;
       btn.keep_changelists = keep_changelists;
       btn.keep_locks = keep_locks;
-      btn.digests = digests;
+      btn.checksums = checksums;
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
@@ -1738,7 +1687,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     }
 
   /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(base_dir, pool);
 
  cleanup:
   /* Abort the commit if it is still in progress. */
@@ -1752,7 +1701,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     {
-      unlock_err = svn_wc_adm_close(base_dir_access);
+      unlock_err = svn_wc_adm_close2(base_dir_access, pool);
 
       if (! unlock_err)
         cleanup_err = remove_tmpfiles(tempfiles, pool);
@@ -1764,49 +1713,4 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     *commit_info_p = svn_create_commit_info(pool);
 
   return reconcile_errors(cmt_err, unlock_err, bump_err, cleanup_err, pool);
-}
-
-svn_error_t *
-svn_client_commit3(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
-                   svn_boolean_t keep_locks,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
-
-  return svn_client_commit4(commit_info_p, targets, depth, keep_locks,
-                            FALSE, NULL, NULL, ctx, pool);
-}
-
-svn_error_t *
-svn_client_commit2(svn_client_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
-                   svn_boolean_t keep_locks,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_commit3(&commit_info, targets, recurse, keep_locks,
-                           ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
-
-svn_error_t *
-svn_client_commit(svn_client_commit_info_t **commit_info_p,
-                  const apr_array_header_t *targets,
-                  svn_boolean_t nonrecursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_commit2(commit_info_p, targets,
-                            nonrecursive ? FALSE : TRUE,
-                            TRUE,
-                            ctx, pool);
 }

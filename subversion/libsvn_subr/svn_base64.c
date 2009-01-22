@@ -2,7 +2,7 @@
  * base64.c:  base64 encoding and decoding functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -68,12 +68,12 @@ encode_group(const unsigned char *in, char *out)
    initialize *INBUFLEN and *LINELEN to 0.  Output will be appended to
    STR.  Include newlines every so often if BREAK_LINES is true. */
 static void
-encode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
+encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
              unsigned char *inbuf, int *inbuflen, int *linelen,
              svn_boolean_t break_lines)
 {
   char group[4];
-  const char *p = data, *end = data + len;
+  const char *p = data, *end = p + len;
 
   /* Keep encoding three-byte groups until we run out.  */
   while (*inbuflen + (end - p) >= 3)
@@ -373,18 +373,22 @@ svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
 }
 
 
-svn_stringbuf_t *
-svn_base64_from_checksum(svn_checksum_t *checksum, apr_pool_t *pool)
+/* Return a base64-encoded representation of CHECKSUM, allocated in POOL.
+   If CHECKSUM->kind is not recognized, return NULL.
+   ### That 'NULL' claim was in the header file when this was public, but
+   doesn't look true in the implementation.
+
+   ### This is now only used as a new implementation of svn_base64_from_md5();
+   it would probably be safer to revert that to its old implementation. */
+static svn_stringbuf_t *
+base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
 {
   svn_stringbuf_t *checksum_str;
   unsigned char ingroup[3];
   int ingrouplen = 0, linelen = 0;
   checksum_str = svn_stringbuf_create("", pool);
 
-  /* This cast is safe because we know encode_bytes does a memcpy and
-   * does an implicit unsigned char * cast.
-   */
-  encode_bytes(checksum_str, (char*)checksum->digest,
+  encode_bytes(checksum_str, checksum->digest,
                svn_checksum_size(checksum), ingroup, &ingrouplen,
                &linelen, TRUE);
   encode_partial_group(checksum_str, ingroup, ingrouplen, linelen, TRUE);
@@ -409,5 +413,5 @@ svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
   checksum = svn_checksum_create(svn_checksum_md5, pool);
   checksum->digest = digest;
 
-  return svn_base64_from_checksum(checksum, pool);
+  return base64_from_checksum(checksum, pool);
 }

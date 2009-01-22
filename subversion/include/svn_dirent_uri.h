@@ -25,15 +25,14 @@
  *  - a URI is a path in a repository or a URL
  *    examples: "/trunk/README", "http://hostname/svn/repos"
  *
- * This distiniction is needed because on Windows we have to handle some 
- * dirents and URIs differently. Since it's not possible to determine from 
- * the path string if it's a dirent or a URI, it's up to the API user to 
+ * This distinction is needed because on Windows we have to handle some
+ * dirents and URIs differently. Since it's not possible to determine from
+ * the path string if it's a dirent or a URI, it's up to the API user to
  * make this choice. See also issue #2028.
  *
- * ###TODO: add description in line with svn_path.h, once more functions
+ * ### TODO: add description in line with svn_path.h, once more functions
  * are moved.
- * ###END TODO
- * 
+ * ### END TODO
  */
 
 #ifndef SVN_DIRENT_URI_H
@@ -52,6 +51,38 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** Convert @a dirent from the local style to the canonical internal style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_dirent_internal_style(const char *dirent,
+                          apr_pool_t *pool);
+
+/** Convert @a dirent from the canonical internal style to the local style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_dirent_local_style(const char *dirent,
+                       apr_pool_t *pool);
+
+/** Convert @a uri from the local style to the canonical internal style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_uri_internal_style(const char *uri,
+                       apr_pool_t *pool);
+
+/** Convert @a uri from the canonical internal style to the local style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_uri_local_style(const char *uri,
+                    apr_pool_t *pool);
+
 /** Join a base dirent (@a base) with a component (@a component), allocated in
  * @a pool.
  *
@@ -60,9 +91,9 @@ extern "C" {
  * empty string is returned.
  *
  * If the @a component is an absolute dirent, then it is copied and returned.
- * Exactly one slash character ('/') is used to joined the components,
+ * Exactly one slash character ('/') is used to join the components,
  * accounting for any trailing slash in @a base, except on Windows when
- * @base is "X:".
+ * @a base is "X:".
  *
  * This function is NOT appropriate for native (local) file
  * dirents. Only for "internal" canonicalized dirents, since it uses '/'
@@ -70,9 +101,10 @@ extern "C" {
  *
  * @since New in 1.6.
  */
-char *svn_dirent_join(const char *base,
-                      const char *component,
-                      apr_pool_t *pool);
+char *
+svn_dirent_join(const char *base,
+                const char *component,
+                apr_pool_t *pool);
 
 /** Join multiple components onto a @a base dirent, allocated in @a pool. The
  * components are terminated by a @c NULL.
@@ -86,13 +118,15 @@ char *svn_dirent_join(const char *base,
  *
  * @since New in 1.6.
  */
-char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...);
+char *
+svn_dirent_join_many(apr_pool_t *pool,
+                     const char *base,
+                     ...);
 
 /** Get the basename of the specified canonicalized @a dirent.  The
- * basename is defined as the last component of the dirent (ignoring any
- * trailing slashes).  If the @a dirent is root ("/", "X:/", "//server/share/"),
- * then that is returned.  Otherwise, the returned value will have no slashes
- * in it.
+ * basename is defined as the last component of the dirent.  If the @a dirent 
+ * is root ("/", "X:/", "//server/share/"), then that is returned.  Otherwise,
+ * the returned value will have no slashes in it.
  *
  * Example: svn_dirent_basename("/foo/bar") -> "bar"
  *
@@ -102,7 +136,9 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...);
  *
  * @since New in 1.6.
  */
-char *svn_dirent_basename(const char *dirent, apr_pool_t *pool);
+char *
+svn_dirent_basename(const char *dirent,
+                    apr_pool_t *pool);
 
 
 /** Get the dirname of the specified canonicalized @a dirent, defined as
@@ -115,7 +151,9 @@ char *svn_dirent_basename(const char *dirent, apr_pool_t *pool);
  *
  * @since New in 1.6.
  */
-char *svn_dirent_dirname(const char *dirent, apr_pool_t *pool);
+char *
+svn_dirent_dirname(const char *dirent,
+                   apr_pool_t *pool);
 
 /** Divide the canonicalized @a dirent into @a *dirpath and @a
  * *base_name, allocated in @a pool.
@@ -141,42 +179,105 @@ char *svn_dirent_dirname(const char *dirent, apr_pool_t *pool);
  *
  * @since New in 1.6.
  */
-void svn_dirent_split(const char *dirent,
-                      const char **dirpath,
-                      const char **base_name,
-                      apr_pool_t *pool);
+void
+svn_dirent_split(const char *dirent,
+                 const char **dirpath,
+                 const char **base_name,
+                 apr_pool_t *pool);
 
-/** Return TRUE if @a dirent is considered absolute on the platform at 
- * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
- * '\\\\server\\share\\foo' on Windows.
+/** Divide the canonicalized @a uri into @a *dirpath and @a
+ * *base_name, allocated in @a pool.
+ *
+ * If @a dirpath or @a base_name is NULL, then don't set that one.
+ *
+ * Either @a dirpath or @a base_name may be @a dirent's own address, but they
+ * may not both be the same address, or the results are undefined.
+ *
+ * If @a dirent has two or more components, the separator between @a dirpath
+ * and @a base_name is not included in either of the new names.
+ *
+ *   examples:
+ *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
+ *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
+ *             - <pre>"/"             ==>  "/"  and "/"</pre>
+ *             - <pre>"bar"           ==>  ""   and "bar"</pre>
+ *             - <pre>""              ==>  ""   and ""</pre> 
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_dirent_is_absolute(const char *dirent, apr_size_t len);
+void
+svn_uri_split(const char *dirent,
+              const char **dirpath,
+              const char **base_name,
+              apr_pool_t *pool);
 
-/** Return TRUE if @a uri is considered absolute.
+/** Get the basename of the specified canonicalized @a uri.  The
+ * basename is defined as the last component of the uri.  If the @a dirent 
+ * is root then that is returned. Otherwise, the returned value will have no 
+ * slashes in it.
+ *
+ * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
+ *
+ * The returned basename will be allocated in @a pool.
+ *
+ * @note If an empty string is passed, then an empty string will be returned.
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_uri_is_absolute(const char *dirent, apr_size_t len);
+char *
+svn_uri_basename(const char *uri,
+                 apr_pool_t *pool);
+
+/** Get the dirname of the specified canonicalized @a uri, defined as
+ * the dirent with its basename removed.
+ *
+ * If @a dirent is root  (e.g. "http://server"), it is returned
+ * unchanged.
+ *
+ * The returned dirname will be allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+char *
+svn_uri_dirname(const char *dirent,
+                apr_pool_t *pool);
+
+
+/** Return TRUE if @a dirent is considered absolute on the platform at
+ * hand, amongst which '/foo' on all platforms or 'X:/foo', 
+ * '//server/share/foo' on Windows.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_dirent_is_absolute(const char *dirent);
+
+/** Return TRUE if @a uri is considered absolute or is a URL.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_uri_is_absolute(const char *dirent);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
- * '\\\\.\\..', '\\\\server\\share' on Windows.
+ * at hand, amongst which '/' on all platforms or 'X:/', '//server/share'
+ * on Windows.
  *
  * @since New in 1.5.
  */
 svn_boolean_t
-svn_dirent_is_root(const char *dirent, apr_size_t len);
+svn_dirent_is_root(const char *dirent,
+                   apr_size_t len);
 
-/** Return TRUE if @a uri is a root path, so starts with '/'. 
+/** Return TRUE if @a uri is a root path, so starts with '/'.
  *
  * Do not use this function with URLs.
- * 
+ *
  * @since New in 1.6
  */
 svn_boolean_t
-svn_uri_is_root(const char *uri, apr_size_t len);
+svn_uri_is_root(const char *uri,
+                apr_size_t len);
 
 /** Return a new dirent like @a dirent, but transformed such that some types
  * of dirent specification redundancies are removed.
@@ -193,9 +294,31 @@ svn_uri_is_root(const char *uri, apr_size_t len);
  *
  * @since New in 1.6.
  */
-const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
+const char *
+svn_dirent_canonicalize(const char *dirent,
+                        apr_pool_t *pool);
 
-/** Return @c TRUE iff dirent is canonical.  Use @a pool for temporary
+
+/** Return a new uri like @a uri, but transformed such that some types
+ * of uri specification redundancies are removed.
+ *
+ * This involves collapsing redundant "/./" elements, removing
+ * multiple adjacent separator characters, removing trailing
+ * separator characters, and possibly other semantically inoperative
+ * transformations.
+ *
+ * This functions supports URLs.
+ *
+ * The returned uri may be statically allocated, equal to @a uri, or
+ * allocated from @a pool.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_uri_canonicalize(const char *uri,
+                     apr_pool_t *pool);
+
+/** Return @c TRUE iff @a dirent is canonical.  Use @a pool for temporary
  * allocations.
  *
  * @note The test for canonicalization is currently defined as
@@ -204,7 +327,18 @@ const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
+svn_boolean_t
+svn_dirent_is_canonical(const char *dirent,
+                        apr_pool_t *pool);
+
+/** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
+ * allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_uri_is_canonical(const char *uri,
+                     apr_pool_t *pool);
 
 /** Return the longest common dirent shared by two canonicalized dirents,
  * @a dirent1 and @a dirent2.  If there's no common ancestor, return the
@@ -267,7 +401,8 @@ svn_dirent_get_absolute(const char **pabsolute,
  * @since New in 1.6.
  */
 const char *
-svn_uri_is_child(const char *uri1, const char *uri2,
+svn_uri_is_child(const char *uri1,
+                 const char *uri2,
                  apr_pool_t *pool);
 
 /**
@@ -277,8 +412,29 @@ svn_uri_is_child(const char *uri1, const char *uri2,
  * @since New in 1.6.
  */
 const char *
-svn_dirent_is_child(const char *dirent1, const char *dirent2,
+svn_dirent_is_child(const char *dirent1,
+                    const char *dirent2,
                     apr_pool_t *pool);
+
+/** Return TRUE if @a dirent1 is an ancestor of @a dirent2 or the dirents are
+ * equal and FALSE otherwise.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_dirent_is_ancestor(const char *path1,
+                       const char *path2);
+
+/** Return TRUE if @a uri1 is an ancestor of @a uri2 or the uris are
+ * equal and FALSE otherwise.
+ *
+ * This function supports URLs.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_uri_is_ancestor(const char *path1,
+                    const char *path2);
 
 #ifdef __cplusplus
 }

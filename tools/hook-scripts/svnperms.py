@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # $HeadURL$
 # $LastChangedDate$
@@ -77,10 +78,10 @@ class Config:
                                      (filename, lineno))
 
     def sections(self):
-        return self._sections_dict.keys()
+        return list(self._sections_dict.keys())
 
     def options(self, section):
-        return self._sections_dict.get(section, {}).keys()
+        return list(self._sections_dict.get(section, {}).keys())
 
     def get(self, section, option, default=None):
         return self._sections_dict.get(option, default)

@@ -4,7 +4,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -37,21 +37,21 @@ def plist(rev=None, home='.', *props):
   if rev is None:
     rev = fs.youngest_rev(fs_ptr)
 
-  print 'Properties for revision:', rev
+  print('Properties for revision: %s' % rev)
   if props:
     for propname in props:
       value = fs.revision_prop(fs_ptr, rev, propname)
       if value is None:
-        print '%s: <not present>' % propname
+        print('%s: <not present>' % propname)
       else:
-        print '%s: %s' % (propname, value)
+        print('%s: %s' % (propname, value))
   else:
     proplist = fs.revision_proplist(fs_ptr, rev)
     for propname, value in proplist.items():
-      print '%s: %s' % (propname, value)
+      print('%s: %s' % (propname, value))
 
 def usage():
-  print "USAGE: %s [-r REV] [-h DBHOME] [PROP1 [PROP2 ...]]" % sys.argv[0]
+  print("USAGE: %s [-r REV] [-h DBHOME] [PROP1 [PROP2 ...]]" % sys.argv[0])
   sys.exit(1)
 
 def main():
@@ -65,7 +65,7 @@ def main():
     elif name == '-h':
       home = value
 
-  apply(plist, (rev, home) + tuple(args))
+  plist(rev, home, *args)
 
 if __name__ == '__main__':
   main()

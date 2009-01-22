@@ -52,9 +52,10 @@ svn_error_t *svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
 
 /* Set *CLEANUP to TRUE if the directory ADM_ACCESS requires cleanup
    processing, set *CLEANUP to FALSE otherwise. */
-svn_error_t *svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
-                                             svn_wc_adm_access_t *adm_access,
-                                             apr_pool_t *pool);
+svn_error_t *
+svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
+                                const svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
 
 /* Store ENTRIES in the cache in ADM_ACCESS appropriate for SHOW_DELETED.
    ENTRIES may be NULL. */
@@ -74,7 +75,7 @@ void svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *wcprops);
 
 /* Retrieve the wcprops cached in ADM_ACCESS, if any. */
-apr_hash_t *svn_wc__adm_access_wcprops(svn_wc_adm_access_t *adm_access);
+apr_hash_t *svn_wc__adm_access_wcprops(const svn_wc_adm_access_t *adm_access);
 
 
 
@@ -91,7 +92,7 @@ svn_error_t *svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
    the parent of PATH and when that access baton was opened it must have
    attempted to open PATH, i.e. it must have been opened with the TREE_LOCK
    parameter set TRUE. */
-svn_boolean_t svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
+svn_boolean_t svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
                                   const char *path);
 
 /* Sets *ADM_ACCESS to an access baton for PATH from the set ASSOCIATED.
@@ -104,7 +105,7 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                                            apr_pool_t *pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
-int svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access);
+int svn_wc__adm_wc_format(const svn_wc_adm_access_t *adm_access);
 
 /* Set the WC FORMAT of this access baton. */
 void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
@@ -117,7 +118,8 @@ void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
  * when the library expects a write lock, and where it is an error for the
  * lock not to be present.  Applications are not expected to call it.
  */
-svn_error_t *svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access);
+svn_error_t *svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *scratch_pool);
 
 /* Ensure ADM_ACCESS has a lock and for an entire WC tree (all the way
    to its leaf nodes).  While locking a tree up front using

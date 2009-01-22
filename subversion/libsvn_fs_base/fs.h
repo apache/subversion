@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,7 +23,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include "svn_fs.h"
 
 #include "bdb/env.h"
@@ -42,8 +41,12 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
-/* Minimum format number that supports explicit metadata */
-#define SVN_FS_BASE__MIN_METADATA_FORMAT          4
+/* Minimum format number that supports representation sharing.  This
+   also brings in the support for storing SHA1 checksums.   */
+#define SVN_FS_BASE__MIN_REP_SHARING_FORMAT       4
+
+/* Minimum format number that supports the 'miscellaneous' table */
+#define SVN_FS_BASE__MIN_MISCELLANY_FORMAT        4
 
 /* Minimum format number that supports forward deltas */
 #define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
@@ -66,10 +69,13 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 
 
 
-/*** Metadata keys. ***/
+/*** Miscellany keys. ***/
 
 /* Revision at which the repo started using forward deltas. */
-#define SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+#define SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+
+/* Next filesystem-global unique identifier value (base36). */
+#define SVN_FS_BASE__MISC_NEXT_FSGUID            "next-fsguid"
 
 
 
@@ -93,7 +99,8 @@ typedef struct
   DB *locks;
   DB *lock_tokens;
   DB *node_origins;
-  DB *metadata;
+  DB *miscellaneous;
+  DB *checksum_reps;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */
@@ -178,6 +185,16 @@ typedef struct
      list (dirs).  may be NULL if there are no contents.  */
   const char *data_key;
 
+  /* data representation instance identifier.  Sounds fancy, but is
+     really just a way to distinguish between "I use the same rep key
+     as another node because we share ancestry and haven't had our
+     text touched at all" and "I use the same rep key as another node
+     only because one or both of us decided to pick up a shared
+     representation after-the-fact."  May be NULL (if this node
+     revision isn't using a shared rep, or isn't the original
+     "assignee" of a shared rep). */
+  const char *data_key_uniquifier;
+
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress.  This field
      is always NULL for kinds other than "file".  */
@@ -242,14 +259,15 @@ typedef struct
      transaction). */
   const char *txn_id;
 
-  /* Checksum for the contents produced by this representation.
-     This checksum is for the contents the rep shows to consumers,
+  /* Checksums for the contents produced by this representation.
+     These checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
      If this is NULL, then for compatibility behave as though
      this checksum matches the expected checksum. */
-  svn_checksum_t *checksum;
+  svn_checksum_t *md5_checksum;
+  svn_checksum_t *sha1_checksum;
 
   /* kind-specific stuff */
   union

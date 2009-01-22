@@ -32,6 +32,17 @@ extern "C" {
 
 
 
+/* OVERVIEW OF THE LOGGY API
+ *
+ * NOTES
+ *
+ *  * When a doc string says "Extend **LOG_ACCUM", it means: "if *LOG_ACCUM is
+ *    NULL then set *LOG_ACCUM to a new stringbuf allocated in POOL, else
+ *    append to the existing stringbuf there."
+ */
+
+
+
 /* Return the filename (with no path components) to use for logfile number
    LOG_NUMBER.  The returned string will be allocated from POOL.
 
@@ -59,6 +70,7 @@ const char *svn_wc__logfile_path(int log_number,
    human-readable non-parsed property conflict files) should be
    rewritten.  See Issue #3015.
 */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
@@ -77,43 +89,18 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
                         apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to copy the file SRC_PATH to
-   DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
-   the file at DST_PATH will be deleted if any.
+/* Extend **LOG_ACCUM with log instructions to copy (and translate!) the
+   file SRC_PATH to DST_PATH, if it exists. If it doesn't and
+   REMOVE_DST_IF_NO_SRC is TRUE the file at DST_PATH will be deleted if any.
 
    The test for existence is made during this call, not at log running time.
 
    SRC_PATH and DST_PATH are relative to ADM_ACCESS.
-
-   Perform textual translations, or not, according to COPY_TYPE.
-
-   Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
-   destination path will have been modified after running the log: if either
-   the copy or the remove will have been carried out.
 */
-
-typedef enum svn_wc__copy_t
-{
-  /* Normal copy, no translation */
-  svn_wc__copy_normal = 0,
-
-  /* Copy, translate using file properties */
-  svn_wc__copy_translate,
-
-  /* Copy, translate using only the svn:special property, if any */
-  svn_wc__copy_translate_special_only,
-
-  /* Copy, detranslate using file properties */
-  svn_wc__copy_detranslate
-} svn_wc__copy_t;
-
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
-                   svn_boolean_t *dst_modified,
                    svn_wc_adm_access_t *adm_access,
-                   svn_wc__copy_t copy_type,
                    const char *src_path, const char *dst_path,
-                   svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool);
 
 
@@ -160,7 +147,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
+/* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
    in ADM_ACCESS according to the flags specified in MODIFY_FLAGS, based on
    the values supplied in *ENTRY.
 
@@ -170,7 +157,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
-                           const char *name,
+                           const char *path,
                            svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool);
@@ -202,10 +189,8 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
-                   svn_boolean_t *dst_modified,
                    svn_wc_adm_access_t *adm_access,
                    const char *src_path, const char *dst_path,
-                   svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool);
 
 

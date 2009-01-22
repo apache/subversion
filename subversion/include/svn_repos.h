@@ -306,6 +306,22 @@ svn_repos_hotcopy(const char *src_path,
                   svn_boolean_t clean_logs,
                   apr_pool_t *pool);
 
+
+/**
+ * Possibly update the repository, @a repos, to use a more efficient
+ * filesystem representation.  Use @a pool for allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_fs_pack(svn_repos_t *repos,
+                  svn_fs_pack_notify_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool);
+
+
 /**
  * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
@@ -1159,7 +1175,7 @@ svn_repos_stat(svn_dirent_t **dirent,
 /**
  * Given @a path which exists at revision @a start in @a fs, set
  * @a *deleted to the revision @a path was first deleted, within the
- * inclusive revision range set by @a start and @a end.  If @a path
+ * inclusive revision range bounded by @a start and @a end.  If @a path
  * does not exist at revision @a start or was not deleted within the
  * specified range, then set @a *deleted to SVN_INVALID_REVNUM.
  * Use @a pool for memory allocation.
@@ -2030,8 +2046,14 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH        "Node-copyfrom-path"
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV         "Node-copyfrom-rev"
-#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM "Text-copy-source-md5"
-#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM     "Text-content-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5      "Text-copy-source-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_SHA1     "Text-copy-source-sha1"
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM \
+                                        SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5          "Text-content-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_SHA1         "Text-content-sha1"
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM     \
+                                        SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
 
 #define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
@@ -2041,7 +2063,10 @@ svn_repos_node_from_baton(void *edit_baton);
 /* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
 /* @since New in 1.5. */
-#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  "Text-delta-base-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5       "Text-delta-base-md5"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_SHA1      "Text-delta-base-sha1"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
+                                        SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action

@@ -3,6 +3,12 @@
 ## See the usage() function for operating instructions. ##
 
 import re
+try:
+  # Python >=2.6
+  from functools import reduce
+except ImportError:
+  # Python <2.6
+  pass
 import sys
 import operator
 
@@ -81,7 +87,7 @@ def list_frequencies(list):
   for item in list:
     counter[item] = counter.get(item, 0) + 1
 
-  frequencies = counter.items()
+  frequencies = list(counter.items())
   frequencies.sort(_freqtable_cmp)
 
   return frequencies

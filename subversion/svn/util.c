@@ -256,7 +256,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                                const char *editor_cmd,
                                const char *base_dir /* UTF-8! */,
                                const svn_string_t *contents /* UTF-8! */,
-                               const char *prefix,
+                               const char *filename,
                                apr_hash_t *config,
                                svn_boolean_t as_text,
                                const char *encoding,
@@ -318,10 +318,12 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 
   /*** From here on, any problems that occur require us to cd back!! ***/
 
-  /* Ask the working copy for a temporary file that starts with
-     PREFIX. */
-  err = svn_io_open_unique_file2(&tmp_file, &tmpfile_name,
-                                 prefix, ".tmp", svn_io_file_del_none, pool);
+  /* Ask the working copy for a temporary file named FILENAME-something. */
+  err = svn_io_open_uniquely_named(&tmp_file, &tmpfile_name,
+                                   "" /* dirpath */,
+                                   filename,
+                                   ".tmp",
+                                   svn_io_file_del_none, pool, pool);
 
   if (err && (APR_STATUS_IS_EACCES(err->apr_err) || err->apr_err == EROFS))
     {
@@ -339,9 +341,11 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
             (apr_err, _("Can't change working directory to '%s'"), base_dir);
         }
 
-      err = svn_io_open_unique_file2(&tmp_file, &tmpfile_name,
-                                     prefix, ".tmp",
-                                     svn_io_file_del_none, pool);
+      err = svn_io_open_uniquely_named(&tmp_file, &tmpfile_name,
+                                       "" /* dirpath */,
+                                       filename,
+                                       ".tmp",
+                                       svn_io_file_del_none, pool, pool);
     }
 
   if (err)
@@ -557,9 +561,11 @@ svn_cl__make_log_msg_baton(void **baton,
 
 svn_error_t *
 svn_cl__cleanup_log_msg(void *log_msg_baton,
-                        svn_error_t *commit_err)
+                        svn_error_t *commit_err,
+                        apr_pool_t *pool)
 {
   struct log_msg_baton *lmb = log_msg_baton;
+  svn_error_t *err;
 
   /* If there was no tmpfile left, or there is no log message baton,
      return COMMIT_ERR. */
@@ -575,11 +581,12 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      chain.  Then return COMMIT_ERR.  If the conversion from UTF-8 to
      native encoding fails, we have to compose that error with the
      commit error chain, too. */
-  svn_error_compose
-    (commit_err,
-     svn_error_create(commit_err->apr_err,
-                      svn_error_createf(commit_err->apr_err, NULL,
-                                        "   '%s'", lmb->tmpfile_left),
+
+  err = svn_error_createf(commit_err->apr_err, NULL,
+                          "   '%s'",
+                          svn_path_local_style(lmb->tmpfile_left, pool));
+  svn_error_compose(commit_err,
+                    svn_error_create(commit_err->apr_err, err,
                       _("Your commit message was left in "
                         "a temporary file:")));
   return commit_err;
@@ -658,7 +665,7 @@ svn_cl__get_log_message(const char **log_msg,
 
       /* Trim incoming messages of the EOF marker text and the junk
          that follows it.  */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data, 
+      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data,
                                 EDITOR_EOF_PREFIX);
 
       /* Make a string from a stringbuf, sharing the data allocation. */
@@ -992,10 +999,12 @@ svn_cl__xml_print_footer(const char *tagname,
 
 
 const char *
-svn_cl__node_kind_str(svn_node_kind_t kind)
+svn_cl__node_kind_str_xml(svn_node_kind_t kind)
 {
   switch (kind)
     {
+    case svn_node_none:
+      return "none";
     case svn_node_dir:
       return "dir";
     case svn_node_file:
@@ -1003,6 +1012,52 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
     default:
       return "";
     }
+}
+
+const char *
+svn_cl__node_kind_str_human_readable(svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_none:
+      return _("none");
+    case svn_node_dir:
+      return _("dir");
+    case svn_node_file:
+      return _("file");
+    default:
+      return "";
+    }
+}
+
+
+const char *
+svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return "update";
+    case svn_wc_operation_switch:
+      return "switch";
+    case svn_wc_operation_merge:
+      return "merge";
+  }
+  return "unknown_operation";
+}
+
+const char *
+svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
+                                     apr_pool_t *pool)
+{
+  switch(operation){
+    case svn_wc_operation_update:
+      return _("update");
+    case svn_wc_operation_switch:
+      return _("switch");
+    case svn_wc_operation_merge:
+      return _("merge");
+  }
+  return _("unknown operation");
 }
 
 
@@ -1164,3 +1219,26 @@ svn_cl__indent_string(const char *str,
     }
   return out->data;
 }
+
+const char *
+svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         apr_pool_t *pool)
+{
+  const char *url_str;
+
+  /* Construct the whole URL if we can, else use whatever we have. */
+  if (node->repos_url && node->path_in_repos)
+    url_str = svn_path_url_add_component(node->repos_url,
+                                         node->path_in_repos, pool);
+  else if (node->repos_url)
+    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
+  else if (node->path_in_repos)
+    url_str = node->path_in_repos;
+  else
+    url_str = "...";
+
+  return apr_psprintf(pool, "(%s) %s@%ld",
+                      svn_cl__node_kind_str_human_readable(node->node_kind),
+                      url_str, node->peg_rev);
+}
+

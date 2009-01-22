@@ -565,7 +565,7 @@ foreach my $project (@project_settings_list)
 
     my @head;
     my $formatted_date;
-    if (defined $stdout)
+    if ($stdout)
       {
         $formatted_date = strftime('%a %b %e %X %Y', localtime());
         push(@head, "From $mail_from $formatted_date\n");

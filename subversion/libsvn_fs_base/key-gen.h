@@ -21,6 +21,7 @@
 #include <apr.h>
 
 #include "svn_types.h"
+#include "private/svn_skel.h"  /* ### for svn_fs_base__{get,put}size() */
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,29 +47,9 @@ extern "C" {
    but that's a risk we'll live with for now. */
 #define MAX_KEY_SIZE 200
 
-/* In the `representations' and `strings', the value at this key is
-   the key to use when storing a new rep or string. */
+/* In many of the databases, the value at this key is the key to use
+   when storing a new record. */
 #define NEXT_KEY_KEY "next-key"
-
-
-/* Return the value of the string of digits at DATA as an ASCII
-   decimal number.  The string is at most LEN bytes long.  The value
-   of the number is at most MAX.  Set *END to the address of the first
-   byte after the number, or zero if an error occurred while
-   converting the number (overflow, for example).
-
-   We would like to use strtoul, but that family of functions is
-   locale-dependent, whereas we're trying to parse data in a
-   locale-independent format.  */
-
-apr_size_t svn_fs_base__getsize(const char *data, apr_size_t len,
-                                const char **endptr, apr_size_t max);
-
-
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-int svn_fs_base__putsize(char *data, apr_size_t len, apr_size_t value);
 
 
 /* Generate the next key after a given alphanumeric key.

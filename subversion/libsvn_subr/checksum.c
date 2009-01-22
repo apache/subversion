@@ -18,6 +18,7 @@
 
 
 #include <ctype.h>
+#include <apr_md5.h>
 
 #include "svn_checksum.h"
 #include "svn_error.h"
@@ -35,7 +36,7 @@
                        (k) == svn_checksum_sha1 ? APR_SHA1_DIGESTSIZE : 0)
 
 
-/* Check to see if KIND is something we recognize.  If not, return 
+/* Check to see if KIND is something we recognize.  If not, return
  * SVN_ERR_BAD_CHECKSUM_KIND */
 static svn_error_t *
 validate_kind(svn_checksum_kind_t kind)
@@ -67,12 +68,23 @@ svn_checksum_create(svn_checksum_kind_t kind,
     }
 }
 
+svn_checksum_t *
+svn_checksum__from_digest(const unsigned char *digest,
+                          svn_checksum_kind_t kind,
+                          apr_pool_t *result_pool)
+{
+  svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
+
+  memcpy((unsigned char *)checksum->digest, digest, DIGESTSIZE(kind));
+  return checksum;
+}
+
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum)
 {
   SVN_ERR(validate_kind(checksum->kind));
 
-  memset(checksum->digest, 0, DIGESTSIZE(checksum->kind));
+  memset((unsigned char *) checksum->digest, 0, DIGESTSIZE(checksum->kind));
   return SVN_NO_ERROR;
 }
 
@@ -138,6 +150,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 {
   int len;
   int i;
+  unsigned char is_zeros = '\0';
 
   if (hex == NULL)
     {
@@ -153,13 +166,16 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   for (i = 0; i < len; i++)
     {
       if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
-        return svn_error_create
-          (SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      (*checksum)->digest[i] = 
+      ((unsigned char *)(*checksum)->digest)[i] =
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+      is_zeros |= (*checksum)->digest[i];
     }
+
+  if (is_zeros == '\0')
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -171,7 +187,7 @@ svn_checksum_dup(const svn_checksum_t *src,
   apr_size_t size;
   svn_checksum_t *dest;
   svn_error_t *err;
-  
+
   /* The duplicate of a NULL checksum is a NULL... */
   if (src == NULL)
     return NULL;
@@ -187,7 +203,7 @@ svn_checksum_dup(const svn_checksum_t *src,
   size = DIGESTSIZE(src->kind);
 
   dest->digest = apr_palloc(pool, size);
-  memcpy(dest->digest, src->digest, size);
+  memcpy((unsigned char *)dest->digest, src->digest, size);
 
   return dest;
 }
@@ -207,13 +223,13 @@ svn_checksum(svn_checksum_t **checksum,
   switch (kind)
     {
       case svn_checksum_md5:
-        apr_md5((*checksum)->digest, data, len);
+        apr_md5((unsigned char *)(*checksum)->digest, data, len);
         break;
 
       case svn_checksum_sha1:
         apr_sha1_init(&sha1_ctx);
         apr_sha1_update(&sha1_ctx, data, len);
-        apr_sha1_final((*checksum)->digest, &sha1_ctx);
+        apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
         break;
 
       default:
@@ -234,13 +250,13 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
   switch (kind)
     {
       case svn_checksum_md5:
-        memcpy(checksum->digest, svn_md5__empty_string_digest(),
+        memcpy((unsigned char *)checksum->digest, svn_md5__empty_string_digest(),
                APR_MD5_DIGESTSIZE);
         break;
 
       case svn_checksum_sha1:
-        memcpy(checksum->digest, svn_sha1__empty_string_digest(),
-               APR_SHA1_DIGESTSIZE);
+        memcpy((unsigned char *)checksum->digest,
+               svn_sha1__empty_string_digest(), APR_SHA1_DIGESTSIZE);
         break;
 
       default:
@@ -316,11 +332,11 @@ svn_checksum_final(svn_checksum_t **checksum,
   switch (ctx->kind)
     {
       case svn_checksum_md5:
-        apr_md5_final((*checksum)->digest, ctx->apr_ctx);
+        apr_md5_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_final((*checksum)->digest, ctx->apr_ctx);
+        apr_sha1_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
         break;
 
       default:
@@ -332,7 +348,7 @@ svn_checksum_final(svn_checksum_t **checksum,
 }
 
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum)
+svn_checksum_size(const svn_checksum_t *checksum)
 {
   return DIGESTSIZE(checksum->kind);
 }

@@ -59,7 +59,7 @@ $LastChangedDate$
 <li><a href="#filing-issues">Filing bugs / issues</a></li>
 <li><a href="#issue-triage">Issue triage</a></li>
 <li><a href="#commit-access">Commit access</a></li>
-<li><a href="#lightweight-branches">Use lightweight branches</a></li>
+<li><a href="#branch-based-development">Branch-based development</a></li>
 <li><a href="#configury">The configuration/build system under unix</a></li>
 <li><a href="#releasing">How to release a distribution tarball</a></li>
 <li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
@@ -2247,8 +2247,38 @@ Obvious fix.
 
 </div>
 
-<div class="h2" id="lightweight-branches" title="lightweight-branches">
-<h2>Use lightweight branches</h2>
+<div class="h2" id="branch-based-development" title="branch-based-development">
+<h2>Branch-based development</h2>
+
+<p>We prefer to have development performed on the trunk.  Changes made
+to trunk have the highest visibility and get the greatest amount of
+exercise that can be expected from unreleased code.  That said, trunk
+is expected at all times to be stable.  It should build.  It should
+work.  Those policies, combined with our preference to see large
+changes broken up and committed in the smallest logical chunks
+feasible, and applied to particularly large changes (new features,
+sweeping code reorganizations, etc.), makes for set of rules that are
+almost impossible to keep.  It is in those situations that you might
+consider using a custom branch dedicated to your development task.
+The following are some guidelines to make your branch-based
+development work go smoothly.</p>
+
+<div class="h3" id="branch-creation-and-management" title="branch-creation-and-management">
+<h3>Branch creation and management</h3>
+
+<p>There's nothing particularly complex about branch-based
+development.  You make a branch from the trunk (or from whatever
+branch best serves as both source and destination for your work), and
+you do your work on it.  Subversion's merge tracking feature has
+greatly helped to reduce the sort of mental overhead required to work
+in this way, so making good use of that feature (by using Subversion
+1.5 or newer clients, and by performing all merges to and from the
+roots of branches) is highly encouraged.</p>
+
+</div>
+
+<div class="h3" id="lightweight-branches" title="lightweight-branches">
+<h3>Lightweight branches</h3>
 
 <p>If you're working on a feature or bugfix in stages involving
 multiple commits, and some of the intermediate stages aren't stable
@@ -2278,6 +2308,47 @@ remember to remove it.</p>
 <p>See also the <a href="#partial-commit-access" >section on partial
 commit access</a> for our policy on offering commit access to
 experimental branches.</p>
+
+</div>
+
+<div class="h3" id="branch-readme-files" title="branch-readme-files">
+<h3>BRANCH-README files</h3>
+
+<p>For branches you expect to be longer-lived, we recommend the
+creation and regular updating of a file in the root of your branch
+named <tt>BRANCH-README</tt>.  Such a file provides you with a great,
+central place to describe the following aspects of your branch:</p>
+
+<ul>
+
+<li><p>The basic purpose of your branch: what bug it exists to fix, or
+       feature to implement; what issue number(s) it relates to; what
+       list discussion threads surround it; what design docs exists to
+       describe the situation.</p></li>
+
+<li><p>What style of branch management you are using: is this a
+       reintegrate-able branch that will regularly be kept in sync
+       with its source branch and ultimately merged back to that
+       source branch using <tt>svn merge --reintegrate</tt>?  Or is it
+       not reintegrate-able, managed in total disregard to new changes
+       made to the source branch, and expected to be merged back to
+       that source without the <tt>--reintegrate</tt> option <tt>svn
+       merge</tt>?</p></li>
+
+<li><p>What tasks remain for you to accomplish on your branch?  Are
+       those tasks claimed by someone?  Do they need more design
+       input?  How can others help you?</p></li>
+
+</ul>
+
+<p>Why all the fuss?  Because this project idealizes communication and
+collaboration, understanding that the latter is more likely to happen
+when the former is a point of emphasis.</p>
+
+<p>Just remember when you merge your branch back to its source to
+delete the <tt>BRANCH-README</tt> file.</p>
+
+</div>
 
 </div>
 
@@ -3036,13 +3107,20 @@ libraries.</p>
 
 <p>The gettext package provides services for translating messages.  It
 uses the xgettext tool to extract strings from the sources for
-translation.  This works by extracting the arguments of the _() and
-N_() macros.  The former is used in context where function calls are
-allowed (typically anything except static initializers).  The latter
-is used whenever _() isn't.  Strings marked with N_() need to be
-passed to gettext translation routines whenever referenced in the
-code.  For an example, look at how the header and footer are handled
-in subversion/svn/help-cmd.c.</p>
+translation.  This works by extracting the arguments of the _(), N_() and
+Q_() macros.  _() is used in context where function calls are allowed
+(typically anything except static initializers).  N_() is used whenever
+_() isn't.  Strings marked with N_() need to be passed to gettext
+translation routines whenever referenced in the code.  For an example,
+look at how the header and footer are handled in subversion/svn/help-cmd.c.
+Q_() is used for messages which have singular and plural version.</p>
+
+<p>Beside _(), N_() and Q_() macros also U_() is used to mark strings which
+will not be translated because it's in general not useful to translate
+internal error messages. This should affect only obscure error messages
+most users should never ever see (caused by bugs in Subversion or
+very special repository corruptions). The reason for using U_() is to
+explicitly note that a gettext call was not just forgotten.</p>
 
 <p>When using direct calls to gettext routines (*gettext or
 *dgettext), keep in mind that most of Subversion code is library code.
@@ -3061,7 +3139,7 @@ svn_private_config.hw (for Windows).  Be sure to put</p>
 
 <p>as the last include in any file which requires localization.</p>
 
-<p>Also note that return values of _() and *gettext() calls are UTF-8
+<p>Also note that return values of _(), Q_() and *gettext() calls are UTF-8
 encoded; this means that they should be translated to the current
 locale being written as any form of program output.</p>
 

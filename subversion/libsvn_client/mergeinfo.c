@@ -2,7 +2,7 @@
  * mergeinfo.c :  merge history functions for the libsvn_client library
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -112,8 +112,8 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
      ### svn_client__get_prop_from_wc(). */
-  return svn_wc_prop_set2(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
-                          adm_access, TRUE /* skip checks */, pool);
+  return svn_wc_prop_set3(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
+                          adm_access, TRUE /* skip checks */, NULL, NULL, pool);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -196,21 +196,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
          an absolute path so we can walk up and out of the WC
          if necessary.  If we are using LIMIT_PATH it needs to
          be absolute too. */
-#if defined(WIN32) || defined(__CYGWIN__)
-      /* On Windows a path is also absolute when it starts with
-         'H:/' where 'H' is any upper or lower case letter. */
-      if (strlen(wcpath) == 0
-          || ((strlen(wcpath) > 0 && wcpath[0] != '/')
-               && !(strlen(wcpath) > 2
-                    && wcpath[1] == ':'
-                    && wcpath[2] == '/'
-                    && ((wcpath[0] >= 'A' && wcpath[0] <= 'Z')
-                        || (wcpath[0] >= 'a' && wcpath[0] <= 'z')))))
-#else
-      if (!(strlen(wcpath) > 0 && wcpath[0] == '/'))
-#endif /* WIN32 or Cygwin */
+
+      if (! svn_dirent_is_absolute(wcpath))
         {
-          SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
+          SVN_ERR(svn_dirent_get_absolute(&wcpath, wcpath, pool));
         }
 
       if (wc_mergeinfo == NULL &&
@@ -624,8 +613,8 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                                  path_suffix, pool));
 
   if (elides)
-    SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
-                             TRUE, pool));
+    SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
+                             TRUE, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -901,7 +890,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                     svn_mergeinfo_inherited,
                                                     NULL, path_or_url,
                                                     adm_access, ctx, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -1097,7 +1086,10 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 {
   apr_array_header_t *target;
   svn_merge_range_t *oldest_range, *youngest_range;
+  apr_array_header_t *revision_ranges;
   svn_opt_revision_t oldest_rev, youngest_rev;
+  svn_opt_revision_range_t *range;
+  svn_client_log_args_t *log_args;
   struct filter_log_entry_baton_t fleb;
 
   if (! rangelist->nelts)
@@ -1126,10 +1118,19 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   fleb.log_receiver_baton = log_receiver_baton;
   fleb.ctx = ctx;
 
+  /* Build log API arguments. */
+  revision_ranges = apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->end = youngest_rev;
+  range->start = oldest_rev;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  log_args = svn_client_log_args_create(pool);
+  log_args->discover_changed_paths = discover_changed_paths;
+
   /* Drive the log. */
-  SVN_ERR(svn_client_log4(target, &youngest_rev, &oldest_rev, &youngest_rev,
-                          0, discover_changed_paths, FALSE, FALSE, revprops,
-                          filter_log_entry_with_rangelist, &fleb, ctx, pool));
+  SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges, revprops,
+                          log_args, filter_log_entry_with_rangelist, &fleb, ctx,
+                          pool));
 
   /* Check for cancellation. */
   if (ctx->cancel_func)
@@ -1191,7 +1192,7 @@ location_from_path_and_rev(const char **url,
   svn_pool_destroy(subpool);
 
   if (adm_access)
-    return svn_wc_adm_close(adm_access);
+    return svn_wc_adm_close2(adm_access, pool);
   else
     return SVN_NO_ERROR;
 }

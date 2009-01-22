@@ -15,7 +15,7 @@ import svn.wc
 FORCE_COMPARISON = 0
 
 def usage():
-  print "Usage: " + sys.argv[0] + " FILE_OR_DIR1 FILE_OR_DIR2\n"
+  print("Usage: " + sys.argv[0] + " FILE_OR_DIR1 FILE_OR_DIR2\n")
   sys.exit(0)
 
 def run(files):
@@ -32,11 +32,11 @@ def run(files):
 
       if svn.wc.text_modified_p(fullpath, FORCE_COMPARISON,
 				adm_baton):
-        print "M      %s" % f
+        print("M      %s" % f)
       else:
-        print "       %s" % f
+        print("       %s" % f)
     except:
-      print "?      %s" % f
+      print("?      %s" % f)
 
     svn.wc.adm_close(adm_baton)
 

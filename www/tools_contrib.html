@@ -17,6 +17,8 @@
 
 <h1>Subversion Tools and Contrib</h1>
 
+<p>Translations: <a href="tools_contrib.zh.html">&#31616;&#20307;&#20013;&#25991;</a></p>
+
 <p>The directories 'tools' and 'contrib' in the Subversion repository
    contain code that works with Subversion but that Subversion doesn't
    depend on for normal operations.
@@ -332,13 +334,18 @@
 
 
   <h3><a name="svnmucc_c"
-    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmucc/svnmucc.c">svnmucc.c</a>
-    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmucc">contrib/client-side/svnmucc</a>)</h3>
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/svnmucc/svnmucc.c">svnmucc.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side/svnmucc">tools/client-side/svnmucc</a>)</h3>
   <p>Multiple URL Command Client: Combine a list of mv, cp and rm commands
      on URLs into a single commit.
   </p>
   <p>Related files:
     <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmucc/svnmucc-test.py">svnmucc-test.py</a>
+  </p>
+  <p>Previous locations: ...<tt>/contrib/client-side/mucc/mucc.c</tt>
+    for Subversion 1.4 or earlier,
+    ...<tt>/contrib/client-side/svnmucc/svnmucc.c</tt> for Subversion
+    1.5.
   </p>
 
 
@@ -892,6 +899,15 @@
   <p>This script, intended for use as a Subversion pre-lock hook, verifies that
      the PATH that USER is attempting to lock has the svn:needs-lock property
      set on it, returning success iff it does.
+  </p>
+
+
+  <h3><a name="require_mergeinfo_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/require-mergeinfo.pl">require-mergeinfo.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>This script checks that the committing client supports the 'mergeinfo'
+     capability. It is intended for use from within a Subversion start-commit
+     hook.
   </p>
 
 

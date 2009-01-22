@@ -17,6 +17,8 @@
 
 <h1 style="text-align: center;">Links</h1>
 
+<p>Translations: <a href="links.zh.html">&#31616;&#20307;&#20013;&#25991;</a></p>
+
 <p><b>Disclaimer:</b> These links are provided as a service to Subversion
 users. Neither Tigris.org, CollabNet Inc. nor the Subversion team
 guarantee the correctness, validity or usefulness of these links.</p>
@@ -26,11 +28,13 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
 </p>
 
 <div class="h2" id="toc" title="toc">
-<h2 id="toc">Table of Contents</h2>
+<h2 id="toc_">Table of Contents</h2>
 
 <ul>
   <li><a href="#mail-archives"
       >Mailing list archives</a></li>
+  <li><a href="#social-networking"
+      >Social networking</a></li>
   <li><a href="#dev-docs"
       >Documentation for developers</a></li>
   <li><a href="#books"
@@ -55,8 +59,6 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
       >Repository converters</a></li>
   <li><a href="#community-sites"
       >Community sites</a></li>
-  <li><a href="#hosting"
-      >Sites that Offer Subversion Hosting</a></li>
   <li><a href="#high-level-tools"
       >Higher-level tools that use Subversion</a></li>
   <li><a href="#browsers"
@@ -138,6 +140,18 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
 
 </div>
 
+<div class="h2" id="social-networking" title="social-networking">
+<h2 id="social_networking">Social networking</h2>
+    <ul>
+      <li><p><b>Subversion Facebook Page</b><br/>
+        <a href="http://www.facebook.com/pages/Subversion/61237832183"
+                >http://www.facebook.com/pages/Subversion/61237832183</a></p>
+      </li>
+    </ul>
+
+</div>
+
+
 <div class="h2" id="dev-docs" title="dev-docs">
 <h2 id="dev_docs">Documentation for developers</h2>
     <ul>
@@ -150,7 +164,7 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
 </div>
 
 <div class="h2" id="books" title="books">
-<h2 id="books">Books</h2>
+<h2 id="books_">Books</h2>
     <ul>
       <li><p><b>"Version Control with Subversion"</b> - 
         A Subversion book by Ben Collins-Sussman, Brian
@@ -211,8 +225,15 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
 <h2 id="all_clients">Subversion Clients</h2>
 
 <div class="h3" id="clients" title="clients">
-<h3 id="clients">Stand-alone clients</h3>
+<h3 id="clients_">Stand-alone clients</h3>
     <ul>
+      <li><p><b>Cornerstone</b> - A GUI Subversion client for Mac OS X.<br/>
+        (<i>Not open source. Free trial version available.</i>)
+        <br/>
+        <a href="http://www.zennaware.com/cornerstone/"
+                >http://www.zennaware.com/cornerstone/</a>
+      </p></li>
+
       <li><p><b>eSvn</b> - cross-platform QT-based GUI frontend to Subversion<br/>
         <a href="http://sourceforge.net/projects/esvn"
                 >http://sourceforge.net/projects/esvn</a>
@@ -273,17 +294,17 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
                >http://www.syncrosvnclient.com</a>
       </p></li>
 
-      <li><p><b>WorkBench</b> - Cross platform software development GUI
-        built on Subversion written in Python<br/>
-        <a href="http://pysvn.tigris.org/"
-                >http://pysvn.tigris.org/</a>
-      </p></li>
-
       <li><p><b>Versions</b> - A GUI Subversion client for Mac OS X.<br/>
         (<i>Not open source; requires commercial license.</i>)
         <br/>
         <a href="http://www.versionsapp.com/"
                 >http://www.versionsapp.com/</a>
+      </p></li>
+
+      <li><p><b>WorkBench</b> - Cross platform software development GUI
+        built on Subversion written in Python<br/>
+        <a href="http://pysvn.tigris.org/"
+                >http://pysvn.tigris.org/</a>
       </p></li>
 
       <li><p><b>ZigVersion</b> - a Subversion Interface for Mac OS X. Aims to
@@ -303,7 +324,7 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
       <li><p><b>Cascade</b> - Cross-platform file system driver frontend to
         Subversion, both GUI and command line.  Also provides other higher-level
         functionality.<br/>
-        (<i>Not open source; free trial edition available.</i>)
+        (<i>Not open source; free for personal use.</i>)
         <br/>
         <a href="http://www.conifersystems.com/cascade/"
                 >http://www.conifersystems.com/cascade/</a>
@@ -373,7 +394,7 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
       </p></li>
 
       <li><p><b>VisualSVN</b> - Subversion integration for Visual Studio .NET
-        2003 &amp; 2005<br/>
+        2003, 2005 &amp; 2008<br/>
         (<i>This is a commercial closed-source product.</i>)
         <br/>
         <a href="http://www.visualsvn.com/visualsvn/"
@@ -490,7 +511,7 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
 </div>
 
 <div class="h2" id="converters" title="converters">
-<h2 id="converters">Repository converters</h2>
+<h2 id="converters_">Repository converters</h2>
     <ul>
       <li><p><b>cvs2svn</b> - CVS to Subversion conversion<br/>
         cvs2svn has become its own project now, look at:<br/>
@@ -554,6 +575,12 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
                >http://www.pumacode.org/projects/vss2svn</a>
       </p></li>
 
+      <li><p><b>SVNFusion</b> - Consolidates several (hundreds) of repositories
+      into a new merged single one, preserving the revision history dates and
+      handling tags and branches cleverly<br/>
+       <a href="http://svnfusion.sourceforge.net">http://svnfusion.sourceforge.net</a>
+      </p></li>
+
     </ul>
 
 </div>
@@ -594,294 +621,6 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
                >http://open.collab.net/</a></p>
      </li>
    </ul>
-
-</div>
-
-<div class="h2" id="hosting" title="hosting">
-<h2 id="hosting">Sites that Offer Subversion Hosting</h2>
-
-  <ul>
-
-    <li><p><strong>berlios.de</strong>:  free hosting for open-source projects<br/>
-      <a href="http://www.berlios.de/"
-              >http://www.berlios.de/</a></p>
-
-      <p><em>"The goal of BerliOS is to provide support for different
-         interest groups in the area of Open Source Software
-         (OSS).  Our aim is to fulfil a neutral mediator function. The
-         target groups of BerliOS are on one hand the developers and
-         users of Open Source Software and on the other hand
-         commercial manufacturers of OSS operating systems and
-         applications as well as support companies."</em></p>
-    </li>
-
-    <li><p><strong>ObjectWeb</strong>:  open source middleware<br/>
-      <a href="http://www.objectweb.org/"
-              >http://www.objectweb.org/</a></p>
-
-      <p><em>"ObjectWeb is an international consortium fostering the
-         development of open-source middleware for cutting-edge
-         applications: EAI, e-business, clustering, grid computing,
-         managed services and more."</em>  Their hosting software is
-         GForge, with integrated Subversion support.  See
-         <a
-         href="http://www.objectweb.org/phorum/read.php?f=49&amp;i=37&amp;t=37"
-         >http://www.objectweb.org/phorum/read.php?f=49&amp;i=37&amp;t=37</a>
-         for details.</p>
-    </li>
-
-    <li><p><strong>CollabNet</strong>: commercial software development
-           collaboration platform, with Subversion integration<br/> 
-      <a href="http://www.collab.net/subversion/"
-              >http://www.collab.net/subversion/</a></p>
-
-      <p><em>"CollabNet Enterprise Edition (CEE) delivers a complete
-          software development and collaboration platform, offered as
-          a managed service, with full Subversion integration.
-          CollabNet also offers Subversion On Demand, a hosted
-          Subversion development environment, and Subversion support
-          and training."</em></p>
-    </li>
-
-    <li><p><strong>CVSDude</strong>: free and commercial Subversion
-            hosting<br/>
-      <a href="http://cvsdude.com/"
-              >http://cvsdude.com/</a></p>
-
-      <p><em>"CVSDude is a free CVS server and Subversion server.  We
-          provide cvs hosting and Subversion hosting for software
-          developers, software teams, graphic artists, project
-          managers and the like.  You can use your favourite software
-          client to access our CVS and Subversion servers. Our basic
-          or 'free' service is limited but we do offer commercial
-          upgrades..."</em></p>
-    </li>
-
-    <li><p><strong>SourceHosting.net</strong>:  commercial Subversion hosting<br/>
-      <a href="http://www.sourcehosting.net/"
-              >http://www.sourcehosting.net/</a></p>
-
-      <p><em>"SourceHosting.net provides fully-managed Subversion hosting, as
-          well as Bugzilla and CVS hosting packages. Hourly, secure offsite
-          backups are included in all of our hosting plans, and add-on tools
-          such as WebSVN and CVSweb are available as well."</em></p>
-    </li>
-
-    <li><p><strong>wush.net</strong>:  commercial Subversion hosting<br/>
-      <a href="http://www.wush.net/"
-              >http://www.wush.net/</a></p>
-
-      <p><em>"We provide professional quality Subversion hosting for
-         individuals and small businesses.  Our plans include a suite
-         of integrated software designed to complement
-         Subversion."</em></p>
-    </li>
-
-    <li><p><strong>ProjectLocker</strong>: commercial Subversion hosting<br/>
-      <a href="http://www.projectlocker.com/"
-              >http://www.projectlocker.com/</a></p>
-
-      <p><em>"ProjectLocker offers professional Subversion hosting, as
-          well as additional development process, project management,
-          and collaboration tools."</em></p>
-    </li>
-
-    <li><p><strong>Gna!</strong>: free hosting for Projects under a
-        GPL-compatible license<br/>
-      <a href="https://gna.org/index.php"
-              >https://gna.org/index.php</a></p>
-      <p><em>"Gna! project [is] a central point for development, distribution
-         and maintenance of Libre Software (Free Software) projects."</em></p>
-    </li>
-
-    <li><p><strong>http://www.projxpert.com/</strong>: professional
-        software project hosting site<br />
-      <a href="http://www.projxpert.com/"
-              >http://www.projxpert.com/</a></p>
-    </li>
-
-    <li><p><strong>DevGuard.com</strong>: commercial Subversion hosting<br/>
-      <a href="http://www.devguard.com/">http://www.devguard.com/</a></p>
-
-      <p><em>"DevGuard.com offers commercial Subversion hosting  for
-          individuals and small businesses.  Secure, encrypted data
-          transfer, fast network access, easy to use web admin
-          interface."</em></p>
-    </li>
-
-    <li><p><strong>AVLUX&nbsp;Solutions</strong>:
-                   commercial Subversion hosting<br/>
-      <a href="http://www.avlux.net/">http://www.avlux.net/</a></p>
-
-      <p><em>"full-service" web hosting, including (among other
-          things) Subversion repositories and WebSVN.</em></p>
-    </li>
-
-    <li><p><strong>GeekISP</strong>:
-                   commercial Subversion hosting<br/>
-      <a href="http://www.geekisp.com/">http://www.geekisp.com/</a></p>
-
-      <p><em>"GeekISP includes CVS and SVN repositories with all
-              accounts."</em></p> 
-    </li>
-
-    <li><p><strong>TextDrive</strong>:
-                   commercial Subversion hosting<br/>
-      <a href="http://textdrive.com/">http://textdrive.com/</a></p>
-
-      <p><em>Repository hosting services, from shared hosting to fully
-             managed dedicated server clusters.</em></p> 
-    </li>
-
-    <li><p><strong>Labyrinth Data Services</strong>:
-                   commercial Subversion hosting<br/>
-      <a href="http://www.labyrinthdata.net.au/"
-              >http://www.labyrinthdata.net.au/</a></p>
-
-      <p><em>Australian-based Linux shell accounts and web hosting;
-             unlimited Subversion repositories with all accounts.</em></p>
-    </li>
-
-    <li><p><strong>SourceForge.net</strong>:
-                   no-charge hosting for open-source projects<br/>
-      <a href="http://sourceforge.net/"
-              >http://sourceforge.net/</a></p>
-
-      <p><em>Probably the largest open source project hosting site on
-             the Net.</em></p>
-    </li>
-
-    <li><p><strong>hosted-projects.com</strong>:
-                   commercial Subversion hosting<br/>
-       <a href="http://www.hosted-projects.com">http://www.hosted-projects.com</a></p>
-       <p><em>hosted-projects.com is a company specialized in web hosting services for
-              software project teams offering the Subversion revision control system coupled
-              with project and issue management software like Trac and Bugzilla.</em></p>
-    </li>
-
-    <li><p><strong>google.com</strong>:
-                   free Subversion hosting for open source projects<br/>
-       <a href="http://code.google.com/hosting/">http://code.google.com/hosting/</a></p>
-      <p>
-          <em>"Our new hosting service offers a collaborative development
-            environment that includes: project workspaces with simple membership controls;
-              version control via Subversion;
-              issue tracking;
-              mailing lists at groups.google.com."
-      </em></p>
-    </li>
-
-    <li><p><strong>myVersionControl.com</strong>:
-                      Subversion Hosting and Project Management<br/>
-       <a href="http://www.myversioncontrol.com/"
-               >http://www.myversioncontrol.com/</a></p>
-      <p>
-          <em>Commercial Subversion hosting, integrated with
-              other project management services.</em></p>
-    </li>
-
-    <li><p><strong>Versionshelf.com</strong>:
-      commercial Subversion hosting with free service for students and
-      teachers<br/>
-      <a href="http://www.versionshelf.com/"
-              >http://www.versionshelf.com/</a></p>
-      <p><em>Versionshelf has a streamlined webinterface to configure
-        and access repositories, users, ACLs, rss feeds, external
-        commit triggers, backups... easily. Access is always secured
-        through 128-bit SSL data encryption.</em></p>
-    </li>
-
-    <li><p><strong>Assembla</strong>: "... free workspaces with
-        unlimited team size and integrated tools like wiki,
-        discussion, alerts, Subversion, Trac,..." [and more]<br/>
-      <a href="http://www.assembla.com/">http://www.assembla.com/</a></p>
-      </li>
-
-   <li><p><strong>Code Spaces</strong>:
-     free and commercial Subversion hosting<br/>
-      <a href="http://www.codespaces.com/"
-              >http://www.CodeSpaces.com/</a></p>
-      <p><em>"Code Spaces is a development and collaboration platform build on
-      top of Subversion, featuring Issue Tracking, Project Management
-      and much more.  Code Spaces offers free plans for single users
-      and open source or non profit projects..."</em></p>
-    </li>
-
-   <li><p><strong>Beanstalk</strong>:
-      hosted Subversion management and integration service<br/>
-      <a href="http://www.beanstalkapp.com/"
-              >http://www.beanstalkapp.com/</a></p>
-      <p><em>"Beanstalk is a hosted Subversion system, making it easy
-      for anyone to set up, browse, track, and manage Subversion
-      repositories. Beanstalk has built-in integration with [...]
-      tools such as Basecamp, FogBugz, and Lighthouse."</em></p>
-    </li>
-
-    <li><p><strong>8svn</strong>: pay-as-you-go subversion hosting<br/> 
-      <a href="http://www.8svn.com/"
-              >http://www.8svn.com/</a></p>
-
-      <p><em>"Unlimited Subversion hosting with no monthly fees.
-         Pay-as-you-go pricing with an unlimited number of 
-         repositories and users."</em></p>
-    </li>
-    
-    <li><p><strong>Springloops</strong>: hosted Subversion dedicated to
-                                         web developers<br/> 
-      <a href="http://www.springloops.com/"
-              >http://www.springloops.com/</a></p>
-
-      <p><em>"Unique source browser, pretty change reviews, code deployments
-          and more dedicated to everyday web development."</em></p>
-    </li>
-
-    <li><p><strong>Weble</strong>: commercial Subversion hosting<br/>
-      <a href="http://www.weble.be/"
-              >http://www.weble.be/</a></p>
-			  
-      <p><em>"Unlimited number of repositories and users,
-              on a high availability server cluster, free trial."</em></p>
-    </li>
-
-    <li><p><strong>SSHControl.com</strong>: Subversion, Git, and
-                   Mercurial hosting over SSH<br/>
-        <a href="http://sshcontrol.com/"
-                >http://sshcontrol.com/</a></p>
- 
-       <p><em>Free svn/git/hg server using SSH.  Has both zero-cost
-              and paid service levels; access control panels; project
-              creation / management; free tour available to
-              unregistered users.</em></p>
-    </li>
-
-    <li><p><strong>XP-Dev.com</strong>: free Subversion hosting<br/>
-        <a href="http://xp-dev.com/"
-                >http://xp-dev.com/</a></p>
- 
-       <p><em>Unlimited free subversion hosting for closed and open
-              source projects, with controls for access permissions
-              and commit emails.</em></p>
-    </li>
-
-    <li><p><strong>LCube</strong>:  professional subversion hosting<br/>
-      <a href="http://www.lcube-webhosting.de/"
-              >http://www.lcube-webhosting.de/</a></p>
-
-      <p><em>"LCube - Webhosting &amp; Webdesign provides professional
-              subversion repository hosting.  SSL-Encryption, Backup,
-              BugZilla, Trac and WebSVN."  Server location: Germany.</em></p>
-    </li>
-
-    <li><p><strong>SlikSVN</strong>: professional subversion hosting<br/>
-      <a href="http://www.sliksvn.com/"
-              >http://www.sliksvn.com/</a></p>
-
-      <p><em>"Specialized in subversion hosting. Offsite backup, encryption,
-              DAV or svnserve. From free to dedicated with uptime
-              guarantees." Network location: The Netherlands.</em></p>
-    </li>
-
-  </ul>
 
 </div>
 
@@ -981,6 +720,14 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
         <br/>
         <a href="http://www.voilasvn.com/main/page_download.html"
                 >http://www.voilasvn.com/main/page_download.html</a>
+      </p></li>
+
+      <li><p><b>Submin</b> - An easy to use web interface for
+         Subversion repository administration. Easily create
+         repositories, add/change/remove users/groups and manage
+         access rights.<br/>
+        <a href="http://supermind.nl/submin"
+                >http://supermind.nl/submin</a>
       </p></li>
 
     </ul>
@@ -1227,7 +974,7 @@ and follow the <a href="hacking.html#patches">patch submission guidelines</a>.
 </div>
 
 <div class="h2" id="articles" title="articles">
-<h2 id="articles">Articles and Reviews</h2>
+<h2 id="articles_">Articles and Reviews</h2>
 
     <ul>
       <li><p><b>"CVS is out, Subversion is in"</b> 

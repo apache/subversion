@@ -1,0 +1,32 @@
+We are getting close to creating the 1.6.x branch.  This file lists the tasks
+we want to complete before branching.  "Blocker" tasks must be done before we
+branch, while "optional" tasks would be nice to have completed, but aren't
+essential.
+
+Tasks which need to happen before the 1.6.0 release, but aren't related to when
+we branch should be put in the issue tracker with the 1.6 milestone.
+
+Blocker:
+
+ * #3334: Tree conflicts "merry-go-round" about update updating the base.
+   Julian Foad is working on this. Done for when victim is a file, still
+   doing for when victim is a directory.  [julianfoad]
+   See: <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1019712>.
+
+ * Review the new "svn_dirent/svn_uri" API and ensure we aren't putting
+   functions into the public name space that we won't want to support.
+   See <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1010183>.
+
+ * #3209: Tests XFAIL due to changed tree-conflicts behaviour
+     http://svn.haxx.se/dev/archive-2009-01/0538.shtml summarizes the tests
+     that are failing because of real differences in pre-TC vs. post-TC
+     functionality.
+
+Optional:
+
+ * Tree conflicts - non-essential issues:
+
+   - #3329: Update/switch fails if the target itself is a tree conflict victim.
+     Should print a 'Skipped' message instead.  Update of an item that is
+     inside a tree conflict, and that no longer exists in the repo, does
+     nothing.  Should print a 'Skipped' message instead.

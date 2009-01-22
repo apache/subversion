@@ -39,9 +39,11 @@ make_pot()
     -name "*.c" -print -or \
     -name "svn_error_codes.h" -print -or \
     -name "svn_fs_util.h" -print | \
-    $XGETTEXT --sort-by-file -k_ -kN_ -kSVN_ERRDEF:3 \
+    $XGETTEXT --sort-by-file -k_ -kN_ -kQ_:1,2 -kSVN_ERRDEF:3 \
     --flag=_:1:pass-c-format \
     --flag=N_:1:pass-c-format \
+    --flag=Q_:1:pass-c-format \
+    --flag=Q_:2:pass-c-format \
     --flag=svn_cmdline_printf:2:c-format \
     --flag=svn_cmdline_fprintf:3:c-format \
     --flag=svn_error_createf:3:c-format \

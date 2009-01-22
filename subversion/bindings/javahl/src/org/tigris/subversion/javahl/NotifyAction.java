@@ -152,6 +152,54 @@ public interface NotifyAction
     public static final int update_replaced = 30;
 
     /**
+     * @since 1.6
+     * Property added.
+     */
+    public static final int property_added = 31;
+
+    /**
+     * @since 1.6
+     * Property modified.
+     */
+    public static final int property_modified = 32;
+
+    /**
+     * @since 1.6
+     * Property deleted.
+     */
+    public static final int property_deleted = 33;
+
+    /**
+     * @since 1.6
+     * Property delete nonexistent.
+     */
+    public static final int property_deleted_nonexistent = 34;
+
+    /**
+     * @since 1.6
+     * Revision property set.
+     */
+    public static final int revprop_set = 35;
+
+    /**
+     * @since 1.6
+     * Revision property deleted.
+     */
+    public static final int revprop_deleted = 36;
+
+    /**
+     * @since 1.6
+     * The last notification in a merge
+     */
+    public static final int merge_completed = 37;
+
+    /**
+     * @since 1.6
+     * The path is a tree-conflict victim of the intended action
+     */
+    public static final int tree_conflict = 38;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =
@@ -186,6 +234,14 @@ public interface NotifyAction
         "changelist cleared",
         "merge begin",
         "foreign merge begin",
-        "replaced"
+        "replaced",
+        "property added",
+        "property modified",
+        "property deleted",
+        "nonexistent property deleted",
+        "revprop set",
+        "revprop deleted",
+        "merge completed",
+        "tree conflict"
     };
 }

@@ -55,11 +55,17 @@ string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
   return new_hash;
 }
 
+svn_client_commit_item3_t *
+svn_client_commit_item3_create(apr_pool_t *pool)
+{
+  return apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+}
+
 svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
                               apr_pool_t *pool)
 {
-  *item = apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+  *item = svn_client_commit_item3_create(pool);
   return SVN_NO_ERROR;
 }
 
@@ -225,7 +231,7 @@ svn_client__path_relative_to_root(const char **rel_path,
  cleanup:
   if (need_wc_cleanup)
     {
-      svn_error_t *err2 = svn_wc_adm_close(adm_access);
+      svn_error_t *err2 = svn_wc_adm_close2(adm_access, pool);
       if (! err)
         err = err2;
       else
@@ -295,7 +301,7 @@ svn_client__get_repos_root(const char **repos_root,
 
   if (need_wc_cleanup)
     {
-      svn_error_t *err2 = svn_wc_adm_close(adm_access);
+      svn_error_t *err2 = svn_wc_adm_close2(adm_access, pool);
       if (! err)
         err = err2;
       else

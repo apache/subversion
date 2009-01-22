@@ -2,7 +2,7 @@
  * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,13 +23,13 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 
 #include "client.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_props.h"
-#include "svn_md5.h"
 #include "svn_iter.h"
 #include "svn_hash.h"
 
@@ -44,6 +44,22 @@
 #define SVN_CLIENT_COMMIT_DEBUG
 */
 
+/* Wrap an RA error in an out-of-date error if warranted. */
+static svn_error_t *
+fixup_out_of_date_error(const char *path,
+                        svn_node_kind_t kind,
+                        svn_error_t *err)
+{
+  if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+    return  svn_error_createf(SVN_ERR_WC_NOT_UP_TO_DATE, err,
+                              (kind == svn_node_dir
+                               ? _("Directory '%s' is out of date")
+                               : _("File '%s' is out of date")),
+                              path);
+  else
+    return err;
+}
 
 
 /*** Harvesting Commit Candidates ***/
@@ -85,8 +101,7 @@ add_committable(apr_hash_t *committables,
 
   /* Now update pointer values, ensuring that their allocations live
      in POOL. */
-  svn_client_commit_item_create((const svn_client_commit_item3_t **) &new_item,
-                                pool);
+  new_item = svn_client_commit_item3_create(pool);
   new_item->path           = apr_pstrdup(pool, path);
   new_item->kind           = kind;
   new_item->url            = apr_pstrdup(pool, url);
@@ -184,6 +199,159 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   add_lock_token,
   svn_client__default_walker_error_handler
 };
+
+
+/* Helper for harvest_committables().
+ * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
+ * encountering a tree-conflicted immediate child node. However, do
+ * not consider immediate children that are outside the bounds of DEPTH.
+ *
+ * PATH, ENTRY, ADM_ACCESS, DEPTH, CHANGELISTS and POOL are the same ones
+ * originally received by harvest_committables().
+ *
+ * Tree-conflicts information is stored in the victim's immediate parent.
+ * In some cases of an absent tree-conflicted victim, the tree-conflict
+ * information in its parent dir is the only indication that the node
+ * is under version control. This function is necessary for this
+ * particular case. In all other cases, this simply bails out a little
+ * bit earlier.
+ *
+ * Note: Tree-conflicts info can only be found in "THIS_DIR" entries. */
+static svn_error_t *
+bail_on_tree_conflicted_children(const char *path,
+                                 const svn_wc_entry_t *entry,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_depth_t depth,
+                                 apr_hash_t *changelists,
+                                 apr_pool_t *pool)
+{
+  apr_array_header_t *conflicts;
+  int i;
+
+  if ((depth == svn_depth_empty)
+      || (entry->kind != svn_node_dir)
+      || (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
+    /* There can't possibly be tree-conflicts information here. */
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
+                                      path, pool));
+
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      const svn_wc_conflict_description_t *conflict;
+      svn_wc_adm_access_t *child_adm_access;
+      const svn_wc_entry_t *child_entry = NULL;
+
+      conflict = APR_ARRAY_IDX(conflicts, i,
+                               svn_wc_conflict_description_t *);
+
+      if ((conflict->node_kind == svn_node_dir) &&
+          (depth == svn_depth_files))
+        continue;
+
+      /* So we've encountered a conflict that is included in DEPTH.
+       * Bail out. */
+
+      /* Get the child's entry, if it has one, else NULL. */
+      if (conflict->node_kind == svn_node_dir)
+        {
+          svn_error_t *err = svn_wc_adm_retrieve(
+                               &child_adm_access, adm_access,
+                               conflict->path, pool);
+          if (err 
+              && (svn_error_root_cause(err)->apr_err
+                  == SVN_ERR_WC_PATH_NOT_FOUND))
+            {
+              svn_error_clear(err);
+              err = 0;
+              child_adm_access = NULL;
+            }
+          SVN_ERR(err);
+        }
+      else
+        child_adm_access = adm_access;
+
+      if (child_adm_access != NULL)
+        SVN_ERR(svn_wc_entry(&child_entry, conflict->path,
+                             child_adm_access, TRUE, pool));
+
+      /* If changelists are used but there is no entry, no changelist
+       * can possibly match. */
+      /* TODO: Currently, there is no way to set a changelist name on
+       * a tree-conflict victim that has no entry (e.g. locally
+       * deleted). */
+      if ((changelists == NULL)
+          || ((child_entry != NULL)
+              && SVN_WC__CL_MATCH(changelists, child_entry)))
+        return svn_error_createf(
+                 SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                 _("Aborting commit: '%s' remains in conflict"),
+                 svn_path_local_style(conflict->path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper function for svn_client__harvest_committables().
+ * Determine whether we are within a tree-conflicted subtree of the
+ * working copy and return an SVN_ERR_WC_FOUND_CONFLICT error if so.
+ * Step outward through the parent directories up to the working copy
+ * root, obtaining read locks temporarily. */
+static svn_error_t *
+bail_on_tree_conflicted_ancestor(svn_wc_adm_access_t *first_ancestor,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *path;
+  const char *parent_path;
+  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t wc_root;
+  svn_boolean_t tree_conflicted;
+
+  path = svn_wc_adm_access_path(first_ancestor);
+  adm_access = first_ancestor;
+
+  while(1)
+    {
+      /* Here, ADM_ACCESS refers to PATH. */
+      svn_wc__strictly_is_wc_root(&wc_root,
+                                  path,
+                                  adm_access,
+                                  scratch_pool);
+
+      if (adm_access != first_ancestor)
+        svn_wc_adm_close2(adm_access, scratch_pool);
+
+      if (wc_root)
+        break;
+
+      /* Check the parent directory's entry for tree-conflicts
+       * on PATH. */
+      parent_path = svn_path_dirname(path, scratch_pool);
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path,
+                               FALSE,  /* Write lock */
+                               0, /* lock levels */
+                               NULL, NULL,
+                               scratch_pool));
+      /* Now, ADM_ACCESS refers to PARENT_PATH. */
+
+      svn_wc_conflicted_p2(NULL, NULL, &tree_conflicted,
+                           path, adm_access, scratch_pool);
+
+      if (tree_conflicted)
+        return svn_error_createf(
+                 SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                 _("Aborting commit: '%s' remains in tree-conflict"),
+                 svn_path_local_style(path, scratch_pool));
+
+      /* Step outwards */
+      path = parent_path;
+      /* And again, ADM_ACCESS refers to PATH. */
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -293,13 +461,9 @@ harvest_committables(apr_hash_t *committables,
          svn_path_local_style(path, pool));
     }
 
-  /* Get a fully populated entry for PATH if we can, and check for
-     conflicts. If this is a directory ... */
   if (entry->kind == svn_node_dir)
     {
-      /* ... then try to read its own entries file so we have a full
-         entry for it (we were going to have to do this eventually to
-         recurse anyway, so... ) */
+      /* Read the dir's own entries for use when recursing. */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
       err = svn_wc_entries_read(&entries, adm_access, copy_mode, pool);
@@ -313,38 +477,13 @@ harvest_committables(apr_hash_t *committables,
         }
 
       /* If we got an entries hash, and the "this dir" entry is
-         present, override our current ENTRY with it, and check for
-         conflicts. */
+         present, try to override our current ENTRY with it. */
       if ((entries) && ((e = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                                           APR_HASH_KEY_STRING))))
-        {
           entry = e;
-          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, entry, pool));
-        }
-
-      /* No new entry?  Just check the parent's pointer for
-         conflicts. */
-      else
-        {
-          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, entry,
-                                       pool));
-        }
     }
 
-  /* If this is not a directory, check for conflicts using the
-     parent's path. */
-  else
-    {
-      /* ### Maybe the tree-conflict test should be a separate function. */
-      svn_boolean_t dummy;
-      const svn_wc_entry_t *p_entry;
-
-      SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc_conflicted_p2(&dummy, &dummy, &treec, p_path,
-                                   p_entry, pool));
-
-      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &dummy, p_path, entry, pool));
-    }
+  SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access, pool));
 
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc || treec)
@@ -356,6 +495,9 @@ harvest_committables(apr_hash_t *committables,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
     }
+
+  SVN_ERR(bail_on_tree_conflicted_children(path, entry, adm_access, depth,
+                                           changelists, pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -575,6 +717,11 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           this_entry = val;
+
+          /* Skip the excluded item. */
+          if (this_entry->depth == svn_depth_exclude)
+            continue;
+
           name_uri = svn_path_uri_encode(name, loop_pool);
 
           full_path = svn_path_join(path, name, loop_pool);
@@ -781,6 +928,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *target;
+      svn_error_t *err;
 
       svn_pool_clear(subpool);
       /* Add the relative portion of our full path (if there are no
@@ -796,8 +944,27 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
                                         target, subpool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                     subpool));
+
+      err = svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
+                                    subpool);
+      /* If a target of the commit is a tree-conflicted node that
+       * has no entry (e.g. locally deleted), issue a proper tree-
+       * conflicts error instead of a "not under version control". */
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+        {
+          svn_wc_conflict_description_t *conflict = NULL;
+          svn_wc__get_tree_conflict(&conflict, target, adm_access, pool);
+          if (conflict != NULL)
+            {
+              svn_error_clear(err);
+              return svn_error_createf(
+                       SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                       _("Aborting commit: '%s' remains in conflict"),
+                       svn_path_local_style(conflict->path, pool));
+            }
+        }
+      SVN_ERR(err);
+
       if (! entry->url)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Entry for '%s' has no URL"),
@@ -811,7 +978,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
           const char *parent, *base_name;
           svn_wc_adm_access_t *parent_access;
           const svn_wc_entry_t *p_entry = NULL;
-          svn_error_t *err;
 
           svn_path_split(target, &parent, &base_name, subpool);
           err = svn_wc_adm_retrieve(&parent_access, parent_dir,
@@ -864,6 +1030,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                    ? target
                                    : svn_path_dirname(target, subpool)),
                                   subpool));
+
+      /* Make sure this isn't inside a working copy subtree that is
+       * marked as tree-conflicted. */
+      SVN_ERR(bail_on_tree_conflicted_ancestor(dir_access, subpool));
+
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
                                    dir_access, entry->url, NULL,
                                    entry, NULL, FALSE, FALSE, depth,
@@ -1072,7 +1243,6 @@ struct path_driver_cb_baton
   const svn_delta_editor_t *editor;    /* commit editor */
   void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
-  apr_hash_t *tempfiles;               /* hash of tempfiles created */
   const char *notify_path_prefix;      /* notification path prefix
                                           (NULL is okay, else abs path) */
   svn_client_ctx_t *ctx;               /* client context baton */
@@ -1099,6 +1269,7 @@ do_item_commit(void **dir_baton,
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
   svn_client_ctx_t *ctx = cb_baton->ctx;
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* Do some initializations. */
   *dir_baton = NULL;
@@ -1198,8 +1369,11 @@ do_item_commit(void **dir_baton,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
       SVN_ERR_ASSERT(parent_baton);
-      SVN_ERR(editor->delete_entry(path, item->revision,
-                                   parent_baton, pool));
+      err = editor->delete_entry(path, item->revision,
+                                 parent_baton, pool);
+
+      if (err)
+        return fixup_out_of_date_error(path, item->kind, err);
     }
 
   /* If this item is supposed to be added, do so. */
@@ -1255,9 +1429,12 @@ do_item_commit(void **dir_baton,
           if (! file_baton)
             {
               SVN_ERR_ASSERT(parent_baton);
-              SVN_ERR(editor->open_file(path, parent_baton,
-                                        item->revision,
-                                        file_pool, &file_baton));
+              err = editor->open_file(path, parent_baton,
+                                      item->revision,
+                                      file_pool, &file_baton);
+
+              if (err)
+                return fixup_out_of_date_error(path, kind, err);
             }
         }
       else
@@ -1279,7 +1456,23 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
+      /* Ensured by harvest_committables(), item->path will never be an
+         excluded path. However, will it be deleted/absent items?  I think
+         committing an modification on a deleted/absent item does not make
+         sense. So it's probably safe to turn off the show_hidden flag here.*/
+      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, FALSE, pool));
+
+      /* When committing a directory that no longer exists in the
+         repository, a "not found" error does not occur immediately
+         upon opening the directory.  It appears here during the delta
+         transmisssion. */
+      err = svn_wc_transmit_prop_deltas
+        (item->path, adm_access, tmp_entry, editor,
+         (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool);
+
+      if (err)
+        return fixup_out_of_date_error(path, kind, err);
+
       SVN_ERR(svn_wc_transmit_prop_deltas
               (item->path, adm_access, tmp_entry, editor,
                (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool));
@@ -1319,9 +1512,12 @@ do_item_commit(void **dir_baton,
       if (! file_baton)
         {
           SVN_ERR_ASSERT(parent_baton);
-          SVN_ERR(editor->open_file(path, parent_baton,
+          err = editor->open_file(path, parent_baton,
                                     item->revision,
-                                    file_pool, &file_baton));
+                                    file_pool, &file_baton);
+
+          if (err)
+            return fixup_out_of_date_error(path, item->kind, err);
         }
 
       /* Add this file mod to the FILE_MODS hash. */
@@ -1358,13 +1554,13 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
-                      apr_hash_t **digests,
+                      apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
   apr_hash_t *file_mods = apr_hash_make(pool);
   apr_hash_t *items_hash = apr_hash_make(pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
   struct path_driver_cb_baton cb_baton;
@@ -1384,9 +1580,9 @@ svn_client__do_commit(const char *base_url,
   if (tempfiles)
     *tempfiles = apr_hash_make(pool);
 
-  /* Ditto for the md5 digests. */
-  if (digests)
-    *digests = apr_hash_make(pool);
+  /* Ditto for the md5 checksums. */
+  if (checksums)
+    *checksums = apr_hash_make(pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      URI-decoded relative paths (which come from the item URLs).  And
@@ -1405,7 +1601,6 @@ svn_client__do_commit(const char *base_url,
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
   cb_baton.file_mods = file_mods;
-  cb_baton.tempfiles = tempfiles ? *tempfiles : NULL;
   cb_baton.notify_path_prefix = notify_path_prefix;
   cb_baton.ctx = ctx;
   cb_baton.commit_items = items_hash;
@@ -1426,7 +1621,7 @@ svn_client__do_commit(const char *base_url,
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       /* Get the next entry. */
       apr_hash_this(hi, NULL, NULL, &val);
       mod = val;
@@ -1443,36 +1638,34 @@ svn_client__do_commit(const char *base_url,
           svn_wc_notify_t *notify;
           notify = svn_wc_create_notify(item->path,
                                         svn_wc_notify_commit_postfix_txdelta,
-                                        subpool);
+                                        iterpool);
           notify->kind = svn_node_file;
           notify->path_prefix = notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
         }
 
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_path_dirname(item->path, subpool);
+      dir_path = svn_path_dirname(item->path, iterpool);
       SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
-                                  subpool));
+                                  iterpool));
       SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
                                            digest, item->path,
                                            item_access, fulltext, editor,
-                                           file_baton, subpool));
-      if (tempfiles && tempfile && *tempfiles)
+                                           file_baton, iterpool));
+      if (tempfiles && tempfile)
         {
-          tempfile = apr_pstrdup(apr_hash_pool_get(*tempfiles), tempfile);
+          tempfile = apr_pstrdup(pool, tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
-      if (digests)
-        {
-          unsigned char *new_digest = apr_pmemdup(apr_hash_pool_get(*digests),
-                                                  digest, APR_MD5_DIGESTSIZE);
-          apr_hash_set(*digests, item->path, APR_HASH_KEY_STRING, new_digest);
-        }
+      if (checksums)
+        apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
+                     svn_checksum__from_digest(digest, svn_checksum_md5,
+                                               apr_hash_pool_get(*checksums)));
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   /* Close the edit. */
   return editor->close_edit(edit_baton, pool);

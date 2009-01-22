@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -175,7 +175,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
-    SVN_JNI_ERR(svn_client_status3(&youngest, checkedPath.c_str(),
+    SVN_JNI_ERR(svn_client_status4(&youngest, checkedPath.c_str(),
                                    &rev, StatusCallback::callback,
                                    callback,
                                    depth,
@@ -202,10 +202,9 @@ void SVNClient::setPrompt(Prompter *prompter)
 }
 
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
-                            Revision &revisionStart,
-                            Revision &revisionEnd, bool stopOnCopy,
-                            bool discoverPaths, bool includeMergedRevisions,
-                            StringArray &revProps,
+                            std::vector<RevisionRange> &logRanges,
+                            bool stopOnCopy, bool discoverPaths,
+                            bool includeMergedRevisions, StringArray &revProps,
                             long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
@@ -220,15 +219,44 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_log4(targets,
-                                pegRevision.revision(),
-                                revisionStart.revision(),
-                                revisionEnd.revision(),
-                                limit,
-                                discoverPaths,
-                                stopOnCopy,
-                                includeMergedRevisions,
-                                revProps.array(requestPool),
+    apr_array_header_t *ranges =
+        apr_array_make(requestPool.pool(), logRanges.size(),
+                       sizeof(svn_opt_revision_range_t *));
+
+    std::vector<RevisionRange>::const_iterator it;
+    for (it = logRanges.begin(); it != logRanges.end(); ++it)
+    {
+        if (it->toRange(requestPool)->start.kind
+            == svn_opt_revision_unspecified
+            && it->toRange(requestPool)->end.kind
+            == svn_opt_revision_unspecified)
+        {
+            svn_opt_revision_range_t *range =
+                (svn_opt_revision_range_t *)apr_pcalloc(requestPool.pool(),
+                                                        sizeof(*range));
+            range->start.kind = svn_opt_revision_number;
+            range->start.value.number = 1;
+            range->end.kind = svn_opt_revision_head;
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
+        }
+        else
+        {
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
+                it->toRange(requestPool);
+        }
+        if (JNIUtil::isExceptionThrown())
+            return;
+    }
+
+    svn_client_log_args_t *log_args = svn_client_log_args_create(
+                                                            requestPool.pool());
+    log_args->limit = limit;
+    log_args->discover_changed_paths = discoverPaths;
+    log_args->strict_node_history = stopOnCopy;
+    log_args->include_merged_revisions = includeMergedRevisions;
+
+    SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
+                                revProps.array(requestPool), log_args,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
@@ -1152,70 +1180,6 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
-#if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
-
-/* Set *PROVIDER according to PROVIDER_NAME and PROVIDER_TYPE,
- * allocating it in POOL.
- *
- * Valid PROVIDER_NAME values are: "gnome_keyring" and "kwallet"
- * (they correspond to the loadable libraries named, e.g.,
- * "libsvn_auth_gnome_keyring-1.so.0", etc.)
- *
- * Valid PROVIDER_TYPE values are: "simple" and "ssl_client_cert_pw"
- * (they correspond to function names found in the loaded library,
- * such as "svn_auth_get_gnome_keyring_simple_provider", etc).
- *
- * What actually happens is we load the library and invoke the
- * appropriate provider function to supply *PROVIDER, like so:
- *
- *    svn_auth_get_<name>_<type>_provider(PROVIDER, POOL);
- *
- * If the library load fails, return an error (with the effect on
- * *PROVIDER undefined).  But if the symbol is simply not found in the
- * library, or if the PROVIDER_TYPE is unrecognized, set *PROVIDER to
- * NULL and return success.
- */
-static svn_error_t *
-get_auth_provider(svn_auth_provider_object_t **provider,
-                  const char *provider_name,
-                  const char *provider_type,
-                  apr_pool_t *pool)
-{
-  apr_dso_handle_t *dso;
-  apr_dso_handle_sym_t symbol;
-  const char *libname;
-  const char *funcname;
-  *provider = NULL;
-  libname = apr_psprintf(pool,
-                         "libsvn_auth_%s-%d.so.0",
-                         provider_name,
-                         SVN_VER_MAJOR);
-  funcname = apr_psprintf(pool,
-                          "svn_auth_get_%s_%s_provider",
-                          provider_name, provider_type);
-  SVN_ERR(svn_dso_load(&dso, libname));
-  if (dso)
-    {
-      if (! apr_dso_sym(&symbol, dso, funcname))
-        {
-          if (strcmp(provider_type, "simple") == 0)
-            {
-              svn_auth_simple_provider_func_t func;
-              func = (svn_auth_simple_provider_func_t) symbol;
-              func(provider, pool);
-            }
-          else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
-            {
-              svn_auth_ssl_client_cert_pw_provider_func_t func;
-              func = (svn_auth_ssl_client_cert_pw_provider_func_t) symbol;
-              func(provider, pool);
-            }
-        }
-    }
-  return SVN_NO_ERROR;
-}
-#endif
-
 svn_client_ctx_t *SVNClient::getContext(const char *message)
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -1223,61 +1187,42 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     svn_client_ctx_t *ctx;
     SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
-    apr_array_header_t *providers
-        = apr_array_make(pool, 10, sizeof(svn_auth_provider_object_t *));
+    const char *configDir = m_configDir.c_str();
+    if (m_configDir.length() == 0)
+        configDir = NULL;
+    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
+    svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
+                                                         SVN_CONFIG_CATEGORY_CONFIG,
+                                                         APR_HASH_KEY_STRING);
+
+    /* The whole list of registered providers */
+    apr_array_header_t *providers;
+
+    /* Populate the registered providers with the platform-specific providers */
+    SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
+                                                                config,
+                                                                pool),
+                NULL);
 
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
-#if defined(WIN32) && !defined(__MINGW32__)
-    svn_auth_get_windows_simple_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
-#ifdef SVN_HAVE_KEYCHAIN_SERVICES
-    svn_auth_get_keychain_simple_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-    svn_auth_get_keychain_ssl_client_cert_pw_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
-#ifdef SVN_HAVE_GNOME_KEYRING
-    SVN_JNI_ERR(get_auth_provider(&provider, "gnome_keyring", "simple",
-                                  pool), NULL);
-    if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-    SVN_JNI_ERR(get_auth_provider(&provider, "gnome_keyring",
-                                  "ssl_client_cert_pw", pool), NULL);
-    if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-#endif
-#ifdef SVN_HAVE_KWALLET
-    SVN_JNI_ERR(get_auth_provider(&provider, "kwallet", "simple",  pool),
-                NULL);
-    if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-    SVN_JNI_ERR(get_auth_provider(&provider, "kwallet", "ssl_client_cert_pw",
-                                  pool), NULL);
-    if (provider)
-      {
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
-#endif
     svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_username_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-#if defined(WIN32) && !defined(__MINGW32__)
-    svn_auth_get_windows_ssl_server_trust_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
+    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                        "windows",
+                                                        "ssl_server_trust",
+                                                        pool),
+                NULL);
+
+    if (provider)
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
     svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
@@ -1327,10 +1272,6 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
-    const char *configDir = m_configDir.c_str();
-    if (m_configDir.length() == 0)
-        configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
     ctx->notify_func2= Notify2::notify;
     ctx->notify_baton2 = m_notify2;
 
@@ -1849,7 +1790,8 @@ void SVNClient::unlock(Targets &targets, bool force)
 }
 void SVNClient::setRevProperty(jobject jthis, const char *path,
                                const char *name, Revision &rev,
-                               const char *value, bool force)
+                               const char *value, const char *original_value,
+                               bool force)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1873,11 +1815,16 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     }
 
     svn_string_t *val = svn_string_create(value, requestPool.pool());
+    svn_string_t *orig_val;
+    if (original_value != NULL)
+      orig_val = svn_string_create(original_value, requestPool.pool());
+    else
+      orig_val = NULL;
 
     svn_revnum_t set_revision;
-    SVN_JNI_ERR(svn_client_revprop_set(name, val, URL, rev.revision(),
-                                       &set_revision, force, ctx,
-                                       requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_revprop_set2(name, val, orig_val, URL, rev.revision(),
+                                        &set_revision, force, ctx,
+                                        requestPool.pool()), );
 }
 
 struct version_status_baton
@@ -1904,20 +1851,21 @@ cancel(void *baton)
         return SVN_NO_ERROR;
 }
 
-/* An svn_wc_status_func2_t callback function for anaylyzing status
+/* An svn_wc_status_func3_t callback function for analyzing status
  * structures. */
-static void
+static svn_error_t *
 analyze_status(void *baton,
                const char *path,
-               svn_wc_status2_t *status)
+               svn_wc_status2_t *status,
+               apr_pool_t *pool)
 {
     struct version_status_baton *sb = (version_status_baton *)baton;
 
     if (sb->done)
-        return;
+        return SVN_NO_ERROR;
 
     if (! status->entry)
-        return;
+        return SVN_NO_ERROR;
 
     /* Added files have a revision of no interest */
     if (status->text_status != svn_wc_status_added)
@@ -1943,6 +1891,8 @@ analyze_status(void *baton,
         && (strcmp(path, sb->wc_path) == 0)
         && (status->entry))
         sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
+
+    return SVN_NO_ERROR;
 }
 
 
@@ -2020,7 +1970,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     ctx.cancel_baton = &sb;
 
     svn_error_t *err;
-    err = svn_client_status3(NULL, intPath.c_str(), &rev, analyze_status,
+    err = svn_client_status4(NULL, intPath.c_str(), &rev, analyze_status,
                              &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
                              FALSE, NULL, &ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))

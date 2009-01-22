@@ -1,7 +1,7 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,12 +23,10 @@
 #include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_utf.h"
-#include "svn_md5.h"
 
 #include <apr_uuid.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
-#include <apr_md5.h>
 
 #include "lock.h"
 #include "tree.h"
@@ -147,17 +145,16 @@ write_digest_file(apr_hash_t *children,
                   apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  apr_file_t *fd;
+  svn_stream_t *stream;
   apr_hash_index_t *hi;
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
+  const char *rev_0_path;
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR,
                                                      pool), fs, pool));
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_dirname(digest_path, pool), fs,
                                        pool));
-  SVN_ERR(svn_io_open_unique_file2
-          (&fd, &tmp_path, digest_path, ".tmp", svn_io_file_del_none, pool));
 
   if (lock)
     {
@@ -196,21 +193,22 @@ write_digest_file(apr_hash_t *children,
                  children_list->data, children_list->len, pool);
     }
 
-  if ((err = svn_hash_write2(hash,
-                             svn_stream_from_aprfile2(fd, TRUE, pool),
-                             SVN_HASH_TERMINATOR, pool)))
+  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
+                                 svn_path_dirname(digest_path, pool),
+                                 svn_io_file_del_none, pool, pool));
+  if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_io_file_close(fd, pool));
+      svn_error_clear(svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Cannot write lock/entries hashfile '%s'"),
                                svn_path_local_style(tmp_path, pool));
     }
 
-  SVN_ERR(svn_io_file_close(fd, pool));
+  SVN_ERR(svn_stream_close(stream));
   SVN_ERR(svn_io_file_rename(tmp_path, digest_path, pool));
-  return svn_fs_fs__dup_perms
-         (digest_path, svn_fs_fs__path_rev(fs, 0, pool), pool);
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, fs, 0, pool));
+  return svn_fs_fs__dup_perms(digest_path, rev_0_path, pool);
 }
 
 
@@ -228,7 +226,7 @@ read_digest_file(apr_hash_t **children_p,
   svn_error_t *err = SVN_NO_ERROR;
   svn_lock_t *lock;
   apr_hash_t *hash;
-  apr_file_t *fd;
+  svn_stream_t *stream;
   const char *val;
 
   if (lock_p)
@@ -236,7 +234,7 @@ read_digest_file(apr_hash_t **children_p,
   if (children_p)
     *children_p = apr_hash_make(pool);
 
-  err = svn_io_file_open(&fd, digest_path, APR_READ, APR_OS_DEFAULT, pool);
+  err = svn_stream_open_readonly(&stream, digest_path, pool, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
@@ -247,20 +245,18 @@ read_digest_file(apr_hash_t **children_p,
   /* If our caller doesn't care about anything but the presence of the
      file... whatever. */
   if (! (lock_p || children_p))
-    return svn_io_file_close(fd, pool);
+    return svn_stream_close(stream);
 
   hash = apr_hash_make(pool);
-  if ((err = svn_hash_read2(hash,
-                            svn_stream_from_aprfile2(fd, TRUE, pool),
-                            SVN_HASH_TERMINATOR, pool)))
+  if ((err = svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_io_file_close(fd, pool));
+      svn_error_clear(svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Can't parse lock/entries hashfile '%s'"),
                                svn_path_local_style(digest_path, pool));
     }
-  SVN_ERR(svn_io_file_close(fd, pool));
+  SVN_ERR(svn_stream_close(stream));
 
   /* If our caller cares, see if we have a lock path in our hash. If
      so, we'll assume we have a lock here. */

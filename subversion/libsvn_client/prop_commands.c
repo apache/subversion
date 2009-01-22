@@ -126,23 +126,13 @@ propset_walk_cb(const char *path,
                               (entry->kind == svn_node_dir ? path
                                : svn_path_dirname(path, pool)),
                               pool));
-  err = svn_wc_prop_set2(wb->propname, wb->propval,
-                         path, adm_access, wb->force, pool);
+  err = svn_wc_prop_set3(wb->propname, wb->propval, path, adm_access,
+                         wb->force, wb->notify_func, wb->notify_baton, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
         return err;
       svn_error_clear(err);
-    }
-
-  /* Notify we updated a property value */
-  if (wb->notify_func)
-    {
-      svn_wc_notify_t *notify =
-          svn_wc_create_notify(path, svn_wc_notify_property_updated,
-                               pool);
-
-      (*wb->notify_func)(wb->notify_baton, notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -271,11 +261,9 @@ propset_on_url(svn_commit_info_t **commit_info_p,
     {
       svn_client_commit_item3_t *item;
       const char *tmp_file;
-      apr_array_header_t *commit_items
-        = apr_array_make(pool, 1, sizeof(item));
+      apr_array_header_t *commit_items = apr_array_make(pool, 1, sizeof(item));
 
-      SVN_ERR(svn_client_commit_item_create
-              ((const svn_client_commit_item3_t **) &item, pool));
+      item = svn_client_commit_item3_create(pool);
       item->url = target;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -414,45 +402,13 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
-          SVN_ERR(svn_wc_prop_set2(propname, propval, target,
-                                   adm_access, skip_checks, pool));
+          SVN_ERR(svn_wc_prop_set3(propname, propval, target,
+                                   adm_access, skip_checks, ctx->notify_func2,
+                                   ctx->notify_baton2, pool));
         }
-      return svn_wc_adm_close(adm_access);
+      return svn_wc_adm_close2(adm_access, pool);
     }
 }
-
-
-svn_error_t *
-svn_client_propset2(const char *propname,
-                    const svn_string_t *propval,
-                    const char *target,
-                    svn_boolean_t recurse,
-                    svn_boolean_t skip_checks,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  return svn_client_propset3(NULL, propname, propval, target,
-                             SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                             skip_checks, SVN_INVALID_REVNUM,
-                             NULL, NULL, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_propset(const char *propname,
-                   const svn_string_t *propval,
-                   const char *target,
-                   svn_boolean_t recurse,
-                   apr_pool_t *pool)
-{
-  svn_client_ctx_t *ctx;
-
-  SVN_ERR(svn_client_create_context(&ctx, pool));
-
-  return svn_client_propset2(propname, propval, target, recurse, FALSE,
-                             ctx, pool);
-}
-
 
 svn_error_t *
 svn_client_revprop_set2(const char *propname,
@@ -523,24 +479,23 @@ svn_client_revprop_set2(const char *propname,
     }
 
   /* The actual RA call. */
-  return svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
-                                pool);
-}
+  SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
+                                 pool));
 
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify_url(URL,
+                                             propval == NULL
+                                               ? svn_wc_notify_revprop_set
+                                               : svn_wc_notify_revprop_deleted,
+                                             pool);
+      notify->prop_name = propname;
+      notify->revision = *set_rev;
 
-svn_error_t *
-svn_client_revprop_set(const char *propname,
-                       const svn_string_t *propval,
-                       const char *URL,
-                       const svn_opt_revision_t *revision,
-                       svn_revnum_t *set_rev,
-                       svn_boolean_t force,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *pool)
-{
-  return svn_client_revprop_set2(propname, propval, NULL, URL,
-                                 revision, set_rev, force, ctx, pool);
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
 
+  return SVN_NO_ERROR;
 }
 
 
@@ -897,7 +852,7 @@ svn_client_propget3(apr_hash_t **props,
                                            pristine, node, adm_access,
                                            depth, changelists, ctx, pool));
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else
     {
@@ -921,42 +876,6 @@ svn_client_propget3(apr_hash_t **props,
   if (actual_revnum)
     *actual_revnum = revnum;
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_propget2(apr_hash_t **props,
-                    const char *propname,
-                    const char *target,
-                    const svn_opt_revision_t *peg_revision,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  return svn_client_propget3(props,
-                             propname,
-                             target,
-                             peg_revision,
-                             revision,
-                             NULL,
-                             SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                             NULL,
-                             ctx,
-                             pool);
-}
-
-
-svn_error_t *
-svn_client_propget(apr_hash_t **props,
-                   const char *propname,
-                   const char *target,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_propget2(props, propname, target, revision, revision,
-                             recurse, ctx, pool);
 }
 
 svn_error_t *
@@ -1271,7 +1190,7 @@ svn_client_proplist3(const char *path_or_url,
 
         }
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else /* remote target */
     {
@@ -1295,71 +1214,6 @@ svn_client_proplist3(const char *path_or_url,
 
   return SVN_NO_ERROR;
 }
-
-/* Receiver baton used by proplist2() */
-struct proplist_receiver_baton {
-  apr_array_header_t *props;
-  apr_pool_t *pool;
-};
-
-/* Receiver function used by proplist2(). */
-static svn_error_t *
-proplist_receiver_cb(void *baton,
-                     const char *path,
-                     apr_hash_t *prop_hash,
-                     apr_pool_t *pool)
-{
-  struct proplist_receiver_baton *pl_baton =
-    (struct proplist_receiver_baton *) baton;
-  svn_client_proplist_item_t *tmp_item = apr_palloc(pool, sizeof(*tmp_item));
-  svn_client_proplist_item_t *item;
-
-  /* Because the pool passed to the receiver function is likely to be a
-     temporary pool of some kind, we need to make copies of *path and
-     *prop_hash in the pool provided by the baton. */
-  tmp_item->node_name = svn_stringbuf_create(path, pl_baton->pool);
-  tmp_item->prop_hash = prop_hash;
-
-  item = svn_client_proplist_item_dup(tmp_item, pl_baton->pool);
-
-  APR_ARRAY_PUSH(pl_baton->props, const svn_client_proplist_item_t *) = item;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_proplist2(apr_array_header_t **props,
-                     const char *target,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  struct proplist_receiver_baton pl_baton;
-
-  *props = apr_array_make(pool, 5, sizeof(svn_client_proplist_item_t *));
-  pl_baton.props = *props;
-  pl_baton.pool = pool;
-
-  return svn_client_proplist3(target, peg_revision, revision,
-                              SVN_DEPTH_INFINITY_OR_EMPTY(recurse), NULL,
-                              proplist_receiver_cb, &pl_baton, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_proplist(apr_array_header_t **props,
-                    const char *target,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  return svn_client_proplist2(props, target, revision, revision,
-                              recurse, ctx, pool);
-}
-
 
 svn_error_t *
 svn_client_revprop_list(apr_hash_t **props,

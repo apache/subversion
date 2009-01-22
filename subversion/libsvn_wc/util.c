@@ -116,19 +116,24 @@ svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool)
 {
-  svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
+  svn_wc_notify_t *ret = apr_pcalloc(pool, sizeof(*ret));
   ret->path = path;
   ret->action = action;
   ret->kind = svn_node_unknown;
-  ret->mime_type = NULL;
-  ret->lock = NULL;
-  ret->err = SVN_NO_ERROR;
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
-  ret->changelist_name = NULL;
-  ret->merge_range = NULL;
-  ret->path_prefix = NULL;
+
+  return ret;
+}
+
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool)
+{
+  svn_wc_notify_t *ret = svn_wc_create_notify(".", action, pool);
+  ret->url = url;
 
   return ret;
 }
@@ -165,8 +170,14 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
   if (ret->merge_range)
     ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
+  if (ret->url)
+    ret->url = apr_pstrdup(pool, ret->url);
   if (ret->path_prefix)
     ret->path_prefix = apr_pstrdup(pool, ret->path_prefix);
+  if (ret->prop_name)
+    ret->prop_name = apr_pstrdup(pool, ret->prop_name);
+  if (ret->rev_props)
+    ret->rev_props = svn_prop_hash_dup(ret->rev_props, pool);
 
   return ret;
 }
@@ -273,7 +284,7 @@ svn_wc__path_switched(const char *wc_path,
 
   SVN_ERR(svn_wc__entry_versioned(&parent_entry, wc_parent_path,
                                   parent_adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close(parent_adm_access));
+  SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   /* Without complete entries (and URLs) for WC_PATH and it's parent
      we return SVN_ERR_ENTRY_MISSING_URL. */
@@ -329,19 +340,102 @@ svn_wc_conflict_description_create_prop(const char *path,
 }
 
 svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_tree(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_node_kind_t node_kind,
-                                        svn_wc_operation_t operation,
-                                        apr_pool_t *pool)
+svn_wc_conflict_description_create_tree(
+                            const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_node_kind_t node_kind,
+                            svn_wc_operation_t operation,
+                            svn_wc_conflict_version_t *src_left_version,
+                            svn_wc_conflict_version_t *src_right_version,
+                            apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
 
-  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
   conflict->path = path;
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_tree;
   conflict->access = adm_access;
   conflict->operation = operation;
+  conflict->src_left_version = src_left_version;
+  conflict->src_right_version = src_right_version;
   return conflict;
 }
+
+svn_wc_conflict_description_t *
+svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
+                                 apr_pool_t *pool)
+{
+  svn_wc_conflict_description_t *new_conflict;
+
+  new_conflict = apr_pcalloc(pool, sizeof(*new_conflict));
+
+  /* Shallow copy all members. */
+  *new_conflict = *conflict;
+
+  if (conflict->path)
+    new_conflict->path = apr_pstrdup(pool, conflict->path);
+  if (conflict->property_name)
+    new_conflict->property_name = apr_pstrdup(pool, conflict->property_name);
+  if (conflict->mime_type)
+    new_conflict->mime_type = apr_pstrdup(pool, conflict->mime_type);
+  /* NOTE: We cannot make a deep copy of adm_access. */
+  if (conflict->base_file)
+    new_conflict->base_file = apr_pstrdup(pool, conflict->base_file);
+  if (conflict->their_file)
+    new_conflict->their_file = apr_pstrdup(pool, conflict->their_file);
+  if (conflict->my_file)
+    new_conflict->my_file = apr_pstrdup(pool, conflict->my_file);
+  if (conflict->merged_file)
+    new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+      svn_wc_conflict_version_dup(conflict->src_left_version, pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+      svn_wc_conflict_version_dup(conflict->src_right_version, pool);
+
+  return new_conflict;
+}
+
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char* path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool)
+{
+  svn_wc_conflict_version_t *version;
+
+  version = apr_pcalloc(pool, sizeof(*version));
+
+  version->repos_url = repos_url;
+  version->peg_rev = peg_rev;
+  version->path_in_repos = path_in_repos;
+  version->node_kind = node_kind;
+
+  return version;
+}
+
+
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
+                            apr_pool_t *pool)
+{
+
+  svn_wc_conflict_version_t *new_version;
+
+  new_version = apr_pcalloc(pool, sizeof(*new_version));
+
+  /* Shallow copy all members. */
+  *new_version = *version;
+
+  if (version->repos_url)
+    new_version->repos_url = apr_pstrdup(pool, version->repos_url);
+
+  if (version->path_in_repos)
+    new_version->path_in_repos = apr_pstrdup(pool, version->path_in_repos);
+
+  return new_version;
+}
+

@@ -115,12 +115,15 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *issuer, *subject, *serf_cert;
   void *creds;
 
-  apr_pool_create(&subpool, conn->session->pool);
+#if SERF_VERSION_AT_LEAST(0, 3, 0)
+  /* Implicitly approve any non-server certs. */
+  if (serf_ssl_cert_depth(cert) > 0)
+    {
+      return APR_SUCCESS;
+    }
+#endif
 
-  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
-  realmstring = apr_uri_unparse(subpool,
-                                &conn->session->repos_url,
-                                APR_URI_UNP_OMITPATHINFO);
+  apr_pool_create(&subpool, conn->session->pool);
 
   /* Extract the info from the certificate */
   subject = serf_ssl_cert_subject(cert, subpool);
@@ -165,6 +168,10 @@ ssl_server_cert(void *baton, int failures,
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
+
+  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
+  realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
+                                APR_URI_UNP_OMITPATHINFO);
 
   err = svn_auth_first_credentials(&creds, &state,
                                    SVN_AUTH_CRED_SSL_SERVER_TRUST,
@@ -323,7 +330,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 
   if (why)
     {
-      abort();
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
   if (our_conn->using_ssl)
@@ -342,6 +349,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data)
 {
+#if !SERF_VERSION_AT_LEAST(0,3,0)
   svn_ra_serf__session_t *serf_sess = data;
   int i;
 
@@ -354,6 +362,7 @@ svn_ra_serf__cleanup_serf_session(void *data)
       return APR_SUCCESS;
     }
 
+  /* serf 0.3.0+ will close connections on pool cleanup */
   for (i = 0; i < serf_sess->num_conns; i++)
     {
       if (serf_sess->conns[i])
@@ -362,6 +371,8 @@ svn_ra_serf__cleanup_serf_session(void *data)
           serf_sess->conns[i] = NULL;
         }
     }
+#endif
+
   return APR_SUCCESS;
 }
 
@@ -1005,10 +1016,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
       /* If our caller won't know about the 404, abort() for now. */
-      if (!ctx->status_code)
-        {
-          abort();
-        }
+      SVN_ERR_ASSERT_NO_RETURN(ctx->status_code);
+
       if (*ctx->done == FALSE)
         {
           *ctx->done = TRUE;
@@ -1048,10 +1057,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           XML_ParserFree(ctx->xmlp);
 
-          if (!ctx->status_code)
-            {
-              abort();
-            }
+          SVN_ERR_ASSERT_NO_RETURN(ctx->status_code);
+
           if (*ctx->done == FALSE)
             {
               *ctx->done = TRUE;
@@ -1134,7 +1141,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
    carry out operation-specific processing.  Afterwards, check for
    connection close.
 
-   If during the setup of the request we set a snapshot on the body buckets, 
+   If during the setup of the request we set a snapshot on the body buckets,
    handle_response has to make sure these buckets get destroyed iff the
    request doesn't have to be resent.
    */
@@ -1163,14 +1170,13 @@ handle_response(serf_request_t *request,
 
       svn_ra_serf__request_create(ctx);
 
-      status = APR_SUCCESS;
-      goto cleanup;
+      return APR_SUCCESS;
     }
 
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      goto cleanup;
+      return status;
     }
   if (!sl.version && (APR_STATUS_IS_EOF(status) ||
                       APR_STATUS_IS_EAGAIN(status)))
@@ -1276,13 +1282,14 @@ handle_response(serf_request_t *request,
 #endif
 
 cleanup:
-  /* If a snapshot was set on the body bucket, it wasn't destroyed when the 
+  /* If a snapshot was set on the body bucket, it wasn't destroyed when the
      request was sent, we have to destroy it now upon successful handling of
      the response. */
   if (ctx->body_snapshot_set && ctx->body_buckets)
     {
       serf_bucket_destroy(ctx->body_buckets);
       ctx->body_buckets = NULL;
+      ctx->body_snapshot_set = FALSE;
     }
 
   return status;
@@ -1351,7 +1358,7 @@ setup_request(serf_request_t *request,
                (req_bkt) including this barrier bucket, but this way our
                body_buckets bucket will not be destroyed and we can reuse it
                later.
-               This does put ownership of body_buckets in our own hands though, 
+               This does put ownership of body_buckets in our own hands though,
                so we have to make sure it gets destroyed when handling the
                response. */
             /* TODO: for now we assume restoring a snapshot on a bucket that
@@ -1369,13 +1376,16 @@ setup_request(serf_request_t *request,
             status = serf_bucket_snapshot(ctx->body_buckets);
             if (status == APR_SUCCESS)
               {
+                ctx->body_snapshot_set = TRUE;
+                body_bkt = serf_bucket_barrier_create(ctx->body_buckets,
+                             serf_request_get_alloc(request));
+              }
+            else
+              {
                 /* If the snapshot wasn't successful (maybe because the caller
                    used a bucket that doesn't support the snapshot feature),
                    fall back to non-snapshot behavior and hope that the request
                    is handled the first time. */
-                ctx->body_snapshot_set = TRUE;
-                body_bkt = serf_bucket_barrier_create(ctx->body_buckets,
-                             serf_request_get_alloc(request));
               }
 #endif
           }

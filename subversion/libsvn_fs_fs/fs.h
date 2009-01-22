@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,14 +20,14 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
-#include "svn_cache.h"
 #include "svn_config.h"
+#include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_sqlite.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +52,8 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
+#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
+                                                    has not been packed. */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -70,13 +72,15 @@ extern "C" {
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 
 /* Names of sections and options in fsfs.conf. */
-#define CONFIG_SECTION_CACHES     "caches"
-#define CONFIG_OPTION_FAIL_STOP       "fail-stop"
+#define CONFIG_SECTION_CACHES            "caches"
+#define CONFIG_OPTION_FAIL_STOP          "fail-stop"
+#define CONFIG_SECTION_REP_SHARING       "rep-sharing"
+#define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   3
+#define SVN_FS_FS__FORMAT_NUMBER   4
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -98,6 +102,15 @@ extern "C" {
 /* The minimum format number that maintains minfo-here and minfo-count
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
+
+/* The minimum format number that allows rep sharing. */
+#define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
+
+/* The minimum format number that supports packed shards. */
+#define SVN_FS_FS__MIN_PACKED_FORMAT 4
+
+/* The minimum format number that stores node kinds in changed-paths lists. */
+#define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -182,26 +195,36 @@ typedef struct
   svn_config_t *config;
 
   /* Caches of immutable data.  (Note that if these are created with
-     svn_cache_create_memcache, the data can be shared between
+     svn_cache__create_memcache, the data can be shared between
      multiple svn_fs_t's for the same filesystem.) */
 
   /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
      (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache_t *rev_root_id_cache;
+  svn_cache__t *rev_root_id_cache;
 
   /* DAG node cache for immutable nodes */
-  svn_cache_t *rev_node_cache;
+  svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
      unparsed FS ID to ###x. */
-  svn_cache_t *dir_cache;
+  svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
      rep key to svn_string_t. */
-  svn_cache_t *fulltext_cache;
+  svn_cache__t *fulltext_cache;
+
+  /* Pack manifest cache; maps revision numbers to offsets in their respective
+     pack files. */
+  svn_cache__t *packed_offset_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
+
+  /* The sqlite database used for rep caching. */
+  svn_sqlite__db_t *rep_cache_db;
+
+  /* The oldest revision not in a pack file. */
+  svn_revnum_t min_unpacked_rev;
 } fs_fs_data_t;
 
 
@@ -231,14 +254,20 @@ typedef struct
  * svn_fs_fs__rep_copy. */
 typedef struct
 {
-  /* Checksum for the contents produced by this representation.
+  /* Checksums for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
      If checksum is NULL, then for compatibility behave as though this
-     checksum matches the expected checksum. */
-  svn_checksum_t *checksum;
+     checksum matches the expected checksum.
+  
+     The md5 checksum is always filled, unless this is rep which was
+     retrieved from the rep-cache.  The sha1 checksum is only computed on
+     a write, for use with rep-sharing; it may be read from an existing
+     representation, but otherwise it is NULL. */
+  svn_checksum_t *md5_checksum;
+  svn_checksum_t *sha1_checksum;
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;
@@ -256,6 +285,14 @@ typedef struct
   /* Is this representation a transaction? */
   const char *txn_id;
 
+  /* For rep-sharing, we need a way of uniquifying node-revs which share the
+     same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
+     store the original txn of the node rev (not the rep!), along with some
+     intra-node uniqification content.
+     
+     May be NULL, in which case, it is considered to match other NULL
+     values.*/
+  const char *uniquifier;
 } representation_t;
 
 
@@ -326,6 +363,9 @@ typedef struct
   /* Text or property mods? */
   svn_boolean_t text_mod;
   svn_boolean_t prop_mod;
+
+  /* Node kind (possibly svn_node_unknown). */
+  svn_node_kind_t node_kind;
 
   /* Copyfrom revision and path. */
   svn_revnum_t copyfrom_rev;

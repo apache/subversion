@@ -50,7 +50,7 @@ s = RemoteRepository(repos_url, user=User(username=options.username))
 
 txn = s.txn()
 
-for name in s.list("").iterkeys():
+for name in s.list("").keys():
     txn.delete(name)
 
 txn.copy(src_path="", dest_path=new_dir_name)

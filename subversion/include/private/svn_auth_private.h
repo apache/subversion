@@ -47,6 +47,7 @@ typedef svn_boolean_t (*svn_auth__password_get_t)
    apr_hash_t *creds,
    const char *realmstring,
    const char *username,
+   apr_hash_t *parameters,
    svn_boolean_t non_interactive,
    apr_pool_t *pool);
 
@@ -60,6 +61,7 @@ typedef svn_boolean_t (*svn_auth__password_set_t)
    const char *realmstring,
    const char *username,
    const char *password,
+   apr_hash_t *parameters,
    svn_boolean_t non_interactive,
    apr_pool_t *pool);
 
@@ -95,13 +97,14 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                    apr_pool_t *pool);
 
 /* Implementation of svn_auth__password_get_t that retrieves
-   the plaintext password from CREDS when USERNAME matches the stored 
+   the plaintext password from CREDS when USERNAME matches the stored
    credentials. */
 svn_boolean_t
 svn_auth__simple_password_get(const char **password,
                               apr_hash_t *creds,
                               const char *realmstring,
                               const char *username,
+                              apr_hash_t *parameters,
                               svn_boolean_t non_interactive,
                               apr_pool_t *pool);
 
@@ -112,6 +115,7 @@ svn_auth__simple_password_set(apr_hash_t *creds,
                               const char *realmstring,
                               const char *username,
                               const char *password,
+                              apr_hash_t *parameters,
                               svn_boolean_t non_interactive,
                               apr_pool_t *pool);
 
@@ -133,9 +137,10 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
    apr_pool_t *pool);
 
 /* Common implementation for ssl_client_cert_pw_file_save_credentials and
-   Uses PARAMETERS and REALMSTRING to save a set of CREDENTIALS to the ssl
-   client cert auth provider's passphrase cache. PASSPHRASE_SET is used to
-   store the passphrase. PASSTYPE identifies the type of the cached passphrase.
+   windows_ssl_client_cert_pw_file_save_credentials. Uses PARAMETERS and 
+   REALMSTRING to save a set of CREDENTIALS to the ssl client cert auth 
+   provider's passphrase cache. PASSPHRASE_SET is used to store the 
+   passphrase. PASSTYPE identifies the type of the cached passphrase.
    Allocates from POOL. */
 svn_error_t *
 svn_auth__ssl_client_cert_pw_file_save_creds_helper
@@ -147,6 +152,30 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
    svn_auth__password_set_t passphrase_set,
    const char *passtype,
    apr_pool_t *pool);
+
+
+/* This implements the svn_auth__password_get_t interface.
+   Set **PASSPHRASE to the plaintext passphrase retrieved from CREDS;
+   ignore other parameters. */
+svn_boolean_t
+svn_auth__ssl_client_cert_pw_get(const char **passphrase,
+                                 apr_hash_t *creds,
+                                 const char *realmstring,
+                                 const char *username,
+                                 apr_hash_t *parameters,
+                                 svn_boolean_t non_interactive,
+                                 apr_pool_t *pool);
+
+/* This implements the svn_auth__password_set_t interface.
+   Store PASSPHRASE in CREDS; ignore other parameters. */
+svn_boolean_t
+svn_auth__ssl_client_cert_pw_set(apr_hash_t *creds,
+                                 const char *realmstring,
+                                 const char *username,
+                                 const char *passphrase,
+                                 apr_hash_t *parameters,
+                                 svn_boolean_t non_interactive,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

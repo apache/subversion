@@ -2,7 +2,7 @@
  * config_auth.c :  authentication files in the user config area
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,10 +18,7 @@
 
 
 
-#include <apr_md5.h>
-
 #include "svn_path.h"
-#include "svn_md5.h"
 #include "svn_hash.h"
 #include "svn_io.h"
 
@@ -87,17 +84,13 @@ svn_config_read_auth_data(apr_hash_t **hash,
   SVN_ERR(svn_io_check_path(auth_path, &kind, pool));
   if (kind == svn_node_file)
     {
-      apr_file_t *authfile = NULL;
       svn_stream_t *stream;
 
-      SVN_ERR_W(svn_io_file_open(&authfile, auth_path,
-                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                                 pool),
+      SVN_ERR_W(svn_stream_open_readonly(&stream, auth_path, pool, pool),
                 _("Unable to open auth file for reading"));
 
       *hash = apr_hash_make(pool);
 
-      stream = svn_stream_from_aprfile2(authfile, FALSE, pool);
       SVN_ERR_W(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool),
                 apr_psprintf(pool, _("Error parsing '%s'"),
                              svn_path_local_style(auth_path, pool)));

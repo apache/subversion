@@ -75,6 +75,7 @@ module Svn
     end
 
     def teardown
+      @repos.close
       @repos = @root = @fs = nil
     end
 

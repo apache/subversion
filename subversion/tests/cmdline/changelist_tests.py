@@ -122,7 +122,7 @@ def verify_changelist_output(output, expected_adds=None,
     num_expected += len(expected_skips)
 
   if not expected_skips:
-    output = filter(lambda line: (not _re_cl_skip.match(line)), output)
+    output = [line for line in output if (not _re_cl_skip.match(line))]
 
   if len(output) != num_expected:
     raise svntest.Failure("Unexpected number of 'svn changelist' output lines")
@@ -508,9 +508,7 @@ def info_with_changelists(sbox):
           expected_paths.append('A/D/G/pi')
           expected_paths.append('A/D/H/chi')
           expected_paths.append('A/D/H/psi')
-      expected_paths = map(lambda x:
-                           os.path.join(wc_dir, x.replace('/', os.sep)),
-                           expected_paths)
+      expected_paths = [os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths]
       expected_paths.sort()
 
       # Build the command line.
@@ -529,7 +527,7 @@ def info_with_changelists(sbox):
       # reduce even those lines to just the actual path.
       def startswith_path(line):
         return line[:6] == 'Path: ' and 1 or 0
-      paths = map(lambda x: x[6:].rstrip(), filter(startswith_path, output))
+      paths = [x[6:].rstrip() for x in filter(startswith_path, output)]
       paths.sort()
 
       # And, compare!
@@ -572,9 +570,7 @@ def diff_with_changelists(sbox):
             expected_paths.append('A/D/G/pi')
             expected_paths.append('A/D/H/chi')
             expected_paths.append('A/D/H/psi')
-        expected_paths = map(lambda x:
-                             os.path.join(wc_dir, x.replace('/', os.sep)),
-                             expected_paths)
+        expected_paths = [os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths]
         expected_paths.sort()
 
         # Build the command line.
@@ -600,14 +596,12 @@ def diff_with_changelists(sbox):
         # reduce even those lines to just the actual path.
         def startswith_path(line):
           return line[:7] == 'Index: ' and 1 or 0
-        paths = map(lambda x: x[7:].rstrip(), filter(startswith_path, output))
+        paths = [x[7:].rstrip() for x in filter(startswith_path, output)]
         paths.sort()
 
         # Diff output on Win32 uses '/' path separators.
         if sys.platform == 'win32':
-          paths = map(lambda x:
-                      x.replace('/', os.sep),
-                      paths)
+          paths = [x.replace('/', os.sep) for x in paths]
 
         # And, compare!
         if (paths != expected_paths):

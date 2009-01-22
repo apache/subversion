@@ -390,7 +390,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
   const char *relative_url, *basecoll_url, *req_url;
   int status_code;
   svn_error_t *err;
@@ -405,21 +405,10 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:file-revs-report xmlns:S=\"",
-                                  sizeof("<S:file-revs-report xmlns:S=\"")-1,
-                                  session->bkt_alloc);
-
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(buckets, session->bkt_alloc,
+                                    "S:file-revs-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:start-revision", apr_ltoa(pool, start),
@@ -440,10 +429,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                "S:path", path,
                                session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:file-revs-report>",
-                                      sizeof("</S:file-revs-report>")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
+                                     "S:file-revs-report");
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                          session, session->repos_url.path,

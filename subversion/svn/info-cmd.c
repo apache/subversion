@@ -2,7 +2,7 @@
  * info-cmd.c -- Display information about a resource
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -82,18 +82,15 @@ print_info_xml(void *baton,
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   const char *rev_str;
 
-  /* If revision is invalid, assume WC is corrupt. */
   if (SVN_IS_VALID_REVNUM(info->rev))
     rev_str = apr_psprintf(pool, "%ld", info->rev);
   else
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                             _("'%s' has invalid revision"),
-                             svn_path_local_style(target, pool));
+    rev_str = apr_pstrdup(pool, _("Resource is not under version control."));
 
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_path_local_style(target, pool),
-                        "kind", svn_cl__node_kind_str(info->kind),
+                        "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
 
@@ -222,24 +219,9 @@ print_info_xml(void *baton,
       svn_xml_make_close_tag(&sb, pool, "lock");
     }
 
-  if (info->tree_conflicts)
-    {
-      svn_wc_conflict_description_t *conflict;
-      int i;
-
-      /* "<tree-conflicts>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "tree-conflicts", NULL);
-
-      for (i = 0; i < info->tree_conflicts->nelts; i++)
-        {
-          conflict = APR_ARRAY_IDX(info->tree_conflicts, i, 
-                                   svn_wc_conflict_description_t *);
-          SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, conflict, pool));
-        }
-
-      /* "</tree-conflicts>" */
-      svn_xml_make_close_tag(&sb, pool, "tree-conflicts");
-    }
+  if (info->tree_conflict)
+    SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, info->tree_conflict,
+                                                  pool));
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");
@@ -435,9 +417,9 @@ print_info(void *baton,
           /* NOTE: The stdio will handle newline translation. */
           comment_lines = svn_cstring_count_newlines(info->lock->comment) + 1;
           SVN_ERR(svn_cmdline_printf(pool,
-                                     (comment_lines != 1)
-                                     ? _("Lock Comment (%i lines):\n%s\n")
-                                     : _("Lock Comment (%i line):\n%s\n"),
+                                     Q_("Lock Comment (%i line):\n%s\n",
+                                        "Lock Comment (%i lines):\n%s\n",
+                                        comment_lines),
                                      comment_lines,
                                      info->lock->comment));
         }
@@ -447,28 +429,36 @@ print_info(void *baton,
     SVN_ERR(svn_cmdline_printf(pool, _("Changelist: %s\n"),
                                info->changelist));
 
-  if (info->tree_conflicts)
+  if (info->tree_conflict)
     {
-      svn_wc_conflict_description_t *tree_conflict;
-      svn_stringbuf_t *tree_conflict_descs = svn_stringbuf_create("", pool);
-      int i;
+      const char *desc, *src_left_version, *src_right_version;
 
-      for (i = 0; i < info->tree_conflicts->nelts; i++)
-        {
-          svn_stringbuf_appendcstr(tree_conflict_descs, "\n");
-          tree_conflict = APR_ARRAY_IDX(info->tree_conflicts, i,
-                                        svn_wc_conflict_description_t *);
-          SVN_ERR(svn_cl__append_human_readable_tree_conflict_description(
-                                                           tree_conflict_descs,
-                                                           tree_conflict,
-                                                           pool));
-        }
+      SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
+                &desc, info->tree_conflict, pool));
+      src_left_version =
+        svn_cl__node_description(info->tree_conflict->src_left_version, pool);
+      src_right_version =
+        svn_cl__node_description(info->tree_conflict->src_right_version, pool);
 
-      if (tree_conflict_descs->len > 0)
-        {
-          svn_cmdline_printf(pool, "Tree conflicts:%s",
-                             tree_conflict_descs->data);
-        }
+      svn_cmdline_printf(pool,
+                         "%s: %s\n",
+                         _("Tree conflict"),
+                         desc);
+ 
+      if (src_left_version)
+        svn_cmdline_printf(pool,
+                           "  %s: %s\n",
+                           _("Source  left"), /* (1) */
+                           src_left_version);
+        /* (1): Sneaking in a space in "Source  left" so that it is the
+         * same length as "Source right" while it still starts in the same
+         * column. That's just a tiny tweak in the English `svn'. */
+ 
+      if (src_right_version)
+        svn_cmdline_printf(pool,
+                           "  %s: %s\n",
+                           _("Source right"),
+                           src_right_version);
     }
 
   /* Print extra newline separator. */

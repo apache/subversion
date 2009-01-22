@@ -34,6 +34,7 @@
 
 #include "svn_md5.h"
 #include "svn_diff.h"
+#include "svn_private_config.h"
 %}
 
 #ifdef SWIGRUBY
@@ -218,6 +219,19 @@
 %ignore svn_path_cstring_to_utf8;
 
 /* Other files */
+
+/* Ignore platform-specific auth functions */
+%ignore svn_auth_get_keychain_simple_provider;
+%ignore svn_auth_get_keychain_ssl_client_cert_pw_provider;
+%ignore svn_auth_get_windows_simple_provider;
+%ignore svn_auth_get_windows_ssl_server_trust_provider;
+%ignore svn_auth_gnome_keyring_version;
+%ignore svn_auth_get_gnome_keyring_simple_provider;
+%ignore svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider;
+%ignore svn_auth_kwallet_version;
+%ignore svn_auth_get_kwallet_simple_provider;
+%ignore svn_auth_get_kwallet_ssl_client_cert_pw_provider;
+
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
 

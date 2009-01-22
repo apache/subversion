@@ -803,7 +803,8 @@ enum {
   ELEM_mergeinfo_path,
   ELEM_mergeinfo_info,
   ELEM_has_children,
-  ELEM_merged_revision
+  ELEM_merged_revision,
+  ELEM_deleted_rev_report
 };
 
 /* ### docco */
@@ -853,7 +854,7 @@ svn_ra_neon__maybe_store_auth_info_after_result(svn_error_t *err,
 
 
 /* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
-   we recieve an element we didn't expect to see. */
+   we receive an element we didn't expect to see. */
 #define UNEXPECTED_ELEMENT(ns, elem)                               \
         (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
                                 NULL,                              \
@@ -1052,6 +1053,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             const char *capability,
                             apr_pool_t *pool);
 
+/*
+ * Implements the get_deleted_rev RA layer function. */
+svn_error_t *
+svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t end_revision,
+                             svn_revnum_t *revision_deleted,
+                             apr_pool_t *pool);
 
 /* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
    values into a stringbuf allocated in POOL.  The string will be of

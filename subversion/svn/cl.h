@@ -82,7 +82,8 @@ typedef enum
   svn_cl__accept_edit,
 
   /* Launch user's resolver and resolve conflict with edited file. */
-  svn_cl__accept_launch,
+  svn_cl__accept_launch
+
 } svn_cl__accept_t;
 
 /* --accept action user input words */
@@ -143,6 +144,9 @@ typedef struct svn_cl__opt_state_t
   /* Flag which is only set if the '-c' option was used. */
   svn_boolean_t used_change_arg;
 
+  /* Flag which is only set if the '-r' option was used. */
+  svn_boolean_t used_revision_arg;
+
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
@@ -189,6 +193,7 @@ typedef struct svn_cl__opt_state_t
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
   const char *config_dir;        /* over-riding configuration directory */
+  apr_array_header_t *config_options; /* over-riding configuration options */
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
@@ -557,13 +562,16 @@ svn_cl__get_log_message(const char **log_msg,
    LOG_MSG_BATON, in the face of COMMIT_ERR.  This may mean removing a
    temporary file left by an external editor, or it may be a complete
    no-op.  COMMIT_ERR may be NULL to indicate to indicate that the
-   function should act as though no commit error occurred.
+   function should act as though no commit error occurred. Use POOL
+   for temporary allocations.
 
    All error returns from this function are guaranteed to at least
    include COMMIT_ERR, and perhaps additional errors attached to the
    end of COMMIT_ERR's chain.  */
 svn_error_t *
-svn_cl__cleanup_log_msg(void *log_msg_baton, svn_error_t *commit_err);
+svn_cl__cleanup_log_msg(void *log_msg_baton,
+                        svn_error_t *commit_err,
+                        apr_pool_t *pool);
 
 /* Add a message about --force if appropriate */
 svn_error_t *
@@ -591,10 +599,32 @@ svn_cl__xml_print_header(const char *tagname, apr_pool_t *pool);
 svn_error_t *
 svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 
-/* Return a (non-localised) string representation of KIND, being "dir" or
-   "file" or, in any other case, the empty string. */
+
+/* For use in XML output, return a non-localised string representation
+ * of KIND, being "none" or "dir" or "file" or, in any other case,
+ * the empty string. */
 const char *
-svn_cl__node_kind_str(svn_node_kind_t kind);
+svn_cl__node_kind_str_xml(svn_node_kind_t kind);
+
+/* Return a (possibly localised) string representation of KIND, being "none" or
+   "dir" or "file" or, in any other case, the empty string. */
+const char *
+svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
+
+
+/** Provides an XML name for a given OPERATION.
+ * Note: POOL is currently not used.
+ */
+const char *
+svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool);
+
+/** Return a possibly localized human readable string for
+ * a given OPERATION.
+ * Note: POOL is currently not used.
+ */
+const char *
+svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
+                                     apr_pool_t *pool);
 
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
@@ -633,6 +663,13 @@ const char *
 svn_cl__indent_string(const char *str,
                       const char *indent,
                       apr_pool_t *pool);
+
+
+/* Return a string showing NODE's kind, URL and revision, to the extent that
+ * that information is available in NODE. */
+const char *
+svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

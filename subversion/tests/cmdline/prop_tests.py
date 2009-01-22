@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -348,12 +348,11 @@ def update_conflict_props(sbox):
                                         None, None, 1)
 
   if len(extra_files) != 0:
-    print "didn't get expected conflict files"
+    print("didn't get expected conflict files")
     raise svntest.verify.SVNUnexpectedOutput
 
   # Resolve the conflicts
-  svntest.main.run_svn(None, 'resolved', mu_path)
-  svntest.main.run_svn(None, 'resolved', A_path)
+  svntest.actions.run_and_verify_resolved([mu_path, A_path])
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', 'A', status=' M')
@@ -690,13 +689,6 @@ def inappropriate_props(sbox):
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/branch:3,3', path)
 
-  # ...contain unordered revision ranges
-  svntest.actions.run_and_verify_svn('unordered ranges', None,
-                                     "svn: Unable to parse unordered "
-                                      "revision ranges '5' and '2-3'\n",
-                                     'propset', SVN_PROP_MERGEINFO,
-                                     '/featureX:5,2-3,9', path)
-
   # ...contain revision ranges with start revisions greater than or
   #    equal to end revisions.
   svntest.actions.run_and_verify_svn('range start >= range end', None,
@@ -763,9 +755,9 @@ def copy_inherits_special_props(sbox):
 
   expected_stdout = [orig_mime_type + '\n']
   if actual_stdout != expected_stdout:
-    print "svn pg svn:mime-type output does not match expected."
-    print "Expected standard output: ", expected_stdout, "\n"
-    print "Actual standard output: ", actual_stdout, "\n"
+    print("svn pg svn:mime-type output does not match expected.")
+    print("Expected standard output:  %s\n" % expected_stdout)
+    print("Actual standard output:  %s\n" % actual_stdout)
     raise svntest.verify.SVNUnexpectedOutput
 
   # Check the svn:executable value.
@@ -776,9 +768,9 @@ def copy_inherits_special_props(sbox):
 
     expected_stdout = ['*\n']
     if actual_stdout != expected_stdout:
-      print "svn pg svn:executable output does not match expected."
-      print "Expected standard output: ", expected_stdout, "\n"
-      print "Actual standard output: ", actual_stdout, "\n"
+      print("svn pg svn:executable output does not match expected.")
+      print("Expected standard output:  %s\n" % expected_stdout)
+      print("Actual standard output:  %s\n" % actual_stdout)
       raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
@@ -1047,16 +1039,16 @@ def binary_props(sbox):
 # expected_out, and that errput is empty.
 def verify_output(expected_out, output, errput):
   if errput != []:
-    print 'Error: stderr:'
-    print errput
+    print('Error: stderr:')
+    print(errput)
     raise svntest.Failure
   output.sort()
   ln = 0
   for line in output:
     if ((line.find(expected_out[ln]) == -1) or
         (line != '' and expected_out[ln] == '')):
-      print 'Error: expected keywords: ', expected_out
-      print '       actual full output:', output
+      print('Error: expected keywords:  %s' % expected_out)
+      print('       actual full output: %s' % output)
       raise svntest.Failure
     ln = ln + 1
 
@@ -1461,8 +1453,9 @@ def invalid_propnames(sbox):
   propname = chr(8)
   propval = 'foo'
 
-  expected_stdout = ["property '%s' deleted from '.'.\n" % (propname,)]
-  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
+  expected_stderr = (".*Attempting to delete nonexistent property "
+                     "'%s'.*" % (propname,))
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'propdel', propname)
   expected_stderr = (".*'%s' is not a valid Subversion"
                      ' property name' % (propname,))
@@ -1501,7 +1494,11 @@ def perms_on_symlink(sbox):
     os.symlink('newdir', 'symlink')
     svntest.actions.run_and_verify_svn(None, None, [], 'add', 'symlink')
     old_mode = os.stat('newdir')[stat.ST_MODE]
-    svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
+    # The only property on 'symlink' is svn:special, so attempting to remove
+    # 'svn:executable' should result in an error
+    expected_stderr = (".*Attempting to delete nonexistent property "
+                       "'svn:executable'.*")
+    svntest.actions.run_and_verify_svn(None, None, expected_stderr, 'propdel',
                                      'svn:executable', 'symlink')
     new_mode = os.stat('newdir')[stat.ST_MODE]
     if not old_mode == new_mode:
@@ -1679,6 +1676,48 @@ def same_replacement_props(sbox):
   svntest.actions.run_and_verify_svn(None, expected_out, [],
                                      'proplist', '-v', foo_url)
 
+def added_moved_file(sbox):
+  "'svn mv added_file' preserves props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # create it
+  foo_path = os.path.join(sbox.wc_dir, 'foo')
+  foo2_path = os.path.join(sbox.wc_dir, 'foo2')
+  foo2_url = sbox.repo_url + '/foo2'
+  open(foo_path, 'w').close()
+
+  # add it
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'propset', 'someprop', 'someval', foo_path)
+
+  # move it
+  svntest.main.run_svn(None, 'mv', foo_path, foo2_path)
+
+  # should still have the property
+  svntest.actions.check_prop('someprop', foo2_path, ['someval'])
+
+  # the property should get committed, too
+  svntest.main.run_svn(None, 'commit', '-m', 'set prop on added moved file',
+                       wc_dir)
+  svntest.actions.check_prop('someprop', foo2_url, ['someval'])
+
+
+# Issue 2220, deleting a non-existent property should error 
+def delete_nonexistent_property(sbox):
+  "remove a property which doesn't exist"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Remove one property
+  expected_stderr = ".*Attempting to delete nonexistent property 'yellow'.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'propdel', 'yellow',
+                                     os.path.join(wc_dir, 'A', 'D', 'G'))
+
 
 ########################################################################
 # Run the tests
@@ -1717,6 +1756,8 @@ test_list = [ None,
               SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
                     svntest.main.server_enforces_date_syntax),
               same_replacement_props,
+              added_moved_file,
+              delete_nonexistent_property,
              ]
 
 if __name__ == '__main__':

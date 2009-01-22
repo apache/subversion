@@ -2,7 +2,7 @@
  * mergeinfo.c :  routines for getting mergeinfo
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,7 +19,6 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
-#include <apr_md5.h>
 
 #include <http_request.h>
 #include <http_log.h>
@@ -43,7 +42,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               ap_filter_t *output)
 {
   svn_error_t *serr;
-  apr_status_t apr_err;
   dav_error *derr = NULL;
   apr_xml_elem *child;
   svn_mergeinfo_catalog_t catalog;
@@ -215,36 +213,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                                                   include_descendants,
                                                   resource->pool));
 
-  /* We don't flush the brigade unless there's something in it to
-     flush; that way, if we jumped to 'cleanup' before sending
-     anything, we will be able to report derr accurately to the
-     client.
-
-     To understand this, see mod_dav.c:dav_method_report(): as long as
-     it doesn't think we've sent anything to the client, it'll send
-     the real error, which is what we'd prefer.  This situation is
-     described in httpd-2.2.6/modules/dav/main/mod_dav.c, line 4066,
-     in the comment in dav_method_report() that says:
-
-        If an error occurred during the report delivery, there's
-        basically nothing we can do but abort the connection and
-        log an error.  This is one of the limitations of HTTP; it
-        needs to "know" the entire status of the response before
-        generating it, which is just impossible in these streamy
-        response situations.
-
-     In other words, flushing the brigade here would cause
-     r->sent_bodyct (see dav_method_report()) to become non-zero,
-     *even* if we hadn't tried to send any data to the brigade yet.
-     So we don't flush unless data was actually sent. */
-  apr_err = 0;
-  if (sent_anything)
-    apr_err = ap_fflush(output, bb);
-
-  if (apr_err && !derr)
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

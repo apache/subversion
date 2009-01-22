@@ -18,7 +18,7 @@
 
 <h1>Subversion FAQ</h1>
 
-<p>Translations: <a href="faq.ja.html">&#26085;&#26412;&#35486;</a></p>
+<p>Translations: <a href="faq.ja.html">&#26085;&#26412;&#35486;</a>, <a href="faq.zh.html">&#31616;&#20307;&#20013;&#25991;</a></p>
 
 <div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
 <h2>Table of Contents</h2>
@@ -255,6 +255,9 @@ a <tt>file:</tt> URL?</a></li>
     "relocation R_X86_64_32 against `a local symbol' can not be used
     when making a shared object" when building the Neon library on 64-bit
     Linux.</a></li>
+<li><a href="#secure-connection-truncated">Why am I getting an error
+    saying "Could not read response body: Secure connection truncated"
+    when doing a checkout from Apache?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -516,7 +519,7 @@ that revision.  However, colloquially, a revision number is used to
 refer to the change committed in that revision; for example, "the
 change in r588" ("r588" is shorthand for "revision 588") really means
 "the difference between repository trees 587 and 588", or put another
-way, "the change made to tree 587 to produce tree 588".
+way, "the change made to tree 587 to produce tree 588".</p>
 
 <p>Thus, the advancing revision number marks the progress of the
 repository as a whole; you generally can't gauge the progress of a
@@ -633,7 +636,7 @@ Illustrator document</a> are available.</p>
 other resources available:</p>
 <ul>
   <li><a href="http://svnbook.red-bean.com">The Subversion Book</a></li>
-  <li><a href="http://subversion.tigris.org/servlets/ProjectMailingListList">The
+  <li><a href="mailing-lists.html">The
        Subversion Users mailing list</a> (<a
        href="mailto:users@subversion.tigris.org"
        >users@subversion.tigris.org</a>)
@@ -2163,7 +2166,7 @@ You want to do something like
 svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
 </pre>
 <p>
-but it fails with 
+but it fails with
 </p>
 <pre>
 svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
@@ -2173,20 +2176,36 @@ svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
 </p>
 
 <p>
-The short, unhappy answer is: there's no built-in way to do this; many
-commands, like <tt>mv</tt>, refuse to take an arbitrary number of
-arguments ... and in any case, Subversion doesn't expand wildcards like
-"*" the way the shell does.
+Subversion doesn't expand wildcards like "*" in URL arguments.
+(Technically speaking, Subversion does not expand wildcards in local
+paths either, but on most operating systems the shell expands wildcards
+in local paths in the command line before passing the resulting list to
+Subversion.)
 </p>
 
 <p>
+You have to generate the list of source URLs yourself. You could do it
+like this (in Bash):
+</p>
+
+<pre>
+        s=svn://server/trunk/stuff
+        items=$(svn ls "$s")
+        urls=$(for item in $items; do echo $s/$item; done)
+        svn mv $urls svn://server/trunk/some-other-dir -m "Moved all at once"
+</pre>
+
+<p>
+In Subversion v1.4 and earlier, Subversion did not allow you to "cp" and
+"mv" multiple paths or URLs in one command. You have to issue multiple
+commands.
 If you happen to have a working copy that contains all the source
 files as well as the destination directory, then you can exploit your
 shell's wildcard feature to do the move, like this (for Bash):
 </p>
 <pre>
-  for i in stuff/*; do svn mv $i some-other-dir; done
-  svn ci -m "moved all the stuff into some other dir"
+        for i in stuff/*; do svn mv $i some-other-dir; done
+        svn ci -m "moved all the stuff into some other dir"
 </pre>
 
 <p>
@@ -2195,7 +2214,7 @@ source files, and then run "svn mv" on each item in that list, like
 this:
 </p>
 <pre>
-        s=svn://server/trunk/stuff/
+        s=svn://server/trunk/stuff
         svn ls "$s"  | \
         while read f
            do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
@@ -2208,17 +2227,10 @@ generates just one commit total.
 </p>
 
 <p>
-There is a program called "svnmucc" or "mucc" depending upon which
-version of Subversion you have, whose source is distributed with
-Subversion (in ...<tt>/contrib/client-side/mucc/mucc.c</tt> for
-Subversion 1.4 or earlier, in
-...<tt>/contrib/client-side/svnmucc/svnmucc.c</tt> for Subversion 1.5
-or later), that appears to solve this problem for you.
-</p>
-
-<p>
-<b>Note:</b> with release 1.5, Subversion in fact allows you to "cp" and "mv"
-multiple files at once.
+There is a program called "svnmucc" (previously "mucc"), whose source is
+distributed with Subversion, that enables you to combine multiple
+commands into one commit. See <a href="tools_contrib.html#svnmucc_c">the
+Tools and Contrib page</a>.
 </p>
 </div>
 
@@ -2522,7 +2534,7 @@ If your patch is committed to the code base and you run an <tt>svn update</tt>, 
 you might receive an error message of: "svn: Failed to add file 'my.new.file':
 object of the same name already exists".</p>
 
-<p>The reason that you recieved this error is that you still have your local copy of
+<p>The reason that you received this error is that you still have your local copy of
 the file in your working copy.  The steps to correct this problem are:</p>
 
 <ol>
@@ -3408,6 +3420,10 @@ your older command-line client.)
 
 The fix is simply to upgrade your command-line client to 1.4 or newer.
 
+As of Subversion 1.5, a helper script is provided to downgrade working
+copies to formats compatible with earlier releases of Subversion; see
+<a href="#working-copy-format-change">this faq.</a>
+
 </div>
 
 <div class="h3" id="switch-problems" title="switch-problems">
@@ -3685,6 +3701,52 @@ thread</a> on the developers' list about this.</p>
 
 <p>The solution is to supply the "--enable-shared" option to Subversion's
 configure script.</p>
+
+</div>
+
+<div class="h3"
+     id="secure-connection-truncated"
+     title="secure-connection-truncated">
+<h3>Why am I getting an error saying "Could not read response body:
+    Secure connection truncated" when doing a checkout from
+    Apache?</h3>
+
+<p>In short, this error is representative of a class of problems which
+can occur when Apache erroneously believes that your Subversion client
+is no longer tending to the network connection it has made with
+Apache.  Other error messages have been reported in similar
+circumstances, depending on whether or not SSL was in use for the
+connection, or when exactly Apache decided that the connection should
+be terminated.</p>
+
+<p>The Subversion client tries to keep working copies in a sane state
+at all times.  One way it does this during checkouts is by squirreling
+away the pristine versions of checked-out files until all the files
+and subdirectories for a given directory have been fetched.  Once all
+the data for a directory has been downloaded, the client "finalizes"
+that directory, copying the pristine versions of files out into the
+working area, diddling administrative data, and so on.  While this
+directory finalization is happening, the client is focused on that
+task and is <em>not</em> tending to the checkout network stream.
+Sometimes &mdash; typically in situations where a versioned directory
+contains an abnormally large number of files, or a bunch of abnormally
+large files &mdash; the client can spend so much time finalizing a
+directory (and ignoring the network stream) that Apache thinks the
+client has gone away for good, so Apache terminates the connection.
+When the client finally turns its attention back to the network
+stream, it finds that the server has given up on the connection, and
+it reports this as an error.</p>
+
+<p>One workaround for this situation is to increase the amount of time
+Apache is willing to wait for a client to prove it is still listening
+to the network stream.  You do this by adjusting upward the
+Apache <tt>Timeout</tt> configuration value.  You are encouraged,
+however, to evaluate your data set.  If having a huge number of files
+in a single directory is causing problems for you during checkouts,
+there is some chance that it will cause additional problems elsewhere,
+too.  If it is possible for you to split your collection of files up
+into a few subdirectories with smaller file counts, this could prove
+universally beneficial.</p>
 
 </div>
 

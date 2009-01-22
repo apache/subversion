@@ -108,18 +108,23 @@ relegate_dir_external(const char *path,
 
   /* ### Ugly. Unlock only if not going to return an error. Revisit */
   if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
+      const char *parent_dir;
+      const char *dirname;
       const char *new_path;
 
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
+      svn_path_split(path, &parent_dir, &dirname, pool);
+
       /* Reserve the new dir name. */
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &new_path, path, ".OLD", svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
+                                         parent_dir, dirname, ".OLD",
+                                         svn_io_file_del_none, pool, pool));
 
       /* Sigh...  We must fall ever so slightly from grace.
 
@@ -139,10 +144,8 @@ relegate_dir_external(const char *path,
          in the meantime -- which would never happen in real life, so
          no big deal.
       */
-      err = svn_io_remove_file(new_path, pool);
-      svn_error_clear(err);  /* It's not clear why this is ignored, is
-                                 it because the rename will catch it? */
-      err = SVN_NO_ERROR;
+      /* Do our best, but no biggy if it fails. The rename will fail. */
+      svn_error_clear(svn_io_remove_file(new_path, pool));
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
@@ -178,7 +181,7 @@ switch_dir_external(const char *path,
                                ctx->cancel_func, ctx->cancel_baton, subpool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access,
                            FALSE, subpool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
 
       if (entry && entry->url)
         {
@@ -361,7 +364,7 @@ switch_file_external(const char *path,
       if (! entry->file_external_path)
         {
           if (close_adm_access)
-            SVN_ERR(svn_wc_adm_close(target_adm_access));
+            SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
           return svn_error_createf
             (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
@@ -376,7 +379,7 @@ switch_file_external(const char *path,
       apr_file_t *f;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      svn_boolean_t has_tree_conflicted_children;
+      svn_boolean_t tree_conflicted;
 
       /* Check for a conflict on the containing directory.  Because a
          switch is done on the added file later, it will leave a
@@ -386,9 +389,9 @@ switch_file_external(const char *path,
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &has_tree_conflicted_children,
-                                   anchor, anchor_dir_entry, subpool));
-      if (text_conflicted || prop_conflicted)
+                                   &tree_conflicted, anchor, target_adm_access,
+                                   subpool));
+      if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
            _("The file external from '%s' cannot be written to '%s' while "
@@ -446,31 +449,21 @@ switch_file_external(const char *path,
       revert_file = FALSE;
       remove_from_revision_control = TRUE;
 
-      /* Switching a newly added file causes a conflict on the anchor
-         directory, so resolve it. */
-      err = svn_wc_resolved_conflict4(anchor, 
-                                      target_adm_access,
-                                      FALSE, FALSE, TRUE,
-                                      svn_depth_empty,
-                                      svn_wc_conflict_choose_merged,
-                                      NULL, /* svn_wc_notify_func2_t */
-                                      NULL, /* void * */
-                                      ctx->cancel_func,
-                                      ctx->cancel_baton,
-                                      subpool);
       if (err)
         goto cleanup;
   }
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(target_adm_access));
+    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+
+  /* ### should destroy the subpool... */
 
   return SVN_NO_ERROR;
 
  cleanup:
   if (revert_file)
     {
-      svn_error_t *e = 
+      svn_error_t *e =
         svn_wc_revert3(path, target_adm_access, svn_depth_empty,
                        use_commit_times,
                        NULL, /* apr_array_header_t *changelists */
@@ -503,7 +496,9 @@ switch_file_external(const char *path,
     }
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(target_adm_access));
+    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+
+  /* ### should destroy the subpool */
 
   return err;
 }
@@ -784,14 +779,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       if (svn_node_none == kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' at revision %ld doesn't exist"), 
+                                 _("URL '%s' at revision %ld doesn't exist"),
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 
       if (svn_node_dir != kind && svn_node_file != kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("URL '%s' at revision %ld is not a file "
-                                   "or a directory"), 
+                                   "or a directory"),
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 
@@ -941,7 +936,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (close_access_baton_when_done &&
           (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
         {
-          svn_error_t *err2 = svn_wc_adm_close(adm_access);
+          svn_error_t *err2 = svn_wc_adm_close2(adm_access, ib->iter_pool);
           if (err2)
             {
               if (!err)
@@ -1006,6 +1001,28 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
      close any RA sessions still open in this pool). */
   svn_pool_clear(ib->iter_pool);
 
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
+                                    enum svn_hash_diff_key_status status,
+                                    void *baton)
+{
+  struct handle_external_item_change_baton *ib = baton;
+  svn_error_t *err = handle_external_item_change(key, klen, status, baton);
+  if (err && ib->ctx->notify_func2)
+    {
+      const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
+      svn_wc_notify_t *notifier = 
+        svn_wc_create_notify(path,
+                             svn_wc_notify_failed_external,
+                             ib->pool);
+      notifier->err = err;
+      ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier, ib->pool);
+    }
+  svn_error_clear(err);
   return SVN_NO_ERROR;
 }
 
@@ -1158,21 +1175,24 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
       item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
 
       if (apr_hash_get(new_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
-        SVN_ERR(handle_external_item_change(item->target_dir,
-                                            APR_HASH_KEY_STRING,
-                                            svn_hash_diff_key_both, &ib));
+        SVN_ERR(handle_external_item_change_wrapper(item->target_dir,
+                                                    APR_HASH_KEY_STRING,
+                                                    svn_hash_diff_key_both,
+                                                    &ib));
       else
-        SVN_ERR(handle_external_item_change(item->target_dir,
-                                            APR_HASH_KEY_STRING,
-                                            svn_hash_diff_key_a, &ib));
+        SVN_ERR(handle_external_item_change_wrapper(item->target_dir,
+                                                    APR_HASH_KEY_STRING,
+                                                    svn_hash_diff_key_a,
+                                                    &ib));
     }
   for (i = 0; new_desc && (i < new_desc->nelts); i++)
     {
       item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
       if (! apr_hash_get(old_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
-        SVN_ERR(handle_external_item_change(item->target_dir,
-                                            APR_HASH_KEY_STRING,
-                                            svn_hash_diff_key_b, &ib));
+        SVN_ERR(handle_external_item_change_wrapper(item->target_dir,
+                                                    APR_HASH_KEY_STRING,
+                                                    svn_hash_diff_key_b,
+                                                    &ib));
     }
 
   /* Now destroy the subpool we pass to the hash differ.  This will

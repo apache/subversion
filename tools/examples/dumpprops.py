@@ -37,7 +37,7 @@ def print_props(root, path):
   for key, value in raw_props.items():
     props[key] = str(value)
 
-  print '---', path
+  print('--- %s' % path)
   pprint.pprint(props)
 
 def walk_tree(root, path):
@@ -48,7 +48,7 @@ def walk_tree(root, path):
       walk_tree(root, full)
 
 def usage():
-  print "USAGE: dumpprops.py [-r REV] repos-path [file]"
+  print("USAGE: dumpprops.py [-r REV] repos-path [file]")
   sys.exit(1)
 
 def main():

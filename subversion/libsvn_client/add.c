@@ -234,10 +234,10 @@ add_file(const char *path,
 
   if (is_special)
     /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set2
+    SVN_ERR(svn_wc_prop_set3
             (SVN_PROP_SPECIAL,
              svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
-             path, adm_access, FALSE, pool));
+             path, adm_access, FALSE, NULL, NULL, pool));
   else if (properties)
     {
       /* loop through the hashtable and add the properties */
@@ -251,8 +251,8 @@ add_file(const char *path,
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set2(pname, pval, path,
-                                   adm_access, FALSE, pool));
+          SVN_ERR(svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
+                                   NULL, NULL, pool));
         }
     }
 
@@ -400,7 +400,7 @@ add_dir_recursive(const char *dirname,
     }
 
   /* Opened by svn_wc_add */
-  SVN_ERR(svn_wc_adm_close(dir_access));
+  SVN_ERR(svn_wc_adm_close2(dir_access, subpool));
 
   /* Destroy the per-iteration pool. */
   svn_pool_destroy(subpool);
@@ -467,18 +467,23 @@ add_parent_dirs(const char *path,
 
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
+      svn_error_clear(err);
       if (svn_dirent_is_root(path, strlen(path)))
         {
-          svn_error_clear(err);
-
           return svn_error_create
             (SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
+        }
+      else if (svn_wc_is_adm_dir(svn_dirent_basename(path, pool), pool))
+        {
+          return svn_error_createf
+            (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
+             _("'%s' ends in a reserved name"), 
+             svn_path_local_style(path, pool));
         }
       else
         {
           const char *parent_path = svn_path_dirname(path, pool);
 
-          svn_error_clear(err);
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
                                       pool));
@@ -523,7 +528,7 @@ svn_client_add4(const char *path,
 
       subpool = svn_pool_create(pool);
       SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
       svn_pool_destroy(subpool);
     }
   else
@@ -537,7 +542,7 @@ svn_client_add4(const char *path,
 
   err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 
-  err2 = svn_wc_adm_close(adm_access);
+  err2 = svn_wc_adm_close2(adm_access, pool);
   if (err2)
     {
       if (err)
@@ -547,38 +552,6 @@ svn_client_add4(const char *path,
     }
 
   return err;
-}
-
-svn_error_t *
-svn_client_add3(const char *path,
-                svn_boolean_t recursive,
-                svn_boolean_t force,
-                svn_boolean_t no_ignore,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_add4(path, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
-                         force, no_ignore, FALSE, ctx,
-                         pool);
-}
-
-svn_error_t *
-svn_client_add2(const char *path,
-                svn_boolean_t recursive,
-                svn_boolean_t force,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_add3(path, recursive, force, FALSE, ctx, pool);
-}
-
-svn_error_t *
-svn_client_add(const char *path,
-               svn_boolean_t recursive,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
-{
-  return svn_client_add3(path, recursive, FALSE, FALSE, ctx, pool);
 }
 
 
@@ -720,8 +693,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          SVN_ERR(svn_client_commit_item_create
-                  ((const svn_client_commit_item3_t **) &item, pool));
+
+          item = svn_client_commit_item3_create(pool);
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -855,30 +828,4 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_client_mkdir2(svn_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_mkdir3(commit_info_p, paths, FALSE, NULL, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
-                 const apr_array_header_t *paths,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_mkdir2(&commit_info, paths, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
 }
