@@ -157,7 +157,7 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_PARENTPATH_COLLECTION,/* see SVNParentPath directive */
 
   /* new types in HTTP protocol v2: */
-  DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION,  /* .../!svn/me/ */
+  DAV_SVN_RESTYPE_ME,                   /* .../!svn/me   */
   DAV_SVN_RESTYPE_REVSTUB_COLLECTION    /* .../!svn/rev/ */
 };
 
@@ -337,12 +337,12 @@ const char * dav_svn__get_activities_db(request_rec *r);
 const char * dav_svn__get_root_dir(request_rec *r);
 
 
-/** For HTTP protocol v2, these are the new URI stubs returned to the
-    client in our OPTIONS response.  They all depend on the 'special
-    uri', which is configurable in httpd.conf.  **/
+/** For HTTP protocol v2, these are the new URIs and URI stubs
+    returned to the client in our OPTIONS response.  They all depend
+    on the 'special uri', which is configurable in httpd.conf.  **/
 
 /* Where REPORT requests are sent (typically "!svn/me") */
-const char *dav_svn__get_root_stub(request_rec *r);
+const char *dav_svn__get_me_resource_uri(request_rec *r);
 
 /* For accessing REV/PATH pairs (typically "!svn/bc") */
 const char *dav_svn__get_pegrev_stub(request_rec *r);

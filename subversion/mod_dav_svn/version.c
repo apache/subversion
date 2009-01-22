@@ -182,8 +182,8 @@ get_option(const dav_resource *resource,
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
      DeltaV-free! */
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_STUB_HEADER,
-                dav_svn__get_root_stub(resource->info->r));
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
+                dav_svn__get_me_resource_uri(resource->info->r));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
                 dav_svn__get_pegrev_stub(resource->info->r));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,

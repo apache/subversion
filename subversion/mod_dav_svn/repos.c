@@ -307,23 +307,20 @@ parse_vcc_uri(dav_resource_combined *comb,
 
 
 static int
-parse_rootstub_uri(dav_resource_combined *comb,
-                   const char *path,
-                   const char *label,
-                   int use_checked_in)
+parse_me_resource_uri(dav_resource_combined *comb,
+                      const char *path,
+                      const char *label,
+                      int use_checked_in)
 {
-  /* There are no components after the root stub, i.e. just
-     "!svn/me/".  
-
-     In HTTP protocol v2, this uri represents the repository itself,
+  /* In HTTP protocol v2, this uri represents the repository itself,
      and is the place where custom REPORTs get sent to.  (It replaces
-     the older vcc uri form.)  */
+     the older vcc uri form.)  It has no trailing components.  */
 
   if (path != NULL)
     return TRUE;
 
   comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
-  comb->priv.restype = DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION;
+  comb->priv.restype = DAV_SVN_RESTYPE_ME;
   
   /* We're keeping these the same as the VCC resource, to make things
      smoother for our report requests. */
@@ -516,7 +513,7 @@ static const struct special_defn
   { "wbl", parse_wrk_baseline_uri, 2, FALSE, DAV_SVN_RESTYPE_WBL_COLLECTION },
 
   /* The new v2 protocol uses these new 'stub' uris: */
-  { "me",  parse_rootstub_uri, 0, FALSE, DAV_SVN_RESTYPE_ROOTSTUB_COLLECTION },
+  { "me",  parse_me_resource_uri, 0, FALSE, DAV_SVN_RESTYPE_ME },
   { "rev", parse_revstub_uri, 1, FALSE, DAV_SVN_RESTYPE_REVSTUB_COLLECTION },
 
   { NULL } /* sentinel */

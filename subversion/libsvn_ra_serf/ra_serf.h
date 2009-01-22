@@ -202,13 +202,17 @@ struct svn_ra_serf__session_t {
   /* Repository UUID */
   const char *uuid;
 
+  /* The "me resource".  Typically used as a target for REPORTs that
+     are path-agnostic.  If we have this, we can speak HTTP v2 to the
+     server.  */
+  const char *me_resource;
+
   /* Cached HEAD revnum of the repository: for v2 protocol, usually
      returned by initial OPTIONS response. */
   svn_revnum_t youngest_rev;
 
   /* Opaque URL "stubs".  If the OPTIONS response returns these, then
      we know we're using HTTP protocol v2. */
-  const char *root_stub;        /* where to send REPORT requests */
   const char *pegrev_stub;      /* for accessing REV/PATH pairs */
   const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
 

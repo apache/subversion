@@ -5,17 +5,17 @@ reintegrate-able branch, with regular catch-up merges from the trunk.
 TODO:
 
  * Teach mod_dav_svn to answer the OPTIONS request with four
-   additional pieces of information: youngest revision, root URI stub,
+   additional pieces of information: youngest revision, me resource URI,
    pegrev URI stub, revision URI stub.  [DONE]
 
- * Teach mod_dav_svn to handle POST against the root URI stub,
+ * Teach mod_dav_svn to handle POST against the "me resource",
    returning a transaction URI stub and transaction prop URI stub for
    further use in the commit.
 
  * Teach mod_dav_svn to recognize and correctly interpret URLs which
    make use of the new URI stubs:
 
-      root URI stub         -> !svn/me  [STARTED]
+      me resource URI       -> !svn/me  [STARTED]
       pegrev URI stub       -> !svn/bc  [DONE]
       revision URI stub     -> !svn/rev [STARTED]
       transaction URI stub  -> !svn/txn
@@ -35,15 +35,15 @@ TODO:
 
  * Teach ra_serf REPORT-type requests to use the URI stubs, too:
 
-      log                   -> REPORT (against root stub)
-      get-dated-rev         -> REPORT (against root stub)
-      get-locations         -> REPORT (against root stub)
-      get-location-segments -> REPORT (against root stub)
-      get-file-revs         -> REPORT (against root stub)
-      get-locks             -> REPORT (against root stub)
-      get-mergeinfo         -> REPORT (against root stub)
-      replay                -> REPORT (against root stub)
-      replay-range          -> pipelined REPORTs (against root stub)
+      log                   -> REPORT (against "me resource")
+      get-dated-rev         -> REPORT (against "me resource")
+      get-locations         -> REPORT (against "me resource")
+      get-location-segments -> REPORT (against "me resource")
+      get-file-revs         -> REPORT (against "me resource")
+      get-locks             -> REPORT (against "me resource")
+      get-mergeinfo         -> REPORT (against "me resource")
+      replay                -> REPORT (against "me resource")
+      replay-range          -> pipelined REPORTs (against "me resource")
 
  * Teach ra_serf simple write requests to use new URI stubs:
 
@@ -53,7 +53,7 @@ TODO:
 
  * Teach ra_serf to do update-style REPORTs a little differently:
 
-    - REPORT against the new 'root stub' instead of VCC URI
+    - REPORT against the new "me resource" instead of VCC URI
     - eliminate now-unnecessary wcprops cache
     - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
 
