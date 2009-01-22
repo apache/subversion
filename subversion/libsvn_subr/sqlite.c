@@ -1,7 +1,7 @@
 /* sqlite.c
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -194,6 +194,18 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
   *got_row = (sqlite_result == SQLITE_ROW);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt)
+{
+  svn_boolean_t got_row;
+
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (row_id)
+    *row_id = sqlite3_last_insert_rowid(stmt->db->db3);
+
+  return svn_sqlite__reset(stmt);
 }
 
 static svn_error_t *
