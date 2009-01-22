@@ -5784,15 +5784,15 @@ commit_body_rep_cache(void *baton, apr_pool_t *pool)
   svn_error_t *err;
 
   /* Start the sqlite transaction. */
-  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache_db));
 
   err = commit_body(baton, pool);
 
   /* Commit or rollback the sqlite transaction. */
   if (err)
-    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache_db));
   else
-    return svn_sqlite__transaction_commit(ffd->rep_cache.db);
+    return svn_sqlite__transaction_commit(ffd->rep_cache_db);
 
   return err;
 }
@@ -5810,7 +5810,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.fs = fs;
   cb.txn = txn;
   return svn_fs_fs__with_write_lock(fs,
-                                    ffd->rep_cache.db ? commit_body_rep_cache :
+                                    ffd->rep_cache_db ? commit_body_rep_cache :
                                                         commit_body, 
                                     &cb, pool);
 }

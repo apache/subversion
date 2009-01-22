@@ -176,19 +176,6 @@ typedef struct
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
-/* Rep cache sqlite database and prepared statements. */
-struct rep_cache_t
-{
-  /* Prepared statements. */
-  svn_sqlite__stmt_t *get_rep_stmt;
-  svn_sqlite__stmt_t *set_rep_stmt;
-  svn_sqlite__stmt_t *inc_select_stmt;
-  svn_sqlite__stmt_t *inc_update_stmt;
-
-  /* The sqlite database handle. */
-  svn_sqlite__db_t *db;
-};
-
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
@@ -234,7 +221,7 @@ typedef struct
   fs_fs_shared_data_t *shared;
 
   /* The sqlite database used for rep caching. */
-  struct rep_cache_t rep_cache;
+  svn_sqlite__db_t *rep_cache_db;
 
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;

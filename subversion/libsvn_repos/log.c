@@ -979,6 +979,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
     }
 
   log_entry->changed_paths = changed_paths;
+  log_entry->changed_paths2 = changed_paths;
   log_entry->revision = rev;
 
   return SVN_NO_ERROR;
