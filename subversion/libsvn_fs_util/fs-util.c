@@ -129,3 +129,17 @@ svn_fs__next_entry_name(const char **next_p,
       return apr_pstrndup(pool, path, end - path);
     }
 }
+
+svn_fs_path_change2_t *
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id, 
+                           svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *pool)
+{
+  svn_fs_path_change2_t *change;
+
+  change = apr_pcalloc(pool, sizeof(*change));
+  change->node_rev_id = node_rev_id;
+  change->change_kind = change_kind;
+
+  return change;
+}
