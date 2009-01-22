@@ -95,7 +95,7 @@ need.
    but will also return new information:
 
       youngest revision:  number
-            "root stub":  !svn/me
+      "me resource" URI:  !svn/me
           "pegrev stub":  !svn/bc
         "revision stub":  !svn/rev
 
@@ -108,7 +108,7 @@ need.
 
  * What the new stubs are used for:
 
-   - root stub:  represents the "repository itself".  This is the URI
+   - me resource:  represents the "repository itself".  This is the URI
      that custom REPORTS are sent against.
 
      Note:  this eliminates our need for the VCC resource.
@@ -171,27 +171,27 @@ need.
    request/response.
 
    These REPORTs are not changing, except that they'll be sent against
-   the root stub URI (!svn/me) rather than a VCC URI.  Again, we're
+   the "me resource" URI (!svn/me) rather than a VCC URI.  Again, we're
    eliminating all "discovery" turnarounds which used to preceed these
    requests.
 
-   log                      -> REPORT (against root stub)
+   log                      -> REPORT (against "me resource")
 
-   get-dated-rev            -> REPORT (against root stub)
+   get-dated-rev            -> REPORT (against "me resource")
 
-   get-locations            -> REPORT (against root stub)
+   get-locations            -> REPORT (against "me resource")
 
-   get-locations-segments   -> REPORT (against root stub)
+   get-locations-segments   -> REPORT (against "me resource")
 
-   get-file-revs            -> REPORT (against root stub)
+   get-file-revs            -> REPORT (against "me resource")
 
-   get-locks                -> REPORT (against root stub)
+   get-locks                -> REPORT (against "me resource")
 
-   get-mergeinfo            -> REPORT (against root stub)
+   get-mergeinfo            -> REPORT (against "me resource")
 
-   replay                   -> REPORT (against root stub)
+   replay                   -> REPORT (against "me resource")
 
-   replay-range             -> pipelined REPORT requests (against root stub)
+   replay-range             -> pipelined REPORT requests (against "me resource")
                                on each revision in the range
 
 
@@ -214,7 +214,7 @@ need.
 
    The only changes we plan to make:
 
-    - the REPORT happens against the new 'root stub', rather than a
+    - the REPORT happens against the new '"me resource"', rather than a
       discovered VCC URI.
 
     - no need to cache the !svn/ver "wcprops" in the working copy
@@ -250,7 +250,7 @@ need.
   The new sequence looks like:
 
       OPTIONS to start ra_session
-      POST against root stub, to create a transaction
+      POST against "me resource", to create a transaction
       for each changed object:
          {PUT, PROPPATCH, DELETE, COPY, MKCOL} against transaction resources
       MERGE to commit the transaction
