@@ -606,7 +606,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   int status_code;
   const char *vcc_url;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
                                      session, session->conns[0],
                                      session->repos_url.path, pool));
 
@@ -704,7 +704,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   const char *vcc_url;
   int active_reports = 0;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
                                      session, session->conns[0],
                                      session->repos_url.path, pool));
 

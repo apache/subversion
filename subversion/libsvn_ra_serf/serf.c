@@ -407,7 +407,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
                                      session, session->conns[0],
                                      session->repos_url.path, pool));
 
@@ -812,7 +812,7 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
     {
       const char *vcc_url;
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
                                          session, session->conns[0],
                                          session->repos_url.path, pool));
     }
@@ -846,8 +846,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url,
-                                         &relative_url,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url, TRUE,
                                          session, session->conns[0],
                                          session->repos_url.path, pool));
       if (!session->uuid)

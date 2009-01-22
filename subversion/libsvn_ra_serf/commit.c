@@ -1061,7 +1061,7 @@ open_root(void *edit_baton,
                                ctx->session->repos_url.hostinfo);
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
                                      ctx->session, ctx->conn,
                                      ctx->session->repos_url.path,
                                      ctx->pool));
@@ -1292,7 +1292,7 @@ add_directory(const char *path,
                                    dir->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path, TRUE,
                                          dir->commit->session,
                                          dir->commit->conn,
                                          uri.path, dir->pool));
@@ -1694,7 +1694,7 @@ close_file(void *file_baton,
                                    ctx->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path, TRUE,
                                          ctx->commit->session,
                                          ctx->commit->conn,
                                          uri.path, pool));
@@ -2010,7 +2010,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   commit->session = session;
   commit->conn = session->conns[0];
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
                                      commit->session,
                                      commit->conn,
                                      commit->session->repos_url.path, pool));

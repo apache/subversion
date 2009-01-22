@@ -2029,8 +2029,9 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, report->sess,
-                                     report->sess->conns[0], uri.path, pool));
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, TRUE,
+                                     report->sess, report->sess->conns[0],
+                                     uri.path, pool));
 
   /* Copy parameters to reporter's pool. */
   lock_token = apr_pstrdup(report->pool, lock_token);
@@ -2134,8 +2135,9 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, sess, sess->conns[0],
-                                      sess->repos_url.path, pool));
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
+                                     sess, sess->conns[0],
+                                     sess->repos_url.path, pool));
 
   if (!vcc_url)
     {
@@ -2605,7 +2607,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
     {
       const char *vcc_url, *rel_path, *baseline_url;
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_path,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_path, TRUE,
                                          session, conn, fetch_url, pool));
 
       SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
