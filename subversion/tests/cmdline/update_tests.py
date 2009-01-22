@@ -4332,7 +4332,7 @@ test_list = [ None,
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
-              XFail(update_moves_and_modifies_an_edited_file),
+              update_moves_and_modifies_an_edited_file,
              ]
 
 if __name__ == '__main__':

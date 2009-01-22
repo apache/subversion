@@ -753,11 +753,19 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                         svn_diff_file_options_t *options,
                         apr_pool_t *pool)
 {
+  svn_wc_conflict_result_t *result = NULL;
+
   /* Give the conflict resolution callback a chance to clean
      up the conflicts before we mark the file 'conflicted' */
-  if (conflict_func)
+  if (!conflict_func)
     {
-      svn_wc_conflict_result_t *result = NULL;
+      /* If there is no interactive conflict resolution then we are effectively
+         postponing conflict resolution. */
+      result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                             NULL, pool);      
+    }
+  else
+    {
       svn_wc_conflict_description_t *cdesc;
 
       cdesc = setup_text_conflict_desc(left,
@@ -787,25 +795,25 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                                   merge_dirpath,
                                   merge_filename,
                                   pool));
-
-      SVN_ERR(eval_conflict_func_result(merge_outcome,
-                                        result,
-                                        log_accum,
-                                        left,
-                                        right,
-                                        merge_target,
-                                        copyfrom_text,
-                                        adm_access,
-                                        result_target,
-                                        detranslated_target,
-                                        options,
-                                        pool));
-
-      if (result->choice != svn_wc_conflict_choose_postpone)
-        /* The conflicts have been dealt with, nothing else
-         * to do for us here. */
-        return SVN_NO_ERROR;
     }
+
+  SVN_ERR(eval_conflict_func_result(merge_outcome,
+                                    result,
+                                    log_accum,
+                                    left,
+                                    right,
+                                    merge_target,
+                                    copyfrom_text,
+                                    adm_access,
+                                    result_target,
+                                    detranslated_target,
+                                    options,
+                                    pool));
+
+  if (result->choice != svn_wc_conflict_choose_postpone)
+    /* The conflicts have been dealt with, nothing else
+     * to do for us here. */
+    return SVN_NO_ERROR;
 
   /* The conflicts have not been dealt with. */
   SVN_ERR(preserve_pre_merge_files(log_accum,
