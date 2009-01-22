@@ -55,8 +55,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
   ],
   [
-    dnl no --with-sqlite switch, and no sqlite subdir, look in PATH
-    SVN_SQLITE_PKG_CONFIG
+    dnl see if the sqlite amalgamation exists in the source tree
+    SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
 
     if test -z "$svn_lib_sqlite"; then
       dnl check the "standard" location of /usr
@@ -64,8 +64,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
 
     if test -z "$svn_lib_sqlite"; then
-      dnl finally, see if the sqlite amalgamation exists
-      SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
+      dnl no --with-sqlite switch, and no sqlite subdir, look in PATH
+      SVN_SQLITE_PKG_CONFIG
     fi
 
     if test -z "$svn_lib_sqlite"; then
@@ -120,6 +120,14 @@ AC_DEFUN(SVN_SQLITE_DIR_CONFIG,
     sqlite_include="$1/include/sqlite3.h"
   fi
 
+  save_CPPFLAGS="$CPPFLAGS"
+  save_LDFLAGS="$LDFLAGS"
+
+  if test ! -z "$1"; then
+    CPPFLAGS="$CPPFLAGS -I$sqlite_dir/include"
+    LDFLAGS="$LDFLAGS -L$sqlite_dir/lib"
+  fi
+
   AC_CHECK_HEADER(sqlite3.h,
     [
       AC_MSG_CHECKING([sqlite library version (via header)])
@@ -139,6 +147,9 @@ SQLITE_VERSION_OKAY
                       fi
                   ])], [AC_MSG_RESULT([unsupported SQLite version])])
     ])
+
+  CPPFLAGS="$save_CPPFLAGS"
+  LDFLAGS="$save_LDFLAGS"
 ])
 
 dnl SVN_SQLITE_FILE_CONFIG(sqlite_file)

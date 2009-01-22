@@ -100,7 +100,7 @@ fi
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
 #       and we can state that dev people need Python on their machine. Note
-#       that running gen-make.py requires Python 2.X or newer.
+#       that running gen-make.py requires Python 2.4 or newer.
 
 PYTHON="`./build/find_python.sh`"
 if test -z "$PYTHON"; then
@@ -110,6 +110,9 @@ if test -z "$PYTHON"; then
   echo "to the Python executable, and re-run autogen.sh"
   exit 1
 fi
+
+# Transform sql files into header files
+$PYTHON build/transform_sql.py subversion/libsvn_fs_fs/rep-cache-db.sql
 
 # Compile SWIG headers into standalone C files if we are in release mode
 if test -n "$RELEASE_MODE"; then

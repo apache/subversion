@@ -425,6 +425,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
+      notify->rev_props = rev_props;
       frb->ctx->notify_func2(frb->ctx->notify_baton2, notify, pool);
     }
 

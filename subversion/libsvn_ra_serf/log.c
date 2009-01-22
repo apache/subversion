@@ -125,9 +125,10 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       log_info_t *info = parser->state->private;
 
-      if (!info->log_entry->changed_paths)
+      if (!info->log_entry->changed_paths2)
         {
-          info->log_entry->changed_paths = apr_hash_make(info->pool);
+          info->log_entry->changed_paths2 = apr_hash_make(info->pool);
+          info->log_entry->changed_paths = info->log_entry->changed_paths;
         }
 
       info->tmp_path = svn_log_changed_path2_create(info->pool);
@@ -387,7 +388,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       path = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
       info->tmp_len = 0;
 
-      apr_hash_set(info->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
+      apr_hash_set(info->log_entry->changed_paths2, path, APR_HASH_KEY_STRING,
                    info->tmp_path);
       svn_ra_serf__xml_pop_state(parser);
     }

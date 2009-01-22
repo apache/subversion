@@ -92,10 +92,11 @@ struct log_baton
 static void
 reset_log_item(struct log_baton *lb)
 {
-  lb->log_entry->revision      = SVN_INVALID_REVNUM;
-  lb->log_entry->revprops      = NULL;
-  lb->log_entry->changed_paths = NULL;
-  lb->log_entry->has_children  = FALSE;
+  lb->log_entry->revision       = SVN_INVALID_REVNUM;
+  lb->log_entry->revprops       = NULL;
+  lb->log_entry->changed_paths  = NULL;  
+  lb->log_entry->has_children   = FALSE;
+  lb->log_entry->changed_paths2 = NULL;
 
   svn_pool_clear(lb->subpool);
 }
@@ -260,9 +261,12 @@ log_end_element(void *baton, int state,
     case ELEM_modified_path:
       {
         char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
-        if (! lb->log_entry->changed_paths)
-          lb->log_entry->changed_paths = apr_hash_make(lb->subpool);
-        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
+        if (! lb->log_entry->changed_paths2)
+          {
+            lb->log_entry->changed_paths2 = apr_hash_make(lb->subpool);
+            lb->log_entry->changed_paths = lb->log_entry->changed_paths2;
+          }
+        apr_hash_set(lb->log_entry->changed_paths2, path, APR_HASH_KEY_STRING,
                      lb->this_path_item);
         break;
       }

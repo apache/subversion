@@ -1811,9 +1811,9 @@ static svn_error_t *log_receiver(void *baton,
     }
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
-  if (log_entry->changed_paths)
+  if (log_entry->changed_paths2)
     {
-      for (h = apr_hash_first(pool, log_entry->changed_paths); h;
+      for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
                                                         h = apr_hash_next(h))
         {
           apr_hash_this(h, &key, NULL, &val);

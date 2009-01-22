@@ -2807,6 +2807,21 @@ def merge_dir_and_file_replace(sbox):
     'A/C/foo/bar'              : Item(status='  ', wc_rev=6),
     'A/C/foo/bar/new file 3'   : Item(status='  ', wc_rev=6),
     })
+
+  # This test is failing on the following commit with this error:
+  #
+  #   >svn ci -m "" svn-test-work\working_copies\merge_tests-34
+  #   Sending        svn-test-work\working_copies\merge_tests-34\A\C
+  #   Replacing      svn-test-work\working_copies\merge_tests-34\A\C\foo
+  #   Adding         svn-test-work\working_copies\merge_tests-34\A\C\foo\bar
+  #   Adding         svn-test-work\working_copies\merge_tests-34\A\C\foo\bar\
+  #                  new file 3
+  #   Deleting       svn-test-work\working_copies\merge_tests-34\A\C\foo\
+  #                  new file
+  #   svn: Commit failed (details follow):
+  #   svn: '/A/C/foo/new file' is out of date
+  #
+  # Test marked as XFail until issue #2690 is fixed.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
