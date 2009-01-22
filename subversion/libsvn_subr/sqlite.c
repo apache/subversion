@@ -197,6 +197,45 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
+{
+  int count;
+
+  for (count = 1; *fmt; fmt++, count++)
+    {
+      switch (*fmt)
+        {
+          case 's':
+            SVN_ERR(svn_sqlite__bind_text(stmt, count,
+                                          va_arg(ap, const char *)));
+            break;
+
+          case 'i':
+            SVN_ERR(svn_sqlite__bind_int64(stmt, count,
+                                           va_arg(ap, apr_int64_t)));
+            break;
+
+          default:
+            SVN_ERR_MALFUNCTION();
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  va_start(ap, fmt);
+  err = vbindf(stmt, fmt, ap);
+  va_end(ap);
+  return err;
+}
+
 svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt,
                        int slot,
