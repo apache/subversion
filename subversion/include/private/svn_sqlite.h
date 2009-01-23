@@ -119,6 +119,13 @@ svn_error_t *
 svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt, int slot,
                       const char *val);
 
+/* Error-handling wrapper around sqlite3_bind_blob. */
+svn_error_t *
+svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
+                      int slot,
+                      void *val,
+                      apr_size_t len);
+
 /* Wrapper around sqlite3_column_text. */
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column);
