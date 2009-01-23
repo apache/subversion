@@ -1576,7 +1576,7 @@ svn_ra_serf__discover_root(const char **root_url,
       if (rel_path)
         {
           const char *decoded_root = 
-            svn_path_uri_decode(session->repos_root_str, pool);
+            svn_path_uri_decode(session->repos_root.path, pool);
           if (strcmp(decoded_root, orig_path) == 0)
             {
               *rel_path = "";
@@ -1584,7 +1584,7 @@ svn_ra_serf__discover_root(const char **root_url,
           else
             {
               *rel_path = svn_path_is_child(decoded_root, orig_path, pool);
-              SVN_ERR_ASSERT(rel_path != NULL);
+              SVN_ERR_ASSERT(*rel_path != NULL);
             }
         }
       return SVN_NO_ERROR;
