@@ -17,13 +17,7 @@
  *
  * @file svn_client.h
  * @brief Subversion's client library
- */
-
-
-
-/*** Includes ***/
-
-/*
+ *
  * Requires:  The working copy library and repository access library.
  * Provides:  Broad wrappers around working copy library functionality.
  * Used By:   Client programs.
@@ -32,17 +26,22 @@
 #ifndef SVN_CLIENT_H
 #define SVN_CLIENT_H
 
+#include <apr.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_getopt.h>
+#include <apr_file_io.h>
+#include <apr_time.h>
 
 #include "svn_types.h"
-#include "svn_wc.h"
 #include "svn_string.h"
-#include "svn_error.h"
+#include "svn_wc.h"
 #include "svn_opt.h"
 #include "svn_version.h"
 #include "svn_ra.h"
 #include "svn_diff.h"
-
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {

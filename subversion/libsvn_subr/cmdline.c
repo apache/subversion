@@ -40,12 +40,14 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_nls.h"
+#include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_version.h"
-#include "utf_impl.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
+
+#include "utf_impl.h"
 
 #include "private/svn_cmdline_private.h"
 

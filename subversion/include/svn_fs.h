@@ -19,15 +19,17 @@
  * @brief Interface to the Subversion filesystem.
  */
 
-
 #ifndef SVN_FS_H
 #define SVN_FS_H
 
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_time.h>    /* for apr_time_t */
+
 #include "svn_types.h"
-#include "svn_error.h"
+#include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_mergeinfo.h"

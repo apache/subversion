@@ -24,6 +24,10 @@
 #ifndef SVN_SUBST_H
 #define SVN_SUBST_H
 
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_time.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_io.h"

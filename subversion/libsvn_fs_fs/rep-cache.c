@@ -45,10 +45,10 @@ enum statement_keys {
 static const char * const statements[] = {
   "select revision, offset, size, expanded_size "
   "from rep_cache "
-  "where hash = :1", 
+  "where hash = ?1", 
 
   "insert into rep_cache (hash, revision, offset, size, expanded_size) "
-  "values (:1, :2, :3, :4, :5);",
+  "values (?1, ?2, ?3, ?4, ?5);",
 
   NULL
   };
@@ -145,7 +145,6 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t have_row;
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 

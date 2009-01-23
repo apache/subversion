@@ -175,24 +175,24 @@ need.
    eliminating all "discovery" turnarounds which used to preceed these
    requests.
 
-   log                      -> REPORT (against "me resource")
+   log                      -> REPORT (against a pegrev URI)
 
    get-dated-rev            -> REPORT (against "me resource")
 
-   get-locations            -> REPORT (against "me resource")
+   get-locations            -> REPORT (against a pegrev URI)
 
-   get-locations-segments   -> REPORT (against "me resource")
+   get-locations-segments   -> REPORT (against a pegrev URI)
 
-   get-file-revs            -> REPORT (against "me resource")
+   get-file-revs            -> REPORT (against a pegrev URI)
 
-   get-locks                -> REPORT (against "me resource")
+   get-locks                -> REPORT (against a public HEAD URI)
 
-   get-mergeinfo            -> REPORT (against "me resource")
+   get-mergeinfo            -> REPORT (against a pegrev URI)
 
    replay                   -> REPORT (against "me resource")
 
-   replay-range             -> pipelined REPORT requests (against "me resource")
-                               on each revision in the range
+   replay-range             -> pipelined REPORT requests (against "me
+                               resource") on each revision in the range
 
 
 * The "update" family of requests
