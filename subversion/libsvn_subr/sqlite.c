@@ -268,6 +268,17 @@ svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
+                      int slot,
+                      void *val,
+                      apr_size_t len)
+{
+  SQLITE_ERR(sqlite3_bind_blob(stmt->s3stmt, slot, val, len, SQLITE_TRANSIENT),
+             stmt->db);
+  return SVN_NO_ERROR;
+}
+
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column)
 {
