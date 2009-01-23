@@ -221,6 +221,33 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
                                                     keywords, pool);
 }
 
+svn_error_t *
+svn_subst_translate_to_normal_form(const char *src,
+                                   const char *dst,
+                                   svn_subst_eol_style_t eol_style,
+                                   const char *eol_str,
+                                   svn_boolean_t always_repair_eols,
+                                   apr_hash_t *keywords,
+                                   svn_boolean_t special,
+                                   apr_pool_t *pool)
+{
+
+  if (eol_style == svn_subst_eol_style_native)
+    eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+  else if (! (eol_style == svn_subst_eol_style_fixed
+              || eol_style == svn_subst_eol_style_none))
+    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+  return svn_subst_copy_and_translate3(src, dst, eol_str,
+                                       eol_style == svn_subst_eol_style_fixed
+                                       || always_repair_eols,
+                                       keywords,
+                                       FALSE /* contract keywords */,
+                                       special,
+                                       pool);
+}
+
+
 /*** From opt.c ***/
 /* Same as print_command_info2(), but with deprecated struct revision. */
 static svn_error_t *

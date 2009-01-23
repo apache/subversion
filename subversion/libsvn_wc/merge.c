@@ -198,6 +198,7 @@ detranslate_wc_file(const char **detranslated_file,
   if (force_copy || keywords || eol || special)
     {
       const char *detranslated;
+
       /* Force a copy into the temporary wc area to avoid having
          temporary files created below to appear in the actual wc. */
 
@@ -209,14 +210,22 @@ detranslate_wc_file(const char **detranslated_file,
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
          consistent newlines and 'svn:eol-style' set.  */
-      SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
-                                                 detranslated,
-                                                 style,
-                                                 eol,
-                                                 TRUE /* always_repair_eols */,
-                                                 keywords,
-                                                 special,
-                                                 pool));
+
+      if (style == svn_subst_eol_style_native)
+        eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+      else if (style != svn_subst_eol_style_fixed
+               && style != svn_subst_eol_style_none)
+        return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+      SVN_ERR(svn_subst_copy_and_translate3(merge_target,
+                                            detranslated,
+                                            eol,
+                                            TRUE /* repair */,
+                                            keywords,
+                                            FALSE /* contract keywords */,
+                                            special,
+                                            pool));
+
       *detranslated_file = detranslated;
     }
   else
