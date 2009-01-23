@@ -203,7 +203,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   date_ctx->revision = revision;
   date_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, FALSE,
                                      session, session->conns[0],
                                      session->repos_url.path, pool));
 

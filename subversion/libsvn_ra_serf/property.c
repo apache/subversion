@@ -959,6 +959,28 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   if (! url)
     url = session->repos_url.path;
 
+  /* Do we have the makings of HTTP v2 support?  (And can we get away
+     with not fetching fresh latest-revnum information?)  */
+  if (session->pegrev_stub && session->repos_root_str && (! latest_revnum))
+    {
+      const char *decoded_url = svn_path_uri_decode(url, pool);
+      const char *decoded_root = 
+        svn_path_uri_decode(session->repos_root.path, pool);
+
+      *bc_url = apr_psprintf(pool, "%s/%ld", session->pegrev_stub, revision);
+      if (strcmp(decoded_root, decoded_url) == 0)
+        {
+          *bc_relative = "";
+        }
+      else
+        {
+          *bc_relative = svn_path_is_child(decoded_root, decoded_url, pool);
+          SVN_ERR_ASSERT(*bc_relative != NULL);
+        }
+      return SVN_NO_ERROR;
+    }
+
+  /* Fall back to the old VCC_URL PROPFIND hunt.  */
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url, TRUE,
                                      session, session->conns[0], url, pool));
 

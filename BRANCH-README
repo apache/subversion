@@ -33,17 +33,19 @@ TODO:
       stat                  -> PROPFIND (against pegrev URI)
       get-lock              -> PROPFIND (against public HEAD URI)
 
- * Teach ra_serf REPORT-type requests to use the URI stubs, too:
+ * Teach ra_serf REPORT-type requests to use the URI stubs where
+   applicable, too:
 
-      log                   -> REPORT (against "me resource")
-      get-dated-rev         -> REPORT (against "me resource")
-      get-locations         -> REPORT (against "me resource")
-      get-location-segments -> REPORT (against "me resource")
-      get-file-revs         -> REPORT (against "me resource")
-      get-locks             -> REPORT (against "me resource")
-      get-mergeinfo         -> REPORT (against "me resource")
-      replay                -> REPORT (against "me resource")
-      replay-range          -> pipelined REPORTs (against "me resource")
+      log                   -> REPORT (against pegrev URI)      [DONE]
+      get-dated-rev         -> REPORT (against "me resource")   [DONE]
+      get-deleted-rev       -> REPORT (against pegrev URI)      [DONE]
+      get-locations         -> REPORT (against pegrev URI)      [DONE]
+      get-location-segments -> REPORT (against pegrev URI)      [DONE]
+      get-file-revs         -> REPORT (against pegrev URI)      [DONE]
+      get-locks             -> REPORT (against public HEAD URI) [DONE]
+      get-mergeinfo         -> REPORT (against pegrev URI)      [DONE]
+      replay                -> REPORT (against "me resource")   [DONE]
+      replay-range          -> REPORTs (against "me resource")  [DONE]
 
  * Teach ra_serf simple write requests to use new URI stubs:
 
