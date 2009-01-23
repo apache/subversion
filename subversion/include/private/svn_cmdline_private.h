@@ -22,6 +22,11 @@
 #ifndef SVN_CMDLINE_PRIVATE_H
 #define SVN_CMDLINE_PRIVATE_H
 
+#include <apr_pools.h>
+
+#include "svn_string.h"
+#include "svn_error.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
