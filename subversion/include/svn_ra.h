@@ -1536,8 +1536,8 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * result of a merge between @a start and @a end will be included.
  *
  * @note This functionality is not available in pre-1.1 servers.  If the
- * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
- * returned.
+ * server doesn't implement it, an alternative (but much slower)
+ * implementation based on svn_ra_get_log2() is used.
  *
  * @since New in 1.5.
  */

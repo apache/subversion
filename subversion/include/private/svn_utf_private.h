@@ -22,6 +22,10 @@
 #ifndef SVN_UTF_PRIVATE_H
 #define SVN_UTF_PRIVATE_H
 
+#include <apr.h>
+
+#include "svn_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
