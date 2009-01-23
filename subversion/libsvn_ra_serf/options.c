@@ -298,23 +298,23 @@ capabilities_headers_iterator_callback(void *baton,
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
         }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+      else if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO,
+                                           vals))
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_server_yes);
         }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+      else if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS,
+                                           vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
         }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
+      else if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
+                                           vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_PARTIAL_REPLAY,
@@ -323,19 +323,24 @@ capabilities_headers_iterator_callback(void *baton,
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
-  if (strncmp(key, "SVN", 3) == 0)
+  else if (strncmp(key, "SVN", 3) == 0)
     {
       if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
-        orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
-
-      if (svn_cstring_casecmp(key, SVN_DAV_PEGREV_STUB_HEADER) == 0)
-        orc->session->pegrev_stub = apr_pstrdup(orc->session->pool, val);
-
-      if (svn_cstring_casecmp(key, SVN_DAV_REV_STUB_HEADER) == 0)
-        orc->session->rev_stub = apr_pstrdup(orc->session->pool, val);
-
-      if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
-        orc->session->youngest_rev = SVN_STR_TO_REV(val);
+        {
+          orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_PEGREV_STUB_HEADER) == 0)
+        {
+          orc->session->pegrev_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_REV_STUB_HEADER) == 0)
+        {
+          orc->session->rev_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
+        {
+          orc->session->youngest_rev = SVN_STR_TO_REV(val);
+        }
     }
 
   return 0;
