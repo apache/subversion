@@ -1688,7 +1688,6 @@ write_entry(svn_stringbuf_t *buf,
   const char *valuestr;
   svn_revnum_t valuerev;
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
   svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
   svn_boolean_t is_subdir = ! is_this_dir && (entry->kind == svn_node_dir);
 
@@ -1934,8 +1933,7 @@ write_entry(svn_stringbuf_t *buf,
   svn_stringbuf_appendbytes(buf, "\f\n", 2);
 
   /* Execute and reset the insert clause. */
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
 }
