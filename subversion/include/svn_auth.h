@@ -22,7 +22,10 @@
 #ifndef SVN_AUTH_H
 #define SVN_AUTH_H
 
+#include <apr.h>
 #include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_tables.h>
 
 #include "svn_types.h"
 #include "svn_config.h"

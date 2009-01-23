@@ -31,6 +31,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_cmdline.h"
+#include "svn_pools.h"
 
 #include "opt.h"
 #include "private/svn_opt_private.h"

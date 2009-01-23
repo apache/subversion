@@ -16,9 +16,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-/*** Includes. ***/
 #include <apr_pools.h>
 
 #include "svn_error.h"
@@ -28,6 +25,8 @@
 #include "svn_ra.h"
 #include "svn_io.h"
 #include "svn_compat.h"
+#include "svn_props.h"
+
 #include "ra_loader.h"
 #include "svn_private_config.h"
 

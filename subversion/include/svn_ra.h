@@ -19,20 +19,21 @@
  * @brief Repository Access
  */
 
-
-
-
 #ifndef SVN_RA_H
 #define SVN_RA_H
 
+#include <apr.h>
 #include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_time.h>
+#include <apr_file_io.h>  /* for apr_file_t */
 
-#include "svn_error.h"
+#include "svn_types.h"
+#include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
 #include "svn_mergeinfo.h"
-#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {

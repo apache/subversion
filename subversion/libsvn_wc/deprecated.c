@@ -17,18 +17,14 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
 #include "svn_wc.h"
 #include "svn_subst.h"
+#include "svn_pools.h"
+#include "svn_props.h"
 
 #include "wc.h"
 
@@ -37,8 +33,6 @@
 
 
 
-/*** Code. ***/
-
 /*** From adm_crawler.c ***/
 
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an

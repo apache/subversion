@@ -28,6 +28,7 @@
 #include <apr_uuid.h>
 #include <apr_lib.h>
 #include <apr_md5.h>
+#include <apr_sha1.h>
 #include <apr_thread_mutex.h>
 
 #include "svn_pools.h"

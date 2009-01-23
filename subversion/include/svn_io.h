@@ -27,11 +27,14 @@
 
 #include <apr.h>
 #include <apr_pools.h>
+#include <apr_time.h>
+#include <apr_hash.h>
+#include <apr_tables.h>
 #include <apr_file_io.h>
-#include <apr_thread_proc.h>
+#include <apr_file_info.h>
+#include <apr_thread_proc.h>  /* for apr_proc_t, apr_exit_why_e */
 
 #include "svn_types.h"
-#include "svn_error.h"
 #include "svn_string.h"
 #include "svn_checksum.h"
 
