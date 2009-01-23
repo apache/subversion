@@ -23,6 +23,7 @@
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
