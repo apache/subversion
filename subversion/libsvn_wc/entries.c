@@ -1842,7 +1842,7 @@ write_entry(svn_stringbuf_t *buf,
              entry->present_props ? strlen(entry->present_props) : 0);
 
   /* TODO: Properties. */
-  SVN_ERR(svn_sqlite__bind_text(stmt, 15, ""));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 15, "", 0));
 
   /* Conflict. */
   write_str(buf, entry->prejfile, pool);
