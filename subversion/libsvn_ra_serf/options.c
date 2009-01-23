@@ -325,7 +325,17 @@ capabilities_headers_iterator_callback(void *baton,
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
   else if (strncmp(key, "SVN", 3) == 0)
     {
-      if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
+      if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
+        {
+          orc->session->repos_root = orc->session->repos_url;
+          orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
+          orc->session->repos_root_str =
+            svn_path_canonicalize(apr_uri_unparse(orc->session->pool,
+                                                  &orc->session->repos_root,
+                                                  0),
+                                  orc->session->pool);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
           orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
         }

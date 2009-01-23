@@ -4,9 +4,9 @@ reintegrate-able branch, with regular catch-up merges from the trunk.
 
 TODO:
 
- * Teach mod_dav_svn to answer the OPTIONS request with four
+ * Teach mod_dav_svn to answer the OPTIONS request with these
    additional pieces of information: youngest revision, me resource URI,
-   pegrev URI stub, revision URI stub.  [DONE]
+   pegrev URI stub, revision URI stub, repository root URI.  [DONE]
 
  * Teach mod_dav_svn to handle POST against the "me resource",
    returning a transaction URI stub and transaction prop URI stub for
@@ -15,7 +15,7 @@ TODO:
  * Teach mod_dav_svn to recognize and correctly interpret URLs which
    make use of the new URI stubs:
 
-      me resource URI       -> !svn/me  [STARTED]
+      me resource URI       -> !svn/me  [DONE]
       pegrev URI stub       -> !svn/bc  [DONE]
       revision URI stub     -> !svn/rev [STARTED]
       transaction URI stub  -> !svn/txn
@@ -53,7 +53,7 @@ TODO:
 
  * Teach ra_serf to do update-style REPORTs a little differently:
 
-    - REPORT against the new "me resource" instead of VCC URI
+    - REPORT against the new "me resource" instead of VCC URI  [DONE]
     - eliminate now-unnecessary wcprops cache
     - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
 
