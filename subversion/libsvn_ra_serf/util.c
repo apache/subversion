@@ -1554,7 +1554,11 @@ discover_vcc(const char **vcc_url,
 }
 
 /* ### TODO:  Rename this function to svn_ra_serf__report_resource(),
-       per gstein's suggestion.  */
+       per gstein's suggestion.  Also, this whole business of
+       generating REL_PATH here is really kinda whack, and seems very much
+       tied to the crawl-toward-the-root junk we did in order to get
+       a VCC URL.  Full-URI-to-relative-URI calculation should be its
+       own thing, and should make use of the cached repos root URI.  */
 svn_error_t *
 svn_ra_serf__discover_root(const char **root_url,
                            const char **rel_path,
@@ -1564,14 +1568,25 @@ svn_ra_serf__discover_root(const char **root_url,
                            const char *orig_path,
                            apr_pool_t *pool)
 {
-  /* Unless our caller explicitly wants a VCC URL, or needs a relative
-     path calculation, we use the cached root stub URI (if any).
-  
-     ### TODO:  Can we do a relative path calculation using the root stub?
-  */
-  if ((! vcc_only) && (! rel_path) && session->me_resource)
+  /* Unless our caller explicitly wants a VCC URL, we use the cached
+     "me resource" URI and repository root URI (if any).  */
+  if ((! vcc_only) && session->me_resource && session->repos_root_str)
     {
       *root_url = apr_pstrdup(pool, session->me_resource);
+      if (rel_path)
+        {
+          const char *decoded_root = 
+            svn_path_uri_decode(session->repos_root_str, pool);
+          if (strcmp(decoded_root, orig_path) == 0)
+            {
+              *rel_path = "";
+            }
+          else
+            {
+              *rel_path = svn_path_is_child(decoded_root, orig_path, pool);
+              SVN_ERR_ASSERT(rel_path != NULL);
+            }
+        }
       return SVN_NO_ERROR;
     }
   

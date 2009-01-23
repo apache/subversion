@@ -316,7 +316,7 @@ parse_me_resource_uri(dav_resource_combined *comb,
      and is the place where custom REPORTs get sent to.  (It replaces
      the older vcc uri form.)  It has no trailing components.  */
 
-  if (path != NULL)
+  if (path[0] != '\0')
     return TRUE;
 
   comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
@@ -571,21 +571,35 @@ parse_uri(dav_resource_combined *comb,
 
               if (len1 >= len3 && memcmp(uri, defn->name, len3) == 0)
                 {
-                  if (uri[len3] == '\0')
-                    {
-                      /* URI was "/root/!svn/XXX". The location exists, but
-                         has restricted usage. */
-                      comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
-
-                      /* store the resource type so that we can PROPFIND
-                         on this collection. */
-                      comb->priv.restype = defn->restype;
-                    }
-                  else if (uri[len3] == '/')
+                  /* If we find a slash after our special subdir, or
+                     if we don't and this subdir isn't *supposed* to have
+                     anything following it (such as the !svn/me
+                     resource), hand off the custom parser for this
+                     subdir type. */
+                  if (uri[len3] == '/')
                     {
                       if ((*defn->parse)(comb, uri + len3 + 1, label,
                                          use_checked_in))
                         return TRUE;
+                    }
+                  else if (uri[len3] == '\0')
+                    {
+                      if ((defn->numcomponents == 0) 
+                          && (! defn->has_repos_path))
+                        {
+                          if ((*defn->parse)(comb, "", label, use_checked_in))
+                            return TRUE;
+                        }
+                      else
+                        {
+                          /* URI was "/root/!svn/XXX". The location
+                             exists, but has restricted usage. */
+                          comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+                          
+                          /* Store the resource type so that we can
+                             PROPFIND on this collection. */
+                          comb->priv.restype = defn->restype;
+                        }
                     }
                   else
                     {

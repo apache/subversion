@@ -87,6 +87,11 @@ extern "C" {
  * against. */
 #define SVN_DAV_ME_RESOURCE_HEADER "SVN-Me-Resource"
 
+/** This header provides the repository root URI, suitable for use in
+    calculating the relative paths of other public URIs for this
+    repository into .  (HTTP protocol v2 only)  */
+#define SVN_DAV_ROOT_URI_HEADER "SVN-Repos-Root"
+
 /** This header provides an opaque URI that the client can append
  * PEGREV/PATH to, in order to construct URIs of pegged objects in the
  * repository.  (HTTP protocol v2 only)  */

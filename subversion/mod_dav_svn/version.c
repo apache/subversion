@@ -161,8 +161,11 @@ get_option(const dav_resource *resource,
            const apr_xml_elem *elem,
            apr_text_header *option)
 {
-  /* ### DAV:version-history-collection-set */
+  const char *repos_root_uri =
+    dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_PUBLIC,
+                       SVN_IGNORED_REVNUM, "", 0, resource->pool);
 
+  /* ### DAV:version-history-collection-set */
   if (elem->ns == APR_XML_NS_DAV_ID)
     {
       if (strcmp(elem->name, "activity-collection-set") == 0)
@@ -182,12 +185,20 @@ get_option(const dav_resource *resource,
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
      DeltaV-free! */
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_URI_HEADER,
+                repos_root_uri);
   apr_table_set(resource->info->r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
-                dav_svn__get_me_resource_uri(resource->info->r));
+                apr_pstrcat(resource->pool, repos_root_uri, "/",
+                            dav_svn__get_me_resource_uri(resource->info->r),
+                            NULL));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
-                dav_svn__get_pegrev_stub(resource->info->r));
+                apr_pstrcat(resource->pool, repos_root_uri, "/",
+                            dav_svn__get_pegrev_stub(resource->info->r),
+                            NULL));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,
-                dav_svn__get_rev_stub(resource->info->r));
+                apr_pstrcat(resource->pool, repos_root_uri, "/",
+                            dav_svn__get_rev_stub(resource->info->r),
+                            NULL));
 
   if (resource->info->repos && resource->info->repos->fs)
     {

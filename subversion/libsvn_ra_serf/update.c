@@ -2029,7 +2029,7 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, TRUE,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, FALSE,
                                      report->sess, report->sess->conns[0],
                                      uri.path, pool));
 
@@ -2135,7 +2135,7 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, FALSE,
                                      sess, sess->conns[0],
                                      sess->repos_url.path, pool));
 
