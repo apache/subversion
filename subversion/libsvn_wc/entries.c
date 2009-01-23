@@ -60,25 +60,25 @@ enum statement_keys {
 
 static const char * const statements[] = {
   "insert into repository (root, uuid) "
-  "values (:1, :2);",
+  "values (?1, ?2);",
 
   "insert into wcroot (local_abspath) "
-  "values (:1);",
+  "values (?1);",
 
   "insert or replace into base_node "
     "(wc_id, local_relpath, repos_id, repos_relpath, parent_id, revnum, "
      "kind, checksum, translated_size, changed_rev, changed_date, "
      "changed_author, depth, last_mod_time, properties, incomplete_children)"
-  "values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, "
-          ":15, :16);",
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
+          "?15, ?16);",
 
   "insert or replace into working_node "
     "(wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_path, "
      "copyfrom_revnum, moved_from, moved_to, checksum, translated_size, "
      "changed_rev, changed_date, changed_author, depth, last_mod_time, "
      "properties, changelist_id) "
-  "values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, "
-          ":15, :16, :17);",
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
+          "?15, ?16, ?17);",
 
   NULL
   };
