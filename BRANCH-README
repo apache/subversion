@@ -2,6 +2,12 @@ This branch exists for the development of ideas documented in
 /trunk/notes/http-protocol-v2.txt.  It is being managed as a
 reintegrate-able branch, with regular catch-up merges from the trunk.
 
+
+   WARNING: Code is currently causing server SEGFAULTs (Possibly
+   WARNING: due to using "me resource" for PROPFINDs, which have
+   WARNING: special handling for VCCs but not for the "me resource")
+
+
 TODO:
 
  * Teach mod_dav_svn to answer the OPTIONS request with these
