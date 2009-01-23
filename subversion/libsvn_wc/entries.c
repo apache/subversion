@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -54,7 +54,8 @@ static const char * const upgrade_sql[] = { NULL,
 enum statement_keys {
   STMT_INSERT_REPOSITORY,
   STMT_INSERT_WCROOT,
-  STMT_INSERT_BASE_NODE
+  STMT_INSERT_BASE_NODE,
+  STMT_INSERT_WORKING_NODE
 };
 
 static const char * const statements[] = {
@@ -70,6 +71,14 @@ static const char * const statements[] = {
      "changed_author, depth, last_mod_time, properties, incomplete_children)"
   "values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, "
           ":15, :16);",
+
+  "insert or replace into working_node "
+    "(wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_path, "
+     "copyfrom_revnum, moved_from, moved_to, checksum, translated_size, "
+     "changed_rev, changed_date, changed_author, depth, last_mod_time, "
+     "properties, changelist_id) "
+  "values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, "
+          ":15, :16, :17);",
 
   NULL
   };
@@ -1766,6 +1775,34 @@ write_entry(svn_stringbuf_t *buf,
     default:
       write_val(buf, NULL, 0);
       break;
+    }
+  if (entry->schedule != svn_wc_schedule_normal)
+    {
+      svn_sqlite__stmt_t *working_stmt;
+      SVN_ERR(svn_sqlite__get_statement(&working_stmt, wc_db,
+                                        STMT_INSERT_WORKING_NODE));
+
+      SVN_ERR(svn_sqlite__bindf(working_stmt, "iss", (apr_int64_t) wc_id,
+                                name, ""));
+
+      switch (entry->schedule)
+        {
+          case svn_wc_schedule_add:
+            SVN_ERR(svn_sqlite__bind_int64(working_stmt, 4, entry->kind));
+            break;
+
+          case svn_wc_schedule_delete:
+            SVN_ERR(svn_sqlite__bind_int64(working_stmt, 4, svn_node_none));
+            break;
+
+          case svn_wc_schedule_replace:
+            /* TODO: we need the kind of the replacing thing. */
+            SVN_ERR(svn_sqlite__bind_int64(working_stmt, 4, svn_node_none));
+            break;
+        }
+
+      SVN_ERR(svn_sqlite__bind_text(working_stmt, 16, ""));
+      SVN_ERR(svn_sqlite__insert(NULL, working_stmt));
     }
 
   /* Text time. */
