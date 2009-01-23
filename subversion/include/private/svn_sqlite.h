@@ -57,8 +57,8 @@ svn_error_t *
 svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 
 /* Perform an insert as given by the prepared and bound STMT, and set
-   *ROW_ID to the id of the inserted row.  STMT will be reset prior
-   to returning. */
+   *ROW_ID to the id of the inserted row if ROW_ID is non-NULL.
+   STMT will be reset prior to returning. */
 svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
