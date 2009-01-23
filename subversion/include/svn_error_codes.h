@@ -461,6 +461,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 31,
              "Cannot move a file external")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_DB_ERROR,
+             SVN_ERR_WC_CATEGORY_START + 32,
+             "Something's amiss with the wc sqlite database")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

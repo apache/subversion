@@ -1383,9 +1383,14 @@ class WinGeneratorBase(GeneratorBase):
     "Transform sql files into header files"
     
     import transform_sql
-    rep_cache_db_sql = os.path.join(
-      'subversion', 'libsvn_fs_fs', 'rep-cache-db.sql')
-    transform_sql.main(rep_cache_db_sql, rep_cache_db_sql + '.h')
+
+    source_paths = [
+      os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db.sql'),
+      os.path.join('subversion', 'libsvn_wc', 'wc-metadata.sql'),
+      ]
+
+    for path in source_paths:
+      transform_sql.main(path, path + '.h')
     
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"

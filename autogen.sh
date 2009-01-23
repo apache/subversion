@@ -113,6 +113,7 @@ fi
 
 # Transform sql files into header files
 $PYTHON build/transform_sql.py subversion/libsvn_fs_fs/rep-cache-db.sql
+$PYTHON build/transform_sql.py subversion/libsvn_wc/wc-metadata.sql
 
 # Compile SWIG headers into standalone C files if we are in release mode
 if test -n "$RELEASE_MODE"; then

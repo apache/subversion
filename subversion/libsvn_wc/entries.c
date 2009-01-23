@@ -38,6 +38,41 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_sqlite.h"
+
+#include "wc-metadata.sql.h"
+
+/* TODO: Determine the real value of this number. */
+#define WC_DB_SCHEMA_FORMAT 1
+
+static const char * const upgrade_sql[] = { NULL,
+  WC_METADATA_SQL
+  };
+
+/* This values map to the members of STATEMENTS below, and should be added
+   and removed at the same time. */
+enum statement_keys {
+  STMT_INSERT_REPOSITORY,
+  STMT_INSERT_WCROOT,
+  STMT_INSERT_BASE_NODE
+};
+
+static const char * const statements[] = {
+  "insert into repository (root, uuid) "
+  "values (:1, :2);",
+
+  "insert into wcroot (local_abspath) "
+  "values (:1);",
+
+  "insert or replace into base_node "
+    "(wc_id, local_relpath, repos_id, repos_relpath, parent_id, revnum, "
+     "kind, checksum, translated_size, changed_rev, changed_date, "
+     "changed_author, depth, last_mod_time, properties, incomplete_children)"
+  "values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, "
+          ":15, :16);",
+
+  NULL
+  };
 
 
 /** Overview **/
@@ -51,6 +86,18 @@
 
 
 /*--------------------------------------------------------------- */
+
+
+/*** Working with the entries sqlite database ***/
+
+/* Return the location of the sqlite database containing the entry information
+   for PATH in the filesystem.  Allocate in RESULT_POOL. ***/
+static const char *
+db_path(const char *path,
+        apr_pool_t *result_pool)
+{
+  return svn_wc__adm_child(path, "wc.db", result_pool);
+}
 
 
 /*** reading and writing the entries file ***/
@@ -1622,6 +1669,8 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
    Allocations are done in POOL.  */
 static svn_error_t *
 write_entry(svn_stringbuf_t *buf,
+            svn_sqlite__db_t *wc_db,
+            apr_int64_t wc_id,
             svn_wc_entry_t *entry,
             const char *name,
             svn_wc_entry_t *this_dir,
@@ -1629,13 +1678,21 @@ write_entry(svn_stringbuf_t *buf,
 {
   const char *valuestr;
   svn_revnum_t valuerev;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
   svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
   svn_boolean_t is_subdir = ! is_this_dir && (entry->kind == svn_node_dir);
 
   SVN_ERR_ASSERT(name);
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_BASE_NODE));
+
+  /* WC ID */
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wc_id));
+
   /* Name. */
   write_str(buf, name, pool);
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, name));
 
   /* Kind. */
   switch (entry->kind)
@@ -1656,6 +1713,7 @@ write_entry(svn_stringbuf_t *buf,
                  sizeof(SVN_WC__ENTRIES_ATTR_FILE_STR) - 1);
       break;
     }
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 7, entry->kind));
 
   /* Revision. */
   if (is_this_dir || (! is_subdir && entry->revision != this_dir->revision))
@@ -1663,6 +1721,7 @@ write_entry(svn_stringbuf_t *buf,
   else
     valuerev = SVN_INVALID_REVNUM;
   write_revnum(buf, valuerev, pool);
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, valuerev));
 
   /* URL. */
   if (is_this_dir ||
@@ -1715,11 +1774,17 @@ write_entry(svn_stringbuf_t *buf,
   /* Checksum. */
   write_val(buf, entry->checksum,
              entry->checksum ? strlen(entry->checksum) : 0);
+  if (entry->checksum)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, entry->checksum));
 
   /* Last-commit stuff */
   write_time(buf, entry->cmt_date, pool);
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 11, entry->cmt_date));
   write_revnum(buf, entry->cmt_rev, pool);
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, entry->cmt_rev));
   write_str(buf, entry->cmt_author, pool);
+  SVN_ERR(svn_sqlite__bind_text(stmt, 12, entry->cmt_author == NULL ? ""
+                                          : entry->cmt_author));
 
   /* has-props flag. */
   write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROPS, entry->has_props);
@@ -1739,6 +1804,9 @@ write_entry(svn_stringbuf_t *buf,
   /* present-props string. */
   write_val(buf, entry->present_props,
              entry->present_props ? strlen(entry->present_props) : 0);
+
+  /* TODO: Properties. */
+  SVN_ERR(svn_sqlite__bind_text(stmt, 15, ""));
 
   /* Conflict. */
   write_str(buf, entry->prejfile, pool);
@@ -1794,6 +1862,7 @@ write_entry(svn_stringbuf_t *buf,
       ? apr_off_t_toa(pool, entry->working_size) : "";
     write_val(buf, val, strlen(val));
   }
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 9, entry->working_size));
 
   /* Depth. */
   /* Accept `exclude' for subdir entry. */
@@ -1806,6 +1875,7 @@ write_entry(svn_stringbuf_t *buf,
     {
       const char *val = svn_depth_to_word(entry->depth);
       write_val(buf, val, strlen(val));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 13, entry->depth));
     }
 
   /* Tree conflict data. */
@@ -1825,6 +1895,10 @@ write_entry(svn_stringbuf_t *buf,
     buf->len--;
 
   svn_stringbuf_appendbytes(buf, "\f\n", 2);
+
+  /* Execute and reset the insert clause. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -2171,6 +2245,7 @@ svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
+  svn_sqlite__db_t *wc_db;
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *bigstr = NULL;
   svn_stream_t *stream;
@@ -2192,6 +2267,14 @@ svn_wc__entries_write(apr_hash_t *entries,
                              svn_path_local_style
                              (svn_wc_adm_access_path(adm_access), pool));
 
+  /* Open the wc.db sqlite database. */
+  SVN_ERR(svn_sqlite__open(&wc_db,
+                           db_path(svn_wc_adm_access_path(adm_access), pool),
+                           svn_sqlite__mode_readwrite, statements,
+                           WC_DB_SCHEMA_FORMAT, upgrade_sql, pool, pool));
+
+  SVN_ERR(svn_sqlite__transaction_begin(wc_db));
+
   /* Open entries file for writing.  It's important we don't use APR_EXCL
    * here.  Consider what happens if a log file is interrupted, it may
    * leave a .svn/tmp/entries file behind.  Then when cleanup reruns the
@@ -2212,7 +2295,7 @@ svn_wc__entries_write(apr_hash_t *entries,
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
       /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
+      SVN_ERR(write_entry(bigstr, wc_db, 0, this_dir, SVN_WC_ENTRY_THIS_DIR,
                           this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -2232,7 +2315,8 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, subpool));
+          SVN_ERR(write_entry(bigstr, wc_db, 0, this_entry, key, this_dir,
+                              subpool));
         }
 
       svn_pool_destroy(subpool);
@@ -2254,6 +2338,10 @@ svn_wc__entries_write(apr_hash_t *entries,
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
+
+  /* TODO: Ignoring the error for now. */
+  svn_sqlite__transaction_commit(wc_db);
+  svn_sqlite__close(wc_db, SVN_NO_ERROR);
 
   return err;
 }
@@ -2986,10 +3074,16 @@ svn_wc__entries_init(const char *path,
 {
   svn_stream_t *stream;
   const char *temp_file_path;
+  svn_node_kind_t kind;
   svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
                                                  SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
   apr_size_t len;
+  svn_sqlite__db_t *wc_db;
+  apr_int64_t wc_id;
+  svn_sqlite__stmt_t *stmt;
+  const char *wc_db_path = db_path(path, pool);
+  const char *abs_path;
 
   SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
@@ -3000,6 +3094,33 @@ svn_wc__entries_init(const char *path,
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
                                     path, SVN_WC__ADM_ENTRIES, pool, pool));
+
+  /* Check that the entries sqlite database does not yet exist. */
+  SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
+  if (kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("Existing sqlite database found at '%s'"),
+                             svn_path_local_style(wc_db_path, pool));
+
+  /* Create the entries database, and start a transaction. */
+  /* TODO: Need to rollback the transaction if we get an error anywehere. */
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
+                           statements, WC_DB_SCHEMA_FORMAT, upgrade_sql, pool,
+                           pool));
+  SVN_ERR(svn_sqlite__transaction_begin(wc_db));
+
+  /* Insert the repository. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
+  /* TODO: We really shouldn't ever have a NULL uuid, but somehow it's getting
+     in here... */
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid == NULL ? "" : uuid));
+  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
+
+  /* Insert the wcroot. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_path_get_absolute(&abs_path, path, pool));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", abs_path));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   /* Add an entry for the dir itself.  The directory has no name.  It
      might have a UUID, but otherwise only the revision and default
@@ -3018,7 +3139,8 @@ svn_wc__entries_init(const char *path,
    */
   entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
-  SVN_ERR(write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool));
+  SVN_ERR(write_entry(accum, wc_db, wc_id, entry, SVN_WC_ENTRY_THIS_DIR, entry,
+                      pool));
 
   len = accum->len;
   SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
@@ -3028,8 +3150,12 @@ svn_wc__entries_init(const char *path,
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
-  return svn_wc__close_adm_stream(stream, temp_file_path, path,
-                                  SVN_WC__ADM_ENTRIES, pool);
+  SVN_ERR(svn_wc__close_adm_stream(stream, temp_file_path, path,
+                                   SVN_WC__ADM_ENTRIES, pool));
+
+  /* Commit the sqlite transaction and close the database. */
+  SVN_ERR(svn_sqlite__transaction_commit(wc_db));
+  return svn_sqlite__close(wc_db, SVN_NO_ERROR);
 }
 
 
