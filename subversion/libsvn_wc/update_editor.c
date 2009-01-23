@@ -2558,7 +2558,12 @@ close_directory(void *dir_baton,
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  if (! db->bump_info->skipped && (db->add_existed || (! db->added))
+  /* ### TODO: Instead of duplicating these complex conditions, should say
+   * "if (! db->have_notified) ...". Alternatively, if it would be
+   * acceptable for the notification to come always after the children, then
+   * store the desired notification in the baton as soon as we know what it
+   * is, and finally, here, just send it if it has already been created. */
+   if (! db->bump_info->skipped && (db->add_existed || (! db->added))
       && (db->edit_baton->notify_func))
     {
       svn_wc_notify_t *notify
