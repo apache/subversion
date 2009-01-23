@@ -145,7 +145,6 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t have_row;
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 
