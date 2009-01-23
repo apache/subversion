@@ -16,11 +16,10 @@
  * ====================================================================
  */
 
-
-
 #include "svn_wc.h"
 #include "svn_diff.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 
 #include "wc.h"
 #include "entries.h"

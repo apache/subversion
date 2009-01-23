@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_time.h"
+#include "svn_props.h"
 
 #include "private/svn_opt_private.h"
 
