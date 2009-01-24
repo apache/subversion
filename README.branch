@@ -35,6 +35,14 @@ Revisions included:
     release.
   * Merge r33842:34862 from 1.5.x branch to bring it up-to-date with 1.5.5
     release.
+  * r31991, r32403, r32717, r33659, r33671, r33677, r33707, r33900:33902
+    r33913, r33924, r33951:33953, r34001, r34002:34004, r34085, r34087,
+    r34110, r34115, r34130, r34148:34150, r34188, r34217:34223, r34225:34227
+    r34229, r34231, r34241:34243, r34289, r34347, r34367, r34399,
+    r34470:34472, r34599, r34690:34693, r34922, r34977, r34995, r35055, r35058
+    r35060, r35063, r35076:35079, r35111:35114, r35116, r35160:35163,
+    r35167:35169, r35175, r35314, r35319, r35332, r35337 backported from
+    trunk via r35442.
 
 Features:
   * Don't save plaintext passwords without prompting
