@@ -650,6 +650,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   svn_ra_svn__session_baton_t *sess;
   const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
+  svn_config_t *cfg, *cfg_client;
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
@@ -660,6 +661,17 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
                               pool));
   else
     tunnel_argv = NULL;
+
+  cfg_client = config ? apr_hash_get(config,
+                                     SVN_CONFIG_CATEGORY_CONFIG,
+                                     APR_HASH_KEY_STRING) : NULL;
+  cfg = config ? apr_hash_get(config,
+                              SVN_CONFIG_CATEGORY_SERVERS,
+                              APR_HASH_KEY_STRING) : NULL;
+  svn_auth_set_parameter(callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
+  svn_auth_set_parameter(callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, cfg);
 
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */

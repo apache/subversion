@@ -80,10 +80,13 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP  "store-ssl-client-cert-pp"
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
                                           "store-ssl-client-cert-pp-plaintext"
+#define SVN_CONFIG_OPTION_USERNAME                  "username"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
 #define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
+#define SVN_CONFIG_OPTION_KWALLET_WALLET            "kwallet-wallet"
+#define SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID "kwallet-svn-application-name-with-pid"
 /* The majority of options of the "auth" section
  * has been moved to SVN_CONFIG_CATEGORY_SERVERS. */
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"

@@ -739,7 +739,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #ifdef SVN_NEON_0_26
         "###   http-auth-types            Auth types to use for HTTP library"NL
 #endif
-        "###   ssl-authority-files        List of files, each of a trusted CAs"
+        "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL
         "###   ssl-client-cert-file       PKCS#12 format client certificate file"
@@ -767,6 +767,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              (passwords as well as server certs)"
                                                                              NL
         "###                              may be cached to disk."            NL
+        "###   username                   Specifies the default username."   NL
         "###"                                                                NL
         "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
         "### auth/ area of your config directory.  It defaults to 'yes',"    NL
@@ -843,6 +844,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #endif
         "# neon-debug-mask = 130"                                            NL
         "# store-plaintext-passwords = no"                                   NL
+        "# username = harry"                                                 NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
         "# [othergroup]"                                                     NL
@@ -938,6 +940,16 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# password-stores = windows-cryptoapi"                              NL
 #else
         "# password-stores = gnome-keyring,kwallet"                          NL
+#endif
+#ifdef SVN_HAVE_KWALLET
+        "###"                                                                NL
+        "### Set KWallet wallet used by Subversion. If empty or unset,"      NL
+        "### then the default network wallet will be used."                  NL
+        "# kwallet-wallet ="                                                 NL
+        "###"                                                                NL
+        "### Include PID (Process ID) in Subversion application name when"   NL
+        "### using KWallet. It defaults to 'no'."                            NL
+        "# kwallet-svn-application-name-with-pid = yes"                      NL
 #endif
         "###"                                                                NL
         "### The rest of this section in this file has been deprecated."     NL

@@ -29,6 +29,9 @@
 %import svn_delta.i
 %import svn_wc.i
 
+/* Ignore platform-specific auth functions */
+%ignore svn_client_get_windows_simple_provider;
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */

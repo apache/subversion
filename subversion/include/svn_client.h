@@ -101,6 +101,7 @@ const svn_version_t *svn_client_version(void);
  * default arguments when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
@@ -122,6 +123,7 @@ void svn_client_get_simple_prompt_provider
  * default argument when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
@@ -151,7 +153,7 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -176,7 +178,7 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
@@ -263,6 +265,7 @@ svn_client_get_ssl_server_trust_prompt_provider
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
  * a server.  The prompt will be retried @a retry_limit times.
+ * For infinite retries, set @a retry_limit to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
@@ -281,7 +284,8 @@ svn_client_get_ssl_client_cert_prompt_provider
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
  * client certificate is protected by a passphrase.  The prompt will
- * be retried @a retry_limit times.
+ * be retried @a retry_limit times. For infinite retries, set @a retry_limit
+ * to value less than 0.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */

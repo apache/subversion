@@ -24,7 +24,9 @@ class Generator(generator.swig.Generator):
     self.header_basenames = map(os.path.basename, self.header_files)
 
   # Ignore svn_repos_parse_fns_t because SWIG can't parse it
-  _ignores = ["svn_repos_parse_fns_t"]
+  _ignores = ["svn_repos_parse_fns_t",
+              "svn_auth_gnome_keyring_unlock_prompt_func_t",
+              ]
 
   def write_makefile_rules(self, makefile):
     """Write makefile rules for generating SWIG wrappers for Subversion
@@ -143,7 +145,6 @@ class Generator(generator.swig.Generator):
 
     struct = None
     for match in callbacks:
-
       if match[0] and not match[1]:
         # Struct definitions
         struct = match[0]
@@ -154,15 +155,14 @@ class Generator(generator.swig.Generator):
 
         self._write_callback(type, return_type, struct[:-2], name, params,
                              "(_obj->%s)" % name)
-
       elif match[0] and match[1]:
         # Callbacks declared as a typedef
         return_type, module, function, params = match
         type = "%s_%s_t" % (module, function)
 
-        self._write_callback(type, return_type, module, function, params,
-                             "_obj")
-
+        if type not in self._ignores:
+          self._write_callback(type, return_type, module, function, params,
+                               "_obj")
 
     self.ofile.write("%}\n")
 

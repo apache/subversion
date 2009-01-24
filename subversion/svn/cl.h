@@ -205,6 +205,8 @@ typedef struct svn_cl__opt_state_t
   svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
   svn_depth_t set_depth;         /* new sticky ambient depth value */
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
+  svn_boolean_t trust_server_cert; /* trust server SSL certs that would
+                                      otherwise be rejected as "untrusted" */
 } svn_cl__opt_state_t;
 
 
