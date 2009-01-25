@@ -208,12 +208,23 @@ class OutputBase:
     """Override this method, if the default implementation is not sufficient.
     Execute CMD, writing the stdout produced to the output representation."""
     # By default we choose to incorporate child stderr into the output
-    pipe_ob = Popen4(cmd)
+    if platform_with_subprocess:
+      pipe_ob = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 close_fds=sys.platform != "win32")
+    else:
+      pipe_ob = Popen4(cmd)
 
-    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    if platform_with_subprocess:
+      buf = pipe_ob.stdout.read(self._CHUNKSIZE)
+    else:
+      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
     while buf:
       self.write(buf)
-      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+      if platform_with_subprocess:
+        buf = pipe_ob.stdout.read(self._CHUNKSIZE)
+      else:
+        buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
 
     # wait on the child so we don't end up with a billion zombies
     pipe_ob.wait()
