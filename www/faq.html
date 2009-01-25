@@ -2166,7 +2166,7 @@ You want to do something like
 svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
 </pre>
 <p>
-but it fails with 
+but it fails with
 </p>
 <pre>
 svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
@@ -2176,20 +2176,36 @@ svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
 </p>
 
 <p>
-The short, unhappy answer is: there's no built-in way to do this; many
-commands, like <tt>mv</tt>, refuse to take an arbitrary number of
-arguments ... and in any case, Subversion doesn't expand wildcards like
-"*" the way the shell does.
+Subversion doesn't expand wildcards like "*" in URL arguments.
+(Technically speaking, Subversion does not expand wildcards in local
+paths either, but on most operating systems the shell expands wildcards
+in local paths in the command line before passing the resulting list to
+Subversion.)
 </p>
 
 <p>
+You have to generate the list of source URLs yourself. You could do it
+like this (in Bash):
+</p>
+
+<pre>
+        s=svn://server/trunk/stuff
+        items=$(svn ls "$s")
+        urls=$(for item in $items; do echo $s/$item; done)
+        svn mv $urls svn://server/trunk/some-other-dir -m "Moved all at once"
+</pre>
+
+<p>
+In Subversion v1.4 and earlier, Subversion did not allow you to "cp" and
+"mv" multiple paths or URLs in one command. You have to issue multiple
+commands.
 If you happen to have a working copy that contains all the source
 files as well as the destination directory, then you can exploit your
 shell's wildcard feature to do the move, like this (for Bash):
 </p>
 <pre>
-  for i in stuff/*; do svn mv $i some-other-dir; done
-  svn ci -m "moved all the stuff into some other dir"
+        for i in stuff/*; do svn mv $i some-other-dir; done
+        svn ci -m "moved all the stuff into some other dir"
 </pre>
 
 <p>
@@ -2198,7 +2214,7 @@ source files, and then run "svn mv" on each item in that list, like
 this:
 </p>
 <pre>
-        s=svn://server/trunk/stuff/
+        s=svn://server/trunk/stuff
         svn ls "$s"  | \
         while read f
            do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
@@ -2211,17 +2227,10 @@ generates just one commit total.
 </p>
 
 <p>
-There is a program called "svnmucc" or "mucc" depending upon which
-version of Subversion you have, whose source is distributed with
-Subversion (in ...<tt>/contrib/client-side/mucc/mucc.c</tt> for
-Subversion 1.4 or earlier, in
-...<tt>/contrib/client-side/svnmucc/svnmucc.c</tt> for Subversion 1.5
-or later), that appears to solve this problem for you.
-</p>
-
-<p>
-<b>Note:</b> with release 1.5, Subversion in fact allows you to "cp" and "mv"
-multiple files at once.
+There is a program called "svnmucc" (previously "mucc"), whose source is
+distributed with Subversion, that enables you to combine multiple
+commands into one commit. See <a href="tools_contrib.html#svnmucc_c">the
+Tools and Contrib page</a>.
 </p>
 </div>
 

@@ -146,7 +146,7 @@ create_packed_filesystem(const char *dir,
   svn_pool_destroy(subpool);
 
   /* Now pack the FS */
-  return svn_fs_pack(dir, NULL, NULL, pool);
+  return svn_fs_pack(dir, NULL, NULL, NULL, NULL, pool);
 }
 
 /* Pack a filesystem.  */

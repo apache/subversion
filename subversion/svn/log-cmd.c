@@ -471,52 +471,27 @@ svn_cl__log(apr_getopt_t *os,
   /* Determine if they really want a two-revision range. */
   if (opt_state->used_change_arg)
     {
-      if (opt_state->start_revision.value.number <
-          opt_state->end_revision.value.number)
-        opt_state->start_revision = opt_state->end_revision;
-      else
-        opt_state->end_revision = opt_state->start_revision;
+      if (opt_state->used_revision_arg && opt_state->revision_ranges->nelts > 1)
+        {
+          return svn_error_create
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL,
+             _("Can not mix change revision with revisions"));
+        }
+      for (i = 0; i < opt_state->revision_ranges->nelts; i++)
+        {
+          svn_opt_revision_range_t *range;
+          range = APR_ARRAY_IDX(opt_state->revision_ranges, i,
+                                svn_opt_revision_range_t *);
+          if (range->start.value.number < range->end.value.number)
+            range->start = range->end;
+          else
+            range->end = range->start;
+        }
     }
 
   /* Strip peg revision if targets contains an URI. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
   APR_ARRAY_IDX(targets, 0, const char *) = true_path;
-
-  if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
-      && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
-    {
-      /* If the user specified exactly one revision, then start rev is
-         set but end is not.  We show the log message for just that
-         revision by making end equal to start.
-
-         Note that if the user requested a single dated revision, then
-         this will cause the same date to be resolved twice.  The
-         extra code complexity to get around this slight inefficiency
-         doesn't seem worth it, however.  */
-
-      opt_state->end_revision = opt_state->start_revision;
-    }
-  else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-    {
-      /* Default to any specified peg revision.  Otherwise, if the
-         first target is an URL, then we default to HEAD:0.  Lastly,
-         the default is BASE:0 since WC@HEAD may not exist. */
-      if (peg_revision.kind == svn_opt_revision_unspecified)
-        {
-          if (svn_path_is_url(target))
-            opt_state->start_revision.kind = svn_opt_revision_head;
-          else
-            opt_state->start_revision.kind = svn_opt_revision_base;
-        }
-      else
-        opt_state->start_revision = peg_revision;
-
-      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-        {
-          opt_state->end_revision.kind = svn_opt_revision_number;
-          opt_state->end_revision.value.number = 0;
-        }
-    }
 
   if (svn_path_is_url(target))
     {
@@ -585,10 +560,9 @@ svn_cl__log(apr_getopt_t *os,
           if (!opt_state->quiet)
             APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
         }
-      SVN_ERR(svn_client_log4(targets,
+      SVN_ERR(svn_client_log5(targets,
                               &peg_revision,
-                              &(opt_state->start_revision),
-                              &(opt_state->end_revision),
+                              opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
@@ -609,10 +583,9 @@ svn_cl__log(apr_getopt_t *os,
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
       if (!opt_state->quiet)
         APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
-      SVN_ERR(svn_client_log4(targets,
+      SVN_ERR(svn_client_log5(targets,
                               &peg_revision,
-                              &(opt_state->start_revision),
-                              &(opt_state->end_revision),
+                              opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,

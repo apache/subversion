@@ -52,8 +52,8 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
-#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Youngest revision which
-                                                    has been packed. */
+#define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
+                                                    has not been packed. */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 

@@ -846,7 +846,11 @@ typedef enum svn_wc_notify_action_t
   /** The path is a tree-conflict victim of the intended action (*not*
    * a persistent tree-conflict from an earlier operation, but *this*
    * operation caused the tree-conflict). @since New in 1.6. */
-  svn_wc_notify_tree_conflict
+  svn_wc_notify_tree_conflict,
+
+  /** The path is a subdirectory referenced in an externals definition
+   * which is unable to be operated on.  @since New in 1.6. */
+  svn_wc_notify_failed_external
 
 } svn_wc_notify_action_t;
 
@@ -951,7 +955,8 @@ typedef struct svn_wc_notify_t {
   const svn_lock_t *lock;
 
   /** Points to an error describing the reason for the failure when @c
-   * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
+   * action is one of the following: @c svn_wc_notify_failed_lock, @c
+   * svn_wc_notify_failed_unlock, @c svn_wc_notify_failed_external.
    * Is @c NULL otherwise. */
   svn_error_t *err;
 
@@ -2436,8 +2441,7 @@ typedef struct svn_wc_entry_callbacks_t
 svn_error_t *
 svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks2_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_depth_t depth,
                      svn_boolean_t show_hidden,
@@ -2456,8 +2460,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks_t
-                     *walk_callbacks,
+                     const svn_wc_entry_callbacks_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2473,8 +2476,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    const svn_wc_entry_callbacks_t
-                    *walk_callbacks,
+                    const svn_wc_entry_callbacks_t *walk_callbacks,
                     void *walk_baton,
                     svn_boolean_t show_hidden,
                     apr_pool_t *pool);

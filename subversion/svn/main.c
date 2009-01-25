@@ -573,6 +573,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     the URL is looked up in HEAD, and the default revision range is\n"
      "     HEAD:1.\n"
      "\n"
+     "  Multiple '-c' or '-r' options may be specified (but not a\n"
+     "  combination of '-c' and '-r' options), and mixing of forward and\n"
+     "  reverse ranges is allowed.\n"
+     "\n"
      "  With -v, also print all affected paths with each log message.\n"
      "  With -q, don't print the log message body itself (note that this is\n"
      "  compatible with -v).\n"
@@ -613,7 +617,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
      "     specified, the default range of 0:REV is used.  Multiple '-c'\n"
-     "     and/or '-r' instances may be specified, and mixing of forward\n"
+     "     and/or '-r' options may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
@@ -1299,6 +1303,7 @@ main(int argc, const char *argv[])
         }
         break;
       case 'r':
+        opt_state.used_revision_arg = TRUE;
         if (svn_opt_parse_revision_to_range(opt_state.revision_ranges,
                                             opt_arg, pool) != 0)
           {
@@ -1719,7 +1724,8 @@ main(int argc, const char *argv[])
     }
 
   /* Only merge supports multiple revisions/revision ranges. */
-  if (subcommand->cmd_func != svn_cl__merge)
+  if (subcommand->cmd_func != svn_cl__merge
+      && subcommand->cmd_func != svn_cl__log)
     {
       if (opt_state.revision_ranges->nelts > 1)
         {

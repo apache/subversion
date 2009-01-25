@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -314,6 +314,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_ENTRY_ATTRIBUTE_INVALID,
              SVN_ERR_ENTRY_CATEGORY_START + 5,
              "Entry has an invalid attribute")
+
+  SVN_ERRDEF(SVN_ERR_ENTRY_FORBIDDEN,
+             SVN_ERR_ENTRY_CATEGORY_START + 6,
+             "Can't create an entry for a forbidden name")
 
   /* wc errors */
 

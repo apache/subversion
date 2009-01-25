@@ -190,7 +190,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_wc__write_tree_conflicts(char **conflict_data,
+svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_array_header_t *conflicts,
                              apr_pool_t *pool);
 

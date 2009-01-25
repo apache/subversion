@@ -348,7 +348,7 @@ svn_checksum_final(svn_checksum_t **checksum,
 }
 
 apr_size_t
-svn_checksum_size(svn_checksum_t *checksum)
+svn_checksum_size(const svn_checksum_t *checksum)
 {
   return DIGESTSIZE(checksum->kind);
 }

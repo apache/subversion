@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2002-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -474,26 +474,16 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
    svn_boolean_t may_save,
    apr_pool_t *pool);
 
-/** Called only by providers which save passwords unencrypted.
- * In this callback, clients should ask the user whether storing
+/** A type of callback function for asking whether storing a password to
+ * disk in plaintext is allowed.
+ *
+ * In this callback, the client should ask the user whether storing
  * a password for the realm identified by @a realmstring to disk
  * in plaintext is allowed.
  *
  * The answer is returned in @a *may_save_plaintext.
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
- *
- * If this callback is NULL it is not called. This matches the
- * deprecated behaviour of storing unencrypted passwords by default,
- * and is only done this way for backward compatibility reasons.
- * Client developers are highly encouraged to provide this callback
- * to ensure their users are made aware of the fact that their password
- * is going to be stored unencrypted. In the future, providers may
- * default to not storing the password unencrypted if this callback is NULL.
- *
- * Clients can however set the callback to NULL and set
- * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS to SVN_CONFIG_FALSE or
- * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * @since New in 1.6
  */
@@ -503,23 +493,16 @@ typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
    void *baton,
    apr_pool_t *pool);
 
-/** Called only by providers which save passphrase unencrypted.
- * In this callback, clients should ask the user whether storing
+/** A type of callback function for asking whether storing a passphrase to
+ * disk in plaintext is allowed.
+ *
+ * In this callback, the client should ask the user whether storing
  * a passphrase for the realm identified by @a realmstring to disk
  * in plaintext is allowed.
  *
  * The answer is returned in @a *may_save_plaintext.
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
- *
- * If this callback is NULL it is not called.
- * Client developers are highly encouraged to provide this callback
- * to ensure their users are made aware of the fact that their passphrase
- * is going to be stored unencrypted.
- *
- * Clients can however set the callback to NULL and set
- * SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT to SVN_CONFIG_FALSE or
- * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * @since New in 1.6
  */
@@ -528,6 +511,26 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)
    const char *realmstring,
    void *baton,
    apr_pool_t *pool);
+
+/** A type of callback function for obtaining the default keyring password.
+ * ### Is this type of callback specific to the GNOME Keyring?
+ * ### Is this type of callback specific to the default keyring?
+ *
+ * In this callback, the client should ask the user for default keyring
+ * @a keyring_name password.
+ *
+ * The answer is returned in @a *keyring_password.
+ * @a baton is an implementation-specific closure.
+ * All allocations should be done in @a pool.
+ *
+ * @since New in 1.6
+ */
+typedef svn_error_t *(*svn_auth_unlock_prompt_func_t)
+  (char **keyring_password,
+   const char *keyring_name,
+   void *baton,
+   apr_pool_t *pool);
+
 
 
 /** Initialize an authentication system.
@@ -695,7 +698,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
 
 /** @} */
 
-/** Create and return @a *provider, an authentication provider of type
+/** Set @a *provider to an authentication provider of type
  * svn_auth_cred_simple_t that gets information by prompting the user
  * with @a prompt_func and @a prompt_baton.  Allocate @a *provider in
  * @a pool.
@@ -718,7 +721,7 @@ svn_auth_get_simple_prompt_provider(svn_auth_provider_object_t **provider,
                                     apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_username_t that gets information by prompting the
  * user with @a prompt_func and @a prompt_baton.  Allocate @a *provider
  * in @a pool.
@@ -741,15 +744,26 @@ svn_auth_get_username_prompt_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.
  *
- * If the provider is going to save the password unencrypted,
- * it calls @a plaintext_prompt_func before saving the
+ * If the provider is going to save the password unencrypted, it calls @a
+ * plaintext_prompt_func, passing @a prompt_baton, before saving the
  * password.
  *
- * @a prompt_baton is passed to @a plaintext_prompt_func.
+ * If @a plaintext_prompt_func is NULL it is not called and the answer is
+ * assumed to be TRUE. This matches the deprecated behaviour of storing
+ * unencrypted passwords by default, and is only done this way for backward
+ * compatibility reasons.
+ * Client developers are highly encouraged to provide this callback
+ * to ensure their users are made aware of the fact that their password
+ * is going to be stored unencrypted. In the future, providers may
+ * default to not storing the password unencrypted if this callback is NULL.
+ *
+ * Clients can however set the callback to NULL and set
+ * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS to SVN_CONFIG_FALSE or
+ * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * Allocate @a *provider in @a pool.
  *
@@ -765,11 +779,12 @@ void
 svn_auth_get_simple_provider2
   (svn_auth_provider_object_t **provider,
    svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
-   void* prompt_baton,
+   void *prompt_baton,
    apr_pool_t *pool);
 
 /** Like svn_auth_get_simple_provider2, but without the ability to
- * call the svn_auth_plaintext_prompt_func_t callback.
+ * call the svn_auth_plaintext_prompt_func_t callback, and the provider
+ * always assumes that it is allowed to store the password in plaintext.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
@@ -779,7 +794,7 @@ void
 svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_provider_object_t, or return @a NULL if the provider is not
  * available for the requested platform or the requested provider is unknown.
  *
@@ -799,12 +814,14 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
-                                        const char *provider_name,
-                                        const char *provider_type,
-                                        apr_pool_t *pool);
+svn_auth_get_platform_specific_provider
+  (svn_auth_provider_object_t **provider,
+   const char *provider_name,
+   const char *provider_type,
+   apr_pool_t *pool);
 
-/** Create and return an array of <tt>svn_auth_provider_object_t *</tt> objects.
+/** Set @a *providers to an array of <tt>svn_auth_provider_object_t *</tt>
+ * objects.
  * Only client authentication providers available for the current platform are
  * returned. Order of the platform-specific authentication providers is
  * determined by the 'password-stores' configuration option which is retrieved
@@ -821,13 +838,14 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
-                                                svn_config_t *config,
-                                                apr_pool_t *pool);
+svn_auth_get_platform_specific_client_providers
+  (apr_array_header_t **providers,
+   svn_config_t *config,
+   apr_pool_t *pool);
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -850,7 +868,7 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -873,7 +891,7 @@ svn_auth_get_windows_ssl_client_cert_pw_provider
    apr_pool_t *pool);
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * This provider automatically validates ssl server certificates with
@@ -893,7 +911,7 @@ svn_auth_get_windows_ssl_server_trust_provider
 
 #if defined(DARWIN) || defined(DOXYGEN)
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -909,7 +927,7 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
                                       apr_pool_t *pool);
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -936,14 +954,30 @@ const svn_version_t *
 svn_auth_gnome_keyring_version(void);
 
 
+/** @brief The function which prompts user for GNOME Keyring password. */
+#define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC "gnome-keyring-unlock-prompt-func"
+
+/** @brief The baton which is passed to
+ * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC. */
+#define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON "gnome-keyring-unlock-prompt-baton"
+
+
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
- * ~/.subversion configuration directory.  Allocate @a *provider in
- * @a pool.
+ * ~/.subversion configuration directory.
  *
  * This is like svn_client_get_simple_provider(), except that the
  * password is stored in GNOME Keyring.
+ *
+ * If the GNOME Keyring is locked the provider calls
+ * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC in order to unlock
+ * the keyring.
+ *
+ * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON is passed to
+ * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC.
+ *
+ * Allocate @a *provider in @a pool.
  *
  * @since New in 1.6
  * @note This function actually works only on systems with
@@ -956,7 +990,7 @@ svn_auth_get_gnome_keyring_simple_provider
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -984,7 +1018,7 @@ svn_auth_kwallet_version(void);
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1002,7 +1036,7 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
 
 
 /**
- * Create and return @a *provider, an authentication provider of type @c
+ * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1021,7 +1055,7 @@ svn_auth_get_kwallet_ssl_client_cert_pw_provider
 #endif /* (!DARWIN && !WIN32) || DOXYGEN */
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
@@ -1037,7 +1071,7 @@ svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials from the configuration
@@ -1051,7 +1085,7 @@ svn_auth_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials from the configuration
@@ -1066,15 +1100,23 @@ svn_auth_get_ssl_client_cert_file_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the user's
  * ~/.subversion configuration directory.
  *
  * If the provider is going to save the passphrase unencrypted,
- * it calls @a plaintext_passphrase_prompt_func before saving the
- * passphrase.
+ * it calls @a plaintext_passphrase_prompt_func, passing @a
+ * prompt_baton, before saving the passphrase.
  *
- * @a prompt_baton is passed to @a plaintext_passphrase_prompt_func.
+ * If @a plaintext_passphrase_prompt_func is NULL it is not called
+ * ### and what?
+ * Client developers are highly encouraged to provide this callback
+ * to ensure their users are made aware of the fact that their passphrase
+ * is going to be stored unencrypted.
+ *
+ * Clients can however set the callback to NULL and set
+ * SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT to SVN_CONFIG_FALSE or
+ * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * Allocate @a *provider in @a pool.
  *
@@ -1089,7 +1131,8 @@ svn_auth_get_ssl_client_cert_pw_file_provider2
 
 /** Like svn_auth_get_ssl_client_cert_pw_file_provider2, but without
  * the ability to call the svn_auth_plaintext_passphrase_prompt_func_t
- * callback.
+ * callback, and the provider always assumes
+ * ### what?
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
@@ -1101,7 +1144,7 @@ svn_auth_get_ssl_client_cert_pw_file_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
@@ -1118,7 +1161,7 @@ svn_auth_get_ssl_server_trust_prompt_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
@@ -1138,7 +1181,7 @@ svn_auth_get_ssl_client_cert_prompt_provider
    apr_pool_t *pool);
 
 
-/** Create and return @a *provider, an authentication provider of type @c
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func

@@ -1498,7 +1498,14 @@ orphaned_textmod_change(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_apply_textdelta
           (&wh_func, &wh_baton, txn_root, "iota", NULL, NULL, subpool));
-                   /* Don't send any delta windows! */
+
+  /* Don't send any delta windows, but do commit the transaction.
+     According to the FS API docs, this is not a legal codepath.  But
+     this requirement on the API was added *after* its BDB
+     implementation, and the BDB backend can't enforce compliance with
+     the additional API rules in this case.  So we are really just
+     testing that misbehaving callers don't introduce more damage to
+     the repository than they have to. */
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
