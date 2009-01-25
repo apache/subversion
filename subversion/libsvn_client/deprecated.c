@@ -935,6 +935,40 @@ svn_client_ls(apr_hash_t **dirents,
 
 /*** From log.c ***/
 svn_error_t *
+svn_client_log4(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  apr_array_header_t *revision_ranges;
+  svn_opt_revision_range_t *range;
+
+  range = apr_palloc(pool, sizeof(svn_opt_revision_range_t));
+  range->start = *start;
+  range->end = *end;
+
+  revision_ranges = apr_array_make(pool, 1,
+                                   sizeof(svn_opt_revision_range_t *));
+
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+
+  return svn_client_log5(targets, peg_revision, revision_ranges, limit,
+                         discover_changed_paths, strict_node_history,
+                         include_merged_revisions, revprops, receiver,
+                         receiver_baton, ctx, pool);
+}
+
+
+svn_error_t *
 svn_client_log3(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *start,

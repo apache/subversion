@@ -401,11 +401,13 @@ svn_error_t *svn_fs_fs__dup_perms(const char *filename,
                                   const char *perms_reference,
                                   apr_pool_t *pool);
 
-/* Return the path to the file containing revision REV in FS.
-   Allocate the new char * from POOL. */
-const char *svn_fs_fs__path_rev(svn_fs_t *fs,
-                                svn_revnum_t rev,
-                                apr_pool_t *pool);
+/* Sets *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate in POOL. */
+svn_error_t *
+svn_fs_fs__path_rev_absolute(const char **path,
+                             svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
 
 /* Return the path to the 'current' file in FS.
    Perform allocation in POOL. */
@@ -516,7 +518,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
    Existing filesystem references need not change.  */
 svn_error_t *
-svn_fs_fs__pack(const char *fs_path,
+svn_fs_fs__pack(svn_fs_t *fs,
+                svn_fs_pack_notify_t notify_func,
+                void *notify_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool);

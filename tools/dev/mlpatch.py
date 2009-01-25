@@ -7,11 +7,12 @@ import sgmllib
 try:
   # Python >=3.0
   from html.entities import entitydefs
+  from urllib.request import urlopen as urllib_request_urlopen
 except ImportError:
   # Python <3.0
   from htmlentitydefs import entitydefs
+  from urllib2 import urlopen as urllib_request_urlopen
 import fileinput
-from urllib2 import urlopen
 
 CHUNKSIZE = 8 * 1024
 
@@ -133,7 +134,7 @@ def main():
     url = "http://svn.haxx.se/" \
         + "%(list)s/archive-%(year)s-%(month)s/%(msgno)s.shtml" % locals()
     print("MsgUrl: " + url)
-    msgfile = urlopen(url)
+    msgfile = urllib_request_urlopen(url)
     p = MyParser()
     buffer = msgfile.read(CHUNKSIZE)
     while buffer:

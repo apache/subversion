@@ -11,6 +11,10 @@ usage: 1. log [PATH]
      the URL is looked up in HEAD, and the default revision range is
      HEAD:1.
 
+  Multiple '-c' or '-r' options may be specified (but not a
+  combination of '-c' and '-r' options), and mixing of forward and
+  reverse ranges is allowed.
+
   With -v, also print all affected paths with each log message.
   With -q, don't print the log message body itself (note that this is
   compatible with -v).
