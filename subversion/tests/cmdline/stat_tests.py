@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -257,13 +257,9 @@ def status_with_new_files_pending(sbox):
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'status', '-u')
 
-  # The bug fixed in revision 3686 was a seg fault.  We don't have a
-  # reliable way to detect a seg fault here, since we haven't dealt
-  # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
-  # are classes within the first, which is a module, and the Popen3
-  # class is not the same as os.popen3().  Got that?)  See the Python
-  # docs for details; in the meantime, no output means there was a
-  # problem.
+  # The bug fixed in revision 3686 was a segmentation fault.
+  # TODO: Check exit code.
+  # In the meantime, no output means there was a problem.
   for line in output:
     if line.find('newfile') != -1:
       break
