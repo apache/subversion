@@ -1,9 +1,9 @@
 #!/bin/sh
 
 # Required version of Python
-# Python 2.0 = 0x2000000
-# Python 2.4 = 0x2040000
-VERSION=${1:-0x2040000}
+# Python 2.6 = 0x2060000
+# Python 3.0 = 0x3000000
+VERSION=${1:-0x2060000}
 
 for pypath in "$PYTHON" "$PYTHON2" "$PYTHON3" python python2 python3; do
   if [ "x$pypath" != "x" ]; then
