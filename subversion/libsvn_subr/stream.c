@@ -1015,7 +1015,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
 
 struct string_stream_baton
 {
-  svn_string_t *str;
+  const svn_string_t *str;
   apr_size_t amt_read;
 };
 
@@ -1032,7 +1032,7 @@ read_handler_string(void *baton, char *buffer, apr_size_t *len)
 }
 
 svn_stream_t *
-svn_stream_from_string(svn_string_t *str,
+svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool)
 {
   svn_stream_t *stream;

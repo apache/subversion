@@ -191,7 +191,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"set-depth",     opt_set_depth, 1,
                     N_("set new working copy depth to ARG ('empty',\n"
                        "                            "
-                       "'files', 'immediates', or 'infinity')")},
+                       "'exclude', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,

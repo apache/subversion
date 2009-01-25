@@ -1474,10 +1474,11 @@ def run_and_validate_lock(path, username):
             comment_re.match(output))):
     raise Failure
 
-def run_and_verify_resolved(expected_paths, *args):
-  """Run "svn resolved" with arguments ARGS, and verify that it resolves the
-  paths in EXPECTED_PATHS and no others. If no ARGS are specified, use the
-  elements of EXPECTED_PATHS as the arguments."""
+def _run_and_verify_resolve(cmd, expected_paths, *args):
+  """Run "svn CMD" (where CMD is 'resolve' or 'resolved') with arguments
+  ARGS, and verify that it resolves the paths in EXPECTED_PATHS and no others.
+  If no ARGS are specified, use the elements of EXPECTED_PATHS as the
+  arguments."""
   # TODO: verify that the status of PATHS changes accordingly.
   if len(args) == 0:
     args = expected_paths
@@ -1485,7 +1486,19 @@ def run_and_verify_resolved(expected_paths, *args):
     "Resolved conflicted state of '" + path + "'\n" for path in
     expected_paths])
   run_and_verify_svn(None, expected_output, [],
-                     'resolved', *args)
+                     cmd, *args)
+
+def run_and_verify_resolve(expected_paths, *args):
+  """Run "svn resolve" with arguments ARGS, and verify that it resolves the
+  paths in EXPECTED_PATHS and no others. If no ARGS are specified, use the
+  elements of EXPECTED_PATHS as the arguments."""
+  _run_and_verify_resolve('resolve', expected_paths, *args)
+
+def run_and_verify_resolved(expected_paths, *args):
+  """Run "svn resolved" with arguments ARGS, and verify that it resolves the
+  paths in EXPECTED_PATHS and no others. If no ARGS are specified, use the
+  elements of EXPECTED_PATHS as the arguments."""
+  _run_and_verify_resolve('resolved', expected_paths, *args)
 
 
 ######################################################################
