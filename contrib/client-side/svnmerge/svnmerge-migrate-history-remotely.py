@@ -107,7 +107,7 @@ def svnmerge_prop_to_mergeinfo(svnmerge_prop_val):
     svnmerge_prop_val = ''
     for source in sources:
         pieces = source.split(':')
-        if len(pieces) != 2:
+        if not (len(pieces) == 2 and pieces[1]):
             continue
         pieces[0] = urllib.unquote(pieces[0])
         svnmerge_prop_val = svnmerge_prop_val + '%s\n' % (':'.join(pieces))
@@ -362,9 +362,9 @@ class SvnmergeHistoryMigrator:
                             sys.stdout.write("   new sanitized chunk:\n")
                             pretty_print_mergeinfo(history, 6)
                         new_mergeinfo = mergeinfo_merge(new_mergeinfo, history)
-                    except svn.core.SubversionException, e:
-                        if not (e.apr_err == svn.core.SVN_ERR_FS_NOT_FOUND
-                                or e.apr_err == svn.core.SVN_ERR_FS_NO_SUCH_REVISION):
+                    except core.SubversionException, e:
+                        if not (e.apr_err == core.SVN_ERR_FS_NOT_FOUND
+                                or e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION):
                             raise
 
         if self.verbose:

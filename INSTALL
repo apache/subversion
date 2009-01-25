@@ -552,7 +552,20 @@ I.    INTRODUCTION
       version if MASM is not compatible with MSVC 6).
 
 
-      13. SQLite 3.4.x, 3.5.x or 3.6.x
+      13. SQLite
+
+      Subversion (starting with version 1.6) requires SQLite version
+      3.4.0 or above, and you can meet this dependency several ways:
+        * Use an SQLite amalgamation file.
+        * Specify an SQLite installation to use.
+        * Let Subversion find an installed SQLite.
+      
+      To use an SQLite-provided amalgamation, just drop sqlite3.c into
+      Subversion's build/ directory, or point to it with the --with-sqlite
+      configure option.  This file also ships with the Subversion dependencies
+      distribution, or you can download it from SQLite:
+
+          http://www.sqlite.org/download.html
 
 
   D. Documentation

@@ -188,7 +188,7 @@ int main()
             else
               SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
               CFLAGS=["$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"]
-              NEON_LIBS=`$neon_config --la-file`
+              NEON_LIBS=`$neon_config --libs`
             fi
             svn_lib_neon="yes"
             break

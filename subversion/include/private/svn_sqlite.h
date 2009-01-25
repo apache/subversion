@@ -19,8 +19,6 @@
 #ifndef SVN_SQLITE_H
 #define SVN_SQLITE_H
 
-#include <sqlite3.h>
-
 #include <apr_pools.h>
 
 #include "svn_types.h"
@@ -82,7 +80,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 /* Error-handling wrapper around sqlite3_bind_int64. */
 svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
-                       sqlite_int64 val);
+                       apr_int64_t val);
 
 /* Error-handling wrapper around sqlite3_bind_text. VAL cannot contain
    zero bytes; we always pass SQLITE_TRANSIENT. */

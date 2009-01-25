@@ -69,40 +69,40 @@ typedef struct enum_mapping_t
 /* A map for svn_node_kind_t values. */
 static const enum_mapping_t node_kind_map[] =
 {
-  { SVN_WC__NODE_NONE, svn_node_none },
-  { SVN_WC__NODE_FILE, svn_node_file },
-  { SVN_WC__NODE_DIR,  svn_node_dir },
-  { "",                svn_node_unknown },
-  { NULL,              0 }
+  { "none", svn_node_none },
+  { "file", svn_node_file },
+  { "dir",  svn_node_dir },
+  { "",     svn_node_unknown },
+  { NULL,   0 }
 };
 
 /* A map for svn_wc_operation_t values. */
 static const enum_mapping_t operation_map[] =
 {
-  { SVN_WC__OPERATION_UPDATE, svn_wc_operation_update },
-  { SVN_WC__OPERATION_SWITCH, svn_wc_operation_switch },
-  { SVN_WC__OPERATION_MERGE,  svn_wc_operation_merge },
-  { NULL,                     0 }
+  { "update", svn_wc_operation_update },
+  { "switch", svn_wc_operation_switch },
+  { "merge",  svn_wc_operation_merge },
+  { NULL,     0 }
 };
 
 /* A map for svn_wc_conflict_action_t values. */
 static const enum_mapping_t action_map[] =
 {
-  { SVN_WC__CONFLICT_ACTION_EDITED,  svn_wc_conflict_action_edit },
-  { SVN_WC__CONFLICT_ACTION_DELETED, svn_wc_conflict_action_delete },
-  { SVN_WC__CONFLICT_ACTION_ADDED,   svn_wc_conflict_action_add },
-  { NULL,                            0 }
+  { "edited",  svn_wc_conflict_action_edit },
+  { "deleted", svn_wc_conflict_action_delete },
+  { "added",   svn_wc_conflict_action_add },
+  { NULL,      0 }
 };
 
 /* A map for svn_wc_conflict_reason_t values. */
 static const enum_mapping_t reason_map[] =
 {
-  { SVN_WC__CONFLICT_REASON_EDITED,     svn_wc_conflict_reason_edited },
-  { SVN_WC__CONFLICT_REASON_DELETED,    svn_wc_conflict_reason_deleted },
-  { SVN_WC__CONFLICT_REASON_MISSING,    svn_wc_conflict_reason_missing },
-  { SVN_WC__CONFLICT_REASON_OBSTRUCTED, svn_wc_conflict_reason_obstructed },
-  { SVN_WC__CONFLICT_REASON_ADDED,      svn_wc_conflict_reason_added },
-  { NULL,                               0 }
+  { "edited",     svn_wc_conflict_reason_edited },
+  { "deleted",    svn_wc_conflict_reason_deleted },
+  { "missing",    svn_wc_conflict_reason_missing },
+  { "obstructed", svn_wc_conflict_reason_obstructed },
+  { "added",      svn_wc_conflict_reason_added },
+  { NULL,         0 }
 };
 
 
