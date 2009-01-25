@@ -13,13 +13,6 @@ if sys.hexversion < 0x2040000:
 # don't export this name
 del sys
 
-# Define True and False if not provided by Python (<=2.1)
-try:
-  False
-except:
-  False = 0
-  True = 1
-
 class Failure(Exception):
   'Base class for exceptions that indicate test failure'
   pass
