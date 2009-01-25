@@ -1059,6 +1059,7 @@ output_unified_diff_modified(void *baton,
       if (output_baton->show_c_function)
         {
           int p;
+          const char *invalid_character;
 
           /* Save the extra context for later use.
            * Note that the last byte of the hunk_extra_context array is never
@@ -1075,7 +1076,7 @@ output_unified_diff_modified(void *baton,
             {
               output_baton->hunk_extra_context[--p] = '\0';
             }
-          const char *invalid_character =
+          invalid_character =
             svn_utf__last_valid(output_baton->hunk_extra_context,
                                 SVN_DIFF__EXTRA_CONTEXT_LENGTH - 1);
           for (p = invalid_character - output_baton->hunk_extra_context;
