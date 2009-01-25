@@ -6,14 +6,7 @@ committed to the repository are encoded in UTF-8.
 import codecs
 import string
 import sys
-try:
-  # Python >=2.4
-  import subprocess
-  platform_with_subprocess = True
-except ImportError:
-  # Python <2.4
-  import popen2
-  platform_with_subprocess = False
+import subprocess
 from svn import core, fs, delta, repos
 
 # Set to the path of the 'msgfmt' executable to use msgfmt to check
@@ -24,32 +17,22 @@ USE_MSGFMT = None
 if USE_MSGFMT is not None:
   class MsgFmtChecker:
     def __init__(self):
-      if platform_with_subprocess:
-        self.pipe = subprocess.Popen([USE_MSGFMT, "-c", "-o", "/dev/null", "-"],
-                                     stdin=subprocess.PIPE,
-                                     close_fds=sys.platform != "win32")
-      else:
-        self.pipe = popen2.Popen3("%s -c -o /dev/null -" % USE_MSGFMT)
-        self.pipe.fromchild.close()
+      self.pipe = subprocess.Popen([USE_MSGFMT, "-c", "-o", "/dev/null", "-"],
+                                   stdin=subprocess.PIPE,
+                                   close_fds=sys.platform != "win32")
       self.io_error = 0
 
     def write(self, data):
       if self.io_error:
         return
       try:
-        if platform_with_subprocess:
-          self.pipe.stdin.write(data)
-        else:
-          self.pipe.tochild.write(data)
+        self.pipe.stdin.write(data)
       except IOError:
         self.io_error = 1
 
     def close(self):
       try:
-        if platform_with_subprocess:
-          self.pipe.stdin.close()
-        else:
-          self.pipe.tochild.close()
+        self.pipe.stdin.close()
       except IOError:
         self.io_error = 1
       return self.pipe.wait() == 0 and not self.io_error
