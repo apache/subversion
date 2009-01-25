@@ -37,7 +37,8 @@
 #include "svn_private_config.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
-#include "../libsvn_subr/utf_impl.h"
+
+#include "private/svn_utf_private.h"
 
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t
