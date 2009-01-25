@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -355,9 +355,7 @@ def verify_exit_code(message, actual, expected,
   if they don't match, print the difference (preceded by MESSAGE iff
   not None) and raise an exception."""
 
-  # main.spawn_process() (by virtue of main.wait_on_pipe()) will return an
-  # exit code of None on platforms not supporting Popen3
-  if actual is not None and expected != actual:
+  if expected != actual:
     display_lines(message, "Exit Code",
                   str(expected) + '\n', str(actual) + '\n')
     raise raisable
