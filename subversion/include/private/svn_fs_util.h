@@ -20,7 +20,14 @@
 #ifndef SVN_FS_UTIL_H
 #define SVN_FS_UTIL_H
 
+#include <apr_pools.h>
+
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_fs.h"
+
 #include "svn_private_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

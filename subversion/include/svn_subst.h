@@ -24,6 +24,10 @@
 #ifndef SVN_SUBST_H
 #define SVN_SUBST_H
 
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_time.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_io.h"
@@ -521,8 +525,9 @@ svn_subst_translate_cstring(const char *src,
  *       svn_subst_copy_and_translate3().
  *
  * @since New in 1.4
- *
+ * @deprecated Provided for backward compatibility with the 1.5 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_to_normal_form(const char *src,
                                    const char *dst,

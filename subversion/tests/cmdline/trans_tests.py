@@ -99,6 +99,8 @@ def setup_working_copy(wc_dir, value_len):
   global url_exp_path
   global id_unexp_path
   global id_exp_path
+  global header_unexp_path
+  global header_exp_path
   global bogus_keywords_path
   global embd_author_rev_unexp_path
   global embd_author_rev_exp_path
@@ -118,6 +120,8 @@ def setup_working_copy(wc_dir, value_len):
   url_exp_path = os.path.join(wc_dir, 'url_exp')
   id_unexp_path = os.path.join(wc_dir, 'id_unexp')
   id_exp_path = os.path.join(wc_dir, 'id_exp')
+  header_unexp_path = os.path.join(wc_dir, 'header_unexp')
+  header_exp_path = os.path.join(wc_dir, 'header_exp')
   bogus_keywords_path = os.path.join(wc_dir, 'bogus_keywords')
   embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
@@ -132,6 +136,8 @@ def setup_working_copy(wc_dir, value_len):
   svntest.main.file_append(url_exp_path, "$URL: blah $")
   svntest.main.file_append(id_unexp_path, "$Id$")
   svntest.main.file_append(id_exp_path, "$Id: blah $")
+  svntest.main.file_append(header_unexp_path, "$Header$")
+  svntest.main.file_append(header_exp_path, "$Header: blah $")
   svntest.main.file_append(bogus_keywords_path, "$Arthur$\n$Rev0$")
   svntest.main.file_append(embd_author_rev_unexp_path,
                            "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
@@ -172,7 +178,8 @@ def setup_working_copy(wc_dir, value_len):
 # ### todo: Later, take list of keywords to set.
 def keywords_on(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
-                                     "svn:keywords", "Author Rev Date URL Id",
+                                     "svn:keywords",
+                                     "Author Rev Date URL Id Header",
                                      path)
 
 # Delete property NAME from versioned PATH in the working copy.
@@ -215,6 +222,8 @@ def keywords_from_birth(sbox):
     'url_exp' : Item(status='A ', wc_rev=0),
     'id_unexp' : Item(status='A ', wc_rev=0),
     'id_exp' : Item(status='A ', wc_rev=0),
+    'header_unexp' : Item(status='A ', wc_rev=0),
+    'header_exp' : Item(status='A ', wc_rev=0),
     'bogus_keywords' : Item(status='A ', wc_rev=0),
     'embd_author_rev_unexp' : Item(status='A ', wc_rev=0),
     'embd_author_rev_exp' : Item(status='A ', wc_rev=0),
@@ -230,6 +239,8 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn(None, 'add', url_exp_path)
   svntest.main.run_svn(None, 'add', id_unexp_path)
   svntest.main.run_svn(None, 'add', id_exp_path)
+  svntest.main.run_svn(None, 'add', header_unexp_path)
+  svntest.main.run_svn(None, 'add', header_exp_path)
   svntest.main.run_svn(None, 'add', bogus_keywords_path)
   svntest.main.run_svn(None, 'add', embd_author_rev_unexp_path)
   svntest.main.run_svn(None, 'add', embd_author_rev_exp_path)
@@ -246,6 +257,8 @@ def keywords_from_birth(sbox):
   keywords_on(url_exp_path)
   keywords_on(id_unexp_path)
   keywords_on(id_exp_path)
+  keywords_on(header_unexp_path)
+  keywords_on(header_exp_path)
   keywords_on(embd_author_rev_exp_path)
   keywords_on(fixed_length_keywords_path)
   keywords_on(id_with_space_path)
@@ -259,6 +272,8 @@ def keywords_from_birth(sbox):
     'url_exp' : Item(verb='Adding'),
     'id_unexp' : Item(verb='Adding'),
     'id_exp' : Item(verb='Adding'),
+    'header_unexp' : Item(verb='Adding'),
+    'header_exp' : Item(verb='Adding'),
     'bogus_keywords' : Item(verb='Adding'),
     'embd_author_rev_unexp' : Item(verb='Adding'),
     'embd_author_rev_exp' : Item(verb='Adding'),
@@ -306,6 +321,26 @@ def keywords_from_birth(sbox):
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_exp", lines[0]))):
     print("Id expansion failed for %s" % id_exp_path)
+    raise svntest.Failure
+  fp.close()
+
+  # Make sure the unexpanded Header keyword got expanded correctly.
+  fp = open(header_unexp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
+                        lines[0]))):
+    print "Header expansion failed for", header_unexp_path
+    raise svntest.Failure
+  fp.close()
+
+  # Make sure the preexpanded Header keyword got reexpanded correctly.
+  fp = open(header_exp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
+                        lines[0]))):
+    print "Header expansion failed for", header_exp_path
     raise svntest.Failure
   fp.close()
 

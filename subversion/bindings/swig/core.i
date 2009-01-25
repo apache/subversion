@@ -32,7 +32,7 @@
 #include <apr.h>
 #include <apr_general.h>
 
-#include "svn_md5.h"
+#include <apr_md5.h>
 #include "svn_diff.h"
 #include "svn_private_config.h"
 %}

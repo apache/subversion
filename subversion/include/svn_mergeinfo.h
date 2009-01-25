@@ -24,10 +24,11 @@
 #define SVN_MERGEINFO_H
 
 #include <apr_pools.h>
-#include <apr_tables.h>         /* for apr_array_header_t */
+#include <apr_tables.h>  /* for apr_array_header_t */
 #include <apr_hash.h>
 
-#include "svn_error.h"
+#include "svn_types.h"
+#include "svn_string.h"  /* for svn_string_t */
 
 
 #ifdef __cplusplus

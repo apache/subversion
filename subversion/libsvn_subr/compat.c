@@ -22,6 +22,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_compat.h"
+#include "svn_props.h"
 
 
 /* Baton for use with svn_compat_wrap_commit_callback */
@@ -131,7 +132,7 @@ log_wrapper_callback(void *baton,
       svn_compat_log_revprops_out(&author, &date, &message,
                                   log_entry->revprops);
       return lwb->receiver(lwb->baton,
-                           log_entry->changed_paths,
+                           log_entry->changed_paths2,
                            log_entry->revision,
                            author, date, message,
                            pool);

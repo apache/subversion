@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include <apr_md5.h>
+#include <apr_sha1.h>
 
 #include "svn_error.h"
 #include "svn_string.h"

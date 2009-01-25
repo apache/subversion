@@ -870,7 +870,7 @@ public class BasicTests extends SVNTests
                      2);
         thisTest.checkStatus();
 
-        assertExpectedSuggestion(sources[0].getPath(), "A/B/F/alpha", thisTest);
+        assertExpectedSuggestion(thisTest.getUrl() + "/A/B/E/alpha", "A/B/F/alpha", thisTest);
 
         // Now test a WC to URL copy
         CopySource wcSource[] = new CopySource[1];
@@ -928,7 +928,7 @@ public class BasicTests extends SVNTests
                                    "Move files", true), 2);
         thisTest.checkStatus();
 
-        assertExpectedSuggestion(srcPaths[0], "A/B/F/alpha", thisTest);
+        assertExpectedSuggestion(thisTest.getUrl() + "/A/B/E/alpha", "A/B/F/alpha", thisTest);
     }
 
     /**
@@ -948,22 +948,18 @@ public class BasicTests extends SVNTests
                                                           Revision.WORKING);
         assertNotNull(suggestions);
         assertTrue(suggestions.length >= 1);
-        String suggestedSrc = suggestions[0];
-        // ### Improve rigor of (pathetically weak) path assertion.
         assertTrue("Unexpected copy source path, expected " +
                    expectedSrc + ", got " + suggestions[0],
-                   suggestions[0].endsWith(new File(wcPath).getName()));
+                   expectedSrc.equals(suggestions[0]));
 
         // Same test using URL
         String url = thisTest.getUrl() + "/" + destPath;
         suggestions = client.suggestMergeSources(url, Revision.HEAD);
         assertNotNull(suggestions);
         assertTrue(suggestions.length >= 1);
-        suggestedSrc = suggestions[0];
-        // ### Improve rigor of (pathetically weak) path assertion.
         assertTrue("Unexpected copy source path, expected " +
                    expectedSrc + ", got " + suggestions[0],
-                   suggestions[0].endsWith(new File(wcPath).getName()));
+                   expectedSrc.equals(suggestions[0]));
 
     }
 

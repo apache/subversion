@@ -42,6 +42,8 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
+#include "svn_props.h"
+
 #include "fs.h"
 #include "err.h"
 #include "key-gen.h"
