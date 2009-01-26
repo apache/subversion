@@ -561,7 +561,7 @@ copy_file_administratively(const char *src_path,
               svn_boolean_t repair = FALSE;
 
               if (eol_style == svn_subst_eol_style_native)
-                eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+                eol_str = SVN_SUBST_NATIVE_EOL_STR;
               else if (eol_style == svn_subst_eol_style_fixed)
                 repair = TRUE;
               else if (eol_style != svn_subst_eol_style_none)

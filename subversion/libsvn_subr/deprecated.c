@@ -207,7 +207,7 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
                                            apr_pool_t *pool)
 {
   if (eol_style == svn_subst_eol_style_native)
-    eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+    eol_str = SVN_SUBST_NATIVE_EOL_STR;
   else if (! (eol_style == svn_subst_eol_style_fixed
               || eol_style == svn_subst_eol_style_none))
     return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
@@ -257,7 +257,7 @@ svn_subst_translate_to_normal_form(const char *src,
 {
 
   if (eol_style == svn_subst_eol_style_native)
-    eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+    eol_str = SVN_SUBST_NATIVE_EOL_STR;
   else if (! (eol_style == svn_subst_eol_style_fixed
               || eol_style == svn_subst_eol_style_none))
     return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);

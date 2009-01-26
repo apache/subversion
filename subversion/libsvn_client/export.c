@@ -778,12 +778,16 @@ close_file(void *file_baton,
   else
     {
       svn_subst_eol_style_t style;
-      const char *eol;
-      apr_hash_t *final_kw;
+      const char *eol = NULL;
+      svn_boolean_t repair = FALSE;
+      apr_hash_t *final_kw = NULL;
 
       if (fb->eol_style_val)
-        SVN_ERR(get_eol_style(&style, &eol, fb->eol_style_val->data,
-                              eb->native_eol));
+        {
+          SVN_ERR(get_eol_style(&style, &eol, fb->eol_style_val->data,
+                                eb->native_eol));
+          repair = TRUE;
+        }
 
       if (fb->keywords_val)
         SVN_ERR(svn_subst_build_keywords2(&final_kw, fb->keywords_val->data,
@@ -792,9 +796,7 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_subst_copy_and_translate3
               (fb->tmppath, fb->path,
-               fb->eol_style_val ? eol : NULL,
-               fb->eol_style_val ? TRUE : FALSE, /* repair */
-               fb->keywords_val ? final_kw : NULL,
+               eol, repair, final_kw,
                TRUE, /* expand */
                fb->special,
                pool));
