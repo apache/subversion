@@ -311,7 +311,9 @@ svn_subst_stream_translated(svn_stream_t *stream,
  * @see svn_subst_translate_to_normal_form()
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
                                            svn_stream_t *source,
@@ -432,41 +434,6 @@ svn_subst_copy_and_translate(const char *src,
                              const svn_subst_keywords_t *keywords,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
-
-
-/**
- * Create a new, translated file.
- *
- * This is similar to svn_subst_copy_and_translate3() except that it
- * takes a source stream.
- *
- * Translates the stream @a src into a file at path @a dst.  The
- * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
- * defined the same as in svn_subst_translate_stream3().
- *
- * If @a special is TRUE, then the stream should define a special file,
- * and be in "normal form". The file @a dst will then be a special file.
- *
- * The contents will be copied/translated into a temporary file, and then
- * moved to @a dst atomically.
- *
- * If anything goes wrong during the copy, attempt to delete @a dst (if
- * it exists).
- *
- * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
- * copy.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_subst_create_translated(svn_stream_t *src,
-                            const char *dst,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            apr_hash_t *keywords,
-                            svn_boolean_t expand,
-                            svn_boolean_t special,
-                            apr_pool_t *scratch_pool);
 
 
 /**

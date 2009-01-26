@@ -101,12 +101,20 @@ svn_wc_translated_stream(svn_stream_t **stream,
     {
       if (to_nf)
         {
-          SVN_ERR(svn_subst_stream_translated_to_normal_form(stream,
-                                                             *stream,
-                                                             style, eol,
-                                                             repair_forced,
-                                                             keywords,
-                                                             pool));
+          if (style == svn_subst_eol_style_native)
+            eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+          else if (style == svn_subst_eol_style_fixed)
+            repair_forced = TRUE;
+          else if (style != svn_subst_eol_style_none)
+            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+          /* Wrap the stream to translate to normal form */
+          *stream = svn_subst_stream_translated(*stream,
+                                                eol,
+                                                repair_forced,
+                                                keywords,
+                                                FALSE /* expand */,
+                                                pool);
 
           /* Enforce our contract. TO_NF streams are readonly */
           svn_stream_set_write(*stream, write_handler_unsupported);
