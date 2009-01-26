@@ -102,6 +102,9 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    ----  -----------------   ---------
    i     apr_int64_t         Number
    s     const char **       String
+   b     const void *        Blob (must be followed by an additional argument
+                                   of type apr_size_t with the number of bytes
+                                   in the object)
 
   Each character in FMT maps to one argument, in the order they appear.
 */
@@ -123,7 +126,7 @@ svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt, int slot,
 svn_error_t *
 svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       int slot,
-                      void *val,
+                      const void *val,
                       apr_size_t len);
 
 /* Wrapper around sqlite3_column_text. */

@@ -35,6 +35,7 @@
 #include "svn_opt.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
+#include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_mergeinfo.h"
 #include "svn_types.h"

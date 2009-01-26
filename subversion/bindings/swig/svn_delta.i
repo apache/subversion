@@ -149,7 +149,7 @@ void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_md5.h"
+#include <apr_md5.h>
 %}
 
 /* -----------------------------------------------------------------------

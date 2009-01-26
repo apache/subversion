@@ -229,6 +229,12 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
                                            va_arg(ap, apr_int64_t)));
             break;
 
+          case 'b':
+            SVN_ERR(svn_sqlite__bind_blob(stmt, count,
+                                          va_arg(ap, const void *),
+                                          va_arg(ap, apr_size_t)));
+            break;
+
           default:
             SVN_ERR_MALFUNCTION();
         }
@@ -271,7 +277,7 @@ svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt,
 svn_error_t *
 svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       int slot,
-                      void *val,
+                      const void *val,
                       apr_size_t len)
 {
   SQLITE_ERR(sqlite3_bind_blob(stmt->s3stmt, slot, val, len, SQLITE_TRANSIENT),

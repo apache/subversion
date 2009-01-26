@@ -43,10 +43,16 @@ function _svn_read_hashfile()
 # extract filenames from 'svn status' output
 function _svn_grcut()
 {
-    local re=$1 line=
+    local re=$1 line= old_IFS
+    # fix IFS, so that leading spaces are not ignored by next read.
+    # (there is a leading space in svn status output if only a prop is changed)
+    # outside IFS is not broken because the function is called in a subshell
+    old_IFS="$IFS"
+    IFS=$'\n'
     while read -r line ; do
-	[[ ! $re || $line == $re ]] && echo ${line/???????/}
+	[[ ! $re || $line == $re ]] && echo "${line/????????/}"
     done
+    IFS="$old_IFS"
 }
 
 # extract stuff from svn info output

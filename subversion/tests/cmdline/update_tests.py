@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, subprocess
 
 # Our testing module
 import svntest
@@ -2138,13 +2138,7 @@ def update_wc_on_windows_drive(sbox):
   if drive is None:
     raise svntest.Skip
 
-  try:
-    # Python >=2.4
-    import subprocess
-    subprocess.call(['subst', drive +':', sbox.wc_dir])
-  except ImportError:
-    # Python <2.4
-    os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
+  subprocess.call(['subst', drive +':', sbox.wc_dir])
   wc_dir = drive + ':/'
   was_cwd = os.getcwd()
 
@@ -2243,13 +2237,7 @@ def update_wc_on_windows_drive(sbox):
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive
-    try:
-      # Python >=2.4
-      import subprocess
-      subprocess.call(['subst', '/D', drive +':'])
-    except ImportError:
-      # Python <2.4
-      os.popen3('subst /D ' + drive +': ', 't')
+    subprocess.call(['subst', '/D', drive +':'])
 
 # Issue #2618: "'Checksum mismatch' error when receiving
 # update for replaced-with-history file".
