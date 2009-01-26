@@ -19,7 +19,6 @@
  * @brief Implementation of the class InfoCallback
  */
 
-#include "SVNClient.h"
 #include "InfoCallback.h"
 #include "CreateJ.h"
 #include "EnumMapper.h"
@@ -146,7 +145,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jobject jlock = SVNClient::createJavaLock(info->lock);
+  jobject jlock = CreateJ::Lock(info->lock);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

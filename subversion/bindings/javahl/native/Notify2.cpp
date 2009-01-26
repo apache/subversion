@@ -21,7 +21,7 @@
 
 #include "Notify2.h"
 #include "JNIUtil.h"
-#include "SVNClient.h"
+#include "CreateJ.h"
 #include "EnumMapper.h"
 #include "RevisionRange.h"
 
@@ -158,7 +158,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  jobject jLock = SVNClient::createJavaLock(wcNotify->lock);
+  jobject jLock = CreateJ::Lock(wcNotify->lock);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
