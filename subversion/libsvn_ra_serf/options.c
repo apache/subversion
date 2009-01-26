@@ -82,6 +82,7 @@ struct svn_ra_serf__options_context_t {
   const char *path;
 
   const char *activity_collection;
+  svn_revnum_t youngest_rev;
 
   serf_response_acceptor_t acceptor;
   serf_response_handler_t handler;
@@ -233,6 +234,12 @@ svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx
   return ctx->activity_collection;
 }
 
+svn_revnum_t
+svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx)
+{
+  return ctx->youngest_rev;
+}
+
 svn_error_t *
 svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx)
 {
@@ -347,7 +354,9 @@ capabilities_headers_iterator_callback(void *baton,
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
         {
-          orc->session->youngest_rev = SVN_STR_TO_REV(val);
+          struct svn_ra_serf__options_context_t *user_data =
+            orc->parser_ctx->user_data;
+          user_data->youngest_rev = SVN_STR_TO_REV(val);
         }
     }
 
@@ -400,6 +409,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   new_ctx->pool = pool;
 
   new_ctx->path = path;
+  new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   new_ctx->session = session;
   new_ctx->conn = conn;

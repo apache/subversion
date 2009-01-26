@@ -923,27 +923,6 @@ svn_ra_serf__set_bare_props(void *baton,
 }
 
 svn_error_t *
-svn_ra_serf__get_youngest_rev(svn_revnum_t *youngest_revnum,
-                              svn_ra_serf__session_t *session,
-                              apr_pool_t *pool)
-{
-  const char *relative_url, *basecoll_url;
-
-  if (SVN_IS_VALID_REVNUM(session->youngest_rev))
-    {
-      /* Return cached value */
-      *youngest_revnum = session->youngest_rev;
-      return SVN_NO_ERROR;
-    }
-  
-  /* else do a network request to get HEAD */
-  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                        session, session->repos_url.path,
-                                        SVN_INVALID_REVNUM, youngest_revnum,
-                                        pool);
-}
-
-svn_error_t *
 svn_ra_serf__get_baseline_info(const char **bc_url,
                                const char **bc_relative,
                                svn_ra_serf__session_t *session,
@@ -961,7 +940,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
   /* Do we have the makings of HTTP v2 support?  (And can we get away
      with not fetching fresh latest-revnum information?)  */
-  if (session->pegrev_stub && session->repos_root_str && (! latest_revnum))
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
       const char *decoded_url = svn_path_uri_decode(url, pool);
       const char *decoded_root = 
@@ -977,6 +956,32 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
           *bc_relative = svn_path_is_child(decoded_root, decoded_url, pool);
           SVN_ERR_ASSERT(*bc_relative != NULL);
         }
+
+      if (latest_revnum)
+        {
+          svn_ra_serf__options_context_t *opt_ctx;
+          svn_error_t *err;
+
+          svn_ra_serf__create_options_req(&opt_ctx, session, session->conns[0],
+                                          session->repos_url.path, pool);
+          err = svn_ra_serf__context_run_wait
+            (svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool);
+          if (svn_ra_serf__get_options_error(opt_ctx) ||
+              svn_ra_serf__get_options_parser_error(opt_ctx))
+            {
+              svn_error_clear(err);
+              SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
+              SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
+            }
+          SVN_ERR(err);
+
+          *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
+          if (! SVN_IS_VALID_REVNUM(*latest_revnum))
+            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                    _("The OPTIONS response did not include "
+                                      "the youngest revision"));
+        }
+
       return SVN_NO_ERROR;
     }
 
@@ -1035,7 +1040,6 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
         }
 
       *latest_revnum = SVN_STR_TO_REV(version_name);
-      session->youngest_rev = *latest_revnum;  /* cache this! */
     }
 
   *bc_url = basecoll_url;
