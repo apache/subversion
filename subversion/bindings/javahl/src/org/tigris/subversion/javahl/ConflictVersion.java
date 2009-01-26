@@ -67,4 +67,9 @@ public class ConflictVersion
     {
         return nodeKind;
     }
+
+    public String toString() {
+        return "(" + NodeKind.getNodeKindName(nodeKind) + ") " + reposURL +
+        "/" + pathInRepos + "@" + pegRevision;
+    }
 }
