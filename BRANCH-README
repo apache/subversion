@@ -84,3 +84,6 @@ TODO:
    methods as described in the design doc.
 
  * Optional:  All that stuff for ra_serf above?  Do it for ra_neon, too.
+
+ * Optional:  If we're sending the youngest rev in the OPTIONs response,
+              let's also send the repository UUID.
