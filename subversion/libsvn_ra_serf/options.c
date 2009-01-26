@@ -463,14 +463,22 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    apr_pool_t *pool)
 {
   svn_ra_serf__options_context_t *opt_ctx;
+  svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
   svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
                                   serf_sess->repos_url_str, pool);
 
-  return svn_ra_serf__context_run_wait(
-                                   svn_ra_serf__get_options_done_ptr(opt_ctx),
-                                   serf_sess, pool);
+  err = svn_ra_serf__context_run_wait
+    (svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
+  if (svn_ra_serf__get_options_error(opt_ctx) ||
+      svn_ra_serf__get_options_parser_error(opt_ctx))
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
+      SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
+    }
+  return err;
 }
 
 
