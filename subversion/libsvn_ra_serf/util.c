@@ -1570,7 +1570,7 @@ svn_ra_serf__discover_root(const char **root_url,
 {
   /* Unless our caller explicitly wants a VCC URL, we use the cached
      "me resource" URI and repository root URI (if any).  */
-  if ((! vcc_only) && session->me_resource && session->repos_root_str)
+  if ((! vcc_only) && SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
       *root_url = apr_pstrdup(pool, session->me_resource);
       if (rel_path)

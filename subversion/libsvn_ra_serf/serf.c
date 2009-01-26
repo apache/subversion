@@ -248,8 +248,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
 
-  serf_sess->youngest_rev = SVN_INVALID_REVNUM;
-
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
 
@@ -385,9 +383,6 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  /* Because this is a public RA function, we deliberately do *not*
-     use the cached HEAD value in our session_t.  The caller might
-     depend on the value to not be stale.  */
   return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                         session, session->repos_url.path,
                                         SVN_INVALID_REVNUM, latest_revnum,

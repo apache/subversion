@@ -202,27 +202,29 @@ struct svn_ra_serf__session_t {
   /* Repository UUID */
   const char *uuid;
 
+  /*** HTTP v2 protocol stuff. ***
+   *
+   * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
+   * response headers, it has sent all of them.  Specifically, we'll
+   * be looking at the presence of the "me resource" as a flag that
+   * the server supports v2 of our HTTP protocol.
+   */
+
   /* The "me resource".  Typically used as a target for REPORTs that
      are path-agnostic.  If we have this, we can speak HTTP v2 to the
      server.  */
   const char *me_resource;
-
-  /* Cached HEAD revnum of the repository: for v2 protocol, usually
-     returned by initial OPTIONS response. */
-  svn_revnum_t youngest_rev;
 
   /* Opaque URL "stubs".  If the OPTIONS response returns these, then
      we know we're using HTTP protocol v2. */
   const char *pegrev_stub;      /* for accessing REV/PATH pairs */
   const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
 
-  /* More HTTP protocol v2 stubs.  These are set only during a
-     commit, returned by the server after we send a POST against a
-     particular revision URL.  */
-  const char *txn_stub;         /* for accessing commit transactions */
-  const char *txnprop_stub;     /* for accessing transaction props */
+  /*** End HTTP v2 stuff ***/
 
 };
+
+#define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) (sess->me_resource != NULL)
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -1019,6 +1021,9 @@ svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx);
 
 const char *
 svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx);
+
+svn_revnum_t
+svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
 
 svn_error_t *
 svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
