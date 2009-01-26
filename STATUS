@@ -70,5 +70,21 @@ Candidate changes for 1.5.6:
    Votes:
      +1: pburba
 
+ * r35466
+   Allow svn_mergeinfo_parse() to tolerate overlapping rangelists as input
+   while still guaranteeing the mergeinfo it creates has no overlapping
+   rangelists as required by all our rangelist manipulating APIs.
+   Justification:
+     svnmerge-migrate-history.py and svnmerge-migrate-history-remotely.py
+     can create mergeinfo with overlapping rangelists, which breaks any
+     subcommand which encounters this mergeinfo because svn_mergeinfo_parse
+     returns a parsing error.
+    Note: Will conflict if r35297 group is not applied first.  Assuming
+    r35297 is already merged, accept theirs-conflict on
+    subversion\tests\libsvn_subr\mergeinfo-test.c to avoid a minor conflict.
+    avoid a minor conflict.
+    Votes:
+     +1: pburba
+
 Approved changes:
 =================
