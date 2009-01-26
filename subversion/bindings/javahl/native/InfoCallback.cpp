@@ -21,7 +21,7 @@
 
 #include "SVNClient.h"
 #include "InfoCallback.h"
-#include "ConflictResolverCallback.h"
+#include "CreateJ.h"
 #include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
@@ -178,8 +178,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jobject jdesc = ConflictResolverCallback::createJConflictDescriptor(
-                                                            info->tree_conflict);
+  jobject jdesc = CreateJ::ConflictDescriptor(info->tree_conflict);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

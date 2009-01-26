@@ -20,7 +20,7 @@
  */
 
 #include "StatusCallback.h"
-#include "ConflictResolverCallback.h"
+#include "CreateJ.h"
 #include "EnumMapper.h"
 #include "SVNClient.h"
 #include "JNIUtil.h"
@@ -175,8 +175,7 @@ StatusCallback::createJavaStatus(const char *path,
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
       jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
-      jConflictDescription = ConflictResolverCallback::createJConflictDescriptor(
-                                                      status->tree_conflict);
+      jConflictDescription = CreateJ::ConflictDescriptor(status->tree_conflict);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
