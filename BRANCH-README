@@ -3,9 +3,133 @@ This branch exists for the development of ideas documented in
 reintegrate-able branch, with regular catch-up merges from the trunk.
 
 
+   =======================================================================
+
    WARNING: Code is currently causing server SEGFAULTs (Possibly
    WARNING: due to using "me resource" for PROPFINDs, which have
    WARNING: special handling for VCCs but not for the "me resource")
+
+   These tests are currently failing for cmpilato:
+
+      authz_tests.py 3: broken authz files cause errors
+      authz_tests.py 4: test authz for read operations
+      authz_tests.py 6: test authz for checkout
+      authz_tests.py 7: test authz for log and tracing path changes
+      authz_tests.py 11: test the authz validation rules
+      authz_tests.py 12: test authz for locking
+      blame_tests.py 10: test 'svn blame -g'
+      blame_tests.py 11: don't look for merged files out of range
+      commit_tests.py 28: commit deletion of out-of-date file or dir
+      log_tests.py 16: test 'svn log -g' on a single revision
+      log_tests.py 17: test 'svn log -g' on a branching revision
+      log_tests.py 18: test 'svn log -g' on a non-branching revision
+      log_tests.py 19: test 'svn log -g' a path added before merge
+      log_tests.py 26: 'svn log -g target_with_bogus_mergeinfo'
+      log_tests.py 27: log -g and explicit mergeinfo replacing inherited
+      log_tests.py 28: log -g and simple propmod to merge-inheriting path
+      merge_authz_tests.py 1: skipped paths get overriding mergeinfo
+      mergeinfo_tests.py 1: 'mergeinfo' on a URL that lacks mergeinfo
+      mergeinfo_tests.py 2: 'mergeinfo' on a path with mergeinfo
+      mergeinfo_tests.py 3: 'mergeinfo' with source selection
+      mergeinfo_tests.py 5: mergeinfo of an unknown url should return error
+      merge_tests.py 1: performing a merge, with mixed results
+      merge_tests.py 2: merge and add new files/dirs with history
+      merge_tests.py 3: merge that deletes items
+      merge_tests.py 4: some simple property merges
+      merge_tests.py 8: merge should not die if a target file is absent
+      merge_tests.py 9: merge on deleted directory in target
+      merge_tests.py 12: merge change into unchanged binary file
+      merge_tests.py 13: 3-way merge of 'file add' into existing binary
+      merge_tests.py 14: merge one file (issue #1150) using the -r option
+      merge_tests.py 15: merge one file (issue #1150) using the -c option
+      merge_tests.py 16: merge one file without explicit revisions
+      merge_tests.py 17: mark a revision range as merged
+      merge_tests.py 18: diff after merge that creates a new file
+      merge_tests.py 19: merge should skip over unversioned obstructions
+      merge_tests.py 21: merge --dry-run adding a new file with props
+      merge_tests.py 22: merge binary files with common ancestry
+      merge_tests.py 23: merge with funny characters (issue #1905)
+      merge_tests.py 24: merge changes to keyword expansion property
+      merge_tests.py 28: property merges don't overwrite existing prop-mods
+      merge_tests.py 29: property merge conflict even without local mods
+      merge_tests.py 31: cherry-pick a dependent change, get conflict
+      merge_tests.py 37: ignore whitespace when merging
+      merge_tests.py 38: ignore eolstyle when merging
+      merge_tests.py 39: conflict from merge of add over versioned file
+      merge_tests.py 40: conflict markers should match the file's eol style
+      merge_tests.py 41: handle eol-style propchange during merge
+      merge_tests.py 42: use inherited mergeinfo to avoid repeated merge
+      merge_tests.py 43: use subtree's mergeinfo to avoid repeated merge
+      merge_tests.py 44: drive reporter api in depth first order
+      merge_tests.py 45: target inherits mergeinfo from nearest ancestor
+      merge_tests.py 46: mergeinfo elides to ancestor with identical info
+      merge_tests.py 47: discontinuous merges produce correct mergeinfo
+      merge_tests.py 48: merge works when target has copied children
+      merge_tests.py 49: merge to switched path does not inherit or elide
+      merge_tests.py 50: merge to path with switched children
+      merge_tests.py 52: mergeinfo can explicitly be empty
+      merge_tests.py 53: merge adding prop to child of merge target works
+      merge_tests.py 56: update does not merge mergeinfo
+      merge_tests.py 57: merge should merge mergeinfo
+      merge_tests.py 59: merge to ood path can lead to inaccurate mergeinfo
+      merge_tests.py 60: merge test for --depth files
+      merge_tests.py 61: merge fails if subtree is deleted on src
+      merge_tests.py 62: subtrees can lose non-inheritable ranges
+      merge_tests.py 63: merge to sparse directories
+      merge_tests.py 64: merge -rold(before rename):head renamed dir
+      merge_tests.py 65: child having different rev ranges to merge
+      merge_tests.py 66: merge -rold(before rename):head renamed file
+      merge_tests.py 67: merge with auto detection of revision ranges
+      merge_tests.py 68: mergeinfo recording in skipped merge
+      merge_tests.py 69: command line supports cherry picked merge ranges
+      merge_tests.py 70: merge of propchange on subdir raises conflict
+      merge_tests.py 71: reverse merge of prop add on child
+      merge_tests.py 73: revert a commit on a target
+      merge_tests.py 74: --ignore-ancestry also ignores mergeinfo
+      merge_tests.py 75: merge from renamed branch
+      merge_tests.py 76: normalized mergeinfo is recorded on subtrees
+      merge_tests.py 77: subtrees added after start of merge range are ok
+      merge_tests.py 78: basic merge --reintegrate support
+      merge_tests.py 79: merge --reintegrate with renamed file on branch
+      merge_tests.py 80: merge --reintegrate on a never-updated branch
+      merge_tests.py 85: merge --reintegrate should fail on stale source
+      merge_tests.py 86: cyclic merges don't add mergeinfo from own history
+      merge_tests.py 93: merges that remove all mergeinfo work
+      merge_tests.py 94: dont merge revs into a subtree that predate it
+      merge_tests.py 95: merge fails with renamed subtrees with mergeinfo
+      merge_tests.py 96: don't explicitly record implicit mergeinfo
+      merge_tests.py 98: subtree ranges might not intersect with target
+      merge_tests.py 99: subtree merge source might not exist
+      merge_tests.py 100: mergeinfo not set on subtree with empty mergeinfo
+      merge_tests.py 101: commits to subtrees added by merge wreak havoc
+      merge_tests.py 105: subtree merges dont cause spurious conflicts
+      merge_tests.py 106: target and subtrees need nonintersecting revs
+      merge_tests.py 109: merge adds mergeinfo to subtrees correctly
+      merge_tests.py 110: merge a file with space in its path
+      merge_tests.py 111: natural history filtering permits valid mergeinfo
+      merge_tests.py 112: tree conflicts and obstructions
+      merge_tests.py 113: tree conflicts on merge, local commit 4.1
+      merge_tests.py 114: tree conflicts on merge, local commit 4.2
+      merge_tests.py 117: tree conflicts on merge, local commit 6
+      merge_tests.py 118: tree conflicts on merge, NO local commit 4.1
+      merge_tests.py 119: tree conflicts on merge, NO local commit 4.2
+      merge_tests.py 122: tree conflicts on merge, NO local commit 6
+      merge_tests.py 123: subtree gets changes even if ultimately deleted
+      merge_tests.py 124: no self referential filtering on added path
+      merge_tests.py 126: merge --reintegrate with subtree mergeinfo
+      merge_tests.py 127: mergeinfo aware merges ignore natural history gaps
+      merge_tests.py 128: mergeinfo deleted by a merge should disappear
+      resolved_tests.py 2: resolved on deleted item
+      special_tests.py 7: merge symlink into file
+      stat_tests.py 22: status on conflicted added file
+      switch_tests.py 23: mergeinfo does not elide post switch
+      tree_conflict_tests.py 2: up/sw file: del/rpl/mv onto modify
+      update_tests.py 36: mergeinfo does not elide after update
+
+   Additionally, the svnsync_tests.py are segfauling the server and as
+   such just running indefinitely in a loop.
+
+   =======================================================================
 
 
 TODO:
