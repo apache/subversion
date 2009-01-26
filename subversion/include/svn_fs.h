@@ -19,15 +19,17 @@
  * @brief Interface to the Subversion filesystem.
  */
 
-
 #ifndef SVN_FS_H
 #define SVN_FS_H
 
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_time.h>    /* for apr_time_t */
+
 #include "svn_types.h"
-#include "svn_error.h"
+#include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
@@ -1047,6 +1049,10 @@ typedef enum
 
 /** Change descriptor.
  *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
  * @since New in 1.6. */
 typedef struct svn_fs_path_change2_t
 {
@@ -1072,6 +1078,8 @@ typedef struct svn_fs_path_change2_t
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
+  /* NOTE! Please update svn_fs_path_change2_create() when adding new
+     fields here. */
 } svn_fs_path_change2_t;
 
 
@@ -1097,6 +1105,20 @@ typedef struct svn_fs_path_change_t
 
 } svn_fs_path_change_t;
 
+/**
+ * Allocate an @c svn_fs_path_change2_t structure in @a pool, initialize and
+ * return it.
+ *
+ * Set the @c node_rev_id field of the created struct to @a node_rev_id, and 
+ * @c change_kind to @a change_kind.  Set all other fields to their 
+ * @c _unknown, @c NULL or invalid value, respectively.  
+ *
+ * @since New in 1.6.
+ */
+svn_fs_path_change2_t *
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id, 
+                           svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *pool);
 
 /** Determine what has changed under a @a root.
  *

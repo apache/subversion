@@ -34,6 +34,7 @@
 
 #include "svn_nls.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_time.h"
 #include "svn_utf.h"
 

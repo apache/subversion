@@ -26,11 +26,11 @@
 #ifndef SVN_UTF_H
 #define SVN_UTF_H
 
-#include <apr_xlate.h>
+#include <apr_pools.h>
+#include <apr_xlate.h>  /* for APR_*_CHARSET */
 
-#include "svn_error.h"
-#include "svn_string.h"
 #include "svn_types.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {

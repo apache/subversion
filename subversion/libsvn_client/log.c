@@ -16,19 +16,11 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
 #include <apr_strings.h>
 #include <apr_pools.h>
-
-#include "client.h"
 
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -36,6 +28,9 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
+
+#include "client.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"

@@ -17,25 +17,18 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
 #include "svn_repos.h"
 #include "svn_compat.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
 
-
 
-/*** Code. ***/
 
 /*** From commit.c ***/
 

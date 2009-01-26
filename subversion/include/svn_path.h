@@ -43,12 +43,12 @@
 #ifndef SVN_PATH_H
 #define SVN_PATH_H
 
-
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 
+#include "svn_types.h"
 #include "svn_string.h"
-#include "svn_error.h"
 
 
 #ifdef __cplusplus

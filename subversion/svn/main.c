@@ -768,6 +768,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      LastChangedRevision\n"
      "      Id                       - A compressed summary of the previous\n"
      "                                   4 keywords.\n"
+     "      Header                   - Similar to Id but includes the full URL.\n"
      "    svn:executable - If present, make the file executable.  Use\n"
      "      'svn propdel svn:executable PATH...' to clear.\n"
      "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"

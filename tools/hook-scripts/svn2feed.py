@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -72,9 +72,9 @@ Options:
 
 import sys
 
-# Python 2.3 is required for datetime
-if sys.version_info < (2, 3):
-    sys.stderr.write("Error: Python 2.3 or higher required.\n")
+# Python 2.4 is required for subprocess
+if sys.version_info < (2, 4):
+    sys.stderr.write("Error: Python 2.4 or higher required.\n")
     sys.stderr.flush()
     sys.exit(1)
 

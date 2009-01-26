@@ -2,7 +2,7 @@
  * patch.c:  wrapper around wc patch functionality.
  *
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,6 +31,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
+#include "svn_props.h"
 #include "svn_string.h"
 #include "svn_hash.h"
 #include <assert.h>

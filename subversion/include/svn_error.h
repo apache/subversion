@@ -25,14 +25,14 @@
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
-#include <apr.h>
-#include <apr_errno.h>     /* APR's error system */
-#include <apr_pools.h>
+#include <apr.h>        /* for apr_size_t */
+#include <apr_errno.h>  /* APR's error system */
+#include <apr_pools.h>  /* for apr_pool_t */
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define APR_WANT_STDIO
 #endif
-#include <apr_want.h>
+#include <apr_want.h>   /* for FILE* */
 
 #include "svn_types.h"
 

@@ -40,14 +40,15 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_nls.h"
+#include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_version.h"
-#include "utf_impl.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_utf_private.h"
 
 #include "svn_private_config.h"
 
@@ -552,7 +553,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
 #ifdef SVN_HAVE_GNOME_KEYRING
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                         &svn_cmdline_auth_unlock_prompt);
+                         &svn_cmdline__auth_gnome_keyring_unlock_prompt);
 #endif /* SVN_HAVE_GNOME_KEYRING */
 
   return SVN_NO_ERROR;

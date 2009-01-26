@@ -17,13 +17,7 @@
  *
  * @file svn_client.h
  * @brief Subversion's client library
- */
-
-
-
-/*** Includes ***/
-
-/*
+ *
  * Requires:  The working copy library and repository access library.
  * Provides:  Broad wrappers around working copy library functionality.
  * Used By:   Client programs.
@@ -32,17 +26,22 @@
 #ifndef SVN_CLIENT_H
 #define SVN_CLIENT_H
 
+#include <apr.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_getopt.h>
+#include <apr_file_io.h>
+#include <apr_time.h>
 
 #include "svn_types.h"
-#include "svn_wc.h"
 #include "svn_string.h"
-#include "svn_error.h"
+#include "svn_wc.h"
 #include "svn_opt.h"
 #include "svn_version.h"
 #include "svn_ra.h"
 #include "svn_diff.h"
-
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -410,7 +409,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create2() to allocate and initialize this
+ * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -539,7 +538,7 @@ typedef struct svn_client_commit_item_t
  * @since New in 1.6.
  */
 svn_client_commit_item3_t *
-svn_client_commit_item_create2(apr_pool_t *pool);
+svn_client_commit_item3_create(apr_pool_t *pool);
 
 /** Like svn_client_commit_item_create2() but with a stupid "const"
  * qualifier on the returned structure, and it returns an error that

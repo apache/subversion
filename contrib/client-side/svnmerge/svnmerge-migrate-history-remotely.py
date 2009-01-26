@@ -237,6 +237,10 @@ class SvnClient:
         ra.get_location_segments(ra_session, rel_path, rev, rev,
                                  oldest_rev, _segment_receiver)
 
+        # Location segments come in youngest to oldest.  But we rather
+        # need oldest-to-youngest for proper revision range ordering.
+        location_segments.sort(lambda a, b: cmp(a.range_start, b.range_start))
+
         # Transform location segments into merge sources and ranges.
         mergeinfo = {}
         for segment in location_segments:
