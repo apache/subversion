@@ -290,7 +290,7 @@ compare_and_verify(svn_boolean_t *modified_p,
           if (compare_textbases && need_translation)
             {
               if (eol_style == svn_subst_eol_style_native)
-                eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+                eol_str = SVN_SUBST_NATIVE_EOL_STR;
               else if (eol_style != svn_subst_eol_style_fixed
                        && eol_style != svn_subst_eol_style_none)
                 return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
