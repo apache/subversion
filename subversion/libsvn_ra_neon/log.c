@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -30,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -64,7 +63,7 @@ struct log_baton
   svn_boolean_t want_message;
 
   /* The current changed path item. */
-  svn_log_changed_path_t *this_path_item;
+  svn_log_changed_path2_t *this_path_item;
 
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
@@ -92,14 +91,14 @@ struct log_baton
 static void
 reset_log_item(struct log_baton *lb)
 {
-  lb->log_entry->revision      = SVN_INVALID_REVNUM;
-  lb->log_entry->revprops      = NULL;
-  lb->log_entry->changed_paths = NULL;
-  lb->log_entry->has_children  = FALSE;
+  lb->log_entry->revision       = SVN_INVALID_REVNUM;
+  lb->log_entry->revprops       = NULL;
+  lb->log_entry->changed_paths  = NULL;  
+  lb->log_entry->has_children   = FALSE;
+  lb->log_entry->changed_paths2 = NULL;
 
   svn_pool_clear(lb->subpool);
 }
-
 
 /*
  * This implements the `svn_ra_neon__xml_startelm_cb' prototype.
@@ -180,8 +179,9 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
-      lb->this_path_item = apr_pcalloc(lb->subpool,
-                                       sizeof(*(lb->this_path_item)));
+      lb->this_path_item = svn_log_changed_path2_create(lb->subpool);
+      lb->this_path_item->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,
@@ -260,9 +260,12 @@ log_end_element(void *baton, int state,
     case ELEM_modified_path:
       {
         char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
-        if (! lb->log_entry->changed_paths)
-          lb->log_entry->changed_paths = apr_hash_make(lb->subpool);
-        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
+        if (! lb->log_entry->changed_paths2)
+          {
+            lb->log_entry->changed_paths2 = apr_hash_make(lb->subpool);
+            lb->log_entry->changed_paths = lb->log_entry->changed_paths2;
+          }
+        apr_hash_set(lb->log_entry->changed_paths2, path, APR_HASH_KEY_STRING,
                      lb->this_path_item);
         break;
       }

@@ -17,6 +17,8 @@
 
 
 #include "svn_iter.h"
+#include "svn_pools.h"
+
 #include "svn_error_codes.h"
 
 static svn_error_t internal_break_error =

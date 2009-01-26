@@ -16,11 +16,13 @@
  * ====================================================================
  */
 
+#include "svn_path.h"
+#include "svn_types.h"
+#include "svn_pools.h"
+
 #include "tree_conflicts.h"
 #include "log.h"
 #include "entries.h"
-#include "svn_path.h"
-#include "svn_types.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"

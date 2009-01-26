@@ -23,6 +23,7 @@
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "dag.h"
 #include "err.h"

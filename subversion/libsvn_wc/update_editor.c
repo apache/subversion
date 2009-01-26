@@ -2558,7 +2558,12 @@ close_directory(void *dir_baton,
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  if (! db->bump_info->skipped && (db->add_existed || (! db->added))
+  /* ### TODO: Instead of duplicating these complex conditions, should say
+   * "if (! db->have_notified) ...". Alternatively, if it would be
+   * acceptable for the notification to come always after the children, then
+   * store the desired notification in the baton as soon as we know what it
+   * is, and finally, here, just send it if it has already been created. */
+   if (! db->bump_info->skipped && (db->add_existed || (! db->added))
       && (db->edit_baton->notify_func))
     {
       svn_wc_notify_t *notify
@@ -3764,12 +3769,6 @@ merge_file(svn_wc_notify_state_t *content_state,
   if (new_text_base_path)
     {
       if (! is_locally_modified && ! is_replaced)
-        /* ### Issue #3354:
-         * ### In the case of #3354, we have a locally modified file
-         * 'alpha', but the target of the current bit of updating is
-         * 'alpha.moved' (which does not yet exist locally). This "if" is
-         * checking the state of 'alpha', but (jump to the "else" now) ...
-         * */
         {
           /* If there are no local mods, who cares whether it's a text
              or binary file!  Just write a log command to overwrite
@@ -3784,11 +3783,6 @@ merge_file(svn_wc_notify_state_t *content_state,
                                      fb->path, pool));
         }
       else   /* working file or obstruction is locally modified... */
-        /* ### Issue 3354:
-         * ... No, no: the working file 'alpha' is locally modified, but the
-         * target file 'alpha.moved' is not because it doesn't yet exist
-         * locally, so this code block fails because it calls
-         * svn_wc__merge_internal() to merge changes into 'alpha.moved'. */
         {
           svn_node_kind_t wfile_kind = svn_node_unknown;
 

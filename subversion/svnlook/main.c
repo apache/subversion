@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2242,7 +2242,7 @@ main(int argc, const char *argv[])
     SVN_INT_ERR(svn_error_create
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("The '--transaction' (-t) and '--revision' (-r) arguments "
-                   "can not co-exist")));
+                   "cannot co-exist")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're

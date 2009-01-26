@@ -26,6 +26,7 @@
 #include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_utf.h"
 
 #ifdef SVN_DEBUG
 /* file_line for the non-debug case. */

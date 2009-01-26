@@ -41,18 +41,21 @@
 #ifndef SVN_WC_H
 #define SVN_WC_H
 
-
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
+#include <apr_time.h>
+#include <apr_file_io.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_delta.h"
-#include "svn_error.h"
+#include "svn_checksum.h"
+#include "svn_io.h"
+#include "svn_delta.h"     /* for svn_stream_t */
 #include "svn_opt.h"
-#include "svn_ra.h"    /* for svn_ra_reporter_t type */
+#include "svn_ra.h"        /* for svn_ra_reporter_t type */
+#include "svn_version.h"
 #include "svn_ra_svn.h"
 
 #ifdef __cplusplus
@@ -944,14 +947,17 @@ typedef enum svn_wc_notify_lock_state_t
  * give a less informative notification).
  *
  * @note Callers of notification functions should use svn_wc_create_notify()
- * to create structures of this type to allow for extensibility.
+ * or svn_wc_create_notify_url() to create structures of this type to allow
+ * for extensibility.
  *
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
 
   /** Path, either absolute or relative to the current working directory
-   * (i.e., not relative to an anchor). */
+   * (i.e., not relative to an anchor).@c path is "." or another valid path
+   * value for compatibilty reasons when the real target is an url that 
+   * is available in @c url. */
   const char *path;
 
   /** Action that describes what happened to @c path. */
@@ -999,15 +1005,23 @@ typedef struct svn_wc_notify_t {
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
 
+  /** Similar to @c path, but if non-NULL the notification is about a url.
+   * @since New in 1.6 */
+  const char *url;
+
   /** If non-NULL, specifies an absolute path prefix that can be subtracted
-   * from the start of the absolute path in @c path.  Its purpose is to
-   * allow notification to remove a common prefix from all the paths
+   * from the start of the absolute path in @c path or @c url.  Its purpose 
+   * is to allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
 
   /** If @c action relates to properties, specifies the name of the property.
    * @since New in 1.6 */
   const char *prop_name;
+
+  /** If @c action is @c svn_wc_notify_blame_revision, contains a list of
+   * revision properties for the specified revision */
+  apr_hash_t *rev_props;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1029,6 +1043,22 @@ svn_wc_notify_t *
 svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool);
+
+/**
+ * Allocate an @c svn_wc_notify_t structure in @a pool, initialize and return
+ * it.
+ *
+ * Set the @c url field of the created struct to @a url, @c action to, @c path
+ * to "." and @a action.  Set all other fields to their @c _unknown, @c NULL or
+ * invalid value, respectively. Make only a shallow copy of the pointer
+ * @a url.
+ *
+ * @since New in 1.6.
+ */
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool);
 
 /**
  * Return a deep copy of @a notify, allocated in @a pool.
@@ -2769,9 +2799,27 @@ typedef struct svn_wc_status2_t
   svn_wc_conflict_description_t *tree_conflict;
 
   /** If the item is a file that was added to the working copy with an
-      svn:externals; if file_external is TRUE, then switched is always
-      FALSE. */
+   * svn:externals; if file_external is TRUE, then switched is always
+   * FALSE. 
+   * @since New in 1.6
+   */
   svn_boolean_t file_external;
+  
+  /** The actual status of the text compared to the pristine base of the
+   * file. This value isn't masked by other working copy statuses.
+   * @c pristine_text_status is @c svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind pristine_text_status;
+  
+  /** The actual status of the properties compared to the pristine base of 
+   * the node. This value isn't masked by other working copy statuses.
+   * @c pristine_prop_status is @c svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind pristine_prop_status;
 
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;

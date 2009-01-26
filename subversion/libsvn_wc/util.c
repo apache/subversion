@@ -5,7 +5,7 @@
  *          specific to working copies.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,17 +19,18 @@
  * ====================================================================
  */
 
-
-
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_lib.h>
+
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_props.h"
+
 #include "wc.h"   /* just for prototypes of things in this .c file */
 #include "private/svn_wc_private.h"
 
@@ -118,19 +119,24 @@ svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool)
 {
-  svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
+  svn_wc_notify_t *ret = apr_pcalloc(pool, sizeof(*ret));
   ret->path = path;
   ret->action = action;
   ret->kind = svn_node_unknown;
-  ret->mime_type = NULL;
-  ret->lock = NULL;
-  ret->err = SVN_NO_ERROR;
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
-  ret->changelist_name = NULL;
-  ret->merge_range = NULL;
-  ret->path_prefix = NULL;
+
+  return ret;
+}
+
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool)
+{
+  svn_wc_notify_t *ret = svn_wc_create_notify(".", action, pool);
+  ret->url = url;
 
   return ret;
 }
@@ -167,8 +173,14 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
   if (ret->merge_range)
     ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
+  if (ret->url)
+    ret->url = apr_pstrdup(pool, ret->url);
   if (ret->path_prefix)
     ret->path_prefix = apr_pstrdup(pool, ret->path_prefix);
+  if (ret->prop_name)
+    ret->prop_name = apr_pstrdup(pool, ret->prop_name);
+  if (ret->rev_props)
+    ret->rev_props = svn_prop_hash_dup(ret->rev_props, pool);
 
   return ret;
 }

@@ -31,6 +31,14 @@
 #include <sasl/sasl.h>
 #endif
 
+#include <apr_errno.h>
+#include <apr_pools.h>
+
+#include "svn_error.h"
+#include "svn_ra_svn.h"
+
+#include "private/svn_atomic.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -64,6 +72,7 @@ svn_error_t *
 svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
                                    sasl_conn_t *sasl_ctx,
                                    apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

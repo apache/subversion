@@ -114,55 +114,6 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
 }
 
 
-svn_error_t *
-svn_subst_translate_to_normal_form(const char *src,
-                                   const char *dst,
-                                   svn_subst_eol_style_t eol_style,
-                                   const char *eol_str,
-                                   svn_boolean_t always_repair_eols,
-                                   apr_hash_t *keywords,
-                                   svn_boolean_t special,
-                                   apr_pool_t *pool)
-{
-
-  if (eol_style == svn_subst_eol_style_native)
-    eol_str = SVN_SUBST__DEFAULT_EOL_STR;
-  else if (! (eol_style == svn_subst_eol_style_fixed
-              || eol_style == svn_subst_eol_style_none))
-    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
-
-  return svn_subst_copy_and_translate3(src, dst, eol_str,
-                                       eol_style == svn_subst_eol_style_fixed
-                                       || always_repair_eols,
-                                       keywords,
-                                       FALSE /* contract keywords */,
-                                       special,
-                                       pool);
-}
-
-svn_error_t *
-svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
-                                           svn_stream_t *source,
-                                           svn_subst_eol_style_t eol_style,
-                                           const char *eol_str,
-                                           svn_boolean_t always_repair_eols,
-                                           apr_hash_t *keywords,
-                                           apr_pool_t *pool)
-{
-  if (eol_style == svn_subst_eol_style_native)
-    eol_str = SVN_SUBST__DEFAULT_EOL_STR;
-  else if (! (eol_style == svn_subst_eol_style_fixed
-              || eol_style == svn_subst_eol_style_none))
-    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
-
- *stream = svn_subst_stream_translated(source, eol_str,
-                                       eol_style == svn_subst_eol_style_fixed
-                                       || always_repair_eols,
-                                       keywords, FALSE, pool);
-
- return SVN_NO_ERROR;
-}
-
 
 /* Helper function for svn_subst_build_keywords */
 
@@ -398,6 +349,15 @@ svn_subst_build_keywords2(apr_hash_t **kw,
                                   pool);
           apr_hash_set(*kw, SVN_KEYWORD_ID,
                        APR_HASH_KEY_STRING, id_val);
+        }
+      else if ((! svn_cstring_casecmp(keyword, SVN_KEYWORD_HEADER)))
+        {
+          svn_string_t *header_val;
+
+          header_val = keyword_printf("%u %r %d %a", rev, url, date, author,
+                                      pool);
+          apr_hash_set(*kw, SVN_KEYWORD_HEADER,
+                       APR_HASH_KEY_STRING, header_val);
         }
     }
 
@@ -1388,6 +1348,16 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
 }
 
 
+/* ### temp forward declaration, rather than a move, to minimize diff size */
+static svn_error_t *
+svn_subst_create_translated(svn_stream_t *src_stream,
+                            const char *dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool);
+
 svn_error_t *
 svn_subst_copy_and_translate3(const char *src,
                               const char *dst,
@@ -1445,9 +1415,10 @@ svn_subst_copy_and_translate3(const char *src,
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
 
   /* ### note: this checks for SPECIAL and for NO-TRANS. whatever. */
+  /* ### inline this code. create_translated is no longer... */
   err = svn_subst_create_translated(src_stream, dst,
                                     eol_str, repair, keywords, expand,
-                                    FALSE, pool);
+                                    pool);
 
   /* On errors, we have a pathname available. */
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
@@ -1459,25 +1430,18 @@ svn_subst_copy_and_translate3(const char *src,
 }
 
 
-svn_error_t *
+static svn_error_t *
 svn_subst_create_translated(svn_stream_t *src_stream,
                             const char *dst,
                             const char *eol_str,
                             svn_boolean_t repair,
                             apr_hash_t *keywords,
                             svn_boolean_t expand,
-                            svn_boolean_t special,
                             apr_pool_t *pool)
 {
   const char *dst_tmp;
   svn_stream_t *dst_stream;
   svn_error_t *err;
-
-  /* If this is a 'special' file, then we need to create the thing... */
-  if (special)
-    {
-      return create_special_file_from_stream(src_stream, dst, pool);
-    }
 
   /* Our API contract says that we don't close SRC_STREAM, but the code
      below always does. Disown the sucker. */

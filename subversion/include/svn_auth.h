@@ -22,7 +22,10 @@
 #ifndef SVN_AUTH_H
 #define SVN_AUTH_H
 
+#include <apr.h>
 #include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_tables.h>
 
 #include "svn_types.h"
 #include "svn_config.h"
@@ -512,26 +515,6 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)
    void *baton,
    apr_pool_t *pool);
 
-/** A type of callback function for obtaining the default keyring password.
- * ### Is this type of callback specific to the GNOME Keyring?
- * ### Is this type of callback specific to the default keyring?
- *
- * In this callback, the client should ask the user for default keyring
- * @a keyring_name password.
- *
- * The answer is returned in @a *keyring_password.
- * @a baton is an implementation-specific closure.
- * All allocations should be done in @a pool.
- *
- * @since New in 1.6
- */
-typedef svn_error_t *(*svn_auth_unlock_prompt_func_t)
-  (char **keyring_password,
-   const char *keyring_name,
-   void *baton,
-   apr_pool_t *pool);
-
-
 
 /** Initialize an authentication system.
  *
@@ -945,6 +928,36 @@ svn_auth_get_keychain_ssl_client_cert_pw_provider
 #endif /* DARWIN || DOXYGEN */
 
 #if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
+/** A type of callback function for obtaining the GNOME Keyring password.
+ *
+ * In this callback, the client should ask the user for default keyring
+ * @a keyring_name password.
+ *
+ * The answer is returned in @a *keyring_password.
+ * @a baton is an implementation-specific closure.
+ * All allocations should be done in @a pool.
+ *
+ * @since New in 1.6
+ */
+typedef svn_error_t *(*svn_auth_gnome_keyring_unlock_prompt_func_t)
+  (char **keyring_password,
+   const char *keyring_name,
+   void *baton,
+   apr_pool_t *pool);
+
+
+/** libsvn_auth_gnome_keyring-specific run-time parameters. */
+
+/** @brief The pointer to function which prompts user for GNOME Keyring
+ * password.
+ * The type of this pointer should be svn_auth_gnome_keyring_unlock_prompt_func_t. */
+#define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC "gnome-keyring-unlock-prompt-func"
+
+/** @brief The baton which is passed to
+ * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC. */
+#define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON "gnome-keyring-unlock-prompt-baton"
+
+
 /**
  * Get libsvn_auth_gnome_keyring version information.
  *
@@ -952,14 +965,6 @@ svn_auth_get_keychain_ssl_client_cert_pw_provider
  */
 const svn_version_t *
 svn_auth_gnome_keyring_version(void);
-
-
-/** @brief The function which prompts user for GNOME Keyring password. */
-#define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC "gnome-keyring-unlock-prompt-func"
-
-/** @brief The baton which is passed to
- * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC. */
-#define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON "gnome-keyring-unlock-prompt-baton"
 
 
 /**
@@ -971,11 +976,11 @@ svn_auth_gnome_keyring_version(void);
  * password is stored in GNOME Keyring.
  *
  * If the GNOME Keyring is locked the provider calls
- * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC in order to unlock
+ * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC in order to unlock
  * the keyring.
  *
  * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON is passed to
- * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC.
+ * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC.
  *
  * Allocate @a *provider in @a pool.
  *
@@ -992,11 +997,19 @@ svn_auth_get_gnome_keyring_simple_provider
 /**
  * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
- * user's ~/.subversion configuration directory.  Allocate @a *provider in
- * @a pool.
+ * user's ~/.subversion configuration directory.
  *
  * This is like svn_client_get_ssl_client_cert_pw_file_provider(), except
  * that the password is stored in GNOME Keyring.
+ *
+ * If the GNOME Keyring is locked the provider calls
+ * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC in order to unlock
+ * the keyring.
+ *
+ * @c SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON is passed to
+ * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC.
+ *
+ * Allocate @a *provider in @a pool.
  *
  * @since New in 1.6
  * @note This function actually works only on systems with

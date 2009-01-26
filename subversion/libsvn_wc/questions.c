@@ -289,13 +289,19 @@ compare_and_verify(svn_boolean_t *modified_p,
 
           if (compare_textbases && need_translation)
             {
+              if (eol_style == svn_subst_eol_style_native)
+                eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+              else if (eol_style != svn_subst_eol_style_fixed
+                       && eol_style != svn_subst_eol_style_none)
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
               /* Wrap file stream to detranslate into normal form. */
-              SVN_ERR(svn_subst_stream_translated_to_normal_form(&v_stream,
-                                                                 v_stream,
-                                                                 eol_style,
-                                                                 eol_str, TRUE,
-                                                                 keywords,
-                                                                 pool));
+              v_stream = svn_subst_stream_translated(v_stream,
+                                                     eol_str,
+                                                     TRUE,
+                                                     keywords,
+                                                     FALSE /* expand */,
+                                                     pool);
             }
           else if (need_translation)
             {

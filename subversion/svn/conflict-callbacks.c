@@ -17,11 +17,7 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
+#include <apr_xlate.h>  /* for APR_LOCALE_CHARSET */
 
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
@@ -31,6 +27,7 @@
 #include "svn_client.h"
 #include "svn_types.h"
 #include "svn_pools.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"

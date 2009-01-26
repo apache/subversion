@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -261,11 +261,3 @@ class RevisionChangeCollector(ChangeCollector):
     if idx == -1:
       return parent_path + '/' + path
     return parent_path + path[idx:]
-
-
-# enable True/False in older vsns of Python
-try:
-  True
-except NameError:
-  True = 1
-  False = 0

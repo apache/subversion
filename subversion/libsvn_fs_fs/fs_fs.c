@@ -28,6 +28,7 @@
 #include <apr_uuid.h>
 #include <apr_lib.h>
 #include <apr_md5.h>
+#include <apr_sha1.h>
 #include <apr_thread_mutex.h>
 
 #include "svn_pools.h"
@@ -4742,14 +4743,13 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_file_t *file;
-  svn_fs_path_change2_t *change = apr_pcalloc(pool, sizeof(*change));
+  svn_fs_path_change2_t *change;
 
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
                            APR_APPEND | APR_WRITE | APR_CREATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  change->node_rev_id = id;
-  change->change_kind = change_kind;
+  change = svn_fs_path_change2_create(id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
   change->node_kind = node_kind;
@@ -5785,15 +5785,15 @@ commit_body_rep_cache(void *baton, apr_pool_t *pool)
   svn_error_t *err;
 
   /* Start the sqlite transaction. */
-  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache.db));
+  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache_db));
 
   err = commit_body(baton, pool);
 
   /* Commit or rollback the sqlite transaction. */
   if (err)
-    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache.db));
+    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache_db));
   else
-    return svn_sqlite__transaction_commit(ffd->rep_cache.db);
+    return svn_sqlite__transaction_commit(ffd->rep_cache_db);
 
   return err;
 }
@@ -5811,7 +5811,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.fs = fs;
   cb.txn = txn;
   return svn_fs_fs__with_write_lock(fs,
-                                    ffd->rep_cache.db ? commit_body_rep_cache :
+                                    ffd->rep_cache_db ? commit_body_rep_cache :
                                                         commit_body, 
                                     &cb, pool);
 }

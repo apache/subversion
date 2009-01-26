@@ -1,7 +1,7 @@
 /* rep-sharing.c --- the rep-sharing cache for fsfs
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,18 +25,32 @@
 
 #include "private/svn_sqlite.h"
 
+#include "rep-cache-db.sql.h"
+
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
 
 static const char * const upgrade_sql[] = { NULL,
-  "pragma auto_vacuum = 1;"
-  APR_EOL_STR
-  "create table rep_cache (hash text not null primary key,   "
-  "                        revision integer not null,        "
-  "                        offset integer not null,          "
-  "                        size integer not null,            "
-  "                        expanded_size integer not null);  "
-  APR_EOL_STR
+  REP_CACHE_DB_SQL
+  };
+
+/* These values are directly related to the statements contained in STATEMENTS
+   below.  If you add something to that array, you'd better do the same here.
+*/
+enum statement_keys {
+  STMT_GET_REP,
+  STMT_SET_REP
+};
+
+static const char * const statements[] = {
+  "select revision, offset, size, expanded_size "
+  "from rep_cache "
+  "where hash = ?1", 
+
+  "insert into rep_cache (hash, revision, offset, size, expanded_size) "
+  "values (?1, ?2, ?3, ?4, ?5);",
+
+  NULL
   };
 
 
@@ -48,34 +62,17 @@ cleanup_db_apr(void *data)
   svn_fs_t *fs = data;
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
-  int i;
 
-  svn_sqlite__stmt_t *stmts[] = { ffd->rep_cache.get_rep_stmt,
-                                  ffd->rep_cache.set_rep_stmt,
-                                  ffd->rep_cache.inc_select_stmt,
-                                  ffd->rep_cache.inc_update_stmt };
-
-  for (i = 0; i < 4; i++)
+  err = svn_sqlite__close(ffd->rep_cache_db, SVN_NO_ERROR);
+  if (err)
     {
-      if (stmts[i])
-        {
-          err = svn_sqlite__finalize(stmts[i]);
-          if (err)
-            goto err_cleanup;
-        }
+      fs->warning(fs->warning_baton, err);
+      svn_error_clear(err);
+
+      return SVN_ERR_FS_CLEANUP;
     }
 
-  err = svn_sqlite__close(ffd->rep_cache.db, SVN_NO_ERROR);
-  if (err)
-    goto err_cleanup;
-
   return APR_SUCCESS;
-
-  err_cleanup:
-    fs->warning(fs->warning_baton, err);
-    svn_error_clear(err);
-
-    return SVN_ERR_FS_CLEANUP;
 }
 
 
@@ -88,8 +85,9 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 
   /* Open (or create) the sqlite database */
   db_path = svn_path_join(fs->path, REP_CACHE_DB_NAME, pool);
-  SVN_ERR(svn_sqlite__open(&ffd->rep_cache.db, db_path,
-                           svn_sqlite__mode_rwcreate, REP_CACHE_SCHEMA_FORMAT,
+  SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
+                           svn_sqlite__mode_rwcreate, statements,
+                           REP_CACHE_SCHEMA_FORMAT,
                            upgrade_sql, fs->pool, pool));
 
   apr_pool_cleanup_register(fs->pool, fs, cleanup_db_apr,
@@ -105,9 +103,10 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  if (ffd->rep_cache.db == NULL)
+  if (ffd->rep_cache_db == NULL)
     {
       *rep = NULL;
       return SVN_NO_ERROR;
@@ -119,30 +118,24 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
 
-  if (!ffd->rep_cache.get_rep_stmt)
-    SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.get_rep_stmt, ffd->rep_cache.db,
-                  "select revision, offset, size, expanded_size from rep_cache "
-                  "where hash = :1", fs->pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_GET_REP));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s",
+                            svn_checksum_to_cstring(checksum, pool)));
 
-  SVN_ERR(svn_sqlite__bind_text(ffd->rep_cache.get_rep_stmt, 1,
-                                svn_checksum_to_cstring(checksum, pool)));
-
-  SVN_ERR(svn_sqlite__step(&have_row, ffd->rep_cache.get_rep_stmt));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
       *rep = apr_pcalloc(pool, sizeof(**rep));
       (*rep)->sha1_checksum = svn_checksum_dup(checksum, pool);
-      (*rep)->revision = svn_sqlite__column_revnum(ffd->rep_cache.get_rep_stmt,
-                                                   0);
-      (*rep)->offset = svn_sqlite__column_int(ffd->rep_cache.get_rep_stmt, 1);
-      (*rep)->size = svn_sqlite__column_int(ffd->rep_cache.get_rep_stmt, 2);
-      (*rep)->expanded_size = svn_sqlite__column_int(ffd->rep_cache.get_rep_stmt,
-                                                     3);
+      (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
+      (*rep)->offset = svn_sqlite__column_int(stmt, 1);
+      (*rep)->size = svn_sqlite__column_int(stmt, 2);
+      (*rep)->expanded_size = svn_sqlite__column_int(stmt, 3);
     }
   else
     *rep = NULL;
 
-  return svn_sqlite__reset(ffd->rep_cache.get_rep_stmt);
+  return svn_sqlite__reset(stmt);
 }
 
 svn_error_t *
@@ -152,10 +145,10 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t have_row;
   representation_t *old_rep;
+  svn_sqlite__stmt_t *stmt;
 
-  if (ffd->rep_cache.db == NULL)
+  if (ffd->rep_cache_db == NULL)
     return SVN_NO_ERROR;
 
   /* We only allow SHA1 checksums in this table. */
@@ -193,21 +186,13 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
         return SVN_NO_ERROR;
     }
 
-  if (!ffd->rep_cache.set_rep_stmt)
-    SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.set_rep_stmt, ffd->rep_cache.db,
-                  "insert into rep_cache (hash, revision, offset, size, "
-                  "expanded_size) "
-                  "values (:1, :2, :3, :4, :5);", fs->pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
+  SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
+                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
+                            (apr_int64_t) rep->revision,
+                            (apr_int64_t) rep->offset,
+                            (apr_int64_t) rep->size,
+                            (apr_int64_t) rep->expanded_size));
 
-  SVN_ERR(svn_sqlite__bind_text(ffd->rep_cache.set_rep_stmt, 1,
-                                svn_checksum_to_cstring(rep->sha1_checksum,
-                                                        pool)));
-  SVN_ERR(svn_sqlite__bind_int64(ffd->rep_cache.set_rep_stmt, 2, rep->revision));
-  SVN_ERR(svn_sqlite__bind_int64(ffd->rep_cache.set_rep_stmt, 3, rep->offset));
-  SVN_ERR(svn_sqlite__bind_int64(ffd->rep_cache.set_rep_stmt, 4, rep->size));
-  SVN_ERR(svn_sqlite__bind_int64(ffd->rep_cache.set_rep_stmt, 5,
-                                 rep->expanded_size));
-
-  SVN_ERR(svn_sqlite__step(&have_row, ffd->rep_cache.set_rep_stmt));
-  return svn_sqlite__reset(ffd->rep_cache.set_rep_stmt);
+  return svn_sqlite__insert(NULL, stmt);
 }

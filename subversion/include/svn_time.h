@@ -26,7 +26,6 @@
 #include <apr_time.h>
 
 #include "svn_error.h"
-#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {

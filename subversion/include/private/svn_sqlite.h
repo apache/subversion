@@ -1,7 +1,7 @@
 /* svn_sqlite.h
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,6 +56,12 @@ svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 
+/* Perform an insert as given by the prepared and bound STMT, and set
+   *ROW_ID to the id of the inserted row if ROW_ID is non-NULL.
+   STMT will be reset prior to returning. */
+svn_error_t *
+svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
+
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
    result is not okay.  */
 svn_error_t *
@@ -64,18 +70,46 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
 /* Open a connection in *DB to the database at PATH. Validate the schema,
    creating/upgrading to LATEST_SCHEMA if needed using the instructions
    in UPGRADE_SQL. The resulting DB is allocated in RESULT_POOL, and any
-   temporary allocations are made in SCRATCH_POOL. */
+   temporary allocations are made in SCRATCH_POOL.
+   
+   STATEMENTS is an array of strings which may eventually be executed, the
+   last element of which should be NULL.  These strings are not duplicated
+   internally, and should have a lifetime at least as long as RESULT_POOL.
+   STATEMENTS itself may be NULL, in which case it has no impact.
+   See svn_sqlite__get_statement() for how these strings are used. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
-                 svn_sqlite__mode_t mode,
+                 svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
+
+/* Returns the statement in *STMT which has been prepared from the
+   STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
+   pool as the DB, and will be cleaned up with DB is closed. */
+svn_error_t *
+svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
+                          int stmt_idx);
 
 /* Prepares TEXT as a statement in DB, returning a statement in *STMT,
    allocated in RESULT_POOL. */
 svn_error_t *
 svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                     const char *text, apr_pool_t *result_pool);
+
+/* Bind values to arguments in STMT, according to FMT.  FMT may contain:
+
+   Spec  Argument type       Item type
+   ----  -----------------   ---------
+   i     apr_int64_t         Number
+   s     const char **       String
+   b     const void *        Blob (must be followed by an additional argument
+                                   of type apr_size_t with the number of bytes
+                                   in the object)
+
+  Each character in FMT maps to one argument, in the order they appear.
+*/
+svn_error_t *
+svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
 
 /* Error-handling wrapper around sqlite3_bind_int64. */
 svn_error_t *
@@ -87,6 +121,13 @@ svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
 svn_error_t *
 svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt, int slot,
                       const char *val);
+
+/* Error-handling wrapper around sqlite3_bind_blob. */
+svn_error_t *
+svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
+                      int slot,
+                      const void *val,
+                      apr_size_t len);
 
 /* Wrapper around sqlite3_column_text. */
 const char *

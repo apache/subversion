@@ -38,13 +38,11 @@
 #ifndef SVN_DIRENT_URI_H
 #define SVN_DIRENT_URI_H
 
-
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 
-#include "svn_string.h"
-#include "svn_error.h"
-
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
