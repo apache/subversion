@@ -1491,9 +1491,9 @@ svn_wc_entries_read(apr_hash_t **entries,
       new_entries = svn_wc__adm_access_entries(adm_access, show_hidden, pool);
     }
 
-   *entries = new_entries;
-   return SVN_NO_ERROR;
- }
+  *entries = new_entries;
+  return SVN_NO_ERROR;
+}
 
 /* If STR is non-null, append STR to BUF, terminating it with a
    newline, escaping bytes that needs escaping, using POOL for
