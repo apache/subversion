@@ -233,7 +233,9 @@ ConflictResolverCallback::createJConflictDescriptor(
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;II"
                               "Ljava/lang/String;ZLjava/lang/String;III"
                               "Ljava/lang/String;Ljava/lang/String;"
-                              "Ljava/lang/String;Ljava/lang/String;)V");
+                              "Ljava/lang/String;Ljava/lang/String;"
+                              "L"JAVA_PACKAGE"/ConflictVersion;"
+                              "L"JAVA_PACKAGE"/ConflictVersion;)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         return NULL;
     }
@@ -259,6 +261,14 @@ ConflictResolverCallback::createJConflictDescriptor(
   jstring jmergedPath = JNIUtil::makeJString(desc->merged_file);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+  jobject jsrcLeft = ConflictResolverCallback::createJConflictVersion(
+                                                      desc->src_left_version);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jobject jsrcRight = ConflictResolverCallback::createJConflictVersion(
+                                                      desc->src_right_version);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath,
@@ -270,7 +280,7 @@ ConflictResolverCallback::createJConflictDescriptor(
                                  EnumMapper::mapConflictReason(desc->reason),
                                  EnumMapper::mapOperation(desc->operation),
                                  jbasePath, jreposPath, juserPath,
-                                 jmergedPath);
+                                 jmergedPath, jsrcLeft, jsrcRight);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -299,6 +309,62 @@ ConflictResolverCallback::createJConflictDescriptor(
   env->DeleteLocalRef(jmergedPath);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+  env->DeleteLocalRef(jsrcRight);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jsrcLeft);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   return jdesc;
+}
+
+jobject
+ConflictResolverCallback::createJConflictVersion(
+                                    const svn_wc_conflict_version_t *version)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  if (version == NULL)
+    return NULL;
+
+  // Create an instance of the conflict descriptor.
+  static jmethodID ctor = 0;
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictVersion");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  if (ctor == 0)
+    {
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
+                                               "Ljava/lang/String;I)V");
+      if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
+        return NULL;
+    }
+
+  jstring jreposURL = JNIUtil::makeJString(version->repos_url);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jstring jpathInRepos = JNIUtil::makeJString(version->path_in_repos);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jobject jversion = env->NewObject(clazz, ctor, jreposURL,
+                                 (jlong)version->peg_rev, jpathInRepos,
+                                 EnumMapper::mapNodeKind(version->node_kind));
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jreposURL);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jpathInRepos);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jversion;
 }
