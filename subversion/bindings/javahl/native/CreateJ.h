@@ -36,6 +36,19 @@ class CreateJ
   static jobject
   ConflictDescriptor(const svn_wc_conflict_description_t *desc);
 
+  static jobject
+  Info(const svn_wc_entry_t *entry);
+
+  static jobject
+  Lock(const svn_lock_t *lock);
+
+  static jobject
+  Property(jobject jthis, const char *path, const char *name,
+           svn_string_t *value);
+
+  static jobjectArray
+  RevisionRangeArray(apr_array_header_t *ranges);
+
  protected:
   static jobject
   ConflictVersion(const svn_wc_conflict_version_t *version);

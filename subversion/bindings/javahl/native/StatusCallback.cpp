@@ -22,7 +22,6 @@
 #include "StatusCallback.h"
 #include "CreateJ.h"
 #include "EnumMapper.h"
-#include "SVNClient.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
@@ -181,7 +180,7 @@ StatusCallback::createJavaStatus(const char *path,
 
       jIsTreeConflicted = (status->tree_conflict != NULL) 
                              ? JNI_TRUE: JNI_FALSE;
-      jLock = SVNClient::createJavaLock(status->repos_lock);
+      jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
