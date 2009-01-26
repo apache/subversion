@@ -22,7 +22,7 @@ package org.tigris.subversion.javahl;
  * The description of a merge conflict, encountered during
  * merge/update/switch operations.
  *
- * @since 1.5
+ * @since 1.6
  */
 public class ConflictVersion
 {
