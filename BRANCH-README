@@ -5,10 +5,6 @@ reintegrate-able branch, with regular catch-up merges from the trunk.
 
    =======================================================================
 
-   WARNING: Code is currently causing server SEGFAULTs (Possibly
-   WARNING: due to using "me resource" for PROPFINDs, which have
-   WARNING: special handling for VCCs but not for the "me resource")
-
    These tests are currently failing for cmpilato:
 
       authz_tests.py 3: broken authz files cause errors
