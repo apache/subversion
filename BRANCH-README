@@ -17,9 +17,6 @@ reintegrate-able branch, with regular catch-up merges from the trunk.
       merge_tests.py 4: some simple property merges
       tree_conflict_tests.py 2: up/sw file: del/rpl/mv onto modify
 
-   Additionally, the svnsync_tests.py are segfauling the server and as
-   such just running indefinitely in a loop.
-
    =======================================================================
 
 
