@@ -558,14 +558,22 @@ copy_file_administratively(const char *src_path,
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
             {
+              svn_boolean_t repair = FALSE;
+
+              if (eol_style == svn_subst_eol_style_native)
+                eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+              else if (eol_style == svn_subst_eol_style_fixed)
+                repair = TRUE;
+              else if (eol_style != svn_subst_eol_style_none)
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
               /* Wrap the stream to translate to normal form */
-              SVN_ERR(svn_subst_stream_translated_to_normal_form(&contents,
-                                                                 contents,
-                                                                 eol_style,
-                                                                 eol_str,
-                                                                 FALSE,
-                                                                 keywords,
-                                                                 pool));
+              contents = svn_subst_stream_translated(contents,
+                                                     eol_str,
+                                                     repair,
+                                                     keywords,
+                                                     FALSE /* expand */,
+                                                     pool);
             }
         }
     }
