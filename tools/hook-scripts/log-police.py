@@ -17,14 +17,6 @@ import svn.repos
 import svn.core
 
 
-# Pretend we have true booleans on older python versions
-try:
-  True
-except:
-  True = 1
-  False = 0
-
-
 def fix_log_message(log_message):
   """Return a fixed version of LOG_MESSAGE.  By default, this just
   means ensuring that the result ends with exactly one newline and no

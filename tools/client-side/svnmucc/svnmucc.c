@@ -15,18 +15,21 @@
     Subversion source directory.
 */
 
-#include "svn_cmdline.h"
-#include "svn_client.h"
-#include "svn_pools.h"
-#include "svn_error.h"
-#include "svn_path.h"
-#include "svn_ra.h"
-#include "svn_config.h"
-#include "svn_props.h"
-#include "svn_string.h"
-#include <apr_lib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <apr_lib.h>
+
+#include "svn_client.h"
+#include "svn_cmdline.h"
+#include "svn_config.h"
+#include "svn_error.h"
+#include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_props.h"
+#include "svn_ra.h"
+#include "svn_string.h"
+#include "svn_utf.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {

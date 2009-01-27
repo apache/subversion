@@ -24,6 +24,10 @@
 #ifndef SVN_SUBST_H
 #define SVN_SUBST_H
 
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_time.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_io.h"
@@ -33,6 +37,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* EOL conversion and keyword expansion. */
+
+/** The EOL used in the Repository for "native" files */
+#define SVN_SUBST_NATIVE_EOL_STR "\n"
 
 /** Valid states for 'svn:eol-style' property.
  *
@@ -307,7 +314,9 @@ svn_subst_stream_translated(svn_stream_t *stream,
  * @see svn_subst_translate_to_normal_form()
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
                                            svn_stream_t *source,
@@ -431,41 +440,6 @@ svn_subst_copy_and_translate(const char *src,
 
 
 /**
- * Create a new, translated file.
- *
- * This is similar to svn_subst_copy_and_translate3() except that it
- * takes a source stream.
- *
- * Translates the stream @a src into a file at path @a dst.  The
- * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
- * defined the same as in svn_subst_translate_stream3().
- *
- * If @a special is TRUE, then the stream should define a special file,
- * and be in "normal form". The file @a dst will then be a special file.
- *
- * The contents will be copied/translated into a temporary file, and then
- * moved to @a dst atomically.
- *
- * If anything goes wrong during the copy, attempt to delete @a dst (if
- * it exists).
- *
- * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
- * copy.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_subst_create_translated(svn_stream_t *src,
-                            const char *dst,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            apr_hash_t *keywords,
-                            svn_boolean_t expand,
-                            svn_boolean_t special,
-                            apr_pool_t *scratch_pool);
-
-
-/**
  * Convenience routine: a variant of svn_subst_translate_stream3() which
  * operates on cstrings.
  *
@@ -521,8 +495,9 @@ svn_subst_translate_cstring(const char *src,
  *       svn_subst_copy_and_translate3().
  *
  * @since New in 1.4
- *
+ * @deprecated Provided for backward compatibility with the 1.5 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_to_normal_form(const char *src,
                                    const char *dst,

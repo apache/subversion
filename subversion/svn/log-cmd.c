@@ -16,12 +16,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 #define APR_WANT_STRFUNC
 #define APR_WANT_STDIO
 #include <apr_want.h>
@@ -35,6 +29,8 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_cmdline.h"
+#include "svn_props.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"

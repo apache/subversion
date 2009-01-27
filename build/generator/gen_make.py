@@ -19,11 +19,6 @@ import generator.swig.external_runtime
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
 
-try:
-  True
-except NameError:
-  True = 1
-  False = 0
 
 class Generator(gen_base.GeneratorBase):
 

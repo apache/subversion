@@ -19,10 +19,12 @@
 #ifndef SVN_LOG_H
 #define SVN_LOG_H
 
+#include <apr.h>
+#include <apr_pools.h>
+#include <apr_tables.h>
+
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
-#include "svn_pools.h"
-#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {

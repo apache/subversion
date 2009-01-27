@@ -19,20 +19,21 @@
  * @brief Repository Access
  */
 
-
-
-
 #ifndef SVN_RA_H
 #define SVN_RA_H
 
+#include <apr.h>
 #include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_time.h>
+#include <apr_file_io.h>  /* for apr_file_t */
 
-#include "svn_error.h"
+#include "svn_types.h"
+#include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
 #include "svn_mergeinfo.h"
-#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1536,8 +1537,8 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * result of a merge between @a start and @a end will be included.
  *
  * @note This functionality is not available in pre-1.1 servers.  If the
- * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
- * returned.
+ * server doesn't implement it, an alternative (but much slower)
+ * implementation based on svn_ra_get_log2() is used.
  *
  * @since New in 1.5.
  */

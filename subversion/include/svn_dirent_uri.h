@@ -38,13 +38,11 @@
 #ifndef SVN_DIRENT_URI_H
 #define SVN_DIRENT_URI_H
 
-
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 
-#include "svn_string.h"
-#include "svn_error.h"
-
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -393,7 +391,7 @@ svn_dirent_get_absolute(const char **pabsolute,
  * If @a pool is @c NULL , a pointer into @a uri2 will be returned to
  *       identify the remainder uri.
  *
- * ### todo: the ".." restriction is unfortunate, and would ideally
+ * ### @todo the ".." restriction is unfortunate, and would ideally
  * be lifted by making the implementation smarter.  But this is not
  * trivial: if the uri is "../foo", how do you know whether or not
  * the current directory is named "foo" in its parent?

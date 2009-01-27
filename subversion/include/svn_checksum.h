@@ -22,7 +22,10 @@
 #ifndef SVN_CHECKSUM_H
 #define SVN_CHECKSUM_H
 
-#include "svn_pools.h"
+#include <apr.h>        /* for apr_size_t */
+#include <apr_pools.h>  /* for apr_pool_t */
+
+#include "svn_types.h"  /* for svn_boolean_t, svn_error_t */
 
 #ifdef __cplusplus
 extern "C" {

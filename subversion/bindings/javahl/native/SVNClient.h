@@ -202,11 +202,8 @@ class SVNClient :public SVNBase
   static SVNClient *getCppObject(jobject jthis);
   SVNClient();
   virtual ~SVNClient();
-  static jobject createJavaLock(const svn_lock_t *lock);
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
-  jobject createJavaProperty(jobject jthis, const char *path,
-                             const char *name, svn_string_t *value);
   svn_client_ctx_t *getContext(const char *message);
   svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,
                                  Revision &revision, Revision &pegRevision,
@@ -222,8 +219,6 @@ class SVNClient :public SVNBase
             const char *outfileName, svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force);
 
-  jobject createJavaInfo(const svn_wc_entry_t *entry);
-
   Notify *m_notify;
   Notify2 *m_notify2;
   ConflictResolverCallback *m_conflictResolver;
@@ -232,8 +227,6 @@ class SVNClient :public SVNBase
   Path m_lastPath;
   bool m_cancelOperation;
   CommitMessage *m_commitMessage;
-
-  jobjectArray makeJRevisionRangeArray(apr_array_header_t *ranges);
 
   /**
    * Implements the svn_client_get_commit_log3_t API.

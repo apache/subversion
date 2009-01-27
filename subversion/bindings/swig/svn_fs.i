@@ -124,7 +124,7 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_md5.h"
+#include <apr_md5.h>
 %}
 
 %include svn_fs_h.swg
