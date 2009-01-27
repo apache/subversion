@@ -43,7 +43,7 @@
 
 #include "wc-metadata.sql.h"
 
-#define MAYBE_ALLOC(x,p) (x) ? (x) : apr_pcalloc((p), sizeof(*(x)))
+#define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
 /* TODO: Determine the real value of this number. */
 #define WC_DB_SCHEMA_FORMAT 1
@@ -76,12 +76,12 @@ static const char * const statements[] = {
           "?15, ?16);",
 
   "insert or replace into working_node "
-    "(wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_path, "
-     "copyfrom_revnum, moved_from, moved_to, checksum, translated_size, "
-     "changed_rev, changed_date, changed_author, depth, last_mod_time, "
-     "properties, changelist_id, tree_conflict_data) "
+    "(wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_id, "
+     "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
+     "translated_size, changed_rev, changed_date, changed_author, depth, "
+     "last_mod_time, properties, changelist_id, tree_conflict_data) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16, ?17, ?18);",
+          "?15, ?16, ?17, ?18, ?19);",
 
   NULL
   };
@@ -111,6 +111,7 @@ typedef struct {
 typedef struct {
   apr_int64_t id;
   apr_int64_t wc_id;
+  const char *local_relpath;
   const char *parent_relpath;
   svn_node_kind_t kind;
   apr_int64_t copyfrom_repos_id;
@@ -118,8 +119,11 @@ typedef struct {
   svn_revnum_t copyfrom_revnum;
   const char *moved_from;
   const char *moved_to;
-  svn_checksum_t checksum;
+  svn_checksum_t *checksum;
   apr_size_t translated_size;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
@@ -1854,7 +1858,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_string_t *properties;
+  svn_stringbuf_t *properties;
   svn_skel_t *skel;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_BASE_NODE));
@@ -1894,8 +1898,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   else
     skel = svn_skel__make_empty_list(scratch_pool);
 
-  properties = svn_string_create_from_buf(svn_skel__unparse(skel,
-                                                scratch_pool), scratch_pool);
+  properties = svn_skel__unparse(skel, scratch_pool);
   SVN_ERR(svn_sqlite__bind_blob(stmt, 15, properties->data, properties->len));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 16, base_node->incomplete_children));
@@ -1909,7 +1912,68 @@ insert_working_node(svn_sqlite__db_t *wc_db,
                     db_working_node_t *working_node,
                     apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
+  svn_sqlite__stmt_t *stmt;
+  svn_stringbuf_t *properties;
+  svn_skel_t *skel;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WORKING_NODE));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, working_node->wc_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, working_node->local_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, working_node->parent_relpath));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 4, working_node->kind));
+
+  if (working_node->copyfrom_repos_id > 0)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 5,
+                                     working_node->copyfrom_repos_id));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 6,
+                                    working_node->copyfrom_repos_path));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 7, working_node->copyfrom_revnum));
+    }
+
+  if (working_node->moved_from)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, working_node->moved_from));
+
+  if (working_node->moved_to)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 9, working_node->moved_to));
+
+  if (working_node->checksum)
+    {
+      SVN_ERR(svn_sqlite__bind_text(stmt, 10,
+                  svn_checksum_to_cstring(working_node->checksum,
+                                          scratch_pool)));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 11, working_node->translated_size));
+    }
+
+  if (working_node->changed_rev != SVN_INVALID_REVNUM)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->changed_rev));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_date));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 14, working_node->changed_author));
+    }
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 15, working_node->depth));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 16, working_node->last_mod_time));
+
+  if (working_node->properties)
+    SVN_ERR(svn_skel__unparse_proplist(&skel, working_node->properties,
+                                       scratch_pool));
+  else
+    skel = svn_skel__make_empty_list(scratch_pool);
+
+  properties = svn_skel__unparse(skel, scratch_pool);
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 17, properties->data, properties->len));
+
+  if (working_node->changelist_id > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 18, working_node->changelist_id));
+
+  if (working_node->tree_conflict_data)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 19, working_node->tree_conflict_data));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(NULL, stmt);
 }
 
 static svn_error_t *
@@ -1940,8 +2004,22 @@ write_entry(svn_stringbuf_t *buf,
 
   SVN_ERR(write_entry_old(buf, entry, name, this_dir, pool));
 
-  if (entry->schedule == svn_wc_schedule_normal)
-    base_node = MAYBE_ALLOC(base_node, scratch_pool);
+  switch (entry->schedule)
+    {
+      case svn_wc_schedule_normal:
+        base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        break;
+
+      case svn_wc_schedule_add:
+        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        break;
+
+      case svn_wc_schedule_delete:
+      case svn_wc_schedule_replace:
+        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        break;
+    }
 
   /* Insert the base node. */
   if (base_node)
@@ -1965,7 +2043,13 @@ write_entry(svn_stringbuf_t *buf,
 
   /* Insert the working node. */
   if (working_node)
-    SVN_ERR(insert_working_node(wc_db, working_node, scratch_pool));
+    {
+      working_node->wc_id = wc_id;
+      working_node->local_relpath = name;
+      working_node->parent_relpath = "";
+
+      SVN_ERR(insert_working_node(wc_db, working_node, scratch_pool));
+    }
 
   /* Insert the actual node. */
   if (actual_node)
