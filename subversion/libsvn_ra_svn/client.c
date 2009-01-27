@@ -1330,7 +1330,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool,
-                                             "cw(?cr)(?c)",
+                                             "cw(?cr)?(?c)",
                                              &cpath, &action, &copy_path,
                                              &copy_rev, &kind_str));
               cpath = svn_path_canonicalize(cpath, iterpool);
