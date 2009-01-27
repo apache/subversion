@@ -59,7 +59,8 @@ enum statement_keys {
   STMT_INSERT_WCROOT,
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_WORKING_NODE,
-  STMT_INSERT_ACTUAL_NODE
+  STMT_INSERT_ACTUAL_NODE,
+  STMT_INSERT_CHANGELIST
 };
 
 static const char * const statements[] = {
@@ -88,6 +89,10 @@ static const char * const statements[] = {
     "(wc_id, local_relpath, properties, conflict_old, conflict_new, "
      "conflict_working, prop_reject, changelist_id) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);",
+
+  "insert or replace into changelist "
+    "(wc_id, name) "
+  "values (?1, ?2);",
 
   NULL
   };
@@ -2022,6 +2027,23 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
   return svn_sqlite__insert(NULL, stmt);
 }
 
+static svn_error_t *
+insert_changelist(svn_sqlite__db_t *wc_db,
+                  db_changelist_t *changelist,
+                  apr_int64_t *changelist_id,
+                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_CHANGELIST));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t) changelist->wc_id,
+                            changelist->name));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(changelist_id, stmt);
+}
+
 /* Write the information for ENTRY to WC_DB.
    (Extra parameters are used for write_entry_old(), and will
    eventually disappear. */
@@ -2093,6 +2115,23 @@ write_entry(svn_stringbuf_t *buf,
     {
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
       actual_node->prop_reject = entry->prejfile;
+    }
+
+  if (entry->changelist)
+    {
+      db_changelist_t changelist;
+      apr_int64_t changelist_id;
+
+      changelist.wc_id = wc_id;
+      changelist.name = entry->changelist;
+
+      SVN_ERR(insert_changelist(wc_db, &changelist, &changelist_id,
+                                scratch_pool));
+
+      if (working_node)
+        working_node->changelist_id = changelist_id;
+      if (actual_node)
+        actual_node->changelist_id = changelist_id;
     }
 
   /* Insert the base node. */
