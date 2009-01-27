@@ -76,7 +76,10 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
+  svn_client_status_args_t *args;
+
   revision.kind = svn_opt_revision_unspecified;
+  args = svn_client_status_args_create(pool);
 
   /* Use an infinite-depth status check to see if there's anything in
      or under PATH which would make it unsafe for deletion.  The
@@ -85,7 +88,7 @@ svn_client__can_delete(const char *path,
      be deleted. */
   return svn_client_status4
          (NULL, path, &revision, find_undeletables, NULL,
-          svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, ctx, pool);
+          svn_depth_infinity, FALSE, args, NULL, ctx, pool);
 }
 
 

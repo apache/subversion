@@ -1279,9 +1279,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func3_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
-                               svn_boolean_t get_all,
                                svn_boolean_t update,
-                               svn_boolean_t no_ignore,
+                               svn_client_status_args_t *args,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
@@ -1351,8 +1350,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
           SVN_ERR(svn_client_status4(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
-                                     depth, get_all, update,
-                                     no_ignore, FALSE, NULL, ctx, iterpool));
+                                     depth, update, args,
+                                     NULL, ctx, iterpool));
         }
     }
 
