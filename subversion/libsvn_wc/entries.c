@@ -496,8 +496,10 @@ unserialize_file_external(const char **path_result,
    string instead of a svn_stringbuf_t so that the string can be
    protected by write_str(). */
 static svn_error_t *
-serialize_file_external(const char **str, const char *path,
-                        svn_opt_revision_t *peg_rev, svn_opt_revision_t *rev,
+serialize_file_external(const char **str,
+                        const char *path,
+                        const svn_opt_revision_t *peg_rev,
+                        const svn_opt_revision_t *rev,
                         apr_pool_t *pool)
 {
   const char *s;
@@ -1567,9 +1569,9 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
    Allocations are done in POOL.  */
 static svn_error_t *
 write_entry_old(svn_stringbuf_t *buf,
-                svn_wc_entry_t *entry,
+                const svn_wc_entry_t *entry,
                 const char *name,
-                svn_wc_entry_t *this_dir,
+                const svn_wc_entry_t *this_dir,
                 apr_pool_t *pool)
 {
   const char *valuestr;
@@ -1779,7 +1781,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                  apr_int64_t wc_id,
                  apr_int64_t repos_id,
                  const char *name,
-                 svn_wc_entry_t *entry,
+                 const svn_wc_entry_t *entry,
                  apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
@@ -1828,7 +1830,7 @@ static svn_error_t *
 insert_working_node(svn_sqlite__db_t *wc_db,
                     apr_int64_t wc_id,
                     const char *name,
-                    svn_wc_entry_t *entry,
+                    const svn_wc_entry_t *entry,
                     apr_pool_t *scratch_pool)
 {
   return SVN_NO_ERROR;
@@ -1842,9 +1844,9 @@ write_entry(svn_stringbuf_t *buf,
             svn_sqlite__db_t *wc_db,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
-            svn_wc_entry_t *entry,
+            const svn_wc_entry_t *entry,
             const char *name,
-            svn_wc_entry_t *this_dir,
+            const svn_wc_entry_t *this_dir,
             apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(name);
@@ -1886,7 +1888,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   svn_stream_t *stream;
   const char *temp_file_path;
   apr_hash_index_t *hi;
-  svn_wc_entry_t *this_dir;
+  const svn_wc_entry_t *this_dir;
   apr_size_t len;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
@@ -1926,8 +1928,10 @@ svn_wc__entries_write(apr_hash_t *entries,
 
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
+
       /* Write out "this dir" */
       SVN_ERR(write_entry(bigstr, wc_db, 0, 0, this_dir,
                           SVN_WC_ENTRY_THIS_DIR, this_dir, pool));
@@ -1936,7 +1940,7 @@ svn_wc__entries_write(apr_hash_t *entries,
         {
           const void *key;
           void *val;
-          svn_wc_entry_t *this_entry;
+          const svn_wc_entry_t *this_entry;
 
           svn_pool_clear(subpool);
 
@@ -1993,7 +1997,7 @@ static svn_error_t *
 fold_entry(apr_hash_t *entries,
            const char *name,
            apr_uint64_t modify_flags,
-           svn_wc_entry_t *entry,
+           const svn_wc_entry_t *entry,
            apr_pool_t *pool)
 {
   svn_wc_entry_t *cur_entry
