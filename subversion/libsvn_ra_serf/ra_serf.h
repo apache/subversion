@@ -224,7 +224,7 @@ struct svn_ra_serf__session_t {
 
 };
 
-#define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) (sess->me_resource != NULL)
+#define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
