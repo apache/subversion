@@ -1012,14 +1012,14 @@ open_root(void *edit_baton,
   err = svn_ra_serf__context_run_wait(
                                 svn_ra_serf__get_options_done_ptr(opt_ctx),
                                 ctx->session, ctx->pool);
-  if (svn_ra_serf__get_options_error(opt_ctx) ||
-      svn_ra_serf__get_options_parser_error(opt_ctx))
-    {
-      svn_error_clear(err);
-      SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
-      SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
-    }
-  SVN_ERR(err);
+
+  /* Return all of the three available errors, favoring the
+     more specific ones over the more generic. */
+  SVN_ERR(svn_error_compose_create(
+    svn_ra_serf__get_options_error(opt_ctx),
+    svn_error_compose_create(
+      svn_ra_serf__get_options_parser_error(opt_ctx),
+      err)));
 
   activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
 
