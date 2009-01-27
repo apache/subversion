@@ -37,15 +37,6 @@ extern "C" {
 /*** Parsing (conversion from skeleton to native FS type) ***/
 
 
-/* Parse a `PROPLIST' SKEL into a regular hash of properties,
-   *PROPLIST_P, which has const char * property names, and
-   svn_string_t * values, or NULL if SKEL contains no properties.  Use
-   POOL for all allocations.  */
-svn_error_t *
-svn_fs_base__parse_proplist_skel(apr_hash_t **proplist_p,
-                                 svn_skel_t *skel,
-                                 apr_pool_t *pool);
-
 /* Parse a `REVISION' SKEL into *REVISION_P.  Use POOL for all
    allocations.  */
 svn_error_t *
@@ -106,14 +97,6 @@ svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
 
 /*** Unparsing (conversion from native FS type to skeleton) ***/
 
-
-/* Unparse a PROPLIST hash (which has const char * property names and
-   svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
-   for all allocations.  */
-svn_error_t *
-svn_fs_base__unparse_proplist_skel(svn_skel_t **skel_p,
-                                   apr_hash_t *proplist,
-                                   apr_pool_t *pool);
 
 /* Unparse REVISION into a `REVISION' skel *SKEL_P.  Use POOL for all
    allocations.  */
