@@ -187,7 +187,10 @@ CREATE TABLE WORKING_NODE (
   properties  BLOB NOT NULL,
 
   /* if not NULL, this node is part of a changelist. */
-  changelist_id  INTEGER
+  changelist_id  INTEGER,
+
+  /* if a directory, serialized data for all of tree conflicts therein. */
+  tree_conflict_data  TEXT
   );
 
 CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
