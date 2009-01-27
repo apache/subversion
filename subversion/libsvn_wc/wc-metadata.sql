@@ -151,6 +151,7 @@ CREATE TABLE WORKING_NODE (
 
   /* Where this node was copied from. Set only on the root of the copy,
      and implied for all children. */
+  copyfrom_repos_id  INTEGER,
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
