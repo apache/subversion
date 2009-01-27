@@ -58,7 +58,8 @@ enum statement_keys {
   STMT_INSERT_REPOSITORY,
   STMT_INSERT_WCROOT,
   STMT_INSERT_BASE_NODE,
-  STMT_INSERT_WORKING_NODE
+  STMT_INSERT_WORKING_NODE,
+  STMT_INSERT_ACTUAL_NODE
 };
 
 static const char * const statements[] = {
@@ -82,6 +83,11 @@ static const char * const statements[] = {
      "last_mod_time, properties, changelist_id, tree_conflict_data) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
           "?15, ?16, ?17, ?18, ?19);",
+
+  "insert or replace into actual_node "
+    "(wc_id, local_relpath, properties, conflict_old, conflict_new, "
+     "conflict_working, prop_reject, changelist_id) "
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);",
 
   NULL
   };
@@ -1981,7 +1987,39 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
                    db_actual_node_t *actual_node,
                    apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
+  svn_sqlite__stmt_t *stmt;
+  svn_stringbuf_t *properties;
+  svn_skel_t *skel;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_ACTUAL_NODE));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, actual_node->wc_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, actual_node->local_relpath));
+
+  if (actual_node->properties)
+    SVN_ERR(svn_skel__unparse_proplist(&skel, actual_node->properties,
+                                       scratch_pool));
+  else
+    skel = svn_skel__make_empty_list(scratch_pool);
+
+  properties = svn_skel__unparse(skel, scratch_pool);
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 3, properties->data, properties->len));
+
+  if (actual_node->conflict_old)
+    {
+      SVN_ERR(svn_sqlite__bind_text(stmt, 4, actual_node->conflict_old));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 5, actual_node->conflict_new));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 6, actual_node->conflict_working));
+    }
+
+  if (actual_node->prop_reject)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->prop_reject));
+
+  if (actual_node->changelist_id > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, actual_node->changelist_id));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(NULL, stmt);
 }
 
 /* Write the information for ENTRY to WC_DB.
@@ -2021,6 +2059,42 @@ write_entry(svn_stringbuf_t *buf,
         break;
     }
 
+  if (entry->copied)
+    {
+      working_node = MAYBE_ALLOC(working_node, scratch_pool);
+      working_node->copyfrom_repos_path = entry->copyfrom_url;
+      working_node->copyfrom_revnum = entry->copyfrom_rev;
+    }
+
+  if (entry->deleted)
+    working_node = MAYBE_ALLOC(working_node, scratch_pool);
+
+  if (entry->absent)
+    {
+      /* TODO: Adjust kinds to absent kinds. */
+    }
+
+  if (entry->incomplete)
+    {
+      base_node = MAYBE_ALLOC(base_node, scratch_pool);
+      /* TODO: how do we find the exact number of incomplete children? */
+      base_node->incomplete_children = 1;
+    }
+
+  if (entry->conflict_old)
+    {
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->conflict_old = entry->conflict_old;
+      actual_node->conflict_new = entry->conflict_new;
+      actual_node->conflict_working = entry->conflict_wrk;
+    }
+
+  if (entry->prejfile)
+    {
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->prop_reject = entry->prejfile;
+    }
+
   /* Insert the base node. */
   if (base_node)
     {
@@ -2053,7 +2127,12 @@ write_entry(svn_stringbuf_t *buf,
 
   /* Insert the actual node. */
   if (actual_node)
-    SVN_ERR(insert_actual_node(wc_db, actual_node, scratch_pool));
+    {
+      actual_node->wc_id = wc_id;
+      actual_node->local_relpath = name;
+
+      SVN_ERR(insert_actual_node(wc_db, actual_node, scratch_pool));
+    }
 
   svn_pool_destroy(scratch_pool);
 
