@@ -4391,7 +4391,7 @@ typedef struct svn_info_t
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   apr_time_t text_time;
-  apr_time_t prop_time;
+  apr_time_t prop_time;  /* will always be 0 for svn 1.4 and later */
   const char *checksum;
   const char *conflict_old;
   const char *conflict_new;
