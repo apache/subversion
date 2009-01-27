@@ -964,8 +964,8 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
           svn_ra_serf__create_options_req(&opt_ctx, session, session->conns[0],
                                           session->repos_url.path, pool);
-          err = svn_ra_serf__context_run_wait
-            (svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool);
+          err = svn_ra_serf__context_run_wait(
+            svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool);
           if (svn_ra_serf__get_options_error(opt_ctx) ||
               svn_ra_serf__get_options_parser_error(opt_ctx))
             {

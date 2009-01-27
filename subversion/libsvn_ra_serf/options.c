@@ -199,7 +199,7 @@ cdata_options(svn_ra_serf__xml_parser_t *parser,
   if (ctx->collect_cdata == TRUE)
     {
       svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
-                    data, len, ctx->pool);
+                                 data, len, ctx->pool);
     }
 
   return SVN_NO_ERROR;
@@ -255,10 +255,10 @@ svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx)
 
 /* Context for both options_response_handler() and capabilities callback. */
 struct options_response_ctx_t {
- /* baton for __handle_xml_parser() */
+  /* Baton for __handle_xml_parser() */
   svn_ra_serf__xml_parser_t *parser_ctx;
 
- /* session into which we'll store server capabilities */
+  /* Session into which we'll store server capabilities */
   svn_ra_serf__session_t *session;      
 
   /* For temporary work only. */
@@ -469,8 +469,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
                                   serf_sess->repos_url_str, pool);
 
-  err = svn_ra_serf__context_run_wait
-    (svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
+  err = svn_ra_serf__context_run_wait(
+    svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
   if (svn_ra_serf__get_options_error(opt_ctx) ||
       svn_ra_serf__get_options_parser_error(opt_ctx))
     {
