@@ -1296,10 +1296,14 @@ svn_client_status3(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   struct status3_wrapper_baton swb = { status_func, status_baton };
+  svn_client_status_args_t* args = svn_client_status_args_create(pool);
+
+  args->get_all = get_all;
+  args->no_ignore = no_ignore;
+  args->ignore_externals = ignore_externals;
 
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
-                            &swb, depth, get_all, update, no_ignore,
-                            ignore_externals, changelists, ctx, pool);
+                            &swb, depth, update, args, changelists, ctx, pool);
 
 }
 
