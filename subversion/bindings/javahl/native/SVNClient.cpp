@@ -177,7 +177,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
-    args = svn_client_status_create(requestPool.pool());
+    args = svn_client_status_args_create(requestPool.pool());
 
     args->get_all = getAll;
     args->no_ignore = noIgnore;
