@@ -22,6 +22,7 @@
 #include <apr_strings.h>
 
 #include "svn_types.h"
+#include "svn_string.h"
 #include "svn_error.h"
 #include "svn_auth.h"
 #include "svn_config.h"

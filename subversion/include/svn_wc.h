@@ -41,18 +41,21 @@
 #ifndef SVN_WC_H
 #define SVN_WC_H
 
-
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
+#include <apr_time.h>
+#include <apr_file_io.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_delta.h"
-#include "svn_error.h"
+#include "svn_checksum.h"
+#include "svn_io.h"
+#include "svn_delta.h"     /* for svn_stream_t */
 #include "svn_opt.h"
-#include "svn_ra.h"    /* for svn_ra_reporter_t type */
+#include "svn_ra.h"        /* for svn_ra_reporter_t type */
+#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {

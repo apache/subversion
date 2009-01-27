@@ -24,10 +24,12 @@
 #ifndef SVN_PROPS_H
 #define SVN_PROPS_H
 
-#include <apr_pools.h>
-#include <apr_tables.h>
+#include <apr_pools.h>   /* for apr_pool_t */
+#include <apr_tables.h>  /* for apr_array_header_t */
+#include <apr_hash.h>    /* for apr_hash_t */
 
-#include "svn_string.h"
+#include "svn_types.h"   /* for svn_boolean_t, svn_error_t */
+#include "svn_string.h"  /* for svn_string_t */
 
 #ifdef __cplusplus
 extern "C" {

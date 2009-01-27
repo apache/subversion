@@ -26,7 +26,6 @@
 
 #include <apr_dso.h>
 
-#include "svn_error.h"
 #include "svn_types.h"
 
 #ifdef __cplusplus
@@ -77,7 +76,9 @@ SVN_DEPRECATED
 void
 svn_dso_initialize(void);
 
+
 #if APR_HAS_DSO
+
 /**
  * Attempt to load @a libname, returning it in @a dso.
  *
@@ -94,7 +95,9 @@ svn_dso_initialize(void);
 svn_error_t *
 svn_dso_load(apr_dso_handle_t **dso,
              const char *libname);
+
 #endif /* APR_HAS_DSO */
+
 
 #ifdef __cplusplus
 }

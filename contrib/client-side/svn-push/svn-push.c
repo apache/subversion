@@ -2,7 +2,7 @@
  * a different (networked) repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,12 +17,13 @@
  */
 #include <stdio.h>
 
-#include "svn_pools.h"
-#include "svn_path.h"
-#include "svn_ra.h"
 #include "svn_delta.h"
-#include "svn_config.h"
 #include "svn_cmdline.h"
+#include "svn_config.h"
+#include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_props.h"
+#include "svn_ra.h"
 
 /* Implements svn_commit_callback2_t. */
 static svn_error_t *

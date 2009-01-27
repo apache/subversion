@@ -18,7 +18,9 @@
 
 
 #include <ctype.h>
+
 #include <apr_md5.h>
+#include <apr_sha1.h>
 
 #include "svn_checksum.h"
 #include "svn_error.h"

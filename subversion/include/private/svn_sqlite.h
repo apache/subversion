@@ -1,7 +1,7 @@
 /* svn_sqlite.h
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,6 +56,12 @@ svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 
+/* Perform an insert as given by the prepared and bound STMT, and set
+   *ROW_ID to the id of the inserted row if ROW_ID is non-NULL.
+   STMT will be reset prior to returning. */
+svn_error_t *
+svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
+
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
    result is not okay.  */
 svn_error_t *
@@ -90,6 +96,21 @@ svn_error_t *
 svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                     const char *text, apr_pool_t *result_pool);
 
+/* Bind values to arguments in STMT, according to FMT.  FMT may contain:
+
+   Spec  Argument type       Item type
+   ----  -----------------   ---------
+   i     apr_int64_t         Number
+   s     const char **       String
+   b     const void *        Blob (must be followed by an additional argument
+                                   of type apr_size_t with the number of bytes
+                                   in the object)
+
+  Each character in FMT maps to one argument, in the order they appear.
+*/
+svn_error_t *
+svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
+
 /* Error-handling wrapper around sqlite3_bind_int64. */
 svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
@@ -100,6 +121,13 @@ svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
 svn_error_t *
 svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt, int slot,
                       const char *val);
+
+/* Error-handling wrapper around sqlite3_bind_blob. */
+svn_error_t *
+svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
+                      int slot,
+                      const void *val,
+                      apr_size_t len);
 
 /* Wrapper around sqlite3_column_text. */
 const char *

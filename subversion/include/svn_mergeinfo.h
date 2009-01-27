@@ -24,10 +24,11 @@
 #define SVN_MERGEINFO_H
 
 #include <apr_pools.h>
-#include <apr_tables.h>         /* for apr_array_header_t */
+#include <apr_tables.h>  /* for apr_array_header_t */
 #include <apr_hash.h>
 
-#include "svn_error.h"
+#include "svn_types.h"
+#include "svn_string.h"  /* for svn_string_t */
 
 
 #ifdef __cplusplus
@@ -142,11 +143,14 @@ typedef apr_hash_t *svn_mergeinfo_catalog_t;
  * Perform temporary allocations in @a pool.
  *
  * If @a input is not a grammatically correct @c SVN_PROP_MERGEINFO
- * property, contains overlapping revision ranges, or revision
- * ranges with a start revision greater than or equal to its end revision,
- * or contains paths mapped to empty revision ranges, then return
- * @c SVN_ERR_MERGEINFO_PARSE_ERROR.  Unordered revision ranges are
- * allowed, but will be sorted when placed into @a *mergeinfo.
+ * property, contains overlapping revision ranges of differing
+ * inheritability, or revision ranges with a start revision greater
+ * than or equal to its end revision, or contains paths mapped to empty
+ * revision ranges, then return  @c SVN_ERR_MERGEINFO_PARSE_ERROR.
+ * Unordered revision ranges are  allowed, but will be sorted when
+ * placed into @a *mergeinfo.  Overlapping revision ranges of the same
+ * inheritability are also allowed, but will be combined into a single
+ * range when placed into @a *mergeinfo.
  *
  * @since New in 1.5.
  */

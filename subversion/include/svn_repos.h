@@ -19,17 +19,21 @@
  * @brief Tools built on top of the filesystem.
  */
 
-
 #ifndef SVN_REPOS_H
 #define SVN_REPOS_H
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include "svn_fs.h"
-#include "svn_delta.h"
+#include <apr_tables.h>
+#include <apr_time.h>
+
 #include "svn_types.h"
-#include "svn_error.h"
+#include "svn_string.h"
+#include "svn_delta.h"
+#include "svn_fs.h"
+#include "svn_io.h"
 #include "svn_version.h"
+#include "svn_mergeinfo.h"
 
 
 #ifdef __cplusplus

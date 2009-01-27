@@ -28,6 +28,7 @@
 #include "svn_fs.h"
 #include "svn_checksum.h"
 #include "svn_mergeinfo.h"
+#include "svn_props.h"
 
 #include "../svn_test_fs.h"
 

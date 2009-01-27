@@ -30,6 +30,8 @@
 #include "svn_fs.h"
 #include "svn_props.h"
 #include "svn_repos.h"
+#include "svn_pools.h"
+
 #include "private/svn_fs_private.h"
 
 #include "dav_svn.h"
