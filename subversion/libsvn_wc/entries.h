@@ -49,7 +49,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_REPOS              "repos"
 #define SVN_WC__ENTRY_ATTR_KIND               "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME          "text-time"
-#define SVN_WC__ENTRY_ATTR_PROP_TIME          "prop-time"
 #define SVN_WC__ENTRY_ATTR_CHECKSUM           "checksum"
 #define SVN_WC__ENTRY_ATTR_SCHEDULE           "schedule"
 #define SVN_WC__ENTRY_ATTR_COPIED             "copied"
@@ -133,7 +132,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_REPOS              APR_INT64_C(0x0000000000000004)
 #define SVN_WC__ENTRY_MODIFY_KIND               APR_INT64_C(0x0000000000000008)
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME          APR_INT64_C(0x0000000000000010)
-#define SVN_WC__ENTRY_MODIFY_PROP_TIME          APR_INT64_C(0x0000000000000020)
+/* OPEN                                      APR_INT64_C(0x0000000000000020) */
 #define SVN_WC__ENTRY_MODIFY_CHECKSUM           APR_INT64_C(0x0000000000000040)
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE           APR_INT64_C(0x0000000000000080)
 #define SVN_WC__ENTRY_MODIFY_COPIED             APR_INT64_C(0x0000000000000100)

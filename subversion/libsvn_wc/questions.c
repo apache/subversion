@@ -178,43 +178,18 @@ svn_error_t *
 svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
                            const char *path,
                            svn_wc_adm_access_t *adm_access,
-                           enum svn_wc__timestamp_kind timestamp_kind,
                            apr_pool_t *pool)
 {
-  apr_time_t wfile_time, entrytime = 0;
   const svn_wc_entry_t *entry;
+  apr_time_t wfile_time;
 
   /* Get the timestamp from the entries file */
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   /* Get the timestamp from the working file and the entry */
-  if (timestamp_kind == svn_wc__text_time)
-    {
-      SVN_ERR(svn_io_file_affected_time(&wfile_time, path, pool));
-      entrytime = entry->text_time;
-    }
+  SVN_ERR(svn_io_file_affected_time(&wfile_time, path, pool));
 
-  else if (timestamp_kind == svn_wc__prop_time)
-    {
-      SVN_ERR(svn_wc__props_last_modified(&wfile_time,
-                                          path, svn_wc__props_working,
-                                          adm_access, pool));
-      entrytime = entry->prop_time;
-    }
-
-  if (! entrytime)
-    {
-      /* TODO: If either timestamp is inaccessible, the test cannot
-         return an answer.  Assume that the timestamps are
-         different. */
-      *equal_p = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  if (wfile_time == entrytime)
-    *equal_p = TRUE;
-  else
-    *equal_p = FALSE;
+  *equal_p = wfile_time == entry->text_time;
 
   return SVN_NO_ERROR;
 }

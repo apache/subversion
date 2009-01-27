@@ -139,7 +139,6 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
       void *val;
       const svn_wc_entry_t *entry;
       const char *entrypath;
-      svn_wc_entry_t tmpentry;
       apr_hash_t *base_props, *props;
 
       apr_hash_this(hi, NULL, NULL, &val);
@@ -156,16 +155,9 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
                                  entrypath, subpool));
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
                                     base_props, props, TRUE, subpool));
-      /* Make sure we get rid of that prop-time field.
-         It only wastes space in new WCs. */
-      tmpentry.prop_time = 0;
-      SVN_ERR(svn_wc__loggy_entry_modify
-              (&log_accum, adm_access,
-               entrypath,
-               &tmpentry,
-               SVN_WC__ENTRY_MODIFY_PROP_TIME,
-               subpool));
     }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

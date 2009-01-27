@@ -2095,7 +2095,10 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t text_time;
 
-  /** last up-to-date time for properties (0 means no information available) */
+  /** last up-to-date time for properties (0 means no information available)
+   *
+   * @deprecated This value will always be 0 in version 1.4 and later.
+   */
   apr_time_t prop_time;
 
   /** Hex MD5 checksum for the untranslated text base file,
