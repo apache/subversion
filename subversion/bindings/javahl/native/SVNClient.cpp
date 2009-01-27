@@ -164,6 +164,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
     Pool requestPool;
     svn_revnum_t youngest = SVN_INVALID_REVNUM;
     svn_opt_revision_t rev;
+    svn_client_status_args_t* args;
 
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -176,12 +177,18 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
+    args = svn_client_status_create(requestPool.pool());
+
+    args->get_all = getAll;
+    args->no_ignore = noIgnore;
+    args->ignore_externals = ignoreExternals;
+
     SVN_JNI_ERR(svn_client_status4(&youngest, checkedPath.c_str(),
                                    &rev, StatusCallback::callback,
                                    callback,
                                    depth,
-                                   getAll, onServer, noIgnore,
-                                   ignoreExternals,
+                                   onServer,
+                                   args,
                                    changelists.array(requestPool),
                                    ctx, requestPool.pool()), );
 }
