@@ -235,7 +235,7 @@ CREATE UNIQUE INDEX I_CL_LIST ON CHANGELIST (wc_id);
 
 /* ------------------------------------------------------------------------- */
 
-CREATE TABLE LOCKS (
+CREATE TABLE LOCK (
   /* URL of the node which is locked */
   url  TEXT NOT NULL PRIMARY KEY,
 
