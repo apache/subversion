@@ -966,14 +966,14 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                           session->repos_url.path, pool);
           err = svn_ra_serf__context_run_wait(
             svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool);
-          if (svn_ra_serf__get_options_error(opt_ctx) ||
-              svn_ra_serf__get_options_parser_error(opt_ctx))
-            {
-              svn_error_clear(err);
-              SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
-              SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
-            }
-          SVN_ERR(err);
+
+          /* Return all of the three available errors, favoring the
+             more specific ones over the more generic. */
+          SVN_ERR(svn_error_compose_create(
+            svn_ra_serf__get_options_error(opt_ctx),
+            svn_error_compose_create(
+              svn_ra_serf__get_options_parser_error(opt_ctx),
+              err)));
 
           *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
           if (! SVN_IS_VALID_REVNUM(*latest_revnum))

@@ -471,14 +471,14 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
 
   err = svn_ra_serf__context_run_wait(
     svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
-  if (svn_ra_serf__get_options_error(opt_ctx) ||
-      svn_ra_serf__get_options_parser_error(opt_ctx))
-    {
-      svn_error_clear(err);
-      SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
-      SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
-    }
-  return err;
+
+  /* Return all of the three available errors, favoring the
+     more specific ones over the more generic. */
+  return svn_error_compose_create(
+    svn_ra_serf__get_options_error(opt_ctx),
+    svn_error_compose_create(
+      svn_ra_serf__get_options_parser_error(opt_ctx),
+      err));
 }
 
 
