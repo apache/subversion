@@ -591,8 +591,13 @@ security or data-loss bugs.</p>
 <h2>New Dependency: SQLite</h2>
 
 <p>XXX: We now require <a href="http://www.sqlite.org/">SQLite</a> for both
-the server and client.  We recommend 3.5.9 or greater, but work with anything
-better than 3.4.0.</p>
+the server and client.  We recommend 3.6.10 or greater, but work with
+anything better than 3.4.0.  Subversion will attempt to use an SQLite
+<a href="http://www.sqlite.org/amalgamation.html">amalgamation</a> if it is
+present in the root of the distribution tarball, otherwise, Subversion will
+search for SQLite in the usual places on the system.  You may also pass
+<code>--with-sqlite</code> to <code>configure</code> to specify the location
+of the SQLite library or amalgamation you wish to use.</p>
 
 </div>  <!-- sqlite -->
 
