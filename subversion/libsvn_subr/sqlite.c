@@ -217,6 +217,9 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
 
   for (count = 1; *fmt; fmt++, count++)
     {
+      const void *blob;
+      apr_size_t blob_size;
+
       switch (*fmt)
         {
           case 's':
@@ -230,9 +233,9 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             break;
 
           case 'b':
-            SVN_ERR(svn_sqlite__bind_blob(stmt, count,
-                                          va_arg(ap, const void *),
-                                          va_arg(ap, apr_size_t)));
+            blob = va_arg(ap, const void *);
+            blob_size = va_arg(ap, apr_size_t);
+            SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
             break;
 
           default:
