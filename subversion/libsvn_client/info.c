@@ -64,7 +64,7 @@ build_info_from_dirent(svn_info_t **info,
     tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN;
 
   tmpinfo->size64               = dirent->size;
-  tmpinfo->working_size         = SVN_INVALID_FILESIZE;
+  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
