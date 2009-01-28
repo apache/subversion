@@ -43,6 +43,7 @@ Revisions included:
     r35060, r35063, r35076:35079, r35111:35114, r35116, r35160:35163,
     r35167:35169, r35175, r35314, r35319, r35332, r35337 backported from
     trunk via r35442.
+  * r33640 and r34607 backported from trunk via r35520
 
 Features:
   * Don't save plaintext passwords without prompting
