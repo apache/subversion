@@ -900,16 +900,26 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise verify.SVNUnexpectedStderr(err)
 
   if dry_run and out != out_dry:
-    print("=============================================================")
-    print("Merge outputs differ")
-    print("The dry-run merge output:")
-    for x in out_dry:
-      sys.stdout.write(x)
-    print("The full merge output:")
-    for x in out:
-      sys.stdout.write(x)
-    print("=============================================================")
-    raise main.SVNUnmatchedError
+    # Due to the way ra_serf works, it's possible that the dry-run and
+    # real merge operations did the same thing, but the output came in
+    # a different order.  Let's see if maybe that's the case.
+    #
+    # NOTE:  Would be nice to limit this dance to serf tests only, but...
+    out_copy = out[:]
+    out_dry_copy = out_dry[:]
+    out_copy.sort()
+    out_dry_copy.sort()
+    if out_copy != out_dry_copy:
+      print("=============================================================")
+      print("Merge outputs differ")
+      print("The dry-run merge output:")
+      for x in out_dry:
+        sys.stdout.write(x)
+      print("The full merge output:")
+      for x in out:
+        sys.stdout.write(x)
+      print("=============================================================")
+      raise main.SVNUnmatchedError
 
   def missing_skip(a, b):
     print("=============================================================")
