@@ -219,6 +219,7 @@
 %ignore svn_path_cstring_to_utf8;
 
 /* Other files */
+%import "svn_private_config.h"
 
 /* Ignore platform-specific auth functions */
 %ignore svn_auth_get_keychain_simple_provider;
