@@ -341,11 +341,9 @@ def hotcopy_dot(sbox):
   cwd = os.getcwd()
 
   os.chdir(backup_dir)
-  exit_code, output, errput = svntest.main.run_svnadmin(
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [],
     "hotcopy", os.path.join(cwd, sbox.repo_dir), '.')
-
-  if errput:
-    raise svntest.Failure
 
   os.chdir(cwd)
 
