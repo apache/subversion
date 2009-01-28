@@ -184,39 +184,43 @@ get_option(const dav_resource *resource,
     }
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
-     DeltaV-free! */
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_URI_HEADER,
-                repos_root_uri);
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_me_resource_uri(resource->info->r),
-                            NULL));
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_pegrev_stub(resource->info->r),
-                            NULL));
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_rev_stub(resource->info->r),
-                            NULL));
-
-  if (resource->info->repos && resource->info->repos->fs)
+     DeltaV-free!  If we're configured to advise this support, do so.  */
+  if (resource->info->repos->v2_protocol)
     {
-      svn_revnum_t youngest;
-      svn_error_t *serr = svn_fs_youngest_rev(&youngest,
-                                              resource->info->repos->fs,
-                                              resource->pool);
-      if ((serr == NULL)
-          && SVN_IS_VALID_REVNUM(youngest))
-          apr_table_set(resource->info->r->headers_out,
-                        SVN_DAV_YOUNGEST_REV_HEADER,
-                        apr_psprintf(resource->pool, "%ld", youngest));
-      else
-          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error fetching youngest rev from repos",
-                                      resource->pool);
+      apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_URI_HEADER,
+                    repos_root_uri);
+      apr_table_set(resource->info->r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_me_resource_uri(resource->info->r),
+                                NULL));
+      apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_pegrev_stub(resource->info->r),
+                                NULL));
+      apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_rev_stub(resource->info->r),
+                                NULL));
+    
+      if (resource->info->repos && resource->info->repos->fs)
+        {
+          svn_revnum_t youngest;
+          svn_error_t *serr = svn_fs_youngest_rev(&youngest,
+                                                  resource->info->repos->fs,
+                                                  resource->pool);
+          if ((serr == NULL)
+              && SVN_IS_VALID_REVNUM(youngest))
+            apr_table_set(resource->info->r->headers_out,
+                          SVN_DAV_YOUNGEST_REV_HEADER,
+                          apr_psprintf(resource->pool, "%ld", youngest));
+          else
+            return dav_svn__convert_err
+              (serr, HTTP_INTERNAL_SERVER_ERROR,
+               "Error fetching youngest rev from repos",
+               resource->pool);
+        }
     }
-  
+
   return NULL;
 }
 

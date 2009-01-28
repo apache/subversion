@@ -1308,6 +1308,7 @@ get_parentpath_resource(request_rec *r,
   repos->xslt_uri = dav_svn__get_xslt_uri(r);
   repos->autoversioning = dav_svn__get_autoversioning_flag(r);
   repos->bulk_updates = dav_svn__get_bulk_updates_flag(r);
+  repos->v2_protocol = dav_svn__get_v2_protocol_flag(r);
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
@@ -1810,6 +1811,9 @@ get_resource(request_rec *r,
 
   /* Are bulk updates allowed in this repos? */
   repos->bulk_updates = dav_svn__get_bulk_updates_flag(r);
+
+  /* Are we advertising HTTP v2 protocol support? */
+  repos->v2_protocol = dav_svn__get_v2_protocol_flag(r);
 
   /* Path to activities database */
   repos->activities_db = dav_svn__get_activities_db(r);

@@ -106,6 +106,9 @@ typedef struct {
   /* Whether bulk updates are allowed for this repository. */
   svn_boolean_t bulk_updates;
 
+  /* Whether HTTP protocol version 2 is allowed to be used. */
+  svn_boolean_t v2_protocol;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -277,6 +280,9 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 
 /* for the repository referred to by this request, are bulk updates allowed? */
 svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
+
+/* for the repository referred to by this request, are bulk updates allowed? */
+svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
