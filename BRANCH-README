@@ -2,18 +2,6 @@ This branch exists for the development of ideas documented in
 /trunk/notes/http-protocol-v2.txt.  It is being managed as a
 reintegrate-able branch, with regular catch-up merges from the trunk.
 
-
-   =======================================================================
-
-   These tests are currently failing for cmpilato:
-
-      commit_tests.py 28: commit deletion of out-of-date file or dir
-      merge_tests.py 4: some simple property merges
-      tree_conflict_tests.py 2: up/sw file: del/rpl/mv onto modify
-
-   =======================================================================
-
-
 TODO:
 
  * Teach mod_dav_svn to answer the OPTIONS request with these
