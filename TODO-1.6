@@ -30,3 +30,9 @@ Optional:
      Should print a 'Skipped' message instead.  Update of an item that is
      inside a tree conflict, and that no longer exists in the repo, does
      nothing.  Should print a 'Skipped' message instead.
+
+  * Decide on svn_client_status_args_t, svn_client_status_args_create() and either 
+     remove this argument struct, or move more arguments in the struct and maybe update
+     hacking.html with the result.
+     svn_client_status_args_t: r35512, r35515-r35514, r35518
+     svn_client_log_args_t: r35242,r35245
