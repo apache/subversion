@@ -2233,11 +2233,11 @@ svn_wc__entries_write(apr_hash_t *entries,
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
 
-  /* TODO: Ignoring the error for now. */
-  svn_sqlite__transaction_commit(wc_db);
-  svn_sqlite__close(wc_db, SVN_NO_ERROR);
-
-  return err;
+  /* Just because the entries file stream writing errored doesn't mean we
+     don't want to commit the database.  TODO: This mess should get cleaned
+     up when we stop writing entries files. */
+  svn_error_clear(svn_sqlite__transaction_commit(wc_db));
+  return svn_sqlite__close(wc_db, err);
 }
 
 
