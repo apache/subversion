@@ -2607,17 +2607,11 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
    */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *vcc_url, *rel_path, *baseline_url;
-
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_path, TRUE,
-                                         session, conn, fetch_url, pool));
-
-      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
-                                          revision, "0", baseline_props, pool));
-
-      baseline_url = svn_ra_serf__get_ver_prop(fetch_props, vcc_url, revision,
-                                               "DAV:", "baseline-collection");
-
+      const char *baseline_url, *rel_path;
+      
+      SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
+                                             session, conn, fetch_url,
+                                             revision, NULL, pool));
       fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }
