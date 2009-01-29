@@ -352,6 +352,10 @@ capabilities_headers_iterator_callback(void *baton,
         {
           orc->session->rev_stub = apr_pstrdup(orc->session->pool, val);
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_REPOS_UUID_HEADER) == 0)
+        {
+          orc->session->uuid = apr_pstrdup(orc->session->pool, val);
+        }
       else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
         {
           struct svn_ra_serf__options_context_t *user_data =
