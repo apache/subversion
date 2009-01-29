@@ -314,6 +314,12 @@ svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column)
   return sqlite3_column_int(stmt->s3stmt, column);
 }
 
+svn_boolean_t
+svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column)
+{
+  return sqlite3_column_type(stmt->s3stmt, column) == SQLITE_NULL;
+}
+
 svn_error_t *
 svn_sqlite__finalize(svn_sqlite__stmt_t *stmt)
 {
