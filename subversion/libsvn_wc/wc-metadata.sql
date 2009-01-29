@@ -78,7 +78,7 @@ CREATE TABLE BASE_NODE (
   revnum  INTEGER NOT NULL,
 
   /* file/dir/special. none says this node is NOT present at this REV. */
-  kind  INTEGER NOT NULL,
+  kind  TEXT NOT NULL,
 
   /* if this node is a file, then the checksum and its translated size
      (given the properties on this file) are specified by the following
@@ -92,7 +92,7 @@ CREATE TABLE BASE_NODE (
   changed_author  TEXT NOT NULL,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
-  depth  INTEGER,
+  depth  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
@@ -147,7 +147,7 @@ CREATE TABLE WORKING_NODE (
        if a BASE_NODE exists at the same local_relpath, then this is a
        replaced item (possibly copied or moved here), which implies the
        base node should be deleted first. */
-  kind  INTEGER NOT NULL,
+  kind  TEXT NOT NULL,
 
   /* Where this node was copied from. Set only on the root of the copy,
      and implied for all children. */
@@ -176,7 +176,7 @@ CREATE TABLE WORKING_NODE (
   changed_author  TEXT,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
-  depth  INTEGER,
+  depth  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
