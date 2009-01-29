@@ -634,3 +634,22 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 
   return new_changed_path;
 }
+
+/*** From cmdline.c ***/
+svn_error_t *
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
+{
+  return svn_cmdline_create_auth_baton(ab, non_interactive,
+                                       auth_username, auth_password,
+                                       config_dir, no_auth_cache, FALSE,
+                                       cfg, cancel_func, cancel_baton, pool);
+}

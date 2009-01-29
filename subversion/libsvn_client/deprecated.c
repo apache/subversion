@@ -3,7 +3,7 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -336,6 +336,19 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 
 /*** From copy.c ***/
 
+svn_error_t *
+svn_client_copy4(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_copy5(commit_info_p, sources, dst_path, copy_as_child,
+                          make_parents, FALSE, revprop_table, ctx, pool);
+}
 
 svn_error_t *
 svn_client_copy3(svn_commit_info_t **commit_info_p,
@@ -358,7 +371,6 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
   return svn_client_copy4(commit_info_p, sources, dst_path, FALSE, FALSE,
                           NULL, ctx, pool);
 }
-
 
 svn_error_t *
 svn_client_copy2(svn_commit_info_t **commit_info_p,
@@ -899,7 +911,6 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_client_log_args_t *log_args;
   apr_array_header_t *revision_ranges;
   svn_opt_revision_range_t *range;
 
@@ -912,14 +923,10 @@ svn_client_log4(const apr_array_header_t *targets,
 
   APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
 
-  log_args = svn_client_log_args_create(pool);
-  log_args->limit = limit;
-  log_args->discover_changed_paths = discover_changed_paths;
-  log_args->strict_node_history = strict_node_history;
-  log_args->include_merged_revisions = include_merged_revisions;
-
-  return svn_client_log5(targets, peg_revision, revision_ranges, revprops,
-                         log_args, receiver, receiver_baton, ctx, pool);
+  return svn_client_log5(targets, peg_revision, revision_ranges, limit,
+                         discover_changed_paths, strict_node_history,
+                         include_merged_revisions, revprops, receiver,
+                         receiver_baton, ctx, pool);
 }
 
 
@@ -1296,14 +1303,10 @@ svn_client_status3(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   struct status3_wrapper_baton swb = { status_func, status_baton };
-  svn_client_status_args_t* args = svn_client_status_args_create(pool);
-
-  args->get_all = get_all;
-  args->no_ignore = no_ignore;
-  args->ignore_externals = ignore_externals;
 
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
-                            &swb, depth, update, args, changelists, ctx, pool);
+                            &swb, depth, get_all, update, no_ignore,
+                            ignore_externals, changelists, ctx, pool);
 
 }
 
