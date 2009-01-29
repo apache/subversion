@@ -249,15 +249,10 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
             return;
     }
 
-    svn_client_log_args_t *log_args = svn_client_log_args_create(
-                                                            requestPool.pool());
-    log_args->limit = limit;
-    log_args->discover_changed_paths = discoverPaths;
-    log_args->strict_node_history = stopOnCopy;
-    log_args->include_merged_revisions = includeMergedRevisions;
-
     SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
-                                revProps.array(requestPool), log_args,
+                                limit, discoverPaths, stopOnCopy,
+                                includeMergedRevisions,
+                                revProps.array(requestPool),
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
