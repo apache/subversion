@@ -3,7 +3,7 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -911,7 +911,6 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_client_log_args_t *log_args;
   apr_array_header_t *revision_ranges;
   svn_opt_revision_range_t *range;
 
@@ -924,14 +923,10 @@ svn_client_log4(const apr_array_header_t *targets,
 
   APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
 
-  log_args = svn_client_log_args_create(pool);
-  log_args->limit = limit;
-  log_args->discover_changed_paths = discover_changed_paths;
-  log_args->strict_node_history = strict_node_history;
-  log_args->include_merged_revisions = include_merged_revisions;
-
-  return svn_client_log5(targets, peg_revision, revision_ranges, revprops,
-                         log_args, receiver, receiver_baton, ctx, pool);
+  return svn_client_log5(targets, peg_revision, revision_ranges, limit,
+                         discover_changed_paths, strict_node_history,
+                         include_merged_revisions, revprops, receiver,
+                         receiver_baton, ctx, pool);
 }
 
 
