@@ -185,8 +185,14 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
   int sqlite_result = sqlite3_step(stmt->s3stmt);
 
   if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
-    /* Extract the real error value and reset the statement. */
-    SVN_ERR(svn_sqlite__reset(stmt));
+    {
+      svn_error_t *err1, *err2;
+
+      err1 = svn_error_create(SQLITE_ERROR_CODE(sqlite_result), NULL,
+                              sqlite3_errmsg(stmt->db->db3));
+      err2 = svn_sqlite__reset(stmt);
+      return svn_error_compose_create(err1, err2);
+    }
 
   *got_row = (sqlite_result == SQLITE_ROW);
 
