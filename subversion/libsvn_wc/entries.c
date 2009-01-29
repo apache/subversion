@@ -1845,7 +1845,8 @@ insert_base_node(svn_sqlite__db_t *wc_db,
     SVN_ERR(svn_sqlite__bind_int64(stmt, 5, base_node->parent_id));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 6, base_node->revision));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->kind));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 7,
+                                svn_node_kind_to_word(base_node->kind)));
 
   if (base_node->checksum)
     SVN_ERR(svn_sqlite__bind_text(stmt, 8,
@@ -1857,7 +1858,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_date));
   SVN_ERR(svn_sqlite__bind_text(stmt, 12, base_node->changed_author));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 13, base_node->depth));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 13, svn_depth_to_word(base_node->depth)));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 14, base_node->last_mod_time));
 
@@ -1890,7 +1891,8 @@ insert_working_node(svn_sqlite__db_t *wc_db,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, working_node->wc_id));
   SVN_ERR(svn_sqlite__bind_text(stmt, 2, working_node->local_relpath));
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, working_node->parent_relpath));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 4, working_node->kind));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                svn_node_kind_to_word(working_node->kind)));
 
   if (working_node->copyfrom_repos_id > 0)
     {
@@ -1922,7 +1924,8 @@ insert_working_node(svn_sqlite__db_t *wc_db,
       SVN_ERR(svn_sqlite__bind_text(stmt, 14, working_node->changed_author));
     }
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 15, working_node->depth));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 15,
+                                svn_depth_to_word(working_node->depth)));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 16, working_node->last_mod_time));
 
