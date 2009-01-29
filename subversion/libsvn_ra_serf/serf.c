@@ -839,6 +839,11 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
     {
       const char *vcc_url, *relative_url;
 
+      /* We should never get here if we have HTTP v2 support, because
+         any server with that support should be transmitting the
+         UUID in the initial OPTIONS response.  */
+      SVN_ERR_ASSERT(! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url, TRUE,
