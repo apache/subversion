@@ -368,8 +368,8 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
 
   APR_ARRAY_PUSH(sources, const svn_client_copy_source_t *) = &copy_source;
 
-  return svn_client_copy5(commit_info_p, sources, dst_path, FALSE, FALSE,
-                          FALSE, NULL, ctx, pool);
+  return svn_client_copy4(commit_info_p, sources, dst_path, FALSE, FALSE,
+                          NULL, ctx, pool);
 }
 
 svn_error_t *
