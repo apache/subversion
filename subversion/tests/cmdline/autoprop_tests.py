@@ -33,7 +33,7 @@ Item = svntest.wc.StateItem
 def check_proplist(path, exp_out):
   """Verify that property list on PATH has a value of EXP_OUT"""
 
-  props = svntest.tree.get_props(path)
+  props = svntest.tree.get_props([path])[path]
   if props != exp_out:
     print("Expected properties: %s" % exp_out)
     print("Actual properties:   %s" % props)
