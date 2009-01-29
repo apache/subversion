@@ -336,6 +336,19 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 
 /*** From copy.c ***/
 
+svn_error_t *
+svn_client_copy4(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_copy5(commit_info_p, sources, dst_path, copy_as_child,
+                          make_parents, FALSE, revprop_table, ctx, pool);
+}
 
 svn_error_t *
 svn_client_copy3(svn_commit_info_t **commit_info_p,
@@ -355,10 +368,9 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
 
   APR_ARRAY_PUSH(sources, const svn_client_copy_source_t *) = &copy_source;
 
-  return svn_client_copy4(commit_info_p, sources, dst_path, FALSE, FALSE,
-                          NULL, ctx, pool);
+  return svn_client_copy5(commit_info_p, sources, dst_path, FALSE, FALSE,
+                          FALSE, NULL, ctx, pool);
 }
-
 
 svn_error_t *
 svn_client_copy2(svn_commit_info_t **commit_info_p,
