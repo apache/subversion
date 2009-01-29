@@ -69,10 +69,8 @@ class TestHarness:
     'Run all test programs given in LIST.'
     self._open_log('w')
     failed = 0
-    cnt = 0
-    for prog in list:
+    for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
-      cnt += 1
     self._open_log('r')
     log_lines = self.log.readlines()
     # Print summaries from least interesting to most interesting.
