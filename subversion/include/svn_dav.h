@@ -90,7 +90,7 @@ extern "C" {
 /** This header provides the repository root URI, suitable for use in
     calculating the relative paths of other public URIs for this
     repository into .  (HTTP protocol v2 only)  */
-#define SVN_DAV_ROOT_URI_HEADER "SVN-Repos-Root"
+#define SVN_DAV_ROOT_URI_HEADER "SVN-Repository-Root"
 
 /** This header provides an opaque URI that the client can append
  * PEGREV/PATH to, in order to construct URIs of pegged objects in the
@@ -108,6 +108,10 @@ extern "C" {
  * the repository.  (HTTP protocol v2 only)  */
 #define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
 
+/** Assuming the OPTIONS was performed againts a resource within an
+ * svn repository, then this header indicates the UUID of the repository.
+ * (HTTP protocol v2 only)  */
+#define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
 
 /**
  * @name Fulltext MD5 headers
