@@ -1784,46 +1784,6 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  */
 
 /**
- * A structure to optional arguments for svn_client_status4().  It can grow as
- * needed to avoid rev'ing the API.  Never allocate this structure directly,
- * as its size may change in future versions of Subversion.  Use
- * svn_client_status_args_create() instead.
- *
- * @since New in 1.6.
- */
-typedef struct svn_client_status_args_t
-{
-  /** If set, retrieve all entries; otherwise, retrieve only 
-    "interesting" entries (local mods and/or out of date). */
-  svn_boolean_t get_all;
-
-  /** If set, also retrieve ignored files and directories. */
-  svn_boolean_t no_ignore;
-
-  /** If not set, then recurse into externals definitions (if any exist)
-    after handling the main target.  This calls the client notification
-    function (in @a ctx) with the @c svn_wc_notify_status_external action
-    before handling each externals definition, and with 
-    @c svn_wc_notify_status_completed after each */
-  svn_boolean_t ignore_externals;
-
-  /* Add new members here, and update svn_client_status_args_create(). */
-} svn_client_status_args_t;
-
-/**
- * Create a @c svn_client_status_args_t structure, for use with 
- * svn_client_status4().
- * Values of structure members are as follows:
- *   @c get_all: FALSE
- *   @c no_ignore: FALSE
- *   @c ignore_externals: FALSE
- *
- * @since New in 1.6.
- */
-svn_client_status_args_t *
-svn_client_status_args_create(apr_pool_t *pool);
-
-/**
  * Given @a path to a working copy directory (or single file), call
  * @a status_func/status_baton with a set of @c svn_wc_status_t *
  * structures which describe the status of @a path, and its children
@@ -1840,6 +1800,13 @@ svn_client_status_args_create(apr_pool_t *pool);
  *      working copy was compared (@a *result_rev is not meaningful unless
  *      @a update is set).
  *
+ * If @a ignore_externals is not set, then recurse into externals
+ * definitions (if any exist) after handling the main target.  This
+ * calls the client notification function (in @a ctx) with the @c
+ * svn_wc_notify_status_external action before handling each externals
+ * definition, and with @c svn_wc_notify_status_completed
+ * after each.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose statuses are
  * reported; that is, don't report status about any item unless
@@ -1855,8 +1822,10 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_wc_status_func3_t status_func,
                    void *status_baton,
                    svn_depth_t depth,
+                   svn_boolean_t get_all,
                    svn_boolean_t update,
-                   svn_client_status_args_t *args,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);

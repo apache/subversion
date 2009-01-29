@@ -213,8 +213,10 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_wc_status_func3_t status_func,
                    void *status_baton,
                    svn_depth_t depth,
+                   svn_boolean_t get_all,
                    svn_boolean_t update,
-                   svn_client_status_args_t *args,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -269,10 +271,10 @@ svn_client_status4(svn_revnum_t *result_rev,
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor4(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
-                                    depth, args->get_all, args->no_ignore,
-                                    ignores, tweak_status, &sb, 
-                                    ctx->cancel_func, ctx->cancel_baton, 
-                                    traversal_info, pool));
+                                    depth, get_all, no_ignore, ignores,
+                                    tweak_status, &sb, ctx->cancel_func,
+                                    ctx->cancel_baton, traversal_info,
+                                    pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
@@ -397,19 +399,10 @@ svn_client_status4(svn_revnum_t *result_rev,
      depth anyway, so the code will DTRT if we change the conditional
      in the future.
   */
-  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! args->ignore_externals))
+  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
-                                           status_baton, depth,
-                                           update, args, ctx, pool));
+                                           status_baton, depth, get_all,
+                                           update, no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
 }
-
-svn_client_status_args_t *
-svn_client_status_args_create(apr_pool_t *pool)
-{
-  svn_client_status_args_t *args = apr_pcalloc(pool, sizeof(*args));
-
-  return args;
-}
-
