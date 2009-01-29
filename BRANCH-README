@@ -62,7 +62,12 @@ TODO:
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
 
- * Optional:  All that stuff for ra_serf above?  Do it for ra_neon, too.
+ * If we're sending the youngest rev in the OPTIONs response, let's
+   also send the repository UUID.  [DONE]
 
- * Optional:  If we're sending the youngest rev in the OPTIONs response,
-              let's also send the repository UUID.  [DONE]
+ * Optional:  Do some of this stuff for ra_neon, too:
+
+    - Get and cache UUID and repos_root from OPTIONS
+    - Get me resource, and pegrev stub from OPTIONS
+    - Use me resource instead of the VCC
+    - Use pegrev stubs instead of get_baseline_info() walks
