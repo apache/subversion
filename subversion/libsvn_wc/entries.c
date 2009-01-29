@@ -1067,7 +1067,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
   /* Attempt to set up timestamps. */
   {
-    const char *text_timestr, *prop_timestr;
+    const char *text_timestr;
 
     text_timestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                 APR_HASH_KEY_STRING);
@@ -1087,23 +1087,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
 
-    prop_timestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                                APR_HASH_KEY_STRING);
-    if (prop_timestr)
-      {
-        if (strcmp(prop_timestr, SVN_WC__TIMESTAMP_WC) == 0)
-          {
-            /* Special case:  a magic string that means 'get this value
-               from the working copy' -- we ignore it here, trusting
-               that the caller of this function know what to do about
-               it.  */
-          }
-        else
-          SVN_ERR(svn_time_from_cstring(&entry->prop_time, prop_timestr,
-                                        pool));
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
-      }
+    /* Note: we do not persist prop_time, so there is no need to attempt
+       to parse a new prop_time value from the log. Certainly, on any
+       recent working copy, there will not be a log record to alter
+       the prop_time value. */
   }
 
   /* Checksum. */
@@ -1201,15 +1188,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
-  /* changelist */
-  entry->changelist = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHANGELIST,
-                                   APR_HASH_KEY_STRING);
-  if (entry->changelist)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHANGELIST;
-      entry->changelist = apr_pstrdup(pool, entry->changelist);
-    }
-
   /* has-props flag. */
   SVN_ERR(do_bool_attr(&entry->has_props,
                        modify_flags, SVN_WC__ENTRY_MODIFY_HAS_PROPS,
@@ -1274,26 +1252,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
           entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
-      }
-  }
-
-  /* File externals */
-  {
-    const char *val
-      = apr_hash_get(atts,
-                     SVN_WC__ENTRY_ATTR_FILE_EXTERNAL,
-                     APR_HASH_KEY_STRING);
-
-    if (val)
-      {
-        SVN_ERR(unserialize_file_external(&(entry->file_external_path),
-                                          &(entry->file_external_peg_rev),
-                                          &(entry->file_external_rev),
-                                          val,
-                                          pool));
-        entry->file_external_path = apr_pstrdup(pool,
-                                                entry->file_external_path);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL;
       }
   }
 
@@ -2366,9 +2324,6 @@ fold_entry(apr_hash_t *entries,
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
     cur_entry->text_time = entry->text_time;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-    cur_entry->prop_time = entry->prop_time;
 
   /* Conflict stuff */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)

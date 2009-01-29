@@ -164,6 +164,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
     Pool requestPool;
     svn_revnum_t youngest = SVN_INVALID_REVNUM;
     svn_opt_revision_t rev;
+    svn_client_status_args_t* args;
 
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -176,12 +177,18 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
+    args = svn_client_status_args_create(requestPool.pool());
+
+    args->get_all = getAll;
+    args->no_ignore = noIgnore;
+    args->ignore_externals = ignoreExternals;
+
     SVN_JNI_ERR(svn_client_status4(&youngest, checkedPath.c_str(),
                                    &rev, StatusCallback::callback,
                                    callback,
                                    depth,
-                                   getAll, onServer, noIgnore,
-                                   ignoreExternals,
+                                   onServer,
+                                   args,
                                    changelists.array(requestPool),
                                    ctx, requestPool.pool()), );
 }
@@ -1790,6 +1797,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
 {
     struct version_status_baton sb;
     Pool requestPool;
+    svn_client_status_args_t *status_args;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     sb.switched = FALSE;
     sb.modified = FALSE;
@@ -1841,10 +1849,13 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     ctx.cancel_func = cancel;
     ctx.cancel_baton = &sb;
 
+    status_args = svn_client_status_args_create(requestPool.pool());
+    status_args->get_all = TRUE;
+
     svn_error_t *err;
     err = svn_client_status4(NULL, intPath.c_str(), &rev, analyze_status,
-                             &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
-                             FALSE, NULL, &ctx, requestPool.pool());
+                             &sb, svn_depth_infinity, FALSE, status_args,
+                             NULL, &ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))
         svn_error_clear(err);
     else

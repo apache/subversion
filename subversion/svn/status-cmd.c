@@ -174,6 +174,7 @@ svn_cl__status(apr_getopt_t *os,
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
+  svn_client_status_args_t *args;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -218,6 +219,11 @@ svn_cl__status(apr_getopt_t *os,
   sb.cached_changelists = master_cl_hash;
   sb.cl_pool = pool;
 
+  args = svn_client_status_args_create(pool);
+  args->get_all = opt_state->verbose;
+  args->no_ignore = opt_state->no_ignore;
+  args->ignore_externals = opt_state->ignore_externals;
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
@@ -236,10 +242,8 @@ svn_cl__status(apr_getopt_t *os,
       SVN_ERR(svn_cl__try(svn_client_status4(&repos_rev, target, &rev,
                                              print_status, &sb,
                                              opt_state->depth,
-                                             opt_state->verbose,
                                              opt_state->update,
-                                             opt_state->no_ignore,
-                                             opt_state->ignore_externals,
+                                             args,
                                              opt_state->changelists,
                                              ctx, subpool),
                           NULL, opt_state->quiet,

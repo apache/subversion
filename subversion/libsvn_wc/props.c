@@ -134,19 +134,7 @@ load_props(apr_hash_t **hash,
   if (finfo.size == 0)
     return SVN_NO_ERROR;
 
-  err = svn_stream_open_readonly(&stream, prop_path, pool, pool);
-
-  if (err)
-    {
-      if ((APR_STATUS_IS_ENOENT(err->apr_err)
-            || APR_STATUS_IS_ENOTDIR(err->apr_err)))
-        {
-           svn_error_clear(err);
-           return SVN_NO_ERROR;
-        }
-      else
-        return err;
-    }
+  SVN_ERR(svn_stream_open_readonly(&stream, prop_path, pool, pool));
 
   SVN_ERR(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool));
 
@@ -2767,16 +2755,15 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  apr_pool_t *subpool = svn_pool_create(pool);
   int wc_format = svn_wc__adm_wc_format(adm_access);
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
   /* If we have no entry, we can't have any prop mods. */
   if (! entry)
     {
       *modified_p = FALSE;
-      goto cleanup;
+      return SVN_NO_ERROR;
     }
 
   /* For newer WCs, if there is an entry for the path, we have a fast
@@ -2784,120 +2771,39 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
     {
       *modified_p = entry->has_prop_mods;
-      goto cleanup;
+      return SVN_NO_ERROR;
     }
 
   /* So, we have a WC in an older format, we have some work to do... */
 
-  /* Check for numerous easy outs on older WC formats before we
-     resort to svn_prop_diffs(). */
-  if (wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
-    {
-      svn_boolean_t bempty, wempty;
-      svn_boolean_t different_filesizes;
-      svn_boolean_t equal_timestamps;
-      const char *prop_path;
-      const char *prop_base_path;
-
-      /* Decide if either path is "empty" of properties. */
-      SVN_ERR(empty_props_p(&wempty, path, entry->kind, svn_wc__props_working,
-                            subpool));
-      SVN_ERR(empty_props_p(&bempty, path, entry->kind, svn_wc__props_base,
-                            subpool));
-
-      /* If something is scheduled for replacement, we do *not* want to
-         pay attention to any base-props;  they might be residual from the
-         old deleted file.  Or, if the base file is empty, we know the answer
-         immediately. */
-      if (entry->schedule == svn_wc_schedule_replace || bempty)
-        {
-          *modified_p = !wempty;
-          goto cleanup;
-        }
-
-      /* OK, so the base file is non-empty.  One more easy out: */
-      if (wempty)
-        {
-          /* base exists, working is empty */
-          *modified_p = TRUE;
-          goto cleanup;
-        }
-
-      /* At this point, we know both files exists.  Therefore we have no
-         choice but to start checking their contents. */
-
-      /* There are at least three tests we can try in succession. */
-
-      /* Easy-answer attempt #1:  (### this stat's the files again) */
-
-      /* Get the paths of the working and 'base' prop files. */
-      SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
-                                svn_wc__props_working, subpool));
-      SVN_ERR(svn_wc__prop_path(&prop_base_path, path, entry->kind,
-                                svn_wc__props_base, subpool));
-
-      /* Check if the local and prop-base file have *definitely*
-         different filesizes. */
-      SVN_ERR(svn_io_filesizes_different_p(&different_filesizes,
-                                           prop_path,
-                                           prop_base_path,
-                                           subpool));
-      if (different_filesizes)
-        {
-          *modified_p = TRUE;
-          goto cleanup;
-        }
-
-      /* Easy-answer attempt #2: (### this stat's the files again) */
-
-      /* See if the local file's prop timestamp is the same as the
-         one recorded in the administrative directory.  */
-      SVN_ERR(svn_wc__timestamps_equal_p(&equal_timestamps, path, adm_access,
-                                         svn_wc__prop_time, subpool));
-      if (equal_timestamps)
-        {
-          *modified_p = FALSE;
-          goto cleanup;
-        }
-    } /* wc_format <= SVN_WC__NO_PROPCACHING_VERSION */
-
-  /* If we get here, then we either known we have prop changes and want
-     the specific changed props or we have a pre-propcaching WC version
-     and still haven't figured out if we even have changes.  Regardless,
-     our approach is the same in both cases.
-
-     In the pre-propcaching case:
-
-       We know that the filesizes are the same,
-       but the timestamps are different.  That's still not enough
-       evidence to make a correct decision;  we need to look at the
-       files' contents directly.
-
-       However, doing a byte-for-byte comparison won't work.  The two
-       properties files may have the *exact* same name/value pairs, but
-       arranged in a different order.  (Our hashdump format makes no
-       guarantees about ordering.)
-
-       Therefore, rather than use contents_identical_p(), we use
-       svn_prop_diffs(). */
   {
     apr_array_header_t *local_propchanges;
-    apr_hash_t *localprops, *baseprops;
+    apr_hash_t *localprops;
+    apr_hash_t *baseprops;
 
-    /* ### Amazingly, this stats the files again! */
     SVN_ERR(load_props(&localprops, path, entry->kind, svn_wc__props_working,
-                       subpool));
-    SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
-                       subpool));
+                       pool));
 
-    /* Don't use the subpool if we are hanging on to the changed props. */
-    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, subpool));
+    /* If something is scheduled for replacement, we do *not* want to
+       pay attention to any base-props;  they might be residual from the
+       old deleted file. */
+    /* ### in modern WC formats, they should be the replaced file's
+       ### base props. hard to know on old WCs tho? (given the above
+       ### comment). just declare propmods if the node has any working
+       ### properties. */
+    if (entry->schedule == svn_wc_schedule_replace)
+      {
+        *modified_p = apr_hash_count(localprops) > 0;
+        return SVN_NO_ERROR;
+      }
+
+    SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
+                       pool));
+
+    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, pool));
 
     *modified_p = (local_propchanges->nelts > 0);
   }
-
- cleanup:
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

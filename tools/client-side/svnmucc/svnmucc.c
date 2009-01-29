@@ -78,13 +78,9 @@ open_tmp_file(apr_file_t **fp,
 {
   const char *temp_dir;
 
-  /* "Say, Subversion.  Seen any good tempdirs lately?" */
-  SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-
   /* Open a unique file;  use APR_DELONCLOSE. */
-  return svn_io_open_unique_file2(fp, NULL,
-                                  svn_path_join(temp_dir, "svnmucc", pool),
-                                  ".tmp", svn_io_file_del_on_close, pool);
+  return svn_io_open_unique_file3(fp, NULL, NULL, svn_io_file_del_on_close,
+                                  pool, pool);
 }
 
 static svn_ra_callbacks_t *

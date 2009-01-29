@@ -29,14 +29,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Indicates which kind of timestamp to pay attention to.
-   See svn_wc__timestamps_equal_p(). */
-enum svn_wc__timestamp_kind
-{
-  svn_wc__text_time = 1,
-  svn_wc__prop_time
-};
-
 
 /* Return an SVN_ERR_WC_UNSUPPORTED_FORMAT error if the working copy
  * format WC_FORMAT is unsupported.  PATH is only used in the error
@@ -48,9 +40,9 @@ svn_error_t *
 svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool);
 
 
-/* Set *EQUAL_P to true if PATH's TIMESTAMP_KIND timestamp is the same as
- * the one recorded in its `entries' file, else to set to false. ADM_ACCESS
- * must be an access baton for PATH.
+/* Set *EQUAL_P to true if PATH's timestamp is the same as the one recorded
+ * in its `entries' file, else to set to false. ADM_ACCESS must be an access
+ * baton for PATH.
  *
  * Use POOL for any temporary allocation.
  */
@@ -58,7 +50,6 @@ svn_error_t *
 svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
                            const char *path,
                            svn_wc_adm_access_t *adm_access,
-                           enum svn_wc__timestamp_kind timestamp_kind,
                            apr_pool_t *pool);
 
 
