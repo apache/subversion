@@ -1077,12 +1077,16 @@ svn_ra_serf__discover_root(const char **root_url,
  * REVISION was set to SVN_INVALID_REVNUM, this will return the current
  * HEAD revision.
  *
+ * If non-NULL, use CONN for communications with the server;
+ * otherwise, use the default connection.
+ *
  * Use POOL for all allocations.
  */
 svn_error_t *
 svn_ra_serf__get_baseline_info(const char **bc_url,
                                const char **bc_relative,
                                svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
                                const char *url,
                                svn_revnum_t revision,
                                svn_revnum_t *latest_revnum,
