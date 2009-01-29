@@ -96,10 +96,6 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                         FALSE, NULL, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
-  (*callbacks)->get_wc_prop = NULL;
-  (*callbacks)->set_wc_prop = NULL;
-  (*callbacks)->push_wc_prop = NULL;
-  (*callbacks)->invalidate_wc_props = NULL;
 
   return SVN_NO_ERROR;
 }
