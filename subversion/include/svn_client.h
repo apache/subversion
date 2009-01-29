@@ -3192,6 +3192,9 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -3206,8 +3209,27 @@ typedef struct svn_client_copy_source_t
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_client_copy5(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy5(), with @a ignore_externals set to @c FALSE.
+ *
+ * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *sources,
