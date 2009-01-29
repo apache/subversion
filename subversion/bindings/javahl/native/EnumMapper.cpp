@@ -493,6 +493,8 @@ jint EnumMapper::mapOperation(svn_wc_operation_t operation)
 {
   switch (operation)
     {
+    case svn_wc_operation_none:
+      return org_tigris_subversion_javahl_Operation_none;
     case svn_wc_operation_update:
       return org_tigris_subversion_javahl_Operation_update;
     case svn_wc_operation_switch:

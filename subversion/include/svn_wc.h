@@ -1215,6 +1215,7 @@ typedef enum svn_wc_conflict_kind_t
  */
 typedef enum svn_wc_operation_t
 {
+  svn_wc_operation_none = 0,
   svn_wc_operation_update,
   svn_wc_operation_switch,
   svn_wc_operation_merge
