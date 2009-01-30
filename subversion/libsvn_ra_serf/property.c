@@ -647,6 +647,22 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
       *prop_ctx = new_prop_ctx;
     }
+  else
+    {
+      /* If we're re-using PROP_CTX, we'll do our caller a favor and
+         verify that the path and revision are as expected. */
+      SVN_ERR_ASSERT(strcmp((*prop_ctx)->path, path) == 0);
+      if (SVN_IS_VALID_REVNUM(rev))
+        {
+          SVN_ERR_ASSERT(((*prop_ctx)->label)
+                         && (strcmp((*prop_ctx)->label, 
+                                    apr_ltoa(pool, rev)) == 0));
+        }
+      else
+        {
+          SVN_ERR_ASSERT((*prop_ctx)->label == NULL);
+        }
+    }
 
   /* create request */
   svn_ra_serf__request_create((*prop_ctx)->handler);
