@@ -84,11 +84,20 @@ class TestHarness:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         sys.stdout.write(x)
+    failed_list = [x for x in log_lines if x[:6] in ('FAIL: ', 'XPASS:')];
     if failed:
       print('At least one test FAILED, checking ' + self.logfile)
-      for x in log_lines:
-        if x[:6] in ('FAIL: ', 'XPASS:'):
-          sys.stdout.write(x)
+      for x in failed_list:
+        sys.stdout.write(x)
+    if skipped or xfailed or failed:
+      print('Summary of test results:')
+      if skipped:
+        print('  %d test%s SKIPPED' % (len(skipped), 's'*min(len(skipped), 1)))
+      if xfailed:
+        print('  %d test%s XFAILED' % (len(xfailed), 's'*min(len(xfailed), 1)))
+      if failed:
+        print('  %d test%s FAILED' % (len(failed_list),
+                                      's'*min(len(failed_list), 1)))
     self._close_log()
     return failed
 
