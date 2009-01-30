@@ -3953,6 +3953,34 @@ dav_svn__create_version_resource(dav_resource **version_res,
 }
 
 
+/* POST handler for commits over HTTP protocol v2.
+*/
+int dav_svn__method_post(request_rec *r)
+{
+  dav_resource *resource;
+  dav_error *derr;
+
+  derr = get_resource(r, dav_svn__get_root_dir(r),
+                      "ignored", 0, &resource);
+  if (derr != NULL)
+    return derr->status;
+  
+  if (resource->info->restype != DAV_SVN_RESTYPE_ME)
+    return HTTP_BAD_REQUEST;
+
+  /* ### Create a new txn based on HEAD.  Remember the UUID.  */
+
+  /* ### Build a 200 CREATED response with two special headers in it:
+
+            !svn/txn/UUID
+            !svn/txp/UUID
+   */
+
+  return HTTP_CREATED;
+}
+
+
+
 const dav_hooks_repository dav_svn__hooks_repository =
 {
   1,                            /* special GET handling */

@@ -732,6 +732,23 @@ merge_xml_in_filter(ap_filter_t *f,
   return APR_SUCCESS;
 }
 
+
+/* Repsonse handler for POST requests (protocol-v2 commits).  */
+static int dav_svn__handler(request_rec *r)
+{
+  /* HTTP-defined Methods we handle */
+  r->allowed = 0
+    | (AP_METHOD_BIT << M_POST);
+
+  if (r->method_number == M_POST) {
+    return dav_svn__method_post(r);
+  }
+
+  return DECLINED;
+}
+
+
+
 
 
 /** Module framework stuff **/
@@ -828,6 +845,9 @@ register_hooks(apr_pool_t *pconf)
                            AP_FTYPE_RESOURCE);
   ap_hook_insert_filter(merge_xml_filter_insert, NULL, NULL,
                         APR_HOOK_MIDDLE);
+
+  /* general request handler for methods which mod_dav DECLINEs. */
+  ap_hook_handler(dav_svn__handler, NULL, NULL, APR_HOOK_LAST);
 
   /* live property handling */
   dav_hook_gather_propsets(dav_svn__gather_propsets, NULL, NULL,
