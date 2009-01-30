@@ -2,7 +2,7 @@
  * log.c:  return log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -175,6 +175,8 @@ typedef struct
   /* ra session for retrieving revprops from old servers */
   svn_ra_session_t *ra_session;
   /* caller's list of requested revprops, receiver, and baton */
+  const char *ra_session_url;
+  apr_pool_t *ra_session_pool;
   const apr_array_header_t *revprops;
   svn_log_entry_receiver_t receiver;
   void *baton;
@@ -220,6 +222,12 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
               want_log = TRUE;
               continue;
             }
+
+          if (rb->ra_session == NULL)
+            SVN_ERR(svn_client_open_ra_session(&rb->ra_session, 
+                                                rb->ra_session_url, 
+                                               rb->ctx, rb->ra_session_pool));
+
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
@@ -244,6 +252,11 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
     }
   else
     {
+      if (rb->ra_session == NULL)
+        SVN_ERR(svn_client_open_ra_session(&rb->ra_session, 
+                                           rb->ra_session_url,
+                                           rb->ctx, rb->ra_session_pool));
+
       SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
                                   &log_entry->revprops, pool));
     }
@@ -277,8 +290,11 @@ svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
                 const apr_array_header_t *revprops,
-                const svn_client_log_args_t *args,
                 svn_log_entry_receiver_t real_receiver,
                 void *real_receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -293,9 +309,8 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
   const char *ra_target;
-  pre_15_receiver_baton_t rb;
+  pre_15_receiver_baton_t rb = {0};
   apr_pool_t *iterpool;
-  int limit = args->limit;
   int i;
 
   if (revision_ranges->nelts == 0)
@@ -500,8 +515,10 @@ svn_client_log5(const apr_array_header_t *targets,
     if (!has_log_revprops) {
       /* See above pre-1.5 notes. */
       rb.ctx = ctx;
-      SVN_ERR(svn_client_open_ra_session(&rb.ra_session, actual_url,
-                                         ctx, pool));
+
+      /* Create ra session on first use */
+      rb.ra_session_pool = pool;
+      rb.ra_session_url = actual_url;
     }
   }
 
@@ -605,9 +622,9 @@ svn_client_log5(const apr_array_header_t *targets,
                               start_revnum,
                               end_revnum,
                               limit,
-                              args->discover_changed_paths,
-                              args->strict_node_history,
-                              args->include_merged_revisions,
+                              discover_changed_paths,
+                              strict_node_history,
+                              include_merged_revisions,
                               passed_receiver_revprops,
                               passed_receiver,
                               passed_receiver_baton,
@@ -624,12 +641,4 @@ svn_client_log5(const apr_array_header_t *targets,
     }
 
   return SVN_NO_ERROR;
-}
-
-svn_client_log_args_t *
-svn_client_log_args_create(apr_pool_t *pool)
-{
-  svn_client_log_args_t *log_args = apr_pcalloc(pool, sizeof(*log_args));
-
-  return log_args;
 }

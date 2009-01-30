@@ -80,10 +80,9 @@ load_config(svn_ra_serf__session_t *session,
 {
   svn_config_t *config, *config_client;
   const char *server_group;
-#if SERF_VERSION_AT_LEAST(0, 1, 3)
-  const char *proxy_host = NULL, *port_str = NULL;
+  const char *proxy_host = NULL;
+  const char *port_str = NULL;
   unsigned int proxy_port;
-#endif
 
   config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
                         APR_HASH_KEY_STRING);
@@ -99,7 +98,6 @@ load_config(svn_ra_serf__session_t *session,
   svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, config);
 
-#if SERF_VERSION_AT_LEAST(0, 1, 3)
   /* Load the global proxy server settings, if set. */
   svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
@@ -116,7 +114,6 @@ load_config(svn_ra_serf__session_t *session,
                               TRUE));
   svn_config_get(config, &session->ssl_authorities, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
-#endif
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -134,7 +131,6 @@ load_config(svn_ra_serf__session_t *session,
       svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                              SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
-#if SERF_VERSION_AT_LEAST(0, 1, 3)
       /* Load the group proxy server settings, overriding global settings. */
       svn_config_get(config, &proxy_host, server_group,
                      SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
@@ -152,10 +148,8 @@ load_config(svn_ra_serf__session_t *session,
                                   TRUE));
       svn_config_get(config, &session->ssl_authorities, server_group,
                      SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
-#endif
     }
 
-#if SERF_VERSION_AT_LEAST(0, 1, 3)
   /* Convert the proxy port value, if any. */
   if (port_str)
     {
@@ -191,12 +185,10 @@ load_config(svn_ra_serf__session_t *session,
     }
   else
     session->using_proxy = FALSE;
-#endif
 
   return SVN_NO_ERROR;
 }
 
-#if SERF_VERSION_AT_LEAST(0,1,3)
 static void
 svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
 {
@@ -208,7 +200,6 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
                                   serf_sess->pool);
     }
 }
-#endif
 
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
@@ -324,10 +315,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                              serf_sess->pool);
 
   /* Set the progress callback. */
-#if SERF_VERSION_AT_LEAST(0,1,3)
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
                                serf_sess);
-#endif
 
   serf_sess->num_conns = 1;
 

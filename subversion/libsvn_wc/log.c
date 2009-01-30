@@ -770,14 +770,11 @@ log_do_modify_entry(struct log_runner *loggy,
                         strcmp(name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
                         loggy->pool);
 
-  /* Did the log command give us any timestamps?  There are three
-     possible scenarios here.  We must check both text_time
-     and prop_time for each of the three scenarios.  */
-
-  /* TEXT_TIME: */
+  /* svn_wc__atts_to_entry will no-op if the TEXT_TIME timestamp is
+     SVN_WC__TIMESTAMP_WC, so look for that case and fill in the proper
+     value. */
   valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                           APR_HASH_KEY_STRING);
-
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
       && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
     {
@@ -791,21 +788,6 @@ log_do_modify_entry(struct log_runner *loggy,
            svn_path_local_style(tfile, loggy->pool));
 
       entry->text_time = text_time;
-    }
-
-  /* PROP_TIME: */
-  valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                          APR_HASH_KEY_STRING);
-
-  if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-      && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
-    {
-      apr_time_t prop_time;
-
-      SVN_ERR(svn_wc__props_last_modified(&prop_time,
-                                          tfile, svn_wc__props_working,
-                                          loggy->adm_access, loggy->pool));
-      entry->prop_time = prop_time;
     }
 
   valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_WORKING_SIZE,
@@ -2202,10 +2184,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_TEXT_TIME,
                  svn_time_to_cstring(entry->text_time, pool));
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PROP_TIME,
-                 SVN_WC__ENTRY_ATTR_PROP_TIME,
-                 svn_time_to_cstring(entry->prop_time, pool));
-
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CHECKSUM,
                  SVN_WC__ENTRY_ATTR_CHECKSUM,
                  entry->checksum);
@@ -2353,7 +2331,6 @@ svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           svn_wc_adm_access_t *adm_access,
                                           const char *path,
-                                          const char *time_prop,
                                           apr_pool_t *pool)
 {
   svn_xml_make_open_tag(log_accum,
@@ -2362,7 +2339,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_MODIFY_ENTRY,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path(path, adm_access),
-                        time_prop,
+                        SVN_WC__ENTRY_ATTR_TEXT_TIME,
                         SVN_WC__TIMESTAMP_WC,
                         NULL);
 

@@ -23,14 +23,17 @@ package org.tigris.subversion.javahl;
  */
 public final class Operation
 {
+    /* none */
+    public static final int none = 0;
+
     /* update */
-    public static final int update = 0;
+    public static final int update = 1;
 
     /* switch */
     /* Note: this is different that svn_wc.h, because 'switch' is a
      * reserved word in java  :(  */
-    public static final int switched = 1;
+    public static final int switched = 2;
 
     /* merge */
-    public static final int merge = 2;
+    public static final int merge = 3;
 }
