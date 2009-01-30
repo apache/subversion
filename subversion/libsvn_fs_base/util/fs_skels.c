@@ -1006,6 +1006,8 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
 }
 
 
+/* Construct a skel representing CHECKSUM, allocated in POOL, and prepend
+ * it onto the existing skel SKEL. */
 static svn_error_t *
 prepend_checksum(svn_skel_t *skel,
                  svn_checksum_t *checksum,
