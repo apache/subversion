@@ -161,7 +161,9 @@ enum dav_svn_private_restype {
 
   /* new types in HTTP protocol v2: */
   DAV_SVN_RESTYPE_ME,                   /* .../!svn/me   */
-  DAV_SVN_RESTYPE_REVSTUB_COLLECTION    /* .../!svn/rev/ */
+  DAV_SVN_RESTYPE_REVSTUB_COLLECTION,   /* .../!svn/rev/ */
+  DAV_SVN_RESTYPE_TXNSTUB_COLLECTION,   /* .../!svn/txn/ */
+  DAV_SVN_RESTYPE_TXNPROP_STUB          /* .../!svn/txp/ */
 };
 
 
@@ -382,6 +384,9 @@ dav_error *
 dav_svn__create_activity(const dav_svn_repos *repos,
                          const char **ptxn_name,
                          apr_pool_t *pool);
+
+/* HTTP protocol v2:  client does POST against 'me' resource. */
+int dav_svn__method_post(request_rec *r);
 
 
 /*** repos.c ***/
