@@ -139,11 +139,6 @@ print_info_xml(void *baton,
         svn_cl__xml_tagged_cdata(&sb, pool, "text-updated",
                                  svn_time_to_cstring(info->text_time, pool));
 
-      /* "<prop-updated> xx </prop-updated>" */
-      if (info->prop_time)
-        svn_cl__xml_tagged_cdata(&sb, pool, "prop-updated",
-                                 svn_time_to_cstring(info->prop_time, pool));
-
       /* "<checksum> xx </checksum>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "checksum", info->checksum);
 
@@ -361,10 +356,6 @@ print_info(void *baton,
       if (info->text_time)
         SVN_ERR(svn_cl__info_print_time(info->text_time,
                                         _("Text Last Updated"), pool));
-
-      if (info->prop_time)
-        SVN_ERR(svn_cl__info_print_time(info->prop_time,
-                                        _("Properties Last Updated"), pool));
 
       if (info->checksum)
         SVN_ERR(svn_cmdline_printf(pool, _("Checksum: %s\n"),

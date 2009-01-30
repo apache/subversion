@@ -211,7 +211,7 @@ detranslate_wc_file(const char **detranslated_file,
          consistent newlines and 'svn:eol-style' set.  */
 
       if (style == svn_subst_eol_style_native)
-        eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+        eol = SVN_SUBST_NATIVE_EOL_STR;
       else if (style != svn_subst_eol_style_fixed
                && style != svn_subst_eol_style_none)
         return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);

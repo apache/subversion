@@ -3055,6 +3055,94 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test the basic tree conflict functionality.
+     * @throws Throwable
+     */
+    public void testTreeConflict() throws Throwable
+    {
+        // build the test setup. Used for the changes
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        // build the backup test setup. That is the one that will be updated
+        OneTest tcTest = thisTest.copy(".tree-conflict");
+
+
+        // Move files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha" };
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            srcPaths[i] = new File(thisTest.getWorkingCopy(),
+                                   "A/B/E/" + fileName).getPath();
+
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+
+            wc.removeItem("A/B/E/" + fileName);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/E/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Delete);
+        }
+        client.move(srcPaths,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, false, true, false, null);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Unexpected WC revision number after commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Move files", true), 2);
+        thisTest.checkStatus();
+
+        // modify A/B/E/alpha in second working copy
+        File alpha = new File(tcTest.getWorkingCopy(), "A/B/E/alpha");
+        PrintWriter alphaWriter = new PrintWriter(new FileOutputStream(alpha, true));
+        alphaWriter.print("appended alpha text");
+        alphaWriter.close();
+
+        // update the tc test
+        assertEquals("wrong revision number from update",
+                     client.update(tcTest.getWCPath(), null, true),
+                     2);
+
+        // set the expected working copy layout for the tc test
+        tcTest.getWc().addItem("A/B/F/alpha",
+                tcTest.getWc().getItemContent("A/B/E/alpha"));
+        tcTest.getWc().setItemWorkingCopyRevision("A/B/F/alpha", 2);
+        // we expect the tree conflict to turn the existing item into
+        // a scheduled-add with history.  We expect the modifications in
+        // the local file to have been copied to the new file.
+        tcTest.getWc().setItemTextStatus("A/B/E/alpha", StatusKind.added);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.modified);
+
+        // check the status of the working copy of the tc test
+        tcTest.checkStatus();
+
+        // get the Info2 of the tree conflict
+        MyInfoCallback callback = new MyInfoCallback();
+        client.info2(tcTest.getWCPath() + "/A/B/E/alpha", null,
+                null, Depth.unknown, null, callback);
+        ConflictDescriptor conflict = callback.getInfo().getConflictDescriptor();
+        
+        assertNotNull("Conflict should not be null", conflict);
+        
+        assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
+        assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
+                conflict.getSrcLeftVersion().getPathInRepos(), tcTest.getUrl() + "/A/B/E/alpha");
+        assertEquals(conflict.getSrcLeftVersion().getPegRevision(), 1L);
+        
+        assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
+        assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl());
+        assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+        
+    }
+
+    /**
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.tigris.subversion.javahl.SVNClient#checkout()},
      * {@link org.tigris.subversion.javahl.SVNClient#update()}, and
@@ -3381,5 +3469,18 @@ public class BasicTests extends SVNTests
         {
             return (List) super.get(path);
         }
+    }
+    
+    private class MyInfoCallback implements InfoCallback {
+        private Info2 info;
+
+        public void singleInfo(Info2 info) {
+            this.info = info;
+        }
+        
+        public Info2 getInfo() {
+            return info;
+        }
+        
     }
 }

@@ -58,8 +58,7 @@ public class ErrorCodes
 {
 """)
 
-  keys = list(error_codes.keys())
-  keys.sort()
+  keys = sorted(error_codes.keys())
 
   for key in keys:
     # Format the code name to be more Java-esque

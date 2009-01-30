@@ -37,7 +37,8 @@
 #include "svn_private_config.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
-#include "../libsvn_subr/utf_impl.h"
+
+#include "private/svn_utf_private.h"
 
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t
@@ -1078,7 +1079,7 @@ output_unified_diff_modified(void *baton,
             }
           invalid_character =
             svn_utf__last_valid(output_baton->hunk_extra_context,
-                                SVN_DIFF__EXTRA_CONTEXT_LENGTH - 1);
+                                SVN_DIFF__EXTRA_CONTEXT_LENGTH);
           for (p = invalid_character - output_baton->hunk_extra_context;
                p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
             {

@@ -186,11 +186,12 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
 
   if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
     {
-      /* Create the error, then reset the statement, and return the error. */
-      svn_error_t *err = svn_error_create(SQLITE_ERROR_CODE(sqlite_result),
-                                          NULL, sqlite3_errmsg(stmt->db->db3));
-      svn_error_clear(svn_sqlite__reset(stmt));
-      return err;
+      svn_error_t *err1, *err2;
+
+      err1 = svn_error_create(SQLITE_ERROR_CODE(sqlite_result), NULL,
+                              sqlite3_errmsg(stmt->db->db3));
+      err2 = svn_sqlite__reset(stmt);
+      return svn_error_compose_create(err1, err2);
     }
 
   *got_row = (sqlite_result == SQLITE_ROW);
@@ -217,6 +218,9 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
 
   for (count = 1; *fmt; fmt++, count++)
     {
+      const void *blob;
+      apr_size_t blob_size;
+
       switch (*fmt)
         {
           case 's':
@@ -230,9 +234,9 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             break;
 
           case 'b':
-            SVN_ERR(svn_sqlite__bind_blob(stmt, count,
-                                          va_arg(ap, const void *),
-                                          va_arg(ap, apr_size_t)));
+            blob = va_arg(ap, const void *);
+            blob_size = va_arg(ap, apr_size_t);
+            SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
             break;
 
           default:
@@ -308,6 +312,12 @@ int
 svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column)
 {
   return sqlite3_column_int(stmt->s3stmt, column);
+}
+
+svn_boolean_t
+svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column)
+{
+  return sqlite3_column_type(stmt->s3stmt, column) == SQLITE_NULL;
 }
 
 svn_error_t *

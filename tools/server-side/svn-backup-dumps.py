@@ -3,7 +3,7 @@
 # svn-backup-dumps.py -- Create dumpfiles to backup a subversion repository.
 #
 # ====================================================================
-# Copyright (c) 2006, 2008-2009 CollabNet.  All rights reserved.
+# Copyright (c) 2006-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,8 +18,6 @@
 #
 # This script creates dump files from a subversion repository.
 # It is intended for use in cron jobs and post-commit hooks.
-#
-# Tested on UNIX with python 2.3 and 2.4, on Windows with python 2.4.
 #
 # The basic operation modes are:
 #    1. Create a full dump (revisions 0 to HEAD).
@@ -141,6 +139,7 @@ import gzip
 import os.path
 from optparse import OptionParser
 from ftplib import FTP
+from subprocess import Popen, PIPE
 
 try:
     import bz2
@@ -148,133 +147,6 @@ try:
 except ImportError:
     have_bz2 = False
 
-
-class Popen24Compat:
-
-    def __init__(self, args, bufsize=0, executable=None, stdin=None,
-            stdout=None, stderr=None, preexec_fn=None, close_fds=False,
-            shell=False, cwd=None, env=None, universal_newlines=False,
-            startupinfo=None, creationflags=0):
-
-        if isinstance(args, list):
-            args = tuple(args)
-        elif not isinstance(args, tuple):
-            raise RipperException("Popen24Compat: args is not tuple or list")
-
-        self.stdin = None
-        self.stdout = None
-        self.stderr = None
-        self.returncode = None
-
-        if executable == None:
-            executable = args[0]
-
-        if stdin == PIPE:
-            stdin, stdin_fd = os.pipe()
-            self.stdin = os.fdopen(stdin_fd)
-        elif stdin == None:
-            stdin = 0
-        else:
-            stdin = stdin.fileno()
-        if stdout == PIPE:
-            stdout_fd, stdout = os.pipe()
-            self.stdout = os.fdopen(stdout_fd)
-        elif stdout == None:
-            stdout = 1
-        else:
-            stdout = stdout.fileno()
-        if stderr == PIPE:
-            stderr_fd, stderr = os.pipe()
-            self.stderr = os.fdopen(stderr_fd)
-        elif stderr == None:
-            stderr = 2
-        else:
-            stderr = stderr.fileno()
-
-        # error pipe
-        err_read, err_write = os.pipe()
-        fcntl.fcntl(err_write, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
-
-        self.pid = os.fork()
-        if self.pid < 0:
-            raise Exception("Popen24Compat: fork")
-        if self.pid == 0:
-            # child
-            os.close(err_read)
-            fcntl.fcntl(err_write, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
-            if self.stdin:
-                self.stdin.close()
-            if self.stdout:
-                self.stdout.close()
-            if self.stderr:
-                self.stderr.close()
-            if stdin != 0:
-                os.dup2(stdin, 0)
-                os.close(stdin)
-            if stdout != 1:
-                os.dup2(stdout, 1)
-                os.close(stdout)
-            if stderr != 2:
-                os.dup2(stderr, 2)
-                os.close(stderr)
-            try:
-                if shell:
-                    # should spawn a shell here...
-                    os.execvp(executable, args)
-                else:
-                    os.execvp(executable, args)
-            except:
-                err = sys.exc_info()[1]
-            # exec error
-            os.write(err_write, str(err))
-            os._exit(255)
-        else:
-            # parent
-            os.close(err_write)
-            if stdin != 0:
-                os.close(stdin)
-            if stdout != 0:
-                os.close(stdout)
-            if stderr != 0:
-                os.close(stderr)
-            sr, sw, se = select.select([ err_read ], [], [ err_read ])
-            if len(se) == 1:
-                os.close(err_read)
-                raise Exception("Popen24Compat: err pipe read error")
-            if len(sr) == 1:
-                err = os.read(err_read, 1024)
-            os.close(err_read)
-            if len(err) != 0:
-                raise Exception("Popen24Compat: exec error: " + err)
-
-    def poll(self):
-        self.__wait(os.WNOHANG)
-        return self.returncode
-
-    def wait(self):
-        self.__wait(0)
-        return self.returncode
-
-    def __wait(self, options):
-        pid, rc = os.waitpid(self.pid, options)
-        if pid != 0:
-            self.returncode = rc
-
-def PopenConstr(args, bufsize=0, executable=None, stdin=None, stdout=None,
-            stderr=None, preexec_fn=None, close_fds=False, shell=False,
-            cwd=None, env=None, universal_newlines=False, startupinfo=None,
-            creationflags=0):
-    return Popen24Compat(args, bufsize=bufsize, executable=executable,
-                stdin=stdin, stdout=stdout, stderr=stderr,
-                preexec_fn=preexec_fn, close_fds=close_fds, shell=shell,
-                cwd=cwd, env=env, universal_newlines=universal_newlines,
-                startupinfo=startupinfo, creationflags=creationflags)
-
-try:
-    from subprocess import Popen, PIPE
-except ImportError:
-    Popen = PopenConstr
-    PIPE = -1
 
 class SvnBackupOutput:
 

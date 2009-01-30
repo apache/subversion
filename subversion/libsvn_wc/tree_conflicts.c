@@ -81,6 +81,7 @@ static const enum_mapping_t node_kind_map[] =
 /* A map for svn_wc_operation_t values. */
 static const enum_mapping_t operation_map[] =
 {
+  { "none",   svn_wc_operation_none },
   { "update", svn_wc_operation_update },
   { "switch", svn_wc_operation_switch },
   { "merge",  svn_wc_operation_merge },

@@ -140,8 +140,7 @@ def main():
                (branch_name, wc_version)
 
     os.chdir(po_dir)
-    files = os.listdir('.')
-    files.sort()
+    files = sorted(os.listdir('.'))
     format_head = "%6s %7s %7s %7s %7s" % ("lang", "trans", "untrans",
                    "fuzzy", "obs")
     format_line = "--------------------------------------"

@@ -41,10 +41,6 @@
 
 #include "svn_private_config.h"
 
-/* The Repository Default EOL used for files which
- * use the 'native' eol style.
- */
-#define SVN_SUBST__DEFAULT_EOL_STR "\n"
 
 /**
  * The textual elements of a detranslated special file.  One of these
@@ -108,34 +104,11 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
   return (special || keywords
           || (style != svn_subst_eol_style_none && force_eol_check)
           || (style == svn_subst_eol_style_native &&
-              strcmp(APR_EOL_STR, SVN_SUBST__DEFAULT_EOL_STR) != 0)
+              strcmp(APR_EOL_STR, SVN_SUBST_NATIVE_EOL_STR) != 0)
           || (style == svn_subst_eol_style_fixed &&
               strcmp(APR_EOL_STR, eol) != 0));
 }
 
-
-svn_error_t *
-svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
-                                           svn_stream_t *source,
-                                           svn_subst_eol_style_t eol_style,
-                                           const char *eol_str,
-                                           svn_boolean_t always_repair_eols,
-                                           apr_hash_t *keywords,
-                                           apr_pool_t *pool)
-{
-  if (eol_style == svn_subst_eol_style_native)
-    eol_str = SVN_SUBST__DEFAULT_EOL_STR;
-  else if (! (eol_style == svn_subst_eol_style_fixed
-              || eol_style == svn_subst_eol_style_none))
-    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
-
- *stream = svn_subst_stream_translated(source, eol_str,
-                                       eol_style == svn_subst_eol_style_fixed
-                                       || always_repair_eols,
-                                       keywords, FALSE, pool);
-
- return SVN_NO_ERROR;
-}
 
 
 /* Helper function for svn_subst_build_keywords */
@@ -1382,6 +1355,8 @@ svn_subst_copy_and_translate3(const char *src,
                               apr_pool_t *pool)
 {
   svn_stream_t *src_stream;
+  svn_stream_t *dst_stream;
+  const char *dst_tmp;
   svn_error_t *err;
   svn_node_kind_t kind;
   svn_boolean_t path_special;
@@ -1394,8 +1369,6 @@ svn_subst_copy_and_translate3(const char *src,
     {
       if (expand)
         {
-          svn_stream_t *source;
-
           if (path_special)
             {
               /* We are being asked to create a special file from a special
@@ -1406,14 +1379,14 @@ svn_subst_copy_and_translate3(const char *src,
                  ### svn_subst_read_specialfile even checks the file type
                  ### for us! */
 
-              SVN_ERR(svn_subst_read_specialfile(&source, src, pool, pool));
+              SVN_ERR(svn_subst_read_specialfile(&src_stream, src, pool, pool));
             }
           else
             {
-              SVN_ERR(svn_stream_open_readonly(&source, src, pool, pool));
+              SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
             }
 
-          return create_special_file_from_stream(source, dst, pool);
+          return create_special_file_from_stream(src_stream, dst, pool);
         }
       /* else !expand */
 
@@ -1427,61 +1400,26 @@ svn_subst_copy_and_translate3(const char *src,
   /* Open source file. */
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
 
-  /* ### note: this checks for SPECIAL and for NO-TRANS. whatever. */
-  err = svn_subst_create_translated(src_stream, dst,
-                                    eol_str, repair, keywords, expand,
-                                    FALSE, pool);
-
-  /* On errors, we have a pathname available. */
-  if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
-    err = svn_error_createf(SVN_ERR_IO_INCONSISTENT_EOL, err,
-                            _("File '%s' has inconsistent newlines"),
-                            svn_path_local_style(src, pool));
-
-  return svn_error_compose_create(err, svn_stream_close(src_stream));
-}
-
-
-svn_error_t *
-svn_subst_create_translated(svn_stream_t *src_stream,
-                            const char *dst,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            apr_hash_t *keywords,
-                            svn_boolean_t expand,
-                            svn_boolean_t special,
-                            apr_pool_t *pool)
-{
-  const char *dst_tmp;
-  svn_stream_t *dst_stream;
-  svn_error_t *err;
-
-  /* If this is a 'special' file, then we need to create the thing... */
-  if (special)
-    {
-      return create_special_file_from_stream(src_stream, dst, pool);
-    }
-
-  /* Our API contract says that we don't close SRC_STREAM, but the code
-     below always does. Disown the sucker. */
-  src_stream = svn_stream_disown(src_stream, pool);
-
   /* For atomicity, we translate to a tmp file and then rename the tmp file
      over the real destination. */
   SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
                                  svn_path_dirname(dst, pool),
                                  svn_io_file_del_none, pool, pool));
 
-  /* If some translation is needed, the wrap the output stream (this is
-     more efficient than wrapping the input). */
-  if (eol_str || (keywords && (apr_hash_count(keywords) > 0)))
-    dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
-                                             keywords, expand, pool);
+  dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
+                                           keywords, expand, pool);
 
   /* ###: use cancel func/baton in place of NULL/NULL below. */
   err = svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool);
   if (err)
-    return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
+    {
+      /* On errors, we have a pathname available. */
+      if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
+        err = svn_error_createf(SVN_ERR_IO_INCONSISTENT_EOL, err,
+                                _("File '%s' has inconsistent newlines"),
+                                svn_path_local_style(src, pool));
+      return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
+    }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   return svn_io_file_rename(dst_tmp, dst, pool);

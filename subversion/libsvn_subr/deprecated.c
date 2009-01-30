@@ -198,6 +198,29 @@ svn_subst_copy_and_translate2(const char *src,
 }
 
 svn_error_t *
+svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
+                                           svn_stream_t *source,
+                                           svn_subst_eol_style_t eol_style,
+                                           const char *eol_str,
+                                           svn_boolean_t always_repair_eols,
+                                           apr_hash_t *keywords,
+                                           apr_pool_t *pool)
+{
+  if (eol_style == svn_subst_eol_style_native)
+    eol_str = SVN_SUBST_NATIVE_EOL_STR;
+  else if (! (eol_style == svn_subst_eol_style_fixed
+              || eol_style == svn_subst_eol_style_none))
+    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+ *stream = svn_subst_stream_translated(source, eol_str,
+                                       eol_style == svn_subst_eol_style_fixed
+                                       || always_repair_eols,
+                                       keywords, FALSE, pool);
+
+ return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_subst_stream_detranslated(svn_stream_t **stream_p,
                               const char *src,
                               svn_subst_eol_style_t eol_style,
@@ -234,7 +257,7 @@ svn_subst_translate_to_normal_form(const char *src,
 {
 
   if (eol_style == svn_subst_eol_style_native)
-    eol_str = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+    eol_str = SVN_SUBST_NATIVE_EOL_STR;
   else if (! (eol_style == svn_subst_eol_style_fixed
               || eol_style == svn_subst_eol_style_none))
     return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
@@ -610,4 +633,23 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
       apr_pstrdup(pool, new_changed_path->copyfrom_path);
 
   return new_changed_path;
+}
+
+/*** From cmdline.c ***/
+svn_error_t *
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
+{
+  return svn_cmdline_create_auth_baton(ab, non_interactive,
+                                       auth_username, auth_password,
+                                       config_dir, no_auth_cache, FALSE,
+                                       cfg, cancel_func, cancel_baton, pool);
 }

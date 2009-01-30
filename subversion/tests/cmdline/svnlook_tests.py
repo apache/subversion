@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2007-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2007-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -144,8 +144,7 @@ def test_misc(sbox):
 
 
   proplist = run_svnlook('proplist', '--revprop', repo_dir)
-  proplist = [prop.strip() for prop in proplist]
-  proplist.sort()
+  proplist = sorted([prop.strip() for prop in proplist])
 
   # We cannot rely on svn:author's presence. ra_svn doesn't set it.
   if not (proplist == [ 'svn:author', 'svn:date', 'svn:log' ]

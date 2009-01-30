@@ -561,8 +561,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
                                     noderev->prop_key, trail, pool));
   proplist_skel = svn_skel__parse(raw_proplist.data, raw_proplist.len, pool);
   if (proplist_skel)
-    SVN_ERR(svn_fs_base__parse_proplist_skel(&proplist,
-                                             proplist_skel, pool));
+    SVN_ERR(svn_skel__parse_proplist(&proplist, proplist_skel, pool));
 
   *proplist_p = proplist;
   return SVN_NO_ERROR;
@@ -601,8 +600,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   rep_key = noderev->prop_key;
 
   /* Flatten the proplist into a string. */
-  SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
-                                             proplist, pool));
+  SVN_ERR(svn_skel__unparse_proplist(&proplist_skel, proplist, pool));
   raw_proplist_buf = svn_skel__unparse(proplist_skel, pool);
 
   /* If this repository supports representation sharing, and the

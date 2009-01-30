@@ -89,8 +89,7 @@ if __name__ == "__main__":
   if sys.argv[1] == 'list':
     if len(sys.argv) > 2:
       usage_and_exit()
-    codes = list(__svn_error_codes.keys())
-    codes.sort()
+    codes = sorted(__svn_error_codes.keys())
 
   # Get a list of code by parsing stdin for apr_err=CODE instances
   elif sys.argv[1] == 'parse':

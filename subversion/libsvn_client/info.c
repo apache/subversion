@@ -64,7 +64,7 @@ build_info_from_dirent(svn_info_t **info,
     tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN;
 
   tmpinfo->size64               = dirent->size;
-  tmpinfo->working_size         = SVN_INVALID_FILESIZE;
+  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
@@ -99,7 +99,6 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->copyfrom_url         = entry->copyfrom_url;
   tmpinfo->copyfrom_rev         = entry->copyfrom_rev;
   tmpinfo->text_time            = entry->text_time;
-  tmpinfo->prop_time            = entry->prop_time;
   tmpinfo->checksum             = entry->checksum;
   tmpinfo->conflict_old         = entry->conflict_old;
   tmpinfo->conflict_new         = entry->conflict_new;

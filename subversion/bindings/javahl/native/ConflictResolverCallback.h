@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -69,8 +69,6 @@ class ConflictResolverCallback
                   void *baton,
                   apr_pool_t *pool);
 
-  static jobject
-  createJConflictDescriptor(const svn_wc_conflict_description_t *desc);
  protected:
   /**
    * Delegate to m_conflictResolver.resolve(), which provides the

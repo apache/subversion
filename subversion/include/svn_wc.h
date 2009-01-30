@@ -1202,10 +1202,12 @@ typedef enum svn_wc_conflict_reason_t
  */
 typedef enum svn_wc_conflict_kind_t
 {
-  svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
-  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
-  svn_wc_conflict_kind_tree          /* tree conflict (on a dir) */
-
+  /** textual conflict (on a file) */
+  svn_wc_conflict_kind_text,
+  /** property conflict (on a file or dir) */
+  svn_wc_conflict_kind_property,
+  /** tree conflict (on a dir) @since New in 1.6. */
+  svn_wc_conflict_kind_tree 
 } svn_wc_conflict_kind_t;
 
 
@@ -1215,6 +1217,7 @@ typedef enum svn_wc_conflict_kind_t
  */
 typedef enum svn_wc_operation_t
 {
+  svn_wc_operation_none = 0,
   svn_wc_operation_update,
   svn_wc_operation_switch,
   svn_wc_operation_merge
@@ -1670,6 +1673,7 @@ typedef struct svn_wc_diff_callbacks3_t
    * A file @a path was deleted.  The [loss of] contents can be seen by
    * comparing @a tmpfile1 and @a tmpfile2.  @a originalprops provides
    * the properties of the file.
+   * ### Some existing callers include WC "entry props" in @a originalprops.
    *
    * If known, the @c svn:mime-type value of each file is passed into
    * @a mimetype1 and @a mimetype2;  either or both of the values can
@@ -2095,7 +2099,10 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t text_time;
 
-  /** last up-to-date time for properties (0 means no information available) */
+  /** last up-to-date time for properties (0 means no information available)
+   *
+   * @deprecated This value will always be 0 in version 1.4 and later.
+   */
   apr_time_t prop_time;
 
   /** Hex MD5 checksum for the untranslated text base file,
