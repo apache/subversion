@@ -47,16 +47,6 @@ Candidate changes for 1.5.6:
    Votes:
      +1: rhuijben, stylesen
 
- * r35250, r35286
-   Fix the error handling logic of the get-location-segments REPORT code
-   in mod_dav_svn.
-   Justification:
-     This causes inconsistencies across the RA layers, and those
-     confusing client-side XML parsing errors that fuss about
-     responses with 200 status codes.
-   Votes:
-     +1: cmpilato, gstein
-
  * r35297, r35367
    Allow svn_mergeinfo_parse() to tolerate unordered rangelists as input
    while still guaranteeing the mergeinfo it creates has sorted rangelists
@@ -108,3 +98,13 @@ Candidate changes for 1.5.6:
 
 Approved changes:
 =================
+
+* r35250, r35286
+   Fix the error handling logic of the get-location-segments REPORT code
+   in mod_dav_svn.
+   Justification:
+     This causes inconsistencies across the RA layers, and those
+     confusing client-side XML parsing errors that fuss about
+     responses with 200 status codes.
+   Votes:
+     +1: cmpilato, gstein, rhuijben
