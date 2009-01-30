@@ -66,8 +66,8 @@ typedef struct svn_checksum_t
  */
 typedef struct svn_checksum_ctx_t svn_checksum_ctx_t;
 
-/** Allocate, initialize and return a @c svn_checksum_t structure of type
- * @a kind.  The checksum is allocated in @a pool.
+/** Return a new checksum structure of type @a kind, initialized to the all-
+ * zeros value, allocated in @a pool.
  *
  * @since New in 1.6.
  */
@@ -83,7 +83,7 @@ svn_checksum_create(svn_checksum_kind_t kind,
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum);
 
-/** Compare digests @a d1 and @a d2.  If their kinds do not match or
+/** Compare checksums @a d1 and @a d2.  If their kinds do not match or
  * if neither is all zeros, and their content does not match, then
  * return FALSE; else return TRUE.
  *
@@ -125,10 +125,11 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool);
 
 
-/** Parse the hex representation of a checksum of kind @a kind into
- * @a checksum, allocating in @a pool.
+/** Parse the hex representation @a hex of a checksum of kind @a kind and
+ * set @a *checksum to the result, allocating in @a pool.
  *
- * If @a hex is @c NULL, then @a *checksum will also be @c NULL.
+ * If @a hex is @c NULL or is the all-zeros checksum, then set @a *checksum
+ * to @c NULL.
  *
  * @since New in 1.6.
  */
@@ -154,7 +155,7 @@ svn_checksum(svn_checksum_t **checksum,
 
 /**
  * Return in @a pool a newly allocated checksum populated with the checksum
- * of type @a kind for the empty string of type.
+ * of type @a kind for the empty string.
  *
  * @since New in 1.6.
  */
