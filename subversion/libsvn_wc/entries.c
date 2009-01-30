@@ -60,7 +60,8 @@ enum statement_keys {
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
-  STMT_INSERT_CHANGELIST
+  STMT_INSERT_CHANGELIST,
+  STMT_SELECT_REPOSITORY
 };
 
 static const char * const statements[] = {
@@ -93,6 +94,8 @@ static const char * const statements[] = {
   "insert or replace into changelist "
     "(wc_id, name) "
   "values (?1, ?2);",
+
+  "select id, root from repository where uuid = ?1;",
 
   NULL
   };
@@ -2010,6 +2013,7 @@ write_entry(svn_stringbuf_t *buf,
             svn_sqlite__db_t *wc_db,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
+            const char *repos_root,
             const svn_wc_entry_t *entry,
             const char *name,
             const svn_wc_entry_t *this_dir,
@@ -2100,6 +2104,27 @@ write_entry(svn_stringbuf_t *buf,
       base_node->kind = entry->kind;
       base_node->revision = entry->revision;
 
+      if (repos_root)
+        {
+          base_node->repos_id = repos_id;
+          if (entry->url != NULL)
+            {
+              base_node->repos_relpath = svn_path_is_child(repos_root,
+                                                           entry->url,
+                                                           scratch_pool);
+            }
+          else
+            {
+              const char *base_path = svn_path_is_child(repos_root,
+                                                        this_dir->url,
+                                                        scratch_pool);
+              if (base_path == NULL)
+                base_path = repos_root;
+
+              base_node->repos_relpath = svn_path_join(base_path, entry->name,
+                                                       scratch_pool);
+            }
+        }
       /* TODO: These values should always be present, if they are missing
          during an upgrade, set a flag, and then ask the user to talk to the
          server. */
@@ -2148,7 +2173,11 @@ svn_wc__entries_write(apr_hash_t *entries,
   const char *temp_file_path;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *this_dir;
+  const char *repos_root;
+  apr_int64_t repos_id;
   apr_size_t len;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -2168,6 +2197,22 @@ svn_wc__entries_write(apr_hash_t *entries,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
                            svn_sqlite__mode_readwrite, statements,
                            WC_DB_SCHEMA_FORMAT, upgrade_sql, pool, pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->uuid));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      repos_id = svn_sqlite__column_int(stmt, 0);
+      repos_root = apr_pstrdup(pool, svn_sqlite__column_text(stmt, 1));
+    }
+  else
+    {
+      repos_id = 0;
+      repos_root = NULL;
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   SVN_ERR(svn_sqlite__transaction_begin(wc_db));
 
@@ -2192,7 +2237,7 @@ svn_wc__entries_write(apr_hash_t *entries,
                                      svn_wc__adm_wc_format(adm_access));
 
       /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, wc_db, 0, 0, this_dir,
+      SVN_ERR(write_entry(bigstr, wc_db, 0, repos_id, repos_root, this_dir,
                           SVN_WC_ENTRY_THIS_DIR, this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -2212,8 +2257,8 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, wc_db, 0, 0, this_entry, key,
-                              this_dir, subpool));
+          SVN_ERR(write_entry(bigstr, wc_db, 0, repos_id, repos_root,
+                              this_entry, key, this_dir, subpool));
         }
 
       svn_pool_destroy(subpool);
@@ -3031,7 +3076,7 @@ svn_wc__entries_init(const char *path,
    */
   entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
-  SVN_ERR(write_entry(accum, wc_db, wc_id, repos_id, entry,
+  SVN_ERR(write_entry(accum, wc_db, wc_id, repos_id, repos, entry,
                       SVN_WC_ENTRY_THIS_DIR, entry, pool));
 
   len = accum->len;
