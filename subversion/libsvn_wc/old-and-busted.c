@@ -22,8 +22,10 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
+#include "svn_pools.h"
 
 #include "wc.h"
+#include "lock.h"
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
@@ -701,6 +703,36 @@ read_entry(svn_wc_entry_t **new_entry,
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
+}
+
+/* Use entry SRC to fill in blank portions of entry DST.  SRC itself
+   may not have any blanks, of course.
+   Typically, SRC is a parent directory's own entry, and DST is some
+   child in that directory. */
+static void
+take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
+{
+  /* Inherits parent's revision if doesn't have a revision of one's
+     own, unless this is a subdirectory. */
+  if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
+    dst->revision = src->revision;
+
+  /* Inherits parent's url if doesn't have a url of one's own. */
+  if (! dst->url)
+    dst->url = svn_path_url_add_component(src->url, dst->name, pool);
+
+  if (! dst->repos)
+    dst->repos = src->repos;
+
+  if ((! dst->uuid)
+      && (! ((dst->schedule == svn_wc_schedule_add)
+             || (dst->schedule == svn_wc_schedule_replace))))
+    {
+      dst->uuid = src->uuid;
+    }
+
+  if (! dst->cachable_props)
+    dst->cachable_props = src->cachable_props;
 }
 
 /* Resolve any missing information in ENTRIES by deducing from the
