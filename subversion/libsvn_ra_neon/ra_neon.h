@@ -1053,6 +1053,12 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             const char *capability,
                             apr_pool_t *pool);
 
+/* 
+ * Do a capabilities exchange with the server. */
+svn_error_t *
+svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras, 
+                                   apr_pool_t *pool);
+
 /*
  * Implements the get_deleted_rev RA layer function. */
 svn_error_t *

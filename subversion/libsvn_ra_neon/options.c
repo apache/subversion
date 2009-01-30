@@ -18,11 +18,10 @@
 
 
 
-#include <apr_pools.h>
-
+#include "svn_pools.h"
 #include "svn_error.h"
-
 #include "svn_private_config.h"
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
 
@@ -45,8 +44,6 @@ typedef struct {
   apr_pool_t *pool;
   svn_string_t *activity_coll;
 } options_ctx_t;
-
-
 
 static int
 validate_element(svn_ra_neon__xml_elmid parent, svn_ra_neon__xml_elmid child)
@@ -148,6 +145,246 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
     }
 
   *activity_coll = oc.activity_coll;
+
+  return SVN_NO_ERROR;
+}
+
+
+/** Capabilities exchange. */
+
+/* Both server and repository support the capability. */
+static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
+static const char *capability_no = "no";
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
+
+
+/* Store in RAS the capabilities discovered from REQ's headers.
+   Use POOL for temporary allocation only. */
+static void
+parse_capabilities(ne_request *req,
+                   svn_ra_neon__session_t *ras,
+                   apr_pool_t *pool)
+{
+  const char *header_value;
+
+  /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
+
+  /* Then find out which ones are supported. */
+  header_value = ne_get_response_header(req, "dav");
+  if (header_value)
+    {
+      /* Multiple headers of the same name will have been merged
+         together by the time we see them (either by an intermediary,
+         as is permitted in HTTP, or by neon) -- merged in the sense
+         that if a header "foo" appears multiple times, all the values
+         will be concatenated together, with spaces at the splice
+         points.  For example, if the server sent:
+
+            DAV: 1,2
+            DAV: version-control,checkout,working-resource
+            DAV: merge,baseline,activity,version-controlled-collection
+            DAV: http://subversion.tigris.org/xmlns/dav/svn/depth
+
+          Here we might see:
+
+          header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
+
+          (Deliberately not line-wrapping that, so you can see what
+          we're about to parse.)
+      */
+
+      apr_array_header_t *vals =
+        svn_cstring_split(header_value, ",", TRUE, pool);
+
+      /* Right now we only have a few capabilities to detect, so
+         just seek for them directly.  This could be written
+         slightly more efficiently, but that wouldn't be worth it
+         until we have many more capabilities. */
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                     APR_HASH_KEY_STRING, capability_yes);
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+        /* The server doesn't know what repository we're referring
+           to, so it can't just say capability_yes. */
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                     APR_HASH_KEY_STRING, capability_server_yes);
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                     APR_HASH_KEY_STRING, capability_yes);
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
+                                      vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                     APR_HASH_KEY_STRING, capability_yes);
+    }
+}
+
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   RAS->capabilities with the server's capabilities as read from the
+   response headers.  Use POOL only for temporary allocation. */
+svn_error_t *
+svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras, 
+                                   apr_pool_t *pool)
+{
+  int http_ret_code;
+  svn_ra_neon__request_t *rar;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+
+  /* Client capabilities are sent with every request.
+     See issue #3255 for more details. */
+  err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
+                                      NULL, NULL, 200, 0, pool);
+  if (err)
+    goto cleanup;
+
+  if (http_ret_code == 200)
+    {
+      parse_capabilities(rar->ne_req, ras, pool);
+    }
+  else
+    {
+      /* "can't happen", because svn_ra_neon__request_dispatch()
+         itself should have returned error if response code != 200. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("OPTIONS request (for capabilities) got HTTP response code %d"),
+         http_ret_code);
+    }
+
+ cleanup:
+  svn_ra_neon__request_destroy(rar);
+
+  return err;
+}
+
+
+svn_error_t *
+svn_ra_neon__has_capability(svn_ra_session_t *session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool)
+{
+  svn_ra_neon__session_t *ras = session->priv;
+  const char *cap_result;
+
+  /* This capability doesn't rely on anything server side. */
+  if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    {
+      *has = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+ cap_result = apr_hash_get(ras->capabilities,
+                           capability,
+                           APR_HASH_KEY_STRING);
+
+  /* If any capability is unknown, they're all unknown, so ask. */
+  if (cap_result == NULL)
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, pool));
+
+
+  /* Try again, now that we've fetched the capabilities. */
+  cap_result = apr_hash_get(ras->capabilities,
+                            capability, APR_HASH_KEY_STRING);
+
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_serf/serf.c:svn_ra_serf__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our svn_ra_neon__exchange_capabilities() call
+             above didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          svn_mergeinfo_catalog_t ignored;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+
+          err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
+                                           FALSE, FALSE, pool);
+
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
+
+            }
+          else
+            cap_result = capability_yes;
+
+          apr_hash_set(ras->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
+        }
+    }
+
+  if (cap_result == capability_yes)
+    {
+      *has = TRUE;
+    }
+  else if (cap_result == capability_no)
+    {
+      *has = FALSE;
+    }
+  else if (cap_result == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
+    }
+  else  /* "can't happen" */
+    {
+      /* Well, let's hope it's a string. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("Attempt to fetch capability '%s' resulted in '%s'"),
+         capability, cap_result);
+    }
 
   return SVN_NO_ERROR;
 }
