@@ -156,7 +156,7 @@ class Generator(gen_base.GeneratorBase):
 
     # write dependencies and build rules for generated .c files
     swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
-    swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+    swig_c_deps.sort(lambda t1, t2: cmp(t1[0].filename, t2[0].filename))
 
     swig_lang_deps = {}
     for lang in self.swig.langs:
@@ -451,7 +451,7 @@ class Generator(gen_base.GeneratorBase):
     # for all other generated files which will not be installed
     # (or will be installed, but not by the main generated build)
     obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
-    obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+    obj_deps.sort(lambda t1, t2: cmp(t1[0].filename, t2[0].filename))
 
     for objname, sources in obj_deps:
       deps = ' '.join(map(str, sources))
