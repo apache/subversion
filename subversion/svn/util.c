@@ -1035,6 +1035,8 @@ const char *
 svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
 {
   switch(operation){
+	case svn_wc_operation_none:
+      return "none";
     case svn_wc_operation_update:
       return "update";
     case svn_wc_operation_switch:
@@ -1050,6 +1052,8 @@ svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool)
 {
   switch(operation){
+	case svn_wc_operation_none:
+      return _("none");
     case svn_wc_operation_update:
       return _("update");
     case svn_wc_operation_switch:

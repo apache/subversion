@@ -186,28 +186,11 @@ svn_checksum_t *
 svn_checksum_dup(const svn_checksum_t *src,
                  apr_pool_t *pool)
 {
-  apr_size_t size;
-  svn_checksum_t *dest;
-  svn_error_t *err;
-
   /* The duplicate of a NULL checksum is a NULL... */
   if (src == NULL)
     return NULL;
 
-  dest = svn_checksum_create(src->kind, pool);
-
-  err = validate_kind(src->kind);
-  if (err)
-    {
-      svn_error_clear(err);
-      return NULL;
-    }
-  size = DIGESTSIZE(src->kind);
-
-  dest->digest = apr_palloc(pool, size);
-  memcpy((unsigned char *)dest->digest, src->digest, size);
-
-  return dest;
+  return svn_checksum__from_digest(src->digest, src->kind, pool);
 }
 
 svn_error_t *

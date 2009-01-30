@@ -486,8 +486,8 @@ svn_client_revprop_set2(const char *propname,
     {
       svn_wc_notify_t *notify = svn_wc_create_notify_url(URL,
                                              propval == NULL
-                                               ? svn_wc_notify_revprop_set
-                                               : svn_wc_notify_revprop_deleted,
+                                               ? svn_wc_notify_revprop_deleted
+                                               : svn_wc_notify_revprop_set,
                                              pool);
       notify->prop_name = propname;
       notify->revision = *set_rev;

@@ -111,7 +111,7 @@ typedef enum {
    ### like it is "Right".
 */
 
-/* ### where/how to handle: text_time, prop_time, locks, working_size */
+/* ### where/how to handle: text_time, locks, working_size */
 
 /* ### update docstrings: all paths should be internal/canonical */
 
