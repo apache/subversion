@@ -155,8 +155,7 @@ class Generator(gen_base.GeneratorBase):
     self.begin_section('SWIG autogen rules')
 
     # write dependencies and build rules for generated .c files
-    swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
-    swig_c_deps.sort(key = lambda t: t[0].filename)
+    swig_c_deps = sorted(self.graph.get_deps(gen_base.DT_SWIG_C), key = lambda t: t[0].filename)
 
     swig_lang_deps = {}
     for lang in self.swig.langs:
@@ -450,8 +449,7 @@ class Generator(gen_base.GeneratorBase):
     # write dependencies and build rules (when not using suffix rules)
     # for all other generated files which will not be installed
     # (or will be installed, but not by the main generated build)
-    obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
-    obj_deps.sort(key = lambda t: t[0].filename)
+    obj_deps = sorted(self.graph.get_deps(gen_base.DT_OBJECT), key = lambda t: t[0].filename)
 
     for objname, sources in obj_deps:
       deps = ' '.join(map(str, sources))

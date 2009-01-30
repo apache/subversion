@@ -101,9 +101,8 @@ class GeneratorBase:
     self.target_dirs = []    # Directories in which files are built
     self.manpages = []       # Manpages
 
-    # Collect the build targets
-    parser_sections = parser.sections()
-    parser_sections.sort() # Have a reproducible ordering
+    # Collect the build targets and have a reproducible ordering
+    parser_sections = sorted(parser.sections())
     for section_name in parser_sections:
       if section_name in self.skip_sections:
         continue
@@ -373,8 +372,7 @@ class TargetLinked(Target):
     # the specified install area depends upon this target
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.c' or '*.cpp', self.path)
-    sources.sort()
+    sources = sorted(_collect_paths(self.sources or '*.c' or '*.cpp', self.path))
 
     for srcs, reldir in sources:
       for src in srcs.split(" "):
@@ -494,8 +492,7 @@ class TargetI18N(Target):
   def add_dependencies(self):
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.po', self.path)
-    sources.sort()
+    sources = sorted(_collect_paths(self.sources or '*.po', self.path))
 
     for src, reldir in sources:
       if src[-3:] == '.po':
