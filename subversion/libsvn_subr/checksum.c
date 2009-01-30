@@ -91,21 +91,21 @@ svn_checksum_clear(svn_checksum_t *checksum)
 }
 
 svn_boolean_t
-svn_checksum_match(const svn_checksum_t *d1,
-                   const svn_checksum_t *d2)
+svn_checksum_match(const svn_checksum_t *checksum1,
+                   const svn_checksum_t *checksum2)
 {
-  if (d1 == NULL || d2 == NULL)
+  if (checksum1 == NULL || checksum2 == NULL)
     return TRUE;
 
-  if (d1->kind != d2->kind)
+  if (checksum1->kind != checksum2->kind)
     return FALSE;
 
-  switch (d1->kind)
+  switch (checksum1->kind)
     {
       case svn_checksum_md5:
-        return svn_md5__digests_match(d1->digest, d2->digest);
+        return svn_md5__digests_match(checksum1->digest, checksum2->digest);
       case svn_checksum_sha1:
-        return svn_sha1__digests_match(d1->digest, d2->digest);
+        return svn_sha1__digests_match(checksum1->digest, checksum2->digest);
       default:
         /* We really shouldn't get here, but if we do... */
         return FALSE;
@@ -183,14 +183,14 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 }
 
 svn_checksum_t *
-svn_checksum_dup(const svn_checksum_t *src,
+svn_checksum_dup(const svn_checksum_t *checksum,
                  apr_pool_t *pool)
 {
   /* The duplicate of a NULL checksum is a NULL... */
-  if (src == NULL)
+  if (checksum == NULL)
     return NULL;
 
-  return svn_checksum__from_digest(src->digest, src->kind, pool);
+  return svn_checksum__from_digest(checksum->digest, checksum->kind, pool);
 }
 
 svn_error_t *
