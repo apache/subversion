@@ -45,12 +45,8 @@
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
-/* TODO: Determine the real value of this number. */
-#define WC_DB_SCHEMA_FORMAT 1
-
-static const char * const upgrade_sql[] = { NULL,
-  WC_METADATA_SQL
-  };
+static const char * const upgrade_sql[] = { NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, WC_METADATA_SQL };
 
 /* This values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */
@@ -2196,7 +2192,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   SVN_ERR(svn_sqlite__open(&wc_db,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
                            svn_sqlite__mode_readwrite, statements,
-                           WC_DB_SCHEMA_FORMAT, upgrade_sql, pool, pool));
+                           SVN_WC__VERSION, upgrade_sql, pool, pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
   SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->uuid));
@@ -3042,7 +3038,7 @@ svn_wc__entries_init(const char *path,
   /* Create the entries database, and start a transaction. */
   /* TODO: Need to rollback the transaction if we get an error anywehere. */
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
-                           statements, WC_DB_SCHEMA_FORMAT, upgrade_sql, pool,
+                           statements, SVN_WC__VERSION, upgrade_sql, pool,
                            pool));
   SVN_ERR(svn_sqlite__transaction_begin(wc_db));
 
