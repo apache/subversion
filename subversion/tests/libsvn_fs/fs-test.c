@@ -3574,7 +3574,6 @@ get_file_checksum(svn_checksum_t **checksum,
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
 
   /* Get a checksummed stream for the contents. */
-  *checksum = svn_checksum_create(checksum_kind, pool);
   checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
                                             checksum_kind, TRUE, pool);
 

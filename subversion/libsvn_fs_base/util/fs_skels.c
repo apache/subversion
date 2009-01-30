@@ -1058,10 +1058,7 @@ svn_fs_base__unparse_representation_skel(svn_skel_t **skel_p,
   {
     svn_checksum_t *md5_checksum = rep->md5_checksum;
     if (! md5_checksum)
-      {
-        md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
-        SVN_ERR(svn_checksum_clear(md5_checksum));
-      }
+      md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
     prepend_checksum(header_skel, md5_checksum, pool);
   }
 
