@@ -114,7 +114,7 @@ def get_ordinal_date(date):
 
 def load_stats():
   dates = [get_ordinal_date(date) for date, value in STATS]
-  counts = map(operator.itemgetter(1), STATS)
+  counts = [operator.itemgetter(1)(x) for x in STATS]
 
   return dates, counts
 
