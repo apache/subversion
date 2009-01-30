@@ -6688,8 +6688,16 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
   apr_array_header_t *remove_sources, *add_sources, *ranges;
   svn_opt_revision_t peg_revision;
   const char *old_url;
+  const char *source_repos_uuid;
+  const char *wc_repos_uuid;
+
+  SVN_ERR(svn_client_uuid_from_url(&source_repos_uuid, source_repos_root,
+                                   ctx, pool));
+  SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
+                                   ctx, pool));
+
   svn_boolean_t same_repos =
-    (strcmp(wc_repos_root, source_repos_root) == 0) ? TRUE : FALSE;
+    (strcmp(wc_repos_uuid, source_repos_uuid) == 0) ? TRUE : FALSE;
 
   peg_revision.kind = svn_opt_revision_number;
   SVN_ERR(svn_ra_get_session_url(ra_session, &old_url, pool));
@@ -6802,6 +6810,8 @@ svn_client_merge3(const char *source1,
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
+  const char *source_repos_uuid;
+  const char *wc_repos_uuid;
 
   /* Sanity check our input -- we require specified revisions. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -6868,7 +6878,12 @@ svn_client_merge3(const char *source1,
   SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root, sesspool));
 
   /* Do our working copy and sources come from the same repository? */
-  same_repos = (strcmp(source_repos_root, wc_repos_root) == 0) ? TRUE : FALSE;
+  SVN_ERR(svn_client_uuid_from_url(&source_repos_uuid, source_repos_root,
+                                   ctx, pool));
+  SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
+                                   ctx, pool));
+
+  same_repos = (strcmp(source_repos_uuid, wc_repos_uuid) == 0) ? TRUE : FALSE;
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
@@ -7897,6 +7912,8 @@ svn_client_merge_peg3(const char *source,
   apr_pool_t *sesspool;
   svn_boolean_t use_sleep;
   svn_error_t *err;
+  const char *source_repos_uuid;
+  const char *wc_repos_uuid;
 
   /* No ranges to merge?  No problem. */
   if (ranges_to_merge->nelts == 0)
@@ -7940,9 +7957,14 @@ svn_client_merge_peg3(const char *source,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
+  SVN_ERR(svn_client_uuid_from_url(&source_repos_uuid, source_repos_root,
+                                   ctx, pool));
+  SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
+                                   ctx, pool));
+
   err = do_merge(merge_sources, target_wcpath, entry, adm_access,
                  TRUE, TRUE,
-                 (strcmp(wc_repos_root, source_repos_root) == 0),
+                 (strcmp(wc_repos_uuid, source_repos_uuid) == 0),
                  ignore_ancestry, force, dry_run, record_only, depth,
                  merge_options, &use_sleep, ctx, pool);
 
