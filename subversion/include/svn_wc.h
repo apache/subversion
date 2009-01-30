@@ -1673,6 +1673,7 @@ typedef struct svn_wc_diff_callbacks3_t
    * A file @a path was deleted.  The [loss of] contents can be seen by
    * comparing @a tmpfile1 and @a tmpfile2.  @a originalprops provides
    * the properties of the file.
+   * ### Some existing callers include WC "entry props" in @a originalprops.
    *
    * If known, the @c svn:mime-type value of each file is passed into
    * @a mimetype1 and @a mimetype2;  either or both of the values can

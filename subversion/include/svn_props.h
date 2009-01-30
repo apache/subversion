@@ -191,15 +191,21 @@ svn_categorize_props(const apr_array_header_t *proplist,
 
 /** Given two property hashes (<tt>const char *name</tt> -> <tt>const
  * svn_string_t *value</tt>), deduce the differences between them (from
- * @a source_props -> @c target_props).  Return these changes as a series of
- * @c svn_prop_t structures stored in @a propdiffs, allocated from @a pool.
+ * @a source_props -> @c target_props).  Set @a propdiffs to a new array of
+ * @c svn_prop_t structures, with one entry for each property that differs,
+ * including properties that exist in @a source_props or @a target_props but
+ * not both. The @c value field of each entry is that property's value from
+ * @a target_props or NULL if that property only exists in @a source_props.
+ *
+ * Allocate the array from @a pool. Allocate the contents of the array from
+ * @a pool or by reference to the storage of the input hashes or both.
  *
  * For note, here's a quick little table describing the logic of this
  * routine:
  *
  * @verbatim
-   basehash        localhash         event
-   --------        ---------         -----
+   source_props    target_props      event
+   ------------    ------------      -----
    value = foo     value = NULL      Deletion occurred.
    value = foo     value = bar       Set occurred (modification)
    value = NULL    value = baz       Set occurred (creation) @endverbatim
