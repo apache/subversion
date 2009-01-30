@@ -26,7 +26,7 @@ def scan_file(fname):
   for line in lines:
     if re_call.match(line):
       if prev and re_func.match(prev):
-        print '%s:%d:%s' % (fname, line_num - 1, prev.rstrip())
+        print('%s:%d:%s' % (fname, line_num - 1, prev.rstrip()))
 
     prev = line
     line_num += 1
