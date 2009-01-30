@@ -432,8 +432,7 @@ def _make_dist(cfg):
       shutil.rmtree(distdir)
     os.makedirs(distdir)
 
-    dirlist = list(_disttree.keys())
-    dirlist.sort()
+    dirlist = sorted(_disttree.keys())
 
     for reldir in dirlist:
       dir = os.path.join(distdir, reldir)

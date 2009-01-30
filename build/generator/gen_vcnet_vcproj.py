@@ -234,8 +234,7 @@ class Generator(gen_win.WinGeneratorBase):
       configs.append(gen_win.ProjectItem(name=self.configs[i], index=i))
 
     # sort the values for output stability.
-    guidvals = list(guids.values())
-    guidvals.sort()
+    guidvals = sorted(guids.values())
 
     data = {
       'version': self.vsnet_version,
