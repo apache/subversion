@@ -393,7 +393,12 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      propfind_path = apr_psprintf(pool, "%s/%ld/", session->rev_stub, rev);
+      propfind_path = apr_psprintf(pool, "%s/%ld", session->rev_stub, rev);
+
+      /* svn_ra_serf__retrieve_props() wants to added the revision as
+         a Label to the PROPFIND, which isn't really necessary when
+         querying a rev-stub URI.  *Shrug*  Probably okay to leave the
+         Label, but whatever. */
       rev = SVN_INVALID_REVNUM;
     }
   else
