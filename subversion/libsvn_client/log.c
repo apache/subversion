@@ -210,6 +210,8 @@ typedef struct
   /* ra session for retrieving revprops from old servers */
   svn_ra_session_t *ra_session;
   /* caller's list of requested revprops, receiver, and baton */
+  const char *ra_session_url;
+  apr_pool_t *ra_session_pool;
   const apr_array_header_t *revprops;
   svn_log_entry_receiver_t receiver;
   void *baton;
@@ -255,6 +257,12 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
               want_log = TRUE;
               continue;
             }
+
+          if (rb->ra_session == NULL)
+            SVN_ERR(svn_client_open_ra_session(&rb->ra_session, 
+                                                rb->ra_session_url, 
+                                               rb->ctx, rb->ra_session_pool));
+
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
@@ -279,6 +287,11 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
     }
   else
     {
+      if (rb->ra_session == NULL)
+        SVN_ERR(svn_client_open_ra_session(&rb->ra_session, 
+                                           rb->ra_session_url,
+                                           rb->ctx, rb->ra_session_pool));
+
       SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
                                   &log_entry->revprops, pool));
     }
@@ -521,10 +534,13 @@ svn_client_log4(const apr_array_header_t *targets,
     else
       {
         /* See above pre-1.5 notes. */
-        pre_15_receiver_baton_t rb;
+        pre_15_receiver_baton_t rb = {0};
+
+        /* Create ra session on first use */
         rb.ctx = ctx;
-        SVN_ERR(svn_client_open_ra_session(&rb.ra_session, actual_url,
-                                           ctx, pool));
+        rb.ra_session_pool = pool;
+        rb.ra_session_url = actual_url;
+    
         rb.revprops = revprops;
         rb.receiver = real_receiver;
         rb.baton = real_receiver_baton;
