@@ -397,20 +397,30 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *vcc_url;
-
+  const char *propfind_path;
+  
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+    {
+      propfind_path = apr_psprintf(pool, "%s/%ld/", session->rev_stub, rev);
+      rev = SVN_INVALID_REVNUM;
+    }
+  else
+    {
+      /* Use the VCC as the propfind target path. */
+      SVN_ERR(svn_ra_serf__discover_root(&propfind_path, NULL, TRUE,
+                                         session, session->conns[0],
+                                         session->repos_url.path, pool));
+    }
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, rev, "0", all_props, pool));
+                                      propfind_path, rev, "0", all_props,
+                                      pool));
 
-  svn_ra_serf__walk_all_props(props, vcc_url, rev, svn_ra_serf__set_bare_props,
-                              *ret_props, pool);
+  svn_ra_serf__walk_all_props(props, propfind_path, rev,
+                              svn_ra_serf__set_bare_props, *ret_props, pool);
 
   return SVN_NO_ERROR;
 }
