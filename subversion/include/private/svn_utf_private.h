@@ -44,11 +44,12 @@ svn_boolean_t
 svn_utf__cstring_is_valid(const char *src);
 
 /* Return a pointer to the first character after the last valid UTF-8
- * multi-byte character in the string SRC of length LEN.  If SRC is a valid
- * UTF-8 the return value will point to the byte after SRC+LEN, otherwise
- * it will point to the start of the first invalid multi-byte character.
- * In either case all the characters between SRC and the return pointer are
- * valid UTF-8.
+ * potentially multi-byte character in the string SRC of length LEN.
+ * Validity of bytes from SRC to SRC+LEN-1, inclusively, is checked.
+ * If SRC is a valid UTF-8, the return value will point to the byte SRC+LEN,
+ * otherwise it will point to the start of the first invalid character.
+ * In either case all the characters between SRC and the return pointer - 1,
+ * inclusively, are valid UTF-8.
  *
  * See also svn_utf__is_valid().
  */
