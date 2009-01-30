@@ -6690,13 +6690,14 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
   const char *old_url;
   const char *source_repos_uuid;
   const char *wc_repos_uuid;
+  svn_boolean_t same_repos;
 
   SVN_ERR(svn_client_uuid_from_url(&source_repos_uuid, source_repos_root,
                                    ctx, pool));
   SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
                                    ctx, pool));
 
-  svn_boolean_t same_repos =
+  same_repos =
     (strcmp(wc_repos_uuid, source_repos_uuid) == 0) ? TRUE : FALSE;
 
   peg_revision.kind = svn_opt_revision_number;
