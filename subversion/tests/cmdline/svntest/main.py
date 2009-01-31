@@ -735,12 +735,14 @@ def create_repos(path):
     # Note that some tests (currently only commit_tests) create their own
     # post-commit hooks, which would override this one. :-(
     if fsfs_packing:
-      create_python_hook_script(get_post_commit_hook_path(path), 
+      # some tests chdir.
+      abs_path = os.path.abspath(path)
+      create_python_hook_script(get_post_commit_hook_path(abs_path), 
           "import subprocess\n"
           "import sys\n"
           "command = %s\n"
           "sys.exit(subprocess.Popen(command).wait())\n"
-          % repr([svnadmin_binary, 'pack', path]))
+          % repr([svnadmin_binary, 'pack', abs_path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)

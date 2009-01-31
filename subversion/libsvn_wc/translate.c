@@ -102,7 +102,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
       if (to_nf)
         {
           if (style == svn_subst_eol_style_native)
-            eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+            eol = SVN_SUBST_NATIVE_EOL_STR;
           else if (style == svn_subst_eol_style_fixed)
             repair_forced = TRUE;
           else if (style != svn_subst_eol_style_none)
@@ -194,7 +194,7 @@ svn_wc_translated_file2(const char **xlated_path,
           /* to normal form */
 
           if (style == svn_subst_eol_style_native)
-            eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+            eol = SVN_SUBST_NATIVE_EOL_STR;
           else if (style == svn_subst_eol_style_fixed)
             repair_forced = TRUE;
           else if (style != svn_subst_eol_style_none)

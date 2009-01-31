@@ -447,19 +447,6 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, _("Can't create tunnel"));
 
-  /* Arrange for the tunnel agent to get a SIGKILL on pool
-   * cleanup.  This is a little extreme, but the alternatives
-   * weren't working out:
-   *   - Closing the pipes and waiting for the process to die
-   *     was prone to mysterious hangs which are difficult to
-   *     diagnose (e.g. svnserve dumps core due to unrelated bug;
-   *     sshd goes into zombie state; ssh connection is never
-   *     closed; ssh never terminates).
-   *   - Killing the tunnel agent with SIGTERM leads to unsightly
-   *     stderr output from ssh.
-   */
-  apr_pool_note_subprocess(pool, proc, APR_KILL_ALWAYS);
-
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
    * (such as other ra_svn sessions), so turn that off. */
@@ -1330,7 +1317,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool,
-                                             "cw(?cr)(?c)",
+                                             "cw(?cr)?(?c)",
                                              &cpath, &action, &copy_path,
                                              &copy_rev, &kind_str));
               cpath = svn_path_canonicalize(cpath, iterpool);

@@ -2,6 +2,7 @@
 #
 # transform_sql.py -- create a header file with the appropriate SQL variables
 # from an SQL file
+# The output file is named by adding ".h" onto the input file name.
 #
 
 
@@ -48,6 +49,6 @@ def main(input_filename, output_filename):
 
 
 if __name__ == '__main__':
-  if len(sys.argv) < 2:
+  if len(sys.argv) != 2:
     usage_and_exit("Incorrect number of arguments")
   main(sys.argv[1], sys.argv[1] + ".h")

@@ -770,14 +770,11 @@ log_do_modify_entry(struct log_runner *loggy,
                         strcmp(name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
                         loggy->pool);
 
-  /* Did the log command give us any timestamps?  There are three
-     possible scenarios here.  We must check both text_time
-     and prop_time for each of the three scenarios.  */
-
-  /* TEXT_TIME: */
+  /* svn_wc__atts_to_entry will no-op if the TEXT_TIME timestamp is
+     SVN_WC__TIMESTAMP_WC, so look for that case and fill in the proper
+     value. */
   valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                           APR_HASH_KEY_STRING);
-
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
       && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
     {
@@ -791,21 +788,6 @@ log_do_modify_entry(struct log_runner *loggy,
            svn_path_local_style(tfile, loggy->pool));
 
       entry->text_time = text_time;
-    }
-
-  /* PROP_TIME: */
-  valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                          APR_HASH_KEY_STRING);
-
-  if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-      && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
-    {
-      apr_time_t prop_time;
-
-      SVN_ERR(svn_wc__props_last_modified(&prop_time,
-                                          tfile, svn_wc__props_working,
-                                          loggy->adm_access, loggy->pool));
-      entry->prop_time = prop_time;
     }
 
   valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_WORKING_SIZE,
@@ -1062,17 +1044,16 @@ log_do_committed(struct log_runner *loggy,
   apr_pool_t *pool = loggy->pool;
   int is_this_dir = (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
-  svn_boolean_t wc_root, overwrote_working = FALSE, remove_executable = FALSE;
+  svn_boolean_t wc_root, remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
   const char *full_path;
   const char *pdir, *base_name;
   apr_hash_t *entries;
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
-  apr_time_t text_time = 0; /* By default, don't override old stamp. */
   svn_wc_adm_access_t *adm_access;
-  apr_finfo_t finfo;
   svn_boolean_t prop_mods;
+  apr_uint64_t modify_flags = 0;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -1263,6 +1244,9 @@ log_do_committed(struct log_runner *loggy,
 
   if (entry->kind == svn_node_file)
     {
+      svn_boolean_t overwrote_working;
+      apr_finfo_t finfo;
+
       /* Install the new file, which may involve expanding keywords.
          A copy of this file should have been dropped into our `tmp/text-base'
          directory during the commit process.  Part of this process
@@ -1286,15 +1270,20 @@ log_do_committed(struct log_runner *loggy,
                                  _("Error getting 'affected time' of '%s'"),
                                  svn_path_local_style(full_path, pool));
 
+      /* We will compute and modify the size and timestamp */
+      modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+                      | SVN_WC__ENTRY_MODIFY_TEXT_TIME;
+
+      entry->working_size = finfo.size;
+
       if (overwrote_working)
-        text_time = finfo.mtime;
+        entry->text_time = finfo.mtime;
       else
         {
           /* The working copy file hasn't been overwritten, meaning
              we need to decide which timestamp to use. */
 
           const char *basef;
-          svn_boolean_t modified = FALSE;
           apr_finfo_t basef_finfo;
 
           /* If the working file was overwritten (due to re-translation)
@@ -1310,6 +1299,8 @@ log_do_committed(struct log_runner *loggy,
                svn_path_local_style(basef, pool));
           else
             {
+              svn_boolean_t modified;
+
               /* Verify that the working file is the same as the base file
                  by comparing file sizes, then timestamps and the contents
                  after that. */
@@ -1332,12 +1323,10 @@ log_do_committed(struct log_runner *loggy,
                 }
               /* If they are the same, use the working file's timestamp,
                  else use the base file's timestamp. */
-              text_time = modified ? basef_finfo.mtime : finfo.mtime;
+              entry->text_time = modified ? basef_finfo.mtime : finfo.mtime;
             }
         }
     }
-  else
-    finfo.size = 0;
 
   /* Files have been moved, and timestamps have been found.  It is now
      time for The Big Entry Modification. Here we set fields in the entry
@@ -1347,7 +1336,6 @@ log_do_committed(struct log_runner *loggy,
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;
   entry->deleted = FALSE;
-  entry->text_time = text_time;
   entry->conflict_old = NULL;
   entry->conflict_new = NULL;
   entry->conflict_wrk = NULL;
@@ -1355,26 +1343,24 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
-  entry->working_size = finfo.size;
+
   /* We don't reset tree_conflict_data, because it's about conflicts on
      children, not on this node, and it could conceivably be valid to commit
      this node non-recursively while children are still in conflict. */
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
-                                  (SVN_WC__ENTRY_MODIFY_REVISION
+                                  (modify_flags
+                                   | SVN_WC__ENTRY_MODIFY_REVISION
+                                   | SVN_WC__ENTRY_MODIFY_KIND
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                    | SVN_WC__ENTRY_MODIFY_COPIED
                                    | SVN_WC__ENTRY_MODIFY_DELETED
-                                   | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                                   | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
                                    | SVN_WC__ENTRY_MODIFY_PREJFILE
-                                   | (text_time
-                                      ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                      : 0)
+                                   | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                                   | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
-                                   | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2198,10 +2184,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_TEXT_TIME,
                  svn_time_to_cstring(entry->text_time, pool));
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PROP_TIME,
-                 SVN_WC__ENTRY_ATTR_PROP_TIME,
-                 svn_time_to_cstring(entry->prop_time, pool));
-
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CHECKSUM,
                  SVN_WC__ENTRY_ATTR_CHECKSUM,
                  entry->checksum);
@@ -2349,7 +2331,6 @@ svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           svn_wc_adm_access_t *adm_access,
                                           const char *path,
-                                          const char *time_prop,
                                           apr_pool_t *pool)
 {
   svn_xml_make_open_tag(log_accum,
@@ -2358,7 +2339,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_MODIFY_ENTRY,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path(path, adm_access),
-                        time_prop,
+                        SVN_WC__ENTRY_ATTR_TEXT_TIME,
                         SVN_WC__TIMESTAMP_WC,
                         NULL);
 

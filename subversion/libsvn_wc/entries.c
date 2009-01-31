@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -441,8 +441,10 @@ unserialize_file_external(const char **path_result,
    string instead of a svn_stringbuf_t so that the string can be
    protected by write_str(). */
 static svn_error_t *
-serialize_file_external(const char **str, const char *path,
-                        svn_opt_revision_t *peg_rev, svn_opt_revision_t *rev,
+serialize_file_external(const char **str,
+                        const char *path,
+                        const svn_opt_revision_t *peg_rev,
+                        const svn_opt_revision_t *rev,
                         apr_pool_t *pool)
 {
   const char *s;
@@ -923,7 +925,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
   /* Attempt to set up timestamps. */
   {
-    const char *text_timestr, *prop_timestr;
+    const char *text_timestr;
 
     text_timestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                 APR_HASH_KEY_STRING);
@@ -943,23 +945,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
 
-    prop_timestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                                APR_HASH_KEY_STRING);
-    if (prop_timestr)
-      {
-        if (strcmp(prop_timestr, SVN_WC__TIMESTAMP_WC) == 0)
-          {
-            /* Special case:  a magic string that means 'get this value
-               from the working copy' -- we ignore it here, trusting
-               that the caller of this function know what to do about
-               it.  */
-          }
-        else
-          SVN_ERR(svn_time_from_cstring(&entry->prop_time, prop_timestr,
-                                        pool));
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
-      }
+    /* Note: we do not persist prop_time, so there is no need to attempt
+       to parse a new prop_time value from the log. Certainly, on any
+       recent working copy, there will not be a log record to alter
+       the prop_time value. */
   }
 
   /* Checksum. */
@@ -1057,15 +1046,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
-  /* changelist */
-  entry->changelist = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHANGELIST,
-                                   APR_HASH_KEY_STRING);
-  if (entry->changelist)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHANGELIST;
-      entry->changelist = apr_pstrdup(pool, entry->changelist);
-    }
-
   /* has-props flag. */
   SVN_ERR(do_bool_attr(&entry->has_props,
                        modify_flags, SVN_WC__ENTRY_MODIFY_HAS_PROPS,
@@ -1133,26 +1113,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
-  /* File externals */
-  {
-    const char *val
-      = apr_hash_get(atts,
-                     SVN_WC__ENTRY_ATTR_FILE_EXTERNAL,
-                     APR_HASH_KEY_STRING);
-
-    if (val)
-      {
-        SVN_ERR(unserialize_file_external(&(entry->file_external_path),
-                                          &(entry->file_external_peg_rev),
-                                          &(entry->file_external_rev),
-                                          val,
-                                          pool));
-        entry->file_external_path = apr_pstrdup(pool,
-                                                entry->file_external_path);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL;
-      }
-  }
-
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -1165,9 +1125,6 @@ struct entries_accumulator
 
   /* The parser that's parsing it, for signal_expat_bailout(). */
   svn_xml_parser_t *parser;
-
-  /* Should we include 'deleted' entries in the hash? */
-  svn_boolean_t show_hidden;
 
   /* Don't leave home without one. */
   apr_pool_t *pool;
@@ -1215,8 +1172,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
      have made it into SVN_WC_ENTRY_THIS_DIR. */
-  if (!entry_is_hidden(entry) || accum->show_hidden)
-    apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
+  apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
 }
 
 /* Parse BUF of size SIZE as an entries file in XML format, storing the parsed
@@ -1225,7 +1181,6 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
 static svn_error_t *
 parse_entries_xml(svn_wc_adm_access_t *adm_access,
                   apr_hash_t *entries,
-                  svn_boolean_t show_hidden,
                   const char *buf,
                   apr_size_t size,
                   apr_pool_t *pool)
@@ -1235,7 +1190,6 @@ parse_entries_xml(svn_wc_adm_access_t *adm_access,
 
   /* Set up userData for the XML parser. */
   accum.entries = entries;
-  accum.show_hidden = show_hidden;
   accum.pool = svn_wc_adm_access_pool(adm_access);
   accum.scratch_pool = svn_pool_create(pool);
 
@@ -1360,13 +1314,11 @@ resolve_to_defaults(apr_hash_t *entries,
 
 
 
-/* Fill the entries cache in ADM_ACCESS. Either the full hash cache will be
-   populated, if SHOW_HIDDEN is TRUE, or the truncated hash cache will be
-   populated if SHOW_HIDDEN is FALSE.  POOL is used for local memory
-   allocation, the access baton pool is used for the cache. */
+/* Fill the entries cache in ADM_ACCESS. The full hash cache will be
+   populated.  POOL is used for local memory allocation, the access baton
+   pool is used for the cache. */
 static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
-             svn_boolean_t show_hidden,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
@@ -1391,8 +1343,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
   /* If the first byte of the file is not a digit, then it is probably in XML
      format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
-    SVN_ERR(parse_entries_xml(adm_access, entries, show_hidden,
-                              buf->data, buf->len, scratch_pool));
+    SVN_ERR(parse_entries_xml(adm_access, entries, buf->data, buf->len,
+                              scratch_pool));
   else
     {
       const char *val;
@@ -1436,18 +1388,14 @@ read_entries(svn_wc_adm_access_t *adm_access,
           ++curp;
           ++entryno;
 
-          if ((entry->depth != svn_depth_exclude)
-              || (!entry_is_hidden(entry) || show_hidden))
-            {
-              apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
-            }
+          apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
         }
     }
 
   /* Fill in any implied fields. */
   SVN_ERR(resolve_to_defaults(entries, result_pool));
 
-  svn_wc__adm_access_set_entries(adm_access, show_hidden, entries);
+  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
   return SVN_NO_ERROR;
 }
@@ -1541,7 +1489,7 @@ svn_wc_entries_read(apr_hash_t **entries,
     {
       /* Ask for the deleted entries because most operations request them
          at some stage, getting them now avoids a second file parse. */
-      SVN_ERR(read_entries(adm_access, TRUE, pool));
+      SVN_ERR(read_entries(adm_access, pool));
 
       new_entries = svn_wc__adm_access_entries(adm_access, show_hidden, pool);
     }
@@ -1622,9 +1570,9 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
    Allocations are done in POOL.  */
 static svn_error_t *
 write_entry(svn_stringbuf_t *buf,
-            svn_wc_entry_t *entry,
+            const svn_wc_entry_t *entry,
             const char *name,
-            svn_wc_entry_t *this_dir,
+            const svn_wc_entry_t *this_dir,
             apr_pool_t *pool)
 {
   const char *valuestr;
@@ -1834,9 +1782,9 @@ write_entry(svn_stringbuf_t *buf,
    comparison/optimization.  Allocations are done in POOL.  */
 static svn_error_t *
 write_entry_xml(svn_stringbuf_t **output,
-                svn_wc_entry_t *entry,
+                const svn_wc_entry_t *entry,
                 const char *name,
-                svn_wc_entry_t *this_dir,
+                const svn_wc_entry_t *this_dir,
                 apr_pool_t *pool)
 {
   apr_hash_t *atts = apr_hash_make(pool);
@@ -1955,11 +1903,8 @@ write_entry_xml(svn_stringbuf_t **output,
       apr_hash_set(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
                    svn_time_to_cstring(entry->text_time, pool));
     }
-  if (entry->prop_time)
-    {
-      apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
-                   svn_time_to_cstring(entry->prop_time, pool));
-    }
+  /* Note: prop_time is no longer stored in "entries", so there is no need
+     to persist it into XML either. */
 
   /* Checksum */
   if (entry->checksum)
@@ -2025,6 +1970,11 @@ write_entry_xml(svn_stringbuf_t **output,
       && *entry->present_props)
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
                  APR_HASH_KEY_STRING, entry->present_props);
+
+  /* NOTE: if new entries are *added* to svn_wc_entry_t, then they do not
+     have to be written here. This function is ONLY used during the "cleanup"
+     phase just before we upgrade away from an XML entries file. The old
+     logs will never attempt to modify new fields. */
 
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
@@ -2122,7 +2072,7 @@ write_entry_xml(svn_stringbuf_t **output,
 static svn_error_t *
 write_entries_xml(svn_stringbuf_t **output,
                   apr_hash_t *entries,
-                  svn_wc_entry_t *this_dir,
+                  const svn_wc_entry_t *this_dir,
                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -2143,7 +2093,7 @@ write_entries_xml(svn_stringbuf_t **output,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *this_entry;
+      const svn_wc_entry_t *this_entry;
 
       svn_pool_clear(subpool);
 
@@ -2176,7 +2126,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   svn_stream_t *stream;
   const char *temp_file_path;
   apr_hash_index_t *hi;
-  svn_wc_entry_t *this_dir;
+  const svn_wc_entry_t *this_dir;
   apr_size_t len;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
@@ -2209,8 +2159,10 @@ svn_wc__entries_write(apr_hash_t *entries,
   if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
+
       /* Write out "this dir" */
       SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
                           this_dir, pool));
@@ -2219,7 +2171,7 @@ svn_wc__entries_write(apr_hash_t *entries,
         {
           const void *key;
           void *val;
-          svn_wc_entry_t *this_entry;
+          const svn_wc_entry_t *this_entry;
 
           svn_pool_clear(subpool);
 
@@ -2274,7 +2226,7 @@ static svn_error_t *
 fold_entry(apr_hash_t *entries,
            const char *name,
            apr_uint64_t modify_flags,
-           svn_wc_entry_t *entry,
+           const svn_wc_entry_t *entry,
            apr_pool_t *pool)
 {
   svn_wc_entry_t *cur_entry
@@ -2342,9 +2294,6 @@ fold_entry(apr_hash_t *entries,
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
     cur_entry->text_time = entry->text_time;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-    cur_entry->prop_time = entry->prop_time;
 
   /* Conflict stuff */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
