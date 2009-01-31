@@ -381,13 +381,15 @@ log_entry_receiver_xml(void *baton,
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
                                     "copyfrom-path", log_item->copyfrom_path,
-                                    "copyfrom-rev", revstr, NULL);
+                                    "copyfrom-rev", revstr,
+                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
             }
           else
             {
               /* <path action="X"> */
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
-                                    "action", action, NULL);
+                                    "action", action, 
+                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -523,11 +525,9 @@ svn_cl__log(apr_getopt_t *os,
       if (opt_state->all_revprops)
         revprops = NULL;
       else if(opt_state->no_revprops)
-	{
-	  revprops = apr_array_make(pool,
-				    0,
-                                    sizeof(char *));
-	}
+        {
+          revprops = apr_array_make(pool, 0, sizeof(char *));
+        }
       else if (opt_state->revprop_table != NULL)
         {
           apr_hash_index_t *hi;

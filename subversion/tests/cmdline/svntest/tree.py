@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2001, 2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2001, 2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -638,8 +638,7 @@ def dump_tree(n,indent=""):
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  tmp_children = n.children or []
-  tmp_children.sort()
+  tmp_children = sorted(n.children or [])
 
   if n.name == root_node_name:
     print("%s%s" % (indent, "ROOT"))

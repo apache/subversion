@@ -14,7 +14,6 @@ import fileinput
 import datetime
 import time
 import datetime
-import operator
 from matplotlib import dates
 import matplotlib
 matplotlib.use('Agg')
@@ -114,7 +113,7 @@ def get_ordinal_date(date):
 
 def load_stats():
   dates = [get_ordinal_date(date) for date, value in STATS]
-  counts = map(operator.itemgetter(1), STATS)
+  counts = [x[1] for x in STATS]
 
   return dates, counts
 
