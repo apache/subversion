@@ -38,6 +38,9 @@ extern "C" {
 
 /* EOL conversion and keyword expansion. */
 
+/** The EOL used in the Repository for "native" files */
+#define SVN_SUBST_NATIVE_EOL_STR "\n"
+
 /** Valid states for 'svn:eol-style' property.
  *
  * Property nonexistence is equivalent to 'none'.

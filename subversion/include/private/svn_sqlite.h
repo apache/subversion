@@ -145,6 +145,11 @@ svn_sqlite__column_boolean(svn_sqlite__stmt_t *stmt, int column);
 int
 svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column);
 
+/* Return TRUE if the result of selecting the column is NULL,
+   FALSE otherwise */
+svn_boolean_t
+svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column);
+
 /* Error-handling wrapper around sqlite3_finalize. */
 svn_error_t *
 svn_sqlite__finalize(svn_sqlite__stmt_t *stmt);

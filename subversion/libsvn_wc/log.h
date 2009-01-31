@@ -229,7 +229,6 @@ svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           svn_wc_adm_access_t *adm_access,
                                           const char *path,
-                                          const char *time_prop,
                                           apr_pool_t *pool);
 
 

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -72,10 +72,7 @@ def get_txns(repo_dir):
 
   exit_code, output_lines, error_lines = svntest.main.run_svnadmin('lstxns',
                                                                    repo_dir)
-  txns = list(map(output_lines.strip, output_lines))
-
-  # sort, just in case
-  txns.sort()
+  txns = sorted([output_lines.strip(x) for x in output_lines])
 
   return txns
 
@@ -341,11 +338,9 @@ def hotcopy_dot(sbox):
   cwd = os.getcwd()
 
   os.chdir(backup_dir)
-  exit_code, output, errput = svntest.main.run_svnadmin(
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [],
     "hotcopy", os.path.join(cwd, sbox.repo_dir), '.')
-
-  if errput:
-    raise svntest.Failure
 
   os.chdir(cwd)
 

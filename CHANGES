@@ -19,9 +19,12 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * commit-email.pl: Deprecated; use mailer.py instead (r31755,r31767)
 
  Developer-visible changes:
- * General:
- * API changes:
- * Bindings
+  - General:
+    * serf 0.3.0 required (r35586)
+
+  - API changes:
+
+  - Bindings:
 
 
 Version 1.5.5

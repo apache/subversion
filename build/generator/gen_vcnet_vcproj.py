@@ -226,7 +226,7 @@ class Generator(gen_win.WinGeneratorBase):
       target.path = target.path.rstrip('"')
       target.path = target.path.lstrip('"')
 
-    targets.sort(lambda x, y: cmp(x.name, y.name))
+    targets.sort(key = lambda x: x.name)
 
     configs = [ ]
     for i in range(len(self.configs)):
@@ -234,8 +234,7 @@ class Generator(gen_win.WinGeneratorBase):
       configs.append(gen_win.ProjectItem(name=self.configs[i], index=i))
 
     # sort the values for output stability.
-    guidvals = list(guids.values())
-    guidvals.sort()
+    guidvals = sorted(guids.values())
 
     data = {
       'version': self.vsnet_version,

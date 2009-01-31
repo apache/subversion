@@ -652,7 +652,23 @@ svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
-  return txn->vtable->commit(conflict_p, new_rev, txn, pool);
+#ifdef PACK_AFTER_EVERY_COMMIT
+  svn_fs_root_t *txn_root;
+  svn_fs_t *fs;
+  const char *fs_path;
+
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  fs = svn_fs_root_fs(txn_root);
+  fs_path = svn_fs_path(fs, pool);
+#endif
+
+  SVN_ERR(txn->vtable->commit(conflict_p, new_rev, txn, pool));
+
+#ifdef PACK_AFTER_EVERY_COMMIT
+  SVN_ERR(svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool));
+#endif
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

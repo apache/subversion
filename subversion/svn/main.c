@@ -430,7 +430,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "contact the repository.  As such, they may not, by default, be able\n"
      "to propagate merge tracking information from the source of the copy\n"
      "to the destination.\n"),
-    {'r', 'q', opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+    {'r', 'q', opt_ignore_externals, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
     ("Remove files and directories from version control.\n"

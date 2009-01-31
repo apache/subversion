@@ -3957,8 +3957,7 @@ merge_file(svn_wc_notify_state_t *content_state,
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                  (&log_accum, adm_access,
-                   fb->path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+                  (&log_accum, adm_access, fb->path, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
               (&log_accum, adm_access, fb->path, pool));
@@ -5003,8 +5002,7 @@ svn_wc_add_repos_file3(const char *dst_path,
                                  tmp_text_base_path, dst_path,
                                  pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-              (&log_accum, adm_access,
-               dst_path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+              (&log_accum, adm_access, dst_path, pool));
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
               (&log_accum, adm_access, dst_path, pool));
     }

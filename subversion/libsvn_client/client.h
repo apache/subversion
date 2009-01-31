@@ -108,9 +108,9 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
-   served as the source of the copy from which PATH_OR_URL at REVISION
-   was created, or NULL and SVN_INVALID_REVNUM (respectively) if
+/* Set *COPYFROM_PATH and *COPYFROM_REV to the path (without initial '/')
+   and revision that served as the source of the copy from which PATH_OR_URL
+   at REVISION was created, or NULL and SVN_INVALID_REVNUM (respectively) if
    PATH_OR_URL at REVISION was not the result of a copy operation. */
 svn_error_t *svn_client__get_copy_source(const char *path_or_url,
                                          const svn_opt_revision_t *revision,

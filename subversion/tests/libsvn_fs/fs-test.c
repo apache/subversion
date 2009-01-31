@@ -3558,8 +3558,8 @@ check_all_revisions(const char **msg,
 
 
 /* Helper function for large_file_integrity().  Given a ROOT and PATH
-   to a file, calculate and return the MD5 digest for the contents of
-   the file. */
+   to a file, set *CHECKSUM to the checksum of kind CHECKSUM_KIND for the
+   contents of the file. */
 static svn_error_t *
 get_file_checksum(svn_checksum_t **checksum,
                   svn_checksum_kind_t checksum_kind,
@@ -3574,7 +3574,6 @@ get_file_checksum(svn_checksum_t **checksum,
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
 
   /* Get a checksummed stream for the contents. */
-  *checksum = svn_checksum_create(checksum_kind, pool);
   checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
                                             checksum_kind, TRUE, pool);
 

@@ -2,7 +2,7 @@
  * update.c:  wrappers around wc update functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -149,7 +149,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   anchor = svn_wc_adm_access_path(adm_access);
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Entry '%s' has no URL"),

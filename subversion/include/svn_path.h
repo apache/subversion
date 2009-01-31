@@ -435,7 +435,7 @@ svn_path_is_dotpath_present(const char *path);
  *       in which case a pointer into @a path2 will be returned to
  *       identify the remainder path.
  *
- * ### todo: the ".." restriction is unfortunate, and would ideally
+ * ### @todo the ".." restriction is unfortunate, and would ideally
  * be lifted by making the implementation smarter.  But this is not
  * trivial: if the path is "../foo", how do you know whether or not
  * the current directory is named "foo" in its parent?
