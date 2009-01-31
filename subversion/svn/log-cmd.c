@@ -526,9 +526,7 @@ svn_cl__log(apr_getopt_t *os,
         revprops = NULL;
       else if(opt_state->no_revprops)
         {
-          revprops = apr_array_make(pool,
-                                    0,
-                                    sizeof(char *));
+          revprops = apr_array_make(pool, 0, sizeof(char *));
         }
       else if (opt_state->revprop_table != NULL)
         {
