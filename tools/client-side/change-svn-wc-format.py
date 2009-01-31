@@ -247,11 +247,11 @@ class Entries:
     assert len(str(format_nbr)) <= self.format_nbr_bytes
     format_string = '%0' + str(self.format_nbr_bytes) + 'd'
 
-    os.chmod(self.path, 0600)
+    os.chmod(self.path, 0o600)
     output = open(self.path, "r+", 0)
     output.write(format_string % format_nbr)
     output.close()
-    os.chmod(self.path, 0400)
+    os.chmod(self.path, 0o400)
 
 class Entry:
   "Describes an entry in a WC."

@@ -1520,7 +1520,7 @@ def nested_in_read_only(sbox):
   svntest.actions.run_and_verify_status(B_path, expected_status)
 
   # Make enclosing wc read only
-  os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0555)
+  os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0o555)
 
   try:
     # Update of nested wc should still work
@@ -1542,7 +1542,7 @@ def nested_in_read_only(sbox):
                                           None, None, None, None, None, 0,
                                           '-r', '2', B_path)
   finally:
-    os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0777)
+    os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0o777)
 
 #----------------------------------------------------------------------
 

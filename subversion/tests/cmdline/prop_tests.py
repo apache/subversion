@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -743,7 +743,7 @@ def copy_inherits_special_props(sbox):
   # copied file.
   if os.name == 'posix':
     svntest.main.run_svn(None, 'propset', 'svn:executable', 'on', new_path1)
-    os.chmod(new_path1, 0644)
+    os.chmod(new_path1, 0o644)
 
   # Commit the file
   svntest.main.run_svn(None,

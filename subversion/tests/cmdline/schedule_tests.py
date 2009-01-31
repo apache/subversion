@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -181,11 +181,11 @@ def add_executable(sbox):
                                        'propget', "svn:executable", fileName)
 
   test_cases = [
-    ("all_exe",   0777, 1),
-    ("none_exe",  0666, 0),
-    ("user_exe",  0766, 1),
-    ("group_exe", 0676, 0),
-    ("other_exe", 0667, 0),
+    ("all_exe",   0o777, 1),
+    ("none_exe",  0o666, 0),
+    ("user_exe",  0o766, 1),
+    ("group_exe", 0o676, 0),
+    ("other_exe", 0o667, 0),
     ]
   for test_case in test_cases:
     runTest(sbox.wc_dir, *test_case)

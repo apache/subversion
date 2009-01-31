@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -55,11 +55,11 @@ def import_executable(sbox):
     svntest.main.file_append(path, "some text")
 
   # set executable bits
-  os.chmod(all_path, 0777)
-  os.chmod(none_path, 0666)
-  os.chmod(user_path, 0766)
-  os.chmod(group_path, 0676)
-  os.chmod(other_path, 0667)
+  os.chmod(all_path, 0o777)
+  os.chmod(none_path, 0o666)
+  os.chmod(user_path, 0o766)
+  os.chmod(group_path, 0o676)
+  os.chmod(other_path, 0o667)
 
   # import new files into repository
   url = sbox.repo_url
@@ -135,7 +135,7 @@ def import_ignores(sbox):
   foo_c_path = os.path.join(dir_path, 'foo.c')
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, 0o755)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
@@ -200,7 +200,7 @@ def import_no_ignores(sbox):
   foo_lo_path = os.path.join(dir_path, 'foo.lo')
   foo_rej_path = os.path.join(dir_path, 'foo.rej')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, 0o755)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
   open(foo_lo_path, 'w')
@@ -308,7 +308,7 @@ enable-auto-props = yes
   imp_dir_path = 'dir'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
-  os.mkdir(imp_dir_path, 0755)
+  os.mkdir(imp_dir_path, 0o755)
   svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',

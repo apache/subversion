@@ -121,7 +121,7 @@ def guarantee_greek_repository(path):
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  main.chmod_tree(path, 0666, 0666)
+  main.chmod_tree(path, 0o666, 0o666)
 
 
 def run_and_verify_svnlook(message, expected_stdout,

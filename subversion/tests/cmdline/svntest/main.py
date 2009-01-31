@@ -609,7 +609,7 @@ def chmod_tree(path, mode, mask):
 def safe_rmtree(dirname, retry=0):
   "Remove the tree at DIRNAME, making it writable first"
   def rmtree(dirname):
-    chmod_tree(dirname, 0666, 0666)
+    chmod_tree(dirname, 0o666, 0o666)
     shutil.rmtree(dirname)
 
   if not os.path.exists(dirname):
@@ -728,7 +728,7 @@ def create_repos(path):
         new_contents = new_contents[:-1]
 
       # replace it
-      os.chmod(format_file_path, 0666)
+      os.chmod(format_file_path, 0o666)
       file_write(format_file_path, new_contents, 'wb')
 
     # post-commit
@@ -745,7 +745,7 @@ def create_repos(path):
           % repr([svnadmin_binary, 'pack', abs_path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  chmod_tree(path, 0666, 0666)
+  chmod_tree(path, 0o666, 0o666)
 
 # For copying a repository
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
@@ -841,7 +841,7 @@ def create_python_hook_script (hook_path, hook_script_code):
   else:
     # For all other platforms
     file_write (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
-    os.chmod (hook_path, 0755)
+    os.chmod (hook_path, 0o755)
 
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."

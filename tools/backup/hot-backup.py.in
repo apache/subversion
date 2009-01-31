@@ -66,7 +66,7 @@ def chmod_tree(path, mode, mask):
 def safe_rmtree(dirname, retry=0):
   "Remove the tree at DIRNAME, making it writable first"
   def rmtree(dirname):
-    chmod_tree(dirname, 0666, 0666)
+    chmod_tree(dirname, 0o666, 0o666)
     shutil.rmtree(dirname)
 
   if not os.path.exists(dirname):
