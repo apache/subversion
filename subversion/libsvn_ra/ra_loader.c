@@ -545,6 +545,7 @@ svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
                                     const svn_string_t *value,
                                     apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev));
   return session->vtable->change_rev_prop(session, rev, name, value, pool);
 }
 
@@ -553,6 +554,7 @@ svn_error_t *svn_ra_rev_proplist(svn_ra_session_t *session,
                                  apr_hash_t **props,
                                  apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev));
   return session->vtable->rev_proplist(session, rev, props, pool);
 }
 
@@ -562,6 +564,7 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
                              svn_string_t **value,
                              apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev));
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 

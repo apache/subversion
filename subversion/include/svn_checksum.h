@@ -83,24 +83,24 @@ svn_checksum_create(svn_checksum_kind_t kind,
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum);
 
-/** Compare checksums @a d1 and @a d2.  If their kinds do not match or
- * if neither is all zeros, and their content does not match, then
+/** Compare checksums @a checksum1 and @a checksum2.  If their kinds do not
+ * match or if neither is all zeros, and their content does not match, then
  * return FALSE; else return TRUE.
  *
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_checksum_match(const svn_checksum_t *d1,
-                   const svn_checksum_t *d2);
+svn_checksum_match(const svn_checksum_t *checksum1,
+                   const svn_checksum_t *checksum2);
 
 
 /**
- * Return a deep copy of @a src, allocated in @a pool.
+ * Return a deep copy of @a checksum, allocated in @a pool.
  *
  * @since New in 1.6.
  */
 svn_checksum_t *
-svn_checksum_dup(const svn_checksum_t *src,
+svn_checksum_dup(const svn_checksum_t *checksum,
                  apr_pool_t *pool);
 
 

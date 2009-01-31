@@ -546,7 +546,7 @@ test_path_join(const char **msg,
                              "svn_path_join_many" #args " returns \"%s\". " \
                              "expected \"%s\"", \
                              result, expect); \
-  else
+  else {}
 
   TEST_MANY((pool, "abc", NULL), "abc");
   TEST_MANY((pool, "/abc", NULL), "/abc");

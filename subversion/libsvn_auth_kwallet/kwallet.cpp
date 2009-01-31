@@ -2,7 +2,7 @@
  * kwallet.cpp: KWallet provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -197,7 +197,7 @@ kwallet_password_get(const char **password,
           if (wallet->setFolder(folder))
             {
               QString q_password;
-              if (wallet->readPassword(key, q_password) == 0);
+              if (wallet->readPassword(key, q_password) == 0)
                 {
                   *password = apr_pstrmemdup(pool,
                                              q_password.toUtf8().data(),

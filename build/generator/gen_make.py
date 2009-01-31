@@ -60,7 +60,7 @@ class Generator(gen_base.GeneratorBase):
 
     # ensure consistency between runs
     install_deps.sort()
-    install_sources.sort(lambda s1, s2: cmp(s1.name, s2.name))
+    install_sources.sort(key = lambda s: s.name)
 
     ########################################
     self.begin_section('Global make variables')
@@ -155,8 +155,7 @@ class Generator(gen_base.GeneratorBase):
     self.begin_section('SWIG autogen rules')
 
     # write dependencies and build rules for generated .c files
-    swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
-    swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+    swig_c_deps = sorted(self.graph.get_deps(gen_base.DT_SWIG_C), key = lambda t: t[0].filename)
 
     swig_lang_deps = {}
     for lang in self.swig.langs:
@@ -450,8 +449,7 @@ class Generator(gen_base.GeneratorBase):
     # write dependencies and build rules (when not using suffix rules)
     # for all other generated files which will not be installed
     # (or will be installed, but not by the main generated build)
-    obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
-    obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+    obj_deps = sorted(self.graph.get_deps(gen_base.DT_OBJECT), key = lambda t: t[0].filename)
 
     for objname, sources in obj_deps:
       deps = ' '.join(map(str, sources))
