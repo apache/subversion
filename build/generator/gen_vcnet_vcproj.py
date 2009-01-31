@@ -93,12 +93,7 @@ class Generator(gen_win.WinGeneratorBase):
     ### implement this from scratch using the algorithms described in
     ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
 
-    hash = md5.md5(data)
-    try:
-      myhash = hash.hexdigest()
-    except AttributeError:
-      # Python 1.5.2
-      myhash = ''.join(['%02x' % ord(x) for x in hash.digest()])
+    myhash = md5.md5(data).hexdigest()
 
     guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
                                   myhash[12:16], myhash[16:20],
