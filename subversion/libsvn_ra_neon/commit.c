@@ -292,7 +292,6 @@ static svn_error_t * get_activity_collection(commit_ctx_t *cc,
   /* use our utility function to fetch the activity URL */
   SVN_ERR(svn_ra_neon__get_activity_collection(collection,
                                                cc->ras,
-                                               cc->ras->root.path,
                                                pool));
 
   if (cc->push_func != NULL)
