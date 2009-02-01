@@ -653,3 +653,15 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                                        config_dir, no_auth_cache, FALSE,
                                        cfg, cancel_func, cancel_baton, pool);
 }
+
+/*** From dso.c ***/
+void
+svn_dso_initialize(void)
+{
+  svn_error_t *err = svn_dso_initialize2();
+  if (err)
+    {
+      svn_error_clear(err);
+      abort();
+    }
+}
