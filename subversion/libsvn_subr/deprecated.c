@@ -638,6 +638,14 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 
 /*** From cmdline.c ***/
 svn_error_t *
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool)
+{
+  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
+}
+
+svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
                              const char *auth_username,

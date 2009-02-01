@@ -502,15 +502,6 @@ svn_cmdline_prompt_user2(const char **result,
                 (svn_cmdline_prompt_baton2_t *)baton, pool);
 }
 
-svn_error_t *
-svn_cmdline_prompt_user(const char **result,
-                        const char *prompt_str,
-                        apr_pool_t *pool)
-{
-  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
-}
-
-
 /* This implements 'svn_auth_gnome_keyring_unlock_prompt_func_t'. */
 svn_error_t *
 svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
