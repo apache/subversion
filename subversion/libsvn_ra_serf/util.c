@@ -1159,7 +1159,7 @@ handle_response(serf_request_t *request,
       /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
 
-      err = svn_ra_serf__handle_auth(sl.code, ctx->session, ctx->conn,
+      err = svn_ra_serf__handle_auth(sl.code, ctx,
                                      request, response, pool);
       if (err)
         {

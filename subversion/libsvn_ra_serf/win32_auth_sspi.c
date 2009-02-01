@@ -140,8 +140,7 @@ init_sspi_connection(svn_ra_serf__session_t *session,
 }
 
 svn_error_t *
-handle_sspi_auth(svn_ra_serf__session_t *session,
-                 svn_ra_serf__connection_t *conn,
+handle_sspi_auth(svn_ra_serf__handler_t *ctx,
                  serf_request_t *request,
                  serf_bucket_t *response,
                  char *auth_hdr,
