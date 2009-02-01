@@ -674,3 +674,20 @@ svn_dso_initialize(void)
       abort();
     }
 }
+
+/*** From simple_providers.c ***/
+void
+svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
+                             apr_pool_t *pool)
+{
+  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
+}
+
+/*** From ssl_client_cert_pw_providers.c ***/
+void
+svn_auth_get_ssl_client_cert_pw_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_file_provider2(provider, NULL, NULL, pool);
+}
