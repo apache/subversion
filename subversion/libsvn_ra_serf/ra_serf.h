@@ -1259,8 +1259,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
  * authentication challenge is received in a session.
  */
 typedef svn_error_t *
-(*svn_serf__auth_handler_func_t)(svn_ra_serf__session_t *session,
-                                 svn_ra_serf__connection_t *conn,
+(*svn_serf__auth_handler_func_t)(svn_ra_serf__handler_t *ctx,
                                  serf_request_t *request,
                                  serf_bucket_t *response,
                                  char *auth_hdr,
@@ -1318,8 +1317,7 @@ struct svn_ra_serf__auth_protocol_t {
  */
 svn_error_t *
 svn_ra_serf__handle_auth(int code,
-                         svn_ra_serf__session_t *session,
-                         svn_ra_serf__connection_t *conn,
+                         svn_ra_serf__handler_t *ctx,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool);

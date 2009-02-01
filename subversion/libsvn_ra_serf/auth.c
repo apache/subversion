@@ -27,8 +27,7 @@
 /*** Forward declarations. ***/
 
 static svn_error_t *
-handle_basic_auth(svn_ra_serf__session_t *session,
-                  svn_ra_serf__connection_t *conn,
+handle_basic_auth(svn_ra_serf__handler_t *ctx,
                   serf_request_t *request,
                   serf_bucket_t *response,
                   char *auth_hdr,
@@ -45,8 +44,7 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
                          serf_bucket_t *hdrs_bkt);
 
 static svn_error_t *
-handle_proxy_basic_auth(svn_ra_serf__session_t *session,
-                        svn_ra_serf__connection_t *conn,
+handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
                         serf_bucket_t *response,
                         char *auth_hdr,
@@ -135,8 +133,7 @@ svn_ra_serf__encode_auth_header(const char * protocol, char **header,
    server or proxy in the Authentication headers. */
 svn_error_t *
 svn_ra_serf__handle_auth(int code,
-                         svn_ra_serf__session_t *session,
-                         svn_ra_serf__connection_t *conn,
+                         svn_ra_serf__handler_t *ctx,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool)
@@ -145,6 +142,8 @@ svn_ra_serf__handle_auth(int code,
   const svn_ra_serf__auth_protocol_t *prot;
   char *auth_name, *auth_attr, *auth_hdr, *header, *header_attr;
   svn_error_t *cached_err;
+  svn_ra_serf__session_t *session = ctx->session;
+  svn_ra_serf__connection_t *conn = ctx->conn;
 
   hdrs = serf_bucket_response_get_headers(response);
   if (code == 401)
@@ -206,7 +205,7 @@ svn_ra_serf__handle_auth(int code,
               if (err == SVN_NO_ERROR)
                 {
                   proto_found = TRUE;
-                  err = handler(session, conn, request, response,
+                  err = handler(ctx, request, response,
                                 header, auth_attr, session->pool);
                 }
               if (err)
@@ -244,8 +243,7 @@ svn_ra_serf__handle_auth(int code,
 }
 
 static svn_error_t *
-handle_basic_auth(svn_ra_serf__session_t *session,
-                  svn_ra_serf__connection_t *conn,
+handle_basic_auth(svn_ra_serf__handler_t *ctx,
                   serf_request_t *request,
                   serf_bucket_t *response,
                   char *auth_hdr,
@@ -259,6 +257,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
   apr_size_t tmp_len;
   apr_port_t port;
   int i;
+  svn_ra_serf__session_t *session = ctx->session;
 
   if (!session->realm)
     {
@@ -384,8 +383,7 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
 }
 
 static svn_error_t *
-handle_proxy_basic_auth(svn_ra_serf__session_t *session,
-                        svn_ra_serf__connection_t *conn,
+handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
                         serf_bucket_t *response,
                         char *auth_hdr,
@@ -395,6 +393,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
   int i;
+  svn_ra_serf__session_t *session = ctx->session;
 
   tmp = apr_pstrcat(session->pool,
                     session->proxy_username, ":",
