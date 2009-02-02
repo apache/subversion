@@ -116,7 +116,7 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *body;
-  const char *vcc_url;
+  const char *report_target;
   svn_error_t *err;
   drev_baton_t *b = apr_palloc(pool, sizeof(*b));
 
@@ -124,9 +124,16 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
   b->cdata = NULL;
   b->revision = SVN_INVALID_REVNUM;
 
-  /* Run the 'dated-rev-report' on the VCC url, which is always
-     guaranteed to exist.   */
-  SVN_ERR(svn_ra_neon__get_vcc(&vcc_url, ras, ras->root.path, pool));
+  /* Got HTTP v2 support?  We'll report against the "me resource".
+     Otherwise, we'll use the VCC.  */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      report_target = ras->me_resource;
+    }
+  else
+    {
+      SVN_ERR(svn_ra_neon__get_vcc(&report_target, ras, ras->root.path, pool));
+    }
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -137,7 +144,7 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
                       svn_time_to_cstring(timestamp, pool));
 
   err = svn_ra_neon__parsed_request(ras, "REPORT",
-                                    vcc_url, body, NULL, NULL,
+                                    report_target, body, NULL, NULL,
                                     drev_start_element,
                                     svn_ra_neon__xml_collect_cdata,
                                     drev_end_element,

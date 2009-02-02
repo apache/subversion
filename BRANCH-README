@@ -67,7 +67,7 @@ TODO:
 
  * Optional:  Do some of this stuff for ra_neon, too:
 
-    - Get and cache UUID and repos_root from OPTIONS
-    - Get me resource, and pegrev stub from OPTIONS
-    - Use me resource instead of the VCC
-    - Use pegrev stubs instead of get_baseline_info() walks
+    - Get and cache UUID and repos_root from OPTIONS         [DONE]
+    - Get me resource, and pegrev stub from OPTIONS          [DONE]
+    - Use me resource instead of the VCC                     [STARTED]
+    - Use pegrev stubs instead of get_baseline_info() walks  [STARTED]
