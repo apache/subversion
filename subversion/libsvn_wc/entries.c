@@ -57,7 +57,8 @@ enum statement_keys {
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
   STMT_INSERT_CHANGELIST,
-  STMT_SELECT_REPOSITORY
+  STMT_SELECT_REPOSITORY,
+  STMT_SELECT_WCROOT
 };
 
 static const char * const statements[] = {
@@ -92,6 +93,8 @@ static const char * const statements[] = {
   "values (?1, ?2);",
 
   "select id, root from repository where uuid = ?1;",
+
+  "select id from wcroot where local_abspath = ?1;",
 
   NULL
   };
@@ -2171,6 +2174,8 @@ svn_wc__entries_write(apr_hash_t *entries,
   const svn_wc_entry_t *this_dir;
   const char *repos_root;
   apr_int64_t repos_id;
+  apr_int64_t wc_id;
+  const char *abs_path;
   apr_size_t len;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -2194,6 +2199,7 @@ svn_wc__entries_write(apr_hash_t *entries,
                            svn_sqlite__mode_readwrite, statements,
                            SVN_WC__VERSION, upgrade_sql, pool, pool));
 
+  /* Get the repos ID. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
   SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->uuid));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -2207,7 +2213,18 @@ svn_wc__entries_write(apr_hash_t *entries,
       repos_id = 0;
       repos_root = NULL;
     }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
+  /* Get the wc ID. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT));
+  SVN_ERR(svn_path_get_absolute(&abs_path, svn_wc_adm_access_path(adm_access),
+                                pool));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", abs_path));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("No WC table entry for abs path '%s'"), abs_path);
+  wc_id = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   SVN_ERR(svn_sqlite__transaction_begin(wc_db));
@@ -2233,7 +2250,7 @@ svn_wc__entries_write(apr_hash_t *entries,
                                      svn_wc__adm_wc_format(adm_access));
 
       /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, wc_db, 0, repos_id, repos_root, this_dir,
+      SVN_ERR(write_entry(bigstr, wc_db, wc_id, repos_id, repos_root, this_dir,
                           SVN_WC_ENTRY_THIS_DIR, this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -2253,7 +2270,7 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, wc_db, 0, repos_id, repos_root,
+          SVN_ERR(write_entry(bigstr, wc_db, wc_id, repos_id, repos_root,
                               this_entry, key, this_dir, subpool));
         }
 
