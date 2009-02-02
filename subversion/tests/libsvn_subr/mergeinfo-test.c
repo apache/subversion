@@ -842,7 +842,7 @@ test_remove_rangelist(const char **msg,
 
             }
           SVN_ERR(svn_rangelist_remove(&output, eraser, whiteboard,
-                                       j == 0 ? TRUE : FALSE,
+                                       j == 0,
                                        pool));
           child_err = verify_ranges_match(output, expected_ranges,
                                           expected_nbr_ranges,

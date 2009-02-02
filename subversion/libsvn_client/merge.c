@@ -2236,7 +2236,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           int new_nearest_ancestor_index =
             find_nearest_ancestor(
               notify_b->children_with_mergeinfo,
-              notify->action == svn_wc_notify_update_delete ? FALSE : TRUE,
+              notify->action != svn_wc_notify_update_delete,
               notify->path);
 
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
@@ -3237,7 +3237,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          child_url2, revision2,
                                          child->pre_merge_mergeinfo,
                                          child->implicit_mergeinfo,
-                                         i > 0 ? TRUE : FALSE, /* is subtree */
+                                         i > 0, /* is subtree */
                                          ra_session, child_entry, merge_b->ctx,
                                          pool));
     }
@@ -4384,12 +4384,11 @@ get_mergeinfo_walk_cb(const char *path,
                               || ((wb->depth == svn_depth_immediates) &&
                                   (entry->kind == svn_node_dir) &&
                                   (strcmp(parent_path,
-                                          wb->merge_target_path) == 0)))
-                              ? TRUE : FALSE;
+                                          wb->merge_target_path) == 0)));
       child->switched = switched;
       child->absent = entry->absent;
       child->scheduled_for_deletion =
-        entry->schedule == svn_wc_schedule_delete ? TRUE : FALSE;
+        entry->schedule == svn_wc_schedule_delete;
       if (propval
           && strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
         child->has_noninheritable = TRUE;
@@ -6701,8 +6700,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
       else
         SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
                                          ctx, pool));
-      same_repos =
-        (strcmp(wc_repos_uuid, source_repos_uuid) == 0) ? TRUE : FALSE;
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
     same_repos = TRUE;
@@ -6895,8 +6893,7 @@ svn_client_merge3(const char *source1,
       else
         SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
                                          ctx, pool));
-      same_repos =
-        (strcmp(wc_repos_uuid, source_repos_uuid) == 0) ? TRUE : FALSE;
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
     same_repos = TRUE;
@@ -7979,8 +7976,7 @@ svn_client_merge_peg3(const char *source,
       else
         SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
                                          ctx, pool));
-      same_repos =
-        (strcmp(wc_repos_uuid, source_repos_uuid) == 0) ? TRUE : FALSE;
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
     same_repos = TRUE;

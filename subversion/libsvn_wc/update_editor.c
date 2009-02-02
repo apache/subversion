@@ -762,7 +762,7 @@ maybe_bump_dir_info(struct edit_baton *eb,
          the directory and mark it 'complete'.  */
       if (! bdi->skipped)
         SVN_ERR(complete_directory(eb, bdi->path,
-                                   bdi->parent ? FALSE : TRUE, pool));
+                                   bdi->parent == NULL, pool));
     }
   /* we exited the for loop because there are no more parents */
 
@@ -4758,7 +4758,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
               SVN_ERR(err);
               /* The query for a switched dir succeeded. If switched,
                * don't consider this a WC root. */
-              *wc_root = switched ? FALSE : TRUE;
+              *wc_root = ! switched;
             }
         }
     }

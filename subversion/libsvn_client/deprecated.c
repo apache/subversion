@@ -329,7 +329,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
                   apr_pool_t *pool)
 {
   return svn_client_commit2(commit_info_p, targets,
-                            nonrecursive ? FALSE : TRUE,
+                            ! nonrecursive,
                             TRUE,
                             ctx, pool);
 }
