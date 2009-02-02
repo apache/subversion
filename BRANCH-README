@@ -29,9 +29,9 @@ TODO:
       get-dir               -> PROPFIND (against pegrev URI)
       rev-prop              -> PROPFIND (against revision URI)     [DONE]
       rev-proplist          -> PROPFIND (against revision URI)     [DONE]
-      check-path            -> PROPFIND (against pegrev URI)
-      stat                  -> PROPFIND (against pegrev URI)
-      get-lock              -> PROPFIND (against public HEAD URI)
+      check-path            -> PROPFIND (against pegrev URI)       [DONE]
+      stat                  -> PROPFIND (against pegrev URI)       [DONE]
+      get-lock              -> PROPFIND (against public HEAD URI)  [DONE]
 
  * Teach ra_serf REPORT-type requests to use the URI stubs where
    applicable, too:
@@ -50,8 +50,8 @@ TODO:
  * Teach ra_serf simple write requests to use new URI stubs:
 
       change-rev-prop       -> PROPPATCH (against revision URI)
-      lock                  -> LOCK (against public HEAD URI)
-      unlock                -> UNLOCK (against public HEAD URI)
+      lock                  -> LOCK (against public HEAD URI)    [DONE]
+      unlock                -> UNLOCK (against public HEAD URI)  [DONE]
 
  * Teach ra_serf to do update-style REPORTs a little differently:
 
