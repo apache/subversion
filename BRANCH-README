@@ -49,7 +49,7 @@ TODO:
 
  * Teach ra_serf simple write requests to use new URI stubs:
 
-      change-rev-prop       -> PROPPATCH (against revision URI)
+      change-rev-prop       -> PROPPATCH (against revision URI)  [DONE]
       lock                  -> LOCK (against public HEAD URI)    [DONE]
       unlock                -> UNLOCK (against public HEAD URI)  [DONE]
 

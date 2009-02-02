@@ -1974,7 +1974,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   svn_ra_serf__propfind_context_t *propfind_ctx;
   proppatch_context_t *proppatch_ctx;
   commit_context_t *commit;
-  const char *vcc_url, *checked_in_href, *ns;
+  const char *vcc_url, *proppatch_target, *ns;
   apr_hash_t *props;
   svn_error_t *err;
 
@@ -1985,22 +1985,30 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   commit->session = session;
   commit->conn = session->conns[0];
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
-                                     commit->session,
-                                     commit->conn,
-                                     commit->session->repos_url.path, pool));
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+    {
+      proppatch_target = apr_psprintf(pool, "%s/%ld", session->rev_stub, rev);
+    }
+  else
+    {
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
+                                         commit->session,
+                                         commit->conn,
+                                         commit->session->repos_url.path,
+                                         pool));
 
-  props = apr_hash_make(pool);
+      props = apr_hash_make(pool);
 
-  propfind_ctx = NULL;
-  svn_ra_serf__deliver_props(&propfind_ctx, props, commit->session,
-                             commit->conn, vcc_url, rev, "0",
-                             checked_in_props, FALSE, NULL, pool);
+      propfind_ctx = NULL;
+      svn_ra_serf__deliver_props(&propfind_ctx, props, commit->session,
+                                 commit->conn, vcc_url, rev, "0",
+                                 checked_in_props, FALSE, NULL, pool);
 
-  SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, commit->session, pool));
+      SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, commit->session, pool));
 
-  checked_in_href = svn_ra_serf__get_ver_prop(props, vcc_url, rev,
-                                              "DAV:", "href");
+      proppatch_target = svn_ra_serf__get_ver_prop(props, vcc_url, rev,
+                                                   "DAV:", "href");
+    }
 
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
     {
@@ -2016,7 +2024,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
   proppatch_ctx->pool = pool;
   proppatch_ctx->commit = commit;
-  proppatch_ctx->path = checked_in_href;
+  proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
 
