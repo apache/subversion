@@ -58,7 +58,7 @@ enum statement_keys {
   STMT_INSERT_ACTUAL_NODE,
   STMT_INSERT_CHANGELIST,
   STMT_SELECT_REPOSITORY,
-  STMT_SELECT_WCROOT
+  STMT_SELECT_WCROOT_NULL
 };
 
 static const char * const statements[] = {
@@ -94,7 +94,7 @@ static const char * const statements[] = {
 
   "select id, root from repository where uuid = ?1;",
 
-  "select id from wcroot where local_abspath = ?1;",
+  "select id from wcroot where local_abspath is null;",
 
   NULL
   };
@@ -2175,7 +2175,6 @@ svn_wc__entries_write(apr_hash_t *entries,
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
-  const char *abs_path;
   apr_size_t len;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -2216,14 +2215,10 @@ svn_wc__entries_write(apr_hash_t *entries,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Get the wc ID. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT));
-  SVN_ERR(svn_path_get_absolute(&abs_path, svn_wc_adm_access_path(adm_access),
-                                pool));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", abs_path));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                             _("No WC table entry for abs path '%s'"), abs_path);
+    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
   wc_id = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -3033,7 +3028,6 @@ svn_wc__entries_init(const char *path,
   apr_int64_t repos_id;
   svn_sqlite__stmt_t *stmt;
   const char *wc_db_path = db_path(path, pool);
-  const char *abs_path;
 
   SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
@@ -3067,9 +3061,8 @@ svn_wc__entries_init(const char *path,
   SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
 
   /* Insert the wcroot. */
+  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_path_get_absolute(&abs_path, path, pool));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", abs_path));
   SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
 
   /* Add an entry for the dir itself.  The directory has no name.  It

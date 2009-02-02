@@ -45,8 +45,8 @@ CREATE TABLE REPOSITORY (
 CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* absolute path in the local filesystem */
-  local_abspath  TEXT NOT NULL
+  /* absolute path in the local filesystem.  NULL if storing metadata in the wc */
+  local_abspath  TEXT
   );
 
 CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
