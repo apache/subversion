@@ -1613,7 +1613,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       same_repositories = FALSE;
 
     else
-      same_repositories = (strcmp(src_uuid, dst_uuid) == 0) ? TRUE : FALSE;
+      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
   }
 
   /* Perform the move for each of the copy_pairs. */

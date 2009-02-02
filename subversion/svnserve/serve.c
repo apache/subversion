@@ -1194,7 +1194,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      violates authz. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
                            NULL,
-                           (lock_tokens && lock_tokens->nelts) ? TRUE : FALSE));
+                           (lock_tokens && lock_tokens->nelts)));
 
   /* Authorize the lock tokens and give them to the FS if we got
      any. */
@@ -1458,8 +1458,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
               /* has_props */
               SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
                                                subpool));
-              entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE
-                                                                  : FALSE;
+              entry->has_props = (apr_hash_count(file_props) > 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)

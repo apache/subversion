@@ -271,7 +271,7 @@ svn_utf__cstring_is_valid(const char *data)
       int category = octet_category[octet];
       state = machine[state][category];
     }
-  return state == FSM_START ? TRUE : FALSE;
+  return state == FSM_START;
 }
 
 svn_boolean_t
@@ -285,7 +285,7 @@ svn_utf__is_valid(const char *data, apr_size_t len)
       int category = octet_category[octet];
       state = machine[state][category];
     }
-  return state == FSM_START ? TRUE : FALSE;
+  return state == FSM_START;
 }
 
 const char *

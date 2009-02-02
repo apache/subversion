@@ -53,13 +53,11 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
     {
       if (!consider_inheritance
           || (consider_inheritance
-              && ((in1->inheritable ? TRUE : FALSE)
-                   == (in2->inheritable ? TRUE : FALSE))))
+              && (in1->inheritable == in2->inheritable)))
         {
           (*output)->start = MIN(in1->start, in2->start);
           (*output)->end = MAX(in1->end, in2->end);
-          (*output)->inheritable =
-            (in1->inheritable || in2->inheritable) ? TRUE : FALSE;
+          (*output)->inheritable = (in1->inheritable || in2->inheritable);
           return TRUE;
         }
     }
@@ -183,7 +181,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
           (*lastrange)->start = MIN((*lastrange)->start, mrange->start);
           (*lastrange)->end = MAX((*lastrange)->end, mrange->end);
           (*lastrange)->inheritable =
-            ((*lastrange)->inheritable || mrange->inheritable) ? TRUE : FALSE;
+            ((*lastrange)->inheritable || mrange->inheritable);
         }
       else /* Ranges intersect but have different
               inheritability so merge the ranges. */

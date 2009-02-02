@@ -99,7 +99,7 @@ svn_fs_base__id_check_related(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return (strcmp(pvta->node_id, pvtb->node_id) == 0) ? TRUE : FALSE;
+  return (strcmp(pvta->node_id, pvtb->node_id) == 0);
 }
 
 
