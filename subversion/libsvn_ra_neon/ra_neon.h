@@ -116,7 +116,30 @@ typedef struct {
      well-informed internal code may just compare against those
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
+
+  /*** HTTP v2 protocol stuff. ***
+   *
+   * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
+   * response headers, it has sent all of them.  Specifically, we'll
+   * be looking at the presence of the "me resource" as a flag that
+   * the server supports v2 of our HTTP protocol.
+   */
+
+  /* The "me resource".  Typically used as a target for REPORTs that
+     are path-agnostic.  If we have this, we can speak HTTP v2 to the
+     server.  */
+  const char *me_resource;
+
+  /* Opaque URL "stubs".  If the OPTIONS response returns these, then
+     we know we're using HTTP protocol v2. */
+  const char *pegrev_stub;      /* for accessing REV/PATH pairs */
+  const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
+
+  /*** End HTTP v2 stuff ***/
+
 } svn_ra_neon__session_t;
+
+#define SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras) ((ras)->me_resource != NULL)
 
 
 typedef struct {

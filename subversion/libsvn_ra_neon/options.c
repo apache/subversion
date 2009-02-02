@@ -118,8 +118,9 @@ static const char *capability_no = "no";
 static const char *capability_server_yes = "server-yes";
 
 
-/* Store in RAS the capabilities discovered from REQ's headers.
-   Use POOL for temporary allocation only. */
+/* Store in RAS the capabilities and other interesting tidbits of
+   information discovered from REQ's headers.  Use POOL for temporary
+   allocation only. */
 static void
 parse_capabilities(ne_request *req,
                    svn_ra_neon__session_t *ras,
@@ -185,6 +186,41 @@ parse_capabilities(ne_request *req,
                                       vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                      APR_HASH_KEY_STRING, capability_yes);
+    }
+
+  /* Not strictly capabilities, but while we're here, we might as well... */
+#if 0
+  if ((header_value = ne_get_response_header(req, SVN_DAV_YOUNGEST_REV_HEADER)))
+    {
+    }
+#endif
+  if ((header_value = ne_get_response_header(req, SVN_DAV_REPOS_UUID_HEADER)))
+    {
+      ras->uuid = apr_pstrdup(ras->pool, header_value);
+    }
+  if ((header_value = ne_get_response_header(req, SVN_DAV_ROOT_URI_HEADER)))
+    {
+      ne_uri root = ras->root;
+      char *root_uri;
+
+      root.path = (char *)header_value;
+      root_uri = ne_uri_unparse(&root);
+      ras->repos_root = apr_pstrdup(ras->pool, root_uri);
+      free(root_uri);
+    }
+
+  /* HTTP v2 stuff */
+  if ((header_value = ne_get_response_header(req, SVN_DAV_ME_RESOURCE_HEADER)))
+    {
+      ras->me_resource = apr_pstrdup(ras->pool, header_value);
+    }
+  if ((header_value = ne_get_response_header(req, SVN_DAV_PEGREV_STUB_HEADER)))
+    {
+      ras->pegrev_stub = apr_pstrdup(ras->pool, header_value);
+    }
+  if ((header_value = ne_get_response_header(req, SVN_DAV_REV_STUB_HEADER)))
+    {
+      ras->rev_stub = apr_pstrdup(ras->pool, header_value);
     }
 }
 
