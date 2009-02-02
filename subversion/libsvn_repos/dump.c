@@ -29,7 +29,7 @@
 #include "svn_props.h"
 
 
-#define ARE_VALID_COPY_ARGS(p,r) ((p && SVN_IS_VALID_REVNUM(r)) ? 1 : 0)
+#define ARE_VALID_COPY_ARGS(p,r) (((p) && SVN_IS_VALID_REVNUM(r)) ? 1 : 0)
 
 /*----------------------------------------------------------------------*/
 
