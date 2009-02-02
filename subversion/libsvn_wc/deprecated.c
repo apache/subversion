@@ -1452,10 +1452,8 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
 svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
 {
-  /* This is the only pool we have access to.
-
-     ### create a subpool just for this? */
-  apr_pool_t *scratch_pool = adm_access->pool;
+  /* This is the only pool we have access to. */
+  apr_pool_t *scratch_pool = svn_wc_adm_access_pool(adm_access);
 
   return svn_wc_adm_close2(adm_access, scratch_pool);
 }
