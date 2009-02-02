@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -508,8 +508,7 @@ def info_with_changelists(sbox):
           expected_paths.append('A/D/G/pi')
           expected_paths.append('A/D/H/chi')
           expected_paths.append('A/D/H/psi')
-      expected_paths = [os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths]
-      expected_paths.sort()
+      expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
 
       # Build the command line.
       args = ['info', wc_dir]
@@ -570,8 +569,7 @@ def diff_with_changelists(sbox):
             expected_paths.append('A/D/G/pi')
             expected_paths.append('A/D/H/chi')
             expected_paths.append('A/D/H/psi')
-        expected_paths = [os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths]
-        expected_paths.sort()
+        expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
 
         # Build the command line.
         args = ['diff']

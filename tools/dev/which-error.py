@@ -5,7 +5,7 @@
 #                 their numeric error code values
 #
 # ====================================================================
-# Copyright (c) 2005, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2005, 2008-2009 CollabNet.  All rights reserved.
 #
 # * This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -89,8 +89,7 @@ if __name__ == "__main__":
   if sys.argv[1] == 'list':
     if len(sys.argv) > 2:
       usage_and_exit()
-    codes = list(__svn_error_codes.keys())
-    codes.sort()
+    codes = sorted(__svn_error_codes.keys())
 
   # Get a list of code by parsing stdin for apr_err=CODE instances
   elif sys.argv[1] == 'parse':

@@ -321,16 +321,14 @@ class Commit(Messenger):
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
-    self.changelist = list(editor.get_changes().items())
-    self.changelist.sort()
+    self.changelist = sorted(editor.get_changes().items())
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = list(params.items())
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
@@ -390,23 +388,6 @@ class Commit(Messenger):
     svn.core.svn_pool_destroy(subpool)
 
 
-try:
-  from tempfile import NamedTemporaryFile
-except ImportError:
-  # NamedTemporaryFile was added in Python 2.3, so we need to emulate it
-  # for older Pythons.
-  class NamedTemporaryFile:
-    def __init__(self):
-      self.name = tempfile.mktemp()
-      self.file = open(self.name, 'w+b')
-    def __del__(self):
-      os.remove(self.name)
-    def write(self, data):
-      self.file.write(data)
-    def flush(self):
-      self.file.flush()
-
-
 class PropChange(Messenger):
   def __init__(self, pool, cfg, repos, author, propname, action):
     Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
@@ -418,8 +399,7 @@ class PropChange(Messenger):
     self.groups = { }
     for (group, params) in self.cfg.which_groups(''):
       # turn the params into a hashable object and stash it away
-      param_list = list(params.items())
-      param_list.sort()
+      param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
 
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
@@ -442,10 +422,10 @@ class PropChange(Messenger):
         self.output.write(propvalue)
       elif self.action == 'M':
         self.output.write('Property diff:\n')
-        tempfile1 = NamedTemporaryFile()
+        tempfile1 = tempfile.NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
         tempfile1.flush()
-        tempfile2 = NamedTemporaryFile()
+        tempfile2 = tempfile.NamedTemporaryFile()
         tempfile2.write(self.repos.get_rev_prop(self.propname))
         tempfile2.flush()
         self.output.run(self.cfg.get_diff_cmd(group, {
@@ -509,8 +489,7 @@ class Lock(Messenger):
     for path in self.dirlist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = list(params.items())
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]

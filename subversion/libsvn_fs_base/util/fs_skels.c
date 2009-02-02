@@ -297,12 +297,12 @@ is_valid_node_revision_skel(svn_skel_t *skel)
 static svn_boolean_t
 is_valid_copy_skel(svn_skel_t *skel)
 {
-  return (((svn_skel__list_length(skel) == 4)
-           && (svn_skel__matches_atom(skel->children, "copy")
-               || svn_skel__matches_atom(skel->children, "soft-copy"))
-           && skel->children->next->is_atom
-           && skel->children->next->next->is_atom
-           && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
+  return ((svn_skel__list_length(skel) == 4)
+          && (svn_skel__matches_atom(skel->children, "copy")
+              || svn_skel__matches_atom(skel->children, "soft-copy"))
+          && skel->children->next->is_atom
+          && skel->children->next->next->is_atom
+          && skel->children->next->next->next->is_atom);
 }
 
 
@@ -640,7 +640,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
               noderev->has_mergeinfo = atoi(apr_pstrmemdup(pool,
                                                            cur_skel->data,
                                                            cur_skel->len))
-                                         ? TRUE : FALSE;
+                                         != 0;
               noderev->mergeinfo_count =
                 apr_atoi64(apr_pstrmemdup(pool,
                                           cur_skel->next->data,
@@ -1006,6 +1006,8 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
 }
 
 
+/* Construct a skel representing CHECKSUM, allocated in POOL, and prepend
+ * it onto the existing skel SKEL. */
 static svn_error_t *
 prepend_checksum(svn_skel_t *skel,
                  svn_checksum_t *checksum,
@@ -1058,10 +1060,7 @@ svn_fs_base__unparse_representation_skel(svn_skel_t **skel_p,
   {
     svn_checksum_t *md5_checksum = rep->md5_checksum;
     if (! md5_checksum)
-      {
-        md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
-        SVN_ERR(svn_checksum_clear(md5_checksum));
-      }
+      md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
     prepend_checksum(header_skel, md5_checksum, pool);
   }
 

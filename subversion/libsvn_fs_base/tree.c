@@ -1304,7 +1304,7 @@ txn_body_change_node_prop(void *baton,
   if ((bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
       && (strcmp(args->name, SVN_PROP_MERGEINFO) == 0))
     {
-      svn_boolean_t had_mergeinfo, has_mergeinfo = args->value ? TRUE : FALSE;
+      svn_boolean_t had_mergeinfo, has_mergeinfo = args->value != NULL;
 
       /* First, note on our node that it has mergeinfo. */
       SVN_ERR(svn_fs_base__dag_set_has_mergeinfo(parent_path->node,
@@ -4346,7 +4346,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
         retry = TRUE;
 
       *prev_history = assemble_history(fs, apr_pstrdup(retpool, path),
-                                       dst_rev, retry ? FALSE : TRUE,
+                                       dst_rev, ! retry,
                                        src_path, src_rev, retpool);
     }
   else

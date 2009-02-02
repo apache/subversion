@@ -2427,7 +2427,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* NAME is either a file's basename or SVN_WC_ENTRY_THIS_DIR. */
-  is_file = (strcmp(name, SVN_WC_ENTRY_THIS_DIR)) ? TRUE : FALSE;
+  is_file = (strcmp(name, SVN_WC_ENTRY_THIS_DIR) != 0);
 
   if (is_file)
     {
@@ -2924,7 +2924,7 @@ resolve_found_entry_callback(const char *path,
           else
             {
               SVN_ERR(err);
-              wc_root = switched ? FALSE : TRUE;
+              wc_root = ! switched;
             }
         }
     }

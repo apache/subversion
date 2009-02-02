@@ -1079,7 +1079,7 @@ output_unified_diff_modified(void *baton,
             }
           invalid_character =
             svn_utf__last_valid(output_baton->hunk_extra_context,
-                                SVN_DIFF__EXTRA_CONTEXT_LENGTH - 1);
+                                SVN_DIFF__EXTRA_CONTEXT_LENGTH);
           for (p = invalid_character - output_baton->hunk_extra_context;
                p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
             {
