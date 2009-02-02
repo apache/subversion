@@ -71,3 +71,4 @@ TODO:
     - Get me resource, and pegrev stub from OPTIONS          [DONE]
     - Use me resource instead of the VCC                     [STARTED]
     - Use pegrev stubs instead of get_baseline_info() walks  [STARTED]
+    - Use rev stubs for revprop stuff
