@@ -1185,12 +1185,18 @@ typedef enum svn_wc_conflict_action_t
  */
 typedef enum svn_wc_conflict_reason_t
 {
-  svn_wc_conflict_reason_edited,     /* local edits are already present */
-  svn_wc_conflict_reason_obstructed, /* another object is in the way */
-  svn_wc_conflict_reason_deleted,    /* object is already schedule-delete */
-  svn_wc_conflict_reason_added,      /* object is already added or schedule-add */
-  svn_wc_conflict_reason_missing,    /* object is unknown or missing */
-  svn_wc_conflict_reason_unversioned /* object is unversioned */
+  /** Local edits are already present */
+  svn_wc_conflict_reason_edited,
+  /** Another object is in the way */
+  svn_wc_conflict_reason_obstructed,
+  /** Object is already schedule-delete */
+  svn_wc_conflict_reason_deleted,
+  /** Object is unknown or missing */
+  svn_wc_conflict_reason_missing,
+  /** Object is unversioned */
+  svn_wc_conflict_reason_unversioned,
+  /** Object is already added or schedule-add. @since New in 1.6. */
+  svn_wc_conflict_reason_added
 
 } svn_wc_conflict_reason_t;
 

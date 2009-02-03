@@ -501,13 +501,13 @@ dav_svn__final_flush_or_error(request_rec *r,
   dav_error *derr = preferred_err;
   svn_boolean_t do_flush;
 
-  do_flush = r->sent_bodyct > 0 ? TRUE : FALSE;
+  do_flush = r->sent_bodyct > 0;
   if (! do_flush)
     {
       /* Ask about the length of the bucket brigade, ignoring errors. */
       apr_off_t len;
       (void)apr_brigade_length(bb, FALSE, &len);
-      do_flush = (len != 0) ? TRUE : FALSE;
+      do_flush = (len != 0);
     }
 
   /* If there's something in the bucket brigade to flush, or we've

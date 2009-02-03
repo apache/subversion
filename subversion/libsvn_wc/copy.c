@@ -275,7 +275,7 @@ copy_added_dir_administratively(const char *src_path,
           if (this_entry.filetype == APR_DIR)
             {
               SVN_ERR(copy_added_dir_administratively(src_fullpath,
-                                                      entry ? TRUE : FALSE,
+                                                      entry != NULL,
                                                       dst_child_dir_access,
                                                       src_child_dir_access,
                                                       this_entry.name,
@@ -288,7 +288,7 @@ copy_added_dir_administratively(const char *src_path,
           else if (this_entry.filetype != APR_UNKFILE)
             {
               SVN_ERR(copy_added_file_administratively(src_fullpath,
-                                                       entry ? TRUE : FALSE,
+                                                       entry != NULL,
                                                        src_child_dir_access,
                                                        dst_child_dir_access,
                                                        this_entry.name,

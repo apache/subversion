@@ -987,8 +987,7 @@ svn_fs_base__dag_remove_node(svn_fs_t *fs,
 
   /* Delete the node revision itself. */
   return svn_fs_base__delete_node_revision(fs, id,
-                                           noderev->predecessor_id
-                                             ? FALSE : TRUE,
+                                           noderev->predecessor_id == NULL,
                                            trail, pool);
 }
 

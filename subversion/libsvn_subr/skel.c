@@ -596,8 +596,8 @@ svn_skel__matches_atom(const svn_skel_t *skel, const char *str)
     {
       apr_size_t len = strlen(str);
 
-      return ((skel->len == len
-               && ! memcmp(skel->data, str, len)) ? TRUE : FALSE);
+      return (skel->len == len
+              && ! memcmp(skel->data, str, len));
     }
   return FALSE;
 }
