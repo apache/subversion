@@ -5,21 +5,29 @@ reintegrate-able branch, with regular catch-up merges from the trunk.
 TODO:
 
  * Teach mod_dav_svn to answer the OPTIONS request with these
-   additional pieces of information: youngest revision, me resource URI,
-   pegrev URI stub, revision URI stub, repository root URI.  [DONE]
+   additional pieces of information:
 
- * Teach mod_dav_svn to handle POST against the "me resource",
-   returning a transaction URI stub and transaction prop URI stub for
-   further use in the commit.  [DONE]
+      repository root URI    [DONE]
+      repository UUID        [DONE]
+      youngest revision      [DONE]
+      me resource URI        [DONE]
+      revision stub          [DONE]
+      revision root stub     [DONE]
+      transaction stub       [STARTED]
+      transaction root stub  [STARTED]
 
  * Teach mod_dav_svn to recognize and correctly interpret URLs which
    make use of the new URI stubs:
 
       me resource URI       -> !svn/me  [DONE]
-      pegrev URI stub       -> !svn/bc  [DONE]
-      revision URI stub     -> !svn/rev [STARTED]
-      transaction URI stub  -> !svn/txn
-      transaction prop stub -> !svn/txp
+      revision stub         -> !svn/rev [STARTED]
+      revision root stub    -> !svn/bc  [DONE]
+      transaction stub      -> !svn/txn
+      transaction root stub -> !svn/txr
+
+ * Teach mod_dav_svn to handle POST against the "me resource",
+   returning a transaction URI stub and transaction prop URI stub for
+   further use in the commit.  [DONE]
 
  * Teach ra_serf operations to not do the multi-PROPFIND dance any
    more, but to fetch the information they seek from mod_dav_svn using
@@ -60,10 +68,7 @@ TODO:
     - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
 
  * Rework ra_serf commit editor implementation to use new direct
-   methods as described in the design doc.
-
- * If we're sending the youngest rev in the OPTIONs response, let's
-   also send the repository UUID.  [DONE]
+   methods as described in the design doc.  [STARTED]
 
  * Optional:  Do some of this stuff for ra_neon, too:
 
@@ -72,3 +77,6 @@ TODO:
     - Use me resource instead of the VCC                     [STARTED]
     - Use pegrev stubs instead of get_baseline_info() walks  [STARTED]
     - Use rev stubs for revprop stuff
+
+ * Optional:  Use !svn/rvr instead of !svn/bc for the revision root stub,
+   just for a clean break from WebDAV and human-grokkable URLs.  [STARTED]
