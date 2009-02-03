@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, subprocess
 
 # Our testing module
 import svntest
@@ -2138,13 +2138,7 @@ def update_wc_on_windows_drive(sbox):
   if drive is None:
     raise svntest.Skip
 
-  try:
-    # Python >=2.4
-    import subprocess
-    subprocess.call(['subst', drive +':', sbox.wc_dir])
-  except ImportError:
-    # Python <2.4
-    os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
+  subprocess.call(['subst', drive +':', sbox.wc_dir])
   wc_dir = drive + ':/'
   was_cwd = os.getcwd()
 
@@ -2243,13 +2237,7 @@ def update_wc_on_windows_drive(sbox):
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive
-    try:
-      # Python >=2.4
-      import subprocess
-      subprocess.call(['subst', '/D', drive +':'])
-    except ImportError:
-      # Python <2.4
-      os.popen3('subst /D ' + drive +': ', 't')
+    subprocess.call(['subst', '/D', drive +':'])
 
 # Issue #2618: "'Checksum mismatch' error when receiving
 # update for replaced-with-history file".
@@ -4093,6 +4081,11 @@ def tree_conflicts_on_update_2_2(sbox):
                         expected_status) ] )
 
 
+#----------------------------------------------------------------------
+# Test for issue #3329 'Update throws error when skipping some tree
+# conflicts'
+#
+# Marked as XFail until issue #3329 is resolved.
 def tree_conflicts_on_update_2_3(sbox):
   "tree conflicts on update 2.3"
 
@@ -4210,7 +4203,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         expected_status, None,
                                         wc_dir)
   
-  # Make a text mod to A/B/E/alpha.moved in the second WC then
+  # Make a text mod to A/B/E/alpha in the second WC then
   # update the second WC.
   new_content_for_other_alpha = 'alpha, modified\n'
   svntest.main.file_write(other_alpha_path, new_content_for_other_alpha)
@@ -4226,40 +4219,26 @@ def update_moves_and_modifies_an_edited_file(sbox):
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_disk = wc.State('', {
-    'alpha'       : Item(new_content_for_other_alpha),
-    'alpha.moved' : Item("<<<<<<< .mine\n" +
-                         new_content_for_other_alpha +
-                         "=======\n" +
-                         new_content_for_alpha +
-                         ">>>>>>> .r3\n"),
-    'beta'        : Item("This is the file 'beta'.\n"),
+    'alpha'              : Item(new_content_for_other_alpha),
+    'alpha.moved'        : Item("<<<<<<< .mine\n" +
+                                new_content_for_other_alpha +
+                                "=======\n" +
+                                new_content_for_alpha +
+                                ">>>>>>> .r3\n"),
+    'alpha.moved.copied' : Item("This is the file 'alpha'.\n"),
+    'alpha.moved.r3'     : Item(new_content_for_alpha),
+    'alpha.moved.mine'   : Item(new_content_for_other_alpha),
+    'beta'               : Item("This is the file 'beta'.\n"),
     })
 
-  # Test is failing on this update and leaving the WC locked:
+  # This update should succeed and leave A/B/E/alpha as scheduled for
+  # addition with the local edit made prior to the update (i.e. this is
+  # a tree conflict with the incoming delete half of the move in r2).
+  # A/B/E/alpha.moved should also be present and have a text conflict
+  # as a result of the incoming text edit in r3.
   #
-  #   >svn up update_tests-52.other\A\B\E
-  #      C update_tests-52.other\A\B\E\alpha
-  #   Conflict discovered in 'update_tests-52.other/A/B/E/alpha.moved'.
-  #   Select: (p) postpone, (df) diff-full, (e) edit,
-  #           (mc) mine-conflict, (tc) theirs-conflict,
-  #           (s) show all options: p
-  #   C    update_tests-52.other\A\B\E\alpha.moved
-  #   ..\..\..\subversion\libsvn_wc\log.c:625: (apr_err=155009)
-  #   svn: In directory 'update_tests-52.other\A\B\E'
-  #   ..\..\..\subversion\libsvn_subr\io.c:2636: (apr_err=720002)
-  #   svn: Can't open file 'update_tests-52.other\A\B\E\alpha.moved':
-  #     The system cannot find the file specified.
-  #
-  #   >svn st update_tests-52.other\A\B\E
-  #   ! L     update_tests-52.other\A\B\E
-  #   ?       update_tests-52.other\A\B\E\alpha.moved.copied
-  #   ?       update_tests-52.other\A\B\E\alpha.moved.r3
-  #   ?       update_tests-52.other\A\B\E\alpha.moved.mine
-  #   A  +  C update_tests-52.other\A\B\E\alpha
-  #         >   local edit, incoming delete upon update
-  #
-  # The update should succeed and leave A/B/E/alpha as an unversioned
-  # obstruction.
+  # Prior to the fix for issue #3354 this update failed and left the
+  # WC locked.
   expected_skip = wc.State(other_E_path, { })
   svntest.actions.run_and_verify_update(other_E_path,
                                         expected_output,
@@ -4403,7 +4382,7 @@ test_list = [ None,
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
-              XFail(update_moves_and_modifies_an_edited_file),
+              update_moves_and_modifies_an_edited_file,
               tree_conflict_uc2_schedule_re_add,
              ]
 

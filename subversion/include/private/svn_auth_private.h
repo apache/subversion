@@ -22,6 +22,12 @@
 #ifndef SVN_AUTH_PRIVATE_H
 #define SVN_AUTH_PRIVATE_H
 
+#include <apr_pools.h>
+#include <apr_hash.h>
+
+#include "svn_types.h"
+#include "svn_error.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

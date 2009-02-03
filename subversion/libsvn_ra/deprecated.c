@@ -17,12 +17,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
 #define SVN_DEPRECATED
@@ -30,6 +24,8 @@
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_compat.h"
+#include "svn_props.h"
+
 #include "ra_loader.h"
 
 #include "svn_private_config.h"
@@ -37,8 +33,6 @@
 
 
 
-/*** Code. ***/
-
 /*** From ra_loader.c ***/
 /*** Compatibility Wrappers ***/
 

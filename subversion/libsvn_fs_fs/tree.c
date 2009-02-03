@@ -42,6 +42,8 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
+#include "svn_props.h"
+
 #include "fs.h"
 #include "err.h"
 #include "key-gen.h"
@@ -3244,7 +3246,7 @@ history_prev(void *baton, apr_pool_t *pool)
         retry = TRUE;
 
       *prev_history = assemble_history(fs, apr_pstrdup(retpool, path),
-                                       dst_rev, retry ? FALSE : TRUE,
+                                       dst_rev, ! retry,
                                        src_path, src_rev, retpool);
     }
   else

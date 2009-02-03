@@ -19,19 +19,20 @@
  * @brief libsvn_ra_svn functions used by the server
  */
 
-
-
-
 #ifndef SVN_RA_SVN_H
 #define SVN_RA_SVN_H
 
 #include <apr.h>
 #include <apr_pools.h>
-#include <apr_network_io.h>
-#include "svn_config.h"
+#include <apr_hash.h>
+#include <apr_tables.h>
+#include <apr_file_io.h>     /* for apr_file_t */
+#include <apr_network_io.h>  /* for apr_socket_t */
 
-#include "svn_delta.h"
 #include "svn_types.h"
+#include "svn_string.h"
+#include "svn_config.h"
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {

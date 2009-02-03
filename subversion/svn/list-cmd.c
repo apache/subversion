@@ -16,12 +16,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 #include "svn_cmdline.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -29,11 +23,13 @@
 #include "svn_time.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_utf.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
+
 
-/*** Code. ***/
 
 /* Baton used when printing directory entries. */
 struct print_baton {

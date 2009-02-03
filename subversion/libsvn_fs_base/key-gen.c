@@ -122,5 +122,5 @@ svn_fs_base__same_keys(const char *a, const char *b)
     return FALSE;
   if ((! a) && b)
     return FALSE;
-  return (strcmp(a, b) == 0) ? TRUE : FALSE;
+  return (strcmp(a, b) == 0);
 }

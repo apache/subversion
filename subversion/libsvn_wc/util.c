@@ -19,15 +19,16 @@
  * ====================================================================
  */
 
-
-
 #include <apr_pools.h>
 #include <apr_file_io.h>
+
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_props.h"
+
 #include "wc.h"   /* just for prototypes of things in this .c file */
 #include "private/svn_wc_private.h"
 

@@ -20,9 +20,8 @@
  */
 
 #include "StatusCallback.h"
-#include "ConflictResolverCallback.h"
+#include "CreateJ.h"
 #include "EnumMapper.h"
-#include "SVNClient.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
@@ -175,14 +174,13 @@ StatusCallback::createJavaStatus(const char *path,
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
       jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
-      jConflictDescription = ConflictResolverCallback::createJConflictDescriptor(
-                                                      status->tree_conflict);
+      jConflictDescription = CreateJ::ConflictDescriptor(status->tree_conflict);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
       jIsTreeConflicted = (status->tree_conflict != NULL) 
                              ? JNI_TRUE: JNI_FALSE;
-      jLock = SVNClient::createJavaLock(status->repos_lock);
+      jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

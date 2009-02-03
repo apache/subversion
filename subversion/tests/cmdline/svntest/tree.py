@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2001, 2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2001, 2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -390,44 +390,61 @@ def create_from_path(path, contents=None, props={}, atts={}):
   return root_node
 
 
-# helper for handle_dir(), which is a helper for build_tree_from_wc()
-def get_props(path):
-  """Return a hash of props for PATH, using the svn client. Convert each
-     embedded end-of-line to a single LF character."""
+def get_nodes_which_might_have_props(wc_path):
+  dot_svn = main.get_admin_name()
+  def walker(output, dirname, names):
+    names[:] = [n for n in names if n != dot_svn]
+    output.extend([os.path.join(dirname, n) for n in names])
+  nodes = [wc_path]
+  os.path.walk(wc_path, walker, nodes)
+  return nodes
+
+# helper for build_tree_from_wc()
+def get_props(paths):
+  """Return a hash of hashes of props for PATHS, using the svn client. Convert
+     each embedded end-of-line to a single LF character."""
 
   # It's not kosher to look inside .svn/ and try to read the internal
   # property storage format.  Instead, we use 'svn proplist'.  After
   # all, this is the only way the user can retrieve them, so we're
   # respecting the black-box paradigm.
 
-  props = {}
-  exit_code, output, errput = main.run_svn(1, "proplist", path, "--verbose")
+  files = {}
+  filename = None
+  exit_code, output, errput = main.run_svn(1, "proplist", "--verbose", *paths)
+
+  properties_on_re = re.compile("^Properties on '(.+)':$")
 
   # Parse the output
   for line in output:
     line = line.rstrip('\r\n')  # ignore stdout's EOL sequence
 
-    if line.startswith('Properties on '):
-      continue
+    match = properties_on_re.match(line)
+    if match:
+      filename = match.group(1)
 
     elif line.startswith('    '):
-      # It's (part of) the value
-      props[name] += line[4:] + '\n'  # strip the indentation
+      # It's (part of) the value (strip the indentation)
+      if filename is None:
+        raise "Missing 'Properties on' line: '"+line+"'"
+      files.setdefault(filename, {})[name] += line[4:] + '\n'
 
     elif line.startswith('  '):
       # It's the name
       name = line[2:]  # strip the indentation
-      props[name] = ''
+      if filename is None:
+        raise "Missing 'Properties on' line: '"+line+"'"
+      files.setdefault(filename, {})[name] = ''
 
     else:
       raise "Malformed line from proplist: '"+line+"'"
 
   # Strip, from each property value, the final new-line that we added
-  for name in props:
-    props[name] = props[name][:-1]
+  for filename in files:
+    for name in files[filename]:
+      files[filename][name] = files[filename][name][:-1]
 
-  return props
-
+  return files
 
 # helper for handle_dir(), which helps build_tree_from_wc()
 def get_text(path):
@@ -442,9 +459,8 @@ def get_text(path):
   fp.close()
   return contents
 
-
 # main recursive helper for build_tree_from_wc()
-def handle_dir(path, current_parent, load_props, ignore_svn):
+def handle_dir(path, current_parent, props, ignore_svn):
 
   # get a list of all the files
   all_files = os.listdir(path)
@@ -453,7 +469,8 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
 
   # put dirs and files in their own lists, and remove SVN dirs
   for f in all_files:
-    f = os.path.join(path, f)
+    if path != '.':  # 'svn pl -v' strips leading './'
+      f = os.path.join(path, f)
     if (os.path.isdir(f) and os.path.basename(f) != main.get_admin_name()):
       dirs.append(f)
     elif os.path.isfile(f):
@@ -462,22 +479,16 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
   # add each file as a child of CURRENT_PARENT
   for f in files:
     fcontents = get_text(f)
-    if load_props:
-      fprops = get_props(f)
-    else:
-      fprops = {}
+    fprops = props.get(f, {})
     current_parent.add_child(SVNTreeNode(os.path.basename(f), None,
                                          fcontents, fprops))
 
   # for each subdir, create a node, walk its tree, add it as a child
   for d in dirs:
-    if load_props:
-      dprops = get_props(d)
-    else:
-      dprops = {}
+    dprops = props.get(d, {})
     new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
     current_parent.add_child(new_dir_node)
-    handle_dir(d, new_dir_node, load_props, ignore_svn)
+    handle_dir(d, new_dir_node, props, ignore_svn)
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
@@ -627,8 +638,7 @@ def dump_tree(n,indent=""):
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  tmp_children = n.children or []
-  tmp_children.sort()
+  tmp_children = sorted(n.children or [])
 
   if n.name == root_node_name:
     print("%s%s" % (indent, "ROOT"))
@@ -893,15 +903,18 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
 
     root = SVNTreeNode(root_node_name, None)
 
-    # if necessary, store the root dir's props in a new child node '.'.
+    props = {}
+    wc_path = os.path.normpath(wc_path)
     if load_props:
-      props = get_props(wc_path)
-      if props:
-        root_dir_node = SVNTreeNode(os.path.basename('.'), None, None, props)
+      nodes = get_nodes_which_might_have_props(wc_path)
+      props = get_props(nodes)
+      if props.has_key(wc_path):
+        root_dir_node = SVNTreeNode(os.path.basename('.'), None, None,
+                                    props[wc_path])
         root.add_child(root_dir_node)
 
     # Walk the tree recursively
-    handle_dir(os.path.normpath(wc_path), root, load_props, ignore_svn)
+    handle_dir(wc_path, root, props, ignore_svn)
 
     return root
 

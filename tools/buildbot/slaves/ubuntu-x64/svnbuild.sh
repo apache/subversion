@@ -15,7 +15,8 @@ echo "========= configure"
             --with-apr=/usr/local/apr \
             --with-jdk=/usr/lib/jvm/java-6-sun-1.6.0.10 \
             --with-junit=/usr/share/java/junit.jar \
-            --with-apr-util=/usr/local/apr || exit $?
+            --with-apr-util=/usr/local/apr \
+            --with-sqlite=/usr/local || exit $?
 
 echo "========= make"
 make || exit $?

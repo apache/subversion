@@ -52,8 +52,7 @@ def main(fname, gentype, verfname=None,
         for source in target_dict[target]:
           print("  " + _objinfo(source))
       print("=" * 72)
-    gen_keys = list(generator.__dict__.keys())
-    gen_keys.sort()
+    gen_keys = sorted(generator.__dict__.keys())
     for name in gen_keys:
       value = generator.__dict__[name]
       if type(value) == type([]):
@@ -82,8 +81,7 @@ def _usage_exit():
   print("  --reload  reuse all options from the previous invocation")
   print("            of the script, except -s, -t, --debug and --reload")
   print("  -t TYPE   use the TYPE generator; can be one of:")
-  items = list(gen_modules.items())
-  items.sort()
+  items = sorted(gen_modules.items())
   for name, (module, desc) in items:
     print('            %-12s  %s' % (name, desc))
   print("")

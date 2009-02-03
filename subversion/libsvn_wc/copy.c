@@ -275,7 +275,7 @@ copy_added_dir_administratively(const char *src_path,
           if (this_entry.filetype == APR_DIR)
             {
               SVN_ERR(copy_added_dir_administratively(src_fullpath,
-                                                      entry ? TRUE : FALSE,
+                                                      entry != NULL,
                                                       dst_child_dir_access,
                                                       src_child_dir_access,
                                                       this_entry.name,
@@ -288,7 +288,7 @@ copy_added_dir_administratively(const char *src_path,
           else if (this_entry.filetype != APR_UNKFILE)
             {
               SVN_ERR(copy_added_file_administratively(src_fullpath,
-                                                       entry ? TRUE : FALSE,
+                                                       entry != NULL,
                                                        src_child_dir_access,
                                                        dst_child_dir_access,
                                                        this_entry.name,
@@ -558,14 +558,22 @@ copy_file_administratively(const char *src_path,
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
             {
+              svn_boolean_t repair = FALSE;
+
+              if (eol_style == svn_subst_eol_style_native)
+                eol_str = SVN_SUBST_NATIVE_EOL_STR;
+              else if (eol_style == svn_subst_eol_style_fixed)
+                repair = TRUE;
+              else if (eol_style != svn_subst_eol_style_none)
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
               /* Wrap the stream to translate to normal form */
-              SVN_ERR(svn_subst_stream_translated_to_normal_form(&contents,
-                                                                 contents,
-                                                                 eol_style,
-                                                                 eol_str,
-                                                                 FALSE,
-                                                                 keywords,
-                                                                 pool));
+              contents = svn_subst_stream_translated(contents,
+                                                     eol_str,
+                                                     repair,
+                                                     keywords,
+                                                     FALSE /* expand */,
+                                                     pool);
             }
         }
     }

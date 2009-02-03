@@ -85,7 +85,6 @@ send_file_contents(const char *path,
                    unsigned char *digest,
                    apr_pool_t *pool)
 {
-  const char *tmpfile_path = NULL;
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
@@ -125,28 +124,37 @@ send_file_contents(const char *path,
   else
     keywords = NULL;
 
-  /* ### bogus. we should open path as a stream, or we should get a
-     ### stream of the Normal Form. we should not use a temporary file. */
-
-  /* If we have EOL styles or keywords to de-translate, do it.  */
-  if (svn_subst_translation_required(eol_style, eol, keywords, special, TRUE))
+  if (special)
     {
-      /* Now create a new tempfile, and open a stream to it. The temp file
-         is removed by the pool cleanup run by the caller */
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmpfile_path, NULL,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       pool, pool));
-
-      SVN_ERR(svn_subst_translate_to_normal_form
-              (path, tmpfile_path, eol_style, eol, FALSE,
-               keywords, special, pool));
+      SVN_ERR(svn_subst_read_specialfile(&contents, path, pool, pool));
     }
+  else
+    {
+      /* Open the working copy file. */
+      SVN_ERR(svn_stream_open_readonly(&contents, path, pool, pool));
 
-  /* Open our contents file, either the original path or the temporary
-     copy we might have made above. */
-  SVN_ERR(svn_stream_open_readonly(&contents,
-                                   tmpfile_path ? tmpfile_path : path,
-                                   pool, pool));
+      /* If we have EOL styles or keywords, then detranslate the file. */
+      if (svn_subst_translation_required(eol_style, eol, keywords,
+                                         FALSE, TRUE))
+        {
+          svn_boolean_t repair = FALSE;
+
+          if (eol_style == svn_subst_eol_style_native)
+            eol = SVN_SUBST_NATIVE_EOL_STR;
+          else if (eol_style == svn_subst_eol_style_fixed)
+            repair = TRUE;
+          else if (eol_style != svn_subst_eol_style_none)
+            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+          /* Wrap the working copy stream with a filter to detranslate it. */
+          contents = svn_subst_stream_translated(contents,
+                                                 eol,
+                                                 repair,
+                                                 keywords,
+                                                 FALSE /* expand */,
+                                                 pool);
+        }
+    }
 
   /* Send the file's contents to the delta-window handler. */
   return svn_txdelta_send_stream(contents, handler, handler_baton,

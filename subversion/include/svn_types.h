@@ -25,12 +25,13 @@
 /* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
 
-#include <apr.h>        /* for apr_size_t */
-#include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_tables.h>
-#include <apr_time.h>
-#include <apr_sha1.h>
+#include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
+#include <apr_errno.h>   /* for apr_status_t */
+#include <apr_pools.h>   /* for apr_pool_t */
+#include <apr_hash.h>    /* for apr_hash_t */
+#include <apr_tables.h>  /* for apr_array_push() */
+#include <apr_time.h>    /* for apr_time_t */
+#include <apr_strings.h> /* for apr_atoi64() */
 
 #ifdef __cplusplus
 extern "C" {
@@ -1046,5 +1047,20 @@ svn_location_segment_dup(svn_location_segment_t *segment,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+
+/*
+ * Everybody and their brother needs to deal with svn_error_t, the error
+ * codes, and whatever else. While they *should* go and include svn_error.h
+ * in order to do that... bah. Let's just help everybody out and include
+ * that header whenever somebody grabs svn_types.h.
+ *
+ * Note that we do this at the END of this header so that its contents
+ * are available to svn_error.h (our guards will prevent the circular
+ * include). We also need to do the include *outside* of the cplusplus
+ * guard.
+ */
+#include "svn_error.h"
+
 
 #endif /* SVN_TYPES_H */

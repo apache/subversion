@@ -530,13 +530,6 @@ svn_auth_get_simple_provider2
   *provider = po;
 }
 
-void
-svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
-                             apr_pool_t *pool)
-{
-  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
-}
-
 
 /*-----------------------------------------------------------------------*/
 /* Prompt provider                                                       */

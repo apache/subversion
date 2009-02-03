@@ -170,7 +170,7 @@ svn_quoprint_encode(svn_stream_t *output, apr_pool_t *pool)
 
 
 svn_stringbuf_t *
-svn_quoprint_encode_string(svn_stringbuf_t *str, apr_pool_t *pool)
+svn_quoprint_encode_string(const svn_stringbuf_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *encoded = svn_stringbuf_create("", pool);
   int linelen = 0;
@@ -293,7 +293,7 @@ svn_quoprint_decode(svn_stream_t *output, apr_pool_t *pool)
 
 
 svn_stringbuf_t *
-svn_quoprint_decode_string(svn_stringbuf_t *str, apr_pool_t *pool)
+svn_quoprint_decode_string(const svn_stringbuf_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *decoded = svn_stringbuf_create("", pool);
   char ingroup[4];

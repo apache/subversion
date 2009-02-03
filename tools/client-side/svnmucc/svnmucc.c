@@ -15,18 +15,21 @@
     Subversion source directory.
 */
 
-#include "svn_cmdline.h"
-#include "svn_client.h"
-#include "svn_pools.h"
-#include "svn_error.h"
-#include "svn_path.h"
-#include "svn_ra.h"
-#include "svn_config.h"
-#include "svn_props.h"
-#include "svn_string.h"
-#include <apr_lib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <apr_lib.h>
+
+#include "svn_client.h"
+#include "svn_cmdline.h"
+#include "svn_config.h"
+#include "svn_error.h"
+#include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_props.h"
+#include "svn_ra.h"
+#include "svn_string.h"
+#include "svn_utf.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -73,34 +76,28 @@ open_tmp_file(apr_file_t **fp,
               void *callback_baton,
               apr_pool_t *pool)
 {
-  const char *temp_dir;
-
-  /* "Say, Subversion.  Seen any good tempdirs lately?" */
-  SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-
   /* Open a unique file;  use APR_DELONCLOSE. */
-  return svn_io_open_unique_file2(fp, NULL,
-                                  svn_path_join(temp_dir, "svnmucc", pool),
-                                  ".tmp", svn_io_file_del_on_close, pool);
+  return svn_io_open_unique_file3(fp, NULL, NULL, svn_io_file_del_on_close,
+                                  pool, pool);
 }
 
-static svn_ra_callbacks_t *
-ra_callbacks(const char *username,
-             const char *password,
-             svn_boolean_t non_interactive,
-             apr_pool_t *pool)
+static svn_error_t *
+create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
+                    const char *username,
+                    const char *password,
+                    svn_boolean_t non_interactive,
+                    apr_pool_t *pool)
 {
-  svn_ra_callbacks_t *callbacks = apr_palloc(pool, sizeof(*callbacks));
-  svn_cmdline_setup_auth_baton(&callbacks->auth_baton, non_interactive,
-                               username, password,
-                               NULL, FALSE, NULL, NULL, NULL, pool);
-  callbacks->open_tmp_file = open_tmp_file;
-  callbacks->get_wc_prop = NULL;
-  callbacks->set_wc_prop = NULL;
-  callbacks->push_wc_prop = NULL;
-  callbacks->invalidate_wc_props = NULL;
+  SVN_ERR(svn_ra_create_callbacks(callbacks, pool));
+  
+  SVN_ERR(svn_cmdline_create_auth_baton(&(*callbacks)->auth_baton, 
+                                        non_interactive,
+                                        username, password, NULL, FALSE,
+                                        FALSE, NULL, NULL, NULL, pool));
 
-  return callbacks;
+  (*callbacks)->open_tmp_file = open_tmp_file;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -586,6 +583,7 @@ execute(const apr_array_header_t *actions,
   svn_ra_session_t *session;
   svn_revnum_t head;
   const svn_delta_editor_t *editor;
+  svn_ra_callbacks2_t *ra_callbacks;
   void *editor_baton;
   struct operation root;
   svn_error_t *err;
@@ -593,9 +591,10 @@ execute(const apr_array_header_t *actions,
   int i;
 
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
-  SVN_ERR(svn_ra_open(&session, anchor,
-                      ra_callbacks(username, password, non_interactive, pool),
-                      NULL, config, pool));
+  SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password,
+                              non_interactive, pool));
+  SVN_ERR(svn_ra_open3(&session, anchor, NULL, ra_callbacks,
+                       NULL, config, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
   if (SVN_IS_VALID_REVNUM(base_revision))

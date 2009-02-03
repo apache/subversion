@@ -2236,7 +2236,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           int new_nearest_ancestor_index =
             find_nearest_ancestor(
               notify_b->children_with_mergeinfo,
-              notify->action == svn_wc_notify_update_delete ? FALSE : TRUE,
+              notify->action != svn_wc_notify_update_delete,
               notify->path);
 
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
@@ -3237,7 +3237,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          child_url2, revision2,
                                          child->pre_merge_mergeinfo,
                                          child->implicit_mergeinfo,
-                                         i > 0 ? TRUE : FALSE, /* is subtree */
+                                         i > 0, /* is subtree */
                                          ra_session, child_entry, merge_b->ctx,
                                          pool));
     }
@@ -4384,12 +4384,11 @@ get_mergeinfo_walk_cb(const char *path,
                               || ((wb->depth == svn_depth_immediates) &&
                                   (entry->kind == svn_node_dir) &&
                                   (strcmp(parent_path,
-                                          wb->merge_target_path) == 0)))
-                              ? TRUE : FALSE;
+                                          wb->merge_target_path) == 0)));
       child->switched = switched;
       child->absent = entry->absent;
       child->scheduled_for_deletion =
-        entry->schedule == svn_wc_schedule_delete ? TRUE : FALSE;
+        entry->schedule == svn_wc_schedule_delete;
       if (propval
           && strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
         child->has_noninheritable = TRUE;
@@ -6688,8 +6687,23 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
   apr_array_header_t *remove_sources, *add_sources, *ranges;
   svn_opt_revision_t peg_revision;
   const char *old_url;
-  svn_boolean_t same_repos =
-    (strcmp(wc_repos_root, source_repos_root) == 0) ? TRUE : FALSE;
+  svn_boolean_t same_repos;
+
+  if (strcmp(wc_repos_root, source_repos_root) != 0)
+    {
+      const char *source_repos_uuid;
+      const char *wc_repos_uuid;
+
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, pool));
+      if (entry)
+        wc_repos_uuid = entry->uuid;
+      else
+        SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
+                                         ctx, pool));
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
+    }
+  else
+    same_repos = TRUE;
 
   peg_revision.kind = svn_opt_revision_number;
   SVN_ERR(svn_ra_get_session_url(ra_session, &old_url, pool));
@@ -6868,7 +6882,21 @@ svn_client_merge3(const char *source1,
   SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root, sesspool));
 
   /* Do our working copy and sources come from the same repository? */
-  same_repos = (strcmp(source_repos_root, wc_repos_root) == 0) ? TRUE : FALSE;
+  if (strcmp(wc_repos_root, source_repos_root) != 0)
+    {
+      const char *source_repos_uuid;
+      const char *wc_repos_uuid;
+
+      SVN_ERR(svn_ra_get_uuid2(ra_session1, &source_repos_uuid, pool));
+      if (entry)
+        wc_repos_uuid = entry->uuid;
+      else
+        SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
+                                         ctx, pool));
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
+    }
+  else
+    same_repos = TRUE;
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
@@ -7897,6 +7925,7 @@ svn_client_merge_peg3(const char *source,
   apr_pool_t *sesspool;
   svn_boolean_t use_sleep;
   svn_error_t *err;
+  svn_boolean_t same_repos;
 
   /* No ranges to merge?  No problem. */
   if (ranges_to_merge->nelts == 0)
@@ -7935,16 +7964,31 @@ svn_client_merge_peg3(const char *source,
                                   source_repos_root, peg_revision,
                                   ranges_to_merge, ra_session, ctx, pool));
 
+  /* Check for same_repos. */
+  if (strcmp(wc_repos_root, source_repos_root) != 0)
+    {
+      const char *source_repos_uuid;
+      const char *wc_repos_uuid;
+
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, pool));
+      if (entry)
+        wc_repos_uuid = entry->uuid;
+      else
+        SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
+                                         ctx, pool));
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
+    }
+  else
+    same_repos = TRUE;
+
   /* We're done with our little RA session. */
   svn_pool_destroy(sesspool);
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
   err = do_merge(merge_sources, target_wcpath, entry, adm_access,
-                 TRUE, TRUE,
-                 (strcmp(wc_repos_root, source_repos_root) == 0),
-                 ignore_ancestry, force, dry_run, record_only, depth,
-                 merge_options, &use_sleep, ctx, pool);
+                 TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
+                 record_only, depth, merge_options, &use_sleep, ctx, pool);
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_wcpath, pool);

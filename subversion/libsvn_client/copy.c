@@ -1275,6 +1275,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 static svn_error_t *
 repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,
+                        svn_boolean_t ignore_externals,
                         svn_ra_session_t *ra_session,
                         svn_wc_adm_access_t *adm_access,
                         svn_client_ctx_t *ctx,
@@ -1290,7 +1291,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
               (NULL, pair->src_original, pair->dst, &pair->src_peg_revision,
                &pair->src_op_revision, NULL,
                SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-               FALSE, FALSE, NULL, ctx, pool));
+               ignore_externals, FALSE, NULL, ctx, pool));
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
          as 'copied' -- assuming that the src and dst are from the
@@ -1427,6 +1428,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 static svn_error_t *
 repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1611,7 +1613,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       same_repositories = FALSE;
 
     else
-      same_repositories = (strcmp(src_uuid, dst_uuid) == 0) ? TRUE : FALSE;
+      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
   }
 
   /* Perform the move for each of the copy_pairs. */
@@ -1626,6 +1628,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(repos_to_wc_copy_single(APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *),
                                       same_repositories,
+                                      ignore_externals,
                                       ra_session, adm_access,
                                       ctx, iterpool));
     }
@@ -1646,6 +1649,7 @@ try_copy(svn_commit_info_t **commit_info_p,
          svn_boolean_t is_move,
          svn_boolean_t force,
          svn_boolean_t make_parents,
+         svn_boolean_t ignore_externals,
          const apr_hash_t *revprop_table,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
@@ -1926,7 +1930,8 @@ try_copy(svn_commit_info_t **commit_info_p,
   else if ((srcs_are_urls) && (! dst_is_url))
     {
       *commit_info_p = NULL;
-      return repos_to_wc_copy(copy_pairs, make_parents, ctx, pool);
+      return repos_to_wc_copy(copy_pairs, make_parents, ignore_externals,
+                              ctx, pool);
     }
   else
     {
@@ -1939,11 +1944,12 @@ try_copy(svn_commit_info_t **commit_info_p,
 
 /* Public Interfaces */
 svn_error_t *
-svn_client_copy4(svn_commit_info_t **commit_info_p,
+svn_client_copy5(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
                  const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
@@ -1961,6 +1967,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  FALSE /* is_move */,
                  TRUE /* force, set to avoid deletion check */,
                  make_parents,
+                 ignore_externals,
                  revprop_table,
                  ctx,
                  subpool);
@@ -1988,6 +1995,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
                      make_parents,
+                     ignore_externals,
                      revprop_table,
                      ctx,
                      subpool);
@@ -2047,6 +2055,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  TRUE /* is_move */,
                  force,
                  make_parents,
+                 FALSE,
                  revprop_table,
                  ctx,
                  subpool);
@@ -2070,6 +2079,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                      TRUE /* is_move */,
                      force,
                      make_parents,
+                     FALSE,
                      revprop_table,
                      ctx,
                      subpool);

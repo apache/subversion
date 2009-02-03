@@ -40,14 +40,15 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_nls.h"
+#include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_version.h"
-#include "utf_impl.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_utf_private.h"
 
 #include "svn_private_config.h"
 
@@ -557,26 +558,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *auth_username,
-                             const char *auth_password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
-{
-  return svn_cmdline_create_auth_baton(ab, non_interactive,
-                                       auth_username, auth_password,
-                                       config_dir, no_auth_cache, FALSE,
-                                       cfg, cancel_func, cancel_baton, pool);
-}
-
 
 svn_error_t *
 svn_cmdline__getopt_init(apr_getopt_t **os,

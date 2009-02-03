@@ -365,7 +365,8 @@ class Template:
     else:
       fp.write(value)
 
-  def _cmd_format(self, (valref, args), fp, ctx):
+  def _cmd_format(self, valref_args, fp, ctx):
+    (valref, args) = valref_args
     fmt = _get_value(valref, ctx)
     parts = _re_subst.split(fmt)
     for i in range(len(parts)):
@@ -378,7 +379,8 @@ class Template:
           piece = '<undef>'
       fp.write(piece)
 
-  def _cmd_include(self, (valref, reader), fp, ctx):
+  def _cmd_include(self, valref_reader, fp, ctx):
+    (valref, reader) = valref_reader
     fname = _get_value(valref, ctx)
     ### note: we don't have the set of for_names to pass into this parse.
     ### I don't think there is anything to do but document it.
@@ -479,7 +481,7 @@ def _prepare_ref(refname, for_names, file_args):
       break
   return refname, start, rest
 
-def _get_value((refname, start, rest), ctx):
+def _get_value(refname_start_rest, ctx):
   """(refname, start, rest) -> a prepared `value reference' (see above).
   ctx -> an execution context instance.
 
@@ -487,6 +489,7 @@ def _get_value((refname, start, rest), ctx):
   for blocks take precedence over data dictionary members with the
   same name.
   """
+  (refname, start, rest) = refname_start_rest
   if rest is None:
     # it was a string constant
     return start

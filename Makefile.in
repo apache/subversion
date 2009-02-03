@@ -69,6 +69,10 @@ datadir = @datadir@
 datarootdir = @datarootdir@
 localedir = @localedir@
 
+ifneq ($(abs_builddir), $(abs_srcdir))
+	srcpath = $(abs_srcdir)/
+endif
+
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
 swig_pl_libdir = @libdir@
@@ -344,6 +348,7 @@ fast-distclean: fast-clean
 local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
+              $(top_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.sql.h \
               $(top_srcdir)/configure \
               $(top_srcdir)/build/config.guess \
               $(top_srcdir)/build/config.sub \
