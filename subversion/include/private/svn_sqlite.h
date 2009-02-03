@@ -129,6 +129,10 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       const void *val,
                       apr_size_t len);
 
+/* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. */
+const void *
+svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len);
+
 /* Wrapper around sqlite3_column_text. */
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column);
