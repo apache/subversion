@@ -58,7 +58,9 @@ enum statement_keys {
   STMT_INSERT_ACTUAL_NODE,
   STMT_INSERT_CHANGELIST,
   STMT_SELECT_REPOSITORY,
-  STMT_SELECT_WCROOT_NULL
+  STMT_SELECT_WCROOT_NULL,
+  STMT_SELECT_REPOSITORY_BY_ID,
+  STMT_SELECT_BASE_NODE
 };
 
 static const char * const statements[] = {
@@ -95,6 +97,13 @@ static const char * const statements[] = {
   "select id, root from repository where uuid = ?1;",
 
   "select id from wcroot where local_abspath is null;",
+
+  "select root, uuid from repository where id = ?1;",
+
+  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_id, "
+    "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
+    "changed_author, depth, last_mod_time, properties, incomplete_children "
+  "from base_node;",
 
   NULL
   };
@@ -1368,8 +1377,8 @@ resolve_to_defaults(apr_hash_t *entries,
    populated.  POOL is used for local memory allocation, the access baton
    pool is used for the cache. */
 static svn_error_t *
-read_entries(svn_wc_adm_access_t *adm_access,
-             apr_pool_t *scratch_pool)
+read_entries_old(svn_wc_adm_access_t *adm_access,
+                 apr_pool_t *scratch_pool)
 {
   apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
   const char *path = svn_wc_adm_access_path(adm_access);
@@ -1437,6 +1446,161 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
   /* Fill in any implied fields. */
   SVN_ERR(resolve_to_defaults(entries, result_pool));
+
+  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
+
+  return SVN_NO_ERROR;
+}
+
+/* Select all the rows from base_node table in WC_DB and put them into *NODES,
+   allocated in RESULT_POOL. */
+static svn_error_t *
+fetch_base_nodes(apr_hash_t **nodes,
+                 svn_sqlite__db_t *wc_db,
+                 apr_pool_t *scratch_pool,
+                 apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *nodes = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      apr_size_t len;
+      const void *val;
+      db_base_node_t *base_node = apr_pcalloc(scratch_pool,
+                                              sizeof(*base_node));
+
+      base_node->wc_id = svn_sqlite__column_int(stmt, 1);
+      base_node->local_relpath = apr_pstrdup(result_pool,
+                                             svn_sqlite__column_text(stmt, 2));
+
+      if (!svn_sqlite__column_is_null(stmt, 3))
+        {
+          base_node->repos_id = svn_sqlite__column_int(stmt, 3);
+          base_node->repos_relpath = apr_pstrdup(result_pool,
+                                        svn_sqlite__column_text(stmt, 4));
+        }
+
+      if (!svn_sqlite__column_is_null(stmt, 5))
+        base_node->parent_id = svn_sqlite__column_int(stmt, 5);
+
+      base_node->revision = svn_sqlite__column_int(stmt, 6);
+      base_node->kind = svn_node_kind_from_word(svn_sqlite__column_text(stmt,
+                                                                        7));
+
+      if (!svn_sqlite__column_is_null(stmt, 8))
+        {
+          const char *digest = svn_sqlite__column_text(stmt, 8);
+          svn_checksum_kind_t kind = (digest[1] == 'm'
+                                      ? svn_checksum_md5 : svn_checksum_sha1);
+          SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, kind,
+                                         digest + 6, result_pool));
+        }
+
+      base_node->translated_size = svn_sqlite__column_int(stmt, 9);
+
+      base_node->changed_rev = svn_sqlite__column_int(stmt, 10);
+      base_node->changed_date = svn_sqlite__column_int(stmt, 11);
+      base_node->changed_author = apr_pstrdup(result_pool,
+                                        svn_sqlite__column_text(stmt, 12));
+
+      base_node->depth = svn_depth_from_word(svn_sqlite__column_text(stmt, 13));
+      base_node->last_mod_time = svn_sqlite__column_int(stmt, 14);
+
+      val = svn_sqlite__column_blob(stmt, 15, &len);
+      SVN_ERR(svn_skel__parse_proplist(&base_node->properties,
+                                       svn_skel__parse(val, len, scratch_pool),
+                                       result_pool));
+
+      base_node->incomplete_children = svn_sqlite__column_int(stmt, 16);
+
+      apr_hash_set(*nodes, base_node->local_relpath, APR_HASH_KEY_STRING,
+                   base_node);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_repos_root(const char **repos_root,
+               svn_sqlite__db_t *wc_db,
+               apr_int64_t repos_id,
+               apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                    STMT_SELECT_REPOSITORY_BY_ID));
+  SVN_ERR(svn_sqlite__bindf(stmt, "i", repos_id));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("No REPOSITORY table entry for id '%ld'"),
+                             repos_id);
+
+  *repos_root = apr_pstrdup(result_pool, svn_sqlite__column_text(stmt, 0));
+
+  return svn_sqlite__reset(stmt);
+}
+
+static svn_error_t *
+read_entries(svn_wc_adm_access_t *adm_access,
+             apr_pool_t *scratch_pool)
+{
+  apr_hash_t *base_nodes;
+  svn_sqlite__db_t *wc_db;
+  apr_hash_index_t *hi;
+  const char *repos_root = NULL;
+  apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
+  apr_hash_t *entries = apr_hash_make(result_pool);
+  const char *wc_db_path = db_path(svn_wc_adm_access_path(adm_access),
+                                   scratch_pool);
+  
+  /* Open the wc.db sqlite database. */
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readwrite,
+                           statements, SVN_WC__VERSION, upgrade_sql,
+                           scratch_pool, scratch_pool));
+
+  SVN_ERR(fetch_base_nodes(&base_nodes, wc_db, scratch_pool, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, base_nodes); hi;
+        hi = apr_hash_next(hi))
+    {
+      db_base_node_t *base_node;
+      const char *rel_path;
+      svn_wc_entry_t *entry = alloc_entry(result_pool);
+
+      apr_hash_this(hi, (const void **) &rel_path, NULL, (void **) &base_node);
+
+      if (base_node->repos_id)
+        {
+          if (repos_root == NULL)
+            SVN_ERR(get_repos_root(&repos_root, wc_db, base_node->repos_id,
+                                   scratch_pool));
+        }
+
+      if (base_node->repos_relpath != NULL)
+        entry->url = svn_path_join(repos_root, base_node->repos_relpath,
+                                   result_pool);
+
+      entry->revision = base_node->revision;
+      entry->kind = base_node->kind;
+
+      entry->incomplete = (base_node->incomplete_children > 1);
+
+      entry->name = apr_pstrdup(result_pool, base_node->local_relpath);
+
+      apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+    }
+
+  SVN_ERR(svn_sqlite__close(wc_db, SVN_NO_ERROR));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
