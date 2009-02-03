@@ -70,7 +70,7 @@ datarootdir = @datarootdir@
 localedir = @localedir@
 
 ifneq ($(abs_builddir), $(abs_srcdir))
-	srcpath = $(abs_srcdir)/
+	srcpath = $(srcdir)/
 endif
 
 # where to install libsvn_swig_*
