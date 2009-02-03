@@ -69,6 +69,10 @@ datadir = @datadir@
 datarootdir = @datarootdir@
 localedir = @localedir@
 
+ifneq ($(abs_builddir), $(abs_srcdir))
+	srcpath = $(abs_srcdir)/
+endif
+
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
 swig_pl_libdir = @libdir@
