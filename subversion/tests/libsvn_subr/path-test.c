@@ -2,7 +2,7 @@
  * path-test.c -- test the path functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -545,8 +545,7 @@ test_path_join(const char **msg,
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, \
                              "svn_path_join_many" #args " returns \"%s\". " \
                              "expected \"%s\"", \
-                             result, expect); \
-  else {}
+                             result, expect);
 
   TEST_MANY((pool, "abc", NULL), "abc");
   TEST_MANY((pool, "/abc", NULL), "/abc");

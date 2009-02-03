@@ -1116,7 +1116,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
               /* has_props? */
               SVN_ERR(svn_fs_node_proplist(&prophash, root, fullpath,
                                            subpool));
-              entry->has_props = (apr_hash_count(prophash)) ? TRUE : FALSE;
+              entry->has_props = (apr_hash_count(prophash) != 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_TIME)

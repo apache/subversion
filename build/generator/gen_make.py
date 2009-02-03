@@ -458,8 +458,7 @@ class Generator(gen_base.GeneratorBase):
       if cmd:
         if not getattr(objname, 'source_generated', 0):
           self.ofile.write('\t%s %s\n\n'
-                           % (cmd, build_path_join('$(abs_srcdir)',
-                              str(sources[0]))))
+                           % (cmd, '$(srcpath)' + str(sources[0])))
         else:
           self.ofile.write('\t%s %s\n\n' % (cmd, sources[0]))
       else:

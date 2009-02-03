@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2008 by Stefan Reichoer
+;; Copyright (C) 2002-2009 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer <stefan@xsteve.at>
 ;; $Id$
@@ -3401,13 +3401,15 @@ This means we mark
 * all modified files
 * all files scheduled for addition
 * all files scheduled for deletion
+* all files with modified properties
 
 The last two categories include all copied and moved files.
 If called with a prefix ARG, unmark all such files."
   (interactive "P")
   (svn-status-mark-added arg)
   (svn-status-mark-modified arg)
-  (svn-status-mark-deleted arg))
+  (svn-status-mark-deleted arg)
+  (svn-status-mark-modified-properties arg))
 
 (defun svn-status-unset-all-usermarks ()
   (interactive)

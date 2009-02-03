@@ -2503,7 +2503,7 @@ make_reporter(svn_ra_session_t *session,
   svn_stringbuf_t *xml_s;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
-  svn_boolean_t has_target = *target ? TRUE : FALSE;
+  svn_boolean_t has_target = *target != '\0';
   svn_boolean_t server_supports_depth;
 
   SVN_ERR(svn_ra_neon__has_capability(session, &server_supports_depth,
@@ -2535,7 +2535,7 @@ make_reporter(svn_ra_session_t *session,
   rb->fetch_content = fetch_content;
   rb->in_resource = FALSE;
   rb->current_wcprop_path = svn_stringbuf_create("", pool);
-  rb->is_switch = dst_path ? TRUE : FALSE;
+  rb->is_switch = dst_path != NULL;
   rb->target = target;
   rb->receiving_all = FALSE;
   rb->spool_response = spool_response;

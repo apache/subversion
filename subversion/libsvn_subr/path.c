@@ -677,7 +677,7 @@ svn_path_is_url(const char *path)
 
      Someday it might be nice to have an actual URI parser here.
   */
-  return skip_uri_scheme(path) ? TRUE : FALSE;
+  return skip_uri_scheme(path) != NULL;
 }
 
 

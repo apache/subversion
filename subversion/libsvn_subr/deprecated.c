@@ -32,6 +32,7 @@
 #include "svn_opt.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
+#include "svn_dso.h"
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
@@ -637,6 +638,14 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 
 /*** From cmdline.c ***/
 svn_error_t *
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool)
+{
+  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
+}
+
+svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
                              const char *auth_username,
@@ -652,4 +661,33 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                                        auth_username, auth_password,
                                        config_dir, no_auth_cache, FALSE,
                                        cfg, cancel_func, cancel_baton, pool);
+}
+
+/*** From dso.c ***/
+void
+svn_dso_initialize(void)
+{
+  svn_error_t *err = svn_dso_initialize2();
+  if (err)
+    {
+      svn_error_clear(err);
+      abort();
+    }
+}
+
+/*** From simple_providers.c ***/
+void
+svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
+                             apr_pool_t *pool)
+{
+  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
+}
+
+/*** From ssl_client_cert_pw_providers.c ***/
+void
+svn_auth_get_ssl_client_cert_pw_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_file_provider2(provider, NULL, NULL, pool);
 }
