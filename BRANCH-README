@@ -26,7 +26,7 @@ TODO:
    the new stub URIs:
 
       get-file              -> GET (against pegrev URI)            [DONE]
-      get-dir               -> PROPFIND (against pegrev URI)
+      get-dir               -> PROPFIND (against pegrev URI)       [DONE]
       rev-prop              -> PROPFIND (against revision URI)     [DONE]
       rev-proplist          -> PROPFIND (against revision URI)     [DONE]
       check-path            -> PROPFIND (against pegrev URI)       [DONE]
