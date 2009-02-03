@@ -289,6 +289,14 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
   return SVN_NO_ERROR;
 }
 
+const void *
+svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len)
+{
+  const void *val = sqlite3_column_blob(stmt->s3stmt, column);
+  *len = sqlite3_column_bytes(stmt->s3stmt, column);
+  return val;
+}
+
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column)
 {
