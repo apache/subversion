@@ -212,16 +212,16 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     AC_MSG_CHECKING([where to install Ruby scripts])
     AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
-      svn_cv_ruby_sitedir_libsuffix="`echo $rbconfig_sitelibdir | \
-                                        sed -e s,^$rbconfig_sitedir,,`"
+      svn_cv_ruby_sitedir_libsuffix="`echo "$rbconfig_sitelibdir" | \
+                                        sed -e "s,^$rbconfig_sitedir,,"`"
     ])
     SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
     AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
 
     AC_MSG_CHECKING([where to install Ruby extensions])
     AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
-      svn_cv_ruby_sitedir_archsuffix="`echo $rbconfig_sitearchdir | \
-                                        sed -e s,^$rbconfig_sitedir,,`"
+      svn_cv_ruby_sitedir_archsuffix="`echo "$rbconfig_sitearchdir" | \
+                                        sed -e "s,^$rbconfig_sitedir,,"`"
     ])
     SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
     AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
