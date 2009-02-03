@@ -763,7 +763,7 @@ maybe_bump_dir_info(struct edit_baton *eb,
          the directory and mark it 'complete'.  */
       if (! bdi->skipped)
         SVN_ERR(complete_directory(eb, bdi->path,
-                                   bdi->parent ? FALSE : TRUE, pool));
+                                   bdi->parent == NULL, pool));
     }
   /* we exited the for loop because there are no more parents */
 
@@ -2692,7 +2692,12 @@ close_directory(void *dir_baton,
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  if (! db->bump_info->skipped && (db->add_existed || (! db->added))
+  /* ### TODO: Instead of duplicating these complex conditions, should say
+   * "if (! db->have_notified) ...". Alternatively, if it would be
+   * acceptable for the notification to come always after the children, then
+   * store the desired notification in the baton as soon as we know what it
+   * is, and finally, here, just send it if it has already been created. */
+   if (! db->bump_info->skipped && (db->add_existed || (! db->added))
       && (db->edit_baton->notify_func))
     {
       svn_wc_notify_t *notify
@@ -4086,8 +4091,7 @@ merge_file(svn_wc_notify_state_t *content_state,
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                  (&log_accum, adm_access,
-                   fb->path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+                  (&log_accum, adm_access, fb->path, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
               (&log_accum, adm_access, fb->path, pool));
@@ -4888,7 +4892,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
               SVN_ERR(err);
               /* The query for a switched dir succeeded. If switched,
                * don't consider this a WC root. */
-              *wc_root = switched ? FALSE : TRUE;
+              *wc_root = ! switched;
             }
         }
     }
@@ -5132,8 +5136,7 @@ svn_wc_add_repos_file3(const char *dst_path,
                                  tmp_text_base_path, dst_path,
                                  pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-              (&log_accum, adm_access,
-               dst_path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+              (&log_accum, adm_access, dst_path, pool));
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
               (&log_accum, adm_access, dst_path, pool));
     }

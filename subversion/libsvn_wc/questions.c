@@ -178,43 +178,18 @@ svn_error_t *
 svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
                            const char *path,
                            svn_wc_adm_access_t *adm_access,
-                           enum svn_wc__timestamp_kind timestamp_kind,
                            apr_pool_t *pool)
 {
-  apr_time_t wfile_time, entrytime = 0;
   const svn_wc_entry_t *entry;
+  apr_time_t wfile_time;
 
   /* Get the timestamp from the entries file */
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   /* Get the timestamp from the working file and the entry */
-  if (timestamp_kind == svn_wc__text_time)
-    {
-      SVN_ERR(svn_io_file_affected_time(&wfile_time, path, pool));
-      entrytime = entry->text_time;
-    }
+  SVN_ERR(svn_io_file_affected_time(&wfile_time, path, pool));
 
-  else if (timestamp_kind == svn_wc__prop_time)
-    {
-      SVN_ERR(svn_wc__props_last_modified(&wfile_time,
-                                          path, svn_wc__props_working,
-                                          adm_access, pool));
-      entrytime = entry->prop_time;
-    }
-
-  if (! entrytime)
-    {
-      /* TODO: If either timestamp is inaccessible, the test cannot
-         return an answer.  Assume that the timestamps are
-         different. */
-      *equal_p = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  if (wfile_time == entrytime)
-    *equal_p = TRUE;
-  else
-    *equal_p = FALSE;
+  *equal_p = wfile_time == entry->text_time;
 
   return SVN_NO_ERROR;
 }
@@ -289,13 +264,19 @@ compare_and_verify(svn_boolean_t *modified_p,
 
           if (compare_textbases && need_translation)
             {
+              if (eol_style == svn_subst_eol_style_native)
+                eol_str = SVN_SUBST_NATIVE_EOL_STR;
+              else if (eol_style != svn_subst_eol_style_fixed
+                       && eol_style != svn_subst_eol_style_none)
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
               /* Wrap file stream to detranslate into normal form. */
-              SVN_ERR(svn_subst_stream_translated_to_normal_form(&v_stream,
-                                                                 v_stream,
-                                                                 eol_style,
-                                                                 eol_str, TRUE,
-                                                                 keywords,
-                                                                 pool));
+              v_stream = svn_subst_stream_translated(v_stream,
+                                                     eol_str,
+                                                     TRUE,
+                                                     keywords,
+                                                     FALSE /* expand */,
+                                                     pool);
             }
           else if (need_translation)
             {

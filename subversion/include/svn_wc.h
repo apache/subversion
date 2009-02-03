@@ -41,18 +41,21 @@
 #ifndef SVN_WC_H
 #define SVN_WC_H
 
-
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
+#include <apr_time.h>
+#include <apr_file_io.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_delta.h"
-#include "svn_error.h"
+#include "svn_checksum.h"
+#include "svn_io.h"
+#include "svn_delta.h"     /* for svn_stream_t */
 #include "svn_opt.h"
-#include "svn_ra.h"    /* for svn_ra_reporter_t type */
+#include "svn_ra.h"        /* for svn_ra_reporter_t type */
+#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1182,12 +1185,18 @@ typedef enum svn_wc_conflict_action_t
  */
 typedef enum svn_wc_conflict_reason_t
 {
-  svn_wc_conflict_reason_edited,     /* local edits are already present */
-  svn_wc_conflict_reason_obstructed, /* another object is in the way */
-  svn_wc_conflict_reason_deleted,    /* object is already schedule-delete */
-  svn_wc_conflict_reason_added,      /* object is already added or schedule-add */
-  svn_wc_conflict_reason_missing,    /* object is unknown or missing */
-  svn_wc_conflict_reason_unversioned /* object is unversioned */
+  /** Local edits are already present */
+  svn_wc_conflict_reason_edited,
+  /** Another object is in the way */
+  svn_wc_conflict_reason_obstructed,
+  /** Object is already schedule-delete */
+  svn_wc_conflict_reason_deleted,
+  /** Object is unknown or missing */
+  svn_wc_conflict_reason_missing,
+  /** Object is unversioned */
+  svn_wc_conflict_reason_unversioned,
+  /** Object is already added or schedule-add. @since New in 1.6. */
+  svn_wc_conflict_reason_added
 
 } svn_wc_conflict_reason_t;
 
@@ -1199,10 +1208,12 @@ typedef enum svn_wc_conflict_reason_t
  */
 typedef enum svn_wc_conflict_kind_t
 {
-  svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
-  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
-  svn_wc_conflict_kind_tree          /* tree conflict (on a dir) */
-
+  /** textual conflict (on a file) */
+  svn_wc_conflict_kind_text,
+  /** property conflict (on a file or dir) */
+  svn_wc_conflict_kind_property,
+  /** tree conflict (on a dir) @since New in 1.6. */
+  svn_wc_conflict_kind_tree 
 } svn_wc_conflict_kind_t;
 
 
@@ -1212,6 +1223,7 @@ typedef enum svn_wc_conflict_kind_t
  */
 typedef enum svn_wc_operation_t
 {
+  svn_wc_operation_none = 0,
   svn_wc_operation_update,
   svn_wc_operation_switch,
   svn_wc_operation_merge
@@ -1667,6 +1679,7 @@ typedef struct svn_wc_diff_callbacks3_t
    * A file @a path was deleted.  The [loss of] contents can be seen by
    * comparing @a tmpfile1 and @a tmpfile2.  @a originalprops provides
    * the properties of the file.
+   * ### Some existing callers include WC "entry props" in @a originalprops.
    *
    * If known, the @c svn:mime-type value of each file is passed into
    * @a mimetype1 and @a mimetype2;  either or both of the values can
@@ -2092,7 +2105,10 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t text_time;
 
-  /** last up-to-date time for properties (0 means no information available) */
+  /** last up-to-date time for properties (0 means no information available)
+   *
+   * @deprecated This value will always be 0 in version 1.4 and later.
+   */
   apr_time_t prop_time;
 
   /** Hex MD5 checksum for the untranslated text base file,

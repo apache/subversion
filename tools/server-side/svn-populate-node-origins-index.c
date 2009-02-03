@@ -3,7 +3,7 @@
  *                                     origins index.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,12 +17,13 @@
  * ====================================================================
  */
 
-#include "svn_pools.h"
-#include "svn_error.h"
 #include "svn_cmdline.h"
-#include "svn_path.h"
-#include "svn_repos.h"
+#include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_repos.h"
+#include "svn_utf.h"
 
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR

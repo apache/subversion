@@ -22,6 +22,12 @@
 #ifndef SVN_MERGEINFO_PRIVATE_H
 #define SVN_MERGEINFO_PRIVATE_H
 
+#include <apr_pools.h>
+
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_mergeinfo.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -133,6 +139,8 @@ svn_mergeinfo__filter_catalog_by_ranges(
   svn_revnum_t youngest_rev,
   svn_revnum_t oldest_rev,
   apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

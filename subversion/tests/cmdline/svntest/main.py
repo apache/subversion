@@ -20,6 +20,7 @@ import os
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
+import subprocess
 import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
@@ -104,22 +105,6 @@ else:
   file_scheme_prefix = 'file://'
   _exe = ''
   _bat = ''
-
-try:
-  # Python >=2.4
-  import subprocess
-  platform_with_subprocess = True
-except ImportError:
-  # Python <2.4
-  platform_with_subprocess = False
-
-if not platform_with_subprocess:
-  # Python <2.4
-  try:
-    from popen2 import Popen3
-    platform_with_popen3_class = True
-  except ImportError:
-    platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
 if windows:
@@ -396,29 +381,12 @@ def _quote_arg(arg):
       arg = arg.replace('$', '\$')
     return '"%s"' % (arg,)
 
-def open_pipe(command, mode):
-  """Opens a popen3 pipe to COMMAND in MODE.
+def open_pipe(command, stdin=None, stdout=None, stderr=None):
+  """Opens a subprocess.Popen pipe to COMMAND using STDIN,
+  STDOUT, and STDERR.
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
-  # Quote only the arguments, neither Popen3() or os.popen3
-  # work if the command itself is quoted.
-  args = command[1:]
-  args = ' '.join([_quote_arg(x) for x in args])
-  command = command[0] + ' ' + args
-  if platform_with_popen3_class:
-    kid = Popen3(command, True)
-    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
-  else:
-    inf, outf, errf = os.popen3(command, mode)
-    return inf, outf, errf, None
-
-def open_pipe2(command, stdin=None, stdout=None, stderr=None):
-  """Opens a subprocess.Popen pipe to COMMAND using STDIN,
-  STDOUT, and STDERR.  For use with Python > 2.4 only.
-
-  Returns (infile, outfile, errfile, waiter); waiter
-  should be passed to wait_on_pipe2."""
   command = [str(x) for x in command]
 
   # On Windows subprocess.Popen() won't accept a Python script as
@@ -447,40 +415,11 @@ def open_pipe2(command, stdin=None, stdout=None, stderr=None):
                        close_fds=not windows)
   return p.stdin, p.stdout, p.stderr, (p, command)
 
-def wait_on_pipe(waiter, stdout_lines, stderr_lines):
+def wait_on_pipe(waiter, binary_mode, stdin=None):
   """Waits for KID (opened with open_pipe) to finish, dying
-  if it does.  Uses STDOUT_LINES and STDERR_LINES for error message
-  if kid fails.  Returns kid's exit code."""
-  if waiter is None:
-    return
-
-  kid, command = waiter    
-  wait_code = kid.wait()
-
-  if os.WIFSIGNALED(wait_code):
-    exit_signal = os.WTERMSIG(wait_code)
-    if stdout_lines is not None:
-      sys.stdout.write("".join(stdout_lines))
-    if stderr_lines is not None:
-      sys.stderr.write("".join(stderr_lines))
-    if verbose_mode:
-      # show the whole path to make it easier to start a debugger
-      sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (' '.join(command), exit_signal))
-    raise SVNProcessTerminatedBySignal
-  else:
-    exit_code = os.WEXITSTATUS(wait_code)
-    if exit_code and verbose_mode:
-      sys.stderr.write("CMD: %s exited with %d\n"
-                       % (' '.join(command), exit_code))
-    return exit_code
-
-def wait_on_pipe2(waiter, binary_mode, stdin=None):
-  """Waits for KID (opened with open_pipe2) to finish, dying
   if it does.  If kid fails create an error message containing
   any stdout and stderr from the kid.  Returns kid's exit code,
-  stdout and stderr (the latter two as lists).
-  For use with Python > 2.4 only."""
+  stdout and stderr (the latter two as lists)."""
   if waiter is None:
     return
   
@@ -522,28 +461,14 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
                                       ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
-  if binary_mode:
-    mode = 'b'
-  else:
-    mode = 't'
-
-  if platform_with_subprocess:
-    infile, outfile, errfile, kid = open_pipe2([command] + list(varargs))
-  else:
-    infile, outfile, errfile, kid = open_pipe([command] + list(varargs), mode)
+  infile, outfile, errfile, kid = open_pipe([command] + list(varargs))
 
   if stdin_lines:
     for x in stdin_lines:
       infile.write(x)
 
-  if platform_with_subprocess:
-    stdout_lines, stderr_lines, exit_code = wait_on_pipe2(kid, binary_mode)
-    infile.close()
-  else:
-    infile.close()
-    stdout_lines = outfile.readlines()
-    stderr_lines = errfile.readlines()
-    exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
+  stdout_lines, stderr_lines, exit_code = wait_on_pipe(kid, binary_mode)
+  infile.close()
 
   outfile.close()
   errfile.close()
@@ -810,12 +735,14 @@ def create_repos(path):
     # Note that some tests (currently only commit_tests) create their own
     # post-commit hooks, which would override this one. :-(
     if fsfs_packing:
-      create_python_hook_script(get_post_commit_hook_path(path), 
+      # some tests chdir.
+      abs_path = os.path.abspath(path)
+      create_python_hook_script(get_post_commit_hook_path(abs_path), 
           "import subprocess\n"
           "import sys\n"
           "command = %s\n"
           "sys.exit(subprocess.Popen(command).wait())\n"
-          % repr([svnadmin_binary, 'pack', path]))
+          % repr([svnadmin_binary, 'pack', abs_path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
@@ -840,54 +767,25 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     sys.stdout.flush()
   start = time.time()
 
-  if platform_with_subprocess:
-    dump_in, dump_out, dump_err, dump_kid = open_pipe2(
-      [svnadmin_binary] + dump_args)
-    load_in, load_out, load_err, load_kid = open_pipe2(
-      [svnadmin_binary] + load_args,
-      stdin=dump_out) # Attached to dump_kid
+  dump_in, dump_out, dump_err, dump_kid = open_pipe(
+    [svnadmin_binary] + dump_args)
+  load_in, load_out, load_err, load_kid = open_pipe(
+    [svnadmin_binary] + load_args,
+    stdin=dump_out) # Attached to dump_kid
 
-    stop = time.time()
-    if verbose_mode:
-      print('<TIME = %.6f>' % (stop - start))
+  stop = time.time()
+  if verbose_mode:
+    print('<TIME = %.6f>' % (stop - start))
 
-    load_stdout, load_stderr, load_exit_code = wait_on_pipe2(load_kid, 'b')
-    dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe2(dump_kid, 'b')
-    
-    dump_in.close()
-    dump_out.close()
-    dump_err.close()
-    #load_in is dump_out so it's already closed.
-    load_out.close()
-    load_err.close()
-  else:
-    # Python < 2.4
-    dump_in, dump_out, dump_err, dump_kid = \
-             open_pipe([svnadmin_binary] + dump_args, 'b')
-    dump_in.close()
-    load_in, load_out, load_err, load_kid = \
-             open_pipe([svnadmin_binary] + load_args, 'b')
-    stop = time.time()
-    if verbose_mode:
-      print('<TIME = %.6f>' % (stop - start))
+  load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
+  dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
 
-    while 1:
-      data = dump_out.read(1024*1024)  # Arbitrary buffer size
-      if data == "":
-        break
-      load_in.write(data)
-    load_in.close() # Tell load we are done
-
-    dump_stderr = dump_err.readlines()
-    load_stdout = load_out.readlines()
-    dump_out.close()
-    dump_err.close()
-    load_out.close()
-    load_err.close()
-    
-    # Wait on the pipes; ignore return code.
-    wait_on_pipe(dump_kid, None, dump_stderr)
-    wait_on_pipe(load_kid, load_stdout, None)
+  dump_in.close()
+  dump_out.close()
+  dump_err.close()
+  #load_in is dump_out so it's already closed.
+  load_out.close()
+  load_err.close()
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -1250,9 +1148,6 @@ class TestSpawningThread(threading.Thread):
       args.append('--server-minor-version=' + str(server_minor_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
-    # "result" will be None on platforms without Popen3 (e.g. Windows)
-    if [x for x in stdout_lines if x.startswith('FAIL: ') or x.startswith('XPASS: ')]:
-      result = 1
     self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
     sys.stdout.flush()

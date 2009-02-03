@@ -139,7 +139,6 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
       void *val;
       const svn_wc_entry_t *entry;
       const char *entrypath;
-      svn_wc_entry_t tmpentry;
       apr_hash_t *base_props, *props;
 
       apr_hash_this(hi, NULL, NULL, &val);
@@ -156,16 +155,9 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
                                  entrypath, subpool));
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
                                     base_props, props, TRUE, subpool));
-      /* Make sure we get rid of that prop-time field.
-         It only wastes space in new WCs. */
-      tmpentry.prop_time = 0;
-      SVN_ERR(svn_wc__loggy_entry_modify
-              (&log_accum, adm_access,
-               entrypath,
-               &tmpentry,
-               SVN_WC__ENTRY_MODIFY_PROP_TIME,
-               subpool));
     }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -773,31 +765,6 @@ do_open(svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
-/* To preserve API compatibility with Subversion 1.0.0 */
-svn_error_t *
-svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
-                svn_wc_adm_access_t *associated,
-                const char *path,
-                svn_boolean_t write_lock,
-                svn_boolean_t tree_lock,
-                apr_pool_t *pool)
-{
-  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
-                          (tree_lock ? -1 : 0), NULL, NULL, pool);
-}
-
-svn_error_t *
-svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
-                 svn_wc_adm_access_t *associated,
-                 const char *path,
-                 svn_boolean_t write_lock,
-                 int levels_to_lock,
-                 apr_pool_t *pool)
-{
-  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
-                          levels_to_lock, NULL, NULL, pool);
-}
-
 svn_error_t *
 svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
@@ -824,34 +791,6 @@ svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
                      apr_pool_t *pool)
 {
   return do_open(adm_access, NULL, path, TRUE, 0, TRUE, NULL, NULL, pool);
-}
-
-
-/* To preserve API compatibility with Subversion 1.0.0 */
-svn_error_t *
-svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
-                      svn_wc_adm_access_t *associated,
-                      const char *path,
-                      svn_boolean_t write_lock,
-                      svn_boolean_t tree_lock,
-                      apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_open3(adm_access, associated, path,
-                                write_lock, (tree_lock ? -1 : 0),
-                                NULL, NULL, pool);
-}
-
-
-svn_error_t *
-svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
-                       svn_wc_adm_access_t *associated,
-                       const char *path,
-                       svn_boolean_t write_lock,
-                       int levels_to_lock,
-                       apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_open3(adm_access, associated, path, write_lock,
-                                levels_to_lock, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -1085,20 +1024,6 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
     return err;
 
   return SVN_NO_ERROR;
-}
-
-
-/* To preserve API compatibility with Subversion 1.0.0 */
-svn_error_t *
-svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
-                     svn_wc_adm_access_t *associated,
-                     const char *path,
-                     svn_boolean_t write_lock,
-                     svn_boolean_t tree_lock,
-                     apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
-                               (tree_lock ? -1 : 0), NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -1452,17 +1377,6 @@ svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 {
   /* ### a scratch pool should be passed */
   return do_close(adm_access, FALSE, TRUE, scratch_pool);
-}
-
-svn_error_t *
-svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
-{
-  /* This is the only pool we have access to.
-
-     ### create a subpool just for this? */
-  apr_pool_t *scratch_pool = adm_access->pool;
-
-  return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
 svn_boolean_t

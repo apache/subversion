@@ -675,19 +675,23 @@ def inappropriate_props(sbox):
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:one', path)
 
-  # ...contain overlapping revision ranges
+  # ...contain overlapping revision ranges of differing inheritability.
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Parsing of overlapping revision "
-                                      "ranges '9-20' and '18-22' is not "
-                                      "supported\n",
+                                     "svn: Unable to parse overlapping "
+                                     "revision ranges '9-20\\*' and "
+                                     "'18-22' with different "
+                                     "inheritance types\n",
                                      'propset', SVN_PROP_MERGEINFO,
-                                     '/branch:5-7,9-20,18-22', path)
+                                     '/branch:5-7,9-20*,18-22', path)
 
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Parsing of overlapping revision "
-                                      "ranges '3' and '3' is not supported\n",
+                                     "svn: Unable to parse overlapping "
+                                     "revision ranges "
+                                     "(('3' and '3\\*')|('3\\*' and '3')) "
+                                     "with different "
+                                     "inheritance types\n",
                                      'propset', SVN_PROP_MERGEINFO,
-                                     '/branch:3,3', path)
+                                     '/branch:3,3*', path)
 
   # ...contain revision ranges with start revisions greater than or
   #    equal to end revisions.

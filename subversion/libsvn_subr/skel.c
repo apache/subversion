@@ -163,6 +163,36 @@ putsize(char *data, apr_size_t len, apr_size_t value)
   return i;
 }
 
+
+/* Checking validity of skels. */
+static svn_error_t *
+skel_err(const char *skel_type)
+{
+  return svn_error_createf(SVN_ERR_FS_MALFORMED_SKEL, NULL,
+                           "Malformed%s%s skeleton",
+                           skel_type ? " " : "",
+                           skel_type ? skel_type : "");
+}
+
+
+static svn_boolean_t
+is_valid_proplist_skel(svn_skel_t *skel)
+{
+  int len = svn_skel__list_length(skel);
+
+  if ((len >= 0) && (len & 1) == 0)
+    {
+      svn_skel_t *elt;
+
+      for (elt = skel->children; elt; elt = elt->next)
+        if (! elt->is_atom)
+          return FALSE;
+
+      return TRUE;
+    }
+
+  return FALSE;
+}
 
 
 static svn_skel_t *parse(const char *data, apr_size_t len,
@@ -566,8 +596,8 @@ svn_skel__matches_atom(const svn_skel_t *skel, const char *str)
     {
       apr_size_t len = strlen(str);
 
-      return ((skel->len == len
-               && ! memcmp(skel->data, str, len)) ? TRUE : FALSE);
+      return (skel->len == len
+              && ! memcmp(skel->data, str, len));
     }
   return FALSE;
 }
@@ -586,4 +616,78 @@ svn_skel__list_length(const svn_skel_t *skel)
     len++;
 
   return len;
+}
+
+
+
+/* Parsing and unparsing into high-level types. */
+
+
+svn_error_t *
+svn_skel__parse_proplist(apr_hash_t **proplist_p,
+                         svn_skel_t *skel,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *proplist = NULL;
+  svn_skel_t *elt;
+
+  /* Validate the skel. */
+  if (! is_valid_proplist_skel(skel))
+    return skel_err("proplist");
+
+  /* Create the returned structure */
+  if (skel->children)
+    proplist = apr_hash_make(pool);
+  for (elt = skel->children; elt; elt = elt->next->next)
+    {
+      svn_string_t *value = svn_string_ncreate(elt->next->data,
+                                               elt->next->len, pool);
+      apr_hash_set(proplist,
+                   apr_pstrmemdup(pool, elt->data, elt->len),
+                   elt->len,
+                   value);
+    }
+
+  /* Return the structure. */
+  *proplist_p = proplist;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_skel__unparse_proplist(svn_skel_t **skel_p,
+                           apr_hash_t *proplist,
+                           apr_pool_t *pool)
+{
+  svn_skel_t *skel = svn_skel__make_empty_list(pool);
+  apr_hash_index_t *hi;
+
+  /* Create the skel. */
+  if (proplist)
+    {
+      /* Loop over hash entries */
+      for (hi = apr_hash_first(pool, proplist); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          apr_ssize_t klen;
+          svn_string_t *value;
+
+          apr_hash_this(hi, &key, &klen, &val);
+          value = val;
+
+          /* VALUE */
+          svn_skel__prepend(svn_skel__mem_atom(value->data, value->len, pool),
+                            skel);
+
+          /* NAME */
+          svn_skel__prepend(svn_skel__mem_atom(key, klen, pool), skel);
+        }
+    }
+
+  /* Validate and return the skel. */
+  if (! is_valid_proplist_skel(skel))
+    return skel_err("proplist");
+  *skel_p = skel;
+  return SVN_NO_ERROR;
 }

@@ -36,14 +36,7 @@ except ImportError:
   import ConfigParser as configparser
   from urllib import quote as urllib_parse_quote
 import time
-try:
-  # Python >=2.4
-  import subprocess
-  platform_with_subprocess = True
-except ImportError:
-  # Python <2.4
-  import popen2
-  platform_with_subprocess = False
+import subprocess
 if sys.version_info[0] >= 3:
   # Python >=3.0
   from io import StringIO
@@ -112,42 +105,6 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   messenger.generate()
 
 
-if not platform_with_subprocess:
-  # Minimal, incomplete, versions of popen2.Popen[34] for those platforms
-  # for which popen2 does not provide them.
-  try:
-    Popen3 = popen2.Popen3
-    Popen4 = popen2.Popen4
-  except AttributeError:
-    class Popen3:
-      def __init__(self, cmd, capturestderr = False):
-        if type(cmd) != types.StringType:
-          cmd = svn.core.argv_to_command_string(cmd)
-        if capturestderr:
-          self.fromchild, self.tochild, self.childerr \
-              = popen2.popen3(cmd, mode='b')
-        else:
-          self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
-          self.childerr = None
-
-      def wait(self):
-        rv = self.fromchild.close()
-        rv = self.tochild.close() or rv
-        if self.childerr is not None:
-          rv = self.childerr.close() or rv
-        return rv
-
-    class Popen4:
-      def __init__(self, cmd):
-        if type(cmd) != types.StringType:
-          cmd = svn.core.argv_to_command_string(cmd)
-        self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
-
-      def wait(self):
-        rv = self.fromchild.close()
-        rv = self.tochild.close() or rv
-        return rv
-
 def remove_leading_slashes(path):
   while path and path[0] == '/':
     path = path[1:]
@@ -208,12 +165,14 @@ class OutputBase:
     """Override this method, if the default implementation is not sufficient.
     Execute CMD, writing the stdout produced to the output representation."""
     # By default we choose to incorporate child stderr into the output
-    pipe_ob = Popen4(cmd)
+    pipe_ob = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               close_fds=sys.platform != "win32")
 
-    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    buf = pipe_ob.stdout.read(self._CHUNKSIZE)
     while buf:
       self.write(buf)
-      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+      buf = pipe_ob.stdout.read(self._CHUNKSIZE)
 
     # wait on the child so we don't end up with a billion zombies
     pipe_ob.wait()
@@ -321,26 +280,16 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    if platform_with_subprocess:
-      self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                   close_fds=sys.platform != "win32")
-      self.write = self.pipe.stdin.write
-    else:
-      self.pipe = Popen3(cmd)
-      self.write = self.pipe.tochild.write
-
-      # we don't need the read-from-mailer descriptor, so close it
-      self.pipe.fromchild.close()
+    self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                 close_fds=sys.platform != "win32")
+    self.write = self.pipe.stdin.write
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
 
   def finish(self):
     # signal that we're done sending content
-    if platform_with_subprocess:
-      self.pipe.stdin.close()
-    else:
-      self.pipe.tochild.close()
+    self.pipe.stdin.close()
 
     # wait to avoid zombies
     self.pipe.wait()
@@ -372,16 +321,14 @@ class Commit(Messenger):
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
-    self.changelist = list(editor.get_changes().items())
-    self.changelist.sort()
+    self.changelist = sorted(editor.get_changes().items())
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = list(params.items())
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
@@ -441,23 +388,6 @@ class Commit(Messenger):
     svn.core.svn_pool_destroy(subpool)
 
 
-try:
-  from tempfile import NamedTemporaryFile
-except ImportError:
-  # NamedTemporaryFile was added in Python 2.3, so we need to emulate it
-  # for older Pythons.
-  class NamedTemporaryFile:
-    def __init__(self):
-      self.name = tempfile.mktemp()
-      self.file = open(self.name, 'w+b')
-    def __del__(self):
-      os.remove(self.name)
-    def write(self, data):
-      self.file.write(data)
-    def flush(self):
-      self.file.flush()
-
-
 class PropChange(Messenger):
   def __init__(self, pool, cfg, repos, author, propname, action):
     Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
@@ -469,8 +399,7 @@ class PropChange(Messenger):
     self.groups = { }
     for (group, params) in self.cfg.which_groups(''):
       # turn the params into a hashable object and stash it away
-      param_list = list(params.items())
-      param_list.sort()
+      param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
 
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
@@ -493,10 +422,10 @@ class PropChange(Messenger):
         self.output.write(propvalue)
       elif self.action == 'M':
         self.output.write('Property diff:\n')
-        tempfile1 = NamedTemporaryFile()
+        tempfile1 = tempfile.NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
         tempfile1.flush()
-        tempfile2 = NamedTemporaryFile()
+        tempfile2 = tempfile.NamedTemporaryFile()
         tempfile2.write(self.repos.get_rev_prop(self.propname))
         tempfile2.flush()
         self.output.run(self.cfg.get_diff_cmd(group, {
@@ -560,8 +489,7 @@ class Lock(Messenger):
     for path in self.dirlist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = list(params.items())
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
         if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
@@ -944,12 +872,9 @@ class DiffContent:
     self.seen_change = False
 
     # By default we choose to incorporate child stderr into the output
-    if platform_with_subprocess:
-      self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT,
-                                   close_fds=sys.platform != "win32")
-    else:
-      self.pipe = Popen4(cmd)
+    self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 close_fds=sys.platform != "win32")
 
   def __nonzero__(self):
     # we always have some items
@@ -959,10 +884,7 @@ class DiffContent:
     if self.pipe is None:
       raise IndexError
 
-    if platform_with_subprocess:
-      line = self.pipe.stdout.readline()
-    else:
-      line = self.pipe.fromchild.readline()
+    line = self.pipe.stdout.readline()
     if not line:
       # wait on the child so we don't end up with a billion zombies
       self.pipe.wait()
@@ -1361,14 +1283,6 @@ class UnknownMappingSpec(Exception):
   pass
 class UnknownSubcommand(Exception):
   pass
-
-
-# enable True/False in older vsns of Python
-try:
-  _unused = True
-except NameError:
-  True = 1
-  False = 0
 
 
 if __name__ == '__main__':

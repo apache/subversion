@@ -13,8 +13,6 @@
 #                   or
 #   $ ./server-version.py https://svn.collab.net/
 #
-# Python 1.5.2 or later is required.
-#
 
 import sys
 import httplib

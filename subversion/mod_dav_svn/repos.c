@@ -593,8 +593,8 @@ prep_regular(dav_resource_combined *comb)
   if (derr != NULL)
     return derr;
 
-  comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
-  comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
+  comb->res.exists = (kind != svn_node_none);
+  comb->res.collection = (kind == svn_node_dir);
 
   /* HACK:  dav_get_resource_state() is making shortcut assumptions
      about how to distinguish a null resource from a lock-null
@@ -784,8 +784,8 @@ prep_working(dav_resource_combined *comb)
   if (derr != NULL)
     return derr;
 
-  comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
-  comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
+  comb->res.exists = (kind != svn_node_none);
+  comb->res.collection = (kind == svn_node_dir);
 
   return NULL;
 }

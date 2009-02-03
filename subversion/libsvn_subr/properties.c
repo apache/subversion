@@ -32,8 +32,7 @@ svn_boolean_t
 svn_prop_is_svn_prop(const char *prop_name)
 {
   return strncmp(prop_name, SVN_PROP_PREFIX, (sizeof(SVN_PROP_PREFIX) - 1))
-         ? FALSE
-         : TRUE;
+         == 0;
 }
 
 

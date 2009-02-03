@@ -17,18 +17,14 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
 #include "svn_wc.h"
 #include "svn_subst.h"
+#include "svn_pools.h"
+#include "svn_props.h"
 
 #include "wc.h"
 
@@ -37,8 +33,6 @@
 
 
 
-/*** Code. ***/
-
 /*** From adm_crawler.c ***/
 
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
@@ -1388,4 +1382,78 @@ svn_wc_add_repos_file(const char *dst_path,
                                 new_props, NULL,
                                 copyfrom_url, copyfrom_rev,
                                 pool);
+}
+
+/*** From lock.c ***/
+
+/* To preserve API compatibility with Subversion 1.0.0 */
+svn_error_t *
+svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
+                svn_wc_adm_access_t *associated,
+                const char *path,
+                svn_boolean_t write_lock,
+                svn_boolean_t tree_lock,
+                apr_pool_t *pool)
+{
+  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
+                          (tree_lock ? -1 : 0), NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
+                 svn_wc_adm_access_t *associated,
+                 const char *path,
+                 svn_boolean_t write_lock,
+                 int levels_to_lock,
+                 apr_pool_t *pool)
+{
+  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
+                          levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      svn_boolean_t tree_lock,
+                      apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_open3(adm_access, associated, path,
+                                write_lock, (tree_lock ? -1 : 0),
+                                NULL, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int levels_to_lock,
+                       apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_open3(adm_access, associated, path, write_lock,
+                                levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
+                     svn_wc_adm_access_t *associated,
+                     const char *path,
+                     svn_boolean_t write_lock,
+                     svn_boolean_t tree_lock,
+                     apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
+                               (tree_lock ? -1 : 0), NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
+{
+  /* This is the only pool we have access to. */
+  apr_pool_t *scratch_pool = svn_wc_adm_access_pool(adm_access);
+
+  return svn_wc_adm_close2(adm_access, scratch_pool);
 }

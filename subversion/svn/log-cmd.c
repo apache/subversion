@@ -2,7 +2,7 @@
  * log-cmd.c -- Display log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -15,12 +15,6 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
 
 #define APR_WANT_STRFUNC
 #define APR_WANT_STDIO
@@ -35,6 +29,8 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_cmdline.h"
+#include "svn_props.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -385,13 +381,15 @@ log_entry_receiver_xml(void *baton,
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
                                     "copyfrom-path", log_item->copyfrom_path,
-                                    "copyfrom-rev", revstr, NULL);
+                                    "copyfrom-rev", revstr,
+                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
             }
           else
             {
               /* <path action="X"> */
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
-                                    "action", action, NULL);
+                                    "action", action, 
+                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -442,7 +440,6 @@ svn_cl__log(apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   const char *true_path;
   apr_array_header_t *revprops;
-  svn_client_log_args_t *log_args;
 
   if (!opt_state->xml)
     {
@@ -517,12 +514,6 @@ svn_cl__log(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
-  log_args = svn_client_log_args_create(pool);
-  log_args->limit = opt_state->limit;
-  log_args->discover_changed_paths = opt_state->verbose;
-  log_args->strict_node_history = opt_state->stop_on_copy;
-  log_args->include_merged_revisions = opt_state->use_merge_history;
-
   if (opt_state->xml)
     {
       /* If output is not incremental, output the XML header and wrap
@@ -534,11 +525,9 @@ svn_cl__log(apr_getopt_t *os,
       if (opt_state->all_revprops)
         revprops = NULL;
       else if(opt_state->no_revprops)
-	{
-	  revprops = apr_array_make(pool,
-				    0,
-                                    sizeof(char *));
-	}
+        {
+          revprops = apr_array_make(pool, 0, sizeof(char *));
+        }
       else if (opt_state->revprop_table != NULL)
         {
           apr_hash_index_t *hi;
@@ -570,8 +559,11 @@ svn_cl__log(apr_getopt_t *os,
       SVN_ERR(svn_client_log5(targets,
                               &peg_revision,
                               opt_state->revision_ranges,
+                              opt_state->limit,
+                              opt_state->verbose,
+                              opt_state->stop_on_copy,
+                              opt_state->use_merge_history,
                               revprops,
-                              log_args,
                               log_entry_receiver_xml,
                               &lb,
                               ctx,
@@ -590,8 +582,11 @@ svn_cl__log(apr_getopt_t *os,
       SVN_ERR(svn_client_log5(targets,
                               &peg_revision,
                               opt_state->revision_ranges,
+                              opt_state->limit,
+                              opt_state->verbose,
+                              opt_state->stop_on_copy,
+                              opt_state->use_merge_history,
                               revprops,
-                              log_args,
                               log_entry_receiver,
                               &lb,
                               ctx,

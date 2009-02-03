@@ -50,12 +50,6 @@ except ImportError:
   # Python <3.0
   from urllib import quote as urllib_parse_quote
 
-# Pretend we have true booleans on older python versions
-try:
-  True
-except:
-  True = 1
-  False = 0
 
 # Warnings and errors start with these strings.  They are typically
 # followed by a colon and a space, as in "%s: " ==> "WARNING: ".
@@ -369,8 +363,7 @@ class Contributor:
                           self.big_name(html=True), True))
     unique_logs = { }
 
-    sorted_activities = list(self.activities.keys())
-    sorted_activities.sort()
+    sorted_activities = sorted(self.activities.keys())
 
     out.write('<div class="h2" id="activities" title="activities">\n\n')
     out.write('<table border="1">\n')
@@ -663,8 +656,7 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = list(Contributor.all_contributors.values())
-  sorted_contributors.sort()
+  sorted_contributors = sorted(Contributor.all_contributors.values())
   for c in sorted_contributors:
     if c not in seen_contributors:
       if c.score() > 0:

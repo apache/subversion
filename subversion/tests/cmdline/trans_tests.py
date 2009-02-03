@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -330,7 +330,7 @@ def keywords_from_birth(sbox):
   if not ((len(lines) == 1)
           and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
                         lines[0]))):
-    print "Header expansion failed for", header_unexp_path
+    print("Header expansion failed for %s" % header_unexp_path)
     raise svntest.Failure
   fp.close()
 
@@ -340,7 +340,7 @@ def keywords_from_birth(sbox):
   if not ((len(lines) == 1)
           and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
                         lines[0]))):
-    print "Header expansion failed for", header_exp_path
+    print("Header expansion failed for %s" % header_exp_path)
     raise svntest.Failure
   fp.close()
 

@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -127,10 +127,8 @@ def guarantee_greek_repository(path):
 def run_and_verify_svnlook(message, expected_stdout,
                            expected_stderr, *varargs):
   """Like run_and_verify_svnlook2, but the expected exit code is
-  assumed to be 0 if no output is expected on stderr, and 1 otherwise.
+  assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
@@ -139,10 +137,8 @@ def run_and_verify_svnlook(message, expected_stdout,
 
 def run_and_verify_svnlook2(message, expected_stdout, expected_stderr,
                             expected_exit, *varargs):
-  """Run svnlook command and check its output and exit code.
+  """Run svnlook command and check its output and exit code."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   exit_code, out, err = main.run_svnlook(*varargs)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
@@ -153,10 +149,8 @@ def run_and_verify_svnlook2(message, expected_stdout, expected_stderr,
 def run_and_verify_svnadmin(message, expected_stdout,
                             expected_stderr, *varargs):
   """Like run_and_verify_svnadmin2, but the expected exit code is
-  assumed to be 0 if no output is expected on stderr, and 1 otherwise.
+  assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
@@ -165,10 +159,8 @@ def run_and_verify_svnadmin(message, expected_stdout,
 
 def run_and_verify_svnadmin2(message, expected_stdout, expected_stderr,
                              expected_exit, *varargs):
-  """Run svnadmin command and check its output and exit code.
+  """Run svnadmin command and check its output and exit code."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   exit_code, out, err = main.run_svnadmin(*varargs)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
@@ -179,10 +171,8 @@ def run_and_verify_svnadmin2(message, expected_stdout, expected_stderr,
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   """like run_and_verify_svnversion2, but the expected exit code is
-  assumed to be 0 if no output is expected on stderr, and 1 otherwise.
+  assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
@@ -193,10 +183,8 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
 def run_and_verify_svnversion2(message, wc_dir, repo_url,
                                expected_stdout, expected_stderr,
                                expected_exit):
-  """Run svnversion command and check its output and exit code.
+  """Run svnversion command and check its output and exit code."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   exit_code, out, err = main.run_svnversion(wc_dir, repo_url)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
@@ -205,10 +193,7 @@ def run_and_verify_svnversion2(message, wc_dir, repo_url,
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svn2, but the expected exit code is assumed to
-  be 0 if no output is expected on stderr, and 1 otherwise.
-
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
+  be 0 if no output is expected on stderr, and 1 otherwise."""
 
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
@@ -236,10 +221,7 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
   If EXPECTED_STDOUT is None, do not check stdout.
   EXPECTED_STDERR may not be None.
 
-  If output checks pass, on supported platforms (namely those with the Popen3
-  class), the expected and actual codes are compared.  On platforms lacking
-  Popen3, the actual exit code is unavailable and a value of None is returned
-  as the exit code from this and all other run_...() functions.
+  If output checks pass, the expected and actual codes are compared.
 
   If a comparison fails, a Failure will be raised."""
 
@@ -258,10 +240,8 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
 def run_and_verify_svn_match_any(message, expected_stdout, expected_stderr,
                                  *varargs):
   """Like run_and_verify_svn_match_any2, but the expected exit code is
-  assumed to be 0 if no output is expected on stderr, and 1 otherwise.
+  assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
 
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
@@ -273,10 +253,7 @@ def run_and_verify_svn_match_any(message, expected_stdout, expected_stderr,
 def run_and_verify_svn_match_any2(message, expected_stdout, expected_stderr,
                                  expected_exit, *varargs):
   """Like run_and_verify_svn2, except that only one stdout line must match
-  EXPECTED_STDOUT.
-
-  Exit code is not checked on platforms without Popen3 - see note in
-  run_and_verify_svn2."""
+  EXPECTED_STDOUT."""
 
   if expected_stderr is None:
     raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
@@ -923,16 +900,26 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise verify.SVNUnexpectedStderr(err)
 
   if dry_run and out != out_dry:
-    print("=============================================================")
-    print("Merge outputs differ")
-    print("The dry-run merge output:")
-    for x in out_dry:
-      sys.stdout.write(x)
-    print("The full merge output:")
-    for x in out:
-      sys.stdout.write(x)
-    print("=============================================================")
-    raise main.SVNUnmatchedError
+    # Due to the way ra_serf works, it's possible that the dry-run and
+    # real merge operations did the same thing, but the output came in
+    # a different order.  Let's see if maybe that's the case.
+    #
+    # NOTE:  Would be nice to limit this dance to serf tests only, but...
+    out_copy = out[:]
+    out_dry_copy = out_dry[:]
+    out_copy.sort()
+    out_dry_copy.sort()
+    if out_copy != out_dry_copy:
+      print("=============================================================")
+      print("Merge outputs differ")
+      print("The dry-run merge output:")
+      for x in out_dry:
+        sys.stdout.write(x)
+      print("The full merge output:")
+      for x in out:
+        sys.stdout.write(x)
+      print("=============================================================")
+      raise main.SVNUnmatchedError
 
   def missing_skip(a, b):
     print("=============================================================")
@@ -980,8 +967,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = [_f for _f in [int(x.rstrip()[1:]) for x in out] if _f]
-  out.sort()
+  out = sorted([_f for _f in [int(x.rstrip()[1:]) for x in out] if _f])
   expected_output.sort()
 
   extra_out = []

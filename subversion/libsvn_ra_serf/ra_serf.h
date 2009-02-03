@@ -35,6 +35,11 @@
 #include "private/svn_dav_protocol.h"
 
 
+/* Enforce the minimum version of serf. */
+#if !SERF_VERSION_AT_LEAST(0, 3, 0)
+#error Please update your version of serf to at least 0.3.0.
+#endif
+
 /** Use this to silence compiler warnings about unused parameters. */
 #define UNUSED_CTX(x) ((void)(x))
 
@@ -45,10 +50,8 @@
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
 #ifdef WIN32
-#if SERF_VERSION_AT_LEAST(0, 1, 3)
 #define SVN_RA_SERF_SSPI_ENABLED
 #endif
-#endif /* WIN32 */
 
 
 /* Forward declarations. */
@@ -316,9 +319,6 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
                          void *closed_baton,
                          apr_status_t why,
                          apr_pool_t *pool);
-
-apr_status_t
-svn_ra_serf__is_conn_closing(serf_bucket_t *response);
 
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data);

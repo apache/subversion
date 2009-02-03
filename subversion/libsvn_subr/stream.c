@@ -909,18 +909,14 @@ close_handler_md5(void *baton)
   SVN_ERR(svn_stream_close(btn->proxy));
 
   if (btn->read_digest)
-    {
-      *btn->read_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->read_digest, btn->read_checksum->digest,
-             APR_MD5_DIGESTSIZE);
-    }
+    *btn->read_digest
+      = apr_pmemdup(btn->pool, btn->read_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
 
   if (btn->write_digest)
-    {
-      *btn->write_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->write_digest, btn->write_checksum->digest,
-             APR_MD5_DIGESTSIZE);
-    }
+    *btn->write_digest
+      = apr_pmemdup(btn->pool, btn->write_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }

@@ -41,17 +41,6 @@ static int not_there_sentinel;
    there.  */
 #define NOT_THERE ((void *) &not_there_sentinel)
 
-void
-svn_dso_initialize(void)
-{
-  svn_error_t *err = svn_dso_initialize2();
-  if (err)
-    {
-      svn_error_clear(err);
-      abort();
-    }
-}
-
 svn_error_t *
 svn_dso_initialize2(void)
 {

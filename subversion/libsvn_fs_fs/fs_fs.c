@@ -28,6 +28,7 @@
 #include <apr_uuid.h>
 #include <apr_lib.h>
 #include <apr_md5.h>
+#include <apr_sha1.h>
 #include <apr_thread_mutex.h>
 
 #include "svn_pools.h"
@@ -1400,7 +1401,7 @@ svn_fs_fs__hotcopy(const char *src_path,
                    apr_pool_t *pool)
 {
   const char *src_subdir, *dst_subdir;
-  svn_revnum_t youngest, rev;
+  svn_revnum_t youngest, rev, min_unpacked_rev;
   apr_pool_t *iterpool;
   svn_node_kind_t kind;
   int format, max_files_per_dir;
@@ -1417,10 +1418,22 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
 
-  /* Copy the min unpacked rev. */
+  /* Copy the min unpacked rev, and read its value. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MIN_UNPACKED_REV,
-                                 pool));
+    {
+      const char *min_unpacked_rev_path;
+      min_unpacked_rev_path = svn_path_join(src_path, PATH_MIN_UNPACKED_REV,
+                                            pool);
+
+      SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MIN_UNPACKED_REV,
+                                   pool));
+      SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev, min_unpacked_rev_path,
+                                    pool));
+    }
+  else
+    {
+      min_unpacked_rev = 0;
+    }
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
@@ -1432,7 +1445,24 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
 
   iterpool = svn_pool_create(pool);
-  for (rev = 0; rev <= youngest; rev++)
+  /* First, copy packed shards. */
+  for (rev = 0; rev < min_unpacked_rev; rev += max_files_per_dir)
+    {
+      const char *packed_shard = apr_psprintf(iterpool, "%ld.pack", rev);
+      const char *src_subdir_packed_shard;
+      src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard, pool);
+
+      SVN_ERR(svn_io_copy_dir_recursively(src_subdir_packed_shard,
+                                          dst_subdir, packed_shard,
+                                          TRUE /* copy_perms */,
+                                          NULL /* cancel_func */, NULL,
+                                          iterpool));
+      svn_pool_clear(iterpool);
+    }
+
+  /* Then, copy non-packed shards. */
+  assert(rev == min_unpacked_rev);
+  for (; rev <= youngest; rev++)
     {
       const char *src_subdir_shard = src_subdir,
                  *dst_subdir_shard = dst_subdir;

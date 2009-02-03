@@ -2,7 +2,7 @@
  * utf_validate.c:  Validate a UTF-8 string
  *
  * ====================================================================
- * Copyright (c) 2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -51,7 +51,7 @@
  *
  */
 
-#include "utf_impl.h"
+#include "private/svn_utf_private.h"
 
 /* Lookup table to categorise each octet in the string. */
 static const char octet_category[256] = {
@@ -271,7 +271,7 @@ svn_utf__cstring_is_valid(const char *data)
       int category = octet_category[octet];
       state = machine[state][category];
     }
-  return state == FSM_START ? TRUE : FALSE;
+  return state == FSM_START;
 }
 
 svn_boolean_t
@@ -285,7 +285,7 @@ svn_utf__is_valid(const char *data, apr_size_t len)
       int category = octet_category[octet];
       state = machine[state][category];
     }
-  return state == FSM_START ? TRUE : FALSE;
+  return state == FSM_START;
 }
 
 const char *

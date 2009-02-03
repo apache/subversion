@@ -19,17 +19,21 @@
  * @brief Tools built on top of the filesystem.
  */
 
-
 #ifndef SVN_REPOS_H
 #define SVN_REPOS_H
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include "svn_fs.h"
-#include "svn_delta.h"
+#include <apr_tables.h>
+#include <apr_time.h>
+
 #include "svn_types.h"
-#include "svn_error.h"
+#include "svn_string.h"
+#include "svn_delta.h"
+#include "svn_fs.h"
+#include "svn_io.h"
 #include "svn_version.h"
+#include "svn_mergeinfo.h"
 
 
 #ifdef __cplusplus
@@ -2058,13 +2062,15 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
 
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
-/* @since New in 1.5. */
+/** @since New in 1.5. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5       "Text-delta-base-md5"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_SHA1      "Text-delta-base-sha1"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
                                         SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
 

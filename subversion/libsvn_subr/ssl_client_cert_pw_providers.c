@@ -17,16 +17,13 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
 
 #include <apr_pools.h>
+
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_config.h"
+#include "svn_string.h"
 
 #include "private/svn_auth_private.h"
 
@@ -394,14 +391,6 @@ svn_auth_get_ssl_client_cert_pw_file_provider2
   po->vtable = &ssl_client_cert_pw_file_provider;
   po->provider_baton = pb;
   *provider = po;
-}
-
-void
-svn_auth_get_ssl_client_cert_pw_file_provider
-  (svn_auth_provider_object_t **provider,
-   apr_pool_t *pool)
-{
-  svn_auth_get_ssl_client_cert_pw_file_provider2(provider, NULL, NULL, pool);
 }
 
 

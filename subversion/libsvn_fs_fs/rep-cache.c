@@ -45,10 +45,10 @@ enum statement_keys {
 static const char * const statements[] = {
   "select revision, offset, size, expanded_size "
   "from rep_cache "
-  "where hash = :1", 
+  "where hash = ?1", 
 
   "insert into rep_cache (hash, revision, offset, size, expanded_size) "
-  "values (:1, :2, :3, :4, :5);",
+  "values (?1, ?2, ?3, ?4, ?5);",
 
   NULL
   };
@@ -119,8 +119,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                               "rep_cache table.\n"));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_GET_REP));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 1,
-                                svn_checksum_to_cstring(checksum, pool)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s",
+                            svn_checksum_to_cstring(checksum, pool)));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
@@ -145,7 +145,6 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t have_row;
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 
@@ -188,14 +187,12 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 1,
-                                svn_checksum_to_cstring(rep->sha1_checksum,
-                                                        pool)));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 2, rep->revision));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, rep->offset));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 4, rep->size));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 5, rep->expanded_size));
+  SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
+                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
+                            (apr_int64_t) rep->revision,
+                            (apr_int64_t) rep->offset,
+                            (apr_int64_t) rep->size,
+                            (apr_int64_t) rep->expanded_size));
 
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  return svn_sqlite__reset(stmt);
+  return svn_sqlite__insert(NULL, stmt);
 }

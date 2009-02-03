@@ -2,7 +2,7 @@
  * swigutil_py.c: utility functions for the SWIG Python bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,6 +35,7 @@
 #include "svn_opt.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
+#include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_mergeinfo.h"
 #include "svn_types.h"
@@ -43,11 +44,6 @@
 
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
-
-/* Define handy Python 2.4 macro if this is older Python. */
-#ifndef Py_RETURN_NONE
-#define Py_RETURN_NONE return Py_INCREF(Py_None), Py_None
-#endif
 
 /* Py_ssize_t for old Pythons */
 /* This code is as recommended by: */
