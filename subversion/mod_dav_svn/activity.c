@@ -263,9 +263,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__create_activity(const dav_svn_repos *repos,
-                         const char **ptxn_name,
-                         apr_pool_t *pool)
+dav_svn__create_txn(const dav_svn_repos *repos,
+                    const char **ptxn_name,
+                    apr_pool_t *pool)
 {
   svn_revnum_t rev;
   svn_fs_txn_t *txn;

@@ -380,9 +380,8 @@ dav_svn__checkout(dav_resource *resource,
           uuid_buf = svn_uuid_generate(resource->info->r->pool);
           shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
 
-          derr = dav_svn__create_activity(resource->info->repos,
-                                          &shared_txn_name,
-                                          resource->info->r->pool);
+          derr = dav_svn__create_txn(resource->info->repos, &shared_txn_name,
+                                     resource->info->r->pool);
           if (derr) return derr;
 
           derr = dav_svn__store_activity(resource->info->repos,
@@ -1094,8 +1093,7 @@ make_activity(dav_resource *resource)
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
 
-  err = dav_svn__create_activity(resource->info->repos, &txn_name,
-                                 resource->pool);
+  err = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
   if (err != NULL)
     return err;
 

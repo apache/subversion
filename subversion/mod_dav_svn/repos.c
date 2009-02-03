@@ -3959,7 +3959,6 @@ int dav_svn__method_post(request_rec *r)
 {
   dav_resource *resource;
   dav_error *derr;
-  const char *uuid_buf;
   const char *txn_name;
   const char *repos_root_uri;
 
@@ -3971,17 +3970,8 @@ int dav_svn__method_post(request_rec *r)
   if (resource->info->restype != DAV_SVN_RESTYPE_ME)
     return HTTP_BAD_REQUEST;
 
-  /* Build an activity and associated Subversion transaction. */
-  /* ### FIXME:  Do we need to do something more interesting with the
-     error handling here? */
-  uuid_buf = svn_uuid_generate(resource->info->r->pool);
-
-  derr = dav_svn__create_activity(resource->info->repos, &txn_name,
-                                  resource->info->r->pool);
-  if (derr)
-    return derr->status;
-
-  derr = dav_svn__store_activity(resource->info->repos, uuid_buf, txn_name);
+  /* Create a Subversion repository transaction based on HEAD. */
+  derr = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
   if (derr)
     return derr->status;
 
@@ -3994,11 +3984,11 @@ int dav_svn__method_post(request_rec *r)
   apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_HEADER,
                 apr_pstrcat(resource->pool, repos_root_uri, "/",
                             dav_svn__get_txn_stub(resource->info->r),
-                            "/", uuid_buf, NULL));
+                            "/", txn_name, NULL));
   apr_table_set(resource->info->r->headers_out, SVN_DAV_TXNPROPS_HEADER,
                 apr_pstrcat(resource->pool, repos_root_uri, "/",
                             dav_svn__get_txnprop_stub(resource->info->r),
-                            "/", uuid_buf, NULL));
+                            "/", txn_name, NULL));
   r->status = HTTP_CREATED;
 
   return OK;
