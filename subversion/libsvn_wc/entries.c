@@ -2111,6 +2111,9 @@ write_entry(svn_stringbuf_t *buf,
               base_node->repos_relpath = svn_path_is_child(repos_root,
                                                            entry->url,
                                                            scratch_pool);
+
+              if (base_node->repos_relpath == NULL)
+                base_node->repos_relpath = "";
             }
           else
             {
