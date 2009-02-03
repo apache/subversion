@@ -305,7 +305,7 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-all: external-all local-all
+all: mkdir-init external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
 extraclean: external-extraclean local-extraclean
