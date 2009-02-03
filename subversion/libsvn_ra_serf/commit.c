@@ -71,25 +71,20 @@ typedef struct {
 
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
+  apr_hash_t *deleted_entries;   /* deleted files (for delete+add detection) */
+  apr_hash_t *copied_entries;    /* copied enties (we don't checkout these) */
 
-  const char *uuid;
-  const char *activity_url;
-  apr_size_t activity_url_len;
+  /* HTTP v2 stuff */
+  const char *txn_url;           /* txn root URL (!svn/txn/UUID) */
+  const char *txnprops_url;      /* txn props URL (!svn/txp/UUID) */
 
-  /* The checkout for the baseline. */
-  checkout_context_t *baseline;
+  /* HTTP v1 stuff (only value when 'txn_url' is NULL) */
+  const char *activity_url;      /* activity base URL... */
+  apr_size_t activity_url_len;   /* ...and length thereof */
+  checkout_context_t *baseline;  /* checkout for the baseline */
+  const char *checked_in_url;    /* checked-in root to base CHECKOUTs from */
+  const char *baseline_url;      /* root baseline collection */
 
-  /* The checked-in root to base CHECKOUTs from */
-  const char *checked_in_url;
-
-  /* The root baseline collection */
-  const char *baseline_url;
-
-  /* Deleted files - so we can detect delete+add (replace) ops. */
-  apr_hash_t *deleted_entries;
-
-  /* Copied entries - so we do not checkout these resources. */
-  apr_hash_t *copied_entries;
 } commit_context_t;
 
 /* Structure associated with a PROPPATCH request. */
@@ -956,6 +951,66 @@ svndiff_stream_write(void *file_baton,
 
 
 
+/* POST against 'me' resource handlers. */
+
+/* Handler baton for POST request. */
+typedef struct
+{
+  svn_ra_serf__simple_request_context_t *request_ctx;
+  commit_context_t *commit_ctx;
+} post_response_ctx_t;
+
+
+/* This implements serf_bucket_headers_do_callback_fn_t.   */
+static int
+post_headers_iterator_callback(void *baton,
+                               const char *key,
+                               const char *val)
+{
+  post_response_ctx_t *prc = baton;
+
+  if (svn_cstring_casecmp(key, SVN_DAV_TXN_HEADER) == 0)
+    {
+      apr_uri_t uri = prc->commit_ctx->session->repos_url;
+      uri.path = apr_pstrdup(prc->commit_ctx->pool, val);
+      prc->commit_ctx->txn_url =
+        svn_path_canonicalize(apr_uri_unparse(prc->commit_ctx->pool, &uri, 0),
+                              prc->commit_ctx->pool);
+    }
+  else if (svn_cstring_casecmp(key, SVN_DAV_TXNPROPS_HEADER) == 0)
+    {
+      apr_uri_t uri = prc->commit_ctx->session->repos_url;
+      uri.path = apr_pstrdup(prc->commit_ctx->pool, val);
+      prc->commit_ctx->txnprops_url =
+        svn_path_canonicalize(apr_uri_unparse(prc->commit_ctx->pool, &uri, 0),
+                              prc->commit_ctx->pool);
+    }
+  return 0;
+}
+
+
+/* A custom serf_response_handler_t which is mostly a wrapper around
+   svn_ra_serf__handle_status_only -- it just notices POST response
+   headers, too. */
+static apr_status_t
+post_response_handler(serf_request_t *request,
+                      serf_bucket_t *response,
+                      void *baton,
+                      apr_pool_t *pool)
+{
+  post_response_ctx_t *prc = baton;
+  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
+
+  /* Then see which ones we can discover. */
+  serf_bucket_headers_do(hdrs, post_headers_iterator_callback, prc);
+
+  /* Execute the 'real' response handler to XML-parse the repsonse body. */
+  return svn_ra_serf__handle_status_only(request, response,
+                                         prc->request_ctx, pool);
+}
+
+
+
 /* Commit baton callbacks */
 
 static svn_error_t *
@@ -965,75 +1020,110 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   commit_context_t *ctx = edit_baton;
-  svn_ra_serf__options_context_t *opt_ctx;
   svn_ra_serf__propfind_context_t *propfind_ctx;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__simple_request_context_t *mkact_ctx;
   proppatch_context_t *proppatch_ctx;
   dir_context_t *dir;
-  const char *activity_str;
   const char *vcc_url;
   apr_hash_t *props;
   apr_hash_index_t *hi;
   svn_error_t *err;
 
-  /* Create a UUID for this commit. */
-  ctx->uuid = svn_uuid_generate(ctx->pool);
-
-  svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
-                                  ctx->session->conns[0],
-                                  ctx->session->repos_url.path, ctx->pool);
-
-  err = svn_ra_serf__context_run_wait(
-                                svn_ra_serf__get_options_done_ptr(opt_ctx),
-                                ctx->session, ctx->pool);
-
-  /* Return all of the three available errors, favoring the
-     more specific ones over the more generic. */
-  SVN_ERR(svn_error_compose_create(
-    svn_ra_serf__get_options_error(opt_ctx),
-    svn_error_compose_create(
-      svn_ra_serf__get_options_parser_error(opt_ctx),
-      err)));
-
-  activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
-
-  if (!activity_str)
+  if (0 && SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
     {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested activity-collection-set value"));
+      svn_ra_serf__simple_request_context_t *post_ctx;
+      post_response_ctx_t *prc;
+
+      /* Create our activity URL now on the server. */
+      handler = apr_pcalloc(ctx->pool, sizeof(*handler));
+      handler->method = "POST";
+      handler->path = ctx->session->me_resource;
+      handler->conn = ctx->session->conns[0];
+      handler->session = ctx->session;
+
+      post_ctx = apr_pcalloc(ctx->pool, sizeof(*post_ctx));
+
+      prc = apr_pcalloc(ctx->pool, sizeof(*prc));
+      prc->request_ctx = post_ctx;
+      prc->commit_ctx = ctx;
+
+      handler->response_handler = post_response_handler;
+      handler->response_baton = prc;
+    
+      svn_ra_serf__request_create(handler);
+
+      SVN_ERR(svn_ra_serf__context_run_wait(&post_ctx->done, ctx->session,
+                                            ctx->pool));
+
+      if (post_ctx->status != 201)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                   _("%s of '%s': %d %s (%s://%s)"),
+                                   handler->method, handler->path,
+                                   post_ctx->status, post_ctx->reason,
+                                   ctx->session->repos_url.scheme,
+                                   ctx->session->repos_url.hostinfo);
+        }
     }
-
-  ctx->activity_url = svn_path_url_add_component(activity_str,
-                                                 ctx->uuid, ctx->pool);
-  ctx->activity_url_len = strlen(ctx->activity_url);
-
-  /* Create our activity URL now on the server. */
-  handler = apr_pcalloc(ctx->pool, sizeof(*handler));
-  handler->method = "MKACTIVITY";
-  handler->path = ctx->activity_url;
-  handler->conn = ctx->session->conns[0];
-  handler->session = ctx->session;
-
-  mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
-
-  handler->response_handler = svn_ra_serf__handle_status_only;
-  handler->response_baton = mkact_ctx;
-
-  svn_ra_serf__request_create(handler);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&mkact_ctx->done, ctx->session,
-                                        ctx->pool));
-
-  if (mkact_ctx->status != 201)
+  else
     {
-      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                               _("%s of '%s': %d %s (%s://%s)"),
-                               handler->method, handler->path,
-                               mkact_ctx->status, mkact_ctx->reason,
-                               ctx->session->repos_url.scheme,
-                               ctx->session->repos_url.hostinfo);
+      svn_ra_serf__options_context_t *opt_ctx;
+      svn_ra_serf__simple_request_context_t *mkact_ctx;
+      const char *activity_str;
+
+      svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
+                                      ctx->session->conns[0],
+                                      ctx->session->repos_url.path, ctx->pool);
+
+      err = svn_ra_serf__context_run_wait(
+        svn_ra_serf__get_options_done_ptr(opt_ctx),
+        ctx->session, ctx->pool);
+
+      /* Return all of the three available errors, favoring the
+         more specific ones over the more generic. */
+      SVN_ERR(svn_error_compose_create(
+        svn_ra_serf__get_options_error(opt_ctx),
+        svn_error_compose_create(
+          svn_ra_serf__get_options_parser_error(opt_ctx),
+          err)));
+
+      activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
+      if (!activity_str)
+        return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                _("The OPTIONS response did not include the "
+                                  "requested activity-collection-set value"));
+
+      ctx->activity_url = 
+        svn_path_url_add_component(activity_str, svn_uuid_generate(ctx->pool),
+                                   ctx->pool);
+      ctx->activity_url_len = strlen(ctx->activity_url);
+
+      /* Create our activity URL now on the server. */
+      handler = apr_pcalloc(ctx->pool, sizeof(*handler));
+      handler->method = "MKACTIVITY";
+      handler->path = ctx->activity_url;
+      handler->conn = ctx->session->conns[0];
+      handler->session = ctx->session;
+
+      mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
+
+      handler->response_handler = svn_ra_serf__handle_status_only;
+      handler->response_baton = mkact_ctx;
+    
+      svn_ra_serf__request_create(handler);
+
+      SVN_ERR(svn_ra_serf__context_run_wait(&mkact_ctx->done, ctx->session,
+                                            ctx->pool));
+
+      if (mkact_ctx->status != 201)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                   _("%s of '%s': %d %s (%s://%s)"),
+                                   handler->method, handler->path,
+                                   mkact_ctx->status, mkact_ctx->reason,
+                                   ctx->session->repos_url.scheme,
+                                   ctx->session->repos_url.hostinfo);
+        }
     }
 
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
