@@ -367,13 +367,14 @@ const char *dav_svn__get_txnprop_stub(request_rec *r);
 
 /*** activity.c ***/
 
-/* activity functions for looking up, storing, and deleting
-   ACTIVITY->TXN mappings */
+/* Create a new transaction based on HEAD in REPOS, setting *PTXN_NAME
+   to the name of that transaction.  Use POOL for allocations. */
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos,
+dav_svn__create_txn(const dav_svn_repos *repos, 
                     const char **ptxn_name,
                     apr_pool_t *pool);
 
+/* Functions for looking up, storing, and deleting ACTIVITY->TXN mappings.  */
 const char *
 dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);
 
