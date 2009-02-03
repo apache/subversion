@@ -81,15 +81,25 @@ extern "C" {
     universe of svn_lock_t->owner.)  */
 #define SVN_DAV_LOCK_OWNER_HEADER "X-SVN-Lock-Owner"
 
+/** Assuming the OPTIONS was performed againts a resource within a
+ * Subversion repository, then this header indicates the youngest
+ * revision in the repository.  */
+#define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
+
+/** Assuming the OPTIONS was performed againts a resource within a
+ * Subversion repository, then this header indicates the UUID of the
+ * repository.  */
+#define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
+
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the server speaks HTTP protocol v2.  This header provides an
  * opaque URI that the client should send all custom REPORT requests
- * against. */
+ * against.  */
 #define SVN_DAV_ME_RESOURCE_HEADER "SVN-Me-Resource"
 
 /** This header provides the repository root URI, suitable for use in
-    calculating the relative paths of other public URIs for this
-    repository into .  (HTTP protocol v2 only)  */
+ * calculating the relative paths of other public URIs for this
+ * repository into .  (HTTP protocol v2 only)  */
 #define SVN_DAV_ROOT_URI_HEADER "SVN-Repository-Root"
 
 /** This header provides an opaque URI that the client can append
@@ -103,15 +113,6 @@ extern "C" {
  * protocol v2 only)  */
 #define SVN_DAV_REV_STUB_HEADER "SVN-Rev-Stub"
 
-/** Assuming the OPTIONS was performed againts a resource within an
- * svn repository, then this header indicates the youngest revision in
- * the repository.  (HTTP protocol v2 only)  */
-#define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
-
-/** Assuming the OPTIONS was performed againts a resource within an
- * svn repository, then this header indicates the UUID of the repository.
- * (HTTP protocol v2 only)  */
-#define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
 
 /**
  * @name Fulltext MD5 headers
