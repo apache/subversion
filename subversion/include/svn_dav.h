@@ -113,6 +113,19 @@ extern "C" {
  * protocol v2 only)  */
 #define SVN_DAV_REV_STUB_HEADER "SVN-Rev-Stub"
 
+/** This header provides an opaque URI which represents a Subversion
+ * transaction (revision-in-progress) object.  It is suitable for use
+ * in fetching and modifying transaction properties as part of a
+ * commit process.  */
+#define SVN_DAV_TXNPROPS_HEADER "SVN-Txn-Props"
+
+/** This header provides an opaque URI which represents the root
+ * directory of a Subversion transaction (revision-in-progress).  The
+ * client can append additional path segments to it to access items
+ * deeper in the transaction tree as part of a commit process.  (HTTP
+ * protocol v2 only)  */
+#define SVN_DAV_TXN_HEADER "SVN-Txn"
+
 
 /**
  * @name Fulltext MD5 headers

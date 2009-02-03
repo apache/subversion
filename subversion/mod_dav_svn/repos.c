@@ -3959,6 +3959,9 @@ int dav_svn__method_post(request_rec *r)
 {
   dav_resource *resource;
   dav_error *derr;
+  const char *uuid_buf;
+  const char *txn_name;
+  const char *repos_root_uri;
 
   derr = get_resource(r, dav_svn__get_root_dir(r),
                       "ignored", 0, &resource);
@@ -3968,15 +3971,37 @@ int dav_svn__method_post(request_rec *r)
   if (resource->info->restype != DAV_SVN_RESTYPE_ME)
     return HTTP_BAD_REQUEST;
 
-  /* ### Create a new txn based on HEAD.  Remember the UUID.  */
+  /* Build an activity and associated Subversion transaction. */
+  /* ### FIXME:  Do we need to do something more interesting with the
+     error handling here? */
+  uuid_buf = svn_uuid_generate(resource->info->r->pool);
 
-  /* ### Build a 200 CREATED response with two special headers in it:
+  derr = dav_svn__create_activity(resource->info->repos, &txn_name,
+                                  resource->info->r->pool);
+  if (derr)
+    return derr->status;
 
-            !svn/txn/UUID
-            !svn/txp/UUID
-   */
+  derr = dav_svn__store_activity(resource->info->repos, uuid_buf, txn_name);
+  if (derr)
+    return derr->status;
 
-  return HTTP_CREATED;
+  /* Build a "201 Created" response with headers that give the client a
+     txn stub and txnprop stub. */
+  repos_root_uri = dav_svn__build_uri(resource->info->repos, 
+                                      DAV_SVN__BUILD_URI_PUBLIC,
+                                      SVN_IGNORED_REVNUM, "", 0, 
+                                      resource->pool);
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_HEADER,
+                apr_pstrcat(resource->pool, repos_root_uri, "/",
+                            dav_svn__get_txn_stub(resource->info->r),
+                            "/", uuid_buf, NULL));
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXNPROPS_HEADER,
+                apr_pstrcat(resource->pool, repos_root_uri, "/",
+                            dav_svn__get_txnprop_stub(resource->info->r),
+                            "/", uuid_buf, NULL));
+  r->status = HTTP_CREATED;
+
+  return OK;
 }
 
 
