@@ -369,6 +369,11 @@ const char *dav_svn__get_txnprop_stub(request_rec *r);
 
 /* activity functions for looking up, storing, and deleting
    ACTIVITY->TXN mappings */
+dav_error *
+dav_svn__create_txn(const dav_svn_repos *repos,
+                    const char **ptxn_name,
+                    apr_pool_t *pool);
+
 const char *
 dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);
 
@@ -380,10 +385,6 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *activity_id,
                         const char *txn_name);
 
-dav_error *
-dav_svn__create_activity(const dav_svn_repos *repos,
-                         const char **ptxn_name,
-                         apr_pool_t *pool);
 
 /* HTTP protocol v2:  client does POST against 'me' resource. */
 int dav_svn__method_post(request_rec *r);
