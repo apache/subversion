@@ -44,21 +44,14 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
                     CPPFLAGS="$CPPFLAGS $d"
                   done
-                  qt_include_dirs=""
-                  for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
-                    qt_include_dirs="$qt_include_dirs $i"
-                  done
-                  qt_include_dirs="${qt_include_dirs## }"
+                  qt_include_dirs="`pkg-config --cflags-only-I QtCore QtDBus QtGui`"
                   kde_dir="`$kde4_config --prefix`"
                   SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
-                  SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
+                  qt_libs_other_options="`pkg-config --libs-only-other QtCore QtDBus QtGui`"
+                  SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
-                  qt_lib_dirs=""
-                  for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
-                    qt_lib_dirs="$qt_lib_dirs $l"
-                  done
-                  qt_lib_dirs="${qt_lib_dirs## }"
+                  qt_lib_dirs="`pkg-config --libs-only-L QtCore QtDBus QtGui`"
                   LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([

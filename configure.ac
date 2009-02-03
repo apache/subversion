@@ -967,7 +967,6 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 AC_CONFIG_HEADER(subversion/svn_private_config.h)
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_COMMANDS(mkdir-init, [make mkdir-init])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs/svn_load_dirs.pl)

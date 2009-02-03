@@ -2062,13 +2062,15 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
 
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
-/* @since New in 1.5. */
+/** @since New in 1.5. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5       "Text-delta-base-md5"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_SHA1      "Text-delta-base-sha1"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
                                         SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
 

@@ -69,6 +69,10 @@ datadir = @datadir@
 datarootdir = @datarootdir@
 localedir = @localedir@
 
+ifneq ($(abs_builddir), $(abs_srcdir))
+	srcpath = $(srcdir)/
+endif
+
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
 swig_pl_libdir = @libdir@
@@ -301,7 +305,7 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-all: external-all local-all
+all: mkdir-init external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
 extraclean: external-extraclean local-extraclean
