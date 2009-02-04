@@ -667,12 +667,18 @@ def update_delete_modified_files(sbox):
                       "This is the file 'pi'.\nappended pi text\n")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  # The expectation on 'alpha' reflects partial progress on issue #3334.
+  # A/B/E/alpha and the subtree rooted at A/D/G had local modificiations
+  # prior to the update.  So there is a tree conflict and both A/B/E/alpha
+  # A/D/G remain after the update, scheduled for addition as copies of
+  # themselves from r1, along with the local modifications.
   expected_status.tweak('A/B/E/alpha', status='A ', copied='+', wc_rev='-',
                         treeconflict='C')
   expected_status.tweak('A/D/G/pi', status='M ')
-  expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', wc_rev=1)
-  expected_status.tweak('A/D/G', wc_rev=1, treeconflict='C')
+  expected_status.tweak('A/D/G/pi', status='M ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/rho', 'A/D/G/tau', status='  ', copied='+',
+                        wc_rev='-')
+  expected_status.tweak('A/D/G', status='A ', copied='+', wc_rev='-',
+                        treeconflict='C')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -3989,6 +3995,14 @@ def tree_conflicts_on_update_1_2(sbox):
 
   expected_status = deep_trees_status_local_tree_del
 
+  # Expect the incoming deletes of F/alpha and D/D1 and the local deletes
+  # of F/alpha and D/D1 to mean that both paths are *really* gone, not
+  # simply scheduled for deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        status='! ', wc_rev=None)
+  expected_disk.remove('D/D1')
+
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
@@ -4009,16 +4023,28 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
+  # Adjust the status of the roots of the six subtrees scheduled for deletion
+  # during the update.  Since these are all tree conflicts, they will all be
+  # scheduled for addition as copies with history - see Issue #3334.
   expected_status.tweak(
-    # These incomplete expectations reflect partial progress on issue #3334.
     'D/D1',
     'F/alpha',
-    #'DD/D1',
-    #'DF/D1',
-    #'DDD/D1',
-    #'DDF/D1',
+    'DD/D1',
+    'DF/D1',
+    'DDD/D1',
+    'DDF/D1',
     status='A ', copied='+', wc_rev='-')
-
+  # See the status of all the paths *under* the above six subtrees.  Only the
+  # roots of the added subtrees show as schedule 'A', these childs paths show
+  # only that history is scheduled with the commit. 
+  expected_status.tweak(
+    'DD/D1/D2',
+    'DDD/D1/D2',
+    'DDD/D1/D2/D3',
+    'DF/D1/beta',
+    'DDF/D1/D2',
+    'DDF/D1/D2/gamma',
+    copied='+', wc_rev='-')
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -4053,25 +4079,33 @@ def tree_conflicts_on_update_2_2(sbox):
     'DDD/D1',
     'DDF/D1',
     treeconflict='C', wc_rev=2)
-  # Anything that's below a tree-conflict is also at an earlier rev.
-  expected_status.tweak(
-    'DD/D1/D2',
-    'DF/D1/beta',
-    'DDD/D1/D2',
-    'DDD/D1/D2/D3',
-    'DDF/D1/D2',
-    'DDF/D1/D2/gamma',
-    wc_rev=2)
-  # The locally deleted nodes.
-  expected_status.tweak(
-    'D/D1',
-    'F/alpha',
-    'DD/D1/D2',
-    'DF/D1/beta',
-    'DDD/D1/D2/D3',
-    'DDF/D1/D2/gamma',
-    status='D ')
 
+  # Expect the incoming tree deletes and the local leaf deletes to mean
+  # that all deleted paths are *really* gone, not simply scheduled for
+  # deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='! ', wc_rev=None)
+  # Remove from expected status and disk everything below the deleted paths.
+  expected_status.remove('DD/D1/D2',
+                         'DF/D1/beta',
+                         'DDD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2',
+                         'DDF/D1/D2/gamma',)
+  expected_disk.remove('D/D1',
+                       'DD/D1',
+                       'DD/D1/D2',
+                       'DF/D1',
+                       'DDD/D1',
+                       'DDD/D1/D2',
+                       'DDD/D1/D2/D3',
+                       'DDF/D1',
+                       'DDF/D1/D2',)
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
@@ -4147,6 +4181,33 @@ def tree_conflicts_on_update_3(sbox):
   expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del
+
+  # Expect the incoming tree deletes and the local tree deletes to mean
+  # that all deleted paths are *really* gone, not simply scheduled for
+  # deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='! ', wc_rev=None)
+  # Remove from expected status and disk everything below the deleted paths.
+  expected_status.remove('DD/D1/D2',
+                         'DF/D1/beta',
+                         'DDD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2',
+                         'DDF/D1/D2/gamma',)
+  expected_disk.remove('D/D1',
+                       'DD/D1',
+                       'DD/D1/D2',
+                       'DF/D1',
+                       'DDD/D1',
+                       'DDD/D1/D2',
+                       'DDD/D1/D2/D3',
+                       'DDF/D1',
+                       'DDF/D1/D2',)
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
@@ -4253,6 +4314,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
 def tree_conflict_uc2_schedule_re_add(sbox):
   "tree conflicts on update UC2, schedule re-add"
   sbox.build()
+  saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
   from svntest.actions import run_and_verify_svn, run_and_verify_resolve
@@ -4285,43 +4347,87 @@ def tree_conflict_uc2_schedule_re_add(sbox):
   dir_url = sbox.repo_url + '/' + dir
 
   def modify_dir(dir):
-    """Make some set of local modifications to an existing tree.
-    Suggestions: prop change, add a child, delete a child, change a child."""
+    """Make some set of local modifications to an existing tree:
+    A prop change, add a child, delete a child, change a child."""
     run_and_verify_svn(None, AnyOutput, [],
                        'propset', 'p', 'v', dir)
+    path = os.path.join(dir, 'new_file')
+    svntest.main.file_write(path, "This is the file 'new_file'.\n")
+    svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
+
+    path = os.path.join(dir, 'B', 'lambda')
+    svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
+
+    path = os.path.join(dir, 'B', 'E', 'alpha')
+    svntest.main.file_append(path, "An extra line.\n")
 
   # Prepare the repos so that a later 'update' has an incoming deletion:
   # Delete the dir in the repos, making r2
   run_and_verify_svn(None, AnyOutput, [],
                      '-m', '', 'delete', dir_url)
 
+  # Existing scenario
+  os.chdir(saved_cwd)
+  wc2 = sbox.add_wc_path('wc2')
+  dir2 = os.path.join(wc2, dir)
+  svntest.actions.duplicate_dir(sbox.wc_dir, wc2)
+  run_and_verify_svn(None, AnyOutput, [], 'up', wc2)
+  run_and_verify_svn(None, AnyOutput, [],
+                     'copy', dir_url + '@1', dir2)
+  modify_dir(dir2)
+  
   # New scenario
   # (The dir is already checked out.)
-
+  os.chdir(sbox.wc_dir)
   modify_dir(dir)
 
   expected_output = None
   expected_disk = None
   expected_status = None
   run_and_verify_update('A', expected_output, expected_disk, expected_status)
-
   run_and_verify_resolve([dir], '--recursive', '--accept=mine-full', dir)
 
-  # Existing scenario
+  os.chdir(saved_cwd)
 
-  ### The test suite has a better way to make a second WC than this...
-  wc2 = 'wc2'
-  dir2 = os.path.join(wc2, dir)
+  def get_status(dir):
+    expected_status = svntest.wc.State(dir, {
+      ''            : Item(status='  ', wc_rev='2'),
+      'A'           : Item(status='A ', wc_rev='-', copied='+'),
+      'A/B'         : Item(status='  ', wc_rev='-', copied='+'),
+      'A/B/lambda'  : Item(status='D ', wc_rev='1'),
+      'A/B/E'       : Item(status='  ', wc_rev='-', copied='+'),
+      'A/B/E/alpha' : Item(status='M ', wc_rev='-', copied='+'),
+      'A/B/E/beta'  : Item(status='  ', wc_rev='-', copied='+'),
+      'A/B/F'       : Item(status='  ', wc_rev='-', copied='+'),
+      'A/mu'        : Item(status='  ', wc_rev='-', copied='+'),
+      'A/C'         : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D'         : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/gamma'   : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/G'       : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/G/pi'    : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/G/rho'   : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/G/tau'   : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/H'       : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/H/chi'   : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
+      'A/D/H/psi'   : Item(status='  ', wc_rev='-', copied='+'),
+      'A/new_file'  : Item(status='A ', wc_rev=0),
+      'iota'        : Item(status='  ', wc_rev=2),
+    })
+    return expected_status
 
-  run_and_verify_svn(None, AnyOutput, [],
-                     'checkout', '-r2', sbox.repo_url, wc2)
-  run_and_verify_svn(None, AnyOutput, [],
-                     'copy', dir_url + '@1', dir2)
-  modify_dir(dir2)
+  # The status of the new and old scenarios should be identical...
+  expected_status = get_status(wc2)
+  svntest.actions.run_and_verify_status(wc2, expected_status)
 
-  ### This "test" needs to actually test that the scenarios come out the same.
+  # ...except for the revision of the root of the WC and iota, because
+  # above 'A' was the target of the update, not the WC root.
+  expected_status = get_status(sbox.wc_dir)
+  expected_status.tweak('', 'iota', wc_rev=1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
-
+  ### Do we need to do more to confirm we got what we want here?
+  
 #######################################################################
 # Run the tests
 

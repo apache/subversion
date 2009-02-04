@@ -2251,8 +2251,16 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del.copy()
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
+  expected_status.tweak('DF/D1', 'DD/D1', 'DDF/D1',
                         'DDD/D1', switched='S')
+
+  # Expect the incoming deletes of F/alpha and D/D1 and the local deletes
+  # of F/alpha and D/D1 to mean that both paths are *really* gone, not
+  # simply scheduled for deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        status='! ', wc_rev=None)
+  expected_disk.remove('D/D1')
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
@@ -2275,12 +2283,36 @@ def tree_conflicts_on_switch_2_1(sbox):
 
   expected_status = deep_trees_status_local_leaf_edit
   # These 'switched' statuses are bogus, because of do_entry_deletion not
-  # updating the URLs (issue #3334).
-  expected_status.tweak('D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+  # updating the URLs (issue #3334).  For example, after the switch, D/D1
+  # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
+  # copy from local/D/D1.  But D/D1/delta, which was an add without history
+  # prior to the switch, still has a URL pointing to local/D/D1/delta, so it
+  # looks like it is switched relative to its parent.
+  expected_status.tweak('D/D1/delta',
+                        'DD/D1/D2',
+                        'DF/D1/beta',
+                        'DDD/D1/D2',
+                        'DDF/D1/D2',
+                        switched='S')
   # The expectation on 'alpha' reflects partial progress on issue #3334.
-  expected_status.tweak('F/alpha', status='A ', copied='+', wc_rev='-')
-
+  expected_status.tweak('D/D1',
+                        'F/alpha',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='A ', copied='+', wc_rev='-')
+  # See the status of all the paths *under* the above six subtrees.  Only the
+  # roots of the added subtrees show as schedule 'A', these childs paths show
+  # only that history is scheduled with the commit. 
+  expected_status.tweak(
+    'DD/D1/D2',
+    'DDD/D1/D2',
+    'DDD/D1/D2/D3',
+    'DF/D1/beta',
+    'DDF/D1/D2',
+    'DDF/D1/D2/gamma',
+    copied='+', wc_rev='-')
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -2306,34 +2338,34 @@ def tree_conflicts_on_switch_2_2(sbox):
   expected_status.add({'' : Item(),
                        'F/alpha' : Item()})
   expected_status.tweak(contents=None, status='  ', wc_rev=3)
-  # Tree conflicts.
-  expected_status.tweak(
-    'D/D1',
-    'F/alpha',
-    'DD/D1',
-    'DF/D1',
-    'DDD/D1',
-    'DDF/D1',
-    treeconflict='C', wc_rev=2, switched='S')
-  # Anything that's below a tree-conflict is also at an earlier rev.
-  expected_status.tweak(
-    'DD/D1/D2',
-    'DF/D1/beta',
-    'DDD/D1/D2',
-    'DDD/D1/D2/D3',
-    'DDF/D1/D2',
-    'DDF/D1/D2/gamma',
-    wc_rev=2)
-  # The locally deleted nodes.
-  expected_status.tweak(
-    'D/D1',
-    'F/alpha',
-    'DD/D1/D2',
-    'DF/D1/beta',
-    'DDD/D1/D2/D3',
-    'DDF/D1/D2/gamma',
-    status='D ')
- 
+
+  # Expect the incoming tree deletes and the local leaf deletes to mean
+  # that all deleted paths are *really* gone, not simply scheduled for
+  # deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='! ', wc_rev=None)
+  # Remove from expected status and disk everything below the deleted paths.
+  expected_status.remove('DD/D1/D2',
+                         'DF/D1/beta',
+                         'DDD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2',
+                         'DDF/D1/D2/gamma',)
+  expected_disk.remove('D/D1',
+                       'DD/D1',
+                       'DD/D1/D2',
+                       'DF/D1',
+                       'DDD/D1',
+                       'DDD/D1/D2',
+                       'DDD/D1/D2/D3',
+                       'DDF/D1',
+                       'DDF/D1/D2',)
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
@@ -2354,8 +2386,33 @@ def tree_conflicts_on_switch_3(sbox):
   expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+
+  # Expect the incoming tree deletes and the local tree deletes to mean
+  # that all deleted paths are *really* gone, not simply scheduled for
+  # deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='! ', wc_rev=None)
+  # Remove from expected status and disk everything below the deleted paths.
+  expected_status.remove('DD/D1/D2',
+                         'DF/D1/beta',
+                         'DDD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2',
+                         'DDF/D1/D2/gamma',)
+  expected_disk.remove('D/D1',
+                       'DD/D1',
+                       'DD/D1/D2',
+                       'DF/D1',
+                       'DDD/D1',
+                       'DDD/D1/D2',
+                       'DDD/D1/D2/D3',
+                       'DDF/D1',
+                       'DDF/D1/D2',)
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
