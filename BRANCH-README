@@ -21,7 +21,7 @@ TODO:
 
       me resource URI       -> !svn/me  [DONE]
       revision stub         -> !svn/rev [STARTED]
-      revision root stub    -> !svn/rvr (or !svn/bc) [DONE]
+      revision root stub    -> !svn/rvr [DONE]
       transaction stub      -> !svn/txn [STARTED]
       transaction root stub -> !svn/txr [STARTED]
 
@@ -77,6 +77,3 @@ TODO:
     - Use me resource instead of the VCC                     [STARTED]
     - Use pegrev stubs instead of get_baseline_info() walks  [STARTED]
     - Use rev stubs for revprop stuff
-
- * Optional:  Use !svn/rvr instead of !svn/bc for the revision root stub,
-   just for a clean break from WebDAV and human-grokkable URLs.  [STARTED]

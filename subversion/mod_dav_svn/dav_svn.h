@@ -162,8 +162,6 @@ enum dav_svn_private_restype {
   /* new types in HTTP protocol v2: */
   DAV_SVN_RESTYPE_ME,                   /* .../!svn/me   */
   DAV_SVN_RESTYPE_REV_COLLECTION,       /* .../!svn/rev/ */
-  /* ### FIXME: revroot is currently unused, as !svn/rvr/ is treated
-     ### as an alias for !svn/bc/ */
   DAV_SVN_RESTYPE_REVROOT_COLLECTION,   /* .../!svn/rvr/ */
   DAV_SVN_RESTYPE_TXN_COLLECTION,       /* .../!svn/txn/ */
   DAV_SVN_RESTYPE_TXNROOT_COLLECTION    /* .../!svn/txr/ */

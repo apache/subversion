@@ -440,6 +440,26 @@ parse_revstub_uri(dav_resource_combined *comb,
 
 
 static int
+parse_revroot_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
+{
+  /* format: !svn/rvr/REVISION/[PATH]
+
+     In HTTP protocol v2, this represents a path within a specific
+     revision.  Clients perform PROPFIND and GET against it to read
+     versioned file/dir properties and file contents.  (This uri
+     replaces baseline collection (bc) forms.)
+   */
+
+  /* Right now, we treat 'rvr' URIs exactly the same as 'bc' ones.
+     Same expected format, same utility, etc.  */
+  return parse_baseline_coll_uri(comb, path, label, use_checked_in);
+}
+
+
+static int
 parse_txnstub_uri(dav_resource_combined *comb,
                   const char *path,
                   const char *label,
@@ -470,7 +490,7 @@ parse_txnroot_uri(dav_resource_combined *comb,
                   const char *label,
                   int use_checked_in)
 {
-  /* format: !svn/txr/TXN_NAME/path
+  /* format: !svn/txr/TXN_NAME/[PATH]
 
      In HTTP protocol v2, this represents a path within a specific
      uncommitted transaction.  Clients perform PUT, COPY, DELETE, MOVE
@@ -590,7 +610,7 @@ static const struct special_defn
   /* The new v2 protocol uses these new 'stub' uris: */
   { "me",  parse_me_resource_uri, 0, FALSE, DAV_SVN_RESTYPE_ME },
   { "rev", parse_revstub_uri, 1, FALSE, DAV_SVN_RESTYPE_REV_COLLECTION },
-  { "rvr", parse_baseline_coll_uri, 1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
+  { "rvr", parse_revroot_uri, 1, TRUE, DAV_SVN_RESTYPE_REVROOT_COLLECTION },
   { "txn", parse_txnstub_uri, 1, FALSE, DAV_SVN_RESTYPE_TXN_COLLECTION},
   { "txr", parse_txnroot_uri, 1, TRUE, DAV_SVN_RESTYPE_TXNROOT_COLLECTION},
 
