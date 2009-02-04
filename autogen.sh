@@ -114,7 +114,7 @@ fi
 # Transform sql files into header files
 for file in subversion/libsvn_fs_fs/rep-cache-db.sql; do
   if test $file -nt $file.h; then
-    $PYTHON build/transform_sql.py $file
+    ./build/transform_sql.sh $file < $file > $file.h
   fi
 done
 
