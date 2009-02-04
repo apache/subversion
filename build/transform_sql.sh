@@ -10,6 +10,8 @@ echo "#define REP_CACHE_DB_SQL \\"
 
 comment=false
 
+IFS="
+"
 while read line; do
   if [ "$comment" = "false" ] && echo "$line" | fgrep '/*' >/dev/null; then
     comment=true
@@ -26,8 +28,8 @@ while read line; do
 
   line="`echo "$line" | sed -e 's/"/\\"/g'`"
   if [ -n "$line" ]; then
-    echo "    \"$line\" \\"
+    echo "  \"$line\"\\"
   fi
 done
 
-echo '    ""'
+echo '  ""'
