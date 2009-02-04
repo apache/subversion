@@ -65,13 +65,10 @@ bindir = @bindir@
 includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
+canonicalized_srcdir = @canonicalized_srcdir@
 datadir = @datadir@
 datarootdir = @datarootdir@
 localedir = @localedir@
-
-ifneq ($(abs_builddir), $(abs_srcdir))
-	srcpath = $(srcdir)/
-endif
 
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
