@@ -1593,7 +1593,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
       entry->revision = base_node->revision;
       entry->kind = base_node->kind;
 
-      entry->incomplete = (base_node->incomplete_children > 1);
+      entry->incomplete = (base_node->incomplete_children > 0);
 
       entry->name = apr_pstrdup(result_pool, base_node->local_relpath);
 
