@@ -44,8 +44,7 @@
 
 
 /* ### todo: make this compare repository too?  Or do so in parallel
-   code.  See also adm_files.c:check_adm_exists(), which should
-   probably be merged with this.  */
+   code.  */
 svn_error_t *
 svn_wc_check_wc(const char *path,
                 int *wc_format,
