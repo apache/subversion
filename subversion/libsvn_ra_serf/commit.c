@@ -1129,12 +1129,11 @@ open_root(void *edit_baton,
         }
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
-                                     ctx->session, ctx->conn,
-                                     ctx->session->repos_url.path,
-                                     ctx->pool));
 
   /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
+  SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, ctx->session, 
+                                    ctx->conn, ctx->pool));
+
   props = apr_hash_make(ctx->pool);
   propfind_ctx = NULL;
   svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
@@ -1360,10 +1359,11 @@ add_directory(const char *path,
                                    dir->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path, TRUE,
-                                         dir->commit->session,
-                                         dir->commit->conn,
-                                         uri.path, dir->pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, dir->commit->session,
+                                        dir->commit->conn, dir->pool));
+      SVN_ERR(svn_ra_serf__get_relative_path(&rel_copy_path, uri.path,
+                                             dir->commit->session,
+                                             dir->commit->conn, dir->pool));
       SVN_ERR(svn_ra_serf__retrieve_props(props,
                                           dir->commit->session,
                                           dir->commit->conn,
@@ -1762,10 +1762,11 @@ close_file(void *file_baton,
                                    ctx->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path, TRUE,
-                                         ctx->commit->session,
-                                         ctx->commit->conn,
-                                         uri.path, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, ctx->commit->session,
+                                        ctx->commit->conn, pool));
+      SVN_ERR(svn_ra_serf__get_relative_path(&rel_copy_path, uri.path,
+                                             ctx->commit->session,
+                                             ctx->commit->conn, pool));
       SVN_ERR(svn_ra_serf__retrieve_props(props,
                                           ctx->commit->session,
                                           ctx->commit->conn,
@@ -2084,11 +2085,8 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else
     {
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
-                                         commit->session,
-                                         commit->conn,
-                                         commit->session->repos_url.path,
-                                         pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, commit->session,
+                                        commit->conn, pool));
 
       props = apr_hash_make(pool);
 

@@ -1044,29 +1044,43 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Try to discover our current root @a ROOT_URL and the resultant @a REL_PATH
- * based on @a ORIG_PATH for the @a SESSION on @a CONN.
- * REL_PATH will be URI decoded.
+/* Set @a VCC_URL to the default VCC for our repository based on @a
+ * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
+ * repository root URLs are cached in @a SESSION.  Use @a CONN for any
+ * required network communications if it is non-NULL; otherwise use the
+ * default connection.
  *
- * If VCC_ONLY is set, this will set @a ROOT_URL to the
- * WebDAV-compliant VCC URI.  Otherwise, @a ROOT_URL might contain a
- * root stub URI, or it might contain a VCC URI, depending on the
- * capabilities of the server.
- * ### FIXME:  This flag matters only while coding HTTP v2 support ###
- *
- * @a REL_PATH may be NULL if the caller is not interested in the relative
- * path.
+ * All temporary allocations will be made in @a POOL. */
+svn_error_t *
+svn_ra_serf__discover_vcc(const char **vcc_url,
+                          svn_ra_serf__session_t *session,
+                          svn_ra_serf__connection_t *conn,
+                          apr_pool_t *pool);
+
+/* Set @a REPORT_TARGET to the URI of the resource at which generic
+ * (path-agnostic) REPORTs should be aimed for @a SESSION.  Use @a
+ * CONN for any required network communications if it is non-NULL;
+ * otherwise use the default connection.
  *
  * All temporary allocations will be made in @a POOL.
  */
 svn_error_t *
-svn_ra_serf__discover_root(const char **root_url,
-                           const char **rel_path,
-                           svn_boolean_t vcc_only,
-                           svn_ra_serf__session_t *session,
-                           svn_ra_serf__connection_t *conn,
-                           const char *orig_path,
-                           apr_pool_t *pool);
+svn_ra_serf__report_resource(const char **report_target,
+                             svn_ra_serf__session_t *session,
+                             svn_ra_serf__connection_t *conn,
+                             apr_pool_t *pool);
+
+/* Set @a REL_PATH to a path (not URI-encoded) relative to the root of
+ * the repository pointed to by @a SESSION, based on original path
+ * (URI-encoded) @a ORIG_PATH.  Use @a CONN for any required network
+ * communications if it is non-NULL; otherwise use the default
+ * connection.  Use POOL for allocations.  */
+svn_error_t *
+svn_ra_serf__get_relative_path(const char **rel_path,
+                               const char *orig_path,
+                               svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
+                               apr_pool_t *pool);
 
 /* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
  * the path relative to that url for URL in REVISION using SESSION.

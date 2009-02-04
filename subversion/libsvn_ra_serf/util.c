@@ -18,6 +18,8 @@
 
 
 
+#include <assert.h>
+
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
@@ -1340,26 +1342,24 @@ svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
                                                  setup_request, handler);
 }
 
-static svn_error_t *
-discover_vcc(const char **vcc_url,
-             const char **rel_path,
-             svn_ra_serf__session_t *session,
-             svn_ra_serf__connection_t *conn,
-             const char *orig_path,
-             apr_pool_t *pool)
+svn_error_t *
+svn_ra_serf__discover_vcc(const char **vcc_url,
+                          svn_ra_serf__session_t *session,
+                          svn_ra_serf__connection_t *conn,
+                          apr_pool_t *pool)
 {
   apr_hash_t *props;
   const char *path, *relative_path, *present_path = "", *uuid;
 
-  /* If we're only interested in our VCC, just return it. */
-  if (session->vcc_url && !rel_path)
+  /* If we've already got the information our caller seeks, just return it.  */
+  if (session->vcc_url && session->repos_root_str)
     {
       *vcc_url = session->vcc_url;
       return SVN_NO_ERROR;
     }
 
   props = apr_hash_make(pool);
-  path = orig_path;
+  path = session->repos_url.path;
   *vcc_url = NULL;
   uuid = NULL;
 
@@ -1446,63 +1446,64 @@ discover_vcc(const char **vcc_url,
       session->uuid = apr_pstrdup(session->pool, uuid);
     }
 
-  if (rel_path)
-    {
-      if (present_path[0] != '\0')
-        {
-          /* The relative path is supposed to be URI decoded, so decode
-             present_path before joining both together. */
-          *rel_path = svn_path_join(relative_path,
-                                    svn_path_uri_decode(present_path, pool),
-                                    pool);
-        }
-      else
-        {
-          *rel_path = relative_path;
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
-/* ### TODO:  Rename this function to svn_ra_serf__report_resource(),
-       per gstein's suggestion.  Also, this whole business of
-       generating REL_PATH here is really kinda whack, and seems very much
-       tied to the crawl-toward-the-root junk we did in order to get
-       a VCC URL.  Full-URI-to-relative-URI calculation should be its
-       own thing, and should make use of the cached repos root URI.  */
 svn_error_t *
-svn_ra_serf__discover_root(const char **root_url,
-                           const char **rel_path,
-                           svn_boolean_t vcc_only,
-                           svn_ra_serf__session_t *session,
-                           svn_ra_serf__connection_t *conn,
-                           const char *orig_path,
-                           apr_pool_t *pool)
+svn_ra_serf__get_relative_path(const char **rel_path,
+                               const char *orig_path,
+                               svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
+                               apr_pool_t *pool)
 {
-  /* Unless our caller explicitly wants a VCC URL, we use the cached
-     "me resource" URI and repository root URI (if any).  */
-  if ((! vcc_only) && SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+  const char *decoded_root, *decoded_orig;
+    
+  if (! session->repos_root.path)
     {
-      *root_url = apr_pstrdup(pool, session->me_resource);
-      if (rel_path)
-        {
-          const char *decoded_root = 
-            svn_path_uri_decode(session->repos_root.path, pool);
-          if (strcmp(decoded_root, orig_path) == 0)
-            {
-              *rel_path = "";
-            }
-          else
-            {
-              *rel_path = svn_path_is_child(decoded_root, orig_path, pool);
-              SVN_ERR_ASSERT(*rel_path != NULL);
-            }
-        }
-      return SVN_NO_ERROR;
+      const char *vcc_url;
+
+      /* This should only happen if we haven't detected HTTP v2
+         support from the server.  */
+      assert (! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+
+      /* We don't actually care about the VCC_URL, but this API
+         promises to populate the session's root-url cache, and that's
+         what we really want. */
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, 
+                                        conn ? conn : session->conns[0], 
+                                        pool));
     }
-  
-  return discover_vcc(root_url, rel_path, session, conn, orig_path, pool);
+
+  decoded_root = svn_path_uri_decode(session->repos_root.path, pool);
+  decoded_orig = svn_path_uri_decode(orig_path, pool);
+  if (strcmp(decoded_root, decoded_orig) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_path_is_child(decoded_root, decoded_orig, pool);
+      SVN_ERR_ASSERT(*rel_path != NULL);
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__report_resource(const char **report_target,
+                             svn_ra_serf__session_t *session,
+                             svn_ra_serf__connection_t *conn,
+                             apr_pool_t *pool)
+{
+  /* If we have HTTP v2 support, we want to report against the 'me'
+     resource. */
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+    *report_target = apr_pstrdup(pool, session->me_resource);
+
+  /* Otherwise, we'll use the default VCC. */
+  else
+    SVN_ERR(svn_ra_serf__discover_vcc(report_target, session, conn, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
