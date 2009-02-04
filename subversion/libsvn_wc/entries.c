@@ -1552,6 +1552,9 @@ get_repos_info(const char **repos_root,
   return svn_sqlite__reset(stmt);
 }
 
+/* Fill the entries cache in ADM_ACCESS. The full hash cache will be
+   populated.  SCRATCH_POOL is used for local memory allocation, the access
+   baton pool is used for the cache. */
 static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
              apr_pool_t *scratch_pool)
