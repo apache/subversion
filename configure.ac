@@ -16,6 +16,12 @@ AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 
 AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
 AC_SUBST([abs_builddir], ["`pwd`"])
+if test "$abs_srcdir" = "$abs_builddir"; then
+  canonicalized_srcdir=""
+else
+  canonicalized_srcdir="$srcdir/"
+fi
+AC_SUBST([canonicalized_srcdir])
 
 SWIG_LDFLAGS="$LDFLAGS"
 AC_SUBST([SWIG_LDFLAGS])
