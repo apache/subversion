@@ -315,6 +315,9 @@ install: external-install local-install revision-install
 
 local-all: @BUILD_RULES@
 
+subversion/libsvn_fs_fs/rep-cache-db.sql.h: subversion/libsvn_fs_fs/rep-cache-db.sql
+	build/transform_sql.sh subversion/libsvn_fs_fs/rep-cache-db.sql < subversion/libsvn_fs_fs/rep-cache-db.sql > subversion/libsvn_fs_fs/rep-cache-db.sql.h
+
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
 	  tools/po/po-update.sh pot

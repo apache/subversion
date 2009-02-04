@@ -111,13 +111,6 @@ if test -z "$PYTHON"; then
   exit 1
 fi
 
-# Transform sql files into header files
-for file in subversion/libsvn_fs_fs/rep-cache-db.sql; do
-  if test $file -nt $file.h; then
-    ./build/transform_sql.sh $file < $file > $file.h
-  fi
-done
-
 # Compile SWIG headers into standalone C files if we are in release mode
 if test -n "$RELEASE_MODE"; then
   echo "Generating SWIG code..."
