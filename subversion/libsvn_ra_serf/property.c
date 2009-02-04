@@ -969,7 +969,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
       const char *decoded_root = 
         svn_path_uri_decode(session->repos_root.path, pool);
 
-      *bc_url = apr_psprintf(pool, "%s/%ld/", session->pegrev_stub, revision);
+      *bc_url = apr_psprintf(pool, "%s/%ld/", session->rev_root_stub, revision);
       if (strcmp(decoded_root, decoded_url) == 0)
         {
           *bc_relative = "";

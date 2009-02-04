@@ -220,8 +220,10 @@ struct svn_ra_serf__session_t {
 
   /* Opaque URL "stubs".  If the OPTIONS response returns these, then
      we know we're using HTTP protocol v2. */
-  const char *pegrev_stub;      /* for accessing REV/PATH pairs */
   const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
+  const char *rev_root_stub;    /* for accessing REV/PATH pairs */
+  const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
+  const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
 
   /*** End HTTP v2 stuff ***/
 
