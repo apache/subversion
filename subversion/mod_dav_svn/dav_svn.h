@@ -193,7 +193,8 @@ typedef struct {
      name. It may be NULL if this root corresponds to a specific revision.
      It may also be NULL if we have not opened the root yet.
 
-     WORKING and ACTIVITY resources use this field.
+     WORKING and ACTIVITY resources use this field, as well as PRIVATE
+     resources that directly represent either a txn or txn-root.
   */
   const char *txn_name;
 

@@ -21,9 +21,9 @@ TODO:
 
       me resource URI       -> !svn/me  [DONE]
       revision stub         -> !svn/rev [STARTED]
-      revision root stub    -> !svn/bc  [DONE]
-      transaction stub      -> !svn/txn
-      transaction root stub -> !svn/txr
+      revision root stub    -> !svn/rvr (or !svn/bc) [DONE]
+      transaction stub      -> !svn/txn [STARTED]
+      transaction root stub -> !svn/txr [STARTED]
 
  * Teach mod_dav_svn to handle POST against the "me resource",
    returning a transaction URI stub and transaction prop URI stub for
