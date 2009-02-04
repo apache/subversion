@@ -1528,7 +1528,8 @@ fetch_base_nodes(apr_hash_t **nodes,
 }
 
 static svn_error_t *
-get_repos_root(const char **repos_root,
+get_repos_info(const char **repos_root,
+               const char **repos_uuid,
                svn_sqlite__db_t *wc_db,
                apr_int64_t repos_id,
                apr_pool_t *result_pool)
@@ -1546,6 +1547,7 @@ get_repos_root(const char **repos_root,
                              repos_id);
 
   *repos_root = apr_pstrdup(result_pool, svn_sqlite__column_text(stmt, 0));
+  *repos_uuid = apr_pstrdup(result_pool, svn_sqlite__column_text(stmt, 1));
 
   return svn_sqlite__reset(stmt);
 }
@@ -1558,6 +1560,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   svn_sqlite__db_t *wc_db;
   apr_hash_index_t *hi;
   const char *repos_root = NULL;
+  const char *repos_uuid = NULL;
   apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
   apr_hash_t *entries = apr_hash_make(result_pool);
   const char *wc_db_path = db_path(svn_wc_adm_access_path(adm_access),
@@ -1579,29 +1582,31 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       apr_hash_this(hi, (const void **) &rel_path, NULL, (void **) &base_node);
 
+      entry->name = apr_pstrdup(result_pool, base_node->local_relpath);
+
       if (base_node->repos_id)
         {
           if (repos_root == NULL)
-            SVN_ERR(get_repos_root(&repos_root, wc_db, base_node->repos_id,
-                                   scratch_pool));
-        }
+            SVN_ERR(get_repos_info(&repos_root, &repos_uuid, wc_db,
+                                   base_node->repos_id, scratch_pool));
 
-      if (base_node->repos_relpath != NULL)
-        entry->url = svn_path_join(repos_root, base_node->repos_relpath,
-                                   result_pool);
+          entry->uuid = apr_pstrdup(result_pool, repos_uuid);
+          entry->url = svn_path_join(repos_root, base_node->repos_relpath,
+                                     result_pool);
+        }
 
       entry->revision = base_node->revision;
       entry->kind = base_node->kind;
 
       entry->incomplete = (base_node->incomplete_children > 0);
 
-      entry->name = apr_pstrdup(result_pool, base_node->local_relpath);
-
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
   SVN_ERR(svn_sqlite__close(wc_db, SVN_NO_ERROR));
 
+  /* Fill in any implied fields. */
+  SVN_ERR(resolve_to_defaults(entries, result_pool));
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
   return SVN_NO_ERROR;
