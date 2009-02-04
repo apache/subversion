@@ -3241,9 +3241,7 @@ svn_wc__entries_init(const char *path,
 
   /* Insert the repository. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
-  /* TODO: We really shouldn't ever have a NULL uuid, but somehow it's getting
-     in here... */
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid == NULL ? "" : uuid));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid));
   SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
 
   /* Insert the wcroot. */
