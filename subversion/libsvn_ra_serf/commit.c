@@ -75,8 +75,9 @@ typedef struct {
   apr_hash_t *copied_entries;    /* copied enties (we don't checkout these) */
 
   /* HTTP v2 stuff */
-  const char *txn_url;           /* txn root URL (!svn/txn/UUID) */
-  const char *txnprops_url;      /* txn props URL (!svn/txp/UUID) */
+  const char *txn_name;          /* transaction name (append to txn-ish stubs */
+  const char *txn_url;           /* txn URL (!svn/txn/TXN_NAME) */
+  const char *txn_root_url;      /* txn root URL (!svn/txr/TXN_NAME) */
 
   /* HTTP v1 stuff (only value when 'txn_url' is NULL) */
   const char *activity_url;      /* activity base URL... */
@@ -968,22 +969,18 @@ post_headers_iterator_callback(void *baton,
                                const char *val)
 {
   post_response_ctx_t *prc = baton;
+  commit_context_t *prc_cc = prc->commit_ctx;
+  svn_ra_serf__session_t *sess = prc_cc->session;
 
-  if (svn_cstring_casecmp(key, SVN_DAV_TXN_HEADER) == 0)
+  if (svn_cstring_casecmp(key, SVN_DAV_TXN_NAME_HEADER) == 0)
     {
-      apr_uri_t uri = prc->commit_ctx->session->repos_url;
-      uri.path = apr_pstrdup(prc->commit_ctx->pool, val);
-      prc->commit_ctx->txn_url =
-        svn_path_canonicalize(apr_uri_unparse(prc->commit_ctx->pool, &uri, 0),
-                              prc->commit_ctx->pool);
-    }
-  else if (svn_cstring_casecmp(key, SVN_DAV_TXNPROPS_HEADER) == 0)
-    {
-      apr_uri_t uri = prc->commit_ctx->session->repos_url;
-      uri.path = apr_pstrdup(prc->commit_ctx->pool, val);
-      prc->commit_ctx->txnprops_url =
-        svn_path_canonicalize(apr_uri_unparse(prc->commit_ctx->pool, &uri, 0),
-                              prc->commit_ctx->pool);
+      /* Build out txn and txn-root URLs using the txn name we're
+         given, and store the whole lot of it in the commit context.  */
+      prc_cc->txn_name = apr_pstrdup(prc_cc->pool, val);
+      prc_cc->txn_url =
+        svn_path_url_add_component(sess->txn_stub, val, prc_cc->pool);
+      prc_cc->txn_root_url =
+        svn_path_url_add_component(sess->txn_root_stub, val, prc_cc->pool);
     }
   return 0;
 }
@@ -1063,6 +1060,12 @@ open_root(void *edit_baton,
                                    post_ctx->status, post_ctx->reason,
                                    ctx->session->repos_url.scheme,
                                    ctx->session->repos_url.hostinfo);
+        }
+      if (! (ctx->txn_name && ctx->txn_root_url && ctx->txn_url))
+        {
+          return svn_error_createf(
+            SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+            _("POST request did not return transaction information"));
         }
     }
   else

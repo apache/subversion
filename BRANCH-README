@@ -13,8 +13,8 @@ TODO:
       me resource URI        [DONE]
       revision stub          [DONE]
       revision root stub     [DONE]
-      transaction stub       [STARTED]
-      transaction root stub  [STARTED]
+      transaction stub       [DONE]
+      transaction root stub  [DONE]
 
  * Teach mod_dav_svn to recognize and correctly interpret URLs which
    make use of the new URI stubs:

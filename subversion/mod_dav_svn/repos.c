@@ -514,7 +514,8 @@ static const struct special_defn
 
   /* The new v2 protocol uses these new 'stub' uris: */
   { "me",  parse_me_resource_uri, 0, FALSE, DAV_SVN_RESTYPE_ME },
-  { "rev", parse_revstub_uri, 1, FALSE, DAV_SVN_RESTYPE_REVSTUB_COLLECTION },
+  { "rev", parse_revstub_uri, 1, FALSE, DAV_SVN_RESTYPE_REV_COLLECTION },
+  { "rvr", parse_baseline_coll_uri, 1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
 
   { NULL } /* sentinel */
 };
@@ -3975,20 +3976,14 @@ int dav_svn__method_post(request_rec *r)
   if (derr)
     return derr->status;
 
-  /* Build a "201 Created" response with headers that give the client a
-     txn stub and txnprop stub. */
+  /* Build a "201 Created" response with header that tells the client
+     our new transaction's name. */
   repos_root_uri = dav_svn__build_uri(resource->info->repos, 
                                       DAV_SVN__BUILD_URI_PUBLIC,
                                       SVN_IGNORED_REVNUM, "", 0, 
                                       resource->pool);
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_txn_stub(resource->info->r),
-                            "/", txn_name, NULL));
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXNPROPS_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_txnprop_stub(resource->info->r),
-                            "/", txn_name, NULL));
+  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_NAME_HEADER,
+                txn_name);
   r->status = HTTP_CREATED;
 
   return OK;

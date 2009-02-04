@@ -344,13 +344,21 @@ capabilities_headers_iterator_callback(void *baton,
         {
           orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
         }
-      else if (svn_cstring_casecmp(key, SVN_DAV_PEGREV_STUB_HEADER) == 0)
-        {
-          orc->session->pegrev_stub = apr_pstrdup(orc->session->pool, val);
-        }
       else if (svn_cstring_casecmp(key, SVN_DAV_REV_STUB_HEADER) == 0)
         {
           orc->session->rev_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_REV_ROOT_STUB_HEADER) == 0)
+        {
+          orc->session->rev_root_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_TXN_STUB_HEADER) == 0)
+        {
+          orc->session->txn_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_TXN_ROOT_STUB_HEADER) == 0)
+        {
+          orc->session->txn_root_stub = apr_pstrdup(orc->session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_REPOS_UUID_HEADER) == 0)
         {

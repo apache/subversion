@@ -161,6 +161,7 @@ get_option(const dav_resource *resource,
            const apr_xml_elem *elem,
            apr_text_header *option)
 {
+  request_rec *r = resource->info->r;
   const char *repos_root_uri =
     dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_PUBLIC,
                        SVN_IGNORED_REVNUM, "", 0, resource->pool);
@@ -200,7 +201,7 @@ get_option(const dav_resource *resource,
         }
       if (SVN_IS_VALID_REVNUM(youngest))
         {
-          apr_table_set(resource->info->r->headers_out,
+          apr_table_set(r->headers_out,
                         SVN_DAV_YOUNGEST_REV_HEADER,
                         apr_psprintf(resource->pool, "%ld", youngest));
         }
@@ -216,7 +217,7 @@ get_option(const dav_resource *resource,
         }
       if (uuid)
         {
-          apr_table_set(resource->info->r->headers_out,
+          apr_table_set(r->headers_out,
                         SVN_DAV_REPOS_UUID_HEADER, uuid);
         }
     }
@@ -225,20 +226,22 @@ get_option(const dav_resource *resource,
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
     {
-      apr_table_set(resource->info->r->headers_out, SVN_DAV_ROOT_URI_HEADER,
-                    repos_root_uri);
-      apr_table_set(resource->info->r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
+      apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
+      apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_me_resource_uri(resource->info->r),
-                                NULL));
-      apr_table_set(resource->info->r->headers_out, SVN_DAV_PEGREV_STUB_HEADER,
+                                dav_svn__get_me_resource_uri(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_REV_ROOT_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_pegrev_stub(resource->info->r),
-                                NULL));
-      apr_table_set(resource->info->r->headers_out, SVN_DAV_REV_STUB_HEADER,
+                                dav_svn__get_rev_root_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_REV_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_rev_stub(resource->info->r),
-                                NULL));
+                                dav_svn__get_rev_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_TXN_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_txn_root_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_txn_stub(r), NULL));
     }
 
   return NULL;

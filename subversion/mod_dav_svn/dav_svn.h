@@ -161,9 +161,12 @@ enum dav_svn_private_restype {
 
   /* new types in HTTP protocol v2: */
   DAV_SVN_RESTYPE_ME,                   /* .../!svn/me   */
-  DAV_SVN_RESTYPE_REVSTUB_COLLECTION,   /* .../!svn/rev/ */
-  DAV_SVN_RESTYPE_TXNSTUB_COLLECTION,   /* .../!svn/txn/ */
-  DAV_SVN_RESTYPE_TXNPROP_STUB          /* .../!svn/txp/ */
+  DAV_SVN_RESTYPE_REV_COLLECTION,       /* .../!svn/rev/ */
+  /* ### FIXME: revroot is currently unused, as !svn/rvr/ is treated
+     ### as an alias for !svn/bc/ */
+  DAV_SVN_RESTYPE_REVROOT_COLLECTION,   /* .../!svn/rvr/ */
+  DAV_SVN_RESTYPE_TXN_COLLECTION,       /* .../!svn/txn/ */
+  DAV_SVN_RESTYPE_TXNROOT_COLLECTION    /* .../!svn/txr/ */
 };
 
 
@@ -352,17 +355,17 @@ const char * dav_svn__get_root_dir(request_rec *r);
 /* Where REPORT requests are sent (typically "!svn/me") */
 const char *dav_svn__get_me_resource_uri(request_rec *r);
 
-/* For accessing REV/PATH pairs (typically "!svn/bc") */
-const char *dav_svn__get_pegrev_stub(request_rec *r);
-
 /* For accessing revision resources (typically "!svn/rev") */
 const char *dav_svn__get_rev_stub(request_rec *r);
+
+/* For accessing REV/PATH pairs (typically "!svn/bc") */
+const char *dav_svn__get_rev_root_stub(request_rec *r);
 
 /* For accessing transaction resources (typically "!svn/txn") */
 const char *dav_svn__get_txn_stub(request_rec *r);
 
-/* For accessing transaction properties (typically "!svn/txp") */
-const char *dav_svn__get_txnprop_stub(request_rec *r);
+/* For accessing transaction properties (typically "!svn/txr") */
+const char *dav_svn__get_txn_root_stub(request_rec *r);
 
 
 /*** activity.c ***/
