@@ -2016,7 +2016,7 @@ link_path(void *report_baton,
           apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  const char *link, *vcc_url;
+  const char *link, *report_target;
   apr_uri_t uri;
   apr_status_t status;
 
@@ -2031,9 +2031,10 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, FALSE,
-                                     report->sess, report->sess->conns[0],
-                                     uri.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess,
+                                       NULL, pool));
+  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
+                                         NULL, pool));
 
   /* Copy parameters to reporter's pool. */
   lock_token = apr_pstrdup(report->pool, lock_token);
@@ -2126,7 +2127,7 @@ finish_report(void *report_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_ra_serf__list_t *done_list;
-  const char *vcc_url;
+  const char *report_target;
   apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
@@ -2137,20 +2138,10 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, FALSE,
-                                     sess, sess->conns[0],
-                                     sess->repos_url.path, pool));
-
-  if (!vcc_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested version-controlled-configuration "
-                                "value"));
-    }
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
 
   /* create and deliver request */
-  report->path = vcc_url;
+  report->path = report_target;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

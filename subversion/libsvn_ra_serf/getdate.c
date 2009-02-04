@@ -194,7 +194,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *vcc_url;
+  const char *report_target;
   int status_code;
 
   date_ctx = apr_pcalloc(pool, sizeof(*date_ctx));
@@ -203,14 +203,12 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   date_ctx->revision = revision;
   date_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, FALSE,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = vcc_url;
+  handler->path = report_target;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;

@@ -404,9 +404,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   else
     {
       /* Use the VCC as the propfind target path. */
-      SVN_ERR(svn_ra_serf__discover_root(&propfind_path, NULL, TRUE,
-                                         session, session->conns[0],
-                                         session->repos_url.path, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL, pool));
     }
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
@@ -810,10 +808,7 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, TRUE,
-                                         session, session->conns[0],
-                                         session->repos_url.path, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
     }
 
   *url = session->repos_root_str;
@@ -841,7 +836,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
   if (!session->uuid)
     {
-      const char *vcc_url, *relative_url;
+      const char *vcc_url;
 
       /* We should never get here if we have HTTP v2 support, because
          any server with that support should be transmitting the
@@ -850,9 +845,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url, TRUE,
-                                         session, session->conns[0],
-                                         session->repos_url.path, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
       if (!session->uuid)
         {
           return svn_error_create(APR_EGENERAL, NULL,

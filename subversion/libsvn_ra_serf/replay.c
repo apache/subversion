@@ -109,8 +109,8 @@ typedef struct {
   svn_revnum_t low_water_mark;
   svn_boolean_t send_deltas;
 
-  /* Cached vcc_url */
-  const char *vcc_url;
+  /* Cached report target url */
+  const char *report_target;
 
   /* Revision properties for this revision. */
   apr_hash_t *revs_props;
@@ -175,8 +175,8 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       push_state(parser, ctx, REPORT);
       ctx->props = apr_hash_make(ctx->pool);
 
-      svn_ra_serf__walk_all_props(ctx->revs_props, ctx->vcc_url, ctx->revision,
-                                  svn_ra_serf__set_bare_props,
+      svn_ra_serf__walk_all_props(ctx->revs_props, ctx->report_target,
+                                  ctx->revision, svn_ra_serf__set_bare_props,
                                   ctx->props, ctx->pool);
       if (ctx->revstart_func)
         {
@@ -601,15 +601,13 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_error_t *err;
+  const char *report_target;
   /* We're not really interested in the status code here in replay, but
      the XML parsing code will abort on error if it doesn't have a place
      to store the response status code. */
   int status_code;
-  const char *vcc_url;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, FALSE,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->pool = pool;
@@ -619,7 +617,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   replay_ctx->revision = revision;
   replay_ctx->low_water_mark = low_water_mark;
   replay_ctx->send_deltas = send_deltas;
-  replay_ctx->vcc_url = vcc_url;
+  replay_ctx->report_target = report_target;
   replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
@@ -705,12 +703,10 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_revnum_t rev = start_revision;
-  const char *vcc_url;
+  const char *report_target;
   int active_reports = 0;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, FALSE,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   while (active_reports || rev <= end_revision)
     {
@@ -743,11 +739,11 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           replay_ctx->send_deltas = send_deltas;
           replay_ctx->done_item.data = replay_ctx;
           /* Request all properties of a certain revision. */
-          replay_ctx->vcc_url = vcc_url;
+          replay_ctx->report_target = report_target;
           replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
           SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx,
                                              replay_ctx->revs_props, session,
-                                             session->conns[0], vcc_url,
+                                             session->conns[0], report_target,
                                              rev,  "0", all_props,
                                              TRUE, NULL, replay_ctx->pool));
 
