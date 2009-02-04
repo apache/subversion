@@ -2371,20 +2371,26 @@ svn_wc__entries_write(apr_hash_t *entries,
                            SVN_WC__VERSION, upgrade_sql, pool, pool));
 
   /* Get the repos ID. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->uuid));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
+  if (this_dir->uuid != NULL)
     {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->uuid));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+        return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                                 _("No REPOSITORY table entry for uuid '%s'"),
+                                 this_dir->uuid);
+
       repos_id = svn_sqlite__column_int(stmt, 0);
       repos_root = apr_pstrdup(pool, svn_sqlite__column_text(stmt, 1));
+      SVN_ERR(svn_sqlite__reset(stmt));
     }
   else
     {
       repos_id = 0;
       repos_root = NULL;
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Get the wc ID. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
