@@ -440,6 +440,81 @@ parse_revstub_uri(dav_resource_combined *comb,
 
 
 static int
+parse_txnstub_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
+{
+  /* format: !svn/txn/TXN_NAME
+
+     In HTTP protocol v2, this represents a specific uncommitted
+     transaction.  Clients perform PROPFIND and PROPPATCH against it
+     to read and write txnprops during a commit.  They can also issue
+     a DELETE against it to abort the txn.
+   */
+
+  if (path == NULL)
+    return TRUE;  /* fail, we need a txn_name. */
+
+  comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+  comb->priv.restype = DAV_SVN_RESTYPE_TXN_COLLECTION;
+  comb->priv.root.txn_name = apr_pstrdup(comb->res.pool, path);
+
+  return FALSE;
+}
+
+
+static int
+parse_txnroot_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
+{
+  /* format: !svn/txr/TXN_NAME/path
+
+     In HTTP protocol v2, this represents a path within a specific
+     uncommitted transaction.  Clients perform PUT, COPY, DELETE, MOVE
+     against it to modify the path.
+   */
+  const char *slash;
+
+  /* Note that we're calling this a WORKING resource, rather than
+     PRIVATE, so that we can let prep_working() do the same work for
+     us that it does on DeltaV 'working resources'.  */
+  comb->res.type = DAV_RESOURCE_TYPE_WORKING;
+
+  /* ...but setting this restype can let parse_working() know whether
+     this is a !svn/wrk/ (DeltaV) or a !svn/txr (protocol v2) */
+  comb->priv.restype = DAV_SVN_RESTYPE_TXNROOT_COLLECTION;
+  comb->res.working = TRUE;
+  comb->res.versioned = TRUE;
+
+  slash = ap_strchr_c(path, '/');
+
+  /* This sucker starts with a slash.  That's bogus. */
+  if (slash == path)
+    return TRUE;
+
+  if (slash == NULL)
+    {
+      /* There's no slash character in our path.  Assume it's just an
+         TXN_NAME pointing to the root path.  That should be cool.
+         We'll just drop through to the normal case handling below. */
+      comb->priv.root.txn_name = apr_pstrdup(comb->res.pool, path);
+      comb->priv.repos_path = "/";
+    }
+  else
+    {
+      comb->priv.root.txn_name = apr_pstrndup(comb->res.pool, path,
+                                              slash - path);
+      comb->priv.repos_path = slash;
+    }
+
+  return FALSE;
+}
+
+
+static int
 parse_wrk_baseline_uri(dav_resource_combined *comb,
                        const char *path,
                        const char *label,
@@ -516,6 +591,8 @@ static const struct special_defn
   { "me",  parse_me_resource_uri, 0, FALSE, DAV_SVN_RESTYPE_ME },
   { "rev", parse_revstub_uri, 1, FALSE, DAV_SVN_RESTYPE_REV_COLLECTION },
   { "rvr", parse_baseline_coll_uri, 1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
+  { "txn", parse_txnstub_uri, 1, FALSE, DAV_SVN_RESTYPE_TXN_COLLECTION},
+  { "txr", parse_txnroot_uri, 1, TRUE, DAV_SVN_RESTYPE_TXNROOT_COLLECTION},
 
   { NULL } /* sentinel */
 };
@@ -761,22 +838,28 @@ prep_history(dav_resource_combined *comb)
 static dav_error *
 prep_working(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
-                                          comb->priv.root.activity_id);
   apr_pool_t *pool = comb->res.pool;
   svn_error_t *serr;
   dav_error *derr;
   svn_node_kind_t kind;
+  const char *txn_name = comb->priv.root.txn_name;
 
+  /* A txnroot object will already have the txn_name filled in, but a
+     DeltaV 'working resource' will only have the activity_id at this
+     point. */
   if (txn_name == NULL)
     {
-      /* ### HTTP_BAD_REQUEST is probably wrong */
-      return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
-                           "An unknown activity was specified in the URL. "
-                           "This is generally caused by a problem in the "
-                           "client software.");
+      txn_name = dav_svn__get_txn(comb->priv.repos,
+                                  comb->priv.root.activity_id);
+      if (txn_name == NULL)
+        {
+          return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                               "An unknown activity was specified in the URL. "
+                               "This is generally caused by a problem in the "
+                               "client software.");
+        }
+      comb->priv.root.txn_name = txn_name;
     }
-  comb->priv.root.txn_name = txn_name;
 
   /* get the FS transaction, given its name */
   serr = svn_fs_open_txn(&comb->priv.root.txn, comb->priv.repos->fs, txn_name,
@@ -820,7 +903,7 @@ prep_working(dav_resource_combined *comb)
       svn_string_t request_author;
 
       serr = svn_fs_txn_prop(&current_author, comb->priv.root.txn,
-               SVN_PROP_REVISION_AUTHOR, pool);
+                             SVN_PROP_REVISION_AUTHOR, pool);
       if (serr != NULL)
         {
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -834,7 +917,8 @@ prep_working(dav_resource_combined *comb)
       if (!current_author)
         {
           serr = svn_fs_change_txn_prop(comb->priv.root.txn,
-                   SVN_PROP_REVISION_AUTHOR, &request_author, pool);
+                                        SVN_PROP_REVISION_AUTHOR,
+                                        &request_author, pool);
           if (serr != NULL)
             {
               return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -888,11 +972,37 @@ prep_activity(dav_resource_combined *comb)
 static dav_error *
 prep_private(dav_resource_combined *comb)
 {
+  svn_error_t *serr;
+  apr_pool_t *pool = comb->res.pool;
+
   if (comb->priv.restype == DAV_SVN_RESTYPE_VCC)
     {
       /* ### what to do */
     }
-  /* else nothing to do (### for now) */
+  else if (comb->priv.restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
+    {
+      /* Open the named transaction. */
+
+      if (comb->priv.root.txn_name == NULL)
+        return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                             "An unknown txn name was specified in the URL.");
+
+      serr = svn_fs_open_txn(&comb->priv.root.txn,
+                             comb->priv.repos->fs,
+                             comb->priv.root.txn_name, pool);
+      if (serr != NULL)
+        {
+          if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
+            {
+              svn_error_clear(serr);
+              return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                   "Named transaction doesn't exist.");
+            }
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not open specified transaction.",
+                                      pool);
+        }
+    }
 
   return NULL;
 }
