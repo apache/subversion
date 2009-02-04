@@ -315,9 +315,6 @@ install: external-install local-install revision-install
 
 local-all: @BUILD_RULES@
 
-subversion/libsvn_fs_fs/rep-cache-db.sql.h: subversion/libsvn_fs_fs/rep-cache-db.sql
-	build/transform_sql.sh subversion/libsvn_fs_fs/rep-cache-db.sql < subversion/libsvn_fs_fs/rep-cache-db.sql > subversion/libsvn_fs_fs/rep-cache-db.sql.h
-
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
 	  tools/po/po-update.sh pot
@@ -333,7 +330,7 @@ locale-gnu-po-update:
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
             echo "Cleaning $$i ..." ;                                \
-            (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo && \
+            (cd $$i && rm -f *.sql.h *.o *.lo *.la *.la-a *.spo *.mo && \
              rm -rf .libs) ; \
         done
 	rm -f $(CLEAN_FILES)
@@ -351,7 +348,6 @@ fast-distclean: fast-clean
 local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
-              $(top_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.sql.h \
               $(top_srcdir)/configure \
               $(top_srcdir)/build/config.guess \
               $(top_srcdir)/build/config.sub \
@@ -602,6 +598,9 @@ schema-clean:
 .SUFFIXES:
 .SUFFIXES: .c .cpp .lo .o .la-a .la \
            .po .spo .mo .rnc .rng .dtd .xsd
+
+%.sql.h: %.sql
+	$(top_srcdir)/build/transform_sql.sh $< < $< > $(top_srcdir)/$@
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
