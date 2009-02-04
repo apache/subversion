@@ -1353,12 +1353,10 @@ insert_changelist(svn_sqlite__db_t *wc_db,
   return svn_sqlite__insert(changelist_id, stmt);
 }
 
-/* Write the information for ENTRY to WC_DB.
-   (Extra parameters are used for write_entry_old(), and will
-   eventually disappear. */
+/* Write the information for ENTRY to WC_DB.  The WC_ID, REPOS_ID and
+   REPOS_ROOT will all be used for writing ENTRY. */
 static svn_error_t *
-write_entry(svn_stringbuf_t *buf,
-            svn_sqlite__db_t *wc_db,
+write_entry(svn_sqlite__db_t *wc_db,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
             const char *repos_root,
@@ -1516,16 +1514,11 @@ svn_wc__entries_write(apr_hash_t *entries,
                       apr_pool_t *pool)
 {
   svn_sqlite__db_t *wc_db;
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_stringbuf_t *bigstr = NULL;
-  svn_stream_t *stream;
-  const char *temp_file_path;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *this_dir;
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
-  apr_size_t len;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -1580,28 +1573,11 @@ svn_wc__entries_write(apr_hash_t *entries,
 
   SVN_ERR(svn_sqlite__transaction_begin(wc_db));
 
-  /* Open entries file for writing.  It's important we don't use APR_EXCL
-   * here.  Consider what happens if a log file is interrupted, it may
-   * leave a .svn/tmp/entries file behind.  Then when cleanup reruns the
-   * log file, and it attempts to modify the entries file, APR_EXCL would
-   * cause an error that prevents cleanup running.  We don't use log file
-   * tags such as SVN_WC__LOG_MV to move entries files so any existing file
-   * is not "valuable".
-   */
-  SVN_ERR(svn_wc__open_adm_writable(&stream,
-                                    &temp_file_path,
-                                    svn_wc_adm_access_path(adm_access),
-                                    SVN_WC__ADM_ENTRIES,
-                                    pool, pool));
-
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      bigstr = svn_stringbuf_createf(pool, "%d\n",
-                                     svn_wc__adm_wc_format(adm_access));
-
       /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, wc_db, wc_id, repos_id, repos_root, this_dir,
+      SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, this_dir,
                           SVN_WC_ENTRY_THIS_DIR, this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -1620,33 +1596,21 @@ svn_wc__entries_write(apr_hash_t *entries,
           if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
             continue;
 
-          /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, wc_db, wc_id, repos_id, repos_root,
+          /* Write the entry. */
+          SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
                               this_entry, key, this_dir, subpool));
         }
 
       svn_pool_destroy(subpool);
     }
 
-  len = bigstr->len;
-  SVN_ERR_W(svn_stream_write(stream, bigstr->data, &len),
-            apr_psprintf(pool,
-                         _("Error writing to '%s'"),
-                         svn_path_local_style
-                         (svn_wc_adm_access_path(adm_access), pool)));
-
-  err = svn_wc__close_adm_stream(stream, temp_file_path,
-                                 svn_wc_adm_access_path(adm_access),
-                                 SVN_WC__ADM_ENTRIES, pool);
+  SVN_ERR(svn_sqlite__transaction_commit(wc_db));
+  SVN_ERR(svn_sqlite__close(wc_db, SVN_NO_ERROR));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
 
-  /* Just because the entries file stream writing errored doesn't mean we
-     don't want to commit the database.  TODO: This mess should get cleaned
-     up when we stop writing entries files. */
-  svn_error_clear(svn_sqlite__transaction_commit(wc_db));
-  return svn_sqlite__close(wc_db, err);
+  return SVN_NO_ERROR;
 }
 
 
@@ -2372,13 +2336,8 @@ svn_wc__entries_init(const char *path,
                      svn_depth_t depth,
                      apr_pool_t *pool)
 {
-  svn_stream_t *stream;
-  const char *temp_file_path;
   svn_node_kind_t kind;
-  svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
-                                                 SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
-  apr_size_t len;
   svn_sqlite__db_t *wc_db;
   apr_int64_t wc_id;
   apr_int64_t repos_id;
@@ -2390,10 +2349,6 @@ svn_wc__entries_init(const char *path,
                  || depth == svn_depth_files
                  || depth == svn_depth_immediates
                  || depth == svn_depth_infinity);
-
-  /* Create the entries file, which must not exist prior to this. */
-  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
-                                    path, SVN_WC__ADM_ENTRIES, pool, pool));
 
   /* Check that the entries sqlite database does not yet exist. */
   SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
@@ -2436,19 +2391,8 @@ svn_wc__entries_init(const char *path,
    */
   entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
-  SVN_ERR(write_entry(accum, wc_db, wc_id, repos_id, repos, entry,
+  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos, entry,
                       SVN_WC_ENTRY_THIS_DIR, entry, pool));
-
-  len = accum->len;
-  SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
-            apr_psprintf(pool,
-                         _("Error writing entries file for '%s'"),
-                         svn_path_local_style(path, pool)));
-
-  /* Now we have a `entries' file with exactly one entry, an entry
-     for this dir.  Close the file and sync it up. */
-  SVN_ERR(svn_wc__close_adm_stream(stream, temp_file_path, path,
-                                   SVN_WC__ADM_ENTRIES, pool));
 
   /* Commit the sqlite transaction and close the database. */
   SVN_ERR(svn_sqlite__transaction_commit(wc_db));
