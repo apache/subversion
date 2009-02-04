@@ -1282,7 +1282,7 @@ entry_has_local_mods(svn_boolean_t *modified,
                      apr_pool_t *pool)
 {
   if (schedule != svn_wc_schedule_normal)
-    *modified = TRUE;
+      *modified = TRUE;
   else
     {
       svn_boolean_t text_modified;
@@ -1308,6 +1308,9 @@ entry_has_local_mods(svn_boolean_t *modified,
 typedef struct modcheck_baton_t {
   svn_wc_adm_access_t *adm_access;  /* access for the root of the sub-tree */
   svn_boolean_t found_mod;  /* whether a modification has been found */
+  svn_boolean_t all_edits_are_deletes;  /* If all the mods found, if any,
+                                          were deletes.  If FOUND_MOD is false
+                                          then this field has no meaning. */
 } modcheck_baton_t;
 
 static svn_error_t *
@@ -1344,7 +1347,11 @@ modcheck_found_entry(const char *path,
                                entry->schedule, path, pool));
 
   if (modified)
-    baton->found_mod = TRUE;
+    {
+      baton->found_mod = TRUE;
+      if (entry->schedule != svn_wc_schedule_delete)
+        baton->all_edits_are_deletes = FALSE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1359,10 +1366,13 @@ modcheck_handle_error(const char *path,
 }
 
 /* Set *MODIFIED to true iff there are any local modifications within the
- * tree rooted at PATH whose admin access baton is ADM_ACCESS. PATH may be a
+ * tree rooted at PATH whose admin access baton is ADM_ACCESS. If *MODIFIED
+ * is set to true and all the local modifications were deletes then set
+ * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  PATH may be a
  * file or a directory. */
 static svn_error_t *
 tree_has_local_mods(svn_boolean_t *modified,
+                    svn_boolean_t *all_edits_are_deletes,
                     const char *path,
                     svn_wc_adm_access_t *adm_access,
                     svn_cancel_func_t cancel_func,
@@ -1371,7 +1381,7 @@ tree_has_local_mods(svn_boolean_t *modified,
 {
   static const svn_wc_entry_callbacks2_t modcheck_callbacks =
     { modcheck_found_entry, modcheck_handle_error };
-  modcheck_baton_t modcheck_baton = { NULL, FALSE };
+  modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
 
   modcheck_baton.adm_access = adm_access;
 
@@ -1386,6 +1396,7 @@ tree_has_local_mods(svn_boolean_t *modified,
                                pool));
 
   *modified = modcheck_baton.found_mod;
+  *all_edits_are_deletes = modcheck_baton.all_edits_are_deletes;
   return SVN_NO_ERROR;
 }
 
@@ -1429,6 +1440,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
                     apr_pool_t *pool)
 {
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
+  svn_boolean_t all_mods_are_deletes = FALSE;
 
   switch (action)
     {
@@ -1462,10 +1474,13 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
 
           /* Use case 2: Deleting a locally-modified item. */
           if (entry->kind == svn_node_file)
-            SVN_ERR(entry_has_local_mods(&modified, parent_adm_access, 
-                                         entry->kind, entry->schedule,
-                                         full_path, pool));
-
+            {
+              SVN_ERR(entry_has_local_mods(&modified, parent_adm_access, 
+                                           entry->kind, entry->schedule,
+                                           full_path, pool));
+              if (entry->schedule == svn_wc_schedule_delete)
+                all_mods_are_deletes = TRUE;
+            }
           else if (entry->kind == svn_node_dir)
             {
               /* We must detect deep modifications in a directory tree,
@@ -1478,13 +1493,19 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
               /* Ensure that the access baton is specific to FULL_PATH,
                * otherwise the crawl will start at the parent. */
               if (strcmp(svn_wc_adm_access_path(adm_access), full_path) == 0)
-                SVN_ERR(tree_has_local_mods(&modified, full_path, adm_access,
+                SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
+                                            full_path, adm_access,
                                             eb->cancel_func, eb->cancel_baton,
                                             pool));
             }
 
           if (modified)
-            reason = svn_wc_conflict_reason_edited;
+            {
+              if (all_mods_are_deletes)
+                reason = svn_wc_conflict_reason_deleted;
+              else
+                reason = svn_wc_conflict_reason_edited;
+            }
 
         }
       break;
@@ -1664,13 +1685,20 @@ already_in_a_tree_conflict(char **victim_path,
   return SVN_NO_ERROR;
 }
 
+/* A walk baton for schedule_existing_item_for_re_add()'s call
+   to svn_wc_walk_entries3(). */
 struct set_copied_baton_t
 {
   struct edit_baton *eb;
+
+  /* The PATH arg to schedule_existing_item_for_re_add(). */
+  const char *added_subtree_root_path;
 };
 
 /* An svn_wc_entry_callbacks2_t found_entry callback function.
- * Set the 'copied' flag on the given entry. */
+ * Set the 'copied' flag on the given ENTRY for every PATH
+ * under ((set_copied_baton_t *)WALK_BATON)->ADDED_SUBTREE_ROOT_PATH
+ * which has a normal schedule. */
 static svn_error_t *
 set_copied_callback(const char *path,
                     const svn_wc_entry_t *entry,
@@ -1678,32 +1706,44 @@ set_copied_callback(const char *path,
                     apr_pool_t *pool)
 {
   struct set_copied_baton_t *b = walk_baton;
-  svn_wc_adm_access_t *entry_adm_access;
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t flags = 0;
 
-  /* Determine which adm dir holds this entry */
-  /* ### This will fail if the operation holds only a shallow lock. */
-  /* Directories are notified twice. Handle them both. */
-  if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+  if (svn_path_compare_paths(path, b->added_subtree_root_path))
     {
-      /* It's the "this dir" entry in its own adm dir. */
-      SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
-                                  path, pool));
-    }
-  else
-    {
-      /* It's an entry in its parent dir */
-      SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
-                                  svn_path_dirname(path, pool), pool));
-    }
+      svn_wc_adm_access_t *entry_adm_access;
+      svn_wc_entry_t tmp_entry;
+      apr_uint64_t flags = 0;
 
-  /* Set the 'copied' flag and write the entry out to disk. */
-  tmp_entry.copied = TRUE;
-  flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-  SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
-                               &tmp_entry, flags, TRUE /* do_sync */, pool));
+      /* Determine which adm dir holds this entry */
+      /* ### This will fail if the operation holds only a shallow lock. */
+      /* Directories are notified twice. Handle them both. */
+      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+        {
+          /* It's the "this dir" entry in its own adm dir. */
+          SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
+                                     path, pool));
+        }
+      else
+        {
+          /* It's an entry in its parent dir */
+          SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
+                                      svn_path_dirname(path, pool), pool));
+        }
 
+      /* We don't want to mark a deleted PATH as copied.  If PATH
+         is added without history we don't want to make it look like
+         it has history.  If PATH is replaced we don't want to make
+         it look like it has history if it doesn't.  Only if PATH is
+         schedule normal do we need to mark it as copied. */
+      if (entry->schedule == svn_wc_schedule_normal)
+        {
+          /* Set the 'copied' flag and write the entry out to disk. */
+          tmp_entry.copied = TRUE;
+          flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+          SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
+                                       &tmp_entry, flags, TRUE /* do_sync */,
+                                       pool));
+        }  
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1752,8 +1792,6 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   /* Update the details of the base rev/url to reflect the incoming
    * delete, while leaving the working version as it is, scheduling it
    * for re-addition unless it was already non-existent. */
-  tmp_entry.revision = *(eb->target_revision);
-  flags |= SVN_WC__ENTRY_MODIFY_REVISION;
   tmp_entry.url = their_url;
   flags |= SVN_WC__ENTRY_MODIFY_URL;
 
@@ -1791,16 +1829,28 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
         = { set_copied_callback, set_copied_handle_error };
       struct set_copied_baton_t set_copied_baton;
       svn_wc_adm_access_t *parent_adm_access;
-
-      parent_adm_access = entry_adm_access;  /* ### no, retrieve it */
+      const svn_wc_entry_t *parent_entry;
 
       /* Set the 'copied' flag recursively, to support the
        * cases where this is a directory. */
       set_copied_baton.eb = eb;
-      SVN_ERR(svn_wc_walk_entries3(path, parent_adm_access,
+      set_copied_baton.added_subtree_root_path = path;
+      SVN_ERR(svn_wc_walk_entries3(path, entry_adm_access,
                                    &set_copied_callbacks, &set_copied_baton,
                                    svn_depth_infinity, FALSE /* show_hidden */,
                                    NULL, NULL, pool));
+
+      /* The update's target is a directory and is not the anchor, then we
+         must also record in the target's parent what we are doing. */
+      flags &= ~SVN_WC__ENTRY_MODIFY_URL;
+      tmp_entry.deleted = TRUE;
+      flags |= SVN_WC__ENTRY_MODIFY_DELETED;
+      SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
+                                  parent_path, pool));
+      SVN_ERR(svn_wc__entry_versioned(&parent_entry, parent_path,
+                                      parent_adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__entry_modify(parent_adm_access, base_name,
+                                   &tmp_entry, flags, TRUE, pool));
 
       /* ### Need to do something more, such as change 'base' into 'revert-base'? */
     }
@@ -1917,7 +1967,7 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
           *log_number = 0;
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
+           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
                                                     full_path, their_url,
                                                     pool));
           return SVN_NO_ERROR;
