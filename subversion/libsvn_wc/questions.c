@@ -112,29 +112,16 @@ svn_wc_check_wc(const char *path,
 svn_error_t *
 svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
 {
-  if (wc_format < 2)
+  if (wc_format < SVN_WC__WC_NG_VERSION)
     {
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
          _("Working copy format of '%s' is too old (%d); "
-           "please check out your working copy again"),
-         svn_path_local_style(path, pool), wc_format);
-    }
-  else if (wc_format > SVN_WC__VERSION)
-    {
-      /* This won't do us much good for the 1.4<->1.5 crossgrade,
-         since 1.4.x clients don't refer to this FAQ entry, but at
-         least post-1.5 crossgrades will be somewhat less painful. */
-      return svn_error_createf
-        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("This client is too old to work with working copy '%s'.  You need\n"
-           "to get a newer Subversion client, or to downgrade this working "
-           "copy.\n"
+           "please run 'svn cleanup' to upgrade your working copy\n"
            "See "
            "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-           "for details."
-           ),
-         svn_path_local_style(path, pool));
+           "for details."),
+         svn_path_local_style(path, pool), wc_format);
     }
 
   return SVN_NO_ERROR;
