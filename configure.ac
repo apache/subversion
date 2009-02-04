@@ -965,7 +965,10 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 # ==== Detection complete - output and run config.status =====================
 
-AC_CONFIG_HEADER(subversion/svn_private_config.h)
+AC_CONFIG_HEADERS(subversion/svn_private_config.h)
+AC_CONFIG_COMMANDS([svn_private_config.h],
+                   [sed -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" -i subversion/svn_private_config.h],
+                   [SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)

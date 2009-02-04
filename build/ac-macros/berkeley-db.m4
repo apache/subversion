@@ -1,14 +1,14 @@
 dnl   SVN_LIB_BERKELEY_DB(major, minor, patch)
 dnl
-dnl   Compare if the DB provided by APR-UTIL is no older than the
-dnl   version given by MAJOR, MINOR, and PATCH.
+dnl   Compare if the Berkeley DB specified by user or provided by APR-UTIL
+dnl   is no older than the version given by MAJOR, MINOR, and PATCH.
 dnl
 dnl   If we find a useable version, set the shell variable
 dnl   `svn_lib_berkeley_db' to `yes'.  Otherwise, set `svn_lib_berkeley_db'
 dnl   to `no'.
 dnl
-dnl   This macro also checks for the `--with-berkeley-db=PATH' flag;
-dnl   if given, the macro will use the PATH specified, and the
+dnl   This macro also checks for the `--with-berkeley-db=ARG' flag;
+dnl   if given, the macro will use the ARG specified, and the
 dnl   configuration script will die if it can't find the library.  If
 dnl   the user gives the `--without-berkeley-db' flag, the entire
 dnl   search is skipped.
@@ -25,42 +25,15 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl        if it doesn't, just do not build the bdb based filesystem.
   dnl    `skip' --- Do not look for Berkeley DB, and do not build the
   dnl        bdb based filesystem.
-  dnl
-  dnl  Finding it is defined as doing a runtime check against the db
-  dnl  that is supplied by APR-UTIL.
-  dnl  Assuming `status' is not `skip', we do a runtime check against the db
-  dnl  that is supplied by APR-UTIL.
-  dnl
-  dnl  Since APR-UTIL uses --with-berkeley-db as well, and we pass it
-  dnl  through when APR-UTIL is in the tree, we also accept a place spec
-  dnl  as argument, and handle that case specifically.
-  dnl
-  dnl  A `place spec' is either:
-  dnl    - a directory prefix P, indicating we should look for headers in
-  dnl      P/include and libraries in P/lib, or
-  dnl    - a string of the form `HEADER:LIB', indicating that we should look
-  dnl      for headers in HEADER and libraries in LIB.
 
   AC_ARG_WITH(berkeley-db, [AS_HELP_STRING(
-                                           [[--with-berkeley-db=[INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
+                                           [[--with-berkeley-db=[HEADER:INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
                           The Subversion Berkeley DB based filesystem library 
                           requires Berkeley DB $db_version or newer.  If you
                           specify `--without-berkeley-db', that library will
-                          not be built.  Otherwise, the configure script builds
-                          that library if and only if APR-UTIL is linked
-                          against a new enough version of Berkeley DB.
-
-                          If and only if you are building APR-UTIL as part of
-                          the Subversion build process, you may help APR-UTIL
-                          to find the correct Berkeley DB installation by
-                          passing a PATH to this option, to cause APR-UTIL to
-                          look for the Berkeley DB header and library in
-                          `PATH/include' and `PATH/lib'.  If PATH is of the
-                          form `HEADER:LIB', then search for header files in
-                          HEADER, and the library in LIB.  If you omit the
-                          `=PATH' part completely, the configure script will
-                          search for Berkeley DB in a number of standard
-                          places.])],
+                          not be built.  If you omit the argument of this option
+                          completely, the configure script will use Berkeley DB
+                          used by APR-UTIL.])],
   [
     if test "$withval" = "no"; then
       status=skip
@@ -89,13 +62,14 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         status=required
       fi
     else
-      if test -n "`echo "$withval" | $EGREP -o ":.*:"`"; then
+      if test -n "`echo "$withval" | $EGREP -o ":.*:.*:"`"; then
+        svn_berkeley_db_header=["`echo "$withval" | sed -e "s/\([^:]*\):.*/\1/"`"]
         SVN_DB_INCLUDES=""
-        for i in [`echo "$withval" | sed -e "s/\([^:]*\):.*/\1/"`]; do
+        for i in [`echo "$withval" | sed -e "s/.*:\([^:]*\):[^:]*:.*/\1/"`]; do
           SVN_DB_INCLUDES="$SVN_DB_INCLUDES -I$i"
         done
         SVN_DB_INCLUDES="${SVN_DB_INCLUDES## }"
-        for l in [`echo "$withval" | sed -e "s/.*:\([^:]*\):.*/\1/"`]; do
+        for l in [`echo "$withval" | sed -e "s/.*:[^:]*:\([^:]*\):.*/\1/"`]; do
           LDFLAGS="$LDFLAGS -L$l"
         done
         SVN_DB_LIBS=""
@@ -158,10 +132,10 @@ dnl   MINOR, and PATCH.  The result of the test is not cached; no
 dnl   messages are printed.
 dnl
 dnl   Set the shell variable `svn_have_berkeley_db' to `yes' if we found
-dnl   an appropriate version via APR-UTIL, or `no' otherwise.
+dnl   an appropriate version, or `no' otherwise.
 dnl
 dnl   This macro uses the Berkeley DB library function `db_version' to
-dnl   find the version.  If the library linked to APR-UTIL doesn't have this
+dnl   find the version.  If the Berkeley DB library doesn't have this
 dnl   function, then this macro assumes it is too old.
 
 dnl NOTE: This is pretty messed up.  It seems that the FreeBSD port of
@@ -192,10 +166,24 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     CPPFLAGS="$SVN_APRUTIL_INCLUDES $SVN_DB_INCLUDES $CPPFLAGS" 
     LIBS="`$apu_config --ldflags` $SVN_DB_LIBS $LIBS"
 
+    if test -n "$svn_berkeley_db_header"; then
+      SVN_DB_HEADER="#include <$svn_berkeley_db_header>"
+      svn_db_header="#include <$svn_berkeley_db_header>"
+    else
+      SVN_DB_HEADER="#define APU_WANT_DB\n#include <apu_want.h>"
+      svn_db_header="#define APU_WANT_DB
+#include <apu_want.h>"
+    fi
+
+    AH_BOTTOM(
+#ifdef SVN_WANT_BDB
+@SVN_DB_HEADER@
+#endif
+)
+
     AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
-#define APU_WANT_DB
-#include <apu_want.h>
+$svn_db_header
 
 int main ()
 {
