@@ -967,7 +967,8 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 AC_CONFIG_HEADERS(subversion/svn_private_config.h)
 AC_CONFIG_COMMANDS([svn_private_config.h],
-                   [sed -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" -i subversion/svn_private_config.h],
+                   [sed -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h > subversion/svn_private_config.h.new
+                    mv -f subversion/svn_private_config.h.new subversion/svn_private_config.h],
                    [SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
 

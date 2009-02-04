@@ -170,13 +170,14 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
       SVN_DB_HEADER="#include <$svn_berkeley_db_header>"
       svn_db_header="#include <$svn_berkeley_db_header>"
     else
-      SVN_DB_HEADER="#define APU_WANT_DB\n#include <apu_want.h>"
+      SVN_DB_HEADER="#include <apu_want.h>"
       svn_db_header="#define APU_WANT_DB
 #include <apu_want.h>"
     fi
 
     AH_BOTTOM(
 #ifdef SVN_WANT_BDB
+#define APU_WANT_DB
 @SVN_DB_HEADER@
 #endif
 )
