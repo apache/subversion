@@ -4309,6 +4309,131 @@ def update_moves_and_modifies_an_edited_file(sbox):
                                         True, other_E_path,
                                         '--accept', 'postpone')
 
+# Issue #3334: a modify-on-deleted tree conflict should leave the node
+# updated to the target revision but still scheduled for deletion.
+def tree_conflict_uc1_update_deleted_tree(sbox):
+  "tree conflicts on update UC1, update deleted tree"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  from svntest.actions import run_and_verify_svn, run_and_verify_resolve
+  from svntest.actions import run_and_verify_update, run_and_verify_commit
+  from svntest.verify import AnyOutput
+
+  """A directory tree 'D1' should end up exactly the same in these two
+  scenarios:
+
+  New scenario:
+  [[[
+    svn checkout -r1             # in which D1 has its original state
+    svn delete D1
+    svn update -r2               # update revs & bases to r2
+    svn resolve --accept=mine    # keep the local, deleted version
+  ]]]
+
+  Existing scenario:
+  [[[
+    svn checkout -r2             # in which D1 is already modified
+    svn delete D1
+  ]]]
+  """
+
+  A = os.path.join(wc_dir, 'A')
+  A_url = sbox.repo_url + '/A'
+
+  def modify_dir(dir):
+    """Make some set of local modifications to an existing tree:
+    A prop change, add a child, delete a child, change a child."""
+    run_and_verify_svn(None, AnyOutput, [],
+                       'propset', 'p', 'v', dir)
+    path = os.path.join(dir, 'new_file')
+    svntest.main.file_write(path, "This is the file 'new_file'.\n")
+    svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
+
+    path = os.path.join(dir, 'B', 'lambda')
+    svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
+
+    path = os.path.join(dir, 'B', 'E', 'alpha')
+    svntest.main.file_append(path, "An extra line.\n")
+
+  # Prep for both scenarios
+  modify_dir(A)
+  run_and_verify_svn(None, AnyOutput, [], 'ci', A, '-m', 'modify_dir')
+  run_and_verify_svn(None, AnyOutput, [], 'up', wc_dir)
+
+  # Existing scenario
+  wc2 = sbox.add_wc_path('wc2')
+  A2 = os.path.join(wc2, 'A')
+  svntest.actions.duplicate_dir(sbox.wc_dir, wc2)
+  run_and_verify_svn(None, AnyOutput, [], 'delete', A2)
+  
+  # New scenario (starts at the revision before the committed mods)
+  run_and_verify_svn(None, AnyOutput, [], 'up', A, '-r1')  
+  run_and_verify_svn(None, AnyOutput, [], 'delete', A)  
+
+  expected_output = None
+  expected_disk = None
+  expected_status = None
+  run_and_verify_update(A, expected_output, expected_disk, expected_status)
+  run_and_verify_resolve([A], '--recursive', '--accept=mine-full', A)
+
+  resolved_status = svntest.wc.State('', {
+      ''            : Item(status='  ', wc_rev=2),
+      'A'           : Item(status='D ', wc_rev=2),
+      'A/B'         : Item(status='D ', wc_rev=2),
+      'A/B/E'       : Item(status='D ', wc_rev=2),
+      'A/B/E/alpha' : Item(status='D ', wc_rev=2),
+      'A/B/E/beta'  : Item(status='D ', wc_rev=2),
+      'A/B/F'       : Item(status='D ', wc_rev=2),
+      'A/mu'        : Item(status='D ', wc_rev=2),
+      'A/C'         : Item(status='D ', wc_rev=2),
+      'A/D'         : Item(status='D ', wc_rev=2),
+      'A/D/gamma'   : Item(status='D ', wc_rev=2),
+      'A/D/G'       : Item(status='D ', wc_rev=2),
+      'A/D/G/pi'    : Item(status='D ', wc_rev=2),
+      'A/D/G/rho'   : Item(status='D ', wc_rev=2),
+      'A/D/G/tau'   : Item(status='D ', wc_rev=2),
+      'A/D/H'       : Item(status='D ', wc_rev=2),
+      'A/D/H/chi'   : Item(status='D ', wc_rev=2),
+      'A/D/H/omega' : Item(status='D ', wc_rev=2),
+      'A/D/H/psi'   : Item(status='D ', wc_rev=2),
+      'A/new_file'  : Item(status='D ', wc_rev=2),
+      'iota'        : Item(status='  ', wc_rev=2),
+      })
+
+  # The status of the new and old scenarios should be identical.
+  expected_status = resolved_status.copy()
+  expected_status.wc_dir = wc2
+  svntest.actions.run_and_verify_status(wc2, expected_status)
+
+  expected_status = resolved_status.copy()
+  expected_status.wc_dir = wc_dir
+  ### HACK! Just to show the skipping behavior that we need to elminate.
+  ### Delete this!
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+      'A/B/lambda'  : Item(status='D ', wc_rev=1),
+      })
+  expected_status.remove('A/new_file')
+  expected_status.tweak('', 'iota', wc_rev=2)
+  ### end hack
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Just for kicks, try to commit.
+  ### The commit fails because A is out of date.
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'           : Item(verb='Adding'),
+      'A/B/E/alpha' : Item(verb='Sending'),
+      'A/B/lambda'  : Item(verb='Deleting'),
+      'A/new_file'  : Item(verb='Adding'),
+      })
+  expected_status = resolved_status.copy()
+  expected_status.tweak(status='  ', wc_rev=3)
+  expected_status.tweak('', 'iota', wc_rev=2)
+  run_and_verify_commit(wc_dir, expected_output, expected_status,
+                        None, wc_dir, '-m', 'commit resolved tree')
+
+
 # Issue #3334: a delete-onto-modified tree conflict should leave the node
 # scheduled for re-addition.
 def tree_conflict_uc2_schedule_re_add(sbox):
@@ -4489,6 +4614,7 @@ test_list = [ None,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               update_moves_and_modifies_an_edited_file,
+              XFail(tree_conflict_uc1_update_deleted_tree),
               tree_conflict_uc2_schedule_re_add,
              ]
 
