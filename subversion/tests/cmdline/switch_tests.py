@@ -2214,10 +2214,7 @@ j = os.path.join
 
 
 def tree_conflicts_on_switch_1_1(sbox):
-  "tree conflicts on switch 1.1"
-
-  # use case 1, as in notes/tree-conflicts/use-cases.txt
-  # 1.1) local tree delete, incoming leaf edit
+  "tree conflicts 1.1: tree del, leaf edit on switch"
 
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
@@ -2242,7 +2239,7 @@ def tree_conflicts_on_switch_1_1(sbox):
 
 
 def tree_conflicts_on_switch_1_2(sbox):
-  "tree conflicts on switch 1.2"
+  "tree conflicts 1.2: tree del, leaf del on switch"
 
   # 1.2) local tree delete, incoming leaf delete
 
@@ -2272,7 +2269,7 @@ def tree_conflicts_on_switch_1_2(sbox):
 
 
 def tree_conflicts_on_switch_2_1(sbox):
-  "tree conflicts on switch 2.1"
+  "tree conflicts 2.1: leaf edit, tree del on switch"
 
   # use case 2, as in notes/tree-conflicts/use-cases.txt
   # 2.1) local leaf edit, incoming tree delete
@@ -2323,7 +2320,7 @@ def tree_conflicts_on_switch_2_1(sbox):
 
 
 def tree_conflicts_on_switch_2_2(sbox):
-  "tree conflicts on switch 2.2"
+  "tree conflicts 2.2: leaf del, tree del on switch"
 
   # 2.2) local leaf delete, incoming tree delete
 
@@ -2376,7 +2373,7 @@ def tree_conflicts_on_switch_2_2(sbox):
 
  
 def tree_conflicts_on_switch_3(sbox):
-  "tree conflicts on switch 3"
+  "tree conflicts 3: tree del, tree del on switch"
 
   # use case 3, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete

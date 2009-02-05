@@ -623,72 +623,6 @@ svn_wc__write_old_wcprops(const char *path,
 
 /*** Checking for and creating administrative subdirs. ***/
 
-/* Set *EXISTS to true iff there's an adm area for PATH, and it matches URL
- * and REVISION.  If there's no adm area, set *EXISTS to false; if
- * there's an adm area but it doesn't match URL and REVISION, then
- * return error and don't touch *EXISTS.
- *
- * ### These semantics are totally bizarre.  One wonders what the
- * ### callers' real needs are.  In the long term, this function
- * ### should probably be unified with svn_wc_check_wc.
- */
-static svn_error_t *
-check_adm_exists(svn_boolean_t *exists,
-                 const char *path,
-                 const char *url,
-                 svn_revnum_t revision,
-                 apr_pool_t *pool)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-
-  /* This is a bit odd.  We have to open an access baton, which relies
-     on this being a working copy, so use an error as a signal this *isn't*
-     a working copy! */
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
-
-  err = svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
-                         NULL, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-    {
-      svn_error_clear(err);
-      *exists = FALSE;
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
-
-  /* When the directory exists and is scheduled for deletion do not
-   * check the revision or the URL.  The revision can be any
-   * arbitrary revision and the URL may differ if the add is
-   * being driven from a merge which will have a different URL. */
-  if (entry->schedule != svn_wc_schedule_delete)
-    {
-      if (entry->revision != revision)
-        return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Revision %ld doesn't match existing revision %ld in '%s'"),
-           revision, entry->revision, path);
-
-      /** ### comparing URLs, should they be canonicalized first? */
-      if (strcmp(entry->url, url) != 0)
-        return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-           url, entry->url, path);
-    }
-
-  *exists = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 make_empty_adm(const char *path, apr_pool_t *pool)
 {
@@ -766,14 +700,6 @@ init_adm(const char *path,
   SVN_ERR(svn_wc__entries_init(path, uuid, url, repos,
                                initial_rev, depth, pool));
 
-  /* We provide this for backwards compatibilty.  Clients that don't understand
-     format version 7 or higher will display a nicer error message if this
-     file exists.
-     ### Consider removing this in svn 1.5 or 1.6. */
-  SVN_ERR(svn_io_write_version_file(svn_wc__adm_child(path, SVN_WC__ADM_FORMAT,
-                                                      pool),
-                                    SVN_WC__VERSION, pool));
-
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
   return svn_wc_adm_close2(adm_access, pool);
@@ -788,11 +714,46 @@ svn_wc_ensure_adm3(const char *path,
                    svn_depth_t depth,
                    apr_pool_t *pool)
 {
-  svn_boolean_t exists_already;
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  int format;
 
-  SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
-  return (exists_already ? SVN_NO_ERROR :
-          init_adm(path, uuid, url, repos, revision, depth, pool));
+  SVN_ERR(svn_wc_check_wc(path, &format, pool));
+
+  /* Early out: we know we're not dealing with an existing wc, so
+     just create one. */
+  if (format == 0)
+    return init_adm(path, uuid, url, repos, revision, depth, pool);
+
+  /* Now, get the existing url and repos for PATH. */
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
+                           NULL, NULL, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+  /* When the directory exists and is scheduled for deletion do not
+   * check the revision or the URL.  The revision can be any
+   * arbitrary revision and the URL may differ if the add is
+   * being driven from a merge which will have a different URL. */
+  if (entry->schedule != svn_wc_schedule_delete)
+    {
+      if (entry->revision != revision)
+        return
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Revision %ld doesn't match existing revision %ld in '%s'"),
+           revision, entry->revision, path);
+
+      /** ### comparing URLs, should they be canonicalized first? */
+      if (strcmp(entry->url, url) != 0)
+        return
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
+           url, entry->url, path);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

@@ -3957,7 +3957,7 @@ DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
 
 def tree_conflicts_on_update_1_1(sbox):
-  "tree conflicts on update 1.1"
+  "tree conflicts 1.1: tree del, leaf edit on update"
 
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
@@ -3985,7 +3985,7 @@ def tree_conflicts_on_update_1_1(sbox):
 
 
 def tree_conflicts_on_update_1_2(sbox):
-  "tree conflicts on update 1.2"
+  "tree conflicts 1.2: tree del, leaf del on update"
 
   # 1.2) local tree delete, incoming leaf delete
 
@@ -4032,7 +4032,7 @@ def tree_conflicts_on_update_1_2(sbox):
 
 
 def tree_conflicts_on_update_2_1(sbox):
-  "tree conflicts on update 2.1"
+  "tree conflicts 2.1: leaf edit, tree del on update"
 
   # use case 2, as in notes/tree-conflicts/use-cases.txt
   # 2.1) local leaf edit, incoming tree delete
@@ -4075,7 +4075,7 @@ def tree_conflicts_on_update_2_1(sbox):
 
 
 def tree_conflicts_on_update_2_2(sbox):
-  "tree conflicts on update 2.2"
+  "tree conflicts 2.2: leaf del, tree del on update"
 
   # 2.2) local leaf delete, incoming tree delete
 
@@ -4140,7 +4140,7 @@ def tree_conflicts_on_update_2_2(sbox):
 #
 # Marked as XFail until issue #3329 is resolved.
 def tree_conflicts_on_update_2_3(sbox):
-  "tree conflicts on update 2.3"
+  "tree conflicts 2.3: skip on 2nd update"
 
   # Test that existing tree conflicts are skipped
 
@@ -4190,7 +4190,7 @@ def tree_conflicts_on_update_2_3(sbox):
 
 
 def tree_conflicts_on_update_3(sbox):
-  "tree conflicts on update 3"
+  "tree conflicts 3: tree del, tree del on update"
 
   # use case 3, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
