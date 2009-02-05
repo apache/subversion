@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,8 +18,8 @@
 #ifndef SVN_LIBSVN_FS_BASE_H
 #define SVN_LIBSVN_FS_BASE_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include <apr_pools.h>
 #include <apr_hash.h>

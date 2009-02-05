@@ -16,6 +16,12 @@ AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 
 AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
 AC_SUBST([abs_builddir], ["`pwd`"])
+if test "$abs_srcdir" = "$abs_builddir"; then
+  canonicalized_srcdir=""
+else
+  canonicalized_srcdir="$srcdir/"
+fi
+AC_SUBST([canonicalized_srcdir])
 
 SWIG_LDFLAGS="$LDFLAGS"
 AC_SUBST([SWIG_LDFLAGS])
@@ -965,7 +971,11 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 # ==== Detection complete - output and run config.status =====================
 
-AC_CONFIG_HEADER(subversion/svn_private_config.h)
+AC_CONFIG_HEADERS(subversion/svn_private_config.h)
+AC_CONFIG_COMMANDS([svn_private_config.h],
+                   [sed -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h > subversion/svn_private_config.h.new
+                    mv -f subversion/svn_private_config.h.new subversion/svn_private_config.h],
+                   [SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)

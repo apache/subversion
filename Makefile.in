@@ -65,13 +65,10 @@ bindir = @bindir@
 includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
+canonicalized_srcdir = @canonicalized_srcdir@
 datadir = @datadir@
 datarootdir = @datarootdir@
 localedir = @localedir@
-
-ifneq ($(abs_builddir), $(abs_srcdir))
-	srcpath = $(srcdir)/
-endif
 
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
@@ -330,7 +327,7 @@ locale-gnu-po-update:
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
             echo "Cleaning $$i ..." ;                                \
-            (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo && \
+            (cd $$i && rm -f *.sql.h *.o *.lo *.la *.la-a *.spo *.mo && \
              rm -rf .libs) ; \
         done
 	rm -f $(CLEAN_FILES)
@@ -348,7 +345,6 @@ fast-distclean: fast-clean
 local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
-              $(top_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.sql.h \
               $(top_srcdir)/configure \
               $(top_srcdir)/build/config.guess \
               $(top_srcdir)/build/config.sub \
@@ -599,6 +595,9 @@ schema-clean:
 .SUFFIXES:
 .SUFFIXES: .c .cpp .lo .o .la-a .la \
            .po .spo .mo .rnc .rng .dtd .xsd
+
+%.sql.h: %.sql
+	$(top_srcdir)/build/transform_sql.sh $< < $< > $(top_srcdir)/$@
 
 .c.o:
 	$(COMPILE) -o $@ -c $<

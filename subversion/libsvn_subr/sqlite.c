@@ -312,7 +312,7 @@ svn_sqlite__column_revnum(svn_sqlite__stmt_t *stmt, int column)
 svn_boolean_t
 svn_sqlite__column_boolean(svn_sqlite__stmt_t *stmt, int column)
 {
-  return (sqlite3_column_int64(stmt->s3stmt, column) == 0);
+  return (sqlite3_column_int64(stmt->s3stmt, column) != 0);
 }
 
 int
