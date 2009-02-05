@@ -1925,24 +1925,27 @@ close_edit(void *edit_baton,
   SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
                         ctx->callback_baton, pool));
 
-  /* DELETE our completed activity */
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->method = "DELETE";
-  handler->path = ctx->activity_url;
-  handler->conn = ctx->conn;
-  handler->session = ctx->session;
+  /* If we're using activities, DELETE our completed activity.  */
+  if (ctx->activity_url)
+    {
+      handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->method = "DELETE";
+      handler->path = ctx->activity_url;
+      handler->conn = ctx->conn;
+      handler->session = ctx->session;
 
-  delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+      delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
 
-  handler->response_handler = svn_ra_serf__handle_status_only;
-  handler->response_baton = delete_ctx;
+      handler->response_handler = svn_ra_serf__handle_status_only;
+      handler->response_baton = delete_ctx;
 
-  svn_ra_serf__request_create(handler);
+      svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
-                                        pool));
+      SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
+                                            pool));
 
-  SVN_ERR_ASSERT(delete_ctx->status == 204);
+      SVN_ERR_ASSERT(delete_ctx->status == 204);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1962,7 +1965,6 @@ abort_edit(void *edit_baton,
   /* DELETE our aborted activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->method = "DELETE";
-  handler->path = ctx->activity_url;
   handler->conn = ctx->session->conns[0];
   handler->session = ctx->session;
 
@@ -1970,6 +1972,11 @@ abort_edit(void *edit_baton,
 
   handler->response_handler = svn_ra_serf__handle_status_only;
   handler->response_baton = delete_ctx;
+
+  if (ctx->txn_url) /* HTTP v2 */
+    handler->path = ctx->txn_url;
+  else
+    handler->path = ctx->activity_url;
 
   svn_ra_serf__request_create(handler);
 
