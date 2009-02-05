@@ -1282,7 +1282,7 @@ entry_has_local_mods(svn_boolean_t *modified,
                      apr_pool_t *pool)
 {
   if (schedule != svn_wc_schedule_normal)
-      *modified = TRUE;
+    *modified = TRUE;
   else
     {
       svn_boolean_t text_modified;
@@ -1707,7 +1707,7 @@ set_copied_callback(const char *path,
 {
   struct set_copied_baton_t *b = walk_baton;
 
-  if (svn_path_compare_paths(path, b->added_subtree_root_path))
+  if (svn_path_compare_paths(path, b->added_subtree_root_path) != 0)
     {
       svn_wc_adm_access_t *entry_adm_access;
       svn_wc_entry_t tmp_entry;
@@ -1715,7 +1715,8 @@ set_copied_callback(const char *path,
 
       /* Determine which adm dir holds this entry */
       /* ### This will fail if the operation holds only a shallow lock. */
-      /* Directories are notified twice. Handle them both. */
+      /* Directories have two 'copied' flags, one in "this dir", and
+       * one in its entry in its parent dir. Handle both. */
       if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         {
           /* It's the "this dir" entry in its own adm dir. */
@@ -1967,7 +1968,7 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
           *log_number = 0;
 
-           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
                                                     full_path, their_url,
                                                     pool));
           return SVN_NO_ERROR;
