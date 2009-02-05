@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_sqlite.h"
 
 
 /* ### todo: make this compare repository too?  Or do so in parallel
@@ -51,19 +52,32 @@ svn_wc_check_wc(const char *path,
                 apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES,
-                                                   pool);
+  const char *format_file_path;
 
-  /* First try to read the format number from the entries file. */
+  /* First, try reading the wc.db file.  Instead of stat'ing the file to
+     see if it exists, and then opening it, we just try opening it.  If we
+     get any kind of an error, wrap that eith an ENOENT error and return. */
+  err = svn_sqlite__get_schema_version(wc_format,
+                                       svn_wc__adm_child(path, "wc.db", pool),
+                                       pool);
+  if (err && err->apr_err != SVN_ERR_SQLITE_ERROR)
+    return svn_error_createf(APR_ENOENT, err, _("'%s' does not exist"),
+                             svn_path_local_style(path, pool));
+  else if (!err)
+    return SVN_NO_ERROR;
+
+  /* Hmm, that didn't work.  Now try reading the format number from the
+     entries file. */
+  svn_error_clear(err);
+  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, pool);
   err = svn_io_read_version_file(wc_format, format_file_path, pool);
 
-  /* If that didn't work and the first line of the entries file contains
-     something other than a number, then it is probably in XML format. */
+  /* Wow, another error; this must be a really old working copy!  Fall back
+     to reading the format file. */
   if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
     {
       svn_error_clear(err);
-      /* Fall back on reading the format file instead.
-         Note that the format file might not exist in newer working copies
+      /* Note that the format file might not exist in newer working copies
          (format 7 and higher), but in that case, the entries file should
          have contained the format number. */
       format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, pool);
