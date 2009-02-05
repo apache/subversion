@@ -700,14 +700,6 @@ init_adm(const char *path,
   SVN_ERR(svn_wc__entries_init(path, uuid, url, repos,
                                initial_rev, depth, pool));
 
-  /* We provide this for backwards compatibilty.  Clients that don't understand
-     format version 7 or higher will display a nicer error message if this
-     file exists.
-     ### Consider removing this in svn 1.5 or 1.6. */
-  SVN_ERR(svn_io_write_version_file(svn_wc__adm_child(path, SVN_WC__ADM_FORMAT,
-                                                      pool),
-                                    SVN_WC__VERSION, pool));
-
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
   return svn_wc_adm_close2(adm_access, pool);
