@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#define SVN_WANT_BDB
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
