@@ -13515,7 +13515,7 @@ alpha_beta_gamma = svntest.wc.State('', {
 
 
 def tree_conflicts_on_merge_local_ci_4_1(sbox):
-  "tree conflicts on merge, local commit 4.1"
+  "tree conflicts 4.1: tree del, leaf edit"
 
   # use case 4, as in notes/tree-conflicts/use-cases.txt
   # 4.1) local tree delete, incoming leaf edit
@@ -13554,7 +13554,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
 
 
 def tree_conflicts_on_merge_local_ci_4_2(sbox):
-  "tree conflicts on merge, local commit 4.2"
+  "tree conflicts 4.2: tree del, leaf del"
 
   # 4.2) local tree delete, incoming leaf delete
 
@@ -13594,7 +13594,7 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
 
 
 def tree_conflicts_on_merge_local_ci_5_1(sbox):
-  "tree conflicts on merge, local commit 5.1"
+  "tree conflicts 5.1: leaf edit, tree del"
 
   # use case 5, as in notes/tree-conflicts/use-cases.txt
   # 5.1) local leaf edit, incoming tree delete
@@ -13646,7 +13646,7 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
 
 
 def tree_conflicts_on_merge_local_ci_5_2(sbox):
-  "tree conflicts on merge, local commit 5.2"
+  "tree conflicts 5.2: leaf del, tree del"
 
   # 5.2) local leaf del, incoming tree delete
 
@@ -13693,7 +13693,7 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
 
 
 def tree_conflicts_on_merge_local_ci_6(sbox):
-  "tree conflicts on merge, local commit 6"
+  "tree conflicts 6: tree del, tree del"
 
   # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
@@ -13734,7 +13734,7 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
-  "tree conflicts on merge, NO local commit 4.1"
+  "tree conflicts 4.1: tree del (no ci), leaf edit"
 
   # use case 4, as in notes/tree-conflicts/use-cases.txt
   # 4.1) local tree delete, incoming leaf edit
@@ -13788,7 +13788,7 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
 
 
 def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
-  "tree conflicts on merge, NO local commit 4.2"
+  "tree conflicts 4.2: tree del (no ci), leaf del"
 
   # 4.2) local tree delete, incoming leaf delete
 
@@ -13843,7 +13843,7 @@ def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
 
 
 def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
-  "tree conflicts on merge, NO local commit 5.1"
+  "tree conflicts 5.1: leaf edit (no ci), tree del"
 
 
   # use case 5, as in notes/tree-conflicts/use-cases.txt
@@ -13895,7 +13895,7 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
 
 
 def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
-  "tree conflicts on merge, NO local commit 5.2"
+  "tree conflicts 5.2: leaf del (no ci), tree del"
 
   # 5.2) local leaf del, incoming tree delete
 
@@ -13948,7 +13948,7 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
 
 
 def tree_conflicts_on_merge_no_local_ci_6(sbox):
-  "tree conflicts on merge, NO local commit 6"
+  "tree conflicts 6: tree del (no ci), tree del"
 
   # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
