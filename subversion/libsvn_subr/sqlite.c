@@ -417,6 +417,19 @@ upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_schema(int *version, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__prepare(&stmt, db, "PRAGMA user_version;", scratch_pool));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+
+  *version = svn_sqlite__column_int(stmt, 0);
+
+  return svn_sqlite__finalize(stmt);
+}
+
 
 /* Check the schema format of the database, upgrading it if necessary.
    Return SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA if the schema format is too new,
@@ -426,16 +439,10 @@ static svn_error_t *
 check_format(svn_sqlite__db_t *db, int latest_schema,
              const char * const *upgrade_sql, apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
   int current_schema;
 
-  SVN_ERR(svn_sqlite__prepare(&stmt, db, "PRAGMA user_version;", scratch_pool));
-  SVN_ERR(svn_sqlite__step_row(stmt));
-
   /* Validate that the schema exists as expected. */
-  current_schema = svn_sqlite__column_int(stmt, 0);
-
-  SVN_ERR(svn_sqlite__finalize(stmt));
+  SVN_ERR(get_schema(&current_schema, db, scratch_pool));
 
   if (current_schema == latest_schema)
     return SVN_NO_ERROR;
@@ -478,6 +485,20 @@ init_sqlite(void)
 
   /* NOTE: if more work is performed here, then consider using
      svn_atomic__init_once() for the call to this function. */
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__get_schema_version(int *version,
+                               const char *path,
+                               apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t db;
+
+  SQLITE_ERR(sqlite3_open(path, &db.db3), &db);
+  SVN_ERR(get_schema(version, &db, scratch_pool));
+  SQLITE_ERR(sqlite3_close(db.db3), &db);
 
   return SVN_NO_ERROR;
 }
