@@ -327,10 +327,10 @@ locale-gnu-po-update:
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
             echo "Cleaning $$i ..." ;                                \
-            (cd $$i && rm -f *.sql.h *.o *.lo *.la *.la-a *.spo *.mo && \
+            (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo && \
              rm -rf .libs) ; \
         done
-	rm -f $(CLEAN_FILES)
+	rm -f $(CLEAN_FILES) $(abs_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.h
 	find $(abs_srcdir) -name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
@@ -594,9 +594,9 @@ schema-clean:
 #
 .SUFFIXES:
 .SUFFIXES: .c .cpp .lo .o .la-a .la \
-           .po .spo .mo .rnc .rng .dtd .xsd
+           .po .spo .mo .rnc .rng .dtd .xsd .sql .h
 
-%.sql.h: %.sql
+.sql.h:
 	$(top_srcdir)/build/transform_sql.sh $< < $< > $(top_srcdir)/$@
 
 .c.o:
