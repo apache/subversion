@@ -450,7 +450,7 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
   if (current_schema == latest_schema)
     return SVN_NO_ERROR;
 
-  if (current_schema < latest_schema)
+  if (current_schema < latest_schema && upgrade_sql != NULL)
     return upgrade_format(db, current_schema, latest_schema, upgrade_sql,
                           scratch_pool);
 
