@@ -376,6 +376,13 @@ dav_svn__create_txn(const dav_svn_repos *repos,
                     const char **ptxn_name,
                     apr_pool_t *pool);
 
+/* If it exists, abort the transaction named TXN_NAME from REPOS.  Use
+   POOL for allocations. */
+dav_error *
+dav_svn__abort_txn(const dav_svn_repos *repos, 
+                   const char *txn_name,
+                   apr_pool_t *pool);
+
 /* Functions for looking up, storing, and deleting ACTIVITY->TXN mappings.  */
 const char *
 dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);

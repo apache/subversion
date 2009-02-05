@@ -3551,10 +3551,13 @@ remove_resource(dav_resource *resource, dav_response **response)
   dav_error *err;
   apr_hash_t *locks;
 
-  /* Only activities, and working or regular resources can be deleted... */
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING
-      && resource->type != DAV_RESOURCE_TYPE_REGULAR
-      && resource->type != DAV_RESOURCE_TYPE_ACTIVITY)
+  /* Only activities, working resources, regular resources, and
+     certain private resources can be deleted... */
+  if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
+         || resource->type == DAV_RESOURCE_TYPE_REGULAR
+         || resource->type == DAV_RESOURCE_TYPE_ACTIVITY
+         || (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+             && resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)))
     return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
                            "DELETE called on invalid resource type.");
 
@@ -3570,6 +3573,17 @@ remove_resource(dav_resource *resource, dav_response **response)
     {
       return dav_svn__delete_activity(resource->info->repos,
                                       resource->info->root.activity_id);
+    }
+
+  /* Handle deletions of transaction collections (early exit) */    
+  if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+      && resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
+    {
+      /* We'll assume that no activity was created to map to this
+         transaction.  */
+      return dav_svn__abort_txn(resource->info->repos,
+                                resource->info->root.txn_name,
+                                resource->pool);
     }
 
   /* ### note that the parent was checked out at some point, and this
