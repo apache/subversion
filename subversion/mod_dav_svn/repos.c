@@ -1015,6 +1015,7 @@ prep_private(dav_resource_combined *comb)
           if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
             {
               svn_error_clear(serr);
+              comb->res.exists = FALSE;
               return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                    "Named transaction doesn't exist.");
             }
@@ -1022,6 +1023,7 @@ prep_private(dav_resource_combined *comb)
                                       "Could not open specified transaction.",
                                       pool);
         }
+      comb->res.exists = TRUE;
     }
 
   return NULL;
