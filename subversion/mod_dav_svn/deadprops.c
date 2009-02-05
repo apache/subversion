@@ -150,34 +150,52 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
                              " namespaces.");
     }
 
-  /* Working Baseline or Working (Version) Resource */
-  if (db->resource->baselined)
-    if (db->resource->working)
-      serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
-                                          propname, value, db->resource->pool);
-    else
-      {
-        /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
-           not a working resource!  But this is how we currently
-           (hackily) allow the svn client to change unversioned rev
-           props.  See issue #916. */
-        serr = svn_repos_fs_change_rev_prop3
-          (db->resource->info->repos->repos,
-           db->resource->info->root.rev,
-           db->resource->info->repos->username,
-           propname, value, TRUE, TRUE,
-           db->authz_read_func,
-           db->authz_read_baton,
-           db->resource->pool);
+  /* HTTP v2: revprop change on an uncommitted txn happens on a
+     private 'txn' resource. */
+  if (db->resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
+    serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
+                                        propname, value,
+                                        db->resource->pool);
+    
+  else if (db->resource->baselined)
+    {
+      if (db->resource->working)
+        /* HTTP v1:  revprop change on an uncommitted txn happens on
+           a working baseline ('wbl') resource. */
+        serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
+                                            propname, value,
+                                            db->resource->pool);
+      else
+        {
+          /* Revprop change on a committed revision:
+             
+             HTTP v1:  happens on a *non*-working baselined resource
+             ('bln'), which technically violates DeltaV (### see issue #916).
 
-        /* Tell the logging subsystem about the revprop change. */
-        dav_svn__operational_log(db->resource->info,
-                                 svn_log__change_rev_prop(
-                                              db->resource->info->root.rev,
-                                              propname,
-                                              db->resource->pool));
-      }
+             HTTP v2:  happens on a standard revstub ('rev') resource,
+             which also happens to be baselined and non-working.
+           */
+          serr = svn_repos_fs_change_rev_prop3
+            (db->resource->info->repos->repos,
+             db->resource->info->root.rev,
+             db->resource->info->repos->username,
+             propname, value, TRUE, TRUE,
+             db->authz_read_func,
+             db->authz_read_baton,
+             db->resource->pool);
+          
+          /* Tell the logging subsystem about the revprop change. */
+          dav_svn__operational_log(db->resource->info,
+                                   svn_log__change_rev_prop(
+                                      db->resource->info->root.rev,
+                                      propname,
+                                      db->resource->pool));
+        }
+    }
   else
+    /* The resource isn't baselined, nor is it private.  So it must be
+       a regular versioned propchange on a file or directory.
+       (Either 'wrk' in HTTP v1 or 'txr' in HTTP v2.) */
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
                                          get_repos_path(db->resource->info),
                                          propname, value, db->resource->pool);
