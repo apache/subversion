@@ -67,17 +67,17 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
 
-/* Return in *VERSION the version of the schema for DB.  Use SCRATCH_POOL
-   for temporary allocations. */
+/* Return in *VERSION the version of the schema for the database as PATH.
+   Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_sqlite__get_schema_version(int *version,
-                               svn_sqlite__db_t *db,
+                               const char *path,
                                apr_pool_t *scratch_pool);
 
 /* Open a connection in *DB to the database at PATH. Validate the schema,
    creating/upgrading to LATEST_SCHEMA if needed using the instructions
-   in UPGRADE_SQL, if UPDATE_SQL is not NULL. The resulting DB is allocated
-   in RESULT_POOL, and any temporary allocations are made in SCRATCH_POOL.
+   in UPGRADE_SQL. The resulting DB is allocated in RESULT_POOL, and any
+   temporary allocations are made in SCRATCH_POOL.
    
    STATEMENTS is an array of strings which may eventually be executed, the
    last element of which should be NULL.  These strings are not duplicated
