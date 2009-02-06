@@ -461,6 +461,13 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
 static svn_error_t *
 init_sqlite(void)
 {
+  static svn_boolean_t sqlite_initialized = FALSE;
+
+  /* There is a potential initialization race condition here, but
+     it currently isn't worth guarding against (e.g. with a mutex). */
+  if (sqlite_initialized)
+    return SVN_NO_ERROR;
+
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
     return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
                              _("SQLite compiled for %s, but running with %s"),
@@ -485,6 +492,7 @@ init_sqlite(void)
 
   /* NOTE: if more work is performed here, then consider using
      svn_atomic__init_once() for the call to this function. */
+  sqlite_initialized = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -496,6 +504,7 @@ svn_sqlite__get_schema_version(int *version,
 {
   svn_sqlite__db_t db;
 
+  SVN_ERR(init_sqlite());
   SQLITE_ERR(sqlite3_open(path, &db.db3), &db);
   SVN_ERR(get_schema(version, &db, scratch_pool));
   SQLITE_ERR(sqlite3_close(db.db3), &db);
@@ -509,15 +518,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  static svn_boolean_t sqlite_initialized = FALSE;
-
-  if (! sqlite_initialized)
-    {
-      /* There is a potential initialization race condition here, but
-         it currently isn't worth guarding against (e.g. with a mutex). */
-      SVN_ERR(init_sqlite());
-      sqlite_initialized = TRUE;
-    }
+  SVN_ERR(init_sqlite());
 
   /* ### use a pool cleanup to close this? (instead of __close()) */
   *db = apr_palloc(result_pool, sizeof(**db));
