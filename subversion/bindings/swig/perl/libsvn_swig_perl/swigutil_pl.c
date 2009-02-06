@@ -16,6 +16,10 @@
  * ====================================================================
  */
 
+#include <apr.h>
+#include <apr_general.h>
+#include <apr_portable.h>
+
 #include <EXTERN.h>
 #include <perl.h>
 #include <XSUB.h>
@@ -24,10 +28,6 @@
 #ifdef WIN32
 #include <io.h>
 #endif
-
-#include <apr.h>
-#include <apr_general.h>
-#include <apr_portable.h>
 
 #include "svn_pools.h"
 #include "svn_opt.h"
