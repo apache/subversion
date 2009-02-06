@@ -87,7 +87,7 @@ Candidate changes for 1.5.6:
      with overlapping or unordered rangelists.  Subversion <= 1.5.5 will
      error out if it tries to parse this mergeinfo, see issue #3302.
     Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r35566
    Improve performance of log operation to < 1.5 servers by only creating
