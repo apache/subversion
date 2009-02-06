@@ -2248,16 +2248,32 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del.copy()
-  expected_status.tweak('DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
 
-  # Expect the incoming deletes of F/alpha and D/D1 and the local deletes
-  # of F/alpha and D/D1 to mean that both paths are *really* gone, not
-  # simply scheduled for deletion.
+  # Expect the incoming leaf deletes to actually occur.  Even though they
+  # are within (or in the case of F/alpha and D/D1 are the same as) the
+  # trees locally scheduled for deletion we must still delete them and
+  # update the scheduled for deletion items to the target rev.  Otherwise
+  # once the conflicts are resolved we still have a mixed-rev WC we can't
+  # commit without updating...which, you guessed it, raises tree conflicts
+  # again, repeat ad infinitum - see issue #3334.
+  #
+  # Currently this test is set as XFail as the incoming deletes are *not*
+  # happening, leaving the WC on the merry-go-round.
+  #
+  # Update to the target rev.
+  expected_status.tweak(wc_rev=3)
   expected_status.tweak('F/alpha',
                         'D/D1',
                         status='! ', wc_rev=None)
-  expected_disk.remove('D/D1')
+  # Remove the incoming deletes from status and disk.
+  expected_status.remove('DD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2/gamma',
+                         'DF/D1/beta')
+  ### Why does the deep trees state not include files? 
+  expected_disk.remove('D/D1',
+                       'DD/D1/D2',
+                       'DDD/D1/D2/D3')
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
@@ -2457,7 +2473,7 @@ test_list = [ None,
               switch_to_root,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
-              tree_conflicts_on_switch_1_2,
+              XFail(tree_conflicts_on_switch_1_2),
               tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
