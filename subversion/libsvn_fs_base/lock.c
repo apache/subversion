@@ -19,6 +19,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#define SVN_WANT_BDB
 #include "svn_private_config.h"
 
 #include <apr_uuid.h>
