@@ -547,7 +547,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                  same inheritability. */              
               if (lastrange->inheritable == range->inheritable)
                 {
-                  lastrange->end = range->end;
+                  lastrange->end = MAX(range->end, lastrange->end);
                   if (i + 1 < revlist->nelts)
                     memmove(revlist->elts + (revlist->elt_size * i),
                             revlist->elts + (revlist->elt_size * (i + 1)),
