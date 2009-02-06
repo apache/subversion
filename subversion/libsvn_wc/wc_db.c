@@ -23,10 +23,14 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_wc.h"
 
+#include "wc.h"
 #include "wc_db.h"
+#include "adm_files.h"
 
 #include "svn_private_config.h"
+#include "private/svn_sqlite.h"
 
 
 struct svn_wc__db_t {
@@ -210,6 +214,61 @@ svn_wc__db_open_many(svn_wc__db_t **db,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_version(int *version,
+                   const char *path,
+                   apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  const char *format_file_path;
+
+  /* First, try reading the wc.db file.  Instead of stat'ing the file to
+     see if it exists, and then opening it, we just try opening it.  If we
+     get any kind of an error, wrap that eith an ENOENT error and return. */
+  err = svn_sqlite__get_schema_version(version,
+                                       svn_wc__adm_child(path, "wc.db",
+                                                         scratch_pool),
+                                       scratch_pool);
+  if (err && err->apr_err != SVN_ERR_SQLITE_ERROR)
+    return err;
+  else if (!err)
+    return SVN_NO_ERROR;
+
+  /* Hmm, that didn't work.  Now try reading the format number from the
+     entries file. */
+  svn_error_clear(err);
+  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, scratch_pool);
+  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
+  if (err && err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT)
+    return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
+                             svn_path_local_style(path, scratch_pool));
+  else if (!err)
+    return SVN_NO_ERROR;
+
+  /* Wow, another error; this must be a really old working copy!  Fall back
+     to reading the format file. */
+  svn_error_clear(err);
+  /* Note that the format file might not exist in newer working copies
+     (format 7 and higher), but in that case, the entries file should
+     have contained the format number. */
+  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, scratch_pool);
+  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
+
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
+                             svn_path_local_style(path, scratch_pool));
+  else if (!err)
+    return SVN_NO_ERROR;
+
+  /* If we've gotten this far, all of the above checks have failed, so just
+     bail. */
+  return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                           _("'%s' is not a working copy"),
+                           svn_path_local_style(path, scratch_pool));
 }
 
 

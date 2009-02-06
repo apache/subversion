@@ -38,10 +38,10 @@
 #include "entries.h"
 #include "props.h"
 #include "translate.h"
+#include "wc_db.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_sqlite.h"
 
 
 /* ### todo: make this compare repository too?  Or do so in parallel
@@ -52,44 +52,14 @@ svn_wc_check_wc(const char *path,
                 apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *format_file_path;
+  svn_node_kind_t kind;
 
-  /* First, try reading the wc.db file.  Instead of stat'ing the file to
-     see if it exists, and then opening it, we just try opening it.  If we
-     get any kind of an error, wrap that eith an ENOENT error and return. */
-  err = svn_sqlite__get_schema_version(wc_format,
-                                       svn_wc__adm_child(path, "wc.db", pool),
-                                       pool);
-  if (err && err->apr_err != SVN_ERR_SQLITE_ERROR)
-    return svn_error_createf(APR_ENOENT, err, _("'%s' does not exist"),
-                             svn_path_local_style(path, pool));
-  else if (!err)
-    return SVN_NO_ERROR;
+  err = svn_wc__db_version(wc_format, path, pool);
+  if (err && err->apr_err != SVN_ERR_WC_MISSING)
+    return err;
 
-  /* Hmm, that didn't work.  Now try reading the format number from the
-     entries file. */
-  svn_error_clear(err);
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, pool);
-  err = svn_io_read_version_file(wc_format, format_file_path, pool);
-
-  /* Wow, another error; this must be a really old working copy!  Fall back
-     to reading the format file. */
-  if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
+  if (err)
     {
-      svn_error_clear(err);
-      /* Note that the format file might not exist in newer working copies
-         (format 7 and higher), but in that case, the entries file should
-         have contained the format number. */
-      format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, pool);
-
-      err = svn_io_read_version_file(wc_format, format_file_path, pool);
-    }
-
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
-    {
-      svn_node_kind_t kind;
-
       svn_error_clear(err);
 
       /* Check path itself exists. */
@@ -102,21 +72,18 @@ svn_wc_check_wc(const char *path,
             svn_path_local_style(path, pool));
         }
 
-      /* If the format file does not exist or path not directory, then for
+      /* If the metadata does not exist or path not directory, then for
          our purposes this is not a working copy, so return 0. */
       *wc_format = 0;
+      return SVN_NO_ERROR;
     }
-  else if (err)
-    return err;
   else
     {
-      /* If we managed to read the format file we assume that we
+      /* If we managed to read the format we assume that we
           are dealing with a real wc so we can return a nice
           error. */
-      SVN_ERR(svn_wc__check_format(*wc_format, path, pool));
+      return svn_wc__check_format(*wc_format, path, pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
