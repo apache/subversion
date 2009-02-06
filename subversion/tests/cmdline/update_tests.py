@@ -4008,15 +4008,14 @@ def tree_conflicts_on_update_1_2(sbox):
   #
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
-  #
   expected_status.tweak('F/alpha',
                         'D/D1',
-                        'DD/D1/D2',
-                        'DDD/D1/D2/D3',
-                        'DDF/D1/D2/gamma',
-                        'DF/D1/beta',
                         status='! ', wc_rev=None)
-  # Remove the incoming deletes from disk
+  # Remove the incoming deletes from status and disk.
+  expected_status.remove('DD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2/gamma',
+                         'DF/D1/beta')
   ### Why does the deep trees state not include files? 
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
