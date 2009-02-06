@@ -1841,11 +1841,9 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                    svn_depth_infinity, FALSE /* show_hidden */,
                                    NULL, NULL, pool));
 
-      /* The update's target is a directory and is not the anchor, then we
-         must also record in the target's parent what we are doing. */
+      /* If PATH is a directory then we must also record in PARENT_PATH's
+         entry that we are re-adding PATH. */
       flags &= ~SVN_WC__ENTRY_MODIFY_URL;
-      tmp_entry.deleted = TRUE;
-      flags |= SVN_WC__ENTRY_MODIFY_DELETED;
       SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                                   parent_path, pool));
       SVN_ERR(svn_wc__entry_versioned(&parent_entry, parent_path,
