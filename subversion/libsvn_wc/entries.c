@@ -41,7 +41,7 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 
-#include "wc-metadata.sql.h"
+#include "wc-metadata.h"
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
