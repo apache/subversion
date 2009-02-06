@@ -107,6 +107,13 @@ svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
                                              const char *date,
                                              const char *msg,
                                              apr_pool_t *pool);
+
+/* thunked diff summarize callback.  */
+svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
+                     const svn_client_diff_summarize_t *diff,
+                     void *baton,
+                     apr_pool_t *pool);
+
 /* thunked commit editor callback. */
 svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 					       const char *date,
