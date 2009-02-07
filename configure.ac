@@ -75,7 +75,7 @@ SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 dnl Search for pkg-config
-AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
@@ -340,21 +340,21 @@ CPPFLAGS="$old_CPPFLAGS"
 
 dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------
 
-if test "$HAVE_PKG_CONFIG" = "yes"; then
+if test -n "$PKG_CONFIG"; then
   AC_MSG_CHECKING([for D-Bus .pc file])
-  if pkg-config --exists dbus-1; then
+  if $PKG_CONFIG --exists dbus-1; then
     AC_MSG_RESULT([yes])
     old_CPPFLAGS="$CPPFLAGS"
     old_LIBS="$LIBS"
-    DBUS_CPPFLAGS="`pkg-config --cflags dbus-1`"
+    DBUS_CPPFLAGS="`$PKG_CONFIG --cflags dbus-1`"
     AC_MSG_CHECKING([D-Bus version])
-    DBUS_VERSION="`pkg-config --modversion dbus-1`"
+    DBUS_VERSION="`$PKG_CONFIG --modversion dbus-1`"
     AC_MSG_RESULT([$DBUS_VERSION])
     # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
     if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
       DBUS_CPPFLAGS="$DBUS_CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
     fi
-    DBUS_LIBS="`pkg-config --libs dbus-1`"
+    DBUS_LIBS="`$PKG_CONFIG --libs dbus-1`"
     CPPFLAGS="$CPPFLAGS $DBUS_CPPFLAGS"
     LIBS="$LIBS $DBUS_LIBS"
     AC_MSG_CHECKING([for D-Bus])
@@ -387,13 +387,13 @@ if test "$with_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
   if test "$enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
-      if test "$HAVE_PKG_CONFIG" = "yes"; then
+      if test -n "$PKG_CONFIG"; then
         if test "$HAVE_DBUS" = "yes"; then
           AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
-          if pkg-config --exists glib-2.0 gnome-keyring-1; then
+          if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
             AC_MSG_RESULT([yes])
             old_CPPFLAGS="$CPPFLAGS"
-            SVN_GNOME_KEYRING_INCLUDES="$DBUS_CPPFLAGS `pkg-config --cflags glib-2.0 gnome-keyring-1`"
+            SVN_GNOME_KEYRING_INCLUDES="$DBUS_CPPFLAGS `$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
             CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
             AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
             AC_MSG_CHECKING([for GNOME Keyring])
@@ -402,7 +402,7 @@ if test "$with_gnome_keyring" != "no"; then
               AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
                         [Is GNOME Keyring support enabled?])
               CPPFLAGS="$old_CPPFLAGS"
-              SVN_GNOME_KEYRING_LIBS="$DBUS_LIBS `pkg-config --libs glib-2.0 gnome-keyring-1`"
+              SVN_GNOME_KEYRING_LIBS="$DBUS_LIBS `$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
             else
               AC_MSG_RESULT([no])
               AC_MSG_ERROR([cannot find GNOME Keyring])
