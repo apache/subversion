@@ -691,3 +691,15 @@ svn_auth_get_ssl_client_cert_pw_file_provider
 {
   svn_auth_get_ssl_client_cert_pw_file_provider2(provider, NULL, NULL, pool);
 }
+
+/*** From path.c ***/
+const char *
+svn_path_url_add_component(const char *url,
+                           const char *component,
+                           apr_pool_t *pool)
+{
+  /* URL can have trailing '/' */
+  url = svn_path_canonicalize(url, pool);
+
+  return svn_path_url_add_component2(url, component, pool);
+}

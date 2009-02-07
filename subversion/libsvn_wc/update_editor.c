@@ -516,8 +516,8 @@ make_dir_baton(struct dir_baton **d_p,
           if (*eb->target && (! pb->parent_baton))
             d->new_URL = apr_pstrdup(pool, eb->switch_url);
           else
-            d->new_URL = svn_path_url_add_component(pb->new_URL,
-                                                    d->name, pool);
+            d->new_URL = svn_path_url_add_component2(pb->new_URL,
+                                                     d->name, pool);
         }
     }
   else  /* must be an update */
@@ -527,7 +527,7 @@ make_dir_baton(struct dir_baton **d_p,
          telescope based on its parent's URL. */
       d->new_URL = get_entry_url(eb->adm_access, d->path, NULL, pool);
       if ((! d->new_URL) && pb)
-        d->new_URL = svn_path_url_add_component(pb->new_URL, d->name, pool);
+        d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name, pool);
     }
 
   /* the bump information lives in the edit pool */
@@ -881,7 +881,7 @@ make_file_baton(struct file_baton **f_p,
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
     {
-      f->new_URL = svn_path_url_add_component(pb->new_URL, f->name, pool);
+      f->new_URL = svn_path_url_add_component2(pb->new_URL, f->name, pool);
     }
   else
     {
@@ -1901,8 +1901,8 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   const char *path_basename = svn_path_basename(path, pool);
-  const char *their_url = svn_path_url_add_component(pb->new_URL,
-                                                     path_basename, pool);
+  const char *their_url = svn_path_url_add_component2(pb->new_URL,
+                                                      path_basename, pool);
 
   SVN_ERR(check_path_under_root(pb->path, path_basename, pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, their_url,
@@ -2190,8 +2190,8 @@ add_directory(const char *path,
 
           if (eb->switch_url)
             {
-              tmp_entry.url = svn_path_url_add_component(eb->switch_url,
-                                                         db->name, pool);
+              tmp_entry.url = svn_path_url_add_component2(eb->switch_url,
+                                                          db->name, pool);
               modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
             }
 
@@ -4412,7 +4412,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(switch_url);
+  SVN_ERR_ASSERT(switch_url && svn_path_is_canonical(switch_url, pool));
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, switch_url,
@@ -4690,7 +4690,7 @@ check_wc_root(svn_boolean_t *wc_root,
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
   if (entry && entry->url
-      && (strcmp(svn_path_url_add_component(p_entry->url, base_name, pool),
+      && (strcmp(svn_path_url_add_component2(p_entry->url, base_name, pool),
                  entry->url) != 0))
     return SVN_NO_ERROR;
 
@@ -4886,7 +4886,7 @@ svn_wc_add_repos_file3(const char *dst_path,
   {
     SVN_ERR(svn_wc__entry_versioned(&ent, dir_name, adm_access, FALSE, pool));
 
-    new_URL = svn_path_url_add_component(ent->url, base_name, pool);
+    new_URL = svn_path_url_add_component2(ent->url, base_name, pool);
 
     if (copyfrom_url && ent->repos &&
         ! svn_path_is_ancestor(ent->repos, copyfrom_url))

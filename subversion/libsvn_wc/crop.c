@@ -253,7 +253,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
           switched 
             = parent_entry && strcmp(entry->url, 
-                                     svn_path_url_add_component
+                                     svn_path_url_add_component2
                                      (parent_entry->url, bname, pool));
 
           /* The server simply do not accept excluded link_path and thus

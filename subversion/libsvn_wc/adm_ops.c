@@ -142,7 +142,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
 
           /* Derive the new URL for the current (child) entry */
           if (base_url)
-            child_url = svn_path_url_add_component(base_url, name, subpool);
+            child_url = svn_path_url_add_component2(base_url, name, subpool);
 
           child_path = svn_path_join(svn_wc_adm_access_path(dirpath), name,
                                      subpool);
@@ -1535,7 +1535,7 @@ svn_wc_add3(const char *path,
                                pool));
 
           /* Derive the parent path for our new addition here. */
-          new_url = svn_path_url_add_component(p_entry->url, base_name, pool);
+          new_url = svn_path_url_add_component2(p_entry->url, base_name, pool);
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
@@ -1590,7 +1590,7 @@ svn_wc_add3(const char *path,
 
           /* Figure out what the new url should be. */
           const char *new_url =
-            svn_path_url_add_component(parent_entry->url, base_name, pool);
+            svn_path_url_add_component2(parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
