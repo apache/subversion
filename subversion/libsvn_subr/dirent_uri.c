@@ -117,6 +117,27 @@ local_style(path_type_t type, const char *path, apr_pool_t *pool)
   return path;
 }
 
+/* Locale insensitive tolower() for converting parts of dirents while
+   canonicalizing */
+static char
+dirent_to_lower(char c)
+{
+  if (c < 'A' || c > 'Z')
+    return c;
+  else
+    return c - 'A' + 'a';
+}
+/* Locale insensitive toupper() for converting parts of dirents while
+   canonicalizing */
+static char
+dirent_to_upper(char c)
+{
+  if (c < 'a' || c > 'z')
+    return c;
+  else
+    return c - 'a' + 'A';
+}
+
 /* Return the length of substring necessary to encompass the entire
  * previous dirent segment in DIRENT, which should be a LEN byte string.
  *
@@ -212,7 +233,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
           src = path;
           while (*src != ':')
             {
-              *(dst++) = tolower((*src++));
+              *(dst++) = dirent_to_lower((*src++));
               schemelen++;
             }
           *(dst++) = ':';
@@ -239,7 +260,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 
           /* Found a hostname, convert to lowercase and copy to dst. */
           while (*src && (*src != '/'))
-            *(dst++) = tolower((*src++));
+            *(dst++) = dirent_to_lower((*src++));
 
           /* Copy trailing slash, or null-terminator. */
           *(dst) = *(src);
@@ -294,7 +315,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
                (strncmp(canon, "file:", 5) == 0) &&
                src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
         {
-          *(dst++) = toupper(src[0]);
+          *(dst++) = dirent_to_upper(src[0]);
           *(dst++) = ':';
           if (*next)
             *(dst++) = *next;
@@ -348,7 +369,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
              case sensitive, so better leave that alone. */
           dst = canon + 2;
           while (*dst && *dst != '/')
-            *(dst++) = tolower(*dst);
+            *(dst++) = dirent_to_lower(*dst);
         }
     }
 #endif /* WIN32 or Cygwin */
