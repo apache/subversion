@@ -37,6 +37,7 @@
 #include "svn_private_config.h"
 
 #include <dbus/dbus.h>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 
 #include <kaboutdata.h>
@@ -171,8 +172,15 @@ kwallet_password_get(const char **password,
       return FALSE;
     }
 
+  QCoreApplication *app;
+  if (! qApp)
+    {
+      int argc = 1;
+      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+    }
+
   KCmdLineArgs::init(1,
-                     (char *[1]) { (char *) "svn" },
+                     (char *[1]) {(char *) "svn"},
                      get_application_name(parameters, pool),
                      "subversion",
                      ki18n(get_application_name(parameters, pool)),
@@ -234,8 +242,15 @@ kwallet_password_set(apr_hash_t *creds,
       return FALSE;
     }
 
+  QCoreApplication *app;
+  if (! qApp)
+    {
+      int argc = 1;
+      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+    }
+
   KCmdLineArgs::init(1,
-                     (char *[1]) { (char *) "svn" },
+                     (char *[1]) {(char *) "svn"},
                      get_application_name(parameters, pool),
                      "subversion",
                      ki18n(get_application_name(parameters, pool)),
