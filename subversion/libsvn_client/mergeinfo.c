@@ -1274,7 +1274,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
   /* Step 4: Finally, we run 'svn log' to drive our log receiver, but
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
-  log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
+  log_target = svn_path_url_add_component2(repos_root, log_target + 1, pool);
   return logs_for_mergeinfo_rangelist(log_target, rangelist,
                                       discover_changed_paths, revprops,
                                       log_receiver, log_receiver_baton,
@@ -1420,7 +1420,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   /* Step 5: Finally, we run 'svn log' to drive our log receiver, but
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
-  log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
+  log_target = svn_path_url_add_component2(repos_root, log_target + 1, pool);
   return logs_for_mergeinfo_rangelist(log_target, rangelist,
                                       discover_changed_paths, revprops,
                                       log_receiver, log_receiver_baton,
@@ -1469,7 +1469,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   if (copyfrom_path)
     {
       APR_ARRAY_PUSH(list, const char *) =
-        svn_path_url_add_component(repos_root, copyfrom_path, pool);
+        svn_path_url_add_component2(repos_root, copyfrom_path, pool);
     }
 
   if (mergeinfo)
@@ -1483,7 +1483,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
           rel_path = key;
           if (copyfrom_path == NULL || strcmp(rel_path, copyfrom_path) != 0)
             APR_ARRAY_PUSH(list, const char *) = \
-              svn_path_url_add_component(repos_root, rel_path + 1, pool);
+              svn_path_url_add_component2(repos_root, rel_path + 1, pool);
         }
     }
 

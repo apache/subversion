@@ -1235,7 +1235,7 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 
   /* Inherits parent's url if doesn't have a url of one's own. */
   if (! dst->url)
-    dst->url = svn_path_url_add_component(src->url, dst->name, pool);
+    dst->url = svn_path_url_add_component2(src->url, dst->name, pool);
 
   if (! dst->repos)
     dst->repos = src->repos;
@@ -1614,8 +1614,8 @@ write_entry(svn_stringbuf_t *buf,
 
   /* URL. */
   if (is_this_dir ||
-      (! is_subdir && strcmp(svn_path_url_add_component(this_dir->url, name,
-                                                        pool),
+      (! is_subdir && strcmp(svn_path_url_add_component2(this_dir->url, name,
+                                                         pool),
                              entry->url) != 0))
     valuestr = entry->url;
   else
@@ -2036,8 +2036,8 @@ write_entry_xml(svn_stringbuf_t **output,
           if (entry->url)
             {
               if (strcmp(entry->url,
-                         svn_path_url_add_component(this_dir->url,
-                                                    name, pool)) == 0)
+                         svn_path_url_add_component2(this_dir->url,
+                                                     name, pool)) == 0)
                 apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL,
                              APR_HASH_KEY_STRING, NULL);
             }
