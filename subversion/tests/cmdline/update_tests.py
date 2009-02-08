@@ -3966,14 +3966,18 @@ def tree_conflicts_on_update_1_1(sbox):
 
   expected_disk = disk_empty_dirs
 
-  # Files delta, epsilon, and zeta are not in the working copy, but
-  # "unquiet" status includes them.
+  # The files delta, epsilon, and zeta are incoming additions, but since
+  # they are all within locally deleted trees they should also be schedule
+  # for deletion.
   expected_status = deep_trees_status_local_tree_del.copy()
   expected_status.add({
-    'D/D1/delta'        : Item(status='  '),
-    'DD/D1/D2/epsilon'  : Item(status='  '),
-    'DDD/D1/D2/D3/zeta' : Item(status='  '),
+    'D/D1/delta'        : Item(status='D '),
+    'DD/D1/D2/epsilon'  : Item(status='D '),
+    'DDD/D1/D2/D3/zeta' : Item(status='D '),
     })
+
+  # Update to the target rev.
+  expected_status.tweak(wc_rev=3)
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
@@ -4625,7 +4629,7 @@ test_list = [ None,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
               restarted_update_should_delete_dir_prop,
-              tree_conflicts_on_update_1_1,
+              XFail(tree_conflicts_on_update_1_1),
               XFail(tree_conflicts_on_update_1_2),
               tree_conflicts_on_update_2_1,
               tree_conflicts_on_update_2_2,
