@@ -3163,8 +3163,8 @@ svn_io_dir_walk(const char *dirname,
      documented to provide it, so we have to do a bit extra. */
   SVN_ERR(svn_io_stat(&finfo, dirname, wanted & ~APR_FINFO_NAME, pool));
   SVN_ERR(cstring_from_utf8(&finfo.name,
-                                     svn_path_basename(dirname, pool),
-                                     pool));
+                            svn_path_basename(dirname, pool),
+                            pool));
   finfo.valid |= APR_FINFO_NAME;
   SVN_ERR((*walk_func)(walk_baton, dirname, &finfo, pool));
 
