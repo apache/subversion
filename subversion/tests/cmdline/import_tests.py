@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -292,6 +292,9 @@ def import_eol_style(sbox):
 
   # setup a custom config, we need autoprops
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = yes
 
