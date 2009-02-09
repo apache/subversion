@@ -884,13 +884,15 @@ def revert_tree_conflicts_in_updated_files(sbox):
     ])
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/pi',  status='  ', wc_rev='1')
+  expected_status.tweak('A/D/G/pi',  status='  ')
   expected_status.remove('A/D/G/rho')
   expected_status.remove('A/D/G/tau')
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'rho'.\nLocal edit.\n")
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nIncoming edit.\n")
   expected_disk.remove('A/D/G/tau')
 
   # Revert individually in wc
@@ -939,7 +941,7 @@ test_list = [ None,
               status_of_missing_dir_after_revert,
               status_of_missing_dir_after_revert_replaced_with_history_dir,
               revert_replaced_with_history_file_2,
-              revert_tree_conflicts_in_updated_files,
+              XFail(revert_tree_conflicts_in_updated_files),
              ]
 
 if __name__ == '__main__':
