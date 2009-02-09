@@ -853,7 +853,7 @@ def obstructed_switch(sbox):
   exit_code, out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
 
   for line in err:
-    if line.find("object of the same name already exists") != -1:
+    if line.find("file of the same name already exists") != -1:
       break
   else:
     raise svntest.Failure
@@ -1367,11 +1367,11 @@ def switch_with_obstructing_local_adds(sbox):
 
   # Setup expected results of switch.
   expected_output = svntest.wc.State(sbox.wc_dir, {
-    "A/B/F/gamma"   : Item(status='  ', treeconflict='C'),
+    "A/B/F/gamma"   : Item(status='E '),
     "A/B/F/G"       : Item(status='E '),
-    "A/B/F/G/pi"    : Item(status='  ', treeconflict='C'),
+    "A/B/F/G/pi"    : Item(status='C '),
     "A/B/F/G/rho"   : Item(status='A '),
-    "A/B/F/G/tau"   : Item(status='  ', treeconflict='C'),
+    "A/B/F/G/tau"   : Item(status='E '),
     "A/B/F/H"       : Item(status='A '),
     "A/B/F/H/chi"   : Item(status='A '),
     "A/B/F/H/omega" : Item(status='A '),
@@ -1382,7 +1382,12 @@ def switch_with_obstructing_local_adds(sbox):
   expected_disk.add({
     "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
     "A/B/F/G"         : Item(),
-    "A/B/F/G/pi"      : Item("This is the OBSTRUCTING file 'pi'.\n"),
+    "A/B/F/G/pi"      : Item("\n".join(["<<<<<<< .mine",
+                                        "This is the OBSTRUCTING file 'pi'.",
+                                        "=======",
+                                        "This is the file 'pi'.",
+                                        ">>>>>>> .r1",
+                                        ""])),
     "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
     "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
     "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),
@@ -1395,13 +1400,11 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.tweak('A/B/F', switched='S')
   expected_status.add({
-    "A/B/F/gamma"     : Item(status='A ', wc_rev=0, treeconflict='C',
-                             switched='S'),
+    "A/B/F/gamma"     : Item(status='  ', wc_rev=1),
     "A/B/F/G"         : Item(status='  ', wc_rev=1),
-    "A/B/F/G/pi"      : Item(status='A ', wc_rev=0, switched='S'),
+    "A/B/F/G/pi"      : Item(status='C ', wc_rev=1),
     "A/B/F/G/rho"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G/tau"     : Item(status='A ', wc_rev=0, treeconflict='C',
-                             switched='S'),
+    "A/B/F/G/tau"     : Item(status='  ', wc_rev=1),
     "A/B/F/G/upsilon" : Item(status='A ', wc_rev=0),
     "A/B/F/H"         : Item(status='  ', wc_rev=1),
     "A/B/F/H/chi"     : Item(status='  ', wc_rev=1),
