@@ -933,26 +933,25 @@ fetch_base_nodes(apr_hash_t **nodes,
                                               sizeof(*base_node));
 
       base_node->wc_id = svn_sqlite__column_int(stmt, 1);
-      base_node->local_relpath = apr_pstrdup(result_pool,
-                                             svn_sqlite__column_text(stmt, 2));
+      base_node->local_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
 
       if (!svn_sqlite__column_is_null(stmt, 3))
         {
           base_node->repos_id = svn_sqlite__column_int(stmt, 3);
-          base_node->repos_relpath = apr_pstrdup(result_pool,
-                                        svn_sqlite__column_text(stmt, 4));
+          base_node->repos_relpath = svn_sqlite__column_text(stmt, 4,
+                                                             result_pool);
         }
 
       if (!svn_sqlite__column_is_null(stmt, 5))
         base_node->parent_id = svn_sqlite__column_int(stmt, 5);
 
       base_node->revision = svn_sqlite__column_int(stmt, 6);
-      base_node->kind = svn_node_kind_from_word(svn_sqlite__column_text(stmt,
-                                                                        7));
+      base_node->kind = svn_node_kind_from_word(
+                                    svn_sqlite__column_text(stmt, 7, NULL));
 
       if (!svn_sqlite__column_is_null(stmt, 8))
         {
-          const char *digest = svn_sqlite__column_text(stmt, 8);
+          const char *digest = svn_sqlite__column_text(stmt, 8, NULL);
           svn_checksum_kind_t kind = (digest[1] == 'm'
                                       ? svn_checksum_md5 : svn_checksum_sha1);
           SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, kind,
@@ -963,10 +962,11 @@ fetch_base_nodes(apr_hash_t **nodes,
 
       base_node->changed_rev = svn_sqlite__column_int(stmt, 10);
       base_node->changed_date = svn_sqlite__column_int(stmt, 11);
-      base_node->changed_author = apr_pstrdup(result_pool,
-                                        svn_sqlite__column_text(stmt, 12));
+      base_node->changed_author = svn_sqlite__column_text(stmt, 12,
+                                                          result_pool);
 
-      base_node->depth = svn_depth_from_word(svn_sqlite__column_text(stmt, 13));
+      base_node->depth = svn_depth_from_word(
+                                    svn_sqlite__column_text(stmt, 13, NULL));
       base_node->last_mod_time = svn_sqlite__column_int(stmt, 14);
 
       val = svn_sqlite__column_blob(stmt, 15, &len);
@@ -1008,32 +1008,31 @@ fetch_working_nodes(apr_hash_t **nodes,
                                                     sizeof(*working_node));
 
       working_node->wc_id = svn_sqlite__column_int(stmt, 1);
-      working_node->local_relpath = apr_pstrdup(result_pool,
-                                             svn_sqlite__column_text(stmt, 2));
-      working_node->parent_relpath = apr_pstrdup(result_pool,
-                                             svn_sqlite__column_text(stmt, 3));
+      working_node->local_relpath = svn_sqlite__column_text(stmt, 2,
+                                                            result_pool);
+      working_node->parent_relpath = svn_sqlite__column_text(stmt, 3,
+                                                             result_pool);
       working_node->kind = svn_node_kind_from_word(
-                                             svn_sqlite__column_text(stmt, 4));
+                                     svn_sqlite__column_text(stmt, 4, NULL));
 
       if (!svn_sqlite__column_is_null(stmt, 5))
         {
           working_node->copyfrom_repos_id = svn_sqlite__column_int(stmt, 5);
-          working_node->copyfrom_repos_path = apr_pstrdup(result_pool,
-                                             svn_sqlite__column_text(stmt, 6));
+          working_node->copyfrom_repos_path = svn_sqlite__column_text(stmt, 6,
+                                                                result_pool);
           working_node->copyfrom_revnum = svn_sqlite__column_revnum(stmt, 7);
         }
 
       if (!svn_sqlite__column_is_null(stmt, 8))
-        working_node->moved_from = apr_pstrdup(result_pool,
-                                            svn_sqlite__column_text(stmt, 8));
+        working_node->moved_from = svn_sqlite__column_text(stmt, 8,
+                                                           result_pool);
 
       if (!svn_sqlite__column_is_null(stmt, 9))
-        working_node->moved_to = apr_pstrdup(result_pool,
-                                            svn_sqlite__column_text(stmt, 9));
+        working_node->moved_to = svn_sqlite__column_text(stmt, 9, result_pool);
 
       if (!svn_sqlite__column_is_null(stmt, 10))
         {
-          const char *digest = svn_sqlite__column_text(stmt, 10);
+          const char *digest = svn_sqlite__column_text(stmt, 10, NULL);
           svn_checksum_kind_t kind = (digest[1] == 'm'
                                       ? svn_checksum_md5 : svn_checksum_sha1);
           SVN_ERR(svn_checksum_parse_hex(&working_node->checksum, kind,
@@ -1045,12 +1044,12 @@ fetch_working_nodes(apr_hash_t **nodes,
         {
           working_node->changed_rev = svn_sqlite__column_revnum(stmt, 12);
           working_node->changed_date = svn_sqlite__column_int(stmt, 13);
-          working_node->changed_author = apr_pstrdup(result_pool,
-                                            svn_sqlite__column_text(stmt, 14));
+          working_node->changed_author = svn_sqlite__column_text(stmt, 14,
+                                                                 result_pool);
         }
 
       working_node->depth = svn_depth_from_word(
-                                            svn_sqlite__column_text(stmt, 15));
+                                    svn_sqlite__column_text(stmt, 15, NULL));
       working_node->last_mod_time = svn_sqlite__column_int(stmt, 16);
 
       val = svn_sqlite__column_blob(stmt, 17, &len);
@@ -1062,8 +1061,8 @@ fetch_working_nodes(apr_hash_t **nodes,
         working_node->changelist_id = svn_sqlite__column_int(stmt, 18);
 
       if (!svn_sqlite__column_is_null(stmt, 19))
-        working_node->tree_conflict_data = apr_pstrdup(result_pool,
-                                            svn_sqlite__column_text(stmt, 19));
+        working_node->tree_conflict_data = svn_sqlite__column_text(stmt, 19,
+                                                                result_pool);
 
       apr_hash_set(*nodes, working_node->local_relpath, APR_HASH_KEY_STRING,
                    working_node);
@@ -1093,8 +1092,8 @@ get_repos_info(const char **repos_root,
                              _("No REPOSITORY table entry for id '%ld'"),
                              repos_id);
 
-  *repos_root = apr_pstrdup(result_pool, svn_sqlite__column_text(stmt, 0));
-  *repos_uuid = apr_pstrdup(result_pool, svn_sqlite__column_text(stmt, 1));
+  *repos_root = svn_sqlite__column_text(stmt, 0, result_pool);
+  *repos_uuid = svn_sqlite__column_text(stmt, 1, result_pool);
 
   return svn_sqlite__reset(stmt);
 }
@@ -1676,7 +1675,7 @@ svn_wc__entries_write(apr_hash_t *entries,
                                  this_dir->uuid);
 
       repos_id = svn_sqlite__column_int(stmt, 0);
-      repos_root = apr_pstrdup(pool, svn_sqlite__column_text(stmt, 1));
+      repos_root = svn_sqlite__column_text(stmt, 1, pool);
       SVN_ERR(svn_sqlite__reset(stmt));
     }
   else
