@@ -385,8 +385,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
       /* ### could alloc in scratch, then copy to result in baton... */
-      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name,
-                                         result_pool));
+      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, result_pool));
 
       apr_err = file_open(&try_file, unique_name_apr, flag,
                           APR_OS_DEFAULT, FALSE, result_pool);
@@ -492,8 +491,7 @@ svn_io_create_unique_link(const char **unique_name_p,
          before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name,
-                                         pool));
+      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, pool));
       do {
         rv = symlink(dest_apr, unique_name_apr);
       } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
@@ -2166,8 +2164,7 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
              program args to be in UTF-8. Callers of svn_io_run_cmd
              should be aware of that. */
       SVN_ERR(cstring_from_utf8(&args_native[num_args],
-                                         args[num_args],
-                                         pool));
+                                args[num_args], pool));
     }
 
 
@@ -2262,7 +2259,7 @@ svn_io_run_diff(const char *dir,
   const char *diff_utf8;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool)); /* ### Assumes config is cstring */
+  SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
     pexitcode = &exitcode;
@@ -2359,7 +2356,7 @@ svn_io_run_diff3_2(int *exitcode,
 #endif
   int i = 0;
 
-  SVN_ERR(cstring_to_utf8(&diff3_utf8, diff3_cmd, pool)); /* ### Assumes config is cstring */
+  SVN_ERR(cstring_to_utf8(&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -2420,7 +2417,7 @@ svn_io_run_diff3_2(int *exitcode,
         const char *diff_cmd, *diff_utf8;
         svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                        SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
-        SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool)); /* ### Assumes config is cstring */
+        SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool));
         args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8, NULL);
 #ifndef NDEBUG
         ++nargs;

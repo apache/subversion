@@ -1269,7 +1269,7 @@ svn_io_run_cmd(const char *path,
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * @a diff_cmd must be non-NULL.
+ * @a diff_cmd must be non-NULL and cstring encoded.
  *
  * Do all allocation in @a pool.
  */
@@ -1316,7 +1316,7 @@ svn_io_run_diff(const char *dir,
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.")
  *
- * @a diff3_cmd must be non-NULL.
+ * @a diff3_cmd must be non-NULL and cstring encoded.
  *
  * Do all allocation in @a pool.
  *
