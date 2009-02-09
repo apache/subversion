@@ -1254,7 +1254,7 @@ svn_io_run_cmd(const char *path,
                apr_file_t *errfile,
                apr_pool_t *pool);
 
-/** Invoke @c the configured diff program, with @a user_args (an array
+/** Invoke the configured @c diff program, with @a user_args (an array
  * of utf8-encoded @a num_user_args arguments) if they are specified
  * (that is, if @a user_args is non-NULL), or "-u" if they are not.
  * If @a user_args is NULL, the value of @a num_user_args is ignored.
@@ -1337,7 +1337,7 @@ svn_io_run_diff(const char *dir,
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.")
  *
- * @a diff3_cmd must be non-NULL and cstring encoded.
+ * @a diff3_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
  *
@@ -1363,6 +1363,7 @@ svn_io_run_diff3_3(int *exitcode,
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff3_2(int *exitcode,
                    const char *dir,

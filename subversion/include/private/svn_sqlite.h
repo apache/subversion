@@ -187,6 +187,21 @@ svn_sqlite__transaction_commit(svn_sqlite__db_t *db);
 svn_error_t *
 svn_sqlite__transaction_rollback(svn_sqlite__db_t *db);
 
+/* Callback function to for use with svn_sqlite__with_transaction(). */
+typedef svn_error_t *(*svn_sqlite__transaction_callback_t)
+  (void *baton, svn_sqlite__db_t *db);
+
+/* Helper function to handle SQLite transactions.  All the work done inside
+   CB_FUNC will be wrapped in an SQLite transaction, which will be committed
+   if CB_FUNC does not return an error.  If any error is returned from CB_FUNC,
+   the transaction will be rolled back.  DB and CB_BATON will be passed to
+   CB_FUNC. */
+svn_error_t *
+svn_sqlite__with_transaction(svn_sqlite__db_t *db,
+                             svn_sqlite__transaction_callback_t cb_func,
+                             void *cb_baton);
+                            
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
