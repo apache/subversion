@@ -2281,7 +2281,7 @@ def update_wc_with_replaced_file(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='R ', wc_rev='1', treeconflict='C'),
+    'iota' : Item(status='R ', wc_rev='2', treeconflict='C'),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents="")
@@ -2296,7 +2296,9 @@ def update_wc_with_replaced_file(sbox):
 
   # Make us a working copy with a 'replace-with-history' file.
   svntest.main.run_svn(None, 'revert', iota_path)
-  expected_output = svntest.wc.State(wc_dir, {})
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='U '),
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_update(wc_dir,
@@ -4602,7 +4604,7 @@ test_list = [ None,
               forced_update,
               XFail(forced_update_failures),
               XFail(update_wc_on_windows_drive),
-              update_wc_with_replaced_file,
+              XFail(update_wc_with_replaced_file),
               XFail(update_with_obstructing_additions),
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
