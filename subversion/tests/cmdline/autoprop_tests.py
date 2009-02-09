@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -50,6 +50,9 @@ def create_config(config_dir, enable_flag):
 
   # contents of the file 'config'
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = %s
 

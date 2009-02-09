@@ -18,10 +18,10 @@ AC_DEFUN(SVN_LIB_KWALLET,
     if test "$enable_shared" = "yes"; then
       if test "$APR_HAS_DSO" = "yes"; then
         if test "$USE_NLS" = "yes"; then
-          if test "$HAVE_PKG_CONFIG" = "yes"; then
+          if test -n "$PKG_CONFIG"; then
             if test "$HAVE_DBUS" = "yes"; then
               AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
-              if pkg-config --exists QtCore QtDBus QtGui; then
+              if $PKG_CONFIG --exists QtCore QtDBus QtGui; then
                 AC_MSG_RESULT([yes])
                 if test "$svn_lib_kwallet" != "yes"; then
                   AC_MSG_CHECKING([for kde4-config])
@@ -41,17 +41,17 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
-                  for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
+                  for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
                     CPPFLAGS="$CPPFLAGS $d"
                   done
-                  qt_include_dirs="`pkg-config --cflags-only-I QtCore QtDBus QtGui`"
+                  qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
                   kde_dir="`$kde4_config --prefix`"
                   SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
-                  qt_libs_other_options="`pkg-config --libs-only-other QtCore QtDBus QtGui`"
+                  qt_libs_other_options="`$PKG_CONFIG --libs-only-other QtCore QtDBus QtGui`"
                   SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
-                  qt_lib_dirs="`pkg-config --libs-only-L QtCore QtDBus QtGui`"
+                  qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
                   LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([

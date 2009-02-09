@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,9 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#define APU_WANT_DB
-#include <apu_want.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -40,6 +37,7 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
+#define SVN_WANT_BDB
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
