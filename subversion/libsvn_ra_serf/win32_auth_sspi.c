@@ -117,18 +117,20 @@ init_sspi_connection(svn_ra_serf__session_t *session,
 {
   const char *tmp;
   apr_size_t tmp_len;
+  serf_sspi_context_t *sspi_context;
 
   SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
 
-  conn->sspi_context = (serf_sspi_context_t*)
-    apr_palloc(pool, sizeof(serf_sspi_context_t));
-  conn->sspi_context->ctx.dwLower = 0;
-  conn->sspi_context->ctx.dwUpper = 0;
-  conn->sspi_context->state = sspi_auth_not_started;
+  sspi_context = 
+      (serf_sspi_context_t *)apr_palloc(pool, sizeof(serf_sspi_context_t));
+  sspi_context->ctx.dwLower = 0;
+  sspi_context->ctx.dwUpper = 0;
+  sspi_context->state = sspi_auth_not_started;
+  conn->auth_context = (void*)sspi_context;
 
   /* Setup the initial request to the server with an SSPI header */
   SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
-                               conn->sspi_context));
+                               sspi_context));
   svn_ra_serf__encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len,
                                   pool);
   conn->auth_header = "Authorization";
@@ -151,6 +153,7 @@ handle_sspi_auth(svn_ra_serf__handler_t *ctx,
   char *base64_token, *token = NULL, *last;
   apr_size_t tmp_len, token_len = 0;
 
+  serf_sspi_context_t *sspi_context = (serf_sspi_context_t *)conn->auth_context;
   base64_token = apr_strtok(auth_attr, " ", &last);
   if (base64_token)
     {
@@ -166,7 +169,7 @@ handle_sspi_auth(svn_ra_serf__handler_t *ctx,
     return SVN_NO_ERROR;
 
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
-                               conn->sspi_context));
+                               sspi_context));
 
   svn_ra_serf__encode_auth_header(session->auth_protocol->auth_name,
                                   &conn->auth_value, tmp, tmp_len, pool);
@@ -298,18 +301,20 @@ init_proxy_sspi_connection(svn_ra_serf__session_t *session,
 {
   const char *tmp;
   apr_size_t tmp_len;
+  serf_sspi_context_t *sspi_context;
 
   SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
 
-  conn->proxy_sspi_context = (serf_sspi_context_t*)
-    apr_palloc(pool, sizeof(serf_sspi_context_t));
-  conn->proxy_sspi_context->ctx.dwLower = 0;
-  conn->proxy_sspi_context->ctx.dwUpper = 0;
-  conn->proxy_sspi_context->state = sspi_auth_not_started;
+  sspi_context = 
+      (serf_sspi_context_t *)apr_palloc(pool, sizeof(serf_sspi_context_t));
+  sspi_context->ctx.dwLower = 0;
+  sspi_context->ctx.dwUpper = 0;
+  sspi_context->state = sspi_auth_not_started;
+  conn->proxy_auth_context = (void*)sspi_context;
 
   /* Setup the initial request to the server with an SSPI header */
   SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
-                               conn->proxy_sspi_context));
+                               sspi_context));
   svn_ra_serf__encode_auth_header("NTLM", &conn->proxy_auth_value, tmp,
                                   tmp_len,
                                   pool);
@@ -333,6 +338,7 @@ handle_proxy_sspi_auth(svn_ra_serf__session_t *session,
   const char *tmp;
   char *base64_token, *token = NULL, *last;
   apr_size_t tmp_len, token_len = 0;
+  serf_sspi_context_t *sspi_context;
 
   base64_token = apr_strtok(auth_attr, " ", &last);
   if (base64_token)
@@ -345,11 +351,13 @@ handle_proxy_sspi_auth(svn_ra_serf__session_t *session,
   /* We can get a whole batch of 401 responses from the server, but we should
      only start the authentication phase once, so if we started authentication
      ignore all responses with initial NTLM authentication header. */
-  if (!token && conn->proxy_sspi_context->state != sspi_auth_not_started)
+  sspi_context = (serf_sspi_context_t *)conn->proxy_auth_context;
+
+  if (!token && sspi_context->state != sspi_auth_not_started)
     return SVN_NO_ERROR;
 
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
-                               conn->proxy_sspi_context));
+                               sspi_context));
 
   svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
                                   &conn->proxy_auth_value, tmp, tmp_len, pool);

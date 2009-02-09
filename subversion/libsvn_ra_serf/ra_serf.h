@@ -49,17 +49,10 @@
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
-#ifdef WIN32
-#define SVN_RA_SERF_SSPI_ENABLED
-#endif
-
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
-#ifdef SVN_RA_SERF_SSPI_ENABLED
-typedef struct serf_sspi_context_t serf_sspi_context_t;
-#endif
 
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
@@ -97,13 +90,11 @@ typedef struct {
 
   svn_ra_serf__session_t *session;
 
-#ifdef SVN_RA_SERF_SSPI_ENABLED
-  /* Optional SSPI context for this connection. */
-  serf_sspi_context_t *sspi_context;
+  /* Baton used to store connection specific authn/authz data */
+  void *auth_context;
 
-  /* Optional SSPI context for the proxy on this connection. */
-  serf_sspi_context_t *proxy_sspi_context;
-#endif
+  /* Baton used to store proxy specific authn/authz data */
+  void *proxy_auth_context;
 
   /* Current authorization header used for the proxy server; may be NULL */
   const char *proxy_auth_header;
@@ -1284,7 +1275,9 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
-                                  serf_bucket_t *hdrs_bkt);
+				  const char *method,
+				  const char *uri,
+				  serf_bucket_t *hdrs_bkt);
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
