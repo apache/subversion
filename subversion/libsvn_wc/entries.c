@@ -1629,19 +1629,98 @@ write_entry(svn_sqlite__db_t *wc_db,
   return SVN_NO_ERROR;
 }
 
+/* Baton for use with entries_write_body(). */
+struct entries_write_txn_baton
+{
+  apr_hash_t *entries;
+  const svn_wc_entry_t *this_dir;
+  apr_pool_t *scratch_pool;
+};
+
+/* Actually do the sqlite work within a transaction.
+   This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+entries_write_body(void *baton,
+                   svn_sqlite__db_t *wc_db)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_hash_index_t *hi;
+  struct entries_write_txn_baton *ewtb = baton;
+  apr_pool_t *iterpool = svn_pool_create(ewtb->scratch_pool);
+  const char *repos_root;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
+
+  /* Get the repos ID. */
+  if (ewtb->this_dir->uuid != NULL)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "s", ewtb->this_dir->uuid));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+        return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                                 _("No REPOSITORY table entry for uuid '%s'"),
+                                 ewtb->this_dir->uuid);
+
+      repos_id = svn_sqlite__column_int(stmt, 0);
+      repos_root = svn_sqlite__column_text(stmt, 1, ewtb->scratch_pool);
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+  else
+    {
+      repos_id = 0;
+      repos_root = NULL;
+    }
+
+  /* Get the wc ID. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
+  wc_id = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Write out "this dir" */
+  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, ewtb->this_dir,
+                      SVN_WC_ENTRY_THIS_DIR, ewtb->this_dir,
+                      ewtb->scratch_pool));
+
+  for (hi = apr_hash_first(ewtb->scratch_pool, ewtb->entries); hi;
+        hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const svn_wc_entry_t *this_entry;
+
+      svn_pool_clear(iterpool);
+
+      /* Get the entry and make sure its attributes are up-to-date. */
+      apr_hash_this(hi, &key, NULL, &val);
+      this_entry = val;
+
+      /* Don't rewrite the "this dir" entry! */
+      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      /* Write the entry. */
+      SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
+                          this_entry, key, ewtb->this_dir, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
   svn_sqlite__db_t *wc_db;
-  apr_hash_index_t *hi;
   const svn_wc_entry_t *this_dir;
-  const char *repos_root;
-  apr_int64_t repos_id;
-  apr_int64_t wc_id;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  struct entries_write_txn_baton ewtb;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -1662,70 +1741,11 @@ svn_wc__entries_write(apr_hash_t *entries,
                            svn_sqlite__mode_readwrite, statements,
                            SVN_WC__VERSION, upgrade_sql, pool, pool));
 
-  /* Get the repos ID. */
-  if (this_dir->uuid != NULL)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
-      SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->uuid));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (!have_row)
-        return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                                 _("No REPOSITORY table entry for uuid '%s'"),
-                                 this_dir->uuid);
-
-      repos_id = svn_sqlite__column_int(stmt, 0);
-      repos_root = svn_sqlite__column_text(stmt, 1, pool);
-      SVN_ERR(svn_sqlite__reset(stmt));
-    }
-  else
-    {
-      repos_id = 0;
-      repos_root = NULL;
-    }
-
-  /* Get the wc ID. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
-  wc_id = svn_sqlite__column_int(stmt, 0);
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  SVN_ERR(svn_sqlite__transaction_begin(wc_db));
-
-    {
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      /* Write out "this dir" */
-      SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, this_dir,
-                          SVN_WC_ENTRY_THIS_DIR, this_dir, pool));
-
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          const svn_wc_entry_t *this_entry;
-
-          svn_pool_clear(iterpool);
-
-          /* Get the entry and make sure its attributes are up-to-date. */
-          apr_hash_this(hi, &key, NULL, &val);
-          this_entry = val;
-
-          /* Don't rewrite the "this dir" entry! */
-          if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-            continue;
-
-          /* Write the entry. */
-          SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
-                              this_entry, key, this_dir, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-
-  SVN_ERR(svn_sqlite__transaction_commit(wc_db));
+  /* Do the work in a transaction. */
+  ewtb.entries = entries;
+  ewtb.this_dir = this_dir;
+  ewtb.scratch_pool = pool;
+  SVN_ERR(svn_sqlite__with_transaction(wc_db, entries_write_body, &ewtb));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
@@ -2447,6 +2467,60 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 
 /*** Initialization of the entries file. ***/
 
+/* Baton for use with init_body() */
+struct init_txn_baton
+{
+  const char *uuid;
+  const char *url;
+  const char *repos;
+  svn_revnum_t initial_rev;
+  svn_depth_t depth;
+  apr_pool_t *scratch_pool;
+};
+
+/* Actually do the sqlite work within a transaction.
+   This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+init_body(void *baton,
+          svn_sqlite__db_t *wc_db)
+{
+  struct init_txn_baton *itb = baton;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t wc_id;
+  apr_int64_t repos_id;
+  svn_wc_entry_t *entry = alloc_entry(itb->scratch_pool);
+
+  /* Insert the repository. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", itb->repos, itb->uuid));
+  SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
+
+  /* Insert the wcroot. */
+  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
+
+  /* Add an entry for the dir itself.  The directory has no name.  It
+     might have a UUID, but otherwise only the revision and default
+     ancestry are present as XML attributes, and possibly an
+     'incomplete' flag if the revnum is > 0. */
+
+  entry->kind = svn_node_dir;
+  entry->url = itb->url;
+  entry->revision = itb->initial_rev;
+  entry->uuid = itb->uuid;
+  entry->repos = itb->repos;
+  entry->depth = itb->depth;
+  if (itb->initial_rev > 0)
+    entry->incomplete = TRUE;
+  /* Add cachable-props here so that it can be inherited by other entries.
+   */
+  entry->cachable_props = SVN_WC__CACHABLE_PROPS;
+
+  return write_entry(wc_db, wc_id, repos_id, itb->repos, entry,
+                     SVN_WC_ENTRY_THIS_DIR, entry, itb->scratch_pool);
+}
+
 svn_error_t *
 svn_wc__entries_init(const char *path,
                      const char *uuid,
@@ -2457,12 +2531,9 @@ svn_wc__entries_init(const char *path,
                      apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_wc_entry_t *entry = alloc_entry(pool);
   svn_sqlite__db_t *wc_db;
-  apr_int64_t wc_id;
-  apr_int64_t repos_id;
-  svn_sqlite__stmt_t *stmt;
   const char *wc_db_path = db_path(path, pool);
+  struct init_txn_baton itb;
 
   SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
@@ -2478,44 +2549,18 @@ svn_wc__entries_init(const char *path,
                              svn_path_local_style(wc_db_path, pool));
 
   /* Create the entries database, and start a transaction. */
-  /* TODO: Need to rollback the transaction if we get an error anywehere. */
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
                            statements, SVN_WC__VERSION, upgrade_sql, pool,
                            pool));
-  SVN_ERR(svn_sqlite__transaction_begin(wc_db));
 
-  /* Insert the repository. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid));
-  SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
-
-  /* Insert the wcroot. */
-  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
-
-  /* Add an entry for the dir itself.  The directory has no name.  It
-     might have a UUID, but otherwise only the revision and default
-     ancestry are present as XML attributes, and possibly an
-     'incomplete' flag if the revnum is > 0. */
-
-  entry->kind = svn_node_dir;
-  entry->url = url;
-  entry->revision = initial_rev;
-  entry->uuid = uuid;
-  entry->repos = repos;
-  entry->depth = depth;
-  if (initial_rev > 0)
-    entry->incomplete = TRUE;
-  /* Add cachable-props here so that it can be inherited by other entries.
-   */
-  entry->cachable_props = SVN_WC__CACHABLE_PROPS;
-
-  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos, entry,
-                      SVN_WC_ENTRY_THIS_DIR, entry, pool));
-
-  /* Commit the sqlite transaction. */
-  return svn_sqlite__transaction_commit(wc_db);
+  /* Do the body of the work within an sqlite transaction. */
+  itb.uuid = uuid;
+  itb.url = url;
+  itb.repos = repos;
+  itb.initial_rev = initial_rev;
+  itb.depth = depth;
+  itb.scratch_pool = pool;
+  return svn_sqlite__with_transaction(wc_db, init_body, &itb);
 }
 
 
