@@ -2,7 +2,7 @@
  * dirent_uri.c:   a library to manipulate URIs and directory entries.
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -127,6 +127,7 @@ canonicalize_to_lower(char c)
   else
     return c - 'A' + 'a';
 }
+#if defined(WIN32) || defined(__CYGWIN__)
 /* Locale insensitive toupper() for converting parts of dirents and urls
    while canonicalizing */
 static char
@@ -137,6 +138,7 @@ canonicalize_to_upper(char c)
   else
     return c - 'a' + 'A';
 }
+#endif
 
 /* Return the length of substring necessary to encompass the entire
  * previous dirent segment in DIRENT, which should be a LEN byte string.
