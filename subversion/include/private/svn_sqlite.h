@@ -143,9 +143,12 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
 const void *
 svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len);
 
-/* Wrapper around sqlite3_column_text. */
+/* Wrapper around sqlite3_column_text. 
+   If RESULT_POOL is not NULL, allocate the return value in it.  Otherwise, the
+   value will become invalid on the next invocation of svn_sqlite__column_* */
 const char *
-svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column);
+svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
+                        apr_pool_t *result_pool);
 
 /* Wrapper around sqlite3_column_int64. */
 svn_revnum_t
