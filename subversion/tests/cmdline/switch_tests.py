@@ -2223,11 +2223,18 @@ def tree_conflicts_on_switch_1_1(sbox):
 
   expected_disk = disk_empty_dirs
 
-  # The tree conflict victims are skipped, which means they're switched
-  # relative to their parent dirs.
+  # The files delta, epsilon, and zeta are incoming additions, but since
+  # they are all within locally deleted trees they should also be schedule
+  # for deletion.
   expected_status = deep_trees_status_local_tree_del.copy()
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+  expected_status.add({
+    'D/D1/delta'        : Item(status='D '),
+    'DD/D1/D2/epsilon'  : Item(status='D '),
+    'DDD/D1/D2/D3/zeta' : Item(status='D '),
+    })
+  
+  # Update to the target rev.
+  expected_status.tweak(wc_rev=3)
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
@@ -2472,7 +2479,7 @@ test_list = [ None,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
               tolerate_local_mods,
-              tree_conflicts_on_switch_1_1,
+              XFail(tree_conflicts_on_switch_1_1),
               XFail(tree_conflicts_on_switch_1_2),
               tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
