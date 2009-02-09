@@ -54,28 +54,6 @@ static const char * const statements[] = {
   };
 
 
-/* APR cleanup function used to close the database when destroying the FS pool
-   DATA should be the FS to to which this database belongs. */
-static apr_status_t
-cleanup_db_apr(void *data)
-{
-  svn_fs_t *fs = data;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_error_t *err;
-
-  err = svn_sqlite__close(ffd->rep_cache_db, SVN_NO_ERROR);
-  if (err)
-    {
-      fs->warning(fs->warning_baton, err);
-      svn_error_clear(err);
-
-      return SVN_ERR_FS_CLEANUP;
-    }
-
-  return APR_SUCCESS;
-}
-
-
 svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool)
@@ -83,15 +61,13 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *db_path;
 
-  /* Open (or create) the sqlite database */
+  /* Open (or create) the sqlite database.  It will be automatically
+     closed when fs->pool is destoyed. */
   db_path = svn_path_join(fs->path, REP_CACHE_DB_NAME, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            REP_CACHE_SCHEMA_FORMAT,
                            upgrade_sql, fs->pool, pool));
-
-  apr_pool_cleanup_register(fs->pool, fs, cleanup_db_apr,
-                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }

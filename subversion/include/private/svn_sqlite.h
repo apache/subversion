@@ -83,7 +83,10 @@ svn_sqlite__get_schema_version(int *version,
    last element of which should be NULL.  These strings are not duplicated
    internally, and should have a lifetime at least as long as RESULT_POOL.
    STATEMENTS itself may be NULL, in which case it has no impact.
-   See svn_sqlite__get_statement() for how these strings are used. */
+   See svn_sqlite__get_statement() for how these strings are used.
+   
+   The statements will be finalized and the SQLite database will be closed
+   when RESULT_POOL is cleaned up. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  svn_sqlite__mode_t mode, const char * const statements[],
@@ -168,11 +171,6 @@ svn_sqlite__finalize(svn_sqlite__stmt_t *stmt);
 /* Error-handling wrapper around sqlite3_reset. */
 svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
-
-/* Close DB, returning any ERR which may've necessitated an early connection
-   closure, or -- if none -- the error from the closure itself. */
-svn_error_t *
-svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err);
 
 /* Wrapper around sqlite transaction handling. */
 svn_error_t *
