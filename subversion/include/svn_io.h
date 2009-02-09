@@ -1363,6 +1363,7 @@ svn_io_run_diff3_3(int *exitcode,
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff3_2(int *exitcode,
                    const char *dir,
