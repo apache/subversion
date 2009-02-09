@@ -619,6 +619,66 @@ svn_io_open_unique_file(apr_file_t **file,
                                   pool);
 }
 
+svn_error_t *
+svn_io_run_diff(const char *dir,
+                const char *const *user_args,
+                int num_user_args,
+                const char *label1,
+                const char *label2,
+                const char *from,
+                const char *to,
+                int *pexitcode,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                const char *diff_cmd,
+                apr_pool_t *pool)
+{
+  SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd, diff_cmd, pool));
+
+  return svn_io_run_diff2(dir, user_args, num_user_args, label1, label2,
+                          from, to, pexitcode, outfile, errfile, diff_cmd,
+                          pool);
+}
+
+svn_error_t *
+svn_io_run_diff3_2(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool)
+{
+  SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+
+  return svn_io_run_diff3_3(exitcode, dir, mine, older, yours, mine_label,
+                            older_label, yours_label, merged, diff3_cmd,
+                            user_args, pool);
+}
+
+svn_error_t *
+svn_io_run_diff3(const char *dir,
+                 const char *mine,
+                 const char *older,
+                 const char *yours,
+                 const char *mine_label,
+                 const char *older_label,
+                 const char *yours_label,
+                 apr_file_t *merged,
+                 int *exitcode,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool)
+{
+  return svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
+                            mine_label, older_label, yours_label,
+                            merged, diff3_cmd, NULL, pool);
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
