@@ -19,11 +19,11 @@ TODO:
  * Teach mod_dav_svn to recognize and correctly interpret URLs which
    make use of the new URI stubs:
 
-      me resource URI       -> !svn/me  [DONE]
-      revision stub         -> !svn/rev [STARTED]
-      revision root stub    -> !svn/rvr [DONE]
-      transaction stub      -> !svn/txn [STARTED]
-      transaction root stub -> !svn/txr [STARTED]
+      me resource URI       -> !svn/me   [DONE]
+      revision stub         -> !svn/rev  [STARTED]
+      revision root stub    -> !svn/rvr  [DONE]
+      transaction stub      -> !svn/txn  [STARTED]
+      transaction root stub -> !svn/txr  [STARTED]
 
  * Teach mod_dav_svn to handle POST against the "me resource",
    returning a transaction URI stub and transaction prop URI stub for
@@ -81,16 +81,16 @@ TODO:
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
 
-    - Use POST to 'me' resource to get txn name          [DONE]
-    - Set revprops using PROPPATCH on the txn resource   [DONE]
-    - Abort edit with DELETE against the txn resource    [DONE]
-    - Send write requests against txn and txn root URLs  [STARTED]
-    - Enable pipelined PUTs
+    - use POST to 'me' resource to get txn name          [DONE]
+    - set revprops using PROPPATCH on the txn resource   [DONE]
+    - abort edit with DELETE against the txn resource    [DONE]
+    - send write requests against txn and txn root URLs  [STARTED]
+    - enable pipelined PUTs
 
  * Optional:  Do some of this stuff for ra_neon, too:
 
-    - Get and cache UUID and repos_root from OPTIONS         [DONE]
-    - Get me resource, and pegrev stub from OPTIONS          [DONE]
-    - Use me resource instead of the VCC                     [STARTED]
-    - Use pegrev stubs instead of get_baseline_info() walks  [STARTED]
-    - Use rev stubs for revprop stuff
+    - get and cache UUID and repos_root from OPTIONS         [DONE]
+    - get me resource, and pegrev stub from OPTIONS          [DONE]
+    - use me resource instead of the VCC                     [STARTED]
+    - use pegrev stubs instead of get_baseline_info() walks  [STARTED]
+    - use rev stubs for revprop stuff
