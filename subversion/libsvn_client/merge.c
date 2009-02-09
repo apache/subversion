@@ -464,10 +464,10 @@ tree_conflict(merge_cmd_baton_t *merge_b,
                                           victim_path, merge_b->pool);
     if (child != NULL)
       {
-        left_url = svn_path_url_add_component(merge_b->merge_source.url1,
-                                              child, merge_b->pool);
-        right_url = svn_path_url_add_component(merge_b->merge_source.url2,
+        left_url = svn_path_url_add_component2(merge_b->merge_source.url1,
                                                child, merge_b->pool);
+        right_url = svn_path_url_add_component2(merge_b->merge_source.url2,
+                                                child, merge_b->pool);
       }
     else
       {
@@ -743,8 +743,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   source_path = key;
                   rangelist = value;
                   merge_source_url =
-                        svn_path_url_add_component(merge_source_root_url,
-                                                   source_path + 1, pool);
+                        svn_path_url_add_component2(merge_source_root_url,
+                                                    source_path + 1, pool);
 
                   for (j = 0; j < rangelist->nelts; j++)
                     {
@@ -1418,8 +1418,9 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 const char *child = svn_path_is_child(merge_b->target,
                                                       mine, subpool);
                 if (child != NULL)
-                  copyfrom_url = svn_path_url_add_component(merge_b->merge_source.url2,
-                                                            child, subpool);
+                  copyfrom_url = svn_path_url_add_component2(
+                                               merge_b->merge_source.url2,
+                                               child, subpool);
                 else
                   copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
@@ -1744,8 +1745,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
      add. */
   if (merge_b->same_repos)
     {
-      copyfrom_url = svn_path_url_add_component(merge_b->merge_source.url2,
-                                                child, subpool);
+      copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.url2,
+                                                 child, subpool);
       copyfrom_rev = rev;
       SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
     }
@@ -3157,8 +3158,10 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       else
         child_repos_path = child->path +
           (merge_target_len ? merge_target_len + 1 : 0);
-      child_url1 = svn_path_url_add_component(url1, child_repos_path, iterpool);
-      child_url2 = svn_path_url_add_component(url2, child_repos_path, iterpool);
+      child_url1 = svn_path_url_add_component2(url1, child_repos_path,
+                                               iterpool);
+      child_url2 = svn_path_url_add_component2(url2, child_repos_path,
+                                               iterpool);
 
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, adm_access,
                                       FALSE, iterpool));
@@ -4289,10 +4292,10 @@ get_mergeinfo_walk_cb(const char *path,
               svn_error_t *err;
               const char *original_ra_url = NULL;
               const char *mergeinfo_url =
-                svn_path_url_add_component(wb->source_root_url,
-                                           /* Skip leading '/'. */
-                                           merge_src_child_path->data + 1,
-                                           pool);
+                svn_path_url_add_component2(wb->source_root_url,
+                                            /* Skip leading '/'. */
+                                            merge_src_child_path->data + 1,
+                                            pool);
               svn_opt_revision_t *start_revision, *end_revision;
               const char *start_url, *end_url;
               svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
@@ -4973,12 +4976,12 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
 
       /* Build our merge source structure. */
       merge_source = apr_pcalloc(pool, sizeof(*merge_source));
-      merge_source->url1 = svn_path_url_add_component(source_root_url,
-                                                      path1,
-                                                      pool);
-      merge_source->url2 = svn_path_url_add_component(source_root_url,
-                                                      segment->path,
-                                                      pool);
+      merge_source->url1 = svn_path_url_add_component2(source_root_url,
+                                                       path1,
+                                                       pool);
+      merge_source->url2 = svn_path_url_add_component2(source_root_url,
+                                                       segment->path,
+                                                       pool);
       merge_source->rev1 = rev1;
       merge_source->rev2 = MIN(segment->range_end, maxrev);
 
@@ -5201,8 +5204,8 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
               range_start_rev.kind = svn_opt_revision_number;
               range_start_rev.value.number = segment2->range_start;
 
-              segment_url = svn_path_url_add_component(source_root_url,
-                                                       segment2->path, pool);
+              segment_url = svn_path_url_add_component2(source_root_url,
+                                                        segment2->path, pool);
               SVN_ERR(svn_client__get_copy_source(segment_url,
                                                   &range_start_rev,
                                                   &copyfrom_path,
@@ -6933,7 +6936,7 @@ svn_client_merge3(const char *source1,
       related = TRUE;
 
       /* Make YC_PATH into a full URL. */
-      yc_path = svn_path_url_add_component(source_repos_root, yc_path, pool);
+      yc_path = svn_path_url_add_component2(source_repos_root, yc_path, pool);
 
       /* If the common ancestor matches the right side of our merge,
          then we only need to reverse-merge the left side. */
@@ -7146,7 +7149,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
                   SVN_ERR(svn_ra_get_session_url(ra_session, &full_url,
                                                  pool));
-                  full_url = svn_path_url_add_component(full_url, path, pool);
+                  full_url = svn_path_url_add_component2(full_url, path, pool);
                   return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
                                            NULL,
                                            _("At least one revision (r%ld) "
@@ -7610,12 +7613,12 @@ calculate_left_hand_side(const char **url_left,
     {
       /* We never merged to the source.  Just return the branch point. */
       const char *yc_ancestor_path,
-        *source_url = svn_path_url_add_component(source_repos_root,
-                                                 source_repos_rel_path,
-                                                 subpool),
-        *target_url = svn_path_url_add_component(source_repos_root,
-                                                 target_repos_rel_path,
-                                                 subpool);
+        *source_url = svn_path_url_add_component2(source_repos_root,
+                                                  source_repos_rel_path,
+                                                  subpool),
+        *target_url = svn_path_url_add_component2(source_repos_root,
+                                                  target_repos_rel_path,
+                                                  subpool);
 
       SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                        rev_left,
@@ -7627,8 +7630,8 @@ calculate_left_hand_side(const char **url_left,
                                  _("'%s@%ld' must be ancestrally related to "
                                    "'%s@%ld'"), source_url, source_rev,
                                  target_url, target_rev);
-      *url_left = svn_path_url_add_component(source_repos_root,
-                                             yc_ancestor_path, pool);
+      *url_left = svn_path_url_add_component2(source_repos_root,
+                                              yc_ancestor_path, pool);
     }
   else
     {
@@ -7644,9 +7647,9 @@ calculate_left_hand_side(const char **url_left,
       *rev_left = youngest_merged_rev;
       SVN_ERR(svn_client__derive_location(
         &youngest_url, NULL,
-        svn_path_url_add_component(source_repos_root,
-                                   target_repos_rel_path,
-                                   subpool),
+        svn_path_url_add_component2(source_repos_root,
+                                    target_repos_rel_path,
+                                    subpool),
         &peg_revision, ra_session, NULL, ctx, subpool));
       *url_left = apr_pstrdup(pool, youngest_url);
     }

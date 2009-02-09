@@ -1235,7 +1235,7 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 
   /* Inherits parent's url if doesn't have a url of one's own. */
   if (! dst->url)
-    dst->url = svn_path_url_add_component(src->url, dst->name, pool);
+    dst->url = svn_path_url_add_component2(src->url, dst->name, pool);
 
   if (! dst->repos)
     dst->repos = src->repos;
@@ -1614,8 +1614,8 @@ write_entry(svn_stringbuf_t *buf,
 
   /* URL. */
   if (is_this_dir ||
-      (! is_subdir && strcmp(svn_path_url_add_component(this_dir->url, name,
-                                                        pool),
+      (! is_subdir && strcmp(svn_path_url_add_component2(this_dir->url, name,
+                                                         pool),
                              entry->url) != 0))
     valuestr = entry->url;
   else
@@ -2036,8 +2036,8 @@ write_entry_xml(svn_stringbuf_t **output,
           if (entry->url)
             {
               if (strcmp(entry->url,
-                         svn_path_url_add_component(this_dir->url,
-                                                    name, pool)) == 0)
+                         svn_path_url_add_component2(this_dir->url,
+                                                     name, pool)) == 0)
                 apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL,
                              APR_HASH_KEY_STRING, NULL);
             }
@@ -2158,7 +2158,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 
   if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
@@ -2173,7 +2173,7 @@ svn_wc__entries_write(apr_hash_t *entries,
           void *val;
           const svn_wc_entry_t *this_entry;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
           /* Get the entry and make sure its attributes are up-to-date. */
           apr_hash_this(hi, &key, NULL, &val);
@@ -2184,10 +2184,10 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, subpool));
+          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, iterpool));
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
   else
     /* This is needed during cleanup of a not yet upgraded WC. */

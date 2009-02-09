@@ -1162,7 +1162,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   len = strlen(cb->to_path);
   if (ib.parent_dir[len] == '/')
     ++len;
-  ib.parent_dir_url = svn_path_url_add_component(cb->from_url,
+  ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
                                                  ib.parent_dir + len,
                                                  cb->pool);
 
