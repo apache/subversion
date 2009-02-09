@@ -3901,7 +3901,7 @@ def restarted_update_should_delete_dir_prop(sbox):
   # update. The update will be interrupted, resulting in an incomplete
   # dir which still has the property.
   svntest.main.file_write(zeta_path, 'Obstructing file\n')
-  error_re = 'Failed to add file.*object of the same name already exists'
+  error_re = 'Failed to add file.*file of the same name already exists'
   svntest.actions.run_and_verify_update(wc_dir, None, None, None,
                                         error_re)
 
