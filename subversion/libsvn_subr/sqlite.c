@@ -26,6 +26,7 @@
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_atomic.h"
 
 
 #ifdef SVN_SQLITE_INLINE
@@ -456,18 +457,14 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
                            current_schema);
 }
 
+static volatile svn_atomic_t sqlite_init_state;
+
 /* If possible, verify that SQLite was compiled in a thread-safe
    manner. */
+/* Don't call this function directly!  Use svn_atomic__init_once(). */
 static svn_error_t *
-init_sqlite(void)
+init_sqlite(apr_pool_t *pool)
 {
-  static svn_boolean_t sqlite_initialized = FALSE;
-
-  /* There is a potential initialization race condition here, but
-     it currently isn't worth guarding against (e.g. with a mutex). */
-  if (sqlite_initialized)
-    return SVN_NO_ERROR;
-
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
     return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
                              _("SQLite compiled for %s, but running with %s"),
@@ -490,10 +487,6 @@ init_sqlite(void)
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
 
-  /* NOTE: if more work is performed here, then consider using
-     svn_atomic__init_once() for the call to this function. */
-  sqlite_initialized = TRUE;
-
   return SVN_NO_ERROR;
 }
 
@@ -504,7 +497,7 @@ svn_sqlite__get_schema_version(int *version,
 {
   svn_sqlite__db_t db;
 
-  SVN_ERR(init_sqlite());
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
   SQLITE_ERR(sqlite3_open(path, &db.db3), &db);
   SVN_ERR(get_schema(version, &db, scratch_pool));
   SQLITE_ERR(sqlite3_close(db.db3), &db);
@@ -518,7 +511,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(init_sqlite());
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
 
   /* ### use a pool cleanup to close this? (instead of __close()) */
   *db = apr_palloc(result_pool, sizeof(**db));
