@@ -1696,7 +1696,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   SVN_ERR(svn_sqlite__transaction_begin(wc_db));
 
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* Write out "this dir" */
       SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, this_dir,
@@ -1708,7 +1708,7 @@ svn_wc__entries_write(apr_hash_t *entries,
           void *val;
           const svn_wc_entry_t *this_entry;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
           /* Get the entry and make sure its attributes are up-to-date. */
           apr_hash_this(hi, &key, NULL, &val);
@@ -1720,10 +1720,10 @@ svn_wc__entries_write(apr_hash_t *entries,
 
           /* Write the entry. */
           SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
-                              this_entry, key, this_dir, subpool));
+                              this_entry, key, this_dir, iterpool));
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   SVN_ERR(svn_sqlite__transaction_commit(wc_db));

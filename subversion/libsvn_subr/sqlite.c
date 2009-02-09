@@ -299,9 +299,15 @@ svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len)
 }
 
 const char *
-svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column)
+svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
+                        apr_pool_t *result_pool)
 {
-  return (const char *) sqlite3_column_text(stmt->s3stmt, column);
+  const char *result = (const char *) sqlite3_column_text(stmt->s3stmt, column);
+
+  if (result_pool)
+    result = apr_pstrdup(result_pool, result);
+
+  return result;
 }
 
 svn_revnum_t
