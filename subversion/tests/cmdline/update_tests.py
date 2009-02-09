@@ -4430,28 +4430,17 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
 
   expected_status = resolved_status.copy()
   expected_status.wc_dir = wc_dir
-  ### HACK! Just to show the skipping behavior that we need to elminate.
-  ### Delete this!
-  expected_status.tweak(wc_rev=1)
-  expected_status.add({
-      'A/B/lambda'  : Item(status='D ', wc_rev=1),
-      })
-  expected_status.remove('A/new_file')
-  expected_status.tweak('', 'iota', wc_rev=2)
-  ### end hack
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Just for kicks, try to commit.
-  ### The commit fails because A is out of date.
   expected_output = svntest.wc.State(wc_dir, {
-      'A'           : Item(verb='Adding'),
-      'A/B/E/alpha' : Item(verb='Sending'),
-      'A/B/lambda'  : Item(verb='Deleting'),
-      'A/new_file'  : Item(verb='Adding'),
+      'A'           : Item(verb='Deleting'),
       })
-  expected_status = resolved_status.copy()
-  expected_status.tweak(status='  ', wc_rev=3)
-  expected_status.tweak('', 'iota', wc_rev=2)
+  expected_status = svntest.wc.State(wc_dir, {
+      ''            : Item(status='  ', wc_rev=2),
+      'iota'        : Item(status='  ', wc_rev=2),
+      })
   run_and_verify_commit(wc_dir, expected_output, expected_status,
                         None, wc_dir, '-m', 'commit resolved tree')
 
