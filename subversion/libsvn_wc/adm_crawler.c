@@ -256,7 +256,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
         continue;
 
       /* Compute the paths and URLs we need. */
-      this_url = svn_path_url_add_component(dot_entry->url, key, iterpool);
+      this_url = svn_path_url_add_component2(dot_entry->url, key, iterpool);
       this_path = svn_path_join(dir_path, key, iterpool);
       this_full_path = svn_path_join(full_path, key, iterpool);
 
@@ -673,8 +673,8 @@ svn_wc_crawl_revisions4(const char *path,
           && parent_entry->url
           && entry->url
           && strcmp(entry->url,
-                    svn_path_url_add_component(parent_entry->url,
-                                               bname, pool)))
+                    svn_path_url_add_component2(parent_entry->url,
+                                                bname, pool)))
         {
           /* This file is disjoint with respect to its parent
              directory.  Since we are looking at the actual target of

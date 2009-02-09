@@ -742,7 +742,7 @@ svn_stream_open_readonly(svn_stream_t **stream,
                          apr_pool_t *scratch_pool);
 
 
-/** Create a stream to write a file at @a path. The fille will be *created*
+/** Create a stream to write a file at @a path. The file will be *created*
  * using the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the
  * perms. The file will be created "exclusively", so if it already exists,
  * then an error will be thrown. If you'd like to use different values, or
@@ -1269,7 +1269,7 @@ svn_io_run_cmd(const char *path,
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * @a diff_cmd must be non-NULL.
+ * @a diff_cmd must be non-NULL and cstring encoded.
  *
  * Do all allocation in @a pool.
  */
@@ -1316,7 +1316,7 @@ svn_io_run_diff(const char *dir,
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.")
  *
- * @a diff3_cmd must be non-NULL.
+ * @a diff3_cmd must be non-NULL and cstring encoded.
  *
  * Do all allocation in @a pool.
  *

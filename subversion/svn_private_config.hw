@@ -30,13 +30,6 @@
 #define SVN_FS_WANT_DB_PATCH	14
 
 
-/* Inclusion of Berkeley DB header */
-#ifdef SVN_WANT_BDB
-#define APU_WANT_DB
-#include <apu_want.h>
-#endif
-
-
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
 
@@ -87,3 +80,9 @@
 #endif
 
 #endif /* SVN_PRIVATE_CONFIG_HW */
+
+/* Inclusion of Berkeley DB header */
+#ifdef SVN_WANT_BDB
+#define APU_WANT_DB
+#include <apu_want.h>
+#endif

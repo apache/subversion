@@ -41,7 +41,7 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 
-#include "wc-metadata.h"
+#include "wc-metadata.sql_h"
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
@@ -826,7 +826,7 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 
   /* Inherits parent's url if doesn't have a url of one's own. */
   if (! dst->url)
-    dst->url = svn_path_url_add_component(src->url, dst->name, pool);
+    dst->url = svn_path_url_add_component2(src->url, dst->name, pool);
 
   if (! dst->repos)
     dst->repos = src->repos;
