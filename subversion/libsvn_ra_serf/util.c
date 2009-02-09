@@ -475,11 +475,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   /* Setup server authorization headers */
   if (conn->session->auth_protocol)
-    conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
+    conn->session->auth_protocol->setup_request_func(conn, method, url, 
+						     hdrs_bkt);
 
   /* Setup proxy authorization headers */
   if (conn->session->proxy_auth_protocol)
-    conn->session->proxy_auth_protocol->setup_request_func(conn, hdrs_bkt);
+    conn->session->proxy_auth_protocol->setup_request_func(conn, method, 
+							   url, hdrs_bkt);
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)

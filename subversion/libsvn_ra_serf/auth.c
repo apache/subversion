@@ -21,6 +21,7 @@
 #include <apr_base64.h>
 
 #include "ra_serf.h"
+#include "auth_digest.h"
 #include "win32_auth_sspi.h"
 #include "svn_private_config.h"
 
@@ -41,6 +42,8 @@ init_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
+			 const char *method,
+			 const char *uri,
                          serf_bucket_t *hdrs_bkt);
 
 static svn_error_t *
@@ -58,6 +61,8 @@ init_proxy_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
+			       const char *method,
+			       const char *uri,
                                serf_bucket_t *hdrs_bkt);
 
 /*** Global variables. ***/
@@ -92,6 +97,13 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     setup_request_proxy_sspi_auth,
   },
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
+  {
+    401,
+    "Digest",
+    init_digest_connection,
+    handle_digest_auth,
+    setup_request_digest_auth,
+  },
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 
@@ -161,9 +173,13 @@ svn_ra_serf__handle_auth(int code,
         return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
     }
 
+#if 0
   /* If multiple *-Authenticate headers are found, serf will combine them into
      one header, with the values separated by a comma. */
   header = apr_strtok(auth_hdr, ",", &header_attr);
+#else
+  header = auth_hdr;
+#endif
 
   while (header)
     {
@@ -225,8 +241,12 @@ svn_ra_serf__handle_auth(int code,
       if (proto_found)
         break;
 
+#if 0
       /* Try the next Authentication header. */
       header = apr_strtok(NULL, ",", &header_attr);
+#else
+      header = NULL;
+#endif
     }
 
   SVN_ERR(cached_err);
@@ -371,6 +391,8 @@ init_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
+			 const char *method,
+			 const char *uri,
                          serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
@@ -437,6 +459,8 @@ init_proxy_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
+			       const char *method,
+			       const char *uri,
                                serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
