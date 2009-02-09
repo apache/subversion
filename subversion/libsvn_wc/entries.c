@@ -2158,7 +2158,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 
   if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
@@ -2173,7 +2173,7 @@ svn_wc__entries_write(apr_hash_t *entries,
           void *val;
           const svn_wc_entry_t *this_entry;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
           /* Get the entry and make sure its attributes are up-to-date. */
           apr_hash_this(hi, &key, NULL, &val);
@@ -2184,10 +2184,10 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, subpool));
+          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, iterpool));
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
   else
     /* This is needed during cleanup of a not yet upgraded WC. */
