@@ -2239,27 +2239,24 @@ svn_io_run_cmd(const char *path,
 
 
 svn_error_t *
-svn_io_run_diff(const char *dir,
-                const char *const *user_args,
-                int num_user_args,
-                const char *label1,
-                const char *label2,
-                const char *from,
-                const char *to,
-                int *pexitcode,
-                apr_file_t *outfile,
-                apr_file_t *errfile,
-                const char *diff_cmd,
-                apr_pool_t *pool)
+svn_io_run_diff2(const char *dir,
+                 const char *const *user_args,
+                 int num_user_args,
+                 const char *label1,
+                 const char *label2,
+                 const char *from,
+                 const char *to,
+                 int *pexitcode,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const char *diff_cmd,
+                 apr_pool_t *pool)
 {
   const char **args;
   int i;
   int exitcode;
   int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
-  const char *diff_utf8;
   apr_pool_t *subpool = svn_pool_create(pool);
-
-  SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
     pexitcode = &exitcode;
@@ -2277,7 +2274,7 @@ svn_io_run_diff(const char *dir,
   args = apr_palloc(subpool, nargs * sizeof(char *));
 
   i = 0;
-  args[i++] = diff_utf8;
+  args[i++] = diff_cmd;
 
   if (user_args != NULL)
     {
@@ -2305,7 +2302,7 @@ svn_io_run_diff(const char *dir,
 
   SVN_ERR_ASSERT(i == nargs);
 
-  SVN_ERR(svn_io_run_cmd(dir, diff_utf8, args, pexitcode, NULL, TRUE,
+  SVN_ERR(svn_io_run_cmd(dir, diff_cmd, args, pexitcode, NULL, TRUE,
                          NULL, outfile, errfile, subpool));
 
   /* The man page for (GNU) diff describes the return value as:
@@ -2321,7 +2318,7 @@ svn_io_run_diff(const char *dir,
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                              _("'%s' returned %d"),
-                             svn_path_local_style(diff_utf8, pool),
+                             svn_path_local_style(diff_cmd, pool),
                              *pexitcode);
 
   svn_pool_destroy(subpool);
@@ -2330,9 +2327,8 @@ svn_io_run_diff(const char *dir,
 }
 
 
-
 svn_error_t *
-svn_io_run_diff3_2(int *exitcode,
+svn_io_run_diff3_3(int *exitcode,
                    const char *dir,
                    const char *mine,
                    const char *older,
@@ -2350,13 +2346,10 @@ svn_io_run_diff3_2(int *exitcode,
                                                   + (user_args
                                                      ? user_args->nelts
                                                      : 1)));
-  const char *diff3_utf8;
 #ifndef NDEBUG
   int nargs = 12;
 #endif
   int i = 0;
-
-  SVN_ERR(cstring_to_utf8(&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -2367,7 +2360,7 @@ svn_io_run_diff3_2(int *exitcode,
     yours_label = ".new";
 
   /* Set up diff3 command line. */
-  args[i++] = diff3_utf8;
+  args[i++] = diff3_cmd;
   if (user_args)
     {
       int j;
@@ -2434,7 +2427,7 @@ svn_io_run_diff3_2(int *exitcode,
 #endif
 
   /* Run diff3, output the merged text into the scratch file. */
-  SVN_ERR(svn_io_run_cmd(dir, diff3_utf8, args,
+  SVN_ERR(svn_io_run_cmd(dir, diff3_cmd, args,
                          exitcode, NULL,
                          TRUE, /* keep environment */
                          NULL, merged, NULL,
@@ -2448,7 +2441,7 @@ svn_io_run_diff3_2(int *exitcode,
                              _("Error running '%s':  exitcode was %d, "
                                "args were:"
                                "\nin directory '%s', basenames:\n%s\n%s\n%s"),
-                             svn_path_local_style(diff3_utf8, pool),
+                             svn_path_local_style(diff3_cmd, pool),
                              *exitcode,
                              svn_path_local_style(dir, pool),
                              /* Don't call svn_path_local_style() on
@@ -2459,25 +2452,6 @@ svn_io_run_diff3_2(int *exitcode,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_io_run_diff3(const char *dir,
-                 const char *mine,
-                 const char *older,
-                 const char *yours,
-                 const char *mine_label,
-                 const char *older_label,
-                 const char *yours_label,
-                 apr_file_t *merged,
-                 int *exitcode,
-                 const char *diff3_cmd,
-                 apr_pool_t *pool)
-{
-  return svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
-                            mine_label, older_label, yours_label,
-                            merged, diff3_cmd, NULL, pool);
-}
-
 
 svn_error_t *
 svn_io_parse_mimetypes_file(apr_hash_t **type_map,

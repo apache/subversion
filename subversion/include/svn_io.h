@@ -1269,10 +1269,30 @@ svn_io_run_cmd(const char *path,
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * @a diff_cmd must be non-NULL and cstring encoded.
+ * @a diff_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
+ * @since New in 1.6.0.
  */
+svn_error_t *
+svn_io_run_diff2(const char *dir,
+                 const char *const *user_args,
+                 int num_user_args,
+                 const char *label1,
+                 const char *label2,
+                 const char *from,
+                 const char *to,
+                 int *exitcode,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const char *diff_cmd,
+                 apr_pool_t *pool);
+
+/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal 
+ * encoding used by APR.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff(const char *dir,
                 const char *const *user_args,
@@ -1286,6 +1306,7 @@ svn_io_run_diff(const char *dir,
                 apr_file_t *errfile,
                 const char *diff_cmd,
                 apr_pool_t *pool);
+
 
 
 /** Invoke the configured @c diff3 program, in utf8-encoded @a dir
@@ -1320,6 +1341,26 @@ svn_io_run_diff(const char *dir,
  *
  * Do all allocation in @a pool.
  *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_io_run_diff3_3(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool);
+
+/** Similar to svn_io_run_diff3_3(), but with @a diff3_cmd encoded in 
+ * internal encoding used by APR.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
 svn_error_t *
