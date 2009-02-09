@@ -5800,31 +5800,35 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
-   the same as commit_body().
+/* Baton for use with an sqlite transaction'd commit body. */
+struct commit_sqlite_txn_baton
+{
+  struct commit_baton *cb;
+  apr_pool_t *pool;
+};
 
-   XXX: If we decide to wrap other stuff with sqlite transactions, this should
-   probably be generalized and moved into libsvn_subr/sqlite.c.
- */
+/* Implements svn_sqlite__transaction_callback_t. */
+static svn_error_t *
+commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db)
+{
+  struct commit_sqlite_txn_baton *cstb = baton;
+  return commit_body(cstb->cb, cstb->pool);
+}
+
+/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
+   the same as commit_body().  */
 static svn_error_t *
 commit_body_rep_cache(void *baton, apr_pool_t *pool)
 {
+  struct commit_sqlite_txn_baton cstb;
   struct commit_baton *cb = baton;
   fs_fs_data_t *ffd = cb->fs->fsap_data;
-  svn_error_t *err;
 
-  /* Start the sqlite transaction. */
-  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache_db));
+  cstb.cb = cb;
+  cstb.pool = pool;
 
-  err = commit_body(baton, pool);
-
-  /* Commit or rollback the sqlite transaction. */
-  if (err)
-    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache_db));
-  else
-    return svn_sqlite__transaction_commit(ffd->rep_cache_db);
-
-  return err;
+  return svn_sqlite__with_transaction(ffd->rep_cache_db,
+                                      commit_sqlite_txn_callback, &cstb);
 }
 
 svn_error_t *

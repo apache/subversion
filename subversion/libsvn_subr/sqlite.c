@@ -639,3 +639,23 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_sqlite__with_transaction(svn_sqlite__db_t *db,
+                             svn_sqlite__transaction_callback_t cb_func,
+                             void *cb_baton)
+{
+  svn_error_t *err;
+
+  SVN_ERR(svn_sqlite__transaction_begin(db));
+  err = cb_func(cb_baton, db);
+
+  /* Commit or rollback the sqlite transaction. */
+  if (err)
+    {
+      svn_error_clear(svn_sqlite__transaction_rollback(db));
+      return err;
+    }
+  else
+    return svn_sqlite__transaction_commit(db);
+}
