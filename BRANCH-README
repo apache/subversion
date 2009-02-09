@@ -29,6 +29,17 @@ TODO:
    returning a transaction URI stub and transaction prop URI stub for
    further use in the commit.  [DONE]
 
+ * Teach mod_dav_svn to notice and use 'If-match' headers in write
+   requests aimed at transaction root resources.
+
+      PROPPATCH
+      DELETE
+      PUT
+      MKCOL
+      COPY
+      MOVE
+      ...
+      
  * Teach ra_serf operations to not do the multi-PROPFIND dance any
    more, but to fetch the information they seek from mod_dav_svn using
    the new stub URIs:
