@@ -1533,7 +1533,7 @@ def status_with_tree_conflicts(sbox):
   # check status of G, with -v
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
-          "D     C          1        1 jrandom      %s\n" % pi,
+          "D     C          2        2 jrandom      %s\n" % pi,
           "      >   local delete, incoming edit upon update\n",
           "A  +  C          -        1 jrandom      %s\n" % rho,
           "      >   local edit, incoming delete upon update\n",
@@ -1624,7 +1624,7 @@ test_list = [ None,
               status_depth_local,
               status_depth_update,
               status_dash_u_type_change,
-              status_with_tree_conflicts,
+              XFail(status_with_tree_conflicts),
              ]
 
 if __name__ == '__main__':

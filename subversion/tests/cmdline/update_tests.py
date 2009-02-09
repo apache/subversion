@@ -951,7 +951,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
-  expected_status.tweak('iota', status='D ', treeconflict='C', wc_rev=1)
+  expected_status.tweak('iota', status='D ', treeconflict='C')
 
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(other_wc,
@@ -4592,7 +4592,7 @@ test_list = [ None,
               update_missing,
               update_replace_dir,
               update_single_file,
-              prop_update_on_scheduled_delete,
+              XFail(prop_update_on_scheduled_delete),
               update_receive_illegal_name,
               update_deleted_missing_dir,
               another_hudson_problem,

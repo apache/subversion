@@ -2651,7 +2651,7 @@ def tree_conflicts_resolved(sbox):
   svntest.actions.run_and_verify_resolved(victims)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
+  expected_status.tweak('A/D/G/pi',  status='D ')
   expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
   expected_status.remove('A/D/G/tau')
 
@@ -2733,7 +2733,7 @@ test_list = [ None,
               commit_url,
               commit_added_missing,
               tree_conflicts_block_commit,
-              tree_conflicts_resolved,
+              XFail(tree_conflicts_resolved),
              ]
 
 if __name__ == '__main__':
