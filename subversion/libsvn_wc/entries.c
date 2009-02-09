@@ -1057,8 +1057,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  SVN_ERR(svn_sqlite__close(wc_db, SVN_NO_ERROR));
-
   /* Fill in any implied fields. */
   SVN_ERR(resolve_to_defaults(entries, result_pool));
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
@@ -1605,7 +1603,6 @@ svn_wc__entries_write(apr_hash_t *entries,
     }
 
   SVN_ERR(svn_sqlite__transaction_commit(wc_db));
-  SVN_ERR(svn_sqlite__close(wc_db, SVN_NO_ERROR));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
@@ -2394,9 +2391,8 @@ svn_wc__entries_init(const char *path,
   SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos, entry,
                       SVN_WC_ENTRY_THIS_DIR, entry, pool));
 
-  /* Commit the sqlite transaction and close the database. */
-  SVN_ERR(svn_sqlite__transaction_commit(wc_db));
-  return svn_sqlite__close(wc_db, SVN_NO_ERROR);
+  /* Commit the sqlite transaction. */
+  return svn_sqlite__transaction_commit(wc_db);
 }
 
 
