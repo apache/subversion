@@ -82,8 +82,10 @@ TODO:
    methods as described in the design doc.
 
     - Use POST to 'me' resource to get txn name          [DONE]
-    - Send write requests against txn and txn root URLs  [STARTED]
+    - Set revprops using PROPPATCH on the txn resource   [DONE]
     - Abort edit with DELETE against the txn resource    [DONE]
+    - Send write requests against txn and txn root URLs  [STARTED]
+    - Enable pipelined PUTs
 
  * Optional:  Do some of this stuff for ra_neon, too:
 
