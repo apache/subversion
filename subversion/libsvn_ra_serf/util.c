@@ -1358,6 +1358,12 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       return SVN_NO_ERROR;
     }
 
+  /* If no connection is provided, use the default one. */
+  if (! conn)
+    {
+      conn = session->conns[0];
+    }
+
   props = apr_hash_make(pool);
   path = session->repos_url.path;
   *vcc_url = NULL;
