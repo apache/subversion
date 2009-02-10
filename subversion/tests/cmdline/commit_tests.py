@@ -2733,7 +2733,7 @@ test_list = [ None,
               commit_url,
               commit_added_missing,
               tree_conflicts_block_commit,
-              XFail(tree_conflicts_resolved),
+              tree_conflicts_resolved,
              ]
 
 if __name__ == '__main__':

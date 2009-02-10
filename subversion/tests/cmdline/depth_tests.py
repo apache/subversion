@@ -2446,10 +2446,10 @@ test_list = [ None,
               excluded_path_update_operation,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
-              XFail(tree_conflicts_resolved_depth_empty),
-              XFail(tree_conflicts_resolved_depth_files),
-              XFail(tree_conflicts_resolved_depth_immediates),
-              XFail(tree_conflicts_resolved_depth_infinity),
+              tree_conflicts_resolved_depth_empty,
+              tree_conflicts_resolved_depth_files,
+              tree_conflicts_resolved_depth_immediates,
+              tree_conflicts_resolved_depth_infinity,
             ]
 
 if __name__ == "__main__":

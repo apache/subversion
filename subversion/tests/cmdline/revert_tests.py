@@ -941,7 +941,7 @@ test_list = [ None,
               status_of_missing_dir_after_revert,
               status_of_missing_dir_after_revert_replaced_with_history_dir,
               revert_replaced_with_history_file_2,
-              XFail(revert_tree_conflicts_in_updated_files),
+              revert_tree_conflicts_in_updated_files,
              ]
 
 if __name__ == '__main__':

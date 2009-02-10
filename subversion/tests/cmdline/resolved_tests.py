@@ -324,7 +324,7 @@ def resolved_on_deleted_item(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(resolved_on_wc_root),
+              resolved_on_wc_root,
               resolved_on_deleted_item,
              ]
 

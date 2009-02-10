@@ -227,6 +227,10 @@ struct edit_baton
      pathnames and the values unspecified. */
   apr_hash_t *skipped_trees;
 
+  /* The root paths of subtrees that are locally deleted.  The keys are
+     pathnames and the values unspecified. */
+  apr_hash_t *deleted_trees;
+
   apr_pool_t *pool;
 };
 
@@ -241,6 +245,42 @@ remember_skipped_tree(struct edit_baton *eb, const char *path)
 {
   apr_hash_set(eb->skipped_trees, apr_pstrdup(eb->pool, path),
                APR_HASH_KEY_STRING, (void*)1);
+}
+
+/* Record in the edit baton EB the root PATH of any locally deleted subtrees.
+ *
+ * Add to EB->deleted_trees a copy (allocated in EB->pool) of the string
+ * PATH.
+ */
+static void
+remember_deleted_tree(struct edit_baton *eb, const char *path)
+{
+  apr_hash_set(eb->deleted_trees, apr_pstrdup(eb->pool, path),
+               APR_HASH_KEY_STRING, (void*)1);
+}
+
+/* If INCLUDE_ROOT is true then return TRUE if PATH is stored in
+ * EB->DELETED_TREES or is a subtree of any of those paths.  If INCLUDE_ROOT
+ * is false then consider only proper subtrees for a match.  In all other
+ * cases return FALSE.  Use SCRATCH_POOL for allocations. */
+static svn_boolean_t
+in_deleted_tree(struct edit_baton *eb, 
+                const char *path,
+                svn_boolean_t include_root,
+                apr_pool_t *scratch_pool)
+{
+  if (!include_root)
+    path = svn_path_dirname(path, scratch_pool);
+
+  while (! svn_path_is_empty(path) && strcmp(path, "/") != 0)
+    {
+      if (apr_hash_get(eb->deleted_trees, path, APR_HASH_KEY_STRING))
+        return TRUE;
+
+      path = svn_path_dirname(path, scratch_pool);
+    }
+
+  return FALSE;
 }
 
 /* Return TRUE if PATH or any of its ancestor is in the set of skipped
@@ -596,7 +636,8 @@ complete_directory(struct edit_baton *eb,
   const char *name;
 
   /* If inside a tree conflict, do nothing. */
-  if (in_skipped_tree(eb, path, pool))
+  if (in_skipped_tree(eb, path, pool)
+      && !in_deleted_tree(eb, path, TRUE, pool))
     return SVN_NO_ERROR;
 
   /* If this is the root directory and there is a target, we can't
@@ -810,6 +851,10 @@ struct file_baton
   /* Set if the dir is a tree conflict victim. */
   svn_boolean_t tree_conflicted;
 
+  /* Set if this file is locally deleted or is being added
+     within a locally deleted tree. */
+  svn_boolean_t deleted;
+
   /* The path to the current text base, if any.
      This gets set if there are file content changes. */
   const char *text_base_path;
@@ -898,6 +943,7 @@ make_file_baton(struct file_baton **f_p,
   f->existed           = FALSE;
   f->add_existed       = FALSE;
   f->tree_conflicted   = FALSE;
+  f->deleted           = FALSE;
   f->dir_baton         = pb;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
@@ -1441,13 +1487,20 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
 {
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
   svn_boolean_t all_mods_are_deletes = FALSE;
+  svn_boolean_t is_subtree_of_locally_deleted =
+    in_deleted_tree(eb, full_path, FALSE, pool);
 
   switch (action)
     {
     case svn_wc_conflict_action_edit:
-      /* Use case 1: Modifying a locally-deleted item. */
-      if (entry->schedule == svn_wc_schedule_delete
-          || entry->schedule == svn_wc_schedule_replace)
+      /* Use case 1: Modifying a locally-deleted item. 
+         If FULL_PATH is an incoming leaf edit within a local
+         tree deletion then we will already have recorded a tree
+         conflict on the locally deleted parent tree.  No need
+         to record a conflict within the conflict. */
+      if ((entry->schedule == svn_wc_schedule_delete
+           || entry->schedule == svn_wc_schedule_replace)
+          && !is_subtree_of_locally_deleted)
         reason = svn_wc_conflict_reason_deleted;
       break;
 
@@ -1466,7 +1519,14 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       /* Use case 3: Deleting a locally-deleted item. */
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
-        reason = svn_wc_conflict_reason_deleted;
+        {
+          /* If FULL_PATH is an incoming leaf deletion within a local
+             tree deletion then we will already have recorded a tree
+             conflict on the locally deleted parent tree.  No need
+             to record a conflict within the conflict. */
+          if (!is_subtree_of_locally_deleted)
+            reason = svn_wc_conflict_reason_deleted;
+        }
       else
         {
           svn_boolean_t modified = FALSE;
@@ -1905,7 +1965,8 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, full_path, pool))
+  if (in_skipped_tree(eb, full_path, pool)
+      && !in_deleted_tree(eb, full_path, TRUE, pool))
     return SVN_NO_ERROR;
 
   /* Is this path, or an ancestor-dir NOT visited by this edit, already
@@ -2063,7 +2124,9 @@ do_entry_deletion(struct edit_baton *eb,
   *log_number = 0;
 
   /* Notify. (If tree_conflict, we've already notified.) */
-  if (eb->notify_func && tree_conflict == NULL)
+  if (eb->notify_func
+      && tree_conflict == NULL
+      && !in_deleted_tree(eb, full_path, TRUE, pool))
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(full_path, svn_wc_notify_update_delete, pool);
@@ -2464,7 +2527,8 @@ open_directory(const char *path,
  
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip the tree without notification. */
-  if (in_skipped_tree(eb, full_path, pool))
+  if (in_skipped_tree(eb, full_path, pool)
+      && !in_deleted_tree(eb, full_path, TRUE, pool))
     {
       db->bump_info->skipped = TRUE;
 
@@ -2486,16 +2550,28 @@ open_directory(const char *path,
                                 svn_wc_conflict_action_edit,
                                 svn_node_dir, db->new_URL, pool));
 
+    /* Remember the roots of any locally deleted trees. */
+    if (tree_conflict
+        && tree_conflict->reason == svn_wc_conflict_reason_deleted
+        && !in_deleted_tree(eb, full_path, TRUE, pool))
+      remember_deleted_tree(eb, full_path);
+
   /* If property-conflicted, skip the tree with notification. */
   SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
                                adm_access, pool));
 
   if (victim_path != NULL || tree_conflict != NULL || prop_conflicted)
     {  
-      db->bump_info->skipped = TRUE;
+      if (!in_deleted_tree(eb, full_path, TRUE, pool))
+        db->bump_info->skipped = TRUE;
+
       remember_skipped_tree(eb, full_path);
-      
-      if (eb->notify_func)
+
+      /* Don't bother with a notification if PATH is inside a locally
+         deleted tree, a conflict notification will already have been
+         issued for the root of that tree. */
+      if (eb->notify_func
+          && !in_deleted_tree(eb, full_path, FALSE, pool))
         {
           svn_wc_notify_t *notify
             = svn_wc_create_notify(full_path,
@@ -2510,7 +2586,14 @@ open_directory(const char *path,
 
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
-      return SVN_NO_ERROR;
+
+      /* Even if PATH is locally deleted we still need mark it as being
+         at TARGET_REVISION, so fall through to the code below to do just
+         that. */
+      if (prop_conflicted
+          || (tree_conflict
+              && tree_conflict->reason != svn_wc_conflict_reason_deleted))
+        return SVN_NO_ERROR;
     }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
@@ -2612,7 +2695,8 @@ close_directory(void *dir_baton,
   svn_wc_adm_access_t *adm_access;
 
   /* Skip if we're in a conflicted tree. */
-  if (in_skipped_tree(db->edit_baton, db->path, pool))
+  if (in_skipped_tree(db->edit_baton, db->path, pool)
+      && !in_deleted_tree(db->edit_baton, db->path, TRUE, pool))
     {
       /* Allow the parent to complete its update. */
       SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
@@ -2759,8 +2843,10 @@ close_directory(void *dir_baton,
    * acceptable for the notification to come always after the children, then
    * store the desired notification in the baton as soon as we know what it
    * is, and finally, here, just send it if it has already been created. */
-   if (! db->bump_info->skipped && (db->add_existed || (! db->added))
-      && (db->edit_baton->notify_func))
+   if (! db->bump_info->skipped
+       && (db->add_existed || (! db->added))
+       && (db->edit_baton->notify_func)
+       && !in_deleted_tree(db->edit_baton, db->path, TRUE, pool))
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(db->path,
@@ -3234,6 +3320,7 @@ add_file(const char *path,
   apr_pool_t *subpool;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   char *victim_path;
+  svn_boolean_t locally_deleted = in_deleted_tree(eb, full_path, TRUE, pool);
 
   if (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev))
     {
@@ -3248,12 +3335,15 @@ add_file(const char *path,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, full_path, pool))
+  if (in_skipped_tree(eb, full_path, pool)
+      && !locally_deleted)
     {
       fb->skipped = TRUE;
 
       return SVN_NO_ERROR;
     }
+
+  fb->deleted = locally_deleted;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3421,6 +3511,7 @@ open_file(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
+  svn_boolean_t locally_deleted;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   char *victim_path;
   svn_wc_conflict_description_t *tree_conflict;
@@ -3450,9 +3541,11 @@ open_file(const char *path,
                              fb->name,
                              svn_path_local_style(pb->path, pool));
 
+  locally_deleted = in_deleted_tree(eb, full_path, TRUE, pool);
+
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, full_path, pool))
+  if (in_skipped_tree(eb, full_path, pool) && !locally_deleted)
     {
       fb->skipped = TRUE;
 
@@ -3477,14 +3570,33 @@ open_file(const char *path,
   SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, NULL,
                                full_path, adm_access, pool));
 
+  /* Remember any locally deleted files that are not already within
+     a locally delete tree. */
+  if (tree_conflict
+      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && !locally_deleted)
+    {
+      remember_deleted_tree(eb, full_path);
+
+      locally_deleted = TRUE;
+    }
+
+  fb->deleted = locally_deleted;
+
   if (victim_path != NULL || tree_conflict != NULL || text_conflicted
       || prop_conflicted)
     {
-      fb->skipped = TRUE;
+      if (!locally_deleted)
+        fb->skipped = TRUE;
+
       remember_skipped_tree(eb, full_path);
       
+      /* Don't bother with a notification if PATH is inside a locally
+         deleted tree, a conflict notification will already have been
+         issued for the root of that tree. */
       /* ### TODO: Also print victim_path in the t-c skip msg. */
-      if (eb->notify_func)
+      if (eb->notify_func
+          && !in_deleted_tree(eb, full_path, FALSE, pool))
         (*eb->notify_func)(eb->notify_baton, 
                            svn_wc_create_notify(full_path,
                                                 (tree_conflict != NULL)
@@ -3991,24 +4103,39 @@ merge_file(svn_wc_notify_state_t *content_state,
     No Mods              |        Just overwrite working file.         |
                          |                                             |
                          -----------------------------------------------
+    File is Locally      |        Same as if 'No Mods' except we       |
+    Deleted              |        don't move the new text base to      |
+                         |        the working file location.           |
+                         -----------------------------------------------
+    File is Locally      |        Install the new text base.           |
+    Replaced             |        Leave working file alone.            |
+                         |                                             |
+                         -----------------------------------------------
 
    So the first thing we do is figure out where we are in the
    matrix. */
   if (new_text_base_path)
     {
-      if (! is_locally_modified && ! is_replaced)
+      if (is_replaced)
         {
-          /* If there are no local mods, who cares whether it's a text
-             or binary file!  Just write a log command to overwrite
-             any working file with the new text-base.  If newline
-             conversion or keyword substitution is activated, this
-             will happen as well during the copy.
-             For replaced files, though, we want to merge in the changes
-             even if the file is not modified compared to the (non-revert)
-             text-base. */
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
-                                     new_text_base_path,
-                                     fb->path, pool));
+          /* Nothing to do, the delete half of the local replacement will
+             have already raised a tree conflict.  So we will just fall
+             through to the installation of the new textbase. */
+        }
+      else if (! is_locally_modified)
+        {
+          if (!fb->deleted)
+            /* If there are no local mods, who cares whether it's a text
+               or binary file!  Just write a log command to overwrite
+               any working file with the new text-base.  If newline
+               conversion or keyword substitution is activated, this
+               will happen as well during the copy.
+               For replaced files, though, we want to merge in the changes
+               even if the file is not modified compared to the (non-revert)
+               text-base. */
+            SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                       new_text_base_path,
+                                       fb->path, pool));
         }
       else   /* working file or obstruction is locally modified... */
         {
@@ -4165,6 +4292,14 @@ merge_file(svn_wc_notify_state_t *content_state,
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
+  /* If FB->PATH is locally deleted, but not as part of a replacement
+     then keep it deleted. */
+  if (fb->deleted && !is_replaced)
+    {
+      tmp_entry.schedule = svn_wc_schedule_delete;
+      flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+    }
+
   /* Do the entry modifications we've accumulated. */
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                      fb->path, &tmp_entry, flags, pool));
@@ -4181,7 +4316,8 @@ merge_file(svn_wc_notify_state_t *content_state,
                                             fb->path, fb->last_changed_date,
                                             pool));
 
-      if (new_text_base_path || magic_props_changed)
+      if ((new_text_base_path || magic_props_changed)
+          && !fb->deleted)
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
@@ -4293,7 +4429,11 @@ close_file(void *file_baton,
        (prop_state != svn_wc_notify_state_unchanged) ||
        (lock_state != svn_wc_notify_lock_state_unchanged) ||
        (fb->tree_conflicted))
-      && eb->notify_func)
+      && eb->notify_func
+      /* Supress notifications for files within locally deleted trees,
+         we will have already raised a tree conflict notification.
+        ### When is FB->PATH absolute? Will we ever use the wrong key? */
+      && !in_deleted_tree(eb, fb->path, TRUE, pool))
     {
       const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
@@ -4376,16 +4516,35 @@ close_edit(void *edit_baton,
      'deleted', then do *not* run cleanup on the target, as it
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
-    SVN_ERR(svn_wc__do_update_cleanup(target_path,
-                                      eb->adm_access,
-                                      eb->requested_depth,
-                                      eb->switch_url,
-                                      eb->repos,
-                                      *(eb->target_revision),
-                                      eb->notify_func,
-                                      eb->notify_baton,
-                                      TRUE, eb->skipped_trees,
-                                      eb->pool));
+    {
+      apr_hash_index_t *hi;
+
+      /* Remove locally deleted paths from EB->SKIPPED_TREES.  We want
+         to update the working revision for those */
+      for (hi = apr_hash_first(pool, eb->deleted_trees);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *key;
+          const char *deleted_path;
+
+          apr_hash_this(hi, &key, NULL, NULL);
+          deleted_path = key;
+          apr_hash_set(eb->skipped_trees, deleted_path,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      SVN_ERR(svn_wc__do_update_cleanup(target_path,
+                                        eb->adm_access,
+                                        eb->requested_depth,
+                                        eb->switch_url,
+                                        eb->repos,
+                                        *(eb->target_revision),
+                                        eb->notify_func,
+                                        eb->notify_baton,
+                                        TRUE, eb->skipped_trees,
+                                        eb->pool));
+    }
 
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
@@ -4476,6 +4635,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->fetch_baton              = fetch_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
   eb->skipped_trees            = apr_hash_make(subpool);
+  eb->deleted_trees            = apr_hash_make(subpool);
   eb->ext_patterns             = preserved_exts;
 
   /* Construct an editor. */

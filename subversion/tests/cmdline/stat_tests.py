@@ -1624,7 +1624,7 @@ test_list = [ None,
               status_depth_local,
               status_depth_update,
               status_dash_u_type_change,
-              XFail(status_with_tree_conflicts),
+              status_with_tree_conflicts,
              ]
 
 if __name__ == '__main__':

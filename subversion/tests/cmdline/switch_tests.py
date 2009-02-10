@@ -2267,9 +2267,6 @@ def tree_conflicts_on_switch_1_2(sbox):
   # commit without updating...which, you guessed it, raises tree conflicts
   # again, repeat ad infinitum - see issue #3334.
   #
-  # Currently this test is set as XFail as the incoming deletes are *not*
-  # happening, leaving the WC on the merry-go-round.
-  #
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
   expected_status.tweak('F/alpha',
@@ -2482,8 +2479,8 @@ test_list = [ None,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
               tolerate_local_mods,
-              XFail(tree_conflicts_on_switch_1_1),
-              XFail(tree_conflicts_on_switch_1_2),
+              tree_conflicts_on_switch_1_1,
+              tree_conflicts_on_switch_1_2,
               tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
