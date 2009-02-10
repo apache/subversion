@@ -2224,7 +2224,7 @@ def tree_conflicts_on_switch_1_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -2255,7 +2255,7 @@ def tree_conflicts_on_switch_1_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
   expected_status = deep_trees_status_local_tree_del.copy()
 
@@ -2299,9 +2299,9 @@ def tree_conflicts_on_switch_2_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_after_leaf_edit
+  expected_disk = disk_after_leaf_edit.copy()
 
-  expected_status = deep_trees_status_local_leaf_edit
+  expected_status = deep_trees_status_local_leaf_edit.copy()
   # These 'switched' statuses are bogus, because of do_entry_deletion not
   # updating the URLs (issue #3334).  For example, after the switch, D/D1
   # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
@@ -2352,7 +2352,7 @@ def tree_conflicts_on_switch_2_2(sbox):
   ### when dirs_same_p() is implemented)
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
   expected_status = svntest.actions.deep_trees_virginal_state.copy()
   expected_status.add({'' : Item(),
@@ -2403,9 +2403,9 @@ def tree_conflicts_on_switch_3(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
-  expected_status = deep_trees_status_local_tree_del
+  expected_status = deep_trees_status_local_tree_del.copy()
 
   # Expect the incoming tree deletes and the local tree deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
