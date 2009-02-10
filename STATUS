@@ -107,6 +107,15 @@ Candidate changes for 1.5.6:
      the wrong way is BAD.
    Votes:
      +1: rhuijben
+     
+ * r32448
+   Copy properties of 'svn add'ed but uncommitted files.
+   Justification:
+     Makes sure that auto and normal props that are applied to a file actually
+     get committed when a new file is renamed before this first commit.
+     (Reported as AnkhSVN bug)
+   Votes:
+     +1: rhuijben   
 
 Approved changes:
 =================
