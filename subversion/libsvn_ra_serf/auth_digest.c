@@ -92,7 +92,7 @@ build_digest_ha2(const char *uri,
   unsigned char ha2[APR_MD5_DIGESTSIZE];
   apr_status_t status;
 
-  if (strcmp(qop, "auth") == 0)
+  if (!qop || strcmp(qop, "auth") == 0)
     {
       /* calculate ha2:
 	 MD5 hash of the combined method and URI */
@@ -119,25 +119,9 @@ build_auth_header(serf_digest_context_t *context,
 {
   unsigned char response_hdr[APR_MD5_DIGESTSIZE]; 
   apr_status_t status;
-  char *tmp, *response_hdr_hex, *ha2, *nc_str;
+  char *hdr, *tmp, *response_hdr_hex, *ha2, *nc_str;
 
   ha2 = build_digest_ha2(uri, method, context->qop, pool);
-
-  /* cnonce must only be specified if a qop directive was sent by the
-     server. */
-  if (context->qop && ! context->cnonce)
-    {
-      context->cnonce = random_cnonce(context->pool);
-    }
-
-  /* nc (nonce-count) must only be specified if a qop directive was sent
-     by the server. */
-  if (context->qop)
-    {
-      /* TODO: nonce-count! */
-    }
-
-  nc_str = apr_psprintf(pool, "%08x", context->digest_nc);
 
 #if 0
   printf("HA1: %s\n", context->ha1);
@@ -148,44 +132,67 @@ build_auth_header(serf_digest_context_t *context,
   printf("DNC: %08x\n", context->digest_nc);
 #endif
 
-  /* calculate the response header:
-     MD5 hash of the combined HA1 result, server nonce (nonce), request counter
-     (nc), client nonce (cnonce), quality of protection code (qop) and 
-     HA2 result. */
-  tmp = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
-		     context->ha1, context->nonce, nc_str,
-                     context->cnonce, context->qop, ha2);
-  status = apr_md5(response_hdr, tmp, strlen(tmp));
-
-  response_hdr_hex =  hex_encode(response_hdr, pool);
-
-  tmp = apr_psprintf(pool,
+  hdr = apr_psprintf(pool,
 		     "Digest realm=\"%s\","
                      " username=\"%s\","
  		     " nonce=\"%s\","
-		     " cnonce=\"%s\","
-                     " qop=\"%s\","
-		     " uri=\"%s\","
-		     " nc=%08x,"
-		     " response=\"%s\"",
+		     " uri=\"%s\",",
 		     context->realm, context->username, context->nonce,
-		     context->cnonce, context->qop, uri,
-		     context->digest_nc,
-		     response_hdr_hex);
+		     uri);
+
+  if (context->qop)
+    {
+      /* calculate the response header:
+	 MD5 hash of the combined HA1 result, server nonce (nonce),
+         request counter (nc), client nonce (cnonce),
+	 quality of protection code (qop) and HA2 result. */
+      if (! context->cnonce)
+	context->cnonce = random_cnonce(context->pool);
+      nc_str = apr_psprintf(pool, "%08x", context->digest_nc);
+
+      tmp = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
+			 context->ha1, context->nonce, nc_str,
+			 context->cnonce, context->qop, ha2);
+      status = apr_md5(response_hdr, tmp, strlen(tmp));
+      response_hdr_hex =  hex_encode(response_hdr, pool);
+
+      hdr = apr_pstrcat(pool,
+			hdr,
+			", nc=", nc_str,
+			", cnonce=\"",context->cnonce, "\"",
+			", qop=\"", context->qop, "\"",
+			", response=\"", response_hdr_hex, "\"",
+			NULL);
+    }
+  else
+    {
+      /* calculate the response header:
+	 MD5 hash of the combined HA1 result, server nonce (nonce)
+	 and HA2 result. */
+      tmp = apr_psprintf(pool, "%s:%s:%s",
+			 context->ha1, context->nonce, ha2);
+      status = apr_md5(response_hdr, tmp, strlen(tmp));
+      response_hdr_hex =  hex_encode(response_hdr, pool);
+
+      hdr = apr_pstrcat(pool,
+			hdr,
+			", response=\"", response_hdr_hex, "\"",
+			NULL);
+    }
   if (context->opaque) {
-    tmp = apr_pstrcat(pool,
-                      tmp,
+    hdr = apr_pstrcat(pool,
+                      hdr,
                       ", opaque=\"", context->opaque, "\"",
                       NULL);
   }
   if (context->algorithm) {
-    tmp = apr_pstrcat(pool,
-                      tmp,
+    hdr = apr_pstrcat(pool,
+                      hdr,
                       ", algorithm=", context->algorithm, "",
                       NULL);
   }
   
-  return tmp;
+  return hdr;
 }
 
 svn_error_t *
@@ -197,8 +204,8 @@ handle_digest_auth(svn_ra_serf__handler_t *ctx,
                    apr_pool_t *pool)
 {
   void *creds;
-  char *nextkv, *realm_name = NULL, *nonce, *algorithm = NULL;
-  char *qop, *opaque = NULL;
+  char *nextkv, *realm_name = NULL, *nonce = NULL, *algorithm = NULL;
+  char *qop = NULL, *opaque = NULL;
   svn_auth_cred_simple_t *simple_creds;
   apr_port_t port;
   svn_ra_serf__session_t *session = ctx->session;

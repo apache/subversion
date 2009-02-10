@@ -3,7 +3,7 @@ Remaining TODO's on the ra_serf-digest-authn branch:
 * Fix Authorization header parsing in auth.c
 * Implement algorithm=MD5-sess
 * Implement qop=auth-int
-* Implement qop=none
+* Implement qop=none [DONE]
 * Implement server returning nextnonce in AuthenticationInfo header
 * Validate rspauth in AuthenticationInfo header
 * Remove printf's from auth_digest.c
