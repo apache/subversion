@@ -3966,7 +3966,7 @@ def tree_conflicts_on_update_1_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -3997,9 +3997,9 @@ def tree_conflicts_on_update_1_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
-  expected_status = deep_trees_status_local_tree_del
+  expected_status = deep_trees_status_local_tree_del.copy()
 
   # Expect the incoming leaf deletes to actually occur.  Even though they
   # are within (or in the case of F/alpha and D/D1 are the same as) the
@@ -4043,7 +4043,7 @@ def tree_conflicts_on_update_2_1(sbox):
 
   expected_disk = disk_after_leaf_edit
 
-  expected_status = deep_trees_status_local_leaf_edit
+  expected_status = deep_trees_status_local_leaf_edit.copy()
   # Adjust the status of the roots of the six subtrees scheduled for deletion
   # during the update.  Since these are all tree conflicts, they will all be
   # scheduled for addition as copies with history - see Issue #3334.
@@ -4086,7 +4086,7 @@ def tree_conflicts_on_update_2_2(sbox):
   ### when dirs_same_p() is implemented)
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
   expected_status = svntest.actions.deep_trees_virginal_state.copy()
   expected_status.add({'' : Item()})
@@ -4150,7 +4150,7 @@ def tree_conflicts_on_update_2_3(sbox):
 
   expected_disk = disk_after_leaf_edit
 
-  expected_status = deep_trees_status_local_leaf_edit
+  expected_status = deep_trees_status_local_leaf_edit.copy()
 
   # Adjust the status of the roots of the six subtrees scheduled for deletion
   # during the update.  Since these are all tree conflicts, they will all be
@@ -4213,9 +4213,9 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs
+  expected_disk = disk_empty_dirs.copy()
 
-  expected_status = deep_trees_status_local_tree_del
+  expected_status = deep_trees_status_local_tree_del.copy()
 
   # Expect the incoming tree deletes and the local tree deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
