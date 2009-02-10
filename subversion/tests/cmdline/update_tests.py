@@ -4154,16 +4154,30 @@ def tree_conflicts_on_update_2_3(sbox):
   expected_disk = disk_after_leaf_edit
 
   expected_status = deep_trees_status_local_leaf_edit
-  expected_status.tweak(
-    #'D/D1',
-    # The expectation on 'alpha' reflects partial progress on issue #3334.
-    'F/alpha',
-    #'DD/D1',
-    #'DF/D1',
-    #'DDD/D1',
-    #'DDF/D1',
-    status='A ', copied='+', wc_rev='-')
 
+  # Adjust the status of the roots of the six subtrees scheduled for deletion
+  # during the update.  Since these are all tree conflicts, they will all be
+  # scheduled for addition as copies with history - see Issue #3334.
+  expected_status.tweak(
+    'D/D1',
+    'F/alpha',
+    'DD/D1',
+    'DF/D1',
+    'DDD/D1',
+    'DDF/D1',
+    status='A ', copied='+', wc_rev='-')
+  # See the status of all the paths *under* the above six subtrees.  Only the
+  # roots of the added subtrees show as schedule 'A', these child paths show
+  # only that history is scheduled with the commit. 
+  expected_status.tweak(
+    'DD/D1/D2',
+    'DDD/D1/D2',
+    'DDD/D1/D2/D3',
+    'DF/D1/beta',
+    'DDF/D1/D2',
+    'DDF/D1/D2/gamma',
+    copied='+', wc_rev='-')
+  
   # Paths where output should be a single 'Skipped' message.
   skip_paths = [
     'D/D1',
