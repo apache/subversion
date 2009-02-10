@@ -30,9 +30,6 @@
 
 
 
-/* A useful macro:  returns the greater of its arguments. */
-#define MAX(x,y) ((x)>(y)?(x):(y))
-
 /* Returns the digest size of it's argument. */
 #define DIGESTSIZE(k) ((k) == svn_checksum_md5 ? APR_MD5_DIGESTSIZE : \
                        (k) == svn_checksum_sha1 ? APR_SHA1_DIGESTSIZE : 0)
