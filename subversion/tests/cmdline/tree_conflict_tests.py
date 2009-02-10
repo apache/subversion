@@ -216,13 +216,14 @@ create_d = ['da','dA']
 # dir-add(D)  = add-new(D)(deep?) or copy(D1,D)(and modify?)
 
 f_adds = [
-  ( absent_f, ['fa','fA'] ),
+  #( absent_f, ['fa','fA'] ), ### local add-without-history: not a tree conflict
   ( absent_f, ['fC'] ),
-  ( absent_f, ['fC','ft'] ),
+  ( absent_f, ['fC','ft'] ), ### Fails because update seems to assume that the
+                             ### local file is unmodified (same as issue 1736?).
   #( absent_f, ['fC','fP'] ),  # don't test all combinations, just because it's slow
 ]
 d_adds = [
-  ( absent_d, ['da','dA'] ),
+  #( absent_d, ['da','dA'] ), ### local add-without-history: not a tree conflict
   ( absent_d, ['dC'] ),
   #( absent_d, ['dC','dP'] ),  # not yet
 ]
@@ -652,11 +653,11 @@ test_list = [ None,
               up_sw_file_mod_onto_del,
               up_sw_file_del_onto_mod,
               up_sw_file_del_onto_del,
-              up_sw_file_add_onto_add,
+              XFail(up_sw_file_add_onto_add),
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              XFail(up_sw_dir_add_onto_add),  # not a primary use case
+              up_sw_dir_add_onto_add,
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
