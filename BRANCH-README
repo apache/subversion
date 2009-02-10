@@ -85,7 +85,7 @@ TODO:
     - set revprops using PROPPATCH on the txn resource   [DONE]
     - abort edit with DELETE against the txn resource    [DONE]
     - send write requests against txn and txn root URLs  [STARTED]
-    - enable pipelined PUTs
+    - enable pipelined PUTs                              [OUT-OF-SCOPE]
 
  * Optional:  Do some of this stuff for ra_neon, too:
 
