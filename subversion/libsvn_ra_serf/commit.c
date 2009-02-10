@@ -88,6 +88,8 @@ typedef struct {
 
 } commit_context_t;
 
+#define USING_HTTPV2_COMMIT_SUPPORT(commit_ctx) ((commit_ctx)->txn_url != NULL)
+
 /* Structure associated with a PROPPATCH request. */
 typedef struct {
   apr_pool_t *pool;
@@ -124,14 +126,9 @@ typedef struct dir_context_t {
   /* The root commit we're in progress for. */
   commit_context_t *commit;
 
-  /* The checked out context for this directory.
-   *
-   * May be NULL; if so call checkout_dir() first.
-   */
-  checkout_context_t *checkout;
-
-  /* Our URL to CHECKOUT */
-  const char *checked_in_url;
+  /* URL to operate against (used for CHECKOUT and PROPPATCH before
+     HTTP v2, for PROPPATCH in HTTP v2).  */
+  const char *url;
 
   /* How many pending changes we have left in this directory. */
   unsigned int ref_count;
@@ -154,6 +151,10 @@ typedef struct dir_context_t {
   /* Changed and removed properties */
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
+
+  /* The checked out context for this directory.  May be NULL; if so
+     call checkout_dir() first.  */
+  checkout_context_t *checkout;
 
 } dir_context_t;
 
@@ -199,7 +200,7 @@ typedef struct {
   apr_hash_t *removed_props;
 
   /* URL to PUT the file at. */
-  const char *put_url;
+  const char *url;
 
 } file_context_t;
 
@@ -377,7 +378,7 @@ checkout_dir(dir_context_t *dir)
     }
   else
     {
-      checkout_ctx->checkout_url = dir->checked_in_url;
+      checkout_ctx->checkout_url = dir->url;
       dir->checkout = checkout_ctx;
     }
 
@@ -835,7 +836,7 @@ setup_copy_file_headers(serf_bucket_t *headers,
 
   /* The Dest URI must be absolute.  Bummer. */
   uri = file->commit->session->repos_url;
-  uri.path = (char*)file->put_url;
+  uri.path = (char*)file->url;
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
@@ -1162,11 +1163,11 @@ open_root(void *edit_baton,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  SVN_ERR(get_version_url(&dir->checked_in_url,
+  SVN_ERR(get_version_url(&dir->url,
                           dir->commit->session, dir->commit->conn,
                           dir->name, dir->base_revision,
                           dir->commit->checked_in_url, dir->pool));
-  ctx->checked_in_url = dir->checked_in_url;
+  ctx->checked_in_url = dir->url;
 
   /* Checkout our root dir */
   SVN_ERR(checkout_dir(dir));
@@ -1321,7 +1322,7 @@ add_directory(const char *path,
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
   dir->name = apr_pstrdup(dir->pool, path);
-  dir->checked_in_url =
+  dir->url =
       svn_path_url_add_component(parent->commit->checked_in_url,
                                  path, dir->pool);
   dir->changed_props = apr_hash_make(dir->pool);
@@ -1435,7 +1436,7 @@ open_directory(const char *path,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  SVN_ERR(get_version_url(&dir->checked_in_url,
+  SVN_ERR(get_version_url(&dir->url,
                           dir->commit->session, dir->commit->conn,
                           dir->name, dir->base_revision,
                           dir->commit->checked_in_url, dir->pool));
@@ -1611,7 +1612,7 @@ add_file(const char *path,
         }
     }
 
-  new_file->put_url =
+  new_file->url =
       svn_path_url_add_component(dir->checkout->resource_url,
                                  svn_path_basename(path, new_file->pool),
                                  new_file->pool);
@@ -1652,7 +1653,7 @@ open_file(const char *path,
   /* CHECKOUT the file into our activity. */
   SVN_ERR(checkout_file(new_file));
 
-  new_file->put_url = new_file->checkout->resource_url;
+  new_file->url = new_file->checkout->resource_url;
 
   *file_baton = new_file;
 
@@ -1719,14 +1720,14 @@ change_file_prop(void *file_baton,
   if (value)
     {
       value = svn_string_dup(value, file->pool);
-      svn_ra_serf__set_prop(file->changed_props, file->put_url,
+      svn_ra_serf__set_prop(file->changed_props, file->url,
                             ns, name, value, file->pool);
     }
   else
     {
       value = svn_string_create("", file->pool);
 
-      svn_ra_serf__set_prop(file->removed_props, file->put_url,
+      svn_ra_serf__set_prop(file->removed_props, file->url,
                             ns, name, value, file->pool);
     }
 
@@ -1824,7 +1825,7 @@ close_file(void *file_baton,
 
       handler = apr_pcalloc(pool, sizeof(*handler));
       handler->method = "PUT";
-      handler->path = ctx->put_url;
+      handler->path = ctx->url;
       handler->conn = ctx->commit->conn;
       handler->session = ctx->commit->session;
 
@@ -1869,7 +1870,7 @@ close_file(void *file_baton,
       proppatch = apr_pcalloc(ctx->pool, sizeof(*proppatch));
       proppatch->pool = ctx->pool;
       proppatch->name = ctx->name;
-      proppatch->path = ctx->put_url;
+      proppatch->path = ctx->url;
       proppatch->commit = ctx->commit;
       proppatch->changed_props = ctx->changed_props;
       proppatch->removed_props = ctx->removed_props;
@@ -1973,7 +1974,7 @@ abort_edit(void *edit_baton,
   handler->response_handler = svn_ra_serf__handle_status_only;
   handler->response_baton = delete_ctx;
 
-  if (ctx->txn_url) /* HTTP v2 */
+  if (USING_HTTPV2_COMMIT_SUPPORT(ctx)) /* HTTP v2 */
     handler->path = ctx->txn_url;
   else
     handler->path = ctx->activity_url;
