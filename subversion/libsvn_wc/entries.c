@@ -1173,6 +1173,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (working_node && (working_node->copyfrom_repos_path != NULL))
         entry->copied = TRUE;
 
+      if (base_node->checksum)
+        entry->checksum = svn_checksum_to_cstring(base_node->checksum,
+                                                  result_pool);
       entry->revision = base_node->revision;
       entry->kind = base_node->kind;
 
@@ -1381,9 +1384,11 @@ insert_working_node(svn_sqlite__db_t *wc_db,
 
   if (working_node->checksum)
     {
-      SVN_ERR(svn_sqlite__bind_text(stmt, 10,
-                  svn_checksum_to_cstring(working_node->checksum,
-                                          scratch_pool)));
+      const char *kind_str = (working_node->checksum->kind == svn_checksum_md5
+                              ? "$md5 $" : "$sha1$");
+      SVN_ERR(svn_sqlite__bind_text(stmt, 10, apr_pstrcat(scratch_pool,
+                    kind_str, svn_checksum_to_cstring(working_node->checksum,
+                                                      scratch_pool), NULL)));
       SVN_ERR(svn_sqlite__bind_int64(stmt, 11, working_node->translated_size));
     }
 
@@ -1491,6 +1496,8 @@ write_entry(svn_sqlite__db_t *wc_db,
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
   db_actual_node_t *actual_node = NULL;
+
+  SVN_ERR_ASSERT(!(entry->kind == svn_node_file && entry->checksum == NULL));
 
   switch (entry->schedule)
     {
