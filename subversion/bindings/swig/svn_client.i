@@ -195,6 +195,28 @@
                   )
 #endif
 
+/* -----------------------------------------------------------------------
+Callback: svn_client_diff_summarize_func_t
+        svn_client_diff_summarize2()
+        svn_client_diff_summarize()
+        svn_client_diff_summarize_peg2()
+        svn_client_diff_summarize_peg()
+*/
+
+#ifdef SWIGPYTHON
+#endif
+
+#ifdef SWIGPERL
+    %typemap(in) (svn_client_diff_summarize_func_t summarize_func,
+                  void *summarize_baton) {
+        $1 = svn_swig_pl_thunk_client_diff_summarize_func;
+        $2 = (void *)$input;
+    }
+#endif
+
+#ifdef SWIGRUBY
+#endif
+
 #ifdef SWIGRUBY
 %callback_typemap(svn_client_diff_summarize_func_t summarize_func,
                   void *summarize_baton,

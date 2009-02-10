@@ -30,6 +30,19 @@
  * the path string if it's a dirent or a URI, it's up to the API user to
  * make this choice. See also issue #2028.
  *
+ * Nearly all the @c svn_dirent_xxx and @c svn_uri_xxx functions expect paths
+ * passed into them to be in canonical form.  The only functions which do 
+ * *not* have such expectations are:
+ *
+ *    - @c svn_dirent_canonicalize()
+ *    - @c svn_dirent_is_canonical()
+ *    - @c svn_dirent_internal_style()
+ *    - @c svn_dirent_local_style()
+ *    - @c svn_uri_canonicalize()
+ *    - @c svn_uri_is_canonical()
+ *    - @c svn_uri_internal_style()
+ *    - @c svn_uri_local_style()
+ *
  * ### TODO: add description in line with svn_path.h, once more functions
  * are moved.
  * ### END TODO
