@@ -1380,10 +1380,7 @@ add_directory(const char *path,
   else
     {
       apr_uri_t uri;
-      apr_hash_t *props;
-      const char *vcc_url, *rel_copy_path, *basecoll_url, *req_url;
-
-      props = apr_hash_make(dir->pool);
+      const char *rel_copy_path, *basecoll_url, *req_url;
 
       status = apr_uri_parse(dir->pool, dir->copy_path, &uri);
       if (status)
@@ -1393,27 +1390,11 @@ add_directory(const char *path,
                                    dir->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, dir->commit->session,
-                                        dir->commit->conn, dir->pool));
-      SVN_ERR(svn_ra_serf__get_relative_path(&rel_copy_path, uri.path,
+      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &rel_copy_path,
                                              dir->commit->session,
-                                             dir->commit->conn, dir->pool));
-      SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                          dir->commit->session,
-                                          dir->commit->conn,
-                                          vcc_url, dir->copy_revision, "0",
-                                          baseline_props, dir->pool));
-      basecoll_url = svn_ra_serf__get_ver_prop(props,
-                                               vcc_url, dir->copy_revision,
-                                               "DAV:", "baseline-collection");
-
-      if (!basecoll_url)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value"));
-        }
-
+                                             dir->commit->conn,
+                                             uri.path, dir->copy_revision,
+                                             NULL, dir_pool));
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path,
                                            dir->pool);
 
@@ -1823,10 +1804,7 @@ close_file(void *file_baton,
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__simple_request_context_t *copy_ctx;
       apr_uri_t uri;
-      apr_hash_t *props;
-      const char *vcc_url, *rel_copy_path, *basecoll_url, *req_url;
-
-      props = apr_hash_make(pool);
+      const char *rel_copy_path, *basecoll_url, *req_url;
 
       status = apr_uri_parse(pool, ctx->copy_path, &uri);
       if (status)
@@ -1836,27 +1814,11 @@ close_file(void *file_baton,
                                    ctx->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, ctx->commit->session,
-                                        ctx->commit->conn, pool));
-      SVN_ERR(svn_ra_serf__get_relative_path(&rel_copy_path, uri.path,
+      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &rel_copy_path,
                                              ctx->commit->session,
-                                             ctx->commit->conn, pool));
-      SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                          ctx->commit->session,
-                                          ctx->commit->conn,
-                                          vcc_url, ctx->copy_revision, "0",
-                                          baseline_props, pool));
-      basecoll_url = svn_ra_serf__get_ver_prop(props,
-                                               vcc_url, ctx->copy_revision,
-                                               "DAV:", "baseline-collection");
-
-      if (!basecoll_url)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value"));
-        }
-
+                                             ctx->commit->conn,
+                                             uri.path, ctx->copy_revision,
+                                             NULL, pool));
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path, pool);
 
       handler = apr_pcalloc(pool, sizeof(*handler));
