@@ -1567,6 +1567,12 @@ write_entry(svn_sqlite__db_t *wc_db,
       base_node->kind = entry->kind;
       base_node->revision = entry->revision;
 
+      if (entry->kind == svn_node_dir)
+        base_node->checksum = NULL;
+      else
+        SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
+                                       entry->checksum, scratch_pool));
+
       if (repos_root)
         {
           base_node->repos_id = repos_id;
@@ -1609,6 +1615,12 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node->wc_id = wc_id;
       working_node->local_relpath = name;
       working_node->parent_relpath = "";
+      if (entry->kind == svn_node_dir)
+        working_node->checksum = NULL;
+      else
+        SVN_ERR(svn_checksum_parse_hex(&working_node->checksum,
+                                       svn_checksum_md5,
+                                       entry->checksum, scratch_pool));
 
       if (entry->schedule == svn_wc_schedule_delete)
         working_node->kind = svn_node_none;
