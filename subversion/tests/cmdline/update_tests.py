@@ -4009,9 +4009,6 @@ def tree_conflicts_on_update_1_2(sbox):
   # commit without updating...which, you guessed it, raises tree conflicts
   # again, repeat ad infinitum - see issue #3334.
   #
-  # Currently this test is set as XFail as the incoming deletes are *not*
-  # happening, leaving the WC on the merry-go-round.
-  #
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
   expected_status.tweak('F/alpha',
@@ -4597,7 +4594,7 @@ test_list = [ None,
               update_missing,
               update_replace_dir,
               update_single_file,
-              XFail(prop_update_on_scheduled_delete),
+              prop_update_on_scheduled_delete,
               update_receive_illegal_name,
               update_deleted_missing_dir,
               another_hudson_problem,
@@ -4618,7 +4615,7 @@ test_list = [ None,
               forced_update,
               XFail(forced_update_failures),
               XFail(update_wc_on_windows_drive),
-              XFail(update_wc_with_replaced_file),
+              update_wc_with_replaced_file,
               XFail(update_with_obstructing_additions),
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
@@ -4634,14 +4631,14 @@ test_list = [ None,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
               restarted_update_should_delete_dir_prop,
-              XFail(tree_conflicts_on_update_1_1),
-              XFail(tree_conflicts_on_update_1_2),
+              tree_conflicts_on_update_1_1,
+              tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               update_moves_and_modifies_an_edited_file,
-              XFail(tree_conflict_uc1_update_deleted_tree),
+              tree_conflict_uc1_update_deleted_tree,
               tree_conflict_uc2_schedule_re_add,
              ]
 
