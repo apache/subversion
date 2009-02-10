@@ -107,10 +107,9 @@ def resolved_on_wc_root(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc, 2)
   expected_status.tweak('iota', 'A/B', 'A/D/gamma',
-                        status='D ', treeconflict='C', wc_rev='1')
+                        status='D ', treeconflict='C')
   expected_status.tweak('A/B/lambda', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
-                        'A/B/F', status='D ', wc_rev=1)
-
+                        'A/B/F', status='D ')
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,
                                         expected_disk,

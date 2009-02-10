@@ -853,7 +853,7 @@ def obstructed_switch(sbox):
   exit_code, out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
 
   for line in err:
-    if line.find("object of the same name already exists") != -1:
+    if line.find("file of the same name already exists") != -1:
       break
   else:
     raise svntest.Failure
@@ -1367,11 +1367,11 @@ def switch_with_obstructing_local_adds(sbox):
 
   # Setup expected results of switch.
   expected_output = svntest.wc.State(sbox.wc_dir, {
-    "A/B/F/gamma"   : Item(status='  ', treeconflict='C'),
+    "A/B/F/gamma"   : Item(status='E '),
     "A/B/F/G"       : Item(status='E '),
-    "A/B/F/G/pi"    : Item(status='  ', treeconflict='C'),
+    "A/B/F/G/pi"    : Item(status='C '),
     "A/B/F/G/rho"   : Item(status='A '),
-    "A/B/F/G/tau"   : Item(status='  ', treeconflict='C'),
+    "A/B/F/G/tau"   : Item(status='E '),
     "A/B/F/H"       : Item(status='A '),
     "A/B/F/H/chi"   : Item(status='A '),
     "A/B/F/H/omega" : Item(status='A '),
@@ -1382,7 +1382,12 @@ def switch_with_obstructing_local_adds(sbox):
   expected_disk.add({
     "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
     "A/B/F/G"         : Item(),
-    "A/B/F/G/pi"      : Item("This is the OBSTRUCTING file 'pi'.\n"),
+    "A/B/F/G/pi"      : Item("\n".join(["<<<<<<< .mine",
+                                        "This is the OBSTRUCTING file 'pi'.",
+                                        "=======",
+                                        "This is the file 'pi'.",
+                                        ">>>>>>> .r1",
+                                        ""])),
     "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
     "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
     "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),
@@ -1395,13 +1400,11 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.tweak('A/B/F', switched='S')
   expected_status.add({
-    "A/B/F/gamma"     : Item(status='A ', wc_rev=0, treeconflict='C',
-                             switched='S'),
+    "A/B/F/gamma"     : Item(status='  ', wc_rev=1),
     "A/B/F/G"         : Item(status='  ', wc_rev=1),
-    "A/B/F/G/pi"      : Item(status='A ', wc_rev=0, switched='S'),
+    "A/B/F/G/pi"      : Item(status='C ', wc_rev=1),
     "A/B/F/G/rho"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G/tau"     : Item(status='A ', wc_rev=0, treeconflict='C',
-                             switched='S'),
+    "A/B/F/G/tau"     : Item(status='  ', wc_rev=1),
     "A/B/F/G/upsilon" : Item(status='A ', wc_rev=0),
     "A/B/F/H"         : Item(status='  ', wc_rev=1),
     "A/B/F/H/chi"     : Item(status='  ', wc_rev=1),
@@ -2223,11 +2226,18 @@ def tree_conflicts_on_switch_1_1(sbox):
 
   expected_disk = disk_empty_dirs
 
-  # The tree conflict victims are skipped, which means they're switched
-  # relative to their parent dirs.
+  # The files delta, epsilon, and zeta are incoming additions, but since
+  # they are all within locally deleted trees they should also be schedule
+  # for deletion.
   expected_status = deep_trees_status_local_tree_del.copy()
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+  expected_status.add({
+    'D/D1/delta'        : Item(status='D '),
+    'DD/D1/D2/epsilon'  : Item(status='D '),
+    'DDD/D1/D2/D3/zeta' : Item(status='D '),
+    })
+  
+  # Update to the target rev.
+  expected_status.tweak(wc_rev=3)
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
@@ -2248,8 +2258,29 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del.copy()
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+
+  # Expect the incoming leaf deletes to actually occur.  Even though they
+  # are within (or in the case of F/alpha and D/D1 are the same as) the
+  # trees locally scheduled for deletion we must still delete them and
+  # update the scheduled for deletion items to the target rev.  Otherwise
+  # once the conflicts are resolved we still have a mixed-rev WC we can't
+  # commit without updating...which, you guessed it, raises tree conflicts
+  # again, repeat ad infinitum - see issue #3334.
+  #
+  # Update to the target rev.
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        status='! ', wc_rev=None)
+  # Remove the incoming deletes from status and disk.
+  expected_status.remove('DD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2/gamma',
+                         'DF/D1/beta')
+  ### Why does the deep trees state not include files? 
+  expected_disk.remove('D/D1',
+                       'DD/D1/D2',
+                       'DDD/D1/D2/D3')
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
@@ -2272,12 +2303,36 @@ def tree_conflicts_on_switch_2_1(sbox):
 
   expected_status = deep_trees_status_local_leaf_edit
   # These 'switched' statuses are bogus, because of do_entry_deletion not
-  # updating the URLs (issue #3334).
-  expected_status.tweak('D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+  # updating the URLs (issue #3334).  For example, after the switch, D/D1
+  # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
+  # copy from local/D/D1.  But D/D1/delta, which was an add without history
+  # prior to the switch, still has a URL pointing to local/D/D1/delta, so it
+  # looks like it is switched relative to its parent.
+  expected_status.tweak('D/D1/delta',
+                        'DD/D1/D2',
+                        'DF/D1/beta',
+                        'DDD/D1/D2',
+                        'DDF/D1/D2',
+                        switched='S')
   # The expectation on 'alpha' reflects partial progress on issue #3334.
-  expected_status.tweak('F/alpha', status='A ', copied='+', wc_rev='-')
-
+  expected_status.tweak('D/D1',
+                        'F/alpha',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='A ', copied='+', wc_rev='-')
+  # See the status of all the paths *under* the above six subtrees.  Only the
+  # roots of the added subtrees show as schedule 'A', these childs paths show
+  # only that history is scheduled with the commit. 
+  expected_status.tweak(
+    'DD/D1/D2',
+    'DDD/D1/D2',
+    'DDD/D1/D2/D3',
+    'DF/D1/beta',
+    'DDF/D1/D2',
+    'DDF/D1/D2/gamma',
+    copied='+', wc_rev='-')
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -2303,34 +2358,34 @@ def tree_conflicts_on_switch_2_2(sbox):
   expected_status.add({'' : Item(),
                        'F/alpha' : Item()})
   expected_status.tweak(contents=None, status='  ', wc_rev=3)
-  # Tree conflicts.
-  expected_status.tweak(
-    'D/D1',
-    'F/alpha',
-    'DD/D1',
-    'DF/D1',
-    'DDD/D1',
-    'DDF/D1',
-    treeconflict='C', wc_rev=2, switched='S')
-  # Anything that's below a tree-conflict is also at an earlier rev.
-  expected_status.tweak(
-    'DD/D1/D2',
-    'DF/D1/beta',
-    'DDD/D1/D2',
-    'DDD/D1/D2/D3',
-    'DDF/D1/D2',
-    'DDF/D1/D2/gamma',
-    wc_rev=2)
-  # The locally deleted nodes.
-  expected_status.tweak(
-    'D/D1',
-    'F/alpha',
-    'DD/D1/D2',
-    'DF/D1/beta',
-    'DDD/D1/D2/D3',
-    'DDF/D1/D2/gamma',
-    status='D ')
- 
+
+  # Expect the incoming tree deletes and the local leaf deletes to mean
+  # that all deleted paths are *really* gone, not simply scheduled for
+  # deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='! ', wc_rev=None)
+  # Remove from expected status and disk everything below the deleted paths.
+  expected_status.remove('DD/D1/D2',
+                         'DF/D1/beta',
+                         'DDD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2',
+                         'DDF/D1/D2/gamma',)
+  expected_disk.remove('D/D1',
+                       'DD/D1',
+                       'DD/D1/D2',
+                       'DF/D1',
+                       'DDD/D1',
+                       'DDD/D1/D2',
+                       'DDD/D1/D2/D3',
+                       'DDF/D1',
+                       'DDF/D1/D2',)
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
@@ -2351,8 +2406,33 @@ def tree_conflicts_on_switch_3(sbox):
   expected_disk = disk_empty_dirs
 
   expected_status = deep_trees_status_local_tree_del
-  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1',
-                        'DDD/D1', switched='S')
+
+  # Expect the incoming tree deletes and the local tree deletes to mean
+  # that all deleted paths are *really* gone, not simply scheduled for
+  # deletion.
+  expected_status.tweak('F/alpha',
+                        'D/D1',
+                        'DD/D1',
+                        'DF/D1',
+                        'DDD/D1',
+                        'DDF/D1',
+                        status='! ', wc_rev=None)
+  # Remove from expected status and disk everything below the deleted paths.
+  expected_status.remove('DD/D1/D2',
+                         'DF/D1/beta',
+                         'DDD/D1/D2',
+                         'DDD/D1/D2/D3',
+                         'DDF/D1/D2',
+                         'DDF/D1/D2/gamma',)
+  expected_disk.remove('D/D1',
+                       'DD/D1',
+                       'DD/D1/D2',
+                       'DF/D1',
+                       'DDD/D1',
+                       'DDD/D1/D2',
+                       'DDD/D1/D2/D3',
+                       'DDF/D1',
+                       'DDF/D1/D2',)
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",

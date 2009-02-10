@@ -269,24 +269,61 @@ def forced_checkout_with_versioned_obstruction(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
 
+  fresh_wc_dir = sbox.add_wc_path('fresh')
+  fresh_wc_dir_A = os.path.join(fresh_wc_dir, 'A')
+  os.mkdir(fresh_wc_dir)
+
   other_wc_dir = sbox.add_wc_path("other")
   other_wc_dir_A = os.path.join(other_wc_dir, "A")
   os.mkdir(other_wc_dir)
 
-  # Checkout "A/" from the other repos.
+  # Checkout "A" from the first repos to a fresh dir.
+  svntest.actions.run_and_verify_svn("Unexpected error during co",
+                                     svntest.verify.AnyOutput, [],
+                                     "co", repo_url + "/A",
+                                     fresh_wc_dir_A)
+
+  # Checkout "A" from the second repos to the other dir.
   svntest.actions.run_and_verify_svn("Unexpected error during co",
                                      svntest.verify.AnyOutput, [],
                                      "co", other_repo_url + "/A",
                                      other_wc_dir_A)
 
-  # Checkout the first repos into "other/A".  This should fail since the
-  # obstructing versioned directory points to a different URL.
+  # Checkout the entire first repos into the fresh dir.
+  expected_output = wc.State(fresh_wc_dir, {
+      'A'                 : Item(status='A '),
+      'A/B'               : Item(status='A '),
+      'A/B/lambda'        : Item(status='A '),
+      'A/B/E'             : Item(status='A '),
+      'A/B/E/alpha'       : Item(status='A '),
+      'A/B/E/beta'        : Item(status='A '),
+      'A/B/F'             : Item(status='A '),
+      'A/mu'              : Item(status='A '),
+      'A/C'               : Item(status='A '),
+      'A/D'               : Item(status='A '),
+      'A/D/gamma'         : Item(status='A '),
+      'A/D/G'             : Item(status='A '),
+      'A/D/G/pi'          : Item(status='A '),
+      'A/D/G/rho'         : Item(status='A '),
+      'A/D/G/tau'         : Item(status='A '),
+      'A/D/H'             : Item(status='A '),
+      'A/D/H/chi'         : Item(status='A '),
+      'A/D/H/omega'       : Item(status='A '),
+      'A/D/H/psi'         : Item(status='A '),
+      'iota'              : Item(status='A '),
+      })
+  expected_disk = svntest.main.greek_state
+  svntest.actions.run_and_verify_checkout(repo_url, fresh_wc_dir,
+                                          expected_output, expected_disk,
+                                          None, None, None, None, '--force')
+
+  # Checkout the entire first repos into the other dir.  This should
+  # fail because it's a different repository.
   exit_code, sout, serr = svntest.actions.run_and_verify_svn(
     "Expected error during co", None, svntest.verify.AnyOutput,
-    "co", "--force", sbox.repo_url, other_wc_dir)
+    "co", "--force", repo_url, other_wc_dir)
 
-  test_stderr("svn: URL '.*A' doesn't match existing URL '.*A' in '.*A'", serr)
-
+  test_stderr("svn: UUID mismatch: existing dir '.*A'", serr)
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
   svntest.actions.run_and_verify_svn("empty status output", None,
