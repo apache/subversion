@@ -288,7 +288,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(anchor, svn_wc_notify_update_completed, pool);
+        = svn_wc_create_notify(path, svn_wc_notify_update_completed, pool);
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;

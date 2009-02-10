@@ -56,7 +56,9 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.vsnet_proj_ver = '7.00'
     self.sqlite_path = 'sqlite'
     self.skip_sections = { 'mod_dav_svn': None,
-                           'mod_authz_svn': None }
+                           'mod_authz_svn': None,
+                           'libsvn_auth_kwallet': None,
+                           'libsvn_auth_gnome_keyring': None }
 
     # Instrumentation options
     self.disable_shared = None

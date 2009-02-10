@@ -189,7 +189,7 @@ class Generator(gen_win.WinGeneratorBase):
           groupname = 'swiglib'
         elif target.msvc_fake:
           groupname = 'fake'
-        elif target.msvc_export:
+        elif target.msvc_export and not self.disable_shared:
           groupname = 'dll'
         else:
           groupname = 'lib'
