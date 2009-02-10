@@ -1170,6 +1170,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
           entry->repos = repos_root;
         }
 
+      if (working_node && (working_node->copyfrom_repos_path != NULL))
+        entry->copied = TRUE;
+
       entry->revision = base_node->revision;
       entry->kind = base_node->kind;
 
