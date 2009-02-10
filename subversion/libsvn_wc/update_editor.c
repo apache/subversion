@@ -2215,45 +2215,45 @@ add_directory(const char *path,
       else /* Obstructing dir *is* versioned or scheduled for addition. */
         {
           const svn_wc_entry_t *entry;
-	  const svn_wc_entry_t *parent_entry;
-	  svn_wc_adm_access_t *parent_adm_access;
+          const svn_wc_entry_t *parent_entry;
+          svn_wc_adm_access_t *parent_adm_access;
 
           SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
-	  SVN_ERR_ASSERT(entry);
+          SVN_ERR_ASSERT(entry);
 
-	  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
-				      pb->path, pool));
-	  SVN_ERR(svn_wc_entry(&parent_entry, pb->path, parent_adm_access,
-			       FALSE, pool));
-	  SVN_ERR_ASSERT(parent_entry);
+          SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
+                                      pb->path, pool));
+          SVN_ERR(svn_wc_entry(&parent_entry, pb->path, parent_adm_access,
+                               FALSE, pool));
+          SVN_ERR_ASSERT(parent_entry);
 
-	  /* What to do with a versioned or schedule-add dir:
+          /* What to do with a versioned or schedule-add dir:
 
-	     If the UUID doesn't match the parent's, or the URL isn't a
-	     child of the parent dir's URL, it's an error.
+             If the UUID doesn't match the parent's, or the URL isn't a
+             child of the parent dir's URL, it's an error.
 
-	     A dir already added without history is OK.  Set add_existed
-	     so that user notification is delayed until after any prop
-	     conflicts have been found.
+             A dir already added without history is OK.  Set add_existed
+             so that user notification is delayed until after any prop
+             conflicts have been found.
 
-	     A dir added with history is a tree conflict.
+             A dir added with history is a tree conflict.
 
-	     A normal or deleted dir is currently a tree conflict; we may
-	     relax this restriction and simply update such dirs. */
+             A normal or deleted dir is currently a tree conflict; we may
+             relax this restriction and simply update such dirs. */
 
-	  if (strcmp(entry->uuid, parent_entry->uuid) != 0)
-	    return svn_error_createf
-	      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-	       _("UUID mismatch: existing dir '%s' was checked out "
-		 "from a different repository"), db->path); 
+          if (strcmp(entry->uuid, parent_entry->uuid) != 0)
+            return svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("UUID mismatch: existing dir '%s' was checked out "
+                 "from a different repository"), db->path); 
 
-	  if (!eb->switch_url
+          if (!eb->switch_url
               && strcmp(db->new_URL, entry->url) != 0)
-	    return svn_error_createf
-	      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-	       _("URL '%s' of existing dir '%s' does not match "
-		 "expected URL '%s'"),
-	       entry->url, db->path, db->new_URL);
+            return svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("URL '%s' of existing dir '%s' does not match "
+                 "expected URL '%s'"),
+               entry->url, db->path, db->new_URL);
 
           if (entry->schedule == svn_wc_schedule_add
               || entry->schedule == svn_wc_schedule_replace)
@@ -3300,13 +3300,13 @@ add_file(const char *path,
   if (!entry && kind == svn_node_file)
     {
       if (eb->allow_unver_obstructions)
-	fb->existed = TRUE;
+        fb->existed = TRUE;
       else
-	return svn_error_createf
-	  (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-	   _("Failed to add file '%s': an unversioned "
-	     "file of the same name already exists"),
-	   svn_path_local_style(full_path, subpool));
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Failed to add file '%s': an unversioned "
+             "file of the same name already exists"),
+           svn_path_local_style(full_path, subpool));
     }
 
   /* What to do with a versioned or schedule-add file:
@@ -3336,23 +3336,23 @@ add_file(const char *path,
     {
       const svn_wc_entry_t *parent_entry;
       SVN_ERR(svn_wc_entry(&parent_entry, pb->path, adm_access, FALSE,
-			   subpool));
+                           subpool));
       SVN_ERR_ASSERT(parent_entry);
 
       if (entry->uuid /* UUID is optional for file entries. */
-	  && strcmp(entry->uuid, parent_entry->uuid) != 0)
-	return svn_error_createf
-	  (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-	   _("UUID mismatch: existing file '%s' was checked out "
-	     "from a different repository"), full_path); 
+          && strcmp(entry->uuid, parent_entry->uuid) != 0)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("UUID mismatch: existing file '%s' was checked out "
+             "from a different repository"), full_path); 
 
       if (!eb->switch_url
           && strcmp(fb->new_URL, entry->url) != 0)
-	return svn_error_createf
-	  (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-	   _("URL '%s' of existing file '%s' does not match "
-	     "expected URL '%s'"),
-	   entry->url, full_path, fb->new_URL);
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("URL '%s' of existing file '%s' does not match "
+             "expected URL '%s'"),
+           entry->url, full_path, fb->new_URL);
     }
 
   if (entry && kind == svn_node_file)
@@ -3360,7 +3360,7 @@ add_file(const char *path,
       if (entry->schedule == svn_wc_schedule_add
           || entry->schedule == svn_wc_schedule_replace)
         {
-	  if (! entry->copied) /* added without history */
+          if (! entry->copied) /* added without history */
             fb->add_existed = TRUE;
           else
             {
