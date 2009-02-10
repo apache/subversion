@@ -1162,11 +1162,12 @@ read_entries(svn_wc_adm_access_t *adm_access,
         {
           if (repos_root == NULL)
             SVN_ERR(get_repos_info(&repos_root, &repos_uuid, wc_db,
-                                   base_node->repos_id, scratch_pool));
+                                   base_node->repos_id, result_pool));
 
-          entry->uuid = apr_pstrdup(result_pool, repos_uuid);
+          entry->uuid = repos_uuid;
           entry->url = svn_path_join(repos_root, base_node->repos_relpath,
                                      result_pool);
+          entry->repos = repos_root;
         }
 
       entry->revision = base_node->revision;
@@ -1611,6 +1612,8 @@ write_entry(svn_sqlite__db_t *wc_db,
 
       if (entry->schedule == svn_wc_schedule_delete)
         working_node->kind = svn_node_none;
+      else
+        working_node->kind = entry->kind;
 
       SVN_ERR(insert_working_node(wc_db, working_node, scratch_pool));
     }
