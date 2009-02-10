@@ -1232,10 +1232,10 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
 
   /* Construct the whole URL if we can, else use whatever we have. */
   if (node->repos_url && node->path_in_repos)
-    url_str = svn_path_url_add_component(node->repos_url,
+    url_str = svn_path_url_add_component2(node->repos_url,
                                          node->path_in_repos, pool);
   else if (node->repos_url)
-    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
+    url_str = svn_path_url_add_component2(node->repos_url, "...", pool);
   else if (node->path_in_repos)
     url_str = node->path_in_repos;
   else

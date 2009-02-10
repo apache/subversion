@@ -110,7 +110,7 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2;
 
-#define NBR_MERGEINFO_VALS 19
+#define NBR_MERGEINFO_VALS 20
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -138,7 +138,8 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/gunther_branch:7-12,1,5-10",
     "/gunther_branch:7-12*,1,5-10*",
     /* Adjacent rangelists of differing inheritability. */
-    "/b5:5-53,1-4,54-90*"
+    "/b5:5-53,1-4,54-90*",
+    "/c0:1-77,12-44"
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -161,7 +162,8 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/branches/branch1",
     "/gunther_branch",
     "/gunther_branch",
-    "/b5"
+    "/b5",
+    "/c0"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -187,6 +189,7 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 1, TRUE}, {4, 12, TRUE} },
     { {0, 1, TRUE}, {4, 12, FALSE} },
     { {0, 53, TRUE}, {53, 90, FALSE} },
+    { {0, 77, TRUE} },
   };
 
 static svn_error_t *

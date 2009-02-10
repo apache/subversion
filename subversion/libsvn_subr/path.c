@@ -939,10 +939,11 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool)
 
 
 const char *
-svn_path_url_add_component(const char *url,
+svn_path_url_add_component2(const char *url,
                            const char *component,
                            apr_pool_t *pool)
 {
+  assert(svn_path_is_canonical(url, pool));
   /* URL can have trailing '/' */
   url = svn_path_canonicalize(url, pool);
 

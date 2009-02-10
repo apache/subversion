@@ -217,7 +217,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       the_ent = val;
 
       path = svn_path_join(dir, key, subpool);
-      URL  = svn_path_url_add_component(session_URL, key, subpool);
+      URL  = svn_path_url_add_component2(session_URL, key, subpool);
 
       fs_path = svn_path_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
