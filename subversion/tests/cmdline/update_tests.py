@@ -4647,7 +4647,7 @@ test_list = [ None,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               update_moves_and_modifies_an_edited_file,
-              XFail(tree_conflict_uc1_update_deleted_tree),
+              tree_conflict_uc1_update_deleted_tree,
               tree_conflict_uc2_schedule_re_add,
              ]
 

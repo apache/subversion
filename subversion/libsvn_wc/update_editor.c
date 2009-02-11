@@ -2171,6 +2171,7 @@ add_directory(const char *path,
   svn_node_kind_t kind;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   char *victim_path;
+  svn_boolean_t locally_deleted = in_deleted_tree(eb, full_path, TRUE, pool);
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
@@ -2209,7 +2210,7 @@ add_directory(const char *path,
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, full_path, pool))
+  if (in_skipped_tree(eb, full_path, pool) && !locally_deleted)
     return SVN_NO_ERROR;
 
   /* Is this path, or an ancestor-dir NOT visited by this edit, already
@@ -2465,10 +2466,40 @@ add_directory(const char *path,
                          *(eb->target_revision),
                          db->pool));
 
+  /* If PATH is within a locally deleted tree then make it also
+     scheduled for deletion.  We must do this after the call to
+     prep_directory() otherwise the administrative area for DB->PATH
+     is not present, nor is there an entry for DB->PATH in DB->PATH's
+     entries. */
+  if (locally_deleted)
+    {
+      svn_wc_entry_t tmp_entry;
+      apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
+      svn_wc_adm_access_t *adm_access;
+     
+      tmp_entry.schedule = svn_wc_schedule_delete;
+
+      /* Mark PATH as scheduled for deletion in its parent. */
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
+                                  pb->path, db->pool));
+      SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
+                                   modify_flags,
+                                   TRUE /* immediate write */, pool));
+
+      /* Mark PATH's 'this dir' entry as scheduled for deletion. */
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
+                                  db->path, db->pool));
+      SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* This Dir entry */,
+                                   &tmp_entry, modify_flags,
+                                   TRUE /* immediate write */, pool));
+    }
+
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there
-     might be properties to deal with. */
-  if (eb->notify_func && !(db->add_existed))
+     might be properties to deal with.  If PATH was added inside a locally
+     deleted tree, then suppress notification, a tree conflict was already
+     issued. */
+  if (eb->notify_func && !(db->add_existed) && !locally_deleted)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(
         db->path,
