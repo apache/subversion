@@ -111,15 +111,3 @@ Candidate changes for 1.5.6:
 
 Approved changes:
 =================
-
- * r35143, r35145
-   Make it impossible to add .svn (and children) to your working copy via 
-     svn add --parents .svn/file
-     svn mkdir --parents .svn/dir/dir
-     svn cp --parents file .svn/dir/file
-   Note: Small merge conflict in the tests lists of basic_tests.py.
-   Justification:
-     Failing to catch this breaks our administrative area handling.
-   Votes:
-     +1: rhuijben, stylesen, danielsh
-
