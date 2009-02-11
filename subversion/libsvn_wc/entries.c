@@ -1259,6 +1259,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (actual_node && (actual_node->prop_reject != NULL))
         entry->prejfile = apr_pstrdup(result_pool, actual_node->prop_reject);
 
+      entry->depth = base_node->depth;
       entry->revision = base_node->revision;
       entry->kind = base_node->kind;
 
@@ -1659,6 +1660,7 @@ write_entry(svn_sqlite__db_t *wc_db,
       base_node->local_relpath = name;
       base_node->kind = entry->kind;
       base_node->revision = entry->revision;
+      base_node->depth = entry->depth;
 
       if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
@@ -1708,6 +1710,8 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node->wc_id = wc_id;
       working_node->local_relpath = name;
       working_node->parent_relpath = "";
+      working_node->depth = entry->depth;
+
       if (entry->kind == svn_node_dir)
         working_node->checksum = NULL;
       else
