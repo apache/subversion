@@ -1268,6 +1268,33 @@ read_entries(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
+  /* Loop over any additional working nodes. */
+  for (hi = apr_hash_first(scratch_pool, working_nodes); hi;
+        hi = apr_hash_next(hi))
+    {
+      db_working_node_t *working_node;
+      const char *rel_path;
+      svn_wc_entry_t *entry = alloc_entry(result_pool);
+
+      apr_hash_this(hi, (const void **) &rel_path, NULL,
+                    (void **) &working_node);
+      entry->name = apr_pstrdup(result_pool, working_node->local_relpath);
+
+      /* This node is in WORKING, but not in BASE, so it must be an add. */
+      entry->schedule = svn_wc_schedule_add;
+
+      if (working_node->copyfrom_repos_path != NULL)
+        entry->copied = TRUE;
+
+      if (working_node->checksum)
+        entry->checksum = svn_checksum_to_cstring(working_node->checksum,
+                                                  result_pool);
+      entry->kind = working_node->kind;
+      entry->revision = 0;
+
+      apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+    }
+
   /* Fill in any implied fields. */
   SVN_ERR(resolve_to_defaults(entries, result_pool));
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
@@ -1580,8 +1607,6 @@ write_entry(svn_sqlite__db_t *wc_db,
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
   db_actual_node_t *actual_node = NULL;
-
-  SVN_ERR_ASSERT(!(entry->kind == svn_node_file && entry->checksum == NULL));
 
   switch (entry->schedule)
     {
