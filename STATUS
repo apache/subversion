@@ -36,17 +36,6 @@ Candidate changes for 1.5.6:
    Votes:
      +1: rhuijben, kameshj
 
- * r35143, r35145
-   Make it impossible to add .svn (and children) to your working copy via 
-     svn add --parents .svn/file
-     svn mkdir --parents .svn/dir/dir
-     svn cp --parents file .svn/dir/file
-   Note: Small merge conflict in the tests lists of basic_tests.py.
-   Justification:
-     Failing to catch this breaks our administrative area handling.
-   Votes:
-     +1: rhuijben, stylesen
-
  * r35297, r35367
    Allow svn_mergeinfo_parse() to tolerate unordered rangelists as input
    while still guaranteeing the mergeinfo it creates has sorted rangelists
@@ -114,8 +103,23 @@ Candidate changes for 1.5.6:
      Makes sure that auto and normal props that are applied to a file actually
      get committed when a new file is renamed before this first commit.
      (Reported as AnkhSVN bug)
+   Note:
+     The second hunk in copy_tests.py (adding mergeinfo expectation) has
+     been reverted on trunk, I suppose it should be reverted after merging.
    Votes:
-     +1: rhuijben   
+     +1: rhuijben, danielsh
 
 Approved changes:
 =================
+
+ * r35143, r35145
+   Make it impossible to add .svn (and children) to your working copy via 
+     svn add --parents .svn/file
+     svn mkdir --parents .svn/dir/dir
+     svn cp --parents file .svn/dir/file
+   Note: Small merge conflict in the tests lists of basic_tests.py.
+   Justification:
+     Failing to catch this breaks our administrative area handling.
+   Votes:
+     +1: rhuijben, stylesen, danielsh
+
