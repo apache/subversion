@@ -978,7 +978,6 @@ fetch_base_nodes(apr_hash_t **nodes,
 
       apr_hash_set(*nodes, base_node->local_relpath, APR_HASH_KEY_STRING,
                    base_node);
-
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
@@ -989,9 +988,9 @@ fetch_base_nodes(apr_hash_t **nodes,
    *NODES allocated in RESULT_POOL. */
 static svn_error_t *
 fetch_working_nodes(apr_hash_t **nodes,
-                 svn_sqlite__db_t *wc_db,
-                 apr_pool_t *scratch_pool,
-                 apr_pool_t *result_pool)
+                    svn_sqlite__db_t *wc_db,
+                    apr_pool_t *scratch_pool,
+                    apr_pool_t *result_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -1066,7 +1065,6 @@ fetch_working_nodes(apr_hash_t **nodes,
 
       apr_hash_set(*nodes, working_node->local_relpath, APR_HASH_KEY_STRING,
                    working_node);
-
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
