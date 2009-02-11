@@ -129,7 +129,9 @@ crop_children(svn_wc_adm_access_t *adm_access,
                  logically not exist. */
               if (depth < svn_depth_immediates)
                 {
-                  svn_wc__entry_remove(entries, current_entry->name);
+                  SVN_ERR(svn_wc__entry_remove(
+                                entries, svn_wc_adm_access_path(dir_access),
+                                current_entry->name, iterpool));
                   SVN_ERR(svn_wc__entries_write(entries, dir_access, iterpool));
                 }
               continue;

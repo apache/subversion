@@ -62,7 +62,10 @@ enum statement_keys {
   STMT_SELECT_REPOSITORY_BY_ID,
   STMT_SELECT_BASE_NODE,
   STMT_SELECT_WORKING_NODE,
-  STMT_SELECT_ACTUAL_NODE
+  STMT_SELECT_ACTUAL_NODE,
+  STMT_DELETE_BASE_NODE,
+  STMT_DELETE_WORKING_NODE,
+  STMT_DELETE_ACTUAL_NODE
 };
 
 static const char * const statements[] = {
@@ -116,6 +119,12 @@ static const char * const statements[] = {
   "select id, wc_id, local_relpath, properties, conflict_old, conflict_new, "
      "conflict_working, prop_reject, changelist_id "
   "from actual_node;",
+
+  "delete from base_node where wc_id = ?1 and local_relpath = ?2;",
+
+  "delete from working_node where wc_id = ?1 and local_relpath = ?2;",
+
+  "delete from actual_node where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
   };
@@ -1138,6 +1147,20 @@ fetch_actual_nodes(apr_hash_t **nodes,
 }
 
 static svn_error_t *
+fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *wc_db)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
+  *wc_id = svn_sqlite__column_int(stmt, 0);
+  return svn_sqlite__reset(stmt);
+}
+
+static svn_error_t *
 get_repos_info(const char **repos_root,
                const char **repos_uuid,
                svn_sqlite__db_t *wc_db,
@@ -1811,15 +1834,8 @@ entries_write_body(void *baton,
       repos_root = NULL;
     }
 
-  /* Get the wc ID. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
-  wc_id = svn_sqlite__column_int(stmt, 0);
-  SVN_ERR(svn_sqlite__reset(stmt));
-
   /* Write out "this dir" */
+  SVN_ERR(fetch_wc_id(&wc_id, wc_db));
   SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, ewtb->this_dir,
                       SVN_WC_ENTRY_THIS_DIR, ewtb->this_dir,
                       ewtb->scratch_pool));
@@ -2133,11 +2149,60 @@ fold_entry(apr_hash_t *entries,
   return SVN_NO_ERROR;
 }
 
-
-void
-svn_wc__entry_remove(apr_hash_t *entries, const char *name)
+/* Actually do the sqlite removal work within a transaction.
+   This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+entry_remove_body(void *baton,
+                  svn_sqlite__db_t *wc_db)
 {
+  const char *local_relpath = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;  /* Meaningless when doing a delete. */
+  apr_int64_t wc_id;
+
+  SVN_ERR(fetch_wc_id(&wc_id, wc_db));
+
+  /* Remove the base node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  /* Remove the working node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  /* Remove the actual node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__entry_remove(apr_hash_t *entries,
+                     const char *parent_dir,
+                     const char *name,
+                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t *wc_db;
+
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+
+  /* Also remove from the sqlite database. */
+  /* Open the wc.db sqlite database. */
+  SVN_ERR(svn_sqlite__open(&wc_db, db_path(parent_dir, scratch_pool),
+                           svn_sqlite__mode_readwrite, statements,
+                           SVN_WC__VERSION, upgrade_sql,
+                           scratch_pool, scratch_pool));
+
+  /* Do the work in a transaction, for consistency. */
+  SVN_ERR(svn_sqlite__with_transaction(wc_db, entry_remove_body,
+                                       (void *) name));
+
+  return SVN_NO_ERROR;
 }
 
 

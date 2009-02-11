@@ -182,7 +182,9 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   if (current_entry->schedule != svn_wc_schedule_add
                       && !excluded)
                     {
-                      svn_wc__entry_remove(entries, name);
+                      SVN_ERR(svn_wc__entry_remove(
+                                     entries, svn_wc_adm_access_path(dirpath),
+                                     name, subpool));
                       if (notify_func)
                         {
                           notify = svn_wc_create_notify(child_path,
@@ -1222,7 +1224,9 @@ svn_wc_delete3(const char *path,
                  with!  this means we're dealing with a missing item
                  that's scheduled for addition.  Easiest to just
                  remove the entry.  */
-              svn_wc__entry_remove(entries, base_name);
+              SVN_ERR(svn_wc__entry_remove(
+                            entries, svn_wc_adm_access_path(parent_access),
+                            base_name, pool));
               SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
             }
         }
@@ -2070,7 +2074,9 @@ revert_entry(svn_depth_t *depth,
                  adm_access, for which we definitely can't use the 'else'
                  code path (as it will remove the parent from version
                  control... (See issue 2425) */
-              svn_wc__entry_remove(entries, basey);
+              SVN_ERR(svn_wc__entry_remove(
+                            entries, svn_wc_adm_access_path(parent_access),
+                            basey, pool));
               SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
             }
           else
@@ -2463,7 +2469,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-      svn_wc__entry_remove(entries, name);
+      SVN_ERR(svn_wc__entry_remove(entries, svn_wc_adm_access_path(adm_access),
+                                   name, pool));
       SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
 
       /* Remove text-base/NAME.svn-base */
@@ -2563,7 +2570,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                   /* The directory is either missing or excluded, 
                      so don't try to recurse, just delete the 
                      entry in the parent directory. */
-                  svn_wc__entry_remove(entries, current_entry_name);
+                  SVN_ERR(svn_wc__entry_remove(
+                                entries, svn_wc_adm_access_path(adm_access),
+                                current_entry_name, subpool));
                 }
               else
                 {
@@ -2627,7 +2636,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                      APR_HASH_KEY_STRING);
             if (dir_entry->depth != svn_depth_exclude)
               {
-                svn_wc__entry_remove(parent_entries, base_name);
+                SVN_ERR(svn_wc__entry_remove(
+                        parent_entries, svn_wc_adm_access_path(parent_access),
+                        base_name, pool));
                 SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
 
               }

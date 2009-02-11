@@ -946,7 +946,9 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
                 {
                   SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access,
                                               TRUE, loggy->pool));
-                  svn_wc__entry_remove(entries, name);
+                  SVN_ERR(svn_wc__entry_remove(
+                            entries, svn_wc_adm_access_path(loggy->adm_access),
+                            name, loggy->pool));
                   SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access,
                                                 loggy->pool));
                 }

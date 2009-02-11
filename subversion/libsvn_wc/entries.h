@@ -206,8 +206,15 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   svn_boolean_t do_sync,
                                   apr_pool_t *pool);
 
-/* Remove entry NAME from ENTRIES, unconditionally. */
-void svn_wc__entry_remove(apr_hash_t *entries, const char *name);
+/* Remove entry NAME from ENTRIES, unconditionally.  PARENT_DIR should be
+   the directory which contains the .svn administrative directory for PATH
+   (in most cases, this will be svn_wc_adm_access_path() applied to the
+   access baton which ENTRIES is or will eventually be a part of. */
+svn_error_t *
+svn_wc__entry_remove(apr_hash_t *entries,
+                     const char *parent_dir,
+                     const char *name,
+                     apr_pool_t *scratch_pool);
 
 
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
