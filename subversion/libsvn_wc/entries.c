@@ -929,7 +929,7 @@ fetch_base_nodes(apr_hash_t **nodes,
     {
       apr_size_t len;
       const void *val;
-      db_base_node_t *base_node = apr_pcalloc(scratch_pool,
+      db_base_node_t *base_node = apr_pcalloc(result_pool,
                                               sizeof(*base_node));
 
       base_node->wc_id = svn_sqlite__column_int(stmt, 1);
@@ -1004,7 +1004,7 @@ fetch_working_nodes(apr_hash_t **nodes,
     {
       apr_size_t len;
       const void *val;
-      db_working_node_t *working_node = apr_pcalloc(scratch_pool,
+      db_working_node_t *working_node = apr_pcalloc(result_pool,
                                                     sizeof(*working_node));
 
       working_node->wc_id = svn_sqlite__column_int(stmt, 1);
