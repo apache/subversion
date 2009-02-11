@@ -4385,6 +4385,12 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
     svntest.main.file_write(path, "This is the file 'new_file'.\n")
     svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
 
+    path = os.path.join(dir, 'C', 'N')
+    os.mkdir(path)
+    path2 = os.path.join(dir, 'C', 'N', 'nu')
+    svntest.main.file_write(path2, "This is the file 'nu'.\n")
+    svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
+
     path = os.path.join(dir, 'B', 'lambda')
     svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
 
@@ -4409,6 +4415,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   expected_output = None
   expected_disk = None
   expected_status = None
+
   run_and_verify_update(A, expected_output, expected_disk, expected_status)
   run_and_verify_resolve([A], '--recursive', '--accept=mine-full', A)
 
@@ -4422,6 +4429,8 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
       'A/B/F'       : Item(status='D ', wc_rev=2),
       'A/mu'        : Item(status='D ', wc_rev=2),
       'A/C'         : Item(status='D ', wc_rev=2),
+      'A/C/N'       : Item(status='D ', wc_rev=2),
+      'A/C/N/nu'    : Item(status='D ', wc_rev=2),
       'A/D'         : Item(status='D ', wc_rev=2),
       'A/D/gamma'   : Item(status='D ', wc_rev=2),
       'A/D/G'       : Item(status='D ', wc_rev=2),
@@ -4638,7 +4647,7 @@ test_list = [ None,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               update_moves_and_modifies_an_edited_file,
-              tree_conflict_uc1_update_deleted_tree,
+              XFail(tree_conflict_uc1_update_deleted_tree),
               tree_conflict_uc2_schedule_re_add,
              ]
 
