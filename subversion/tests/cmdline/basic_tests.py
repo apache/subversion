@@ -2204,7 +2204,23 @@ def info_nonexisting_file(sbox):
 
 
 #----------------------------------------------------------------------
+def basic_add_svn_format_file(sbox):
+  'test add --parents .svn/format'
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  entries_path = os.path.join(wc_dir, '.svn', 'format')
+
+  output = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # The .svn directory and the format file should not be added as this
+  # breaks the administrative area handling, so we expect some error here
+  svntest.actions.run_and_verify_svn(None, None, 
+                                     ".*reserved name.*",
+                                     'add', '--parents', entries_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, output)
 ########################################################################
 # Run the tests
 
@@ -2250,6 +2266,7 @@ test_list = [ None,
               XFail(basic_rm_urls_multi_repos),
               automatic_conflict_resolution,
               info_nonexisting_file,
+              basic_add_svn_format_file,
              ]
 
 if __name__ == '__main__':

@@ -467,18 +467,23 @@ add_parent_dirs(const char *path,
 
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
+      svn_error_clear(err);
       if (svn_dirent_is_root(path, strlen(path)))
         {
-          svn_error_clear(err);
-
           return svn_error_create
             (SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
+        }
+      else if (svn_wc_is_adm_dir(svn_path_basename(path, pool), pool))
+        {
+          return svn_error_createf
+            (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
+             _("'%s' ends in a reserved name"), 
+             svn_path_local_style(path, pool));
         }
       else
         {
           const char *parent_path = svn_path_dirname(path, pool);
 
-          svn_error_clear(err);
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
                                       pool));
