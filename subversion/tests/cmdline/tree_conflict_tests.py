@@ -585,6 +585,36 @@ def up_sw_dir_del_onto_del(sbox):
   # WC state: any (D necessarily exists; children may have any state)
   test_tc_up_sw(sbox, d_dels + d_rpls, d_dels + d_rpls)
 
+# This is currently set as XFail over ra_dav because it hits
+# issue #3314 'DAV can overwrite directories during copy'
+#
+#   TRUNK@35827.DBG>svn st -v branch1
+#                   2        2 jrandom      branch1
+#                   2        2 jrandom      branch1\dC
+#   A  +            -        2 jrandom      branch1\dC\D
+#
+#   TRUNK@35827.DBG>svn log -r2:HEAD branch1 -v
+#   ------------------------------------------------------------------------
+#   r2 | jrandom | 2009-02-12 09:26:52 -0500 (Thu, 12 Feb 2009) | 1 line
+#   Changed paths:
+#      A /D1
+#      A /F1
+#      A /branch1
+#      A /branch1/dC
+#
+#   Initial set-up.
+#   ------------------------------------------------------------------------
+#   r3 | jrandom | 2009-02-12 09:26:52 -0500 (Thu, 12 Feb 2009) | 1 line
+#   Changed paths:
+#      A /branch1/dC/D (from /D1:2)
+#
+#   Action.
+#   ------------------------------------------------------------------------
+#
+#   TRUNK@35827.DBG>svn ci -m "Should be ood" branch1
+#   Adding         branch1\dC\D
+#
+#   Committed revision 4.
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
   # WC state: as scheduled (no obstruction)
@@ -657,7 +687,8 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              up_sw_dir_add_onto_add,
+              XFail(up_sw_dir_add_onto_add,
+                    svntest.main.is_ra_type_dav),
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
