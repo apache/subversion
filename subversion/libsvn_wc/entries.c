@@ -1663,7 +1663,6 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node->tree_conflict_data = entry->tree_conflict_data;
     }
 
-
   /* Insert the base node. */
   if (base_node)
     {
@@ -1703,6 +1702,7 @@ write_entry(svn_sqlite__db_t *wc_db,
                                                        scratch_pool);
             }
         }
+
       /* TODO: These values should always be present, if they are missing
          during an upgrade, set a flag, and then ask the user to talk to the
          server. */
