@@ -4183,10 +4183,13 @@ def tree_conflicts_on_update_2_3(sbox):
     'DDD/D1/D2/D3',
     ]
 
+  # This is where the test fails.  Repeat updates on '', 'D', 'F', or
+  # 'DDD' report no skips.
   chdir_skip_paths = [
     ('D', 'D1'),
     ('F', 'alpha'),
     ('DDD', 'D1'),
+    ('', 'D/D1', 'F/alpha', 'DD/D1', 'DF/D1', 'DDD/D1', 'DDF/D1'),
     ]
   # Note: We don't step *into* a directory that's deleted in the repository.
   # E.g. ('DDD/D1/D2', '') would correctly issue a "path does not
