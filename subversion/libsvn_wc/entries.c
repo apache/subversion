@@ -1196,10 +1196,17 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       entry->name = apr_pstrdup(result_pool, base_node->local_relpath);
 
-      if (working_node && working_node->kind == svn_node_none)
-        entry->schedule = svn_wc_schedule_delete;
+      if (working_node)
+        {
+          if (working_node->kind == svn_node_none)
+            entry->schedule = svn_wc_schedule_delete;
+          else
+            entry->schedule = svn_wc_schedule_replace;
+        }
       else
-        entry->schedule = svn_wc_schedule_normal;
+        {
+          entry->schedule = svn_wc_schedule_normal;
+        }
 
       if (base_node->repos_id)
         {
@@ -1582,6 +1589,8 @@ write_entry(svn_sqlite__db_t *wc_db,
             const svn_wc_entry_t *this_dir,
             apr_pool_t *pool)
 {
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
@@ -1591,10 +1600,24 @@ write_entry(svn_sqlite__db_t *wc_db,
     {
       case svn_wc_schedule_normal:
         base_node = MAYBE_ALLOC(base_node, scratch_pool);
+
+        /* We also need to chuck any existing working node. */
+        SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                          STMT_DELETE_WORKING_NODE));
+        SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, name));
+        SVN_ERR(svn_sqlite__step(&got_row, stmt));
+        SVN_ERR(svn_sqlite__reset(stmt));
         break;
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
+
+        /* We also need to chuck any existing base node. */
+        SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                          STMT_DELETE_BASE_NODE));
+        SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, name));
+        SVN_ERR(svn_sqlite__step(&got_row, stmt));
+        SVN_ERR(svn_sqlite__reset(stmt));
         break;
 
       case svn_wc_schedule_delete:
