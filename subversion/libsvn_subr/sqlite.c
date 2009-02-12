@@ -533,7 +533,11 @@ close_apr(void *data)
 
   /* If there's a pre-existing error, return it. */
   if (err)
-    return err->apr_err;
+    {
+      result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
 
   if (result != SQLITE_OK)
     return SQLITE_ERROR_CODE(result);
