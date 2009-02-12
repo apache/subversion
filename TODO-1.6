@@ -8,11 +8,6 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * #3334: Tree conflicts "merry-go-round" about update updating the base.
-   Julian Foad is working on this. Done for when victim is a file, still
-   doing for when victim is a directory.  [julianfoad]
-   See: <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1019712>.
-
  * #3209: Tests XFAIL due to changed tree-conflicts behaviour
      http://svn.haxx.se/dev/archive-2009-01/0538.shtml summarizes the tests
      that are failing because of real differences in pre-TC vs. post-TC
@@ -20,6 +15,7 @@ Blocker:
 
  * Failing ruby bindings test, see:
    http://svn.haxx.se/dev/archive-2009-01/0771.shtml
+   Note that the tests fail on ^/branches/1.5.x too.
 
 Optional:
 
