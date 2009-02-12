@@ -1216,6 +1216,11 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (working_node && (working_node->copyfrom_repos_path != NULL))
         entry->copied = TRUE;
 
+      if (working_node && (working_node->tree_conflict_data != NULL))
+        entry->tree_conflict_data = apr_pstrdup(result_pool,
+                                             working_node->tree_conflict_data);
+
+
       if (base_node->checksum)
         entry->checksum = svn_checksum_to_cstring(base_node->checksum,
                                                   result_pool);
@@ -1651,6 +1656,13 @@ write_entry(svn_sqlite__db_t *wc_db,
       if (actual_node)
         actual_node->changelist_id = changelist_id;
     }
+
+  if (entry->tree_conflict_data)
+    {
+      working_node = MAYBE_ALLOC(working_node, scratch_pool);
+      working_node->tree_conflict_data = entry->tree_conflict_data;
+    }
+
 
   /* Insert the base node. */
   if (base_node)
