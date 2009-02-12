@@ -1344,7 +1344,6 @@ log_do_committed(struct log_runner *loggy,
   entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
-  entry->has_prop_mods = FALSE;
 
   /* We don't reset tree_conflict_data, because it's about conflicts on
      children, not on this node, and it could conceivably be valid to commit
@@ -1362,7 +1361,6 @@ log_do_committed(struct log_runner *loggy,
                                    | SVN_WC__ENTRY_MODIFY_PREJFILE
                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                                   | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2217,22 +2215,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
                  SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_HAS_PROPS,
-                 SVN_WC__ENTRY_ATTR_HAS_PROPS,
-                 entry->has_props ? "true" : "false");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
-                 SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
-                 entry->has_prop_mods ? "true" : "false");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS,
-                 SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                 entry->cachable_props);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
-                 SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
-                 entry->present_props);
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                  SVN_WC__ENTRY_ATTR_WORKING_SIZE,

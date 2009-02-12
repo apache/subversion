@@ -751,52 +751,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
-  /* has-props flag. */
-  SVN_ERR(do_bool_attr(&entry->has_props,
-                       modify_flags, SVN_WC__ENTRY_MODIFY_HAS_PROPS,
-                       atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, name));
-
-  /* has-prop-mods flag. */
-  {
-    const char *has_prop_mods_str
-      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
-                     APR_HASH_KEY_STRING);
-
-    if (has_prop_mods_str)
-      {
-        if (strcmp(has_prop_mods_str, "true") == 0)
-          entry->has_prop_mods = TRUE;
-        else if (strcmp(has_prop_mods_str, "false") != 0)
-          return svn_error_createf
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_HAS_PROP_MODS);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
-      }
-  }
-
-  /* cachable-props string. */
-  entry->cachable_props = apr_hash_get(atts,
-                                       SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                                       APR_HASH_KEY_STRING);
-  if (entry->cachable_props)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS;
-      entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
-    }
-
-  /* present-props string. */
-  entry->present_props = apr_hash_get(atts,
-                                      SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
-                                      APR_HASH_KEY_STRING);
-  if (entry->present_props)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_PRESENT_PROPS;
-      entry->present_props = apr_pstrdup(pool, entry->present_props);
-    }
-
   /* Translated size */
   {
     const char *val
@@ -858,9 +812,6 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     {
       dst->uuid = src->uuid;
     }
-
-  if (! dst->cachable_props)
-    dst->cachable_props = src->cachable_props;
 }
 
 
@@ -2057,26 +2008,6 @@ fold_entry(apr_hash_t *entries,
                              ? apr_pstrdup(pool, entry->changelist)
                              : NULL);
 
-  /* has-props flag */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPS)
-    cur_entry->has_props = entry->has_props;
-
-  /* prop-mods flag */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS)
-    cur_entry->has_prop_mods = entry->has_prop_mods;
-
-  /* Cachable props. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS)
-    cur_entry->cachable_props = (entry->cachable_props
-                                 ? apr_pstrdup(pool, entry->cachable_props)
-                                 : NULL);
-
-  /* Property existence */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PRESENT_PROPS)
-    cur_entry->present_props = (entry->present_props
-                                ? apr_pstrdup(pool, entry->present_props)
-                                : NULL);
-
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
     cur_entry->keep_local = entry->keep_local;
 
@@ -2552,10 +2483,6 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
   if (entry->changelist)
     dupentry->changelist = apr_pstrdup(pool, entry->changelist);
-  if (entry->cachable_props)
-    dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
-  if (entry->present_props)
-    dupentry->present_props = apr_pstrdup(pool, entry->present_props);
   if (entry->tree_conflict_data)
     dupentry->tree_conflict_data = apr_pstrdup(pool,
                                                entry->tree_conflict_data);
@@ -2715,9 +2642,6 @@ init_body(void *baton,
   entry->depth = itb->depth;
   if (itb->initial_rev > 0)
     entry->incomplete = TRUE;
-  /* Add cachable-props here so that it can be inherited by other entries.
-   */
-  entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
   return write_entry(wc_db, wc_id, repos_id, itb->repos, entry,
                      SVN_WC_ENTRY_THIS_DIR, entry, itb->scratch_pool);

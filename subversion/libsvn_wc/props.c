@@ -2,7 +2,7 @@
  * props.c :  routines dealing with properties in the working copy
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -234,37 +234,6 @@ get_existing_prop_reject_file(const char **reject_file,
 /*---------------------------------------------------------------------*/
 
 
-/* Build a space separated list of properties that are contained in
-   the hash PROPS and which we want to cache.
-   The string is allocated in POOL. */
-static const char *
-build_present_props(apr_hash_t *props, apr_pool_t *pool)
-{
-  apr_array_header_t *cachable;
-  svn_stringbuf_t *present_props = svn_stringbuf_create("", pool);
-  int i;
-
-  if (apr_hash_count(props) == 0)
-    return present_props->data;
-
-  cachable = svn_cstring_split(SVN_WC__CACHABLE_PROPS, " ", TRUE, pool);
-  for (i = 0; i < cachable->nelts; i++)
-    {
-      const char *proptolookfor = APR_ARRAY_IDX(cachable, i,
-                                                const char *);
-
-      if (apr_hash_get(props, proptolookfor, APR_HASH_KEY_STRING) != NULL)
-        {
-          svn_stringbuf_appendcstr(present_props, proptolookfor);
-          svn_stringbuf_appendcstr(present_props, " ");
-        }
-    }
-
-  /* Avoid returning a string with a trailing space. */
-  svn_stringbuf_chop(present_props, 1);
-  return present_props->data;
-}
-
 /*** Loading regular properties. ***/
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
@@ -372,7 +341,6 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                       apr_pool_t *pool)
 {
   apr_array_header_t *prop_diffs;
-  svn_wc_entry_t tmp_entry;
   svn_node_kind_t kind;
 
   if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
@@ -380,23 +348,11 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     kind = svn_node_file;
 
-  /* Check if the props are modified, and update the entry. */
+  /* Check if the props are modified. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
-  tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
-  tmp_entry.has_props = (apr_hash_count(working_props) > 0);
-  tmp_entry.cachable_props = SVN_WC__CACHABLE_PROPS;
-  tmp_entry.present_props = build_present_props(working_props, pool);
-
-  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access,
-                                     path, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_HAS_PROPS
-                                     | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
-                                     | SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS
-                                     | SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
-                                     pool));
 
   /* Save the working properties file if it differs from base. */
-  if (tmp_entry.has_prop_mods)
+  if (prop_diffs->nelts > 0)
     {
       SVN_ERR(install_props_file(log_accum, adm_access, path, working_props,
                                  svn_wc__props_working, pool));
@@ -447,8 +403,6 @@ svn_wc__working_props_committed(const char *path,
   const char *working;
   const char *base;
   const svn_wc_entry_t *entry;
-  svn_wc_entry_t mod_entry;
-  svn_wc_adm_access_t *mod_access;
 
 
   /* The path is ensured not an excluded path. */
@@ -463,13 +417,7 @@ svn_wc__working_props_committed(const char *path,
 
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
-  SVN_ERR(svn_io_file_rename(working, base, pool));
-
-  SVN_ERR(svn_wc_adm_probe_retrieve(&mod_access, adm_access, path, pool));
-  mod_entry.has_prop_mods = FALSE;
-  return svn_wc__entry_modify(mod_access, entry->name, &mod_entry,
-                              SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
-                              sync_entries, pool);
+  return svn_io_file_rename(working, base, pool);
 }
 
 
@@ -2124,6 +2072,8 @@ svn_wc_prop_list(apr_hash_t **props,
                  apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  apr_hash_t *base_props;
+  apr_hash_t *new_props;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
@@ -2141,28 +2091,12 @@ svn_wc_prop_list(apr_hash_t **props,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
 
-  return svn_wc__load_props(NULL, props, NULL, adm_access, path, pool);
-}
+  SVN_ERR(svn_wc__load_props(&base_props, &new_props, NULL, adm_access,
+                             path, pool));
 
-/* Determine if PROPNAME is contained in the list of space separated
-   values STRING.  */
+  *props = apr_hash_overlay(pool, new_props, base_props);
 
-static svn_boolean_t
-string_contains_prop(const char *string, const char *propname)
-{
-  const char *place = strstr(string, propname);
-  int proplen = strlen(propname);
-
-  if (!place)
-    return FALSE;
-
-  while (place)
-    {
-      if (place[proplen] == ' ' || place[proplen] == 0)
-        return TRUE;
-      place = strstr(place + 1, propname);
-    }
-  return FALSE;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -2182,25 +2116,6 @@ svn_wc_prop_get(const svn_string_t **value,
     {
       *value = NULL;
       return SVN_NO_ERROR;
-    }
-
-  if (entry->cachable_props
-      && string_contains_prop(entry->cachable_props, name))
-    {
-      /* We separate these two cases so that we can return the correct
-         value for booleans if they exist in the string.  */
-      if (!entry->present_props
-          || !string_contains_prop(entry->present_props, name))
-        {
-          *value = NULL;
-          return SVN_NO_ERROR;
-        }
-      if (svn_prop_is_boolean(name))
-        {
-          *value = svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool);
-          SVN_ERR_ASSERT(*value != NULL);
-          return SVN_NO_ERROR;
-        }
     }
 
   if (kind == svn_prop_wc_kind)

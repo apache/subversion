@@ -33,6 +33,17 @@
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
+/* Some old defines which this file might need. */
+#define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
+#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
+#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
+#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
+#define SVN_WC__ENTRY_MODIFY_HAS_PROPS          APR_INT64_C(0x0000000004000000)
+#define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      APR_INT64_C(0x0000000008000000)
+#define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     APR_INT64_C(0x0000000010000000)
+#define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x0000000020000000)
+
+
 
 /* Used when reading an entries file in XML format. */
 struct entries_accumulator
