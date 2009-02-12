@@ -935,6 +935,10 @@ def _check_command_line_parsed():
   if not command_line_parsed:
     raise Failure("Condition cannot be tested until command line is parsed")
 
+def is_not_serf():
+  _check_command_line_parsed()
+  return not (http_library == "serf")
+  
 def is_ra_type_dav():
   _check_command_line_parsed()
   return test_area_url.startswith('http')
