@@ -517,32 +517,26 @@ static apr_status_t
 close_apr(void *data)
 {
   svn_sqlite__db_t *db = data;
-  sqlite3_stmt *stmt;
-  int tmp_result;
+  svn_error_t *err = SVN_NO_ERROR;
   int result;
-
-  /* We're possibly going to lose some error information here, because no
-     matter what, we want to attempt to finalize all previously prepared
-     statements, as well as close the database connection.  Normally, we'd
-     just chain all the errors together, but because we get to return only
-     one apr status code, we can't do that.  C'est la vie. */
+  int i;
 
   /* Finalize any existing prepared statements. */
-  while ( (stmt = sqlite3_next_stmt(db->db3, NULL)) != NULL)
+  for (i = 0; i < db->nbr_statements; i++)
     {
-      tmp_result = sqlite3_finalize(stmt);
-      if (result == SQLITE_OK)
-        result = tmp_result;
+      if (db->prepared_stmts[i])
+        err = svn_error_compose_create(
+                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
     }
   
-  tmp_result = sqlite3_close(db->db3);
+  result = sqlite3_close(db->db3);
 
   /* If there's a pre-existing error, return it. */
+  if (err)
+    return err->apr_err;
+
   if (result != SQLITE_OK)
     return SQLITE_ERROR_CODE(result);
-
-  if (tmp_result != SQLITE_OK)
-    return SQLITE_ERROR_CODE(tmp_result);
 
   return APR_SUCCESS;
 }
