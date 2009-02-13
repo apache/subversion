@@ -2,7 +2,6 @@
 #
 # transform_sql.py -- create a header file with the appropriate SQL variables
 # from an SQL file
-# The output file is named by adding ".h" onto the input file name.
 #
 
 
@@ -14,7 +13,7 @@ import sys
 def usage_and_exit(msg):
   if msg:
     sys.stderr.write("%s\n\n" % msg)
-  sys.stderr.write("usage: %s [sqlite_file]\n" % \
+  sys.stderr.write("usage: %s [sqlite_file] [output_file]\n" % \
     os.path.basename(sys.argv[0]))
   sys.stderr.flush()
   sys.exit(1)
@@ -49,6 +48,6 @@ def main(input_filename, output_filename):
 
 
 if __name__ == '__main__':
-  if len(sys.argv) != 2:
+  if len(sys.argv) != 3:
     usage_and_exit("Incorrect number of arguments")
-  main(sys.argv[1], sys.argv[1] + ".h")
+  main(sys.argv[1], sys.argv[2])
