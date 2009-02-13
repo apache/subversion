@@ -1301,7 +1301,7 @@ def forced_switch_failures(sbox):
                                         G_path,
                                         sbox.repo_url + "/A/D/H",
                                         None, None, None,
-                                        "independent working copy",
+                               "Failed to add directory '.*I'.*already exists",
                                         None, None, None, None, False,
                                         '--force')
 

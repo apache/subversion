@@ -2090,7 +2090,7 @@ def forced_update_failures(sbox):
     ['Checked out revision 2.\n'], [],
     "co", I_url, I_path)
   svntest.actions.run_and_verify_update(C_Path, None, None, None,
-                                        "independent working copy",
+                               "Failed to add directory '.*I'.*already exists",
                                         None, None, None, None, 0, C_Path,
                                         '--force')
 

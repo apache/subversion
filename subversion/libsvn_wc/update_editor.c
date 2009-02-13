@@ -2316,22 +2316,25 @@ add_directory(const char *path,
           if (strcmp(entry->uuid, parent_entry->uuid) != 0)
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("UUID mismatch: existing dir '%s' was checked out "
-                 "from a different repository"), db->path); 
+               _("UUID mismatch: existing directory '%s' was checked out "
+                 "from a different repository"), 
+               svn_path_local_style(db->path, pool)); 
 
           if (!eb->switch_url
               && strcmp(db->new_URL, entry->url) != 0)
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("URL '%s' of existing dir '%s' does not match "
+               _("URL '%s' of existing directory '%s' does not match "
                  "expected URL '%s'"),
-               entry->url, db->path, db->new_URL);
+               entry->url, svn_path_local_style(db->path, pool),
+               db->new_URL);
 
           if (! entry_in_parent)
-            return svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Existing dir at '%s' is an independent working copy."),
-               db->path);
+              return svn_error_createf
+                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                 _("Failed to add directory '%s': a versioned "
+                   "directory of the same name already exists"),
+                 svn_path_local_style(db->path, pool));
 
           if ((entry->schedule == svn_wc_schedule_add
                || entry->schedule == svn_wc_schedule_replace)
@@ -3476,7 +3479,8 @@ add_file(const char *path,
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("UUID mismatch: existing file '%s' was checked out "
-             "from a different repository"), full_path); 
+             "from a different repository"),
+           svn_path_local_style(full_path, pool)); 
 
       if (!eb->switch_url
           && strcmp(fb->new_URL, entry->url) != 0)
@@ -3484,7 +3488,8 @@ add_file(const char *path,
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("URL '%s' of existing file '%s' does not match "
              "expected URL '%s'"),
-           entry->url, full_path, fb->new_URL);
+           entry->url, svn_path_local_style(full_path, pool),
+           fb->new_URL);
     }
 
   if (entry && kind == svn_node_file)

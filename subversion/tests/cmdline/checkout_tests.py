@@ -296,7 +296,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
     "Expected error during co", None, svntest.verify.AnyOutput,
     "co", "--force", repo_url, fresh_wc_dir)
 
-  test_stderr("'.*A' is an independent working copy", serr)
+  test_stderr("Failed to add directory '.*A'.*already exists", serr)
 
   # Checkout the entire first repos into the other dir.  This should
   # fail because it's a different repository.
@@ -304,7 +304,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
     "Expected error during co", None, svntest.verify.AnyOutput,
     "co", "--force", repo_url, other_wc_dir)
 
-  test_stderr("svn: UUID mismatch: existing dir '.*A'", serr)
+  test_stderr("UUID mismatch: existing directory '.*A'", serr)
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
   svntest.actions.run_and_verify_svn("empty status output", None,
