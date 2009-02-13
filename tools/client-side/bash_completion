@@ -546,7 +546,7 @@ _svn()
 	    case $prop in
 		svn:keywords)
 		    # just a subset?
-		    values="Id Rev URL Date Author \' $SVN_BASH_KEYWORDS"
+		    values="Id Rev URL Date Author Header \' $SVN_BASH_KEYWORDS"
 		    ;;
 		svn:executable|svn:needs-lock)
 		    # hmmm... canonical value * is special to the shell.
