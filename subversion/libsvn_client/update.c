@@ -162,7 +162,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       const svn_wc_entry_t *target_entry;
       SVN_ERR(svn_wc_entry(&target_entry, 
           svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
-          dir_access, TRUE, pool));
+          adm_access, TRUE, pool));
 
       if (target_entry->kind == svn_node_dir)
         {
