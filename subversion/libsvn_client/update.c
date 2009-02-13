@@ -27,8 +27,8 @@
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_time.h"
-#include "svn_path.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "client.h"
@@ -159,7 +159,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      svn_wc_entry_t *target_entry;
+      const svn_wc_entry_t *target_entry;
       SVN_ERR(svn_wc_entry(&target_entry, 
           svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
           dir_access, TRUE, pool));
