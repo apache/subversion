@@ -28,6 +28,7 @@
 #include "svn_config.h"
 #include "svn_time.h"
 #include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "client.h"
