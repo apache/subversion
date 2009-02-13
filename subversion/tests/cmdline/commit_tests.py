@@ -154,11 +154,11 @@ def commit_one_file(sbox):
   expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
 
   # Commit the one file.
-  #svntest.actions.run_and_verify_commit(wc_dir,
-  #                                      expected_output,
-  #                                      expected_status,
-  #                                      None,
-  #                                      omega_path)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        omega_path)
 
 
 #----------------------------------------------------------------------
