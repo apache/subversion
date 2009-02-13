@@ -168,8 +168,8 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
-    for var_name in archdir CC CFLAGS LDSHARED DLEXT LIBRUBYARG \
-                    sitedir sitelibdir sitearchdir libdir
+    for var_name in arch archdir CC CFLAGS LDSHARED DLEXT LIBRUBYARG \
+                    rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
@@ -178,7 +178,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_NOTICE([Configuring Ruby SWIG binding])
 
     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
-    svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
+    if test -d "$rbconfig_rubyhdrdir"; then
+      dnl Ruby >=1.9
+      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward -I$rbconfig_rubyhdrdir/$rbconfig_arch"
+    else
+      dnl Ruby 1.8
+      svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
+    fi
     ])
     SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
