@@ -1389,7 +1389,7 @@ class WinGeneratorBase(GeneratorBase):
       os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),
       ]
     for sql in sql_sources:
-      transform_sql.main(sql + '.sql', sql + '.sql_h')
+      transform_sql.main(sql + '.sql', sql + '.h')
     
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
