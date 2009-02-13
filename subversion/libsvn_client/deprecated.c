@@ -1423,3 +1423,110 @@ svn_client_switch(svn_revnum_t *result_rev,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      FALSE, NULL, FALSE, FALSE, ctx, pool);
 }
+
+/*** From cat.c ***/
+svn_error_t *
+svn_client_cat(svn_stream_t *out,
+               const char *path_or_url,
+               const svn_opt_revision_t *revision,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *pool)
+{
+  return svn_client_cat2(out, path_or_url, revision, revision,
+                         ctx, pool);
+}
+
+/*** From checkout.c ***/
+svn_error_t *
+svn_client_checkout3(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_externals,
+                     svn_boolean_t allow_unver_obstructions,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
+                                       revision, NULL, depth, ignore_externals,
+                                       allow_unver_obstructions, NULL, ctx,
+                                       pool);
+}
+
+svn_error_t *
+svn_client_checkout2(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_externals,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
+                                       revision, NULL,
+                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                       ignore_externals, FALSE, NULL, ctx,
+                                       pool);
+}
+
+svn_error_t *
+svn_client_checkout(svn_revnum_t *result_rev,
+                    const char *URL,
+                    const char *path,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  svn_opt_revision_t peg_revision;
+
+  peg_revision.kind = svn_opt_revision_unspecified;
+
+  return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
+                                       revision, NULL,
+                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                       FALSE, FALSE, NULL, ctx, pool);
+}
+
+/*** From info.c ***/
+svn_error_t *
+svn_client_info(const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_info_receiver_t receiver,
+                void *receiver_baton,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_info2(path_or_url, peg_revision, revision,
+                          receiver, receiver_baton,
+                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
+                          NULL, ctx, pool);
+}
+
+/*** From resolved.c ***/
+svn_error_t *
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
+  return svn_client_resolve(path, depth,
+                            svn_wc_conflict_choose_merged, ctx, pool);
+}
+/*** From revert.c ***/
+svn_error_t *
+svn_client_revert(const apr_array_header_t *paths,
+                  svn_boolean_t recursive,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_revert2(paths, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
+                            NULL, ctx, pool);
+}
