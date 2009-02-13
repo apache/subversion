@@ -598,23 +598,6 @@ pre_1_2_recurse:
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_client_info(const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_info_receiver_t receiver,
-                void *receiver_baton,
-                svn_boolean_t recurse,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_info2(path_or_url, peg_revision, revision,
-                          receiver, receiver_baton,
-                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                          NULL, ctx, pool);
-}
-
 svn_info_t *
 svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
 {
