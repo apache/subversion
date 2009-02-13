@@ -2887,18 +2887,24 @@ svn_io_file_rename(const char *from_path, const char *to_path,
   apr_status_t status = APR_SUCCESS;
   const char *from_path_apr, *to_path_apr;
 
-#ifdef WIN32
-  /* Set the destination file writable but only on Windows, because
-     Windows will not allow us to rename over files that are read-only. */
-  SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
-#endif /* WIN32 */
-
   SVN_ERR(cstring_from_utf8(&from_path_apr, from_path, pool));
   SVN_ERR(cstring_from_utf8(&to_path_apr, to_path, pool));
 
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
-  WIN32_RETRY_LOOP(status,
-                   apr_file_rename(from_path_apr, to_path_apr, pool));
+
+#ifdef WIN32
+  if (status)
+    {
+      /* Set the destination file writable because Windows will not 
+         allow us to rename over files that are read-only. */
+      SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
+
+      status = apr_file_rename(from_path_apr, to_path_apr, pool);
+
+      WIN32_RETRY_LOOP(status,
+                       apr_file_rename(from_path_apr, to_path_apr, pool));
+    }
+#endif /* WIN32 */
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't move '%s' to '%s'"),
