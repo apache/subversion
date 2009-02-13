@@ -164,7 +164,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
           adm_access, TRUE, pool));
 
-      if (target_entry->kind == svn_node_dir)
+      if (target_entry && target_entry->kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
                                    ctx->notify_func2, ctx->notify_baton2,
