@@ -330,8 +330,9 @@ fast-clean: doc-clean
             (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo && \
              rm -rf .libs) ; \
         done
-	rm -f $(CLEAN_FILES) $(abs_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.h
-	rm -f $(CLEAN_FILES) $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.h
+	rm -f $(CLEAN_FILES) \
+            $(abs_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.h \
+	        $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.h
 	find $(abs_srcdir) -name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
