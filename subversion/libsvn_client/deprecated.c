@@ -1405,3 +1405,21 @@ svn_client_update(svn_revnum_t *result_rev,
                                      FALSE, FALSE, FALSE, NULL,
                                      TRUE, ctx, pool);
 }
+
+/*** From switch.c ***/
+svn_error_t *
+svn_client_switch(svn_revnum_t *result_rev,
+                  const char *path,
+                  const char *switch_url,
+                  const svn_opt_revision_t *revision,
+                  svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_opt_revision_t peg_revision;
+  peg_revision.kind = svn_opt_revision_unspecified;
+  return svn_client__switch_internal(result_rev, path, switch_url,
+                                     &peg_revision, revision, NULL,
+                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                     FALSE, NULL, FALSE, FALSE, ctx, pool);
+}
