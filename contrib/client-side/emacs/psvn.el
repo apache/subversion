@@ -1453,9 +1453,11 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            ;; find last error message and show it.
            (goto-char (point-max))
            (if (re-search-backward "^svn: " nil t)
-               (let ((error-strings))
-                 (while (looking-at "^svn: ")
+               (let ((error-strings)
+                     (beginning-of-buffer))
+                 (while (and (looking-at "^svn: ") (not beginning-of-buffer))
                    (setq error-strings (append error-strings (list (buffer-substring-no-properties (+ 5 (svn-point-at-bol)) (svn-point-at-eol)))))
+                   (setq beginning-of-buffer (bobp))
                    (forward-line -1))
                  (svn-process-handle-error (mapconcat 'identity (reverse error-strings) "\n")))
              (message "svn failed: %s" event)))

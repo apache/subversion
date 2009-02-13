@@ -1295,16 +1295,19 @@ def forced_switch_failures(sbox):
     "co", I_url, I_path)
 
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
-  # from the repos, causing a tree conflict.
-  expected_output = svntest.wc.State(sbox.wc_dir, {
-    "A/D/G/pi"          : Item(status='D '),
-    "A/D/G/rho"         : Item(status='D '),
-    "A/D/G/tau"         : Item(status='D '),
-    "A/D/G/chi"         : Item(status='A '),
-    "A/D/G/I"           : Item(status='  ', treeconflict='C'),
-    "A/D/G/omega"       : Item(status='A '),
-    "A/D/G/psi"         : Item(status='A '),
-    })
+  # from the repos, causing an error.
+  G_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_switch(sbox.wc_dir,
+                                        G_path,
+                                        sbox.repo_url + "/A/D/H",
+                                        None, None, None,
+                               "Failed to add directory '.*I'.*already exists",
+                                        None, None, None, None, False,
+                                        '--force')
+
+  # Delete the obstruction and finish the update of A/D/G (which is
+  # already switched).
+  svntest.main.safe_rmtree(I_path)
   expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_disk.add({
     "A/D/G/chi"         : Item("This is the file 'chi'.\n"),
@@ -1316,20 +1319,17 @@ def forced_switch_failures(sbox):
   expected_status.add({
     'A/D'               : Item(status='  ', wc_rev='1'),
     'A/D/G'             : Item(status='  ', wc_rev='2', switched='S'),
-    'A/D/G/I'           : Item(status='  ', treeconflict='C', wc_rev='2'),
+    'A/D/G/I'           : Item(status='  ', wc_rev='2'),
     'A/D/G/chi'         : Item(status='  ', wc_rev='2'),
     'A/D/G/omega'       : Item(status='  ', wc_rev='2'),
     'A/D/G/psi'         : Item(status='  ', wc_rev='2'),
     })
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        os.path.join(sbox.wc_dir,
-                                                     'A', 'D', 'G'),
-                                        sbox.repo_url + "/A/D/H",
-                                        expected_output,
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        None,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, False,
-                                        '--force')
+                                        G_path)
 
 def switch_with_obstructing_local_adds(sbox):
   "switch tolerates WC adds"
@@ -2469,7 +2469,7 @@ test_list = [ None,
               switch_change_repos_root,
               XFail(relocate_and_propset, svntest.main.is_ra_type_dav),
               forced_switch,
-              XFail(forced_switch_failures),
+              forced_switch_failures,
               switch_scheduled_add,
               SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
               switch_with_obstructing_local_adds,

@@ -1376,3 +1376,32 @@ svn_client_status(svn_revnum_t *result_rev,
                             recurse, get_all, update, no_ignore, FALSE,
                             ctx, pool);
 }
+
+/*** From update.c ***/
+svn_error_t *
+svn_client_update2(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_update3(result_revs, paths, revision,
+                            SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
+                            ignore_externals, FALSE, ctx, pool);
+}
+
+svn_error_t *
+svn_client_update(svn_revnum_t *result_rev,
+                  const char *path,
+                  const svn_opt_revision_t *revision,
+                  svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client__update_internal(result_rev, path, revision,
+                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                     FALSE, FALSE, FALSE, NULL,
+                                     TRUE, ctx, pool);
+}

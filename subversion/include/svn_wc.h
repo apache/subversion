@@ -2167,7 +2167,8 @@ typedef struct svn_wc_entry_t
    *
    * @see @c present_props.
    *
-   * @since New in 1.4. */
+   * @since New in 1.4.
+   * @deprecated This value will always be "" in version 1.7 and later. */
   const char *cachable_props;
 
   /** Cached property existence for this entry.
@@ -2176,7 +2177,8 @@ typedef struct svn_wc_entry_t
    * property.  If a name exists in both lists, the property is present on this
    * entry.
    *
-   * @since New in 1.4. */
+   * @since New in 1.4.
+   * @deprecated This value will always be "" in version 1.7 and later. */
   const char *present_props;
 
   /** which changelist this item is part of, or NULL if not part of any.

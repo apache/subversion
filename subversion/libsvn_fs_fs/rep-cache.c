@@ -25,7 +25,7 @@
 
 #include "private/svn_sqlite.h"
 
-#include "rep-cache-db.sql_h"
+#include "rep-cache-db.h"
 
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1

@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -469,7 +469,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     rb_raise(rb_eArgError, "Expecting a string");
   }
   $1 = StringValuePtr($input);
-  $2 = RSTRING(StringValue($input))->len;
+  $2 = RSTRING_LEN(StringValue($input));
 }
 #endif
 
@@ -1110,9 +1110,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 {
   if (NIL_P($input)) {
     $1 = NULL;
-  } else if (RSTRING($input)->len != APR_MD5_DIGESTSIZE) {
+  } else if (RSTRING_LEN($input) != APR_MD5_DIGESTSIZE) {
     rb_raise(rb_eArgError, "digest size (%d) must be %d",
-             RSTRING($input)->len, APR_MD5_DIGESTSIZE);
+             RSTRING_LEN($input), APR_MD5_DIGESTSIZE);
   } else {
     $1 = ($1_ltype)StringValuePtr($input);
   }

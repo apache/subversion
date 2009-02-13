@@ -27,6 +27,7 @@
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_time.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_io.h"
@@ -158,15 +159,23 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
-                               ctx->notify_func2, ctx->notify_baton2,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
-      /* If we are asked to exclude a target, we can just stop now. */
-      if (depth == svn_depth_exclude)
+      const svn_wc_entry_t *target_entry;
+      SVN_ERR(svn_wc_entry(&target_entry, 
+          svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
+          adm_access, TRUE, pool));
+
+      if (target_entry->kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
-          return SVN_NO_ERROR;
+          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+                                   ctx->notify_func2, ctx->notify_baton2,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
+          /* If we are asked to exclude a target, we can just stop now. */
+          if (depth == svn_depth_exclude)
+            {
+              SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+              return SVN_NO_ERROR;
+            }
         }
     }
 
@@ -362,32 +371,4 @@ svn_client_update3(apr_array_header_t **result_revs,
   svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
   return err;
-}
-
-svn_error_t *
-svn_client_update2(apr_array_header_t **result_revs,
-                   const apr_array_header_t *paths,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_boolean_t ignore_externals,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_update3(result_revs, paths, revision,
-                            SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
-                            ignore_externals, FALSE, ctx, pool);
-}
-
-svn_error_t *
-svn_client_update(svn_revnum_t *result_rev,
-                  const char *path,
-                  const svn_opt_revision_t *revision,
-                  svn_boolean_t recurse,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client__update_internal(result_rev, path, revision,
-                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, FALSE, FALSE, NULL,
-                                     TRUE, ctx, pool);
 }

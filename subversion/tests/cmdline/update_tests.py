@@ -2081,19 +2081,7 @@ def forced_update_failures(sbox):
                                      'up', wc_backup)
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'up', '-r', '1', C_Path)
-  
-  # Prior to the introduction of tree conflict handling, a forced update
-  # that tried to add a directory when a versioned directory of the same
-  # name already exists failed with an error:
-  #
-  #   svn: Failed to add directory 'update_tests-31.backup\A\C\I':
-  #   a versioned directory of the same name already exists
-  #
-  # Now this attempt succeeds, but results in a tree conflict.
-  #
-  ### Are either of these behaviors correct? See issue #3209:
-  ### http://subversion.tigris.org/issues/show_bug.cgi?id=3209
-  #
+
   # Checkout %URL%/A/C/I@2 directly to A/C/I.  A/C, being at r1, views
   # this as an unversioned object.
   I_url = sbox.repo_url + "/A/C/I"
@@ -2102,9 +2090,7 @@ def forced_update_failures(sbox):
     ['Checked out revision 2.\n'], [],
     "co", I_url, I_path)
   svntest.actions.run_and_verify_update(C_Path, None, None, None,
-                                        ".*Failed to add " + \
-                                        "directory.*a versioned directory " + \
-                                        "of the same name already exists",
+                               "Failed to add directory '.*I'.*already exists",
                                         None, None, None, None, 0, C_Path,
                                         '--force')
 
@@ -2609,44 +2595,95 @@ def update_with_obstructing_additions(sbox):
                                      omicron_path)
 
   # Try to update M's Parent.
-  svntest.actions.run_and_verify_update(A_path, expected_output,
+  expected_output = wc.State(A_path, {
+    'M'   : Item(status='  ', treeconflict='C'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/upsilon'   : Item("This is the file 'upsilon'\n"),
+    'A/C/nu'        : Item("This is the file 'nu'\n"),
+    'A/D/H/I'       : Item(),
+    'A/D/H/I/J'     : Item(),
+    'A/D/H/I/J/eta' : Item("This is REPOS file 'eta'\n"),
+    'A/D/H/I/K'     : Item(),
+    'A/D/H/I/K/xi'  : Item("This is the file 'xi'\n"),
+    'A/D/H/I/L'     : Item(),
+    'A/D/kappa'     : Item("This is REPOS file 'kappa'\n"),
+    'A/D/epsilon'   : Item("This is REPOS file 'epsilon'\n"),
+    'A/D/gamma'     : Item("This is the file 'gamma'.\n"),
+    'A/D/zeta'      : Item("This is the file 'zeta'\n"),
+    'A/M/I'         : Item(),
+    'A/M/I/J'       : Item(),
+    'A/M/I/J/eta'   : Item("This is REPOS file 'eta'\n"),
+    'A/M/I/K'       : Item(),
+    'A/M/I/K/xi'    : Item("This is the file 'xi'\n"),
+    'A/M/I/L'       : Item(),
+    'A/M/chi'       : Item("This is the file 'chi'.\n"),
+    'A/M/psi'       : Item("This is the file 'psi'.\n"),
+    'A/M/omega'     : Item("This is the file 'omega'.\n"),
+    'omicron'       : Item("This is the file 'chi'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.tweak('', 'iota', wc_rev=1)
+  expected_status.add({
+    'A/B/upsilon'   : Item(status='  ', wc_rev=4),
+    'A/C/nu'        : Item(status='  ', wc_rev=4),
+    'A/D/kappa'     : Item(status='  ', wc_rev=4),
+    'A/D/epsilon'   : Item(status='  ', wc_rev=4),
+    'A/D/gamma'     : Item(status='  ', wc_rev=4),
+    'A/D/zeta'      : Item(status='  ', wc_rev=4),
+    'A/D/H/I'       : Item(status='  ', wc_rev=4),
+    'A/D/H/I/J'     : Item(status='  ', wc_rev=4),
+    'A/D/H/I/J/eta' : Item(status='  ', wc_rev=4),
+    'A/D/H/I/K'     : Item(status='  ', wc_rev=4),
+    'A/D/H/I/K/xi'  : Item(status='  ', wc_rev=4),
+    'A/D/H/I/L'     : Item(status='  ', wc_rev=4),
+    'A/M'           : Item(status='A ', copied='+', wc_rev='-',
+                           treeconflict='C'),
+    'A/M/I'         : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/I/J'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/I/J/eta'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/I/K'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/I/K/xi'    : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/I/L'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/chi'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/psi'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/omega'     : Item(status='  ', copied='+', wc_rev='-'),
+    'omicron'       : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        "svn: Failed to add " \
-                                        "directory '.*M': a versioned " \
-                                        "directory of the same name " \
-                                        "already exists",
-                                        None, None, None, None, 0)
+                                        None, None, None, None, None, False,
+                                        A_path)
+  # Resolve the tree conflict.
+  svntest.main.run_svn(None, 'resolve', '--accept', 'working', M_path)
 
   # --force shouldn't help either.
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        "svn: Failed to add " \
-                                        "directory '.*M': a versioned " \
-                                        "directory of the same name " \
-                                        "already exists",
-                                        None, None, None, None, 0,
-                                        A_path, '--force')
+                                        None, None, None, None, None, False,
+                                        M_path, '--force')
 
   # Try to update omicron's parent, non-recusively so as not to
   # try and update M first.
+  expected_output = wc.State(wc_dir, {
+    'omicron'   : Item(status='  ', treeconflict='C'),
+    })
+  expected_status.tweak('', 'iota', status='  ', wc_rev=4)
+  expected_status.tweak('omicron', status='A ', copied='+', wc_rev='-',
+                        treeconflict='C'),
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        "Failed to add file '.*omicron': " \
-                                        "a file of the same name is " \
-                                        "already scheduled for addition " \
-                                        "with history",
-                                        None, None, None, None, 0,
+                                        None, None, None, None, None, False,
                                         wc_dir, '-N')
+  # Resolve the tree conflict.
+  svntest.main.run_svn(None, 'resolve', '--accept', 'working', omicron_path)
 
   # Again, --force shouldn't matter.
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        "Failed to add file '.*omicron': " \
-                                        "a file of the same name is " \
-                                        "already scheduled for addition " \
-                                        "with history",
-                                        None, None, None, None, 0,
-                                        wc_dir, '-N', '--force')
+                                        None, None, None, None, None, False,
+                                        omicron_path, '-N', '--force')
 
 # Test for issue #2022: Update shouldn't touch conflicted files.
 def update_conflicted(sbox):
@@ -4183,10 +4220,13 @@ def tree_conflicts_on_update_2_3(sbox):
     'DDD/D1/D2/D3',
     ]
 
+  # This is where the test fails.  Repeat updates on '', 'D', 'F', or
+  # 'DDD' report no skips.
   chdir_skip_paths = [
     ('D', 'D1'),
     ('F', 'alpha'),
     ('DDD', 'D1'),
+    ('', 'D/D1', 'F/alpha', 'DD/D1', 'DF/D1', 'DDD/D1', 'DDF/D1'),
     ]
   # Note: We don't step *into* a directory that's deleted in the repository.
   # E.g. ('DDD/D1/D2', '') would correctly issue a "path does not
@@ -4385,6 +4425,12 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
     svntest.main.file_write(path, "This is the file 'new_file'.\n")
     svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
 
+    path = os.path.join(dir, 'C', 'N')
+    os.mkdir(path)
+    path2 = os.path.join(dir, 'C', 'N', 'nu')
+    svntest.main.file_write(path2, "This is the file 'nu'.\n")
+    svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
+
     path = os.path.join(dir, 'B', 'lambda')
     svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
 
@@ -4409,6 +4455,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   expected_output = None
   expected_disk = None
   expected_status = None
+
   run_and_verify_update(A, expected_output, expected_disk, expected_status)
   run_and_verify_resolve([A], '--recursive', '--accept=mine-full', A)
 
@@ -4422,6 +4469,8 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
       'A/B/F'       : Item(status='D ', wc_rev=2),
       'A/mu'        : Item(status='D ', wc_rev=2),
       'A/C'         : Item(status='D ', wc_rev=2),
+      'A/C/N'       : Item(status='D ', wc_rev=2),
+      'A/C/N/nu'    : Item(status='D ', wc_rev=2),
       'A/D'         : Item(status='D ', wc_rev=2),
       'A/D/gamma'   : Item(status='D ', wc_rev=2),
       'A/D/G'       : Item(status='D ', wc_rev=2),
@@ -4613,10 +4662,10 @@ test_list = [ None,
               update_eolstyle_handling,
               update_copy_of_old_rev,
               forced_update,
-              XFail(forced_update_failures),
+              forced_update_failures,
               XFail(update_wc_on_windows_drive),
               update_wc_with_replaced_file,
-              XFail(update_with_obstructing_additions),
+              update_with_obstructing_additions,
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
                          server_has_mergeinfo),
