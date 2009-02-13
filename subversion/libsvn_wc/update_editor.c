@@ -2280,7 +2280,9 @@ add_directory(const char *path,
         {
           const svn_wc_entry_t *entry;
           const svn_wc_entry_t *parent_entry;
+          const svn_wc_entry_t *entry_in_parent;
           svn_wc_adm_access_t *parent_adm_access;
+          apr_hash_t *entries;
 
           SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
           SVN_ERR_ASSERT(entry);
@@ -2291,19 +2293,25 @@ add_directory(const char *path,
                                FALSE, pool));
           SVN_ERR_ASSERT(parent_entry);
 
+          SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, FALSE,
+                                      pool));
+          entry_in_parent = apr_hash_get(entries, db->name,
+                                         APR_HASH_KEY_STRING);
+
           /* What to do with a versioned or schedule-add dir:
 
              If the UUID doesn't match the parent's, or the URL isn't a
-             child of the parent dir's URL, it's an error.
+             child of the parent dir's URL, or the dir is unversioned in
+             the parent entry, it's an error.
 
              A dir already added without history is OK.  Set add_existed
              so that user notification is delayed until after any prop
              conflicts have been found.
 
-             A dir added with history is a tree conflict.
+             An existing versioned dir is an error.  In the future we may
+             relax this restriction and simply update such dirs.
 
-             A normal or deleted dir is currently a tree conflict; we may
-             relax this restriction and simply update such dirs. */
+             A dir added with history is a tree conflict. */
 
           if (strcmp(entry->uuid, parent_entry->uuid) != 0)
             return svn_error_createf
@@ -2319,39 +2327,45 @@ add_directory(const char *path,
                  "expected URL '%s'"),
                entry->url, db->path, db->new_URL);
 
-          if (entry->schedule == svn_wc_schedule_add
-              || entry->schedule == svn_wc_schedule_replace)
+          if (! entry_in_parent)
+            return svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Existing dir at '%s' is an independent working copy."),
+               db->path);
+
+          if ((entry->schedule == svn_wc_schedule_add
+               || entry->schedule == svn_wc_schedule_replace)
+              && !entry->copied) /* added without history */
             {
-              if (! entry->copied) /* added without history */
-                db->add_existed = TRUE;
-              else
+              db->add_existed = TRUE;
+            }
+          else  
+            {
+              svn_wc_conflict_description_t *tree_conflict;
+
+              /* Raise a tree conflict. */
+              SVN_ERR(check_tree_conflict(&tree_conflict, eb,
+                                          pb->log_accum, db->path, entry,
+                                          parent_adm_access,
+                                          svn_wc_conflict_action_add,
+                                          svn_node_dir, db->new_URL,
+                                          pool));
+
+              if (tree_conflict != NULL)
                 {
-                  svn_wc_conflict_description_t *tree_conflict;
+                  /* Record this conflict so that its descendants are
+                     skipped silently. */
+                  remember_skipped_tree(eb, full_path);
 
-                  /* Raise a tree conflict. */
-                  SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                              pb->log_accum, db->path, entry,
-                                              parent_adm_access,
-                                              svn_wc_conflict_action_add,
-                                              svn_node_dir, db->new_URL,
-                                              pool));
+                  if (eb->notify_func)
+                    (*eb->notify_func)(eb->notify_baton, 
+                                       svn_wc_create_notify
+                                       (full_path,
+                                        svn_wc_notify_tree_conflict,
+                                        pool),
+                                       pool);
 
-                  if (tree_conflict != NULL)
-                    {
-                      /* Record this conflict so that its descendants are
-                         skipped silently. */
-                      remember_skipped_tree(eb, full_path);
-
-                      if (eb->notify_func)
-                        (*eb->notify_func)(eb->notify_baton, 
-                                           svn_wc_create_notify
-                                           (full_path,
-                                            svn_wc_notify_tree_conflict,
-                                            pool),
-                                           pool);
-
-                      return SVN_NO_ERROR;
-                    }
+                  return SVN_NO_ERROR;
                 }
             }
         }
@@ -3441,9 +3455,6 @@ add_file(const char *path,
 
      A file added with history is a tree conflict.
 
-     A normal or deleted file is currently a tree conflict; we may relax
-     this restriction and simply update such files.
-
      sussman sez: If we're trying to add a file that's already in
      `entries' (but not on disk), that's okay.  It's probably because
      the user deleted the working version and ran 'svn up' as a means
@@ -3478,37 +3489,36 @@ add_file(const char *path,
 
   if (entry && kind == svn_node_file)
     {
-      if (entry->schedule == svn_wc_schedule_add
-          || entry->schedule == svn_wc_schedule_replace)
+      if ((entry->schedule == svn_wc_schedule_add
+           || entry->schedule == svn_wc_schedule_replace)
+          && !entry->copied) /* added without history */
+        fb->add_existed = TRUE;
+      else
         {
-          if (! entry->copied) /* added without history */
-            fb->add_existed = TRUE;
-          else
+          svn_wc_conflict_description_t *tree_conflict;
+
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb,
+                                      pb->log_accum, full_path, entry,
+                                      adm_access,
+                                      svn_wc_conflict_action_add,
+                                      svn_node_file, fb->new_URL, subpool));
+
+          if (tree_conflict != NULL)
             {
-              svn_wc_conflict_description_t *tree_conflict;
+              /* Record the conflict so that the file is skipped silently
+                 by the other callbacks. */
+              remember_skipped_tree(eb, full_path);
+              fb->skipped = TRUE;
 
-              SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                          pb->log_accum, full_path, entry,
-                                          adm_access,
-                                          svn_wc_conflict_action_add,
-                                          svn_node_file, fb->new_URL, subpool));
+              if (eb->notify_func)
+                (*eb->notify_func)(eb->notify_baton, 
+                                   svn_wc_create_notify
+                                   (full_path,
+                                    svn_wc_notify_tree_conflict,
+                                    subpool),
+                                   subpool);
 
-              if (tree_conflict != NULL)
-                {
-                  /* Record this conflict so that its descendants are
-                     skipped silently. */
-                  remember_skipped_tree(eb, full_path);
-
-                  if (eb->notify_func)
-                    (*eb->notify_func)(eb->notify_baton, 
-                                       svn_wc_create_notify
-                                       (full_path,
-                                        svn_wc_notify_tree_conflict,
-                                        subpool),
-                                       subpool);
-
-                  return SVN_NO_ERROR;
-                }
+              return SVN_NO_ERROR;
             }
         }
     }
