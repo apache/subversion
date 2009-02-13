@@ -25,6 +25,7 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_time.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_pools.h"
@@ -174,10 +175,20 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
-                               ctx->notify_func2, ctx->notify_baton2,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
+      const svn_wc_entry_t *target_entry;
+
+      SVN_ERR(svn_wc_entry(
+          &target_entry,
+          svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
+          adm_access, TRUE, pool));
+
+      if (target_entry && target_entry->kind == svn_node_dir)
+        {
+          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+                                   ctx->notify_func2, ctx->notify_baton2,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
+        }
     }
 
   SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
