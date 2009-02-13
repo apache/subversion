@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1233,7 +1233,7 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
   /* Construct the whole URL if we can, else use whatever we have. */
   if (node->repos_url && node->path_in_repos)
     url_str = svn_path_url_add_component2(node->repos_url,
-                                         node->path_in_repos, pool);
+                                          node->path_in_repos, pool);
   else if (node->repos_url)
     url_str = svn_path_url_add_component2(node->repos_url, "...", pool);
   else if (node->path_in_repos)

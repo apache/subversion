@@ -2,7 +2,7 @@
  * paths.c:   a path manipulation library using svn_stringbuf_t
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -940,8 +940,8 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool)
 
 const char *
 svn_path_url_add_component2(const char *url,
-                           const char *component,
-                           apr_pool_t *pool)
+                            const char *component,
+                            apr_pool_t *pool)
 {
   assert(svn_path_is_canonical(url, pool));
   /* URL can have trailing '/' */
