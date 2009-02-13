@@ -1301,35 +1301,106 @@ def forced_switch_failures(sbox):
                                         G_path,
                                         sbox.repo_url + "/A/D/H",
                                         None, None, None,
-                               "Failed to add directory '.*I'.*already exists",
+                                        "Failed to add directory '.*I'."
+                                        "*already exists",
                                         None, None, None, None, False,
                                         '--force')
 
-  # Delete the obstruction and finish the update of A/D/G (which is
-  # already switched).
+  # Delete all three obstructions and finish the update.
   svntest.main.safe_rmtree(I_path)
-  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
-  expected_disk.add({
-    "A/D/G/chi"         : Item("This is the file 'chi'.\n"),
-    "A/D/G/I"           : Item(),
-    "A/D/G/omega"       : Item("This is the file 'omega'.\n"),
-    "A/D/G/psi"         : Item("This is the file 'psi'.\n"),
+  svntest.main.safe_rmtree(pi_path)
+  os.remove(H_path)
+
+  # For our expected disk start with the standard greek tree.
+  expected_disk = svntest.main.greek_state.copy()
+
+  ### There has to be a simpler way to do this...but it will do for now.
+  # A/B/F is switched to A/D/G
+  new_A_B_F = svntest.wc.State('', {
+    "A/B/F"       : Item(),
+    "A/B/F/rho"   : Item("This is the file 'rho'.\n"),
+    "A/B/F/pi"    : Item("This is the file 'pi'.\n"),
+    "A/B/F/tau"   : Item("This is the file 'tau'.\n"),
     })
-  expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
-  expected_status.add({
-    'A/D'               : Item(status='  ', wc_rev='1'),
-    'A/D/G'             : Item(status='  ', wc_rev='2', switched='S'),
-    'A/D/G/I'           : Item(status='  ', wc_rev='2'),
-    'A/D/G/chi'         : Item(status='  ', wc_rev='2'),
-    'A/D/G/omega'       : Item(status='  ', wc_rev='2'),
-    'A/D/G/psi'         : Item(status='  ', wc_rev='2'),
+  # A/C is switched to A/D
+  new_A_C = svntest.wc.State('', {
+    "A/C"         : Item(),
+    "A/C/gamma"   : Item("This is the file 'gamma'.\n"),
+    "A/C/G"       : Item(),
+    "A/C/G/pi"    : Item("This is the file 'pi'.\n"),
+    "A/C/G/rho"   : Item("This is the file 'rho'.\n"),
+    "A/C/G/tau"   : Item("This is the file 'tau'.\n"),
+    "A/C/H"       : Item(),
+    "A/C/H/chi"   : Item("This is the file 'chi'.\n"),
+    "A/C/H/I"     : Item(),
+    "A/C/H/omega" : Item("This is the file 'omega'.\n"),
+    "A/C/H/psi"   : Item("This is the file 'psi'.\n"),
     })
+  # A/D/G is switched to A/D/H
+  new_A_D_G = svntest.wc.State('', {
+    "A/D/G"       : Item(),
+    "A/D/G/chi"   : Item("This is the file 'chi'.\n"),
+    "A/D/G/omega" : Item("This is the file 'omega'.\n"),
+    "A/D/G/I"     : Item(),
+    "A/D/G/psi"   : Item("This is the file 'psi'.\n"),
+    "A/D/H"       : Item(),
+    "A/D/H/chi"   : Item("This is the file 'chi'.\n"),
+    "A/D/H/omega" : Item("This is the file 'omega'.\n"),
+    "A/D/H/I"     : Item(),
+    "A/D/H/psi"   : Item("This is the file 'psi'.\n"),
+    "iota"        : Item("This is the file 'iota'.\n"), 
+    })
+  # Remove the three switched subtrees and replace with their new contents.
+  expected_disk.remove('A/B/F', 'A/C',
+                       'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_disk.add_state('', new_A_B_F)
+  expected_disk.add_state('', new_A_C)
+  expected_disk.add_state('', new_A_D_G)
+  
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ""            : Item(),
+    "A"           : Item(),
+    "A/B"         : Item(),
+    "A/B/lambda"  : Item(),
+    "A/B/E"       : Item(),
+    "A/B/E/alpha" : Item(),
+    "A/B/E/beta"  : Item(),
+    "A/B/F"       : Item(switched='S'),
+    "A/B/F/rho"   : Item(),
+    "A/B/F/pi"    : Item(),
+    "A/B/F/tau"   : Item(),
+    "A/mu"        : Item(),
+    "A/C"         : Item(switched='S'),
+    "A/C/gamma"   : Item(),
+    "A/C/G"       : Item(),
+    "A/C/G/pi"    : Item(),
+    "A/C/G/rho"   : Item(),
+    "A/C/G/tau"   : Item(),
+    "A/C/H"       : Item(),
+    "A/C/H/chi"   : Item(),
+    "A/C/H/I"     : Item(),
+    "A/C/H/omega" : Item(),
+    "A/C/H/psi"   : Item(),
+    "A/D"         : Item(),
+    "A/D/gamma"   : Item(),
+    "A/D/G"       : Item(switched='S'),
+    "A/D/G/chi"   : Item(),
+    "A/D/G/omega" : Item(),
+    "A/D/G/I"     : Item(),
+    "A/D/G/psi"   : Item(),
+    "A/D/H"       : Item(),
+    "A/D/H/chi"   : Item(),
+    "A/D/H/omega" : Item(),
+    "A/D/H/I"     : Item(),
+    "A/D/H/psi"   : Item(),
+    "iota"        : Item(),
+    })
+  expected_status.tweak(status='  ', wc_rev=2)
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         None,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
-                                        G_path)
+                                        None, None, None, None, None, False)
 
 def switch_with_obstructing_local_adds(sbox):
   "switch tolerates WC adds"
