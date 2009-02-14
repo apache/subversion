@@ -1179,9 +1179,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
   for (hi = apr_hash_first(scratch_pool, base_nodes); hi;
         hi = apr_hash_next(hi))
     {
-      db_base_node_t *base_node;
-      db_working_node_t *working_node;
-      db_actual_node_t *actual_node;
+      const db_base_node_t *base_node;
+      const db_working_node_t *working_node;
+      const db_actual_node_t *actual_node;
       const char *rel_path;
       svn_wc_entry_t *entry = alloc_entry(result_pool);
 
@@ -1258,7 +1258,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   for (hi = apr_hash_first(scratch_pool, working_nodes); hi;
         hi = apr_hash_next(hi))
     {
-      db_working_node_t *working_node;
+      const db_working_node_t *working_node;
       const char *rel_path;
       svn_wc_entry_t *entry = alloc_entry(result_pool);
 
@@ -1388,7 +1388,7 @@ svn_wc_entries_read(apr_hash_t **entries,
 
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *wc_db,
-                 db_base_node_t *base_node,
+                 const db_base_node_t *base_node,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -1449,7 +1449,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
 
 static svn_error_t *
 insert_working_node(svn_sqlite__db_t *wc_db,
-                    db_working_node_t *working_node,
+                    const db_working_node_t *working_node,
                     apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -1522,7 +1522,7 @@ insert_working_node(svn_sqlite__db_t *wc_db,
 
 static svn_error_t *
 insert_actual_node(svn_sqlite__db_t *wc_db,
-                   db_actual_node_t *actual_node,
+                   const db_actual_node_t *actual_node,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
