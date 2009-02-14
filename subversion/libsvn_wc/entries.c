@@ -1392,7 +1392,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_stringbuf_t *properties;
+  const svn_stringbuf_t *properties;
   svn_skel_t *skel;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_BASE_NODE));
