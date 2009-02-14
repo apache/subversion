@@ -2224,9 +2224,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
                  entry->has_prop_mods ? "true" : "false");
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS,
-                 SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                 entry->cachable_props);
+  /* Note: ignoring the (deprecated) cachable_props field. */
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                  SVN_WC__ENTRY_ATTR_PRESENT_PROPS,

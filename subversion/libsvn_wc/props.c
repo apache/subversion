@@ -399,14 +399,12 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
   tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
   tmp_entry.has_props = (apr_hash_count(working_props) > 0);
-  tmp_entry.cachable_props = SVN_WC__CACHABLE_PROPS;
   tmp_entry.present_props = build_present_props(working_props, pool);
 
   SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access,
                                      path, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_HAS_PROPS
                                      | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
-                                     | SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS
                                      | SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                                      pool));
 
