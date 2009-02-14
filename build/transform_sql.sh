@@ -33,7 +33,7 @@ while read line; do
     continue
   fi
 
-  line="`echo "$line" | sed -e 's/"/\\"/g'`"
+  line="`echo "$line" | sed -e 's/"/\\"/g'`"  #' hi, emacs syntax coloring!
   if [ -n "$line" ]; then
     echo "  \"$line \"\\"
   fi
