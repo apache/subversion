@@ -240,28 +240,23 @@ get_existing_prop_reject_file(const char **reject_file,
 static const char *
 build_present_props(apr_hash_t *props, apr_pool_t *pool)
 {
-  apr_array_header_t *cachable;
-  svn_stringbuf_t *present_props = svn_stringbuf_create("", pool);
-  int i;
+  svn_stringbuf_t *present_props;
 
   if (apr_hash_count(props) == 0)
-    return present_props->data;
+    return "";
 
-  cachable = svn_cstring_split(SVN_WC__CACHABLE_PROPS, " ", TRUE, pool);
-  for (i = 0; i < cachable->nelts; i++)
-    {
-      const char *proptolookfor = APR_ARRAY_IDX(cachable, i,
-                                                const char *);
+  present_props = svn_stringbuf_create("", pool);
 
-      if (apr_hash_get(props, proptolookfor, APR_HASH_KEY_STRING) != NULL)
-        {
-          svn_stringbuf_appendcstr(present_props, proptolookfor);
-          svn_stringbuf_appendcstr(present_props, " ");
-        }
-    }
+  if (apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL)
+    svn_stringbuf_appendcstr(present_props, SVN_PROP_SPECIAL " ");
+  if (apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING) != NULL)
+    svn_stringbuf_appendcstr(present_props, SVN_PROP_EXTERNALS " ");
+  if (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) != NULL)
+    svn_stringbuf_appendcstr(present_props, SVN_PROP_NEEDS_LOCK " ");
 
   /* Avoid returning a string with a trailing space. */
   svn_stringbuf_chop(present_props, 1);
+
   return present_props->data;
 }
 
