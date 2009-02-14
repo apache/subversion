@@ -148,7 +148,7 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
-  apr_int64_t incomplete_children;
+  svn_boolean_t incomplete_children;
 } db_base_node_t;
 
 typedef struct {
@@ -939,7 +939,7 @@ fetch_base_nodes(apr_hash_t **nodes,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
 
-      base_node->incomplete_children = svn_sqlite__column_int(stmt, 16);
+      base_node->incomplete_children = svn_sqlite__column_boolean(stmt, 16);
 
       apr_hash_set(*nodes, base_node->local_relpath, APR_HASH_KEY_STRING,
                    base_node);
@@ -1249,7 +1249,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
       entry->revision = base_node->revision;
       entry->kind = base_node->kind;
 
-      entry->incomplete = (base_node->incomplete_children > 0);
+      entry->incomplete = base_node->incomplete_children;
 
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
@@ -1645,8 +1645,7 @@ write_entry(svn_sqlite__db_t *wc_db,
   if (entry->incomplete)
     {
       base_node = MAYBE_ALLOC(base_node, scratch_pool);
-      /* TODO: how do we find the exact number of incomplete children? */
-      base_node->incomplete_children = 1;
+      base_node->incomplete_children = TRUE;
     }
 
   if (entry->conflict_old)
