@@ -43,6 +43,7 @@ Candidate changes:
     Justification:
       User reported problem, small fix, includes test.
     Branch: 1.4.x-r25178
+      (This branch was removed from HEAD in r35902.)
     Votes:
       +1: vgeorgescu, sussman
       -0: glasser (the ra_svn protocol, even on trunk, is severely broken
@@ -53,8 +54,9 @@ Candidate changes:
 
  * r30004
    Fix the client-side problem described in issue #2382
-   As this fix causes a conflict, it sits on a temporary branch:
+   Branch:
    https://svn.collab.net/repos/svn/branches/1.4.x-r30004/
+      (This branch was removed from HEAD in r35902.)
    Justification: Without this fix, clients cannot connect reliably
      to svnserve daemons running on IPv4/IPv6 dual-stack hosts,
      or IPv4-only hosts with multiple A records. See the issue for details.
