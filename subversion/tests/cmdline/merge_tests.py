@@ -15112,6 +15112,114 @@ def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def tree_conflicts_merge_edit_onto_missing(sbox):
+  "tree conflicts: tree missing, leaf edit"
+
+  # local tree missing (via shell delete), incoming leaf edit
+
+  expected_output = wc.State('', {
+#  'F/alpha'           : Item(status='  ', treeconflict='C'),
+  'D/D1'              : Item(status='  ', treeconflict='C'),
+  'DF/D1'             : Item(status='  ', treeconflict='C'),
+  'DD/D1'             : Item(status='  ', treeconflict='C'),
+  'DDF/D1'            : Item(status='  ', treeconflict='C'),
+  'DDD/D1'            : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev=3),
+    'F'                 : Item(status='  ', wc_rev=3),
+    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'D'                 : Item(status='  ', wc_rev=3),
+    'D/D1'              : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DF'                : Item(status='  ', wc_rev=3),
+    'DF/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DF/D1/beta'        : Item(status='  '),
+    'DD'                : Item(status='  ', wc_rev=3),
+    'DD/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DD/D1/D2'          : Item(status='  '),
+    'DDF'               : Item(status='  ', wc_rev=3),
+    'DDF/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DDF/D1/D2'         : Item(status='  '),
+    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDD'               : Item(status='  ', wc_rev=3),
+    'DDD/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DDD/D1/D2'         : Item(status='  '),
+    'DDD/D1/D2/D3'      : Item(status='  '),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_missing_incoming_leaf_edit",
+               svntest.actions.deep_trees_rmtree,
+               leaf_edit,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+def tree_conflicts_merge_del_onto_missing(sbox):
+  "tree conflicts: tree missing, leaf del"
+
+  # local tree missing (via shell delete), incoming leaf edit
+
+  expected_output = wc.State('', {
+#  'F/alpha'           : Item(status='  ', treeconflict='C'),
+#  'D/D1'              : Item(status='  ', treeconflict='C'),
+  'DF/D1'             : Item(status='  ', treeconflict='C'),
+  'DD/D1'             : Item(status='  ', treeconflict='C'),
+  'DDF/D1'            : Item(status='  ', treeconflict='C'),
+  'DDD/D1'            : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev=3),
+    'F'                 : Item(status='  ', wc_rev=3),
+    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'D'                 : Item(status='  ', wc_rev=3),
+    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'DF'                : Item(status='  ', wc_rev=3),
+    'DF/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DF/D1/beta'        : Item(status='  '),
+    'DD'                : Item(status='  ', wc_rev=3),
+    'DD/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DD/D1/D2'          : Item(status='  '),
+    'DDF'               : Item(status='  ', wc_rev=3),
+    'DDF/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DDF/D1/D2'         : Item(status='  '),
+    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDD'               : Item(status='  ', wc_rev=3),
+    'DDD/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DDD/D1/D2'         : Item(status='  '),
+    'DDD/D1/D2/D3'      : Item(status='  '),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    'D/D1'              : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_missing_incoming_leaf_edit",
+               svntest.actions.deep_trees_rmtree,
+               leaf_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+
 ########################################################################
 # Run the tests
 
@@ -15324,6 +15432,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(mergeinfo_deleted_by_a_merge_should_disappear,
                          server_has_mergeinfo),
+              tree_conflicts_merge_edit_onto_missing,
+              tree_conflicts_merge_del_onto_missing,
              ]
 
 if __name__ == '__main__':
