@@ -102,7 +102,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
       ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
     ])
-    SWIG_PY_COMPILE="$ac_cv_python_compile"
+    SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
     AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
       ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
@@ -168,7 +168,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
-    for var_name in arch archdir CC CFLAGS LDSHARED DLEXT LIBRUBYARG \
+    for var_name in arch archdir CC LDSHARED DLEXT LIBRUBYARG \
                     rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
@@ -189,7 +189,8 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
     AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
-      svn_cv_ruby_compile="$rbconfig_CC $rbconfig_CFLAGS"
+      # Ruby doesn't like '-ansi', so strip that out of CFLAGS
+      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | sed -e "s/ -ansi//g"`"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 
@@ -205,6 +206,25 @@ AC_DEFUN(SVN_FIND_SWIG,
       ac_cv_ruby_libs="$rbconfig_LIBRUBYARG"
     ])
     SWIG_RB_LIBS="$ac_cv_ruby_libs"
+
+    AC_MSG_CHECKING([for rb_errinfo])
+    old_CFLAGS="$CFLAGS"
+    old_LIBS="$LIBS"
+    CFLAGS="`echo $CFLAGS | sed -e "s/ -ansi//g"` $svn_cv_ruby_includes"
+    LIBS="$SWIG_RB_LIBS"
+    AC_LINK_IFELSE([
+#include <ruby.h>
+int main()
+{rb_errinfo();}], have_rb_errinfo="yes", have_rb_errinfo="no")
+    if test "$have_rb_errinfo" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_DEFINE([HAVE_RB_ERRINFO], [1],
+                [Define to 1 if you have the `rb_errinfo' function.])
+    else
+      AC_MSG_RESULT([no])
+    fi
+    CFLAGS="$old_CFLAGS"
+    LIBS="$old_LIBS"
 
     AC_CACHE_VAL([svn_cv_ruby_sitedir],[
       svn_cv_ruby_sitedir="$rbconfig_sitedir"

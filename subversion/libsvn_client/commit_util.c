@@ -259,7 +259,7 @@ bail_on_tree_conflicted_children(const char *path,
           svn_error_t *err = svn_wc_adm_retrieve(
                                &child_adm_access, adm_access,
                                conflict->path, pool);
-          if (err 
+          if (err
               && (svn_error_root_cause(err)->apr_err
                   == SVN_ERR_WC_PATH_NOT_FOUND))
             {

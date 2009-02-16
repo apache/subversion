@@ -262,7 +262,7 @@ svn_wc__db_close(svn_wc__db_t *db,
  * Nothing can change it -- it is always a reflection of the repository.
  * You need to use checkout, update, switch, or commit to alter your view of
  * the repository.
- * 
+ *
  * @{
  */
 

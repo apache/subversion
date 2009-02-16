@@ -3128,18 +3128,18 @@ public class BasicTests extends SVNTests
         client.info2(tcTest.getWCPath() + "/A/B/E/alpha", null,
                 null, Depth.unknown, null, callback);
         ConflictDescriptor conflict = callback.getInfo().getConflictDescriptor();
-        
+
         assertNotNull("Conflict should not be null", conflict);
-        
+
         assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
         assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
                 conflict.getSrcLeftVersion().getPathInRepos(), tcTest.getUrl() + "/A/B/E/alpha");
         assertEquals(conflict.getSrcLeftVersion().getPegRevision(), 1L);
-        
+
         assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
         assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl());
         assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
-        
+
     }
 
     /**
@@ -3470,17 +3470,17 @@ public class BasicTests extends SVNTests
             return (List) super.get(path);
         }
     }
-    
+
     private class MyInfoCallback implements InfoCallback {
         private Info2 info;
 
         public void singleInfo(Info2 info) {
             this.info = info;
         }
-        
+
         public Info2 getInfo() {
             return info;
         }
-        
+
     }
 }

@@ -2809,7 +2809,7 @@ def update_conflicted(sbox):
   expected_status.tweak(wc_rev=3)
   expected_status.tweak('iota', 'A/B/lambda', 'A/mu', 'A/D', wc_rev=2)
   # We no longer update descendants of a prop-conflicted dir.
-  expected_status.tweak('A/D/G', 
+  expected_status.tweak('A/D/G',
                         'A/D/G/pi',
                         'A/D/G/rho',
                         'A/D/G/tau',
@@ -4056,7 +4056,7 @@ def tree_conflicts_on_update_1_2(sbox):
                          'DDD/D1/D2/D3',
                          'DDF/D1/D2/gamma',
                          'DF/D1/beta')
-  ### Why does the deep trees state not include files? 
+  ### Why does the deep trees state not include files?
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
@@ -4094,7 +4094,7 @@ def tree_conflicts_on_update_2_1(sbox):
     status='A ', copied='+', wc_rev='-')
   # See the status of all the paths *under* the above six subtrees.  Only the
   # roots of the added subtrees show as schedule 'A', these childs paths show
-  # only that history is scheduled with the commit. 
+  # only that history is scheduled with the commit.
   expected_status.tweak(
     'DD/D1/D2',
     'DDD/D1/D2',
@@ -4202,7 +4202,7 @@ def tree_conflicts_on_update_2_3(sbox):
     status='A ', copied='+', wc_rev='-')
   # See the status of all the paths *under* the above six subtrees.  Only the
   # roots of the added subtrees show as schedule 'A', these child paths show
-  # only that history is scheduled with the commit. 
+  # only that history is scheduled with the commit.
   expected_status.tweak(
     'DD/D1/D2',
     'DDD/D1/D2',
@@ -4211,7 +4211,7 @@ def tree_conflicts_on_update_2_3(sbox):
     'DDF/D1/D2',
     'DDF/D1/D2/gamma',
     copied='+', wc_rev='-')
-  
+
   # Paths where output should be a single 'Skipped' message.
   skip_paths = [
     'D/D1',
@@ -4315,7 +4315,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
   alpha_moved_path = os.path.join(wc_dir, "A", "B", "E", "alpha.moved")
   other_alpha_path = os.path.join(other_wc, "A", "B", "E", "alpha")
   other_E_path     = os.path.join(other_wc, "A", "B", "E")
-  
+
   # r2: Move A/B/E/alpha to A/B/E/alpha.moved in the first WC.
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
                                      alpha_path, alpha_moved_path)
@@ -4327,7 +4327,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-    
+
   # r3: Make a text mod to A/B/E/alpha.moved in the first WC.
   new_content_for_alpha = 'alpha, modified after move\n'
   svntest.main.file_write(alpha_moved_path, new_content_for_alpha)
@@ -4338,7 +4338,7 @@ def update_moves_and_modifies_an_edited_file(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
                                         wc_dir)
-  
+
   # Make a text mod to A/B/E/alpha in the second WC then
   # update the second WC.
   new_content_for_other_alpha = 'alpha, modified\n'
@@ -4390,7 +4390,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   "tree conflicts on update UC1, update deleted tree"
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   from svntest.actions import run_and_verify_svn, run_and_verify_resolve
   from svntest.actions import run_and_verify_update, run_and_verify_commit
   from svntest.verify import AnyOutput
@@ -4447,10 +4447,10 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   A2 = os.path.join(wc2, 'A')
   svntest.actions.duplicate_dir(sbox.wc_dir, wc2)
   run_and_verify_svn(None, AnyOutput, [], 'delete', A2)
-  
+
   # New scenario (starts at the revision before the committed mods)
-  run_and_verify_svn(None, AnyOutput, [], 'up', A, '-r1')  
-  run_and_verify_svn(None, AnyOutput, [], 'delete', A)  
+  run_and_verify_svn(None, AnyOutput, [], 'up', A, '-r1')
+  run_and_verify_svn(None, AnyOutput, [], 'delete', A)
 
   expected_output = None
   expected_disk = None
@@ -4573,7 +4573,7 @@ def tree_conflict_uc2_schedule_re_add(sbox):
   run_and_verify_svn(None, AnyOutput, [],
                      'copy', dir_url + '@1', dir2)
   modify_dir(dir2)
-  
+
   # New scenario
   # (The dir is already checked out.)
   os.chdir(sbox.wc_dir)
@@ -4625,7 +4625,7 @@ def tree_conflict_uc2_schedule_re_add(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   ### Do we need to do more to confirm we got what we want here?
-  
+
 #######################################################################
 # Run the tests
 

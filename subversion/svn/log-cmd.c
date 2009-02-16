@@ -388,7 +388,7 @@ log_entry_receiver_xml(void *baton,
             {
               /* <path action="X"> */
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
-                                    "action", action, 
+                                    "action", action,
                                     "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
             }
           /* xxx</path> */

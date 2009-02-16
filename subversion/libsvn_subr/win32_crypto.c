@@ -281,7 +281,7 @@ windows_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
                                       apr_pool_t *pool)
 {
     return svn_auth__ssl_client_cert_pw_file_save_creds_helper
-              (saved, 
+              (saved,
                credentials,
                provider_baton,
                parameters,

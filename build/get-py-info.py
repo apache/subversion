@@ -53,11 +53,8 @@ if sys.argv[1] == '--includes':
   sys.exit(0)
 
 if sys.argv[1] == '--compile':
-  cc, basecflags, opt, ccshared = \
-      sysconfig.get_config_vars('CC', 'BASECFLAGS', 'OPT', 'CCSHARED')
-  if basecflags:
-    opt = basecflags + ' ' + opt
-  print("%s %s %s" % (cc, opt, ccshared))
+  cc, ccshared = sysconfig.get_config_vars('CC', 'CCSHARED')
+  print("%s %s" % (cc, ccshared))
   sys.exit(0)
 
 def add_option(options, name, value=None):

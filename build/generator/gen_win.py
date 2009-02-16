@@ -1383,15 +1383,18 @@ class WinGeneratorBase(GeneratorBase):
 
   def _create_sqlite_headers(self):
     "Transform sql files into header files"
-    
+
     import transform_sql
     sql_sources = [
       os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),
       os.path.join('subversion', 'libsvn_wc', 'wc-metadata'),
       ]
     for sql in sql_sources:
-      transform_sql.main(sql + '.sql', sql + '.h')
-    
+      transform_sql.main(open(sql + '.sql', 'r'),
+                         open(sql + '.h', 'w'),
+                         os.path.basename(sql + '.sql'))
+
+
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):

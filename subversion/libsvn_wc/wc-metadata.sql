@@ -103,7 +103,7 @@ CREATE TABLE BASE_NODE (
   properties  BLOB NOT NULL,
 
   /* this node is a directory, and all of its child nodes have not (yet)
-     been created [for this revision number]. */
+     been created [for this revision number]. Note: boolean value. */
   incomplete_children  INTEGER
   );
 
@@ -146,7 +146,7 @@ CREATE TABLE WORKING_NODE (
      other kinds:
        if a BASE_NODE exists at the same local_relpath, then this is a
        replaced item (possibly copied or moved here), which implies the
-       base node should be deleted first. */
+       base node should be deleted or moved (see moved_to). */
   kind  TEXT NOT NULL,
 
   /* Where this node was copied from. Set only on the root of the copy,
@@ -160,7 +160,7 @@ CREATE TABLE WORKING_NODE (
   moved_from  TEXT,
 
   /* If this node was moved (rather than just deleted), this specifies
-     where the node was moved to. */
+     where the BASE node was moved to. */
   moved_to  TEXT,
 
   /* if this node was added-with-history AND is a file, then the checksum

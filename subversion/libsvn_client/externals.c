@@ -1015,7 +1015,7 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
   if (err && ib->ctx->notify_func2)
     {
       const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
-      svn_wc_notify_t *notifier = 
+      svn_wc_notify_t *notifier =
         svn_wc_create_notify(path,
                              svn_wc_notify_failed_external,
                              ib->pool);
