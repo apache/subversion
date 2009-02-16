@@ -1391,7 +1391,7 @@ class WinGeneratorBase(GeneratorBase):
     for sql in sql_sources:
       transform_sql.main(open(sql + '.sql', 'r'),
                          open(sql + '.h', 'w'),
-                         os.path.basename(sql))
+                         os.path.basename(sql + '.sql')))
 
 
 class ProjectItem:
