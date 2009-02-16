@@ -880,8 +880,8 @@ resolve_to_defaults(apr_hash_t *entries,
 static svn_error_t *
 fetch_base_nodes(apr_hash_t **nodes,
                  svn_sqlite__db_t *wc_db,
-                 apr_pool_t *scratch_pool,
-                 apr_pool_t *result_pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -954,8 +954,8 @@ fetch_base_nodes(apr_hash_t **nodes,
 static svn_error_t *
 fetch_working_nodes(apr_hash_t **nodes,
                     svn_sqlite__db_t *wc_db,
-                    apr_pool_t *scratch_pool,
-                    apr_pool_t *result_pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -1041,8 +1041,8 @@ fetch_working_nodes(apr_hash_t **nodes,
 static svn_error_t *
 fetch_actual_nodes(apr_hash_t **nodes,
                    svn_sqlite__db_t *wc_db,
-                   apr_pool_t *scratch_pool,
-                   apr_pool_t *result_pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
