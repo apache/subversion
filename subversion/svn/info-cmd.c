@@ -435,7 +435,7 @@ print_info(void *baton,
                          "%s: %s\n",
                          _("Tree conflict"),
                          desc);
- 
+
       if (src_left_version)
         svn_cmdline_printf(pool,
                            "  %s: %s\n",
@@ -444,7 +444,7 @@ print_info(void *baton,
         /* (1): Sneaking in a space in "Source  left" so that it is the
          * same length as "Source right" while it still starts in the same
          * column. That's just a tiny tweak in the English `svn'. */
- 
+
       if (src_right_version)
         svn_cmdline_printf(pool,
                            "  %s: %s\n",

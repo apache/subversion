@@ -262,7 +262,7 @@ class Migrator:
         # http://subversion.tigris.org/issues/show_bug.cgi?id=3302.
         mergeinfo = svn.core.svn_mergeinfo_parse(new_mergeinfo_prop_val)
         new_mergeinfo_prop_val = mergeinfo2str(mergeinfo)
-        
+
         self.log("Queuing change of %s to '%s'"
                  % (svn.core.SVN_PROP_MERGEINFO,
                     self.flatten_prop(new_mergeinfo_prop_val)))

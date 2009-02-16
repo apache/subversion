@@ -184,7 +184,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
       if (target_entry && target_entry->kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
                                    ctx->notify_func2, ctx->notify_baton2,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool));

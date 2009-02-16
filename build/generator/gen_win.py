@@ -1383,7 +1383,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _create_sqlite_headers(self):
     "Transform sql files into header files"
-    
+
     import transform_sql
     sql_sources = [
       os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),

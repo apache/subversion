@@ -400,14 +400,14 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
     args = command[1:]
     args = ' '.join([_quote_arg(x) for x in args])
     command = command[0] + ' ' + args
- 
+
   if not stdin:
     stdin = subprocess.PIPE
   if not stdout:
     stdout = subprocess.PIPE
   if not stderr:
     stderr = subprocess.PIPE
-    
+
   p = subprocess.Popen(command,
                        stdin=stdin,
                        stdout=stdout,
@@ -422,18 +422,18 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   stdout and stderr (the latter two as lists)."""
   if waiter is None:
     return
-  
+
   kid, command = waiter
   stdout, stderr = kid.communicate(stdin)
   exit_code = kid.returncode
-  
+
   # Normalize Windows line endings if in text mode.
   if windows and not binary_mode:
     stdout = stdout.replace('\r\n', '\n')
     stderr = stderr.replace('\r\n', '\n')
 
-  # Convert output strings to lists.  
-  stdout_lines = stdout.splitlines(True) 
+  # Convert output strings to lists.
+  stdout_lines = stdout.splitlines(True)
   stderr_lines = stderr.splitlines(True)
 
   if exit_code < 0:
@@ -737,7 +737,7 @@ def create_repos(path):
     if fsfs_packing:
       # some tests chdir.
       abs_path = os.path.abspath(path)
-      create_python_hook_script(get_post_commit_hook_path(abs_path), 
+      create_python_hook_script(get_post_commit_hook_path(abs_path),
           "import subprocess\n"
           "import sys\n"
           "command = %s\n"
@@ -938,7 +938,7 @@ def _check_command_line_parsed():
 def is_not_serf():
   _check_command_line_parsed()
   return not (http_library == "serf")
-  
+
 def is_ra_type_dav():
   _check_command_line_parsed()
   return test_area_url.startswith('http')

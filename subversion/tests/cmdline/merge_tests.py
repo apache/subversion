@@ -7044,7 +7044,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   #
   # Also test for a bug with paths added as the immediate child of the
   # merge target when the merge target has non-inheritable mergeinfo
-  # and is also the current working directory, see 
+  # and is also the current working directory, see
   # http://svn.haxx.se/dev/archive-2008-12/0133.shtml.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
@@ -7138,7 +7138,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   #
   # First revert all local mods.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
-  
+
   # r8: Merge all available revisions from A to A_COPY at a depth of empty
   # this will create non-inheritable mergeinfo on A_COPY.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -7159,7 +7159,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
-  # Now merge -c9 from A to A_COPY.  
+  # Now merge -c9 from A to A_COPY.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State('.', {
     'nu': Item(status='A '),
@@ -10561,13 +10561,13 @@ def foreign_repos_uuid(sbox):
   # Convenience variables for working copy paths.
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'zeta')
   Z_path = os.path.join(wc_dir, 'A', 'Z')
-  
+
   # Add new file and directory.
   zeta_contents = "This is the file 'zeta'.\n"
   svntest.main.file_append(zeta_path, zeta_contents)
   os.mkdir(Z_path)
   svntest.main.run_svn(None, 'add', zeta_path, Z_path)
-  
+
   # Commit up these changes.
   expected_output = wc.State(wc_dir, {
     'A/D/G/zeta' : Item(verb='Adding'),
@@ -10593,7 +10593,7 @@ def foreign_repos_uuid(sbox):
 
   svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
   svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
-  
+
   # Run info to check the copied rev to make sure it's right
   zeta2_path = os.path.join(wc_dir2, 'A', 'D', 'G', 'zeta')
   expected_info = {"Path" : re.escape(zeta2_path), # escape backslashes
@@ -11104,7 +11104,7 @@ def set_up_renamed_subtree(sbox):
   # still work.
   svntest.actions.run_and_verify_svn(None, None, [], 'ps', SVN_PROP_MERGEINFO,
                                      "", psi_moved_path)
-  
+
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
@@ -14281,7 +14281,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
   omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
   psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
   nu_COPY_path    = os.path.join(wc_dir, "A_COPY", "D", "H", "nu")
-  
+
   # Setup our basic 'trunk' and 'branch':
   # r2 - Copy A to A_COPY
   # r3 - Text change to A/D/H/psi
@@ -14297,7 +14297,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
   wc_status.add({'A/D/H/nu' : Item(status='  ', wc_rev=7)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
-  
+
   # r8 - Merge all available revisions (i.e. -r1:7) from A to A_COPY.
   svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
                                      wc_dir)
@@ -14454,7 +14454,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   D_COPY_path           = os.path.join(wc_dir, "A_COPY", "D")
   alpha_COPY_path       = os.path.join(wc_dir, "A_COPY", "B", "E", "alpha")
   A_path                = os.path.join(wc_dir, "A")
-  
+
   # Now set up a situation where we try to reintegrate A_COPY back to A but
   # both of these paths have subtree mergeinfo.  Iff the mergeinfo on A_COPY
   # reflects that the same revisions have been applied across all of A_COPY,
@@ -14496,7 +14496,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
   expected_disk.tweak('A_COPY_2/mu', contents="New content")
-  
+
   # r12 - Merge r11 from A_COPY_2/mu to A_COPY/mu
   svntest.actions.run_and_verify_svn(None, ["At revision 11.\n"], [], 'up',
                                      wc_dir)
@@ -14568,7 +14568,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                         expected_status, None, wc_dir)
   expected_disk.tweak('A_COPY/B/E/alpha', contents="New content")
 
-  # Now, reintegrate A_COPY to A.  This should succeed.  
+  # Now, reintegrate A_COPY to A.  This should succeed.
   svntest.actions.run_and_verify_svn(None, ["At revision 14.\n"], [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=14)
@@ -14661,7 +14661,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
 
   # Now reintegrate A_COPY back to A.  Since A_COPY/D no longer has r8 merged
   # to it from A, the merge should fail.  Further we expect an error message
-  # that highlights the fact that A_COPY/D is the offending subtree. 
+  # that highlights the fact that A_COPY/D is the offending subtree.
   #
   # The actions.run_and_verify_* methods are happy if one line of the error
   # matches the regex, but we want to know that the error actually provides
@@ -14869,7 +14869,7 @@ def dont_merge_gaps_in_history(sbox):
   "mergeinfo aware merges ignore natural history gaps"
 
   ## See http://svn.haxx.se/dev/archive-2008-11/0618.shtml ##
-  
+
   # r1: Create a standard greek tree.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -14891,13 +14891,13 @@ def dont_merge_gaps_in_history(sbox):
     None, "(Committed revision 7.)|(\n)", [],
     'copy', sbox.repo_url + '/A@2', sbox.repo_url + '/A',
     '-m', 'Resurrect A from A@2')
-  
+
   # r8: Branch the resurrected 'A' to 'A_COPY'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     None, "(Committed revision 8.)|(\n)", [],
     'copy', sbox.repo_url + '/A', sbox.repo_url + '/A_COPY',
     '-m', 'Copy A to A_COPY')
- 
+
   # Update to bring all the repos side changes down.
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'up', wc_dir)
@@ -14922,14 +14922,14 @@ def dont_merge_gaps_in_history(sbox):
       "A_COPY/D/H/psi"   : Item(status='  '),
       "A_COPY"           : Item(status='  ')})
   wc_status.tweak(wc_rev=8)
-    
+
   # r9: Make a text change to 'A/D/gamma'.
   svntest.main.file_write(gamma_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/gamma' : Item(verb='Sending')})
   wc_status.tweak('A/D/gamma', wc_rev=9)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
-  
+
   # Now merge all available changes from 'A' to 'A_COPY'.  The only
   # available revisions are r8 and r9.  Only r9 effects the source/target
   # so this merge should change 'A/D/gamma' from r9.  The fact that 'A_COPY'
@@ -15014,7 +15014,7 @@ def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
   D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
   A_COPY_path   = os.path.join(wc_dir, "A_COPY")
   A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
-  
+
   # r2 - r6: Copy A to A_COPY and then make some text changes under A.
   wc_disk, wc_status = set_up_branch(sbox)
 
@@ -15044,7 +15044,7 @@ def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Propdel the mergeinfo on A_COPY/D',
                                      wc_dir)
-  
+
   # r10: Merge r5 from A to A_COPY_2 so the latter gets some explicit
   #      mergeinfo.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -15052,7 +15052,7 @@ def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
                                      sbox.repo_url + '/A', A_COPY_2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Merge r5 from A to A_COPY_2', wc_dir)
-  
+
   # Now merge r9 from A_COPY to A_COPY_2.  Since the merge itself cleanly
   # removes all explicit mergeinfo from A_COPY_2/D, we should not set any
   # mergeinfo on that subtree describing the merge.

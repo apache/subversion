@@ -209,15 +209,15 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   ne_add_request_header(req->ne_req, "Content-Type", "text/xml");
 
   /* Create a parser to read the normal response body */
-  parser = svn_ra_neon__xml_parser_create(req, ne_accept_2xx, start_element, 
-                                          svn_ra_neon__xml_collect_cdata, 
+  parser = svn_ra_neon__xml_parser_create(req, ne_accept_2xx, start_element,
+                                          svn_ra_neon__xml_collect_cdata,
                                           end_element, &oc);
 
   /* Run the request and get the resulting status code. */
-  if ((err = svn_ra_neon__request_dispatch(&status_code, req, NULL, 
+  if ((err = svn_ra_neon__request_dispatch(&status_code, req, NULL,
                                            "<?xml version=\"1.0\" "
                                            "encoding=\"utf-8\"?>"
-                                           "<D:options xmlns:D=\"DAV:\">" 
+                                           "<D:options xmlns:D=\"DAV:\">"
                                            "<D:activity-collection-set/>"
                                            "</D:options>",
                                            200, 0, pool)))
@@ -233,7 +233,7 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
                               msg, ras->url->data);
       goto cleanup;
     }
-  
+
   /* We asked for, and therefore expect, to have found an activity
      collection in the response.  */
   if (oc.activity_coll == NULL)
@@ -264,7 +264,7 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
     SVN_ERR(svn_ra_neon__exchange_capabilities(ras, pool));
   *activity_coll = svn_string_create(ras->act_coll, pool);
   return SVN_NO_ERROR;
-}  
+}
 
 
 svn_error_t *
