@@ -1983,12 +1983,11 @@ def merge_into_missing(sbox):
   svntest.main.safe_rmtree(Q_path)
 
   expected_output = wc.State(F_path, {
-    ''      : Item(status='C ')
     })
   expected_disk = wc.State('', {
     })
   expected_status = wc.State(F_path, {
-    ''      : Item(status='C ', wc_rev=1),
+    ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
     })
@@ -2007,9 +2006,11 @@ def merge_into_missing(sbox):
                                        None, None, None, None, None,
                                        0, 0, '--dry-run')
 
-  expected_status.tweak('', status='C ')
-  expected_status.tweak('foo', status='!M')
-  expected_status.tweak('', status='CM')
+  expected_status = wc.State(F_path, {
+    ''      : Item(status=' M', wc_rev=1),
+    'foo'   : Item(status='!M', wc_rev=2),
+    'Q'     : Item(status='! ', wc_rev='?'),
+    })
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url,
                                        expected_output,
                                        expected_disk,
@@ -15259,8 +15260,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_skips_obstructions,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_into_missing,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_into_missing,
+                         server_has_mergeinfo),
               SkipUnless(dry_run_adds_file_with_prop,
                          server_has_mergeinfo),
               merge_binary_with_common_ancestry,
