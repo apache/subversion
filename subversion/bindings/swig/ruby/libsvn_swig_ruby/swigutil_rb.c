@@ -5,7 +5,6 @@
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
 #include <st.h>
-#include <version.h>
 
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -1592,7 +1591,7 @@ callback_rescue(VALUE baton)
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
   *(rescue_baton->err) = r2c_svn_err(
-#if ((RUBY_VERSION_MAJOR >= 2) || ((RUBY_VERSION_MAJOR == 1) && (RUBY_VERSION_MINOR >= 9)))
+#ifdef HAVE_RB_ERRINFO
                                      rb_errinfo(),
 #else
                                      ruby_errinfo,
