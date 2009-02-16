@@ -59,23 +59,62 @@ restore_file(const char *file_path,
              svn_boolean_t use_commit_times,
              apr_pool_t *pool)
 {
-  const char *tmp_file, *text_base_path;
-  svn_wc_entry_t newentry;
-  const char *bname;
+  svn_stream_t *src_stream;
   svn_boolean_t special;
+  svn_wc_entry_t newentry;
 
-  text_base_path = svn_wc__text_base_path(file_path, FALSE, pool);
-  bname = svn_path_basename(file_path, pool);
+  SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
 
-  /* Copy / translate into a temporary file, which afterwards can
-     be atomically moved over the original working copy file. */
+  SVN_ERR(svn_wc__get_special(&special, file_path, adm_access, pool));
+  if (special)
+    {
+      svn_stream_t *dst_stream;
 
-  SVN_ERR(svn_wc_translated_file2(&tmp_file,
-                                  text_base_path, file_path, adm_access,
-                                  SVN_WC_TRANSLATE_FROM_NF
-                                  | SVN_WC_TRANSLATE_FORCE_COPY, pool));
+      /* Copy the source into the destination to create the special file.
+         The creation wil happen atomically. */
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, file_path,
+                                           pool, pool));
+      /* ### need a cancel_func/baton */
+      SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+    }
+  else
+    {
+      svn_subst_eol_style_t style;
+      const char *eol_str;
+      apr_hash_t *keywords;
+      const char *tmp_dir;
+      const char *tmp_file;
+      svn_stream_t *tmp_stream;
 
-  SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
+      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, file_path, adm_access,
+                                    pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, file_path, adm_access, NULL,
+                                   pool));
+
+      /* Get a temporary destination so we can use a rename to create the
+         real destination atomically. */
+      tmp_dir = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
+                                  SVN_WC__ADM_TMP, pool);
+      SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_file, tmp_dir,
+                                     svn_io_file_del_none, pool, pool));
+
+      /* Wrap the (temp) destination stream with a translating stream. */
+      if (svn_subst_translation_required(style, eol_str, keywords,
+                                         FALSE /* special */,
+                                         TRUE /* force_eol_check */))
+        {
+          tmp_stream = svn_subst_stream_translated(tmp_stream,
+                                                   eol_str,
+                                                   TRUE /* repair */,
+                                                   keywords,
+                                                   TRUE /* expand */,
+                                                   pool);
+        }
+
+      SVN_ERR(svn_stream_copy3(src_stream, tmp_stream, NULL, NULL, pool));
+      /* ### need a cancel_func/baton */
+      SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
+    }
 
   SVN_ERR(svn_wc__maybe_set_read_only(NULL, file_path, adm_access, pool));
 
@@ -87,11 +126,6 @@ restore_file(const char *file_path,
                                     FALSE, svn_depth_empty,
                                     svn_wc_conflict_choose_merged,
                                     NULL, NULL, NULL, NULL, pool));
-
-  if (use_commit_times)
-    {
-      SVN_ERR(svn_wc__get_special(&special, file_path, adm_access, pool));
-    }
 
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
@@ -113,7 +147,7 @@ restore_file(const char *file_path,
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
-  return svn_wc__entry_modify(adm_access, bname,
+  return svn_wc__entry_modify(adm_access, svn_path_basename(file_path, pool),
                               &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                               TRUE /* do_sync now */, pool);
 }
