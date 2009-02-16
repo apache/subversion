@@ -372,15 +372,12 @@ assemble_status(svn_wc_status2_t **status,
            entry != parent_entry)
     {
       /* An item is switched if:
-         its working copy basename differs from the basename of its URL,
-         OR
-         its URL, without the basename, does not equal its parent's URL. */
+         parent-url + basename(path) != entry->url  */
 
       switched_p = (strcmp(
-                     svn_path_uri_encode(svn_path_basename(path, pool), pool),
-                     svn_path_basename(entry->url, pool)) != 0)
-        || (strcmp(svn_path_dirname(entry->url, pool),
-                   parent_entry->url) != 0);
+                     svn_path_join(parent_entry->url,
+                          svn_path_uri_encode(svn_path_basename(path, pool),
+                          pool), pool), entry->url) != 0);
     }
 
   if (final_text_status != svn_wc_status_obstructed)
