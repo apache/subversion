@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -170,7 +170,7 @@ def modify(modaction, paths):
     assert os.path.exists(D)
     os.remove(D)
   else:
-    raise "unknown modaction: '" + modaction + "'"
+    raise Exception("unknown modaction: '" + modaction + "'")
 
 #----------------------------------------------------------------------
 
@@ -460,7 +460,7 @@ def ensure_tree_conflict(sbox, operation,
                              '-r', str(source_left_rev) + ':' + str(source_right_rev),
                              source_url, target_path)
         else:
-          raise "unknown operation: '" + operation + "'"
+          raise Exception("unknown operation: '" + operation + "'")
 
       if 'commit-c' in test_what:
         verbose_print("--- Trying to commit (expecting 'conflict' error)")
