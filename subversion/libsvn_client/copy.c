@@ -1569,12 +1569,12 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
               || ent->absent)
             {
               return svn_error_createf
-                (SVN_ERR_ENTRY_EXISTS, 
+                (SVN_ERR_ENTRY_EXISTS,
                  NULL, _("'%s' is already under version control"),
-                 svn_path_local_style(pair->dst, pool)); 
+                 svn_path_local_style(pair->dst, pool));
             }
           else if ((ent->kind != svn_node_dir) &&
-                   (ent->schedule != svn_wc_schedule_delete) 
+                   (ent->schedule != svn_wc_schedule_delete)
                    && ! ent->deleted)
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,

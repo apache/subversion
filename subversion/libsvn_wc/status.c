@@ -420,7 +420,7 @@ assemble_status(svn_wc_status2_t **status,
         {
           SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
                                          adm_access, pool));
-                                         
+
           /* Record actual text status */
           pristine_text_status = text_modified_p ? svn_wc_status_modified
                                                  : svn_wc_status_normal;

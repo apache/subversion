@@ -1109,14 +1109,14 @@ typedef struct svn_fs_path_change_t
  * Allocate an @c svn_fs_path_change2_t structure in @a pool, initialize and
  * return it.
  *
- * Set the @c node_rev_id field of the created struct to @a node_rev_id, and 
- * @c change_kind to @a change_kind.  Set all other fields to their 
- * @c _unknown, @c NULL or invalid value, respectively.  
+ * Set the @c node_rev_id field of the created struct to @a node_rev_id, and
+ * @c change_kind to @a change_kind.  Set all other fields to their
+ * @c _unknown, @c NULL or invalid value, respectively.
  *
  * @since New in 1.6.
  */
 svn_fs_path_change2_t *
-svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id, 
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
                            svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *pool);
 
