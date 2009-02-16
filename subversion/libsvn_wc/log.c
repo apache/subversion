@@ -572,9 +572,9 @@ log_do_merge(struct log_runner *loggy,
   /* Now do the merge with our full paths. */
   /* ### TODO: Fill in the left_version and right_version args. */
   err = svn_wc__merge_internal(&log_accum, &merge_outcome,
-                               left, NULL, right, NULL, name, NULL, 
-                               loggy->adm_access, left_label, right_label, 
-                               target_label, FALSE, loggy->diff3_cmd, NULL, 
+                               left, NULL, right, NULL, name, NULL,
+                               loggy->adm_access, left_label, right_label,
+                               target_label, FALSE, loggy->diff3_cmd, NULL,
                                NULL, NULL, NULL, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {

@@ -1348,7 +1348,7 @@ def forced_switch_failures(sbox):
     "A/D/H/omega" : Item("This is the file 'omega'.\n"),
     "A/D/H/I"     : Item(),
     "A/D/H/psi"   : Item("This is the file 'psi'.\n"),
-    "iota"        : Item("This is the file 'iota'.\n"), 
+    "iota"        : Item("This is the file 'iota'.\n"),
     })
   # Remove the three switched subtrees and replace with their new contents.
   expected_disk.remove('A/B/F', 'A/C',
@@ -1356,7 +1356,7 @@ def forced_switch_failures(sbox):
   expected_disk.add_state('', new_A_B_F)
   expected_disk.add_state('', new_A_C)
   expected_disk.add_state('', new_A_D_G)
-  
+
   expected_status = svntest.wc.State(sbox.wc_dir, {
     ""            : Item(),
     "A"           : Item(),
@@ -2306,7 +2306,7 @@ def tree_conflicts_on_switch_1_1(sbox):
     'DD/D1/D2/epsilon'  : Item(status='D '),
     'DDD/D1/D2/D3/zeta' : Item(status='D '),
     })
-  
+
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
 
@@ -2348,7 +2348,7 @@ def tree_conflicts_on_switch_1_2(sbox):
                          'DDD/D1/D2/D3',
                          'DDF/D1/D2/gamma',
                          'DF/D1/beta')
-  ### Why does the deep trees state not include files? 
+  ### Why does the deep trees state not include files?
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
@@ -2395,7 +2395,7 @@ def tree_conflicts_on_switch_2_1(sbox):
                         status='A ', copied='+', wc_rev='-')
   # See the status of all the paths *under* the above six subtrees.  Only the
   # roots of the added subtrees show as schedule 'A', these childs paths show
-  # only that history is scheduled with the commit. 
+  # only that history is scheduled with the commit.
   expected_status.tweak(
     'DD/D1/D2',
     'DDD/D1/D2',
@@ -2465,7 +2465,7 @@ def tree_conflicts_on_switch_2_2(sbox):
                         expected_disk,
                         expected_status) ] )
 
- 
+
 def tree_conflicts_on_switch_3(sbox):
   "tree conflicts 3: tree del, tree del on switch"
 

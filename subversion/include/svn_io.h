@@ -1288,7 +1288,7 @@ svn_io_run_diff2(const char *dir,
                  const char *diff_cmd,
                  apr_pool_t *pool);
 
-/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal 
+/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal
  * encoding used by APR.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API. */
@@ -1357,7 +1357,7 @@ svn_io_run_diff3_3(int *exitcode,
                    const apr_array_header_t *user_args,
                    apr_pool_t *pool);
 
-/** Similar to svn_io_run_diff3_3(), but with @a diff3_cmd encoded in 
+/** Similar to svn_io_run_diff3_3(), but with @a diff3_cmd encoded in
  * internal encoding used by APR.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.

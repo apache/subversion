@@ -104,7 +104,7 @@ typedef struct {
   const char *vcc;                      /* version-controlled-configuration */
   const char *uuid;                     /* repository UUID */
   const char *act_coll;                 /* activity collection set */
-  
+
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
 
@@ -1059,7 +1059,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *
-svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras, 
+svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
                                    apr_pool_t *pool);
 
 /*

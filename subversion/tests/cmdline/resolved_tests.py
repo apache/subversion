@@ -56,7 +56,7 @@ def resolved_on_wc_root(sbox):
   svntest.main.file_append(g, "changed gamma.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo-val', B)
-  
+
   expected_output = svntest.wc.State(wc, {
       'iota'              : Item(verb='Sending'),
       'A/B'               : Item(verb='Sending'),

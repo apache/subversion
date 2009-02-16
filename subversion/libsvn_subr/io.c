@@ -613,7 +613,7 @@ svn_io_temp_dir(const char **dir,
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't find a temporary directory"));
-    
+
   SVN_ERR(cstring_to_utf8(dir, *dir, pool));
 
   *dir = svn_path_canonicalize(*dir, pool);
@@ -2895,7 +2895,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
 #ifdef WIN32
   if (status)
     {
-      /* Set the destination file writable because Windows will not 
+      /* Set the destination file writable because Windows will not
          allow us to rename over files that are read-only. */
       SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
 

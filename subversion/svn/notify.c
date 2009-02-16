@@ -350,7 +350,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           svn_handle_warning2(stderr, n->err, "svn: ");
         }
       break;
-      
+
     case svn_wc_notify_update_completed:
       {
         if (! nb->suppress_final_line)

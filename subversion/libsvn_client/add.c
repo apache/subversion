@@ -477,7 +477,7 @@ add_parent_dirs(const char *path,
         {
           return svn_error_createf
             (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
-             _("'%s' ends in a reserved name"), 
+             _("'%s' ends in a reserved name"),
              svn_path_local_style(path, pool));
         }
       else

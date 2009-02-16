@@ -333,7 +333,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
               /* We want to pull in the excluded target. So, report it as deleted,
                  and server will respond properly. */
               if (! report_everything)
-                SVN_ERR(reporter->delete_path(report_baton, 
+                SVN_ERR(reporter->delete_path(report_baton,
                                               this_path, iterpool));
             }
 

@@ -770,7 +770,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
       /* If there is no interactive conflict resolution then we are effectively
          postponing conflict resolution. */
       result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                             NULL, pool);      
+                                             NULL, pool);
     }
   else
     {

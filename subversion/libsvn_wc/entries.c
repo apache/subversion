@@ -681,7 +681,7 @@ read_entry(svn_wc_entry_t **new_entry,
 
         entry->depth = svn_depth_from_word(result);
 
-        /* Verify the depth value: 
+        /* Verify the depth value:
            THIS_DIR should not have an excluded value and SUB_DIR should only
            have excluded value. Remember that infinity value is not stored and
            should not show up here. Otherwise, something bad may have

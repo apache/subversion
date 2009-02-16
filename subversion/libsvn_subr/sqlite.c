@@ -528,7 +528,7 @@ close_apr(void *data)
         err = svn_error_compose_create(
                         svn_sqlite__finalize(db->prepared_stmts[i]), err);
     }
-  
+
   result = sqlite3_close(db->db3);
 
   /* If there's a pre-existing error, return it. */

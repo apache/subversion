@@ -1114,7 +1114,7 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   char buf[80];
   apr_file_t *file;
   apr_size_t len;
-      
+
   SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
   len = sizeof(buf);
@@ -5845,7 +5845,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.txn = txn;
   return svn_fs_fs__with_write_lock(fs,
                                     ffd->rep_cache_db ? commit_body_rep_cache :
-                                                        commit_body, 
+                                                        commit_body,
                                     &cb, pool);
 }
 
@@ -6924,14 +6924,14 @@ pack_shard(const char *revs_dir,
       svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT "\n",
                         next_offset);
       next_offset += finfo.size;
-  
+
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
       SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
                                                              iterpool),
                           cancel_func, cancel_baton, iterpool));
     }
-  
+
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_fs_fs__dup_perms(pack_file_dir, shard_path, pool));

@@ -45,7 +45,7 @@ enum statement_keys {
 static const char * const statements[] = {
   "select revision, offset, size, expanded_size "
   "from rep_cache "
-  "where hash = ?1", 
+  "where hash = ?1",
 
   "insert into rep_cache (hash, revision, offset, size, expanded_size) "
   "values (?1, ?2, ?3, ?4, ?5);",
