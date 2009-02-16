@@ -507,7 +507,6 @@ svn_swig_rb_destroyer_destroy(VALUE self, VALUE target)
 void
 svn_swig_rb_initialize(void)
 {
-  apr_pool_t *pool;
   VALUE mSvnConverter, mSvnLocale, mSvnGetText, mSvnDestroyer;
 
   check_apr_status(apr_initialize(), rb_eLoadError, "cannot initialize APR: %s");
@@ -1294,7 +1293,7 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_merge_range,
                           c2r_merge_range_dup, EMPTY_CPP_ARGUMENT,
                           svn_merge_range_t *, NULL)
 
-VALUE
+static VALUE
 c2r_merge_range_array(void *value, void *ctx)
 {
   return svn_swig_rb_apr_array_to_array_merge_range(value);
@@ -1421,7 +1420,7 @@ c2r_hash_with_key_convert(apr_hash_t *hash,
   return r_hash;
 }
 
-VALUE
+static VALUE
 c2r_hash(apr_hash_t *hash,
          c2r_func value_conv,
          void *ctx)
@@ -1473,7 +1472,7 @@ svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash)
   return svn_swig_rb_apr_hash_to_hash_svn_string(prop_hash);
 }
 
-VALUE
+static VALUE
 c2r_revnum(void *value, void *ctx)
 {
   svn_revnum_t *num = value;
