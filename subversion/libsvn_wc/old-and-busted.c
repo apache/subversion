@@ -1043,12 +1043,12 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
 /* Append a single entry ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
-static svn_error_t *
-write_entry(svn_stringbuf_t *buf,
-            const svn_wc_entry_t *entry,
-            const char *name,
-            const svn_wc_entry_t *this_dir,
-            apr_pool_t *pool)
+svn_error_t *
+svn_wc__write_entry_old(svn_stringbuf_t *buf,
+                        const svn_wc_entry_t *entry,
+                        const char *name,
+                        const svn_wc_entry_t *this_dir,
+                        apr_pool_t *pool)
 {
   const char *valuestr;
   svn_revnum_t valuerev;
@@ -1604,8 +1604,8 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                                      svn_wc__adm_wc_format(adm_access));
 
       /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
-                          this_dir, pool));
+      SVN_ERR(svn_wc__write_entry_old(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
+                                      this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -1624,7 +1624,8 @@ svn_wc__entries_write_old(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, iterpool));
+          SVN_ERR(svn_wc__write_entry_old(bigstr, this_entry, key, this_dir,
+                                          iterpool));
         }
 
       svn_pool_destroy(iterpool);

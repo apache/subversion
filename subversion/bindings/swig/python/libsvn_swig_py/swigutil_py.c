@@ -200,7 +200,7 @@ void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool)
 }
 
 /* Clear the application pool */
-void svn_swig_py_clear_application_pool()
+void svn_swig_py_clear_application_pool(void)
 {
   application_pool = NULL;
   application_py_pool = NULL;

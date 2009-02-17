@@ -76,7 +76,7 @@
 # Indikativ: "Gibt keine interaktiven Rückfragen aus"
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.6\n"
+"Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-10-17 21:59+0200\n"
 "PO-Revision-Date: 2008-10-21 11:01+0200\n"

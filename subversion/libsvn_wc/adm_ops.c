@@ -1488,7 +1488,10 @@ svn_wc_add3(const char *path,
 
   /* If this is a replacement without history, we need to reset the
      properties for PATH. */
-  if (orig_entry && (! copyfrom_url))
+  /* ### this is totally bogus. we clear these cuz turds might have been
+     ### left around. thankfully, this will be properly managed during the
+     ### wc-ng upgrade process. for now, we try to compensate... */
+  if (copyfrom_url == NULL)
     SVN_ERR(svn_wc__props_delete(path, svn_wc__props_working,
                                  adm_access, pool));
 
