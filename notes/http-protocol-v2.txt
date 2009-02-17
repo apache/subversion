@@ -3,8 +3,9 @@
 GOAL
 ====
 
-Write a new HTTP protocol for svn -- one which is entirely proprietary
-and designed for speed and comprehensibility.
+Write a new HTTP protocol for svn -- one which has no pretense of
+adhering to some pre-existing standard, and which is designed for
+speed and comprehensibility.  This ain't your Daddy's WebDAV.
 
 
 PURPOSE / HISTORY
