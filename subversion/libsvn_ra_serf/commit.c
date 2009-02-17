@@ -1025,7 +1025,7 @@ open_root(void *edit_baton,
   apr_hash_index_t *hi;
   const char *proppatch_target;
 
-  if (0 && SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
     {
       svn_ra_serf__simple_request_context_t *post_ctx;
       post_response_ctx_t *prc;
