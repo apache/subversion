@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-06 09:47+0800\n"
-"PO-Revision-Date: 2009-02-06 10:17+0800\n"
+"POT-Creation-Date: 2009-02-17 13:16+0800\n"
+"PO-Revision-Date: 2009-02-17 13:05+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -945,8 +945,10 @@ msgstr "清理 post-commit 出错 (细节如下): "
 msgid "Are all the targets part of the same working copy?"
 msgstr "是否所有目标都属于同一工作副本？"
 
-msgid "Cannot non-recursively commit a directory deletion"
-msgstr "无法以非递归提交方式删除目录"
+msgid ""
+"Cannot non-recursively commit a directory deletion of a directory with child "
+"nodes"
+msgstr "无法以非递归提交方式删除有子节点的目录"
 
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
@@ -4694,11 +4696,17 @@ msgstr "无法复制到“%s”，因为它不在版本库“%s”中；它来�
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "无法复制到“%s”，因为它已调度删除"
 
+msgid "Can only crop a working copy with a restrictive depth"
+msgstr "只能修剪工作副本到有限深度"
+
+msgid "Can only crop directories"
+msgstr "只能修剪目录"
+
 #, c-format
 msgid ""
 "Cannot crop '%s': it is going to be removed from repository. Try commit "
 "instead"
-msgstr "无法获取 “%s”: 它将要从版本库中删除；请先提交"
+msgstr "无法修剪 “%s”: 它将要从版本库中删除；请先提交"
 
 #, c-format
 msgid "Cannot exclude current directory"
@@ -4710,7 +4718,7 @@ msgstr "无法排除根目录"
 
 #, c-format
 msgid "Cannot crop '%s': it is a switched path"
-msgstr "无法获取 “%s”：它是已切换的路径"
+msgstr "无法修剪 “%s”：它是已切换的路径"
 
 #, c-format
 msgid "Entry '%s' has invalid '%s' value"
@@ -5195,6 +5203,22 @@ msgstr "无法新增目录“%s”: 同名未版本控制目录对象已存在"
 
 #, c-format
 msgid ""
+"UUID mismatch: existing directory '%s' was checked out from a different "
+"repository"
+msgstr "UUID 不匹配: 现有目录 '%s' 是从其它版本库检出"
+
+#, c-format
+msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
+msgstr "URL '%s' 对于现有目录 '%s' 不匹配，期望的 URL 是 '%s'"
+
+#, c-format
+msgid ""
+"Failed to add directory '%s': a versioned directory of the same name already "
+"exists"
+msgstr "增加目录 '%s' 失败: 同名受版本控制的目录已存在"
+
+#, c-format
+msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
 "directory"
 msgstr "无法增加目录“%s”: 对象与管理目录同名"
@@ -5230,8 +5254,18 @@ msgid ""
 msgstr "无法新增文件“%s”: 同名非文件对象已存在"
 
 #, c-format
-msgid "Failed to add file '%s': object of the same name already exists"
-msgstr "无法增加文件“%s”: 同名对象已存在"
+msgid ""
+"Failed to add file '%s': an unversioned file of the same name already exists"
+msgstr "增加文件 '%s' 失败: 同名未版本控制的文件已存在"
+
+#, c-format
+msgid ""
+"UUID mismatch: existing file '%s' was checked out from a different repository"
+msgstr "UUID 不匹配: 现有文件 '%s' 来自其它版本库"
+
+#, c-format
+msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
+msgstr "URL '%s' 对于现有文件 '%s' 不匹配，期望的 URL 是 '%s'"
 
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
