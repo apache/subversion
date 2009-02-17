@@ -572,9 +572,9 @@ log_do_merge(struct log_runner *loggy,
   /* Now do the merge with our full paths. */
   /* ### TODO: Fill in the left_version and right_version args. */
   err = svn_wc__merge_internal(&log_accum, &merge_outcome,
-                               left, NULL, right, NULL, name, NULL, 
-                               loggy->adm_access, left_label, right_label, 
-                               target_label, FALSE, loggy->diff3_cmd, NULL, 
+                               left, NULL, right, NULL, name, NULL,
+                               loggy->adm_access, left_label, right_label,
+                               target_label, FALSE, loggy->diff3_cmd, NULL,
                                NULL, NULL, NULL, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -1342,7 +1342,6 @@ log_do_committed(struct log_runner *loggy,
   entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
-  entry->has_prop_mods = FALSE;
 
   /* We don't reset tree_conflict_data, because it's about conflicts on
      children, not on this node, and it could conceivably be valid to commit
@@ -1360,7 +1359,6 @@ log_do_committed(struct log_runner *loggy,
                                    | SVN_WC__ENTRY_MODIFY_PREJFILE
                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                                   | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2216,26 +2214,14 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_HAS_PROPS,
-                 SVN_WC__ENTRY_ATTR_HAS_PROPS,
-                 entry->has_props ? "true" : "false");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
-                 SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
-                 entry->has_prop_mods ? "true" : "false");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS,
-                 SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                 entry->cachable_props);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
-                 SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
-                 entry->present_props);
+  /* Note: ignoring the (deprecated) has_props, has_prop_mods,
+     cachable_props, and present_props fields. */
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                  SVN_WC__ENTRY_ATTR_WORKING_SIZE,
                  apr_psprintf(pool, "%" APR_OFF_T_FMT,
                               entry->working_size));
+
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
                  SVN_WC__LOG_ATTR_FORCE,
                  "true");

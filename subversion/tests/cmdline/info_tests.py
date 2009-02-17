@@ -198,7 +198,7 @@ def info_with_tree_conflicts(sbox):
         "Tree conflict missing in svn info -R output:\n"
         "  Expected: '%s'\n"
         "  Found: '%s'" % (expected, output))
-  
+
 def info_on_added_file(sbox):
   """info on added file"""
 

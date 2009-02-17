@@ -80,14 +80,3 @@ svn_client_resolve(const char *path,
 
   return svn_wc_adm_close2(adm_access, pool);
 }
-
-svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
-  return svn_client_resolve(path, depth,
-                            svn_wc_conflict_choose_merged, ctx, pool);
-}

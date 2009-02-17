@@ -160,6 +160,7 @@ class Contributor:
     if not log in logs:
       logs.append(log)
 
+  @staticmethod
   def get(username, real_name, email):
     """If this contributor is already registered, just return it;
     otherwise, register it then return it.  Hint: use parse() to
@@ -188,7 +189,6 @@ class Contributor:
       Contributor.all_contributors[email]     = c
     # This Contributor has never been in better shape; return it.
     return c
-  get = staticmethod(get)
 
   def score(self):
     """Return a contribution score for this contributor."""
@@ -245,6 +245,7 @@ class Contributor:
     """See LogMessage.__hash__() for why this exists."""
     return self.hash_value
 
+  @staticmethod
   def parse(name):
     """Parse NAME, which can be
 
@@ -282,7 +283,6 @@ class Contributor:
       email = email.replace('{_AT_}', '@')
 
     return username, real_name, email
-  parse = staticmethod(parse)
 
   def canonical_name(self):
     """Return a canonical name for this contributor.  The canonical

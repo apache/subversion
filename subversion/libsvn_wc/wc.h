@@ -168,15 +168,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__KILL_ADM_ONLY           "adm-only"
 
 
-/* A space separated list of properties that we cache presence/absence of.
- *
- * Note that each entry contains information about which properties are cached
- * in that particular entry.  This constant is only used when writing entries.
- */
-#define SVN_WC__CACHABLE_PROPS                                         \
-SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK
-
-
 /* A few declarations for stuff in util.c.
  * If this section gets big, move it all out into a new util.h file. */
 
@@ -255,7 +246,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    conflict is encountered, giving the callback a chance to resolve
    the conflict (before marking the file 'conflicted').
 
-   When LEFT_VERSION and RIGHT_VERSION are non-NULL, pass them to the 
+   When LEFT_VERSION and RIGHT_VERSION are non-NULL, pass them to the
    conflict resolver as older_version and their_version.
 
    ## TODO: We should store the information in LEFT_VERSION and RIGHT_VERSION

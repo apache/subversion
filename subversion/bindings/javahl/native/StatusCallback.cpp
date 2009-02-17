@@ -178,7 +178,7 @@ StatusCallback::createJavaStatus(const char *path,
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      jIsTreeConflicted = (status->tree_conflict != NULL) 
+      jIsTreeConflicted = (status->tree_conflict != NULL)
                              ? JNI_TRUE: JNI_FALSE;
       jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())

@@ -743,7 +743,7 @@ proppatch_resource(proppatch_context_t *proppatch,
   if (proppatch->progress.status != 207 ||
       proppatch->progress.server_error.error)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED, 
+      return svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED,
         return_response_err(handler, &proppatch->progress),
         _("At least one property change failed; repository is unchanged"));
     }

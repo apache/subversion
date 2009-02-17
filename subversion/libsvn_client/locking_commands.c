@@ -120,6 +120,8 @@ store_locks_callback(void *baton,
             notify->lock_state = svn_wc_notify_lock_state_unchanged;
         }
     }
+  else
+    notify->url = rel_url; /* Notify that path is actually a url  */
 
   if (lb->ctx->notify_func2)
     lb->ctx->notify_func2(lb->ctx->notify_baton2, notify, pool);

@@ -48,7 +48,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
    Use POOL for temporary allocations.
 
    If the rep cache database has not been opened, this may be a no op.
-   
+
    If REJECT_DUP is TRUE, return an error if there is an existing
    match for REP->CHECKSUM. */
 svn_error_t *

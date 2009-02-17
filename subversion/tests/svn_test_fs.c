@@ -138,7 +138,7 @@ maybe_install_fsfs_conf(svn_fs_t *fs,
 
   *must_reopen = TRUE;
   return svn_io_copy_file(opts->config_file,
-                          svn_path_join(svn_fs_path(fs, pool), 
+                          svn_path_join(svn_fs_path(fs, pool),
                                         "fsfs.conf", pool),
                           FALSE,
                           pool);
@@ -163,7 +163,7 @@ svn_test__create_fs(svn_fs_t **fs_p,
 {
   svn_boolean_t must_reopen;
 
-  SVN_ERR(create_fs(fs_p, name, opts->fs_type, 
+  SVN_ERR(create_fs(fs_p, name, opts->fs_type,
                     opts->server_minor_version, pool));
 
   SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
@@ -186,7 +186,7 @@ svn_test__create_repos(svn_repos_t **repos_p,
   apr_finfo_t finfo;
   svn_repos_t *repos;
   svn_boolean_t must_reopen;
-  apr_hash_t *fs_config = make_fs_config(opts->fs_type, 
+  apr_hash_t *fs_config = make_fs_config(opts->fs_type,
                                          opts->server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing

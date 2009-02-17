@@ -197,7 +197,7 @@ class SvnReposTest < Test::Unit::TestCase
     file = "hello.txt"
     path = File.join(@wc_path, file)
     FileUtils.touch(path)
-    
+
     # So we can later rename files when running the tests on
     # Windows, close access to the repos created by the test setup.
     test_repos_path = @repos.path

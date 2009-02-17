@@ -216,21 +216,6 @@ svn_wc_translated_file2(const char **xlated_path,
 
 
 svn_error_t *
-svn_wc_translated_file(const char **xlated_p,
-                       const char *vfile,
-                       svn_wc_adm_access_t *adm_access,
-                       svn_boolean_t force_repair,
-                       apr_pool_t *pool)
-{
-  return svn_wc_translated_file2(xlated_p, vfile, vfile, adm_access,
-                                 SVN_WC_TRANSLATE_TO_NF
-                                 | (force_repair ?
-                                    SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
-                                 pool);
-}
-
-
-svn_error_t *
 svn_wc__get_eol_style(svn_subst_eol_style_t *style,
                       const char **eol,
                       const char *path,
