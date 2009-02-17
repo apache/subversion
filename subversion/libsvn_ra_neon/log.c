@@ -93,7 +93,7 @@ reset_log_item(struct log_baton *lb)
 {
   lb->log_entry->revision       = SVN_INVALID_REVNUM;
   lb->log_entry->revprops       = NULL;
-  lb->log_entry->changed_paths  = NULL;  
+  lb->log_entry->changed_paths  = NULL;
   lb->log_entry->has_children   = FALSE;
   lb->log_entry->changed_paths2 = NULL;
 

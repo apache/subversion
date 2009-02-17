@@ -143,10 +143,9 @@ or another dump file."""
 
   # Setup the mirror repository.  Feed it the UUID of the source repository.
   exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
-  mirror_cfg = ["SVN-fs-dump-format-version: 2\n",
-                "UUID: " + output[0],
-                ]
-  svntest.actions.run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
+  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+                                           'setuuid', dest_sbox.repo_dir,
+                                           output[0][:-1])
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)

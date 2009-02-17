@@ -2,7 +2,7 @@
  * diff.c: comparing
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1561,7 +1561,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   return reporter->finish_report(report_baton, pool);
 }
 
-/* This is basically just the guts of svn_client_diff_summarize[_peg](). */
+/* This is basically just the guts of svn_client_diff_summarize[_peg]2(). */
 static svn_error_t *
 do_diff_summarize(const struct diff_parameters *diff_param,
                   svn_client_diff_summarize_func_t summarize_func,

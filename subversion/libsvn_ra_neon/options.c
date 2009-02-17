@@ -107,48 +107,6 @@ end_element(void *baton, int state,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
-                                     svn_ra_neon__session_t *ras,
-                                     const char *url,
-                                     apr_pool_t *pool)
-{
-  options_ctx_t oc = { 0 };
-
-#if 0
-  ne_add_response_header_handler(req, "dav",
-                                 ne_duplicate_header, &dav_header);
-#endif
-
-  oc.pool = pool;
-  oc.cdata = svn_stringbuf_create("", pool);
-
-  SVN_ERR(svn_ra_neon__parsed_request(ras, "OPTIONS", url,
-                                      "<?xml version=\"1.0\" "
-                                      "encoding=\"utf-8\"?>"
-                                      "<D:options xmlns:D=\"DAV:\">"
-                                      "<D:activity-collection-set/>"
-                                      "</D:options>", 0, NULL,
-                                      start_element,
-                                      svn_ra_neon__xml_collect_cdata,
-                                      end_element, &oc,
-                                      NULL, NULL, FALSE, pool));
-
-  if (oc.activity_coll == NULL)
-    {
-      /* ### error */
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested activity-collection-set; "
-                                "this often means that "
-                                "the URL is not WebDAV-enabled"));
-    }
-
-  *activity_coll = oc.activity_coll;
-
-  return SVN_NO_ERROR;
-}
-
 
 /** Capabilities exchange. */
 
@@ -231,45 +189,81 @@ parse_capabilities(ne_request *req,
 }
 
 
-/* Exchange capabilities with the server, by sending an OPTIONS
-   request announcing the client's capabilities, and by filling
-   RAS->capabilities with the server's capabilities as read from the
-   response headers.  Use POOL only for temporary allocation. */
 svn_error_t *
-svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras, 
+svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
                                    apr_pool_t *pool)
 {
-  int http_ret_code;
-  svn_ra_neon__request_t *rar;
+  svn_ra_neon__request_t* req;
   svn_error_t *err = SVN_NO_ERROR;
+  ne_xml_parser *parser = NULL;
+  options_ctx_t oc = { 0 };
+  const char *msg;
+  int status_code;
 
-  rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+  oc.pool = pool;
+  oc.cdata = svn_stringbuf_create("", pool);
 
-  /* Client capabilities are sent with every request.
-     See issue #3255 for more details. */
-  err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
-                                      NULL, NULL, 200, 0, pool);
-  if (err)
+  req = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+
+  /* ### Use a symbolic name somewhere for this MIME type? */
+  ne_add_request_header(req->ne_req, "Content-Type", "text/xml");
+
+  /* Create a parser to read the normal response body */
+  parser = svn_ra_neon__xml_parser_create(req, ne_accept_2xx, start_element,
+                                          svn_ra_neon__xml_collect_cdata,
+                                          end_element, &oc);
+
+  /* Run the request and get the resulting status code. */
+  if ((err = svn_ra_neon__request_dispatch(&status_code, req, NULL,
+                                           "<?xml version=\"1.0\" "
+                                           "encoding=\"utf-8\"?>"
+                                           "<D:options xmlns:D=\"DAV:\">"
+                                           "<D:activity-collection-set/>"
+                                           "</D:options>",
+                                           200, 0, pool)))
     goto cleanup;
 
-  if (http_ret_code == 200)
+  /* Was there an XML parse error somewhere? */
+  msg = ne_xml_get_error(parser);
+  if (msg && *msg)
     {
-      parse_capabilities(rar->ne_req, ras, pool);
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                              _("The OPTIONS request returned invalid XML "
+                                "in the response: %s (%s)"),
+                              msg, ras->url->data);
+      goto cleanup;
     }
-  else
+
+  /* We asked for, and therefore expect, to have found an activity
+     collection in the response.  */
+  if (oc.activity_coll == NULL)
     {
-      /* "can't happen", because svn_ra_neon__request_dispatch()
-         itself should have returned error if response code != 200. */
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("OPTIONS request (for capabilities) got HTTP response code %d"),
-         http_ret_code);
+      err = svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                             _("The OPTIONS response did not include the "
+                               "requested activity-collection-set; this often "
+                               "means that the URL is not WebDAV-enabled"));
+      goto cleanup;
     }
+
+  ras->act_coll = apr_pstrdup(ras->pool, oc.activity_coll->data);
+  parse_capabilities(req->ne_req, ras, pool);
 
  cleanup:
-  svn_ra_neon__request_destroy(rar);
+  svn_ra_neon__request_destroy(req);
 
   return err;
+}
+
+
+svn_error_t *
+svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
+                                     svn_ra_neon__session_t *ras,
+                                     apr_pool_t *pool)
+{
+  if (! ras->act_coll)
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, pool));
+  *activity_coll = svn_string_create(ras->act_coll, pool);
+  return SVN_NO_ERROR;
 }
 
 

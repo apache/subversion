@@ -565,39 +565,14 @@ do_open(svn_wc_adm_access_t **adm_access,
 
   if (! under_construction)
     {
-      /* ### this logic is duplicated in questions.c */
+      err = svn_wc_check_wc(path, &wc_format, subpool);
 
-      /* By reading the format file we check both that PATH is a directory
-         and that it is a working copy. */
-      /* ### We will read the entries file later.  Maybe read the whole
-         file here instead to avoid reopening it. */
-      err = svn_io_read_version_file(&wc_format,
-                                     svn_wc__adm_child(path,
-                                                       SVN_WC__ADM_ENTRIES,
-                                                       subpool),
-                                     subpool);
-      /* If the entries file doesn't start with a version number, we're dealing
-         with a pre-format 7 working copy, so we need to get the format from
-         the format file instead. */
-      if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
-        {
-          svn_error_clear(err);
-          err = svn_io_read_version_file(&wc_format,
-                                         svn_wc__adm_child(path,
-                                                           SVN_WC__ADM_FORMAT,
-                                                           subpool),
-                                         subpool);
-        }
-      if (err)
+      if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
                                    _("'%s' is not a working copy"),
                                    svn_path_local_style(path, pool));
         }
-
-      SVN_ERR(svn_wc__check_format(wc_format,
-                                   svn_path_local_style(path, subpool),
-                                   subpool));
     }
 
   /* Need to create a new lock */
@@ -765,31 +740,6 @@ do_open(svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
-/* To preserve API compatibility with Subversion 1.0.0 */
-svn_error_t *
-svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
-                svn_wc_adm_access_t *associated,
-                const char *path,
-                svn_boolean_t write_lock,
-                svn_boolean_t tree_lock,
-                apr_pool_t *pool)
-{
-  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
-                          (tree_lock ? -1 : 0), NULL, NULL, pool);
-}
-
-svn_error_t *
-svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
-                 svn_wc_adm_access_t *associated,
-                 const char *path,
-                 svn_boolean_t write_lock,
-                 int levels_to_lock,
-                 apr_pool_t *pool)
-{
-  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
-                          levels_to_lock, NULL, NULL, pool);
-}
-
 svn_error_t *
 svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
@@ -816,34 +766,6 @@ svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
                      apr_pool_t *pool)
 {
   return do_open(adm_access, NULL, path, TRUE, 0, TRUE, NULL, NULL, pool);
-}
-
-
-/* To preserve API compatibility with Subversion 1.0.0 */
-svn_error_t *
-svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
-                      svn_wc_adm_access_t *associated,
-                      const char *path,
-                      svn_boolean_t write_lock,
-                      svn_boolean_t tree_lock,
-                      apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_open3(adm_access, associated, path,
-                                write_lock, (tree_lock ? -1 : 0),
-                                NULL, NULL, pool);
-}
-
-
-svn_error_t *
-svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
-                       svn_wc_adm_access_t *associated,
-                       const char *path,
-                       svn_boolean_t write_lock,
-                       int levels_to_lock,
-                       apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_open3(adm_access, associated, path, write_lock,
-                                levels_to_lock, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -1077,20 +999,6 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
     return err;
 
   return SVN_NO_ERROR;
-}
-
-
-/* To preserve API compatibility with Subversion 1.0.0 */
-svn_error_t *
-svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
-                     svn_wc_adm_access_t *associated,
-                     const char *path,
-                     svn_boolean_t write_lock,
-                     svn_boolean_t tree_lock,
-                     apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
-                               (tree_lock ? -1 : 0), NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -1444,17 +1352,6 @@ svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 {
   /* ### a scratch pool should be passed */
   return do_close(adm_access, FALSE, TRUE, scratch_pool);
-}
-
-svn_error_t *
-svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
-{
-  /* This is the only pool we have access to.
-
-     ### create a subpool just for this? */
-  apr_pool_t *scratch_pool = adm_access->pool;
-
-  return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
 svn_boolean_t

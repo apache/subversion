@@ -32,6 +32,7 @@
 #include "svn_opt.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
+#include "svn_dso.h"
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
@@ -618,6 +619,66 @@ svn_io_open_unique_file(apr_file_t **file,
                                   pool);
 }
 
+svn_error_t *
+svn_io_run_diff(const char *dir,
+                const char *const *user_args,
+                int num_user_args,
+                const char *label1,
+                const char *label2,
+                const char *from,
+                const char *to,
+                int *pexitcode,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                const char *diff_cmd,
+                apr_pool_t *pool)
+{
+  SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd, diff_cmd, pool));
+
+  return svn_io_run_diff2(dir, user_args, num_user_args, label1, label2,
+                          from, to, pexitcode, outfile, errfile, diff_cmd,
+                          pool);
+}
+
+svn_error_t *
+svn_io_run_diff3_2(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool)
+{
+  SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+
+  return svn_io_run_diff3_3(exitcode, dir, mine, older, yours, mine_label,
+                            older_label, yours_label, merged, diff3_cmd,
+                            user_args, pool);
+}
+
+svn_error_t *
+svn_io_run_diff3(const char *dir,
+                 const char *mine,
+                 const char *older,
+                 const char *yours,
+                 const char *mine_label,
+                 const char *older_label,
+                 const char *yours_label,
+                 apr_file_t *merged,
+                 int *exitcode,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool)
+{
+  return svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
+                            mine_label, older_label, yours_label,
+                            merged, diff3_cmd, NULL, pool);
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
@@ -637,6 +698,14 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 
 /*** From cmdline.c ***/
 svn_error_t *
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool)
+{
+  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
+}
+
+svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
                              const char *auth_username,
@@ -652,4 +721,45 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                                        auth_username, auth_password,
                                        config_dir, no_auth_cache, FALSE,
                                        cfg, cancel_func, cancel_baton, pool);
+}
+
+/*** From dso.c ***/
+void
+svn_dso_initialize(void)
+{
+  svn_error_t *err = svn_dso_initialize2();
+  if (err)
+    {
+      svn_error_clear(err);
+      abort();
+    }
+}
+
+/*** From simple_providers.c ***/
+void
+svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
+                             apr_pool_t *pool)
+{
+  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
+}
+
+/*** From ssl_client_cert_pw_providers.c ***/
+void
+svn_auth_get_ssl_client_cert_pw_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_file_provider2(provider, NULL, NULL, pool);
+}
+
+/*** From path.c ***/
+const char *
+svn_path_url_add_component(const char *url,
+                           const char *component,
+                           apr_pool_t *pool)
+{
+  /* URL can have trailing '/' */
+  url = svn_path_canonicalize(url, pool);
+
+  return svn_path_url_add_component2(url, component, pool);
 }

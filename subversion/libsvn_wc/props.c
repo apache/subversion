@@ -64,13 +64,13 @@
 
 /* ### HKW/WC-NG: This is a summary of the my efforts to localize accesses to
    svn_wc__prop_path(), in preparation to moving to the wc_db API.  The
-   general idea here is to combine all calls to svn_wc__prop_path() into a 
+   general idea here is to combine all calls to svn_wc__prop_path() into a
    single one, which will make conversion to the new db API easier.  The catch
    is our currently loggy implementation, which uses the properties file path
    all over the place.  Rather than attempt to refactor all of those right
    now, I'm going to punt and leave properties loggy-ness to the SQLite
    transaction mechanism.
-   
+
    Also, several of these could be funnelled through the load_props()
    interface, but for the fact that it may complicate handling of propcaching.
    I'm happy to do that, but I'm wary of killing performance right before
@@ -78,7 +78,7 @@
    again a free-for-all.
 
    The following functions currently call this API:
-     load_props(): The current "gateway" function through we all access to 
+     load_props(): The current "gateway" function through we all access to
        properties should be funneled.
      svn_wc__working_props_committed(): Moves WORKING props to BASE props,
        sync'ing to disk and clearing appropriate caches.
@@ -240,28 +240,23 @@ get_existing_prop_reject_file(const char **reject_file,
 static const char *
 build_present_props(apr_hash_t *props, apr_pool_t *pool)
 {
-  apr_array_header_t *cachable;
-  svn_stringbuf_t *present_props = svn_stringbuf_create("", pool);
-  int i;
+  svn_stringbuf_t *present_props;
 
   if (apr_hash_count(props) == 0)
-    return present_props->data;
+    return "";
 
-  cachable = svn_cstring_split(SVN_WC__CACHABLE_PROPS, " ", TRUE, pool);
-  for (i = 0; i < cachable->nelts; i++)
-    {
-      const char *proptolookfor = APR_ARRAY_IDX(cachable, i,
-                                                const char *);
+  present_props = svn_stringbuf_create("", pool);
 
-      if (apr_hash_get(props, proptolookfor, APR_HASH_KEY_STRING) != NULL)
-        {
-          svn_stringbuf_appendcstr(present_props, proptolookfor);
-          svn_stringbuf_appendcstr(present_props, " ");
-        }
-    }
+  if (apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL)
+    svn_stringbuf_appendcstr(present_props, SVN_PROP_SPECIAL " ");
+  if (apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING) != NULL)
+    svn_stringbuf_appendcstr(present_props, SVN_PROP_EXTERNALS " ");
+  if (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) != NULL)
+    svn_stringbuf_appendcstr(present_props, SVN_PROP_NEEDS_LOCK " ");
 
   /* Avoid returning a string with a trailing space. */
   svn_stringbuf_chop(present_props, 1);
+
   return present_props->data;
 }
 
@@ -359,7 +354,7 @@ install_props_file(svn_stringbuf_t **log_accum,
                             node_kind, wc_prop_kind, pool));
 
   /* Write the property hash into a temporary file. */
-  SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props, 
+  SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props,
                              svn_path_dirname(propfile_path, pool),
                              FALSE, pool));
 
@@ -399,14 +394,12 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
   tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
   tmp_entry.has_props = (apr_hash_count(working_props) > 0);
-  tmp_entry.cachable_props = SVN_WC__CACHABLE_PROPS;
   tmp_entry.present_props = build_present_props(working_props, pool);
 
   SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access,
                                      path, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_HAS_PROPS
                                      | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
-                                     | SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS
                                      | SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                                      pool));
 
@@ -474,7 +467,7 @@ svn_wc__working_props_committed(const char *path,
 
 
   /* The path is ensured not an excluded path. */
-  /* TODO(#2843) It seems that there is no need to 
+  /* TODO(#2843) It seems that there is no need to
      reveal hidden entry here? */
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 

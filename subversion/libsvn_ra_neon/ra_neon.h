@@ -99,10 +99,11 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
 
-  /* Both of these function as caches, and are NULL when uninitialized
+  /* Each of these function as caches, and are NULL when uninitialized
      or cleared: */
   const char *vcc;                      /* version-controlled-configuration */
   const char *uuid;                     /* repository UUID */
+  const char *act_coll;                 /* activity collection set */
 
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
@@ -544,14 +545,11 @@ extern const ne_propname svn_ra_neon__vcc_prop;
 extern const ne_propname svn_ra_neon__checked_in_prop;
 
 
-
-
 /* send an OPTIONS request to fetch the activity-collection-set */
-svn_error_t * svn_ra_neon__get_activity_collection
-  (const svn_string_t **activity_coll,
-   svn_ra_neon__session_t *ras,
-   const char *url,
-   apr_pool_t *pool);
+svn_error_t *
+svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
+                                     svn_ra_neon__session_t *ras,
+                                     apr_pool_t *pool);
 
 
 /* Call ne_set_request_body_pdovider on REQ with a provider function
@@ -1053,10 +1051,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             const char *capability,
                             apr_pool_t *pool);
 
-/* 
- * Do a capabilities exchange with the server. */
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   RAS->capabilities with the server's capabilities as read from the
+   response headers.  Use POOL only for temporary allocation.
+
+   NOTE:  This function also expects the server to announce the
+   activity collection.  */
 svn_error_t *
-svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras, 
+svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
                                    apr_pool_t *pool);
 
 /*

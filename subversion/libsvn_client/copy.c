@@ -2,7 +2,7 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1295,7 +1295,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
          as 'copied' -- assuming that the src and dst are from the
-         same repository.  (It's kind of weird that svn_wc_add() is the
+         same repository.  (It's kind of weird that svn_wc_add3() is the
          way to do this; see its doc for more about the controversy.) */
       if (same_repositories)
         {
@@ -1310,7 +1310,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
             {
               /* If we just checked out from the "head" revision,
                  that's fine, but we don't want to pass a '-1' as a
-                 copyfrom_rev to svn_wc_add().  That function will
+                 copyfrom_rev to svn_wc_add3().  That function will
                  dump it right into the entry, and when we try to
                  commit later on, the 'add-dir-with-history' step will
                  be -very- unhappy; it only accepts specific
@@ -1338,7 +1338,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
           /* ### Recording of implied mergeinfo should really occur
              ### *before* the notification callback is invoked by
-             ### svn_wc_add2(), but can't occur before we add the new
+             ### svn_wc_add3(), but can't occur before we add the new
              ### source path. */
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src, src_revnum,
@@ -1348,12 +1348,12 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
       else  /* different repositories */
         {
-          /* ### Someday, we would just call svn_wc_add(), as above,
+          /* ### Someday, we would just call svn_wc_add3(), as above,
              but with no copyfrom args.  I.e. in the
              directory-foreign-UUID case, we still want everything
              scheduled for addition, URLs rewritten, and wcprop cache
              deleted, but WITHOUT any copied flags or copyfrom urls.
-             Unfortunately, svn_wc_add() is such a mess that it chokes
+             Unfortunately, svn_wc_add3() is such a mess that it chokes
              at the moment when we pass a NULL copyfromurl. */
 
           return svn_error_createf
@@ -1406,7 +1406,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(extend_wc_mergeinfo(pair->dst, dst_entry, src_mergeinfo,
                                   adm_access, ctx, pool));
 
-      /* Ideally, svn_wc_add_repos_file() would take a notify function
+      /* Ideally, svn_wc_add_repos_file3() would take a notify function
          and baton, and we wouldn't have to make this call here.
          However, the situation is... complicated.  See issue #1552
          for the full story. */
@@ -1569,12 +1569,12 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
               || ent->absent)
             {
               return svn_error_createf
-                (SVN_ERR_ENTRY_EXISTS, 
+                (SVN_ERR_ENTRY_EXISTS,
                  NULL, _("'%s' is already under version control"),
-                 svn_path_local_style(pair->dst, pool)); 
+                 svn_path_local_style(pair->dst, pool));
             }
           else if ((ent->kind != svn_node_dir) &&
-                   (ent->schedule != svn_wc_schedule_delete) 
+                   (ent->schedule != svn_wc_schedule_delete)
                    && ! ent->deleted)
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -1613,7 +1613,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       same_repositories = FALSE;
 
     else
-      same_repositories = (strcmp(src_uuid, dst_uuid) == 0) ? TRUE : FALSE;
+      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
   }
 
   /* Perform the move for each of the copy_pairs. */

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -170,7 +170,7 @@ def modify(modaction, paths):
     assert os.path.exists(D)
     os.remove(D)
   else:
-    raise "unknown modaction: '" + modaction + "'"
+    raise Exception("unknown modaction: '" + modaction + "'")
 
 #----------------------------------------------------------------------
 
@@ -216,13 +216,14 @@ create_d = ['da','dA']
 # dir-add(D)  = add-new(D)(deep?) or copy(D1,D)(and modify?)
 
 f_adds = [
-  ( absent_f, ['fa','fA'] ),
+  #( absent_f, ['fa','fA'] ), ### local add-without-history: not a tree conflict
   ( absent_f, ['fC'] ),
-  ( absent_f, ['fC','ft'] ),
+  ( absent_f, ['fC','ft'] ), ### Fails because update seems to assume that the
+                             ### local file is unmodified (same as issue 1736?).
   #( absent_f, ['fC','fP'] ),  # don't test all combinations, just because it's slow
 ]
 d_adds = [
-  ( absent_d, ['da','dA'] ),
+  #( absent_d, ['da','dA'] ), ### local add-without-history: not a tree conflict
   ( absent_d, ['dC'] ),
   #( absent_d, ['dC','dP'] ),  # not yet
 ]
@@ -459,7 +460,7 @@ def ensure_tree_conflict(sbox, operation,
                              '-r', str(source_left_rev) + ':' + str(source_right_rev),
                              source_url, target_path)
         else:
-          raise "unknown operation: '" + operation + "'"
+          raise Exception("unknown operation: '" + operation + "'")
 
       if 'commit-c' in test_what:
         verbose_print("--- Trying to commit (expecting 'conflict' error)")
@@ -584,6 +585,36 @@ def up_sw_dir_del_onto_del(sbox):
   # WC state: any (D necessarily exists; children may have any state)
   test_tc_up_sw(sbox, d_dels + d_rpls, d_dels + d_rpls)
 
+# This is currently set as XFail over ra_dav because it hits
+# issue #3314 'DAV can overwrite directories during copy'
+#
+#   TRUNK@35827.DBG>svn st -v branch1
+#                   2        2 jrandom      branch1
+#                   2        2 jrandom      branch1\dC
+#   A  +            -        2 jrandom      branch1\dC\D
+#
+#   TRUNK@35827.DBG>svn log -r2:HEAD branch1 -v
+#   ------------------------------------------------------------------------
+#   r2 | jrandom | 2009-02-12 09:26:52 -0500 (Thu, 12 Feb 2009) | 1 line
+#   Changed paths:
+#      A /D1
+#      A /F1
+#      A /branch1
+#      A /branch1/dC
+#
+#   Initial set-up.
+#   ------------------------------------------------------------------------
+#   r3 | jrandom | 2009-02-12 09:26:52 -0500 (Thu, 12 Feb 2009) | 1 line
+#   Changed paths:
+#      A /branch1/dC/D (from /D1:2)
+#
+#   Action.
+#   ------------------------------------------------------------------------
+#
+#   TRUNK@35827.DBG>svn ci -m "Should be ood" branch1
+#   Adding         branch1\dC\D
+#
+#   Committed revision 4.
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
   # WC state: as scheduled (no obstruction)
@@ -656,7 +687,8 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              XFail(up_sw_dir_add_onto_add),  # not a primary use case
+              XFail(up_sw_dir_add_onto_add,
+                    svntest.main.is_ra_type_dav),
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,

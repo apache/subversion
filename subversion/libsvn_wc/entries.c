@@ -578,9 +578,15 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* cachable-props string. */
-  SVN_ERR(read_val(&entry->cachable_props, buf, end));
-  if (entry->cachable_props)
-    entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
+  {
+    const char *unused_value;
+    SVN_ERR(read_val(&unused_value, buf, end));
+
+    /* Fill in a value for the (deprecated) cachable_props. Note that if
+       we're reading from a current-format 'entries', then present_props
+       will have been computed properly. */
+    entry->cachable_props = SVN_WC__CACHABLE_PROPS;
+  }
   MAYBE_DONE;
 
   /* present-props string. */
@@ -675,7 +681,7 @@ read_entry(svn_wc_entry_t **new_entry,
 
         entry->depth = svn_depth_from_word(result);
 
-        /* Verify the depth value: 
+        /* Verify the depth value:
            THIS_DIR should not have an excluded value and SUB_DIR should only
            have excluded value. Remember that infinity value is not stored and
            should not show up here. Otherwise, something bad may have
@@ -1072,15 +1078,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
-  /* cachable-props string. */
-  entry->cachable_props = apr_hash_get(atts,
-                                       SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                                       APR_HASH_KEY_STRING);
-  if (entry->cachable_props)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS;
-      entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
-    }
+  /* NOTE: if there is an attribute for the (deprecated) cachable_props,
+     then we're just going to ignore it. */
 
   /* present-props string. */
   entry->present_props = apr_hash_get(atts,
@@ -1235,7 +1234,7 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 
   /* Inherits parent's url if doesn't have a url of one's own. */
   if (! dst->url)
-    dst->url = svn_path_url_add_component(src->url, dst->name, pool);
+    dst->url = svn_path_url_add_component2(src->url, dst->name, pool);
 
   if (! dst->repos)
     dst->repos = src->repos;
@@ -1246,9 +1245,6 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     {
       dst->uuid = src->uuid;
     }
-
-  if (! dst->cachable_props)
-    dst->cachable_props = src->cachable_props;
 }
 
 
@@ -1614,8 +1610,8 @@ write_entry(svn_stringbuf_t *buf,
 
   /* URL. */
   if (is_this_dir ||
-      (! is_subdir && strcmp(svn_path_url_add_component(this_dir->url, name,
-                                                        pool),
+      (! is_subdir && strcmp(svn_path_url_add_component2(this_dir->url, name,
+                                                         pool),
                              entry->url) != 0))
     valuestr = entry->url;
   else
@@ -1675,14 +1671,8 @@ write_entry(svn_stringbuf_t *buf,
   /* has-prop-mods flag. */
   write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS, entry->has_prop_mods);
 
-  /* cachable-props string. */
-  if (is_this_dir
-      || ! this_dir->cachable_props || ! entry->cachable_props
-      || strcmp(this_dir->cachable_props, entry->cachable_props) != 0)
-    valuestr = entry->cachable_props;
-  else
-    valuestr = NULL;
-  write_val(buf, valuestr, valuestr ? strlen(valuestr) : 0);
+  /* cachable-props string. Deprecated, so write nothing. */
+  write_val(buf, NULL, 0);
 
   /* present-props string. */
   write_val(buf, entry->present_props,
@@ -1960,10 +1950,7 @@ write_entry_xml(svn_stringbuf_t **output,
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
                  APR_HASH_KEY_STRING, "true");
 
-  /* Cachable props. */
-  if (entry->cachable_props && *entry->cachable_props)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                 APR_HASH_KEY_STRING, entry->cachable_props);
+  /* Cachable props. Deprecated, so do not add an attribute. */
 
   /* Present props. */
   if (entry->present_props
@@ -2036,8 +2023,8 @@ write_entry_xml(svn_stringbuf_t **output,
           if (entry->url)
             {
               if (strcmp(entry->url,
-                         svn_path_url_add_component(this_dir->url,
-                                                    name, pool)) == 0)
+                         svn_path_url_add_component2(this_dir->url,
+                                                     name, pool)) == 0)
                 apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL,
                              APR_HASH_KEY_STRING, NULL);
             }
@@ -2047,12 +2034,6 @@ write_entry_xml(svn_stringbuf_t **output,
               && strcmp(entry->repos, this_dir->repos) == 0)
             apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
                          NULL);
-
-          /* Cachable props are also inherited. */
-          if (entry->cachable_props && this_dir->cachable_props
-              && strcmp(entry->cachable_props, this_dir->cachable_props) == 0)
-            apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                         APR_HASH_KEY_STRING, NULL);
         }
     }
 
@@ -2158,7 +2139,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 
   if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
@@ -2173,7 +2154,7 @@ svn_wc__entries_write(apr_hash_t *entries,
           void *val;
           const svn_wc_entry_t *this_entry;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
           /* Get the entry and make sure its attributes are up-to-date. */
           apr_hash_this(hi, &key, NULL, &val);
@@ -2184,10 +2165,10 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, subpool));
+          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, iterpool));
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
   else
     /* This is needed during cleanup of a not yet upgraded WC. */
@@ -2369,11 +2350,7 @@ fold_entry(apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS)
     cur_entry->has_prop_mods = entry->has_prop_mods;
 
-  /* Cachable props. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS)
-    cur_entry->cachable_props = (entry->cachable_props
-                                 ? apr_pstrdup(pool, entry->cachable_props)
-                                 : NULL);
+  /* Cachable props. Deprecated, so we do not copy it. */
 
   /* Property existence */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_PRESENT_PROPS)
@@ -2807,8 +2784,10 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
   if (entry->changelist)
     dupentry->changelist = apr_pstrdup(pool, entry->changelist);
-  if (entry->cachable_props)
-    dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
+
+  /* NOTE: we do not dup cachable_props since it is deprecated. */
+  dupentry->cachable_props = SVN_WC__CACHABLE_PROPS;
+
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
   if (entry->tree_conflict_data)
@@ -2963,9 +2942,6 @@ svn_wc__entries_init(const char *path,
   entry->depth = depth;
   if (initial_rev > 0)
     entry->incomplete = TRUE;
-  /* Add cachable-props here so that it can be inherited by other entries.
-   */
-  entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
   SVN_ERR(write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool));
 

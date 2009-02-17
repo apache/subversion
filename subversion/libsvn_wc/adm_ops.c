@@ -142,7 +142,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
 
           /* Derive the new URL for the current (child) entry */
           if (base_url)
-            child_url = svn_path_url_add_component(base_url, name, subpool);
+            child_url = svn_path_url_add_component2(base_url, name, subpool);
 
           child_path = svn_path_join(svn_wc_adm_access_path(dirpath), name,
                                      subpool);
@@ -260,8 +260,8 @@ svn_wc__do_update_cleanup(const char *path,
     return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_file
-      || (entry->kind == svn_node_dir 
-          && (entry->deleted || entry->absent 
+      || (entry->kind == svn_node_dir
+          && (entry->deleted || entry->absent
               || entry->depth == svn_depth_exclude)))
     {
       const char *parent, *base_name;
@@ -1388,7 +1388,7 @@ svn_wc_add3(const char *path,
      previously 'deleted', unless, of course, you're specifying an
      addition with -history-; then it's okay for the object to be
      under version control already; it's not really new.
-     Also, if the target is recorded as excluded from wc, it really 
+     Also, if the target is recorded as excluded from wc, it really
      exists in repos. Report error on this situation too. */
   if (orig_entry)
     {
@@ -1535,7 +1535,7 @@ svn_wc_add3(const char *path,
                                pool));
 
           /* Derive the parent path for our new addition here. */
-          new_url = svn_path_url_add_component(p_entry->url, base_name, pool);
+          new_url = svn_path_url_add_component2(p_entry->url, base_name, pool);
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
@@ -1590,7 +1590,7 @@ svn_wc_add3(const char *path,
 
           /* Figure out what the new url should be. */
           const char *new_url =
-            svn_path_url_add_component(parent_entry->url, base_name, pool);
+            svn_path_url_add_component2(parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
@@ -2427,7 +2427,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* NAME is either a file's basename or SVN_WC_ENTRY_THIS_DIR. */
-  is_file = (strcmp(name, SVN_WC_ENTRY_THIS_DIR)) ? TRUE : FALSE;
+  is_file = (strcmp(name, SVN_WC_ENTRY_THIS_DIR) != 0);
 
   if (is_file)
     {
@@ -2560,8 +2560,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
               if (svn_wc__adm_missing(adm_access, entrypath)
                   || current_entry->depth == svn_depth_exclude)
                 {
-                  /* The directory is either missing or excluded, 
-                     so don't try to recurse, just delete the 
+                  /* The directory is either missing or excluded,
+                     so don't try to recurse, just delete the
                      entry in the parent directory. */
                   svn_wc__entry_remove(entries, current_entry_name);
                 }
@@ -2621,9 +2621,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
             /* An exception: When the path is at svn_depth_exclude,
                the entry in the parent directory should be preserved
-               for bookkeeping purpose. This only happens when the 
+               for bookkeeping purpose. This only happens when the
                function is called by svn_wc_crop_tree(). */
-            dir_entry = apr_hash_get(parent_entries, base_name, 
+            dir_entry = apr_hash_get(parent_entries, base_name,
                                      APR_HASH_KEY_STRING);
             if (dir_entry->depth != svn_depth_exclude)
               {
@@ -2924,7 +2924,7 @@ resolve_found_entry_callback(const char *path,
           else
             {
               SVN_ERR(err);
-              wc_root = switched ? FALSE : TRUE;
+              wc_root = ! switched;
             }
         }
     }

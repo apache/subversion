@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2003-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -35,7 +35,7 @@ class SubversionException(Exception):
     file and line are for C, not Python; they are redundant to the
     traceback information for exceptions raised in Python.
     """
-    # Be compatible with pre-1.5 .args behavior:
+    # Be compatible with Subversion <1.5 .args behavior:
     args = []
     if message is not None or apr_err is not None:
         args.append(message)
@@ -49,6 +49,7 @@ class SubversionException(Exception):
     self.file = file
     self.line = line
 
+  @classmethod
   def _new_from_err_list(cls, errors):
     """Return new Subversion exception object from list of svn_error_t data.
 
@@ -67,9 +68,6 @@ class SubversionException(Exception):
     for (apr_err, message, file, line) in errors:
       child = cls(message, apr_err, child, file, line)
     return child
-  # Don't use @classmethod, we support 2.2.
-  _new_from_err_list = classmethod(_new_from_err_list)
-
 
 def _cleanup_application_pool():
   """Cleanup the application pool before exiting"""

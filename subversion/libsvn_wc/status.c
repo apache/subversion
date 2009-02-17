@@ -371,18 +371,13 @@ assemble_status(svn_wc_status2_t **status,
   else if (entry->url && parent_entry && parent_entry->url &&
            entry != parent_entry)
     {
-      /* An item is switched if its working copy basename differs from the
-         basename of its URL. */
-      if (strcmp(svn_path_uri_encode(svn_path_basename(path, pool), pool),
-                 svn_path_basename(entry->url, pool)))
-        switched_p = TRUE;
+      /* An item is switched if:
+         parent-url + basename(path) != entry->url  */
 
-      /* An item is switched if its URL, without the basename, does not
-         equal its parent's URL. */
-      if (! switched_p
-          && strcmp(svn_path_dirname(entry->url, pool),
-                    parent_entry->url))
-        switched_p = TRUE;
+      switched_p = (strcmp(
+                     svn_path_join(parent_entry->url,
+                          svn_path_uri_encode(svn_path_basename(path, pool),
+                          pool), pool), entry->url) != 0);
     }
 
   if (final_text_status != svn_wc_status_obstructed)
@@ -422,7 +417,7 @@ assemble_status(svn_wc_status2_t **status,
         {
           SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
                                          adm_access, pool));
-                                         
+
           /* Record actual text status */
           pristine_text_status = text_modified_p ? svn_wc_status_modified
                                                  : svn_wc_status_normal;
@@ -1233,9 +1228,9 @@ tweak_statushash(void *baton,
               /* When deleting PATH, BATON is for PATH's parent,
                  so we must construct PATH's real statstruct->url. */
               statstruct->url =
-                svn_path_url_add_component(b->url,
-                                           svn_path_basename(path, pool),
-                                           pool);
+                svn_path_url_add_component2(b->url,
+                                            svn_path_basename(path, pool),
+                                            pool);
             }
           else
             statstruct->url = apr_pstrdup(pool, b->url);
@@ -1305,7 +1300,7 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
 
       url = find_dir_url(pb, pool);
       if (url)
-        return svn_path_url_add_component(url, db->name, pool);
+        return svn_path_url_add_component2(url, db->name, pool);
       else
         return NULL;
     }
@@ -1440,9 +1435,9 @@ make_file_baton(struct dir_baton *parent_dir_baton,
   f->pool = pool;
   f->dir_baton = pb;
   f->edit_baton = eb;
-  f->url = svn_path_url_add_component(find_dir_url(pb, pool),
-                                      svn_path_basename(full_path, pool),
-                                      pool);
+  f->url = svn_path_url_add_component2(find_dir_url(pb, pool),
+                                       svn_path_basename(full_path, pool),
+                                       pool);
   f->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   f->ood_last_cmt_date = 0;
   f->ood_kind = svn_node_file;
@@ -2041,7 +2036,7 @@ close_file(void *file_baton,
           url = find_dir_url(fb->dir_baton, pool);
           if (url)
             {
-              url = svn_path_url_add_component(url, fb->name, pool);
+              url = svn_path_url_add_component2(url, fb->name, pool);
               repos_lock = apr_hash_get
                 (fb->edit_baton->repos_locks,
                  svn_path_uri_decode(url +

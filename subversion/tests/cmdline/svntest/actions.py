@@ -1974,6 +1974,23 @@ def deep_trees_tree_del(base):
   DDD = j(base, 'DDD', 'D1')
   main.run_svn(None, 'rm', F, D, DF, DD, DDF, DDD)
 
+def deep_trees_rmtree(base):
+  """Helper function for deep trees test cases.  Delete top-level dirs
+     with rmtree instead of svn del."""
+  j = os.path.join
+  F   = j(base, 'F', 'alpha')
+  D   = j(base, 'D', 'D1')
+  DF  = j(base, 'DF', 'D1')
+  DD  = j(base, 'DD', 'D1')
+  DDF = j(base, 'DDF', 'D1')
+  DDD = j(base, 'DDD', 'D1')
+  os.unlink(F)
+  main.safe_rmtree(D)
+  main.safe_rmtree(DF)
+  main.safe_rmtree(DD)
+  main.safe_rmtree(DDF)
+  main.safe_rmtree(DDD)
+
 # deep trees state after a call to deep_trees_tree_del
 deep_trees_after_tree_del = wc.State('', {
   'F'                 : Item(),

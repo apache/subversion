@@ -44,8 +44,7 @@
 
 
 /* ### todo: make this compare repository too?  Or do so in parallel
-   code.  See also adm_files.c:check_adm_exists(), which should
-   probably be merged with this.  */
+   code.  */
 svn_error_t *
 svn_wc_check_wc(const char *path,
                 int *wc_format,
@@ -54,8 +53,6 @@ svn_wc_check_wc(const char *path,
   svn_error_t *err;
   const char *format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES,
                                                    pool);
-
-  /* ### this logic is duplicated in lock.c */
 
   /* First try to read the format number from the entries file. */
   err = svn_io_read_version_file(wc_format, format_file_path, pool);

@@ -214,15 +214,16 @@ static svn_error_t *
 return_response_err(svn_ra_serf__handler_t *handler,
                     svn_ra_serf__simple_request_context_t *ctx)
 {
-  SVN_ERR(ctx->server_error.error);
-
-  /* Try to return one of the standard errors for 301, 404 etc. */
-  SVN_ERR(svn_ra_serf__error_on_status(ctx->status, handler->path));
-
-  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                           "%s of '%s': %d %s",
-                           handler->method, handler->path,
-                           ctx->status, ctx->reason);
+  /* Try to return one of the standard errors for 301, 404, etc.,
+     then look for an error embedded in the response.  */
+  return svn_error_compose_create(
+    svn_ra_serf__error_on_status(ctx->status, handler->path),
+    svn_error_compose_create(
+      ctx->server_error.error,
+      svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                        "%s of '%s': %d %s",
+                        handler->method, handler->path,
+                        ctx->status, ctx->reason)));
 }
 
 static serf_bucket_t *
@@ -411,24 +412,7 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      err = svn_ra_serf__error_on_status(checkout_ctx->progress.status,
-                                         dir->name);
-      if (err)
-        {
-          svn_error_clear(checkout_ctx->progress.server_error.error);
-          return err;
-        }
-
-      /* In the normal cases where this error might occur we already handled
-         it based on the status code. */
-      SVN_ERR(checkout_ctx->progress.server_error.error);
-
-      return svn_error_createf(SVN_ERR_FS_CONFLICT,
-                    return_response_err(handler,
-                                        &checkout_ctx->progress),
-                    _("Directory '%s' is out of date; try updating"),
-                    svn_path_local_style(relative_dir_path(dir, dir->pool),
-                                         dir->pool));
+      return return_response_err(handler, &checkout_ctx->progress);
     }
 
   return SVN_NO_ERROR;
@@ -597,15 +581,7 @@ checkout_file(file_context_t *file)
 
   if (file->checkout->progress.status != 201)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(file->checkout->progress.status,
-                                           file->name));
-
-      return svn_error_createf(SVN_ERR_FS_CONFLICT,
-                    return_response_err(handler,
-                                        &file->checkout->progress),
-                    _("File '%s' is out of date; try updating"),
-                    svn_path_local_style(relative_file_path(file, file->pool),
-                                         file->pool));
+      return return_response_err(handler, &file->checkout->progress);
     }
 
   return SVN_NO_ERROR;
@@ -770,10 +746,9 @@ proppatch_resource(proppatch_context_t *proppatch,
   if (proppatch->progress.status != 207 ||
       proppatch->progress.server_error.error)
     {
-      svn_error_t *err;
-      err = return_response_err(handler, &proppatch->progress);
-      return svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED, err,
-             _("At least one property change failed; repository is unchanged"));
+      return svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED,
+        return_response_err(handler, &proppatch->progress),
+        _("At least one property change failed; repository is unchanged"));
     }
 
   return SVN_NO_ERROR;

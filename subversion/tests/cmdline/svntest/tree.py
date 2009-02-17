@@ -426,18 +426,18 @@ def get_props(paths):
     elif line.startswith('    '):
       # It's (part of) the value (strip the indentation)
       if filename is None:
-        raise "Missing 'Properties on' line: '"+line+"'"
+        raise Exception("Missing 'Properties on' line: '"+line+"'")
       files.setdefault(filename, {})[name] += line[4:] + '\n'
 
     elif line.startswith('  '):
       # It's the name
       name = line[2:]  # strip the indentation
       if filename is None:
-        raise "Missing 'Properties on' line: '"+line+"'"
+        raise Exception("Missing 'Properties on' line: '"+line+"'")
       files.setdefault(filename, {})[name] = ''
 
     else:
-      raise "Malformed line from proplist: '"+line+"'"
+      raise Exception("Malformed line from proplist: '"+line+"'")
 
   # Strip, from each property value, the final new-line that we added
   for filename in files:

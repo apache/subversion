@@ -56,7 +56,7 @@
    real depth we're looking for.
  */
 #define DEPTH_TO_RECURSE(d)    \
-        (((d) == svn_depth_unknown || (d) > svn_depth_files) ? TRUE : FALSE)
+        ((d) == svn_depth_unknown || (d) > svn_depth_files)
 
 typedef struct {
   svn_ra_svn__session_baton_t *sess_baton;
@@ -317,7 +317,7 @@ ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
       SVN_ERR(svn_delta_depth_filter_editor(&filter_editor,
                                             &filter_baton,
                                             editor, edit_baton, depth,
-                                            *target ? TRUE : FALSE,
+                                            *target != '\0',
                                             pool));
       editor = filter_editor;
       edit_baton = filter_baton;

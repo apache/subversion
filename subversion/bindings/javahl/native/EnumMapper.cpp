@@ -461,6 +461,9 @@ jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
     case svn_wc_conflict_reason_unversioned:
       return org_tigris_subversion_javahl_ConflictDescriptor_Reason_unversioned;
+
+    case svn_wc_conflict_reason_added:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_added;
     }
 }
 

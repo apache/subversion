@@ -1,7 +1,7 @@
 /* dbt.h --- interface to DBT-frobbing functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,8 +20,8 @@
 
 #include <apr_pools.h>
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "svn_fs.h"
 #include "private/svn_skel.h"

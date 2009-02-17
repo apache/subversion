@@ -75,11 +75,11 @@ typedef struct
 {
   svn_boolean_t is_first;
   const char *path;
-  svn_revnum_t rev;  
+  svn_revnum_t rev;
   apr_pool_t *pool;
 } copyfrom_info_t;
 
-/* A location segment callback for obtaining the copy source of 
+/* A location segment callback for obtaining the copy source of
    a node at a path and storing it in *BATON (a struct copyfrom_info_t *).
    Implements svn_location_segment_receiver_t. */
 static svn_error_t *
@@ -108,7 +108,7 @@ copyfrom_info_receiver(svn_location_segment_t *segment,
       copyfrom_info->path = apr_pstrdup(copyfrom_info->pool, segment->path);
       copyfrom_info->rev = segment->range_end;
 
-      /* ### FIXME: We *should* be able to return SVN_ERR_CEASE_INVOCATION 
+      /* ### FIXME: We *should* be able to return SVN_ERR_CEASE_INVOCATION
          ### here so we don't get called anymore. */
     }
 
@@ -224,8 +224,8 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
             }
 
           if (rb->ra_session == NULL)
-            SVN_ERR(svn_client_open_ra_session(&rb->ra_session, 
-                                                rb->ra_session_url, 
+            SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
+                                                rb->ra_session_url,
                                                rb->ctx, rb->ra_session_pool));
 
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
@@ -253,7 +253,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
   else
     {
       if (rb->ra_session == NULL)
-        SVN_ERR(svn_client_open_ra_session(&rb->ra_session, 
+        SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
                                            rb->ra_session_url,
                                            rb->ctx, rb->ra_session_pool));
 

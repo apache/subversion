@@ -1114,7 +1114,7 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   char buf[80];
   apr_file_t *file;
   apr_size_t len;
-      
+
   SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
   len = sizeof(buf);
@@ -5800,31 +5800,35 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
-   the same as commit_body().
+/* Baton for use with an sqlite transaction'd commit body. */
+struct commit_sqlite_txn_baton
+{
+  struct commit_baton *cb;
+  apr_pool_t *pool;
+};
 
-   XXX: If we decide to wrap other stuff with sqlite transactions, this should
-   probably be generalized and moved into libsvn_subr/sqlite.c.
- */
+/* Implements svn_sqlite__transaction_callback_t. */
+static svn_error_t *
+commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db)
+{
+  struct commit_sqlite_txn_baton *cstb = baton;
+  return commit_body(cstb->cb, cstb->pool);
+}
+
+/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
+   the same as commit_body().  */
 static svn_error_t *
 commit_body_rep_cache(void *baton, apr_pool_t *pool)
 {
+  struct commit_sqlite_txn_baton cstb;
   struct commit_baton *cb = baton;
   fs_fs_data_t *ffd = cb->fs->fsap_data;
-  svn_error_t *err;
 
-  /* Start the sqlite transaction. */
-  SVN_ERR(svn_sqlite__transaction_begin(ffd->rep_cache_db));
+  cstb.cb = cb;
+  cstb.pool = pool;
 
-  err = commit_body(baton, pool);
-
-  /* Commit or rollback the sqlite transaction. */
-  if (err)
-    svn_error_clear(svn_sqlite__transaction_rollback(ffd->rep_cache_db));
-  else
-    return svn_sqlite__transaction_commit(ffd->rep_cache_db);
-
-  return err;
+  return svn_sqlite__with_transaction(ffd->rep_cache_db,
+                                      commit_sqlite_txn_callback, &cstb);
 }
 
 svn_error_t *
@@ -5841,7 +5845,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.txn = txn;
   return svn_fs_fs__with_write_lock(fs,
                                     ffd->rep_cache_db ? commit_body_rep_cache :
-                                                        commit_body, 
+                                                        commit_body,
                                     &cb, pool);
 }
 
@@ -6920,14 +6924,14 @@ pack_shard(const char *revs_dir,
       svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT "\n",
                         next_offset);
       next_offset += finfo.size;
-  
+
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
       SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
                                                              iterpool),
                           cancel_func, cancel_baton, iterpool));
     }
-  
+
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_fs_fs__dup_perms(pack_file_dir, shard_path, pool));

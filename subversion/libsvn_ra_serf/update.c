@@ -2382,7 +2382,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report_context_t *report;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
-  svn_boolean_t has_target = *update_target ? TRUE : FALSE;
+  svn_boolean_t has_target = *update_target != '\0';
   svn_boolean_t server_supports_depth;
   svn_ra_serf__session_t *sess = ra_session->priv;
 

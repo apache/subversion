@@ -343,7 +343,7 @@ main(int argc, const char *argv[])
                 fprintf(stderr, "FAIL: Non-numeric minor version given\n");
                 exit(1);
               }
-            if ((opts.server_minor_version < 3) 
+            if ((opts.server_minor_version < 3)
                 || (opts.server_minor_version > 5))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");

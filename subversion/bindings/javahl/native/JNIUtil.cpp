@@ -786,38 +786,31 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  _("URL '%s' contains a '..' element"),
                                  path);
-
-      /* strip any trailing '/' */
-      path = svn_path_canonicalize(path, pool);
     }
   else  /* not a url, so treat as a path */
     {
-      const char *apr_target;
-      char *truenamed_target; /* APR-encoded */
-      apr_status_t apr_err;
+      /* Normalize path to subversion internal style */
 
-      /* canonicalize case, and change all separators to '/'. */
-      SVN_ERR(svn_path_cstring_from_utf8(&apr_target, path, pool));
-      apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
-                                   APR_FILEPATH_TRUENAME, pool);
+      /* ### In Subversion < 1.6 this method on Windows actually tried
+         to lookup the path on disk to fix possible invalid casings in
+         the passed path. (An extremely expensive operation; especially
+         on network drives).
 
-      if (!apr_err)
-        /* We have a canonicalized APR-encoded target now. */
-        apr_target = truenamed_target;
-      else if (APR_STATUS_IS_ENOENT(apr_err))
-        /* It's okay for the file to not exist, that just means we
-           have to accept the case given to the client. We'll use
-           the original APR-encoded target. */
-        ;
-      else
-        return svn_error_createf(apr_err, NULL,
-                                 _("Error resolving case of '%s'"),
-                                 svn_path_local_style(path, pool));
+         This 'feature'is now removed as it penalizes every correct
+         path passed, and also breaks behavior of e.g.
+           'svn status .' returns '!' file, because there is only a "File"
+             on disk.
+            But when you then call 'svn status file', you get '? File'.
 
-      /* convert back to UTF-8. */
-      SVN_ERR(svn_path_cstring_to_utf8(&path, apr_target, pool));
-      path = svn_path_canonicalize(path, pool);
+         As JavaHL is designed to be platform independent I assume users
+         don't want this broken behavior on non round-trippable paths, nor
+         the performance penalty.
+       */
 
+      path = svn_path_internal_style(path, pool);
     }
+    /* strip any trailing '/' */
+    path = svn_path_canonicalize(path, pool);
+
   return NULL;
 }

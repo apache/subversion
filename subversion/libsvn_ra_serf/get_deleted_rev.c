@@ -225,7 +225,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&drev_ctx->done, ras, pool);
-  
+
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.5.x servers and older don't support this report. */
   if (status_code == 501)
