@@ -27,6 +27,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
+#include "svn_string.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -38,40 +39,158 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_skel.h"
 
 #include "wc-metadata.h"
 
-/* TODO: Determine the real value of this number. */
-#define WC_DB_SCHEMA_FORMAT 1
+#define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
-static const char * const upgrade_sql[] = { NULL,
-  WC_METADATA_SQL
-  };
+static const char * const upgrade_sql[] = { NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, WC_METADATA_SQL };
 
 /* This values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */
 enum statement_keys {
   STMT_INSERT_REPOSITORY,
   STMT_INSERT_WCROOT,
-  STMT_INSERT_BASE_NODE
+  STMT_INSERT_BASE_NODE,
+  STMT_INSERT_WORKING_NODE,
+  STMT_INSERT_ACTUAL_NODE,
+  STMT_INSERT_CHANGELIST,
+  STMT_SELECT_REPOSITORY,
+  STMT_SELECT_WCROOT_NULL,
+  STMT_SELECT_REPOSITORY_BY_ID,
+  STMT_SELECT_BASE_NODE,
+  STMT_SELECT_WORKING_NODE,
+  STMT_SELECT_ACTUAL_NODE
 };
 
 static const char * const statements[] = {
   "insert into repository (root, uuid) "
-  "values (:1, :2);",
+  "values (?1, ?2);",
 
   "insert into wcroot (local_abspath) "
-  "values (:1);",
+  "values (?1);",
 
   "insert or replace into base_node "
     "(wc_id, local_relpath, repos_id, repos_relpath, parent_id, revnum, "
      "kind, checksum, translated_size, changed_rev, changed_date, "
      "changed_author, depth, last_mod_time, properties, incomplete_children)"
-  "values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, "
-          ":15, :16);",
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
+          "?15, ?16);",
+
+  "insert or replace into working_node "
+    "(wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_id, "
+     "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
+     "translated_size, changed_rev, changed_date, changed_author, depth, "
+     "last_mod_time, properties, changelist_id, tree_conflict_data) "
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
+          "?15, ?16, ?17, ?18, ?19);",
+
+  "insert or replace into actual_node "
+    "(wc_id, local_relpath, properties, conflict_old, conflict_new, "
+     "conflict_working, prop_reject, changelist_id) "
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);",
+
+  "insert or replace into changelist "
+    "(wc_id, name) "
+  "values (?1, ?2);",
+
+  "select id, root from repository where uuid = ?1;",
+
+  "select id from wcroot where local_abspath is null;",
+
+  "select root, uuid from repository where id = ?1;",
+
+  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_id, "
+    "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
+    "changed_author, depth, last_mod_time, properties, incomplete_children "
+  "from base_node;",
+
+  "select id, wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_id, "
+    "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
+    "translated_size, changed_rev, changed_date, changed_author, depth, "
+    "last_mod_time, properties, changelist_id, tree_conflict_data "
+  "from working_node;",
+
+  "select id, wc_id, local_relpath, properties, conflict_old, conflict_new, "
+     "conflict_working, prop_reject, changelist_id "
+  "from actual_node;",
 
   NULL
   };
+
+/* Temporary structures which mirror the tables in wc-metadata.sql.
+   For detailed descriptions of each field, see that file. */
+typedef struct {
+  apr_int64_t id;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+  apr_int64_t parent_id;
+  svn_revnum_t revision;
+  svn_node_kind_t kind;
+  svn_checksum_t *checksum;
+  apr_size_t translated_size;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  svn_depth_t depth;
+  apr_time_t last_mod_time;
+  apr_hash_t *properties;
+  apr_int64_t incomplete_children;
+} db_base_node_t;
+
+typedef struct {
+  apr_int64_t id;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  const char *parent_relpath;
+  svn_node_kind_t kind;
+  apr_int64_t copyfrom_repos_id;
+  const char *copyfrom_repos_path;
+  svn_revnum_t copyfrom_revnum;
+  const char *moved_from;
+  const char *moved_to;
+  svn_checksum_t *checksum;
+  apr_size_t translated_size;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  svn_depth_t depth;
+  apr_time_t last_mod_time;
+  apr_hash_t *properties;
+  apr_int64_t changelist_id;
+  const char *tree_conflict_data;
+} db_working_node_t;
+
+typedef struct {
+  apr_int64_t id;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  apr_hash_t *properties;
+  const char *conflict_old;
+  const char *conflict_new;
+  const char *conflict_working;
+  const char *prop_reject;
+  apr_int64_t changelist_id;
+} db_actual_node_t;
+
+typedef struct {
+  apr_int64_t id;
+  apr_int64_t wc_id;
+  const char *name;
+} db_changelist_t;
+
+typedef struct {
+  const char *url;
+  const char *lock_token;
+  const char *lock_owner;
+  const char *lock_comment;
+  apr_time_t lock_date;
+} db_lock_t;
+
 
 
 /** Overview **/
@@ -89,6 +208,8 @@ static const char * const statements[] = {
 
 /*** Working with the entries sqlite database ***/
 
+#ifdef FROM_EXPLORE_WC
+
 /* Return the location of the sqlite database containing the entry information
    for PATH in the filesystem.  Allocate in RESULT_POOL. ***/
 static const char *
@@ -97,6 +218,8 @@ db_path(const char *path,
 {
   return svn_wc__adm_child(path, "wc.db", result_pool);
 }
+
+#endif
 
 
 /*** reading and writing the entries file ***/
@@ -547,15 +670,399 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 }
 
 
+#ifdef FROM_EXPLORE_WC
+
+/* Select all the rows from base_node table in WC_DB and put them into *NODES,
+   allocated in RESULT_POOL. */
+static svn_error_t *
+fetch_base_nodes(apr_hash_t **nodes,
+                 svn_sqlite__db_t *wc_db,
+                 apr_pool_t *scratch_pool,
+                 apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *nodes = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      apr_size_t len;
+      const void *val;
+      db_base_node_t *base_node = apr_pcalloc(result_pool,
+                                              sizeof(*base_node));
+
+      base_node->wc_id = svn_sqlite__column_int(stmt, 1);
+      base_node->local_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
+
+      if (!svn_sqlite__column_is_null(stmt, 3))
+        {
+          base_node->repos_id = svn_sqlite__column_int(stmt, 3);
+          base_node->repos_relpath = svn_sqlite__column_text(stmt, 4,
+                                                             result_pool);
+        }
+
+      if (!svn_sqlite__column_is_null(stmt, 5))
+        base_node->parent_id = svn_sqlite__column_int(stmt, 5);
+
+      base_node->revision = svn_sqlite__column_int(stmt, 6);
+      base_node->kind = svn_node_kind_from_word(
+                                    svn_sqlite__column_text(stmt, 7, NULL));
+
+      if (!svn_sqlite__column_is_null(stmt, 8))
+        {
+          const char *digest = svn_sqlite__column_text(stmt, 8, NULL);
+          svn_checksum_kind_t kind = (digest[1] == 'm'
+                                      ? svn_checksum_md5 : svn_checksum_sha1);
+          SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, kind,
+                                         digest + 6, result_pool));
+        }
+
+      base_node->translated_size = svn_sqlite__column_int(stmt, 9);
+
+      base_node->changed_rev = svn_sqlite__column_int(stmt, 10);
+      base_node->changed_date = svn_sqlite__column_int(stmt, 11);
+      base_node->changed_author = svn_sqlite__column_text(stmt, 12,
+                                                          result_pool);
+
+      base_node->depth = svn_depth_from_word(
+                                    svn_sqlite__column_text(stmt, 13, NULL));
+      base_node->last_mod_time = svn_sqlite__column_int(stmt, 14);
+
+      val = svn_sqlite__column_blob(stmt, 15, &len);
+      SVN_ERR(svn_skel__parse_proplist(&base_node->properties,
+                                       svn_skel__parse(val, len, scratch_pool),
+                                       result_pool));
+
+      base_node->incomplete_children = svn_sqlite__column_int(stmt, 16);
+
+      apr_hash_set(*nodes, base_node->local_relpath, APR_HASH_KEY_STRING,
+                   base_node);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Select all the rows from working_node table in WC_DB and put them into
+   *NODES allocated in RESULT_POOL. */
+static svn_error_t *
+fetch_working_nodes(apr_hash_t **nodes,
+                    svn_sqlite__db_t *wc_db,
+                    apr_pool_t *scratch_pool,
+                    apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *nodes = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      apr_size_t len;
+      const void *val;
+      db_working_node_t *working_node = apr_pcalloc(result_pool,
+                                                    sizeof(*working_node));
+
+      working_node->wc_id = svn_sqlite__column_int(stmt, 1);
+      working_node->local_relpath = svn_sqlite__column_text(stmt, 2,
+                                                            result_pool);
+      working_node->parent_relpath = svn_sqlite__column_text(stmt, 3,
+                                                             result_pool);
+      working_node->kind = svn_node_kind_from_word(
+                                     svn_sqlite__column_text(stmt, 4, NULL));
+
+      if (!svn_sqlite__column_is_null(stmt, 5))
+        {
+          working_node->copyfrom_repos_id = svn_sqlite__column_int(stmt, 5);
+          working_node->copyfrom_repos_path = svn_sqlite__column_text(stmt, 6,
+                                                                result_pool);
+          working_node->copyfrom_revnum = svn_sqlite__column_revnum(stmt, 7);
+        }
+
+      if (!svn_sqlite__column_is_null(stmt, 8))
+        working_node->moved_from = svn_sqlite__column_text(stmt, 8,
+                                                           result_pool);
+
+      if (!svn_sqlite__column_is_null(stmt, 9))
+        working_node->moved_to = svn_sqlite__column_text(stmt, 9, result_pool);
+
+      if (!svn_sqlite__column_is_null(stmt, 10))
+        {
+          const char *digest = svn_sqlite__column_text(stmt, 10, NULL);
+          svn_checksum_kind_t kind = (digest[1] == 'm'
+                                      ? svn_checksum_md5 : svn_checksum_sha1);
+          SVN_ERR(svn_checksum_parse_hex(&working_node->checksum, kind,
+                                         digest + 6, result_pool));
+          working_node->translated_size = svn_sqlite__column_int(stmt, 11);
+        }
+
+      if (!svn_sqlite__column_is_null(stmt, 12))
+        {
+          working_node->changed_rev = svn_sqlite__column_revnum(stmt, 12);
+          working_node->changed_date = svn_sqlite__column_int(stmt, 13);
+          working_node->changed_author = svn_sqlite__column_text(stmt, 14,
+                                                                 result_pool);
+        }
+
+      working_node->depth = svn_depth_from_word(
+                                    svn_sqlite__column_text(stmt, 15, NULL));
+      working_node->last_mod_time = svn_sqlite__column_int(stmt, 16);
+
+      val = svn_sqlite__column_blob(stmt, 17, &len);
+      SVN_ERR(svn_skel__parse_proplist(&working_node->properties,
+                                       svn_skel__parse(val, len, scratch_pool),
+                                       result_pool));
+
+      if (!svn_sqlite__column_is_null(stmt, 18))
+        working_node->changelist_id = svn_sqlite__column_int(stmt, 18);
+
+      if (!svn_sqlite__column_is_null(stmt, 19))
+        working_node->tree_conflict_data = svn_sqlite__column_text(stmt, 19,
+                                                                result_pool);
+
+      apr_hash_set(*nodes, working_node->local_relpath, APR_HASH_KEY_STRING,
+                   working_node);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Select all the rows from actual_node table in WC_DB and put them into
+   *NODES allocated in RESULT_POOL. */
+static svn_error_t *
+fetch_actual_nodes(apr_hash_t **nodes,
+                   svn_sqlite__db_t *wc_db,
+                   apr_pool_t *scratch_pool,
+                   apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *nodes = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      db_actual_node_t *actual_node = apr_pcalloc(result_pool,
+                                                  sizeof(*actual_node));
+
+      actual_node->wc_id = svn_sqlite__column_int(stmt, 1);
+      actual_node->local_relpath = svn_sqlite__column_text(stmt, 2,
+                                                           result_pool);
+
+      if (!svn_sqlite__column_is_null(stmt, 3))
+        {
+          apr_size_t len;
+          const void *val;
+
+          val = svn_sqlite__column_blob(stmt, 3, &len);
+          SVN_ERR(svn_skel__parse_proplist(&actual_node->properties,
+                                           svn_skel__parse(val, len,
+                                                           scratch_pool),
+                                           result_pool));
+        }
+
+      if (!svn_sqlite__column_is_null(stmt, 4))
+        {
+          actual_node->conflict_old = svn_sqlite__column_text(stmt, 4,
+                                                              result_pool);
+          actual_node->conflict_new = svn_sqlite__column_text(stmt, 5,
+                                                              result_pool);
+          actual_node->conflict_working = svn_sqlite__column_text(stmt, 6,
+                                                                  result_pool);
+        }
+
+      if (!svn_sqlite__column_is_null(stmt, 7))
+        actual_node->prop_reject = svn_sqlite__column_text(stmt, 7,
+                                                           result_pool);
+
+      if (!svn_sqlite__column_is_null(stmt, 8))
+        actual_node->changelist_id = svn_sqlite__column_int(stmt, 8);
+
+      apr_hash_set(*nodes, actual_node->local_relpath, APR_HASH_KEY_STRING,
+                   actual_node);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_repos_info(const char **repos_root,
+               const char **repos_uuid,
+               svn_sqlite__db_t *wc_db,
+               apr_int64_t repos_id,
+               apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                    STMT_SELECT_REPOSITORY_BY_ID));
+  SVN_ERR(svn_sqlite__bindf(stmt, "i", repos_id));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("No REPOSITORY table entry for id '%ld'"),
+                             repos_id);
+
+  *repos_root = svn_sqlite__column_text(stmt, 0, result_pool);
+  *repos_uuid = svn_sqlite__column_text(stmt, 1, result_pool);
+
+  return svn_sqlite__reset(stmt);
+}
+
+#endif /* FROM_EXPLORE_WC */
 
 /* Fill the entries cache in ADM_ACCESS. The full hash cache will be
-   populated.  POOL is used for local memory allocation, the access baton
-   pool is used for the cache. */
+   populated.  SCRATCH_POOL is used for local memory allocation, the access
+   baton pool is used for the cache. */
 static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
              apr_pool_t *scratch_pool)
 {
   return svn_wc__read_entries_old(adm_access, scratch_pool);
+
+#ifdef FROM_EXPLORE_WC
+  apr_hash_t *base_nodes;
+  apr_hash_t *working_nodes;
+  apr_hash_t *actual_nodes;
+  svn_sqlite__db_t *wc_db;
+  apr_hash_index_t *hi;
+  const char *repos_root = NULL;
+  const char *repos_uuid = NULL;
+  apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
+  apr_hash_t *entries = apr_hash_make(result_pool);
+  const char *wc_db_path = db_path(svn_wc_adm_access_path(adm_access),
+                                   scratch_pool);
+  
+  /* Open the wc.db sqlite database. */
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readwrite,
+                           statements, SVN_WC__VERSION, upgrade_sql,
+                           scratch_pool, scratch_pool));
+
+  /* The basic strategy here is to get all the node information from the
+     database for the directory in question and convert that to
+     svn_wc_entry_t structs.  To do that, we fetch each of the nodes from
+     the three node tables into a hash, then iterate over them, linking them
+     together as required.
+
+     TODO: A smarter way would be to craft a query using the correct type of
+     outer join so that we can get all the nodes in one fell swoop.  However,
+     that takes more thought and effort than I'm willing to invest right now.
+     We can put it on the stack of future optimizations. */
+
+  SVN_ERR(fetch_base_nodes(&base_nodes, wc_db, scratch_pool, scratch_pool));
+  SVN_ERR(fetch_working_nodes(&working_nodes, wc_db, scratch_pool,
+                              scratch_pool));
+  SVN_ERR(fetch_actual_nodes(&actual_nodes, wc_db, scratch_pool, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, base_nodes); hi;
+        hi = apr_hash_next(hi))
+    {
+      db_base_node_t *base_node;
+      db_working_node_t *working_node;
+      db_actual_node_t *actual_node;
+      const char *rel_path;
+      svn_wc_entry_t *entry = alloc_entry(result_pool);
+
+      apr_hash_this(hi, (const void **) &rel_path, NULL, (void **) &base_node);
+
+      /* Get any corresponding working and actual nodes, removing them from
+         their respective hashs to indicate we've seen them. */
+      working_node = apr_hash_get(working_nodes, rel_path, APR_HASH_KEY_STRING);
+      apr_hash_set(working_nodes, rel_path, APR_HASH_KEY_STRING, NULL);
+      actual_node = apr_hash_get(actual_nodes, rel_path, APR_HASH_KEY_STRING);
+      apr_hash_set(actual_nodes, rel_path, APR_HASH_KEY_STRING, NULL);
+
+      entry->name = apr_pstrdup(result_pool, base_node->local_relpath);
+
+      if (working_node && working_node->kind == svn_node_none)
+        entry->schedule = svn_wc_schedule_delete;
+      else
+        entry->schedule = svn_wc_schedule_normal;
+
+      if (base_node->repos_id)
+        {
+          if (repos_root == NULL)
+            SVN_ERR(get_repos_info(&repos_root, &repos_uuid, wc_db,
+                                   base_node->repos_id, result_pool));
+
+          entry->uuid = repos_uuid;
+          entry->url = svn_path_join(repos_root, base_node->repos_relpath,
+                                     result_pool);
+          entry->repos = repos_root;
+        }
+
+      if (working_node && (working_node->copyfrom_repos_path != NULL))
+        entry->copied = TRUE;
+
+      if (base_node->checksum)
+        entry->checksum = svn_checksum_to_cstring(base_node->checksum,
+                                                  result_pool);
+
+      if (actual_node && (actual_node->conflict_old != NULL))
+        {
+          entry->conflict_old = apr_pstrdup(result_pool,
+                                            actual_node->conflict_old);
+          entry->conflict_new = apr_pstrdup(result_pool,
+                                            actual_node->conflict_new);
+          entry->conflict_wrk = apr_pstrdup(result_pool,
+                                            actual_node->conflict_working);
+        }
+
+      if (actual_node && (actual_node->prop_reject != NULL))
+        entry->prejfile = apr_pstrdup(result_pool, actual_node->prop_reject);
+
+      entry->depth = base_node->depth;
+      entry->revision = base_node->revision;
+      entry->kind = base_node->kind;
+
+      entry->incomplete = (base_node->incomplete_children > 0);
+
+      apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+    }
+
+  /* Loop over any additional working nodes. */
+  for (hi = apr_hash_first(scratch_pool, working_nodes); hi;
+        hi = apr_hash_next(hi))
+    {
+      db_working_node_t *working_node;
+      const char *rel_path;
+      svn_wc_entry_t *entry = alloc_entry(result_pool);
+
+      apr_hash_this(hi, (const void **) &rel_path, NULL,
+                    (void **) &working_node);
+      entry->name = apr_pstrdup(result_pool, working_node->local_relpath);
+
+      /* This node is in WORKING, but not in BASE, so it must be an add. */
+      entry->schedule = svn_wc_schedule_add;
+
+      if (working_node->copyfrom_repos_path != NULL)
+        entry->copied = TRUE;
+
+      if (working_node->checksum)
+        entry->checksum = svn_checksum_to_cstring(working_node->checksum,
+                                                  result_pool);
+      entry->kind = working_node->kind;
+      entry->revision = 0;
+
+      apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+    }
+
+  /* Fill in any implied fields. */
+  SVN_ERR(resolve_to_defaults(entries, result_pool));
+  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
+
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* For non-directory PATHs full entry information is obtained by reading
@@ -656,6 +1163,462 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
+#ifdef FROM_EXPLORE_WC
+
+
+static svn_error_t *
+insert_base_node(svn_sqlite__db_t *wc_db,
+                 db_base_node_t *base_node,
+                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_stringbuf_t *properties;
+  svn_skel_t *skel;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_BASE_NODE));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, base_node->wc_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, base_node->local_relpath));
+
+  if (base_node->repos_id)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 3, base_node->repos_id));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 4, base_node->repos_relpath));
+    }
+
+  if (base_node->parent_id)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 5, base_node->parent_id));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, base_node->revision));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 7,
+                                svn_node_kind_to_word(base_node->kind)));
+
+  if (base_node->checksum)
+    {
+      const char *kind_str = (base_node->checksum->kind == svn_checksum_md5
+                              ? "$md5 $" : "$sha1$");
+      SVN_ERR(svn_sqlite__bind_text(stmt, 8, apr_pstrcat(scratch_pool,
+                    kind_str, svn_checksum_to_cstring(base_node->checksum,
+                                                      scratch_pool), NULL)));
+    }
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 9, base_node->translated_size));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->changed_rev));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_date));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 12, base_node->changed_author));
+
+  SVN_ERR(svn_sqlite__bind_text(stmt, 13, svn_depth_to_word(base_node->depth)));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 14, base_node->last_mod_time));
+
+  if (base_node->properties)
+    SVN_ERR(svn_skel__unparse_proplist(&skel, base_node->properties,
+                                       scratch_pool));
+  else
+    skel = svn_skel__make_empty_list(scratch_pool);
+
+  properties = svn_skel__unparse(skel, scratch_pool);
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 15, properties->data, properties->len));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 16, base_node->incomplete_children));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(NULL, stmt);
+}
+
+static svn_error_t *
+insert_working_node(svn_sqlite__db_t *wc_db,
+                    db_working_node_t *working_node,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_stringbuf_t *properties;
+  svn_skel_t *skel;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WORKING_NODE));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, working_node->wc_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, working_node->local_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, working_node->parent_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                svn_node_kind_to_word(working_node->kind)));
+
+  if (working_node->copyfrom_repos_id > 0)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 5,
+                                     working_node->copyfrom_repos_id));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 6,
+                                    working_node->copyfrom_repos_path));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 7, working_node->copyfrom_revnum));
+    }
+
+  if (working_node->moved_from)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, working_node->moved_from));
+
+  if (working_node->moved_to)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 9, working_node->moved_to));
+
+  if (working_node->checksum)
+    {
+      const char *kind_str = (working_node->checksum->kind == svn_checksum_md5
+                              ? "$md5 $" : "$sha1$");
+      SVN_ERR(svn_sqlite__bind_text(stmt, 10, apr_pstrcat(scratch_pool,
+                    kind_str, svn_checksum_to_cstring(working_node->checksum,
+                                                      scratch_pool), NULL)));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 11, working_node->translated_size));
+    }
+
+  if (working_node->changed_rev != SVN_INVALID_REVNUM)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->changed_rev));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_date));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 14, working_node->changed_author));
+    }
+
+  SVN_ERR(svn_sqlite__bind_text(stmt, 15,
+                                svn_depth_to_word(working_node->depth)));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 16, working_node->last_mod_time));
+
+  if (working_node->properties)
+    SVN_ERR(svn_skel__unparse_proplist(&skel, working_node->properties,
+                                       scratch_pool));
+  else
+    skel = svn_skel__make_empty_list(scratch_pool);
+
+  properties = svn_skel__unparse(skel, scratch_pool);
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 17, properties->data, properties->len));
+
+  if (working_node->changelist_id > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 18, working_node->changelist_id));
+
+  if (working_node->tree_conflict_data)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 19, working_node->tree_conflict_data));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(NULL, stmt);
+}
+
+static svn_error_t *
+insert_actual_node(svn_sqlite__db_t *wc_db,
+                   db_actual_node_t *actual_node,
+                   apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_stringbuf_t *properties;
+  svn_skel_t *skel;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_ACTUAL_NODE));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, actual_node->wc_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, actual_node->local_relpath));
+
+  if (actual_node->properties)
+    SVN_ERR(svn_skel__unparse_proplist(&skel, actual_node->properties,
+                                       scratch_pool));
+  else
+    skel = svn_skel__make_empty_list(scratch_pool);
+
+  properties = svn_skel__unparse(skel, scratch_pool);
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 3, properties->data, properties->len));
+
+  if (actual_node->conflict_old)
+    {
+      SVN_ERR(svn_sqlite__bind_text(stmt, 4, actual_node->conflict_old));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 5, actual_node->conflict_new));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 6, actual_node->conflict_working));
+    }
+
+  if (actual_node->prop_reject)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->prop_reject));
+
+  if (actual_node->changelist_id > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, actual_node->changelist_id));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(NULL, stmt);
+}
+
+static svn_error_t *
+insert_changelist(svn_sqlite__db_t *wc_db,
+                  db_changelist_t *changelist,
+                  apr_int64_t *changelist_id,
+                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_CHANGELIST));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t) changelist->wc_id,
+                            changelist->name));
+
+  /* Execute and reset the insert clause. */
+  return svn_sqlite__insert(changelist_id, stmt);
+}
+
+/* Write the information for ENTRY to WC_DB.  The WC_ID, REPOS_ID and
+   REPOS_ROOT will all be used for writing ENTRY. */
+static svn_error_t *
+write_entry(svn_sqlite__db_t *wc_db,
+            apr_int64_t wc_id,
+            apr_int64_t repos_id,
+            const char *repos_root,
+            const svn_wc_entry_t *entry,
+            const char *name,
+            const svn_wc_entry_t *this_dir,
+            apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  db_base_node_t *base_node = NULL;
+  db_working_node_t *working_node = NULL;
+  db_actual_node_t *actual_node = NULL;
+
+  switch (entry->schedule)
+    {
+      case svn_wc_schedule_normal:
+        base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        break;
+
+      case svn_wc_schedule_add:
+        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        break;
+
+      case svn_wc_schedule_delete:
+      case svn_wc_schedule_replace:
+        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        break;
+    }
+
+  if (entry->copied)
+    {
+      working_node = MAYBE_ALLOC(working_node, scratch_pool);
+      working_node->copyfrom_repos_path = entry->copyfrom_url;
+      working_node->copyfrom_revnum = entry->copyfrom_rev;
+    }
+
+  if (entry->deleted)
+    working_node = MAYBE_ALLOC(working_node, scratch_pool);
+
+  if (entry->absent)
+    {
+      /* TODO: Adjust kinds to absent kinds. */
+    }
+
+  if (entry->incomplete)
+    {
+      base_node = MAYBE_ALLOC(base_node, scratch_pool);
+      /* TODO: how do we find the exact number of incomplete children? */
+      base_node->incomplete_children = 1;
+    }
+
+  if (entry->conflict_old)
+    {
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->conflict_old = entry->conflict_old;
+      actual_node->conflict_new = entry->conflict_new;
+      actual_node->conflict_working = entry->conflict_wrk;
+    }
+
+  if (entry->prejfile)
+    {
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->prop_reject = entry->prejfile;
+    }
+
+  if (entry->changelist)
+    {
+      db_changelist_t changelist;
+      apr_int64_t changelist_id;
+
+      changelist.wc_id = wc_id;
+      changelist.name = entry->changelist;
+
+      SVN_ERR(insert_changelist(wc_db, &changelist, &changelist_id,
+                                scratch_pool));
+
+      if (working_node)
+        working_node->changelist_id = changelist_id;
+      if (actual_node)
+        actual_node->changelist_id = changelist_id;
+    }
+
+  /* Insert the base node. */
+  if (base_node)
+    {
+      base_node->wc_id = wc_id;
+      base_node->local_relpath = name;
+      base_node->kind = entry->kind;
+      base_node->revision = entry->revision;
+      base_node->depth = entry->depth;
+
+      if (entry->kind == svn_node_dir)
+        base_node->checksum = NULL;
+      else
+        SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
+                                       entry->checksum, scratch_pool));
+
+      if (repos_root)
+        {
+          base_node->repos_id = repos_id;
+          if (entry->url != NULL)
+            {
+              base_node->repos_relpath = svn_path_is_child(repos_root,
+                                                           entry->url,
+                                                           scratch_pool);
+
+              if (base_node->repos_relpath == NULL)
+                base_node->repos_relpath = "";
+            }
+          else
+            {
+              const char *base_path = svn_path_is_child(repos_root,
+                                                        this_dir->url,
+                                                        scratch_pool);
+              if (base_path == NULL)
+                base_path = repos_root;
+
+              base_node->repos_relpath = svn_path_join(base_path, entry->name,
+                                                       scratch_pool);
+            }
+        }
+      /* TODO: These values should always be present, if they are missing
+         during an upgrade, set a flag, and then ask the user to talk to the
+         server. */
+      base_node->changed_rev = entry->cmt_rev;
+      base_node->changed_date = entry->cmt_date;
+      base_node->changed_author = entry->cmt_author == NULL
+                                        ? "<unknown author>"
+                                        : entry->cmt_author;
+
+      SVN_ERR(insert_base_node(wc_db, base_node, scratch_pool));
+    }
+
+  /* Insert the working node. */
+  if (working_node)
+    {
+      working_node->wc_id = wc_id;
+      working_node->local_relpath = name;
+      working_node->parent_relpath = "";
+      working_node->depth = entry->depth;
+
+      if (entry->kind == svn_node_dir)
+        working_node->checksum = NULL;
+      else
+        SVN_ERR(svn_checksum_parse_hex(&working_node->checksum,
+                                       svn_checksum_md5,
+                                       entry->checksum, scratch_pool));
+
+      if (entry->schedule == svn_wc_schedule_delete)
+        working_node->kind = svn_node_none;
+      else
+        working_node->kind = entry->kind;
+
+      SVN_ERR(insert_working_node(wc_db, working_node, scratch_pool));
+    }
+
+  /* Insert the actual node. */
+  if (actual_node)
+    {
+      actual_node->wc_id = wc_id;
+      actual_node->local_relpath = name;
+
+      SVN_ERR(insert_actual_node(wc_db, actual_node, scratch_pool));
+    }
+
+  svn_pool_destroy(scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton for use with entries_write_body(). */
+struct entries_write_txn_baton
+{
+  apr_hash_t *entries;
+  const svn_wc_entry_t *this_dir;
+  apr_pool_t *scratch_pool;
+};
+
+/* Actually do the sqlite work within a transaction.
+   This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+entries_write_body(void *baton,
+                   svn_sqlite__db_t *wc_db)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_hash_index_t *hi;
+  struct entries_write_txn_baton *ewtb = baton;
+  apr_pool_t *iterpool = svn_pool_create(ewtb->scratch_pool);
+  const char *repos_root;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
+
+  /* Get the repos ID. */
+  if (ewtb->this_dir->uuid != NULL)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "s", ewtb->this_dir->uuid));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+        return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                                 _("No REPOSITORY table entry for uuid '%s'"),
+                                 ewtb->this_dir->uuid);
+
+      repos_id = svn_sqlite__column_int(stmt, 0);
+      repos_root = svn_sqlite__column_text(stmt, 1, ewtb->scratch_pool);
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+  else
+    {
+      repos_id = 0;
+      repos_root = NULL;
+    }
+
+  /* Get the wc ID. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
+  wc_id = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Write out "this dir" */
+  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, ewtb->this_dir,
+                      SVN_WC_ENTRY_THIS_DIR, ewtb->this_dir,
+                      ewtb->scratch_pool));
+
+  for (hi = apr_hash_first(ewtb->scratch_pool, ewtb->entries); hi;
+        hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const svn_wc_entry_t *this_entry;
+
+      svn_pool_clear(iterpool);
+
+      /* Get the entry and make sure its attributes are up-to-date. */
+      apr_hash_this(hi, &key, NULL, &val);
+      this_entry = val;
+
+      /* Don't rewrite the "this dir" entry! */
+      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      /* Write the entry. */
+      SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
+                          this_entry, key, ewtb->this_dir, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+#endif /* FROM_EXPLORE_WC */
+
+
 svn_error_t *
 svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
@@ -665,13 +1628,8 @@ svn_wc__entries_write(apr_hash_t *entries,
 
 #ifdef FROM_EXPLORE_WC
   svn_sqlite__db_t *wc_db;
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_stringbuf_t *bigstr = NULL;
-  svn_stream_t *stream;
-  const char *temp_file_path;
-  apr_hash_index_t *hi;
-  svn_wc_entry_t *this_dir;
-  apr_size_t len;
+  const svn_wc_entry_t *this_dir;
+  struct entries_write_txn_baton ewtb;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -690,79 +1648,18 @@ svn_wc__entries_write(apr_hash_t *entries,
   SVN_ERR(svn_sqlite__open(&wc_db,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
                            svn_sqlite__mode_readwrite, statements,
-                           WC_DB_SCHEMA_FORMAT, upgrade_sql, pool, pool));
+                           SVN_WC__VERSION, upgrade_sql, pool, pool));
 
-  SVN_ERR(svn_sqlite__transaction_begin(wc_db));
-
-  /* Open entries file for writing.  It's important we don't use APR_EXCL
-   * here.  Consider what happens if a log file is interrupted, it may
-   * leave a .svn/tmp/entries file behind.  Then when cleanup reruns the
-   * log file, and it attempts to modify the entries file, APR_EXCL would
-   * cause an error that prevents cleanup running.  We don't use log file
-   * tags such as SVN_WC__LOG_MV to move entries files so any existing file
-   * is not "valuable".
-   */
-  SVN_ERR(svn_wc__open_adm_writable(&stream,
-                                    &temp_file_path,
-                                    svn_wc_adm_access_path(adm_access),
-                                    SVN_WC__ADM_ENTRIES,
-                                    pool, pool));
-
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
-    {
-      apr_pool_t *subpool = svn_pool_create(pool);
-      bigstr = svn_stringbuf_createf(pool, "%d\n",
-                                     svn_wc__adm_wc_format(adm_access));
-      /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, wc_db, 0, this_dir, SVN_WC_ENTRY_THIS_DIR,
-                          this_dir, pool));
-
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          svn_wc_entry_t *this_entry;
-
-          svn_pool_clear(subpool);
-
-          /* Get the entry and make sure its attributes are up-to-date. */
-          apr_hash_this(hi, &key, NULL, &val);
-          this_entry = val;
-
-          /* Don't rewrite the "this dir" entry! */
-          if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-            continue;
-
-          /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, wc_db, 0, this_entry, key, this_dir,
-                              subpool));
-        }
-
-      svn_pool_destroy(subpool);
-    }
-  else
-    /* This is needed during cleanup of a not yet upgraded WC. */
-    SVN_ERR(write_entries_xml(&bigstr, entries, this_dir, pool));
-
-  len = bigstr->len;
-  SVN_ERR_W(svn_stream_write(stream, bigstr->data, &len),
-            apr_psprintf(pool,
-                         _("Error writing to '%s'"),
-                         svn_path_local_style
-                         (svn_wc_adm_access_path(adm_access), pool)));
-
-  err = svn_wc__close_adm_stream(stream, temp_file_path,
-                                 svn_wc_adm_access_path(adm_access),
-                                 SVN_WC__ADM_ENTRIES, pool);
+  /* Do the work in a transaction. */
+  ewtb.entries = entries;
+  ewtb.this_dir = this_dir;
+  ewtb.scratch_pool = pool;
+  SVN_ERR(svn_sqlite__with_transaction(wc_db, entries_write_body, &ewtb));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
 
-  /* TODO: Ignoring the error for now. */
-  svn_sqlite__transaction_commit(wc_db);
-  svn_sqlite__close(wc_db, SVN_NO_ERROR);
-
-  return err;
+  return SVN_NO_ERROR;
 #endif /* FROM_EXPLORE_WC */
 }
 
@@ -1465,6 +2362,61 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 
 /*** Initialization of the entries file. ***/
 
+#ifdef FROM_EXPLORE_WC
+
+/* Baton for use with init_body() */
+struct init_txn_baton
+{
+  const char *uuid;
+  const char *url;
+  const char *repos;
+  svn_revnum_t initial_rev;
+  svn_depth_t depth;
+  apr_pool_t *scratch_pool;
+};
+
+/* Actually do the sqlite work within a transaction.
+   This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+init_body(void *baton,
+          svn_sqlite__db_t *wc_db)
+{
+  struct init_txn_baton *itb = baton;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t wc_id;
+  apr_int64_t repos_id;
+  svn_wc_entry_t *entry = alloc_entry(itb->scratch_pool);
+
+  /* Insert the repository. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", itb->repos, itb->uuid));
+  SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
+
+  /* Insert the wcroot. */
+  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
+
+  /* Add an entry for the dir itself.  The directory has no name.  It
+     might have a UUID, but otherwise only the revision and default
+     ancestry are present as XML attributes, and possibly an
+     'incomplete' flag if the revnum is > 0. */
+
+  entry->kind = svn_node_dir;
+  entry->url = itb->url;
+  entry->revision = itb->initial_rev;
+  entry->uuid = itb->uuid;
+  entry->repos = itb->repos;
+  entry->depth = itb->depth;
+  if (itb->initial_rev > 0)
+    entry->incomplete = TRUE;
+
+  return write_entry(wc_db, wc_id, repos_id, itb->repos, entry,
+                     SVN_WC_ENTRY_THIS_DIR, entry, itb->scratch_pool);
+}
+
+#endif
+
 svn_error_t *
 svn_wc__entries_init(const char *path,
                      const char *uuid,
@@ -1477,28 +2429,16 @@ svn_wc__entries_init(const char *path,
   return svn_wc__entries_init_old(path, uuid, url, repos, initial_rev,
                                   depth, pool);
 #ifdef FROM_EXPLORE_WC
-  svn_stream_t *stream;
-  const char *temp_file_path;
   svn_node_kind_t kind;
-  svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
-                                                 SVN_WC__VERSION);
-  svn_wc_entry_t *entry = alloc_entry(pool);
-  apr_size_t len;
   svn_sqlite__db_t *wc_db;
-  apr_int64_t wc_id;
-  svn_sqlite__stmt_t *stmt;
   const char *wc_db_path = db_path(path, pool);
-  const char *abs_path;
+  struct init_txn_baton itb;
 
   SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
                  || depth == svn_depth_files
                  || depth == svn_depth_immediates
                  || depth == svn_depth_infinity);
-
-  /* Create the entries file, which must not exist prior to this. */
-  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
-                                    path, SVN_WC__ADM_ENTRIES, pool, pool));
 
   /* Check that the entries sqlite database does not yet exist. */
   SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
@@ -1508,56 +2448,18 @@ svn_wc__entries_init(const char *path,
                              svn_path_local_style(wc_db_path, pool));
 
   /* Create the entries database, and start a transaction. */
-  /* TODO: Need to rollback the transaction if we get an error anywehere. */
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
-                           statements, WC_DB_SCHEMA_FORMAT, upgrade_sql, pool,
+                           statements, SVN_WC__VERSION, upgrade_sql, pool,
                            pool));
-  SVN_ERR(svn_sqlite__transaction_begin(wc_db));
 
-  /* Insert the repository. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
-  /* TODO: We really shouldn't ever have a NULL uuid, but somehow it's getting
-     in here... */
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid == NULL ? "" : uuid));
-  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
-
-  /* Insert the wcroot. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_path_get_absolute(&abs_path, path, pool));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", abs_path));
-  SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
-  /* Add an entry for the dir itself.  The directory has no name.  It
-     might have a UUID, but otherwise only the revision and default
-     ancestry are present as XML attributes, and possibly an
-     'incomplete' flag if the revnum is > 0. */
-
-  entry->kind = svn_node_dir;
-  entry->url = url;
-  entry->revision = initial_rev;
-  entry->uuid = uuid;
-  entry->repos = repos;
-  entry->depth = depth;
-  if (initial_rev > 0)
-    entry->incomplete = TRUE;
-
-  SVN_ERR(write_entry(accum, wc_db, wc_id, entry, SVN_WC_ENTRY_THIS_DIR, entry,
-                      pool));
-
-  len = accum->len;
-  SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
-            apr_psprintf(pool,
-                         _("Error writing entries file for '%s'"),
-                         svn_path_local_style(path, pool)));
-
-  /* Now we have a `entries' file with exactly one entry, an entry
-     for this dir.  Close the file and sync it up. */
-  SVN_ERR(svn_wc__close_adm_stream(stream, temp_file_path, path,
-                                   SVN_WC__ADM_ENTRIES, pool));
-
-  /* Commit the sqlite transaction and close the database. */
-  SVN_ERR(svn_sqlite__transaction_commit(wc_db));
-  return svn_sqlite__close(wc_db, SVN_NO_ERROR);
+  /* Do the body of the work within an sqlite transaction. */
+  itb.uuid = uuid;
+  itb.url = url;
+  itb.repos = repos;
+  itb.initial_rev = initial_rev;
+  itb.depth = depth;
+  itb.scratch_pool = pool;
+  return svn_sqlite__with_transaction(wc_db, init_body, &itb);
 #endif /* FROM_EXPLORE_WC */
 }
 
