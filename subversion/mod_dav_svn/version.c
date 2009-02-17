@@ -1326,12 +1326,15 @@ merge(dav_resource *target,
   /* ### what to verify on the target? */
 
   /* ### anything else for the source? */
-  if (source->type != DAV_RESOURCE_TYPE_ACTIVITY)
+  if (! (source->type == DAV_RESOURCE_TYPE_ACTIVITY
+         || (source->type == DAV_RESOURCE_TYPE_PRIVATE
+             && source->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)))
     {
       return dav_svn__new_error_tag(pool, HTTP_METHOD_NOT_ALLOWED,
                                     SVN_ERR_INCORRECT_PARAMS,
                                     "MERGE can only be performed using an "
-                                    "activity as the source [at this time].",
+                                    "activity or transaction resource as the "
+                                    "source.",
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }
@@ -1410,13 +1413,16 @@ merge(dav_resource *target,
                            svn_log__commit(new_rev, target->info->r->pool));
 
   /* Since the commit was successful, the txn ID is no longer valid.
-     Store an empty txn ID in the activity database so that when the
-     client deletes the activity, we don't try to open and abort the
-     transaction. */
-  err = dav_svn__store_activity(source->info->repos,
-                                source->info->root.activity_id, "");
-  if (err != NULL)
-    return err;
+     If we're using activities, store an empty txn ID in the activity
+     database so that when the client deletes the activity, we don't
+     try to open and abort the transaction. */
+  if (source->type == DAV_RESOURCE_TYPE_ACTIVITY)
+    {
+      err = dav_svn__store_activity(source->info->repos,
+                                    source->info->root.activity_id, "");
+      if (err != NULL)
+        return err;
+    }
 
   /* Check the dav_resource->info area for information about the
      special X-SVN-Options: header that may have come in the http

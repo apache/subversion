@@ -105,21 +105,48 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
 
   /* ### if db->props exists, then try in there first */
 
-  /* Working Baseline, Baseline, or (Working) Version resource */
+  /* We've got three different types of properties (node, txn, and
+     revision), and we've got two different protocol versions to deal
+     with.  Let's try to make some sense of this, shall we?
+
+        HTTP v1:
+          working baseline ('wbl') resource        -> txn prop change
+          non-working, baselined resource ('bln')  -> rev prop change [*]
+          working, non-baselined resource ('wrk')  -> node prop change
+
+        HTTP v2:
+          transaction resource ('txn')             -> txn prop change
+          revision resource ('rev')                -> rev prop change 
+          transaction root resource ('txr')        -> node prop change
+
+     [*] This is a violation of the DeltaV spec (### see issue #916).
+
+  */
+
   if (db->resource->baselined)
-    if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+    {
+      if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+        serr = svn_fs_txn_prop(pvalue, db->resource->info->root.txn,
+                               propname, db->p);
+      else
+        serr = svn_repos_fs_revision_prop(pvalue,
+                                          db->resource->info-> repos->repos,
+                                          db->resource->info->root.rev, 
+                                          propname, db->authz_read_func,
+                                          db->authz_read_baton, db->p);
+    }
+  else if (db->resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
+    {
       serr = svn_fs_txn_prop(pvalue, db->resource->info->root.txn,
                              propname, db->p);
-    else
-      serr = svn_repos_fs_revision_prop(pvalue,
-                                        db->resource->info-> repos->repos,
-                                        db->resource->info->root.rev, propname,
-                                        db->authz_read_func,
-                                        db->authz_read_baton, db->p);
+    }
   else
-    serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
-                            get_repos_path(db->resource->info),
-                            propname, db->p);
+    {
+      serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
+                              get_repos_path(db->resource->info),
+                              propname, db->p);
+    }
+
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "could not fetch a property",
@@ -134,6 +161,7 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
 {
   const char *propname;
   svn_error_t *serr;
+  const dav_resource *resource = db->resource;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
@@ -150,59 +178,64 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
                              " namespaces.");
     }
 
-  /* HTTP v2: revprop change on an uncommitted txn happens on a
-     private 'txn' resource. */
-  if (db->resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
-    serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
-                                        propname, value,
-                                        db->resource->pool);
-    
-  else if (db->resource->baselined)
+  /* We've got three different types of properties (node, txn, and
+     revision), and we've got two different protocol versions to deal
+     with.  Let's try to make some sense of this, shall we?
+
+        HTTP v1:
+          working baseline ('wbl') resource        -> txn prop change
+          non-working, baselined resource ('bln')  -> rev prop change [*]
+          working, non-baselined resource ('wrk')  -> node prop change
+
+        HTTP v2:
+          transaction resource ('txn')             -> txn prop change
+          revision resource ('rev')                -> rev prop change 
+          transaction root resource ('txr')        -> node prop change
+
+     [*] This is a violation of the DeltaV spec (### see issue #916).
+
+  */
+
+  if (db->resource->baselined)
     {
       if (db->resource->working)
-        /* HTTP v1:  revprop change on an uncommitted txn happens on
-           a working baseline ('wbl') resource. */
-        serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
-                                            propname, value,
-                                            db->resource->pool);
+        {
+          serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
+                                              propname, value,
+                                              resource->pool);
+        }
       else
         {
-          /* Revprop change on a committed revision:
-             
-             HTTP v1:  happens on a *non*-working baselined resource
-             ('bln'), which technically violates DeltaV (### see issue #916).
-
-             HTTP v2:  happens on a standard revstub ('rev') resource,
-             which also happens to be baselined and non-working.
-           */
-          serr = svn_repos_fs_change_rev_prop3
-            (db->resource->info->repos->repos,
-             db->resource->info->root.rev,
-             db->resource->info->repos->username,
-             propname, value, TRUE, TRUE,
-             db->authz_read_func,
-             db->authz_read_baton,
-             db->resource->pool);
+          serr = svn_repos_fs_change_rev_prop3(resource->info->repos->repos,
+                                               resource->info->root.rev,
+                                               resource->info->repos->username,
+                                               propname, value, TRUE, TRUE,
+                                               db->authz_read_func,
+                                               db->authz_read_baton,
+                                               resource->pool);
           
           /* Tell the logging subsystem about the revprop change. */
-          dav_svn__operational_log(db->resource->info,
+          dav_svn__operational_log(resource->info,
                                    svn_log__change_rev_prop(
-                                      db->resource->info->root.rev,
-                                      propname,
-                                      db->resource->pool));
+                                      resource->info->root.rev,
+                                      propname, resource->pool));
         }
     }
+  else if (resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
+    {
+      serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
+                                          propname, value, resource->pool);
+    }
   else
-    /* The resource isn't baselined, nor is it private.  So it must be
-       a regular versioned propchange on a file or directory.
-       (Either 'wrk' in HTTP v1 or 'txr' in HTTP v2.) */
-    serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
-                                         get_repos_path(db->resource->info),
-                                         propname, value, db->resource->pool);
+    {
+      serr = svn_repos_fs_change_node_prop(resource->info->root.root,
+                                           get_repos_path(resource->info),
+                                           propname, value, resource->pool);
+    }
+
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                NULL,
-                                db->resource->pool);
+                                NULL, resource->pool);
 
   /* a change to the props was made; make sure our cached copy is gone */
   db->props = NULL;
@@ -220,12 +253,16 @@ db_open(apr_pool_t *p,
   dav_db *db;
   dav_svn__authz_read_baton *arb;
 
-  /* Some resource types do not have deadprop databases. Specifically:
-     REGULAR, VERSION, and WORKING resources have them. (SVN does not
-     have WORKSPACE resources, and isn't covered here) */
+  /* Some resource types do not have deadprop databases.
+     Specifically: REGULAR, VERSION, WORKING, and our custom
+     transaction and transaction root resources have them. (SVN does
+     not have WORKSPACE resources, and isn't covered here.) */
+
   if (resource->type == DAV_RESOURCE_TYPE_HISTORY
       || resource->type == DAV_RESOURCE_TYPE_ACTIVITY
-      || resource->type == DAV_RESOURCE_TYPE_PRIVATE)
+      || (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+          && resource->info->restype != DAV_SVN_RESTYPE_TXN_COLLECTION
+          && resource->info->restype != DAV_SVN_RESTYPE_TXNROOT_COLLECTION))
     {
       *pdb = NULL;
       return NULL;
@@ -233,7 +270,10 @@ db_open(apr_pool_t *p,
 
   /* If the DB is being opened R/W, and this isn't a working resource, then
      we have a problem! */
-  if (!ro && resource->type != DAV_RESOURCE_TYPE_WORKING)
+  if ((! ro)
+      && resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->type != DAV_RESOURCE_TYPE_PRIVATE
+      && resource->info->restype != DAV_SVN_RESTYPE_TXN_COLLECTION)
     {
       /* ### Exception: in violation of deltaV, we *are* allowing a
          baseline resource to receive a proppatch, as a way of
