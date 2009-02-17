@@ -963,8 +963,6 @@ find_working_add_entry_url_stuffs(const char *adm_access_path,
   svn_sqlite__db_t *wc_db;
 
   /* Open parent database. */
-  /*fprintf(stderr, "%d: access path: '%s'; relative path: '%s'; db path: '%s'\n",
-            __LINE__, adm_access_path, relative_path, wc_db_path);*/
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path,
                            svn_sqlite__mode_readwrite, statements,
                            SVN_WC__VERSION, upgrade_sql, scratch_pool,
