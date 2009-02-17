@@ -58,9 +58,21 @@ def get_md5sums():
     return sums
 
 
+def encode_multipart_form(params, boundary):
+    "Encode the given params to be output as a multipart POST"
+    lines = []
+    for key in params:
+        lines.append('--' + boundary)
+        lines.append('Content-Disposition: form-data; name="%s"' % key)
+        lines.append('')
+        lines.append(params[key])
+    return '\r\n'.join(lines)
+
+
 def add_items(opener, folderId, release_name):
     "Add the 12(!) items for a release to the given folder"
     folder_add_url = 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%d&action=Add%%20document' % folderId
+    boundary = '----------A_boundary_goes_here_$'
 
     if re.match('^\d*\.\d*\.\d*$', release_name):
       status = 'Stable'
@@ -83,11 +95,18 @@ def add_items(opener, folderId, release_name):
                 'type': 'link',
                 'url': 'http://subversion.tigris.org/downloads/%s' % filename,
                 'maxDepth': '',
+                'Button': 'Submit',
             }
 
+            headers = {
+                'Referer' : 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%s' % folderId,
+                'Content-Type' : 'multipart/form-data; boundary=%s' % boundary
+              }
+
             # Add file
-            request = urllib2.Request(folder_add_url,
-                                      urllib.urlencode(params))
+            data = encode_multipart_form(params, boundary)
+            request = urllib2.Request(folder_add_url, data, headers)
+            request.add_header('Content-Length', len(data))
             opener.open(request)
 
             # Add signature
@@ -96,8 +115,9 @@ def add_items(opener, folderId, release_name):
             params['description'] = 'PGP signatures for %s' % desc
             params['url'] = 'http://subversion.tigris.org/downloads/%s' % \
                                                                       filename
-            request = urllib2.Request(folder_add_url,
-                                      urllib.urlencode(params))
+            data = encode_multipart_form(params, boundary)
+            request = urllib2.Request(folder_add_url, data, headers)
+            request.add_header('Content-Length', len(data))
             opener.open(request)
 
 
