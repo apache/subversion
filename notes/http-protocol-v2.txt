@@ -308,4 +308,10 @@ need.
       [### If we're talking about custom protocols anyway, why use an
            'If-match' header with an Etag value?  Why not use a custom
            'SVN-Base-Revision' header that carries the value given us
-           via the commit editor?]
+           via the commit editor?
+           
+       A:  Because If-Match is standard HTTP, and proxies can/should
+           know about etags to improve the overall performance.
+           
+           Just jam that base-revision into the etag. In fact, I think
+           when mod_dav_svn makes up an etag, it uses that mechanism. ]
