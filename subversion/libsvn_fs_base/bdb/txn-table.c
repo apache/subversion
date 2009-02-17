@@ -39,7 +39,7 @@
 static svn_boolean_t
 is_committed(transaction_t *txn)
 {
-  return (txn->kind == transaction_kind_committed) ? TRUE : FALSE;
+  return (txn->kind == transaction_kind_committed);
 }
 
 

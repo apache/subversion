@@ -444,7 +444,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
                                                base_dir, base_access, NULL,
-                                               base_access ? TRUE : FALSE,
+                                               base_access != NULL,
                                                FALSE, ctx, pool));
 
   dead_end_rev.kind = svn_opt_revision_unspecified;

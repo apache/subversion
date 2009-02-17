@@ -1255,8 +1255,6 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
   /* ### TODO(sd): This check is slightly too strict.  It should be
      ### possible to:
      ###
-     ###   * delete an empty directory when depth==svn_depth_empty;
-     ###
      ###   * delete a directory containing only files when
      ###     depth==svn_depth_files;
      ###
@@ -1282,9 +1280,17 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
           SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
           if (status->text_status == svn_wc_status_deleted ||
               status->text_status == svn_wc_status_replaced)
-            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+            {
+              apr_hash_t* entries;
+
+              SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+
+              if (apr_hash_count(entries) > 1)
+                return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                     _("Cannot non-recursively commit a "
-                                      "directory deletion"));
+                                      "directory deletion of a directory "
+                                      "with child nodes"));
+            }
         }
     }
   return SVN_NO_ERROR;

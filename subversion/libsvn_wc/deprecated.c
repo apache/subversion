@@ -265,6 +265,20 @@ svn_wc_ensure_adm(const char *path,
   return svn_wc_ensure_adm2(path, uuid, url, NULL, revision, pool);
 }
 
+svn_error_t *
+svn_wc_create_tmp_file(apr_file_t **fp,
+                       const char *path,
+                       svn_boolean_t delete_on_close,
+                       apr_pool_t *pool)
+{
+  return svn_wc_create_tmp_file2(fp, NULL, path,
+                                 delete_on_close
+                                 ? svn_io_file_del_on_close
+                                 : svn_io_file_del_none,
+                                 pool);
+}
+
+
 /*** From adm_ops.c ***/
 svn_error_t *
 svn_wc_process_committed3(const char *path,
@@ -1382,4 +1396,95 @@ svn_wc_add_repos_file(const char *dst_path,
                                 new_props, NULL,
                                 copyfrom_url, copyfrom_rev,
                                 pool);
+}
+
+/*** From lock.c ***/
+
+/* To preserve API compatibility with Subversion 1.0.0 */
+svn_error_t *
+svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
+                svn_wc_adm_access_t *associated,
+                const char *path,
+                svn_boolean_t write_lock,
+                svn_boolean_t tree_lock,
+                apr_pool_t *pool)
+{
+  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
+                          (tree_lock ? -1 : 0), NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
+                 svn_wc_adm_access_t *associated,
+                 const char *path,
+                 svn_boolean_t write_lock,
+                 int levels_to_lock,
+                 apr_pool_t *pool)
+{
+  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
+                          levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      svn_boolean_t tree_lock,
+                      apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_open3(adm_access, associated, path,
+                                write_lock, (tree_lock ? -1 : 0),
+                                NULL, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int levels_to_lock,
+                       apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_open3(adm_access, associated, path, write_lock,
+                                levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
+                     svn_wc_adm_access_t *associated,
+                     const char *path,
+                     svn_boolean_t write_lock,
+                     svn_boolean_t tree_lock,
+                     apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
+                               (tree_lock ? -1 : 0), NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
+{
+  /* This is the only pool we have access to. */
+  apr_pool_t *scratch_pool = svn_wc_adm_access_pool(adm_access);
+
+  return svn_wc_adm_close2(adm_access, scratch_pool);
+}
+
+
+/*** From translate.c ***/
+
+svn_error_t *
+svn_wc_translated_file(const char **xlated_p,
+                       const char *vfile,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t force_repair,
+                       apr_pool_t *pool)
+{
+  return svn_wc_translated_file2(xlated_p, vfile, vfile, adm_access,
+                                 SVN_WC_TRANSLATE_TO_NF
+                                 | (force_repair ?
+                                    SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
+                                 pool);
 }

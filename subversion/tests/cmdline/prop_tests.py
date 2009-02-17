@@ -1708,7 +1708,7 @@ def added_moved_file(sbox):
   svntest.actions.check_prop('someprop', foo2_url, ['someval'])
 
 
-# Issue 2220, deleting a non-existent property should error 
+# Issue 2220, deleting a non-existent property should error
 def delete_nonexistent_property(sbox):
   "remove a property which doesn't exist"
 

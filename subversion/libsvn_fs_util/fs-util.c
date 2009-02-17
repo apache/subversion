@@ -131,7 +131,7 @@ svn_fs__next_entry_name(const char **next_p,
 }
 
 svn_fs_path_change2_t *
-svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id, 
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
                            svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *pool)
 {

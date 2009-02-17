@@ -261,7 +261,7 @@ typedef struct
 
      If checksum is NULL, then for compatibility behave as though this
      checksum matches the expected checksum.
-  
+
      The md5 checksum is always filled, unless this is rep which was
      retrieved from the rep-cache.  The sha1 checksum is only computed on
      a write, for use with rep-sharing; it may be read from an existing
@@ -289,7 +289,7 @@ typedef struct
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
      intra-node uniqification content.
-     
+
      May be NULL, in which case, it is considered to match other NULL
      values.*/
   const char *uniquifier;

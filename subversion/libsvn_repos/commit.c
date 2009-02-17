@@ -841,7 +841,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                                      subpool);
   eb->fs = svn_repos_fs(repos);
   eb->txn = txn;
-  eb->txn_owner = txn ? FALSE : TRUE;
+  eb->txn_owner = txn == NULL;
 
   *edit_baton = eb;
   *editor = e;

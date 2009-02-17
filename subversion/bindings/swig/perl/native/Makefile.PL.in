@@ -29,6 +29,7 @@ my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
 my $cppflags = '@CPPFLAGS@';
+my $cflags = '@CFLAGS@';
 my $apr_cflags = '@SVN_APR_INCLUDES@';
 my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
 
@@ -42,6 +43,7 @@ chomp $apr_shlib_path_var;
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     DEFINE => $cppflags,
+    CCFLAGS => $cflags,
     INC  => join(' ',$apr_cflags, $apu_cflags, 
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",

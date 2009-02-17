@@ -593,8 +593,8 @@ prep_regular(dav_resource_combined *comb)
   if (derr != NULL)
     return derr;
 
-  comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
-  comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
+  comb->res.exists = (kind != svn_node_none);
+  comb->res.collection = (kind == svn_node_dir);
 
   /* HACK:  dav_get_resource_state() is making shortcut assumptions
      about how to distinguish a null resource from a lock-null
@@ -784,8 +784,8 @@ prep_working(dav_resource_combined *comb)
   if (derr != NULL)
     return derr;
 
-  comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
-  comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
+  comb->res.exists = (kind != svn_node_none);
+  comb->res.collection = (kind == svn_node_dir);
 
   return NULL;
 }
@@ -1460,7 +1460,7 @@ capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
 }
 
 
-/* Given a non-NULL QUERY string of the form "key1=val1&key2=val2&...",  
+/* Given a non-NULL QUERY string of the form "key1=val1&key2=val2&...",
  * parse the keys and values into an apr table.  Allocate the table in
  * POOL;  dup all keys and values into POOL as well.
  *
@@ -1506,7 +1506,7 @@ parse_querystring(const char *query, dav_resource_combined *comb,
   apr_table_t *pairs = querystring_to_table(query, pool);
   const char *prevstr = apr_table_get(pairs, "p");
   const char *wrevstr;
-  
+
   if (prevstr)
     {
       peg_rev = SVN_STR_TO_REV(prevstr);

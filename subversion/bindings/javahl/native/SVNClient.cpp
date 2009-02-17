@@ -851,7 +851,6 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                 LogMessageCallback *callback)
 {
     Pool requestPool;
-    JNIEnv *env = JNIUtil::getEnv();
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)

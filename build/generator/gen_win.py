@@ -56,7 +56,9 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.vsnet_proj_ver = '7.00'
     self.sqlite_path = 'sqlite'
     self.skip_sections = { 'mod_dav_svn': None,
-                           'mod_authz_svn': None }
+                           'mod_authz_svn': None,
+                           'libsvn_auth_kwallet': None,
+                           'libsvn_auth_gnome_keyring': None }
 
     # Instrumentation options
     self.disable_shared = None
@@ -212,8 +214,8 @@ class WinGeneratorBase(GeneratorBase):
     self._find_apr()
     self._find_apr_util()
 
-    # Create Sqlite header
-    self._create_sqlite_header()
+    # Create Sqlite headers
+    self._create_sqlite_headers()
 
     # Find Sqlite
     self._find_sqlite()
@@ -1379,14 +1381,19 @@ class WinGeneratorBase(GeneratorBase):
 
     sys.stderr.write(msg % self.sqlite_version)
 
-  def _create_sqlite_header(self):
+  def _create_sqlite_headers(self):
     "Transform sql files into header files"
-    
+
     import transform_sql
-    rep_cache_db_sql = os.path.join(
-      'subversion', 'libsvn_fs_fs', 'rep-cache-db.sql')
-    transform_sql.main(rep_cache_db_sql, rep_cache_db_sql + '.h')
-    
+    sql_sources = [
+      os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),
+      ]
+    for sql in sql_sources:
+      transform_sql.main(open(sql + '.sql', 'r'),
+                         open(sql + '.h', 'w'),
+                         os.path.basename(sql + '.sql'))
+
+
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):

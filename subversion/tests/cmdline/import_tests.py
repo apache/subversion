@@ -292,6 +292,9 @@ def import_eol_style(sbox):
 
   # setup a custom config, we need autoprops
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = yes
 

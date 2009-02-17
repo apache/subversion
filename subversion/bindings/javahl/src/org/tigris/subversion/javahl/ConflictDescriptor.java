@@ -264,5 +264,11 @@ public class ConflictDescriptor
          * Object is unversioned.
          */
         public static final int unversioned = 4;
+
+        /**
+         * Object is already added or schedule-add.
+         * @since New in 1.6.
+         */
+        public static final int added = 5;
     }
 }

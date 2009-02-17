@@ -1257,7 +1257,7 @@ def add_tree_with_depth(sbox):
 
 def upgrade_from_above(sbox):
   "upgrade a depth=empty wc from above"
-  
+
   # The bug was that 'svn up --set-depth=files' worked from within the
   # working copy, but not from without with working copy top given
   # as an argument.  Both ways would correctly cause 'iota' to
@@ -1271,7 +1271,7 @@ def upgrade_from_above(sbox):
   #   Date: Wed, 19 Sep 2007 23:15:24 +0700
   #   Message-ID: <46F14B1C.8010406@svnkit.com>
 
-  sbox2 = sbox.clone_dependent() 
+  sbox2 = sbox.clone_dependent()
 
   wc, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
 
@@ -1689,7 +1689,7 @@ def depth_folding_clean_trees_2(sbox):
   verify_depth(None, "immediates", A_path)
 
   # pull in directory D at infinity
-  svntest.actions.run_and_verify_svn(None, None, [], 
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '--set-depth', 'infinity', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A/D.
@@ -1968,7 +1968,7 @@ def fold_tree_with_unversioned_modified_items(sbox):
 
   # Even though the directory B and D is not deleted because of local
   # modificatoin or unversioned items, there will be only one notification at
-  # B and D. 
+  # B and D.
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'            : Item(status='D '),
     'A/C'            : Item(status='D '),
@@ -2182,7 +2182,7 @@ def excluded_path_misc_operation(sbox):
     'A/L/lambda' : Item(status='  ', wc_rev=2),
     'A/L/F'      : Item(status='  ', wc_rev=2),
     })
-  svntest.actions.run_and_verify_commit(wc_dir, 
+  svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
 					None,
@@ -2236,10 +2236,10 @@ def excluded_receive_remote_removal(sbox):
                                         "--set-depth", "exclude", B_path)
 
   # Remove path B in the repos.
-  svntest.actions.run_and_verify_svn(None, None, [], "delete", "-m", 
+  svntest.actions.run_and_verify_svn(None, None, [], "delete", "-m",
                                      "Delete B.", sbox.repo_url + "/A/B")
 
-  # Update wc, should receive the removal of excluded path B 
+  # Update wc, should receive the removal of excluded path B
   # and handle it silently.
   expected_status = svntest.actions.get_virginal_state(wc, 2)
   expected_status.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
@@ -2343,9 +2343,9 @@ def make_depth_tree_conflicts(sbox):
                         'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                         'A/B/F',
                         'A/D/gamma',
-                        status='D ', wc_rev=1)
+                        status='D ')
   expected_status.tweak('A/mu', 'A/B', 'A/D/gamma',
-                        treeconflict='C', wc_rev=1)
+                        treeconflict='C')
 
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,

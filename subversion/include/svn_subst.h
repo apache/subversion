@@ -347,6 +347,9 @@ svn_subst_read_specialfile(svn_stream_t **stream,
  * allocated in @a result_pool, and any temporary allocations will be
  * made in @a scratch_pool.
  *
+ * Note: the target file is created in a temporary location, then renamed
+ *   into position, so the creation can be considered "atomic".
+ *
  * @since New in 1.6.
  */
 svn_error_t *

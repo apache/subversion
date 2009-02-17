@@ -157,14 +157,3 @@ svn_client_revert2(const apr_array_header_t *paths,
 
   return err;
 }
-
-
-svn_error_t *
-svn_client_revert(const apr_array_header_t *paths,
-                  svn_boolean_t recursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_revert2(paths, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
-                            NULL, ctx, pool);
-}

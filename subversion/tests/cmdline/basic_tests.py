@@ -2405,7 +2405,7 @@ def basic_add_svn_format_file(sbox):
 
   # The .svn directory and the format file should not be added as this
   # breaks the administrative area handling, so we expect some error here
-  svntest.actions.run_and_verify_svn(None, None, 
+  svntest.actions.run_and_verify_svn(None, None,
                                      ".*reserved name.*",
                                      'add', '--parents', entries_path)
 

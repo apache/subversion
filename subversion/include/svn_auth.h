@@ -1122,7 +1122,7 @@ svn_auth_get_ssl_client_cert_file_provider
  * prompt_baton, before saving the passphrase.
  *
  * If @a plaintext_passphrase_prompt_func is NULL it is not called
- * ### and what?
+ * and the passphrase is not stored in plaintext.
  * Client developers are highly encouraged to provide this callback
  * to ensure their users are made aware of the fact that their passphrase
  * is going to be stored unencrypted.
@@ -1144,8 +1144,8 @@ svn_auth_get_ssl_client_cert_pw_file_provider2
 
 /** Like svn_auth_get_ssl_client_cert_pw_file_provider2, but without
  * the ability to call the svn_auth_plaintext_passphrase_prompt_func_t
- * callback, and the provider always assumes
- * ### what?
+ * callback, and the provider always assumes that it is not allowed
+ * to store the passphrase in plaintext.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.

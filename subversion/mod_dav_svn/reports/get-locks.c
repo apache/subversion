@@ -55,7 +55,7 @@
    output stream".  If you need to return something more interesting,
    you'll probably want to generate dav_error's here instead of
    passing back only apr_status_t's.  */
-static apr_status_t 
+static apr_status_t
 send_get_lock_response(apr_hash_t *locks,
                        ap_filter_t *output,
                        apr_bucket_brigade *bb,
@@ -90,14 +90,14 @@ send_get_lock_response(apr_hash_t *locks,
                              "<S:creationdate>%s</S:creationdate>" DEBUG_CR,
                              apr_xml_quote_string(subpool, lock->path, 1),
                              apr_xml_quote_string(subpool, lock->token, 1),
-                             svn_time_to_cstring(lock->creation_date, 
+                             svn_time_to_cstring(lock->creation_date,
                                                  subpool)));
 
       /* Got expiration date?  Tell the client. */
       if (lock->expiration_date)
         SVN_APR_ERR(ap_fprintf(output, bb,
                                "<S:expirationdate>%s</S:expirationdate>"
-                               DEBUG_CR, 
+                               DEBUG_CR,
                                svn_time_to_cstring(lock->expiration_date,
                                                    subpool)));
 
@@ -115,7 +115,7 @@ send_get_lock_response(apr_hash_t *locks,
             {
               svn_string_t owner_string;
               const svn_string_t *encoded_owner;
-              
+
               owner_string.data = lock->owner;
               owner_string.len = strlen(lock->owner);
               encoded_owner = svn_base64_encode_string2(&owner_string, TRUE,
@@ -206,7 +206,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
   if ((apr_err = send_get_lock_response(locks, output, bb, resource->pool)))
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,
-                                "Error writing REPORT response.", 
+                                "Error writing REPORT response.",
                                 resource->pool);
 
   return dav_svn__final_flush_or_error(resource->info->r, bb, output,

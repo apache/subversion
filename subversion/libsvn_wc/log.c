@@ -572,9 +572,9 @@ log_do_merge(struct log_runner *loggy,
   /* Now do the merge with our full paths. */
   /* ### TODO: Fill in the left_version and right_version args. */
   err = svn_wc__merge_internal(&log_accum, &merge_outcome,
-                               left, NULL, right, NULL, name, NULL, 
-                               loggy->adm_access, left_label, right_label, 
-                               target_label, FALSE, loggy->diff3_cmd, NULL, 
+                               left, NULL, right, NULL, name, NULL,
+                               loggy->adm_access, left_label, right_label,
+                               target_label, FALSE, loggy->diff3_cmd, NULL,
                                NULL, NULL, NULL, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -1471,8 +1471,8 @@ log_do_upgrade_format(struct log_runner *loggy,
     return svn_error_create(pick_error_code(loggy), NULL,
                             _("Invalid 'format' attribute"));
 
-  /* Update the .svn/format file right away. */
-  SVN_ERR(svn_io_write_version_file(path, fmt, loggy->pool));
+  /* Remove the .svn/format file, if it exists. */
+  SVN_ERR(svn_io_remove_file(path, loggy->pool));
 
   /* The nice thing is that, just by setting this flag, the entries file will
      be rewritten in the desired format. */
@@ -2224,9 +2224,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
                  entry->has_prop_mods ? "true" : "false");
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS,
-                 SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-                 entry->cachable_props);
+  /* Note: ignoring the (deprecated) cachable_props field. */
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                  SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
