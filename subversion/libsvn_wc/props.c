@@ -115,7 +115,6 @@ load_props(apr_hash_t **hash,
 
   SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, pool));
 
-  *hash = apr_hash_make(pool);
   /* We shouldn't be calling load_prop_file() with an empty file, but
      we do.  This check makes sure that we don't call svn_hash_read2()
      on an empty stream.  Ugly, hacky and crude. */
@@ -126,11 +125,22 @@ load_props(apr_hash_t **hash,
             || APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
           svn_error_clear(err);
+
+          /* NOTE: we need to signal that this file is NOT PRESENT, as
+             opposed to merely devoid of properties. */
+          if (props_kind == svn_wc__props_working)
+            *hash = NULL;
+          else
+            *hash = apr_hash_make(pool);
+
           return SVN_NO_ERROR;
         }
       else
         return err;
     }
+
+  *hash = apr_hash_make(pool);
+
   if (finfo.size == 0)
     return SVN_NO_ERROR;
 
@@ -262,8 +272,10 @@ svn_wc__load_props(apr_hash_t **base_props_p,
     }
 
   kind = entry->kind;
-  /* We will need the base props if the user requested them. */
-  if (base_props_p)
+
+  /* We will need the base props if the user requested them, or we need
+     them if no (working) prop mods have occurred. */
+  if (base_props_p != NULL || props_p != NULL)
     {
       SVN_ERR(load_props(&base_props, path, kind, svn_wc__props_base, pool));
 
@@ -272,7 +284,17 @@ svn_wc__load_props(apr_hash_t **base_props_p,
     }
 
   if (props_p)
-    SVN_ERR(load_props(props_p, path, kind, svn_wc__props_working, pool));
+    {
+      SVN_ERR(load_props(props_p, path, kind, svn_wc__props_working, pool));
+
+      /* If the WORKING props are not present, then no modifications have
+         occurred. Simply return a copy of the BASE props.
+
+         Note that the WORKING props might be present, but simply empty,
+         signifying that all BASE props have been deleted. */
+      if (*props_p == NULL)
+        *props_p = apr_hash_copy(pool, base_props);
+    }
 
   if (revert_props_p)
     {
@@ -2072,8 +2094,6 @@ svn_wc_prop_list(apr_hash_t **props,
                  apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  apr_hash_t *base_props;
-  apr_hash_t *new_props;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
@@ -2091,12 +2111,7 @@ svn_wc_prop_list(apr_hash_t **props,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
 
-  SVN_ERR(svn_wc__load_props(&base_props, &new_props, NULL, adm_access,
-                             path, pool));
-
-  *props = apr_hash_overlay(pool, new_props, base_props);
-
-  return SVN_NO_ERROR;
+  return svn_wc__load_props(NULL, props, NULL, adm_access, path, pool);
 }
 
 svn_error_t *
@@ -2625,7 +2640,15 @@ svn_wc__has_props(svn_boolean_t *has_props,
 
   SVN_ERR(empty_props_p(&is_empty, path, entry->kind, svn_wc__props_working,
                         pool));
+  if (!is_empty)
+    {
+      *has_props = TRUE;
+      return SVN_NO_ERROR;
+    }
 
+  /* See if there are base props now. */
+  SVN_ERR(empty_props_p(&is_empty, path, entry->kind, svn_wc__props_base,
+                        pool));
   *has_props = !is_empty;
 
   return SVN_NO_ERROR;
@@ -2649,8 +2672,6 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  /* So, we have a WC in an older format, we have some work to do... */
-
   {
     apr_array_header_t *local_propchanges;
     apr_hash_t *localprops;
@@ -2658,6 +2679,14 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
 
     SVN_ERR(load_props(&localprops, path, entry->kind, svn_wc__props_working,
                        pool));
+
+    /* If the WORKING props are not present, then no modifications have
+       occurred. */
+    if (localprops == NULL)
+      {
+        *modified_p = FALSE;
+        return SVN_NO_ERROR;
+      }
 
     /* If something is scheduled for replacement, we do *not* want to
        pay attention to any base-props;  they might be residual from the
@@ -2672,6 +2701,9 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
         return SVN_NO_ERROR;
       }
 
+    /* The WORKING props are present, so let's dig in and see what the
+       differences are. On really old WCs, they might be the same. On
+       newer WCs, the file would have been removed if there was no delta. */
     SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
                        pool));
 

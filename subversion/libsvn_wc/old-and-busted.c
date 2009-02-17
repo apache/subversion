@@ -530,32 +530,36 @@ read_entry(svn_wc_entry_t **new_entry,
   SVN_ERR(read_str(&entry->cmt_author, buf, end, pool));
   MAYBE_DONE;
 
-  /* has-props flag. */
-  SVN_ERR(read_bool(&entry->has_props, SVN_WC__ENTRY_ATTR_HAS_PROPS,
-                    buf, end));
-  MAYBE_DONE;
-
-  /* has-prop-mods flag. */
-  SVN_ERR(read_bool(&entry->has_prop_mods, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
-                    buf, end));
-  MAYBE_DONE;
-
-  /* cachable-props string. */
+  /* has-props, has-prop-mods, cachable-props, present-props are all
+     deprecated. Read any values that may be in the 'entries' file, but
+     discard them, and just put default values into the entry. */
   {
     const char *unused_value;
+
+    /* has-props flag. */
     SVN_ERR(read_val(&unused_value, buf, end));
+    entry->has_props = FALSE;
+    MAYBE_DONE;
+
+    /* has-prop-mods flag. */
+    SVN_ERR(read_val(&unused_value, buf, end));
+    entry->has_prop_mods = FALSE;
+    MAYBE_DONE;
 
     /* Use the empty string for cachable_props, indicating that we no
-       longer attempt to cache any properties. */
-    entry->cachable_props = "";
-  }
-  MAYBE_DONE;
+       longer attempt to cache any properties. An empty string for
+       present_props means that no cachable props are present. */
 
-  /* present-props string. */
-  SVN_ERR(read_val(&entry->present_props, buf, end));
-  if (entry->present_props)
-    entry->present_props = apr_pstrdup(pool, entry->present_props);
-  MAYBE_DONE;
+    /* cachable-props string. */
+    SVN_ERR(read_val(&unused_value, buf, end));
+    entry->cachable_props = "";
+    MAYBE_DONE;
+
+    /* present-props string. */
+    SVN_ERR(read_val(&unused_value, buf, end));
+    entry->present_props = "";
+    MAYBE_DONE;
+  }
 
   /* Is this entry in a state of mental torment (conflict)? */
   {
@@ -1140,18 +1144,12 @@ write_entry(svn_stringbuf_t *buf,
   write_revnum(buf, entry->cmt_rev, pool);
   write_str(buf, entry->cmt_author, pool);
 
-  /* has-props flag. */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROPS, entry->has_props);
-
-  /* has-prop-mods flag. */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS, entry->has_prop_mods);
-
-  /* cachable-props string. Deprecated, so write nothing. */
+  /* has-props, has-prop-mods, cachable-props, present-props are all
+     deprecated, so write nothing for them. */
   write_val(buf, NULL, 0);
-
-  /* present-props string. */
-  write_val(buf, entry->present_props,
-             entry->present_props ? strlen(entry->present_props) : 0);
+  write_val(buf, NULL, 0);
+  write_val(buf, NULL, 0);
+  write_val(buf, NULL, 0);
 
   /* Conflict. */
   write_str(buf, entry->prejfile, pool);
@@ -1416,22 +1414,8 @@ write_entry_xml(svn_stringbuf_t **output,
                  APR_HASH_KEY_STRING,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
 
-  /* Has-props flag. */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
-               (entry->has_props ? "true" : NULL));
-
-  /* Prop-mods. */
-  if (entry->has_prop_mods)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
-                 APR_HASH_KEY_STRING, "true");
-
-  /* Cachable props. Deprecated, so do not add an attribute. */
-
-  /* Present props. */
-  if (entry->present_props
-      && *entry->present_props)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
-                 APR_HASH_KEY_STRING, entry->present_props);
+  /* has_props, has_prop_mods, cachable_props, and present_props are all
+     deprecated, so do not add any attributes. */
 
   /* NOTE: if new entries are *added* to svn_wc_entry_t, then they do not
      have to be written here. This function is ONLY used during the "cleanup"

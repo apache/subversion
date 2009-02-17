@@ -117,6 +117,51 @@ do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
    on a working copy that you typically use with an older version. */
 #ifndef SVN_DISABLE_WC_UPGRADE
 
+/* Write, to LOG_ACCUM, log entries to convert an old WC that did not have
+   propcaching into a WC that uses propcaching.  Do this conversion for
+   the directory of ADM_ACCESS and its file children.  Use POOL for
+   temporary allocations.  */
+static svn_error_t *
+introduce_propcaching(svn_stringbuf_t *log_accum,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+
+  /* Reinstall the properties for each file and this dir; subdirs are handled
+     when they're opened. */
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      const svn_wc_entry_t *entry;
+      const char *entrypath;
+      apr_hash_t *base_props, *props;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+
+      if (entry->kind != svn_node_file
+          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+        continue;
+
+      svn_pool_clear(subpool);
+
+      entrypath = svn_path_join(adm_access->path, entry->name, subpool);
+      SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, adm_access,
+                                 entrypath, subpool));
+      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
+                                    base_props, props, TRUE, subpool));
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Write, to LOG_ACCUM, commands to convert a WC that has wcprops in individual
    files to use one wcprops file per directory.
    Do this for ADM_ACCESS and its file children, using POOL for temporary
@@ -213,6 +258,10 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       /* First, loggily upgrade the format file. */
       SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, adm_access,
                                            SVN_WC__VERSION, pool));
+
+      /* Possibly convert an old WC that doesn't use propcaching. */
+      if (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
+        SVN_ERR(introduce_propcaching(log_accum, adm_access, pool));
 
       /* If the WC uses one file per entry for wcprops, give back some inodes
          to the poor user. */

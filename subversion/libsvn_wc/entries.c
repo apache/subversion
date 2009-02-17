@@ -763,6 +763,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
+  /* Note: if there are attributes for the (deprecated) has_props,
+     has_prop_mods, cachable_props, or present_props, then we're just
+     going to ignore them. */
+
   /* Translated size */
   {
     const char *val
@@ -2599,6 +2603,12 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
   if (entry->changelist)
     dupentry->changelist = apr_pstrdup(pool, entry->changelist);
+
+  /* NOTE: we do not dup cachable_props or present_props since they
+     are deprecated. Use "" to indicate "nothing cachable or cached". */
+  dupentry->cachable_props = "";
+  dupentry->present_props = "";
+
   if (entry->tree_conflict_data)
     dupentry->tree_conflict_data = apr_pstrdup(pool,
                                                entry->tree_conflict_data);

@@ -2216,10 +2216,14 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
 
+  /* Note: ignoring the (deprecated) has_props, has_prop_mods,
+     cachable_props, and present_props fields. */
+
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                  SVN_WC__ENTRY_ATTR_WORKING_SIZE,
                  apr_psprintf(pool, "%" APR_OFF_T_FMT,
                               entry->working_size));
+
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
                  SVN_WC__LOG_ATTR_FORCE,
                  "true");
