@@ -1470,11 +1470,6 @@ svn_wc_add3(const char *path,
     {
       tmp_entry.checksum = NULL;
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-
-      tmp_entry.has_props = FALSE;
-      tmp_entry.has_prop_mods = FALSE;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROPS;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
     }
 
   tmp_entry.revision = 0;
