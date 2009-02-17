@@ -768,7 +768,7 @@ def basic_revert(sbox):
   # Finally, check that reverted file is not readonly
   os.remove(beta_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', beta_path)
-  if not (open(beta_path, 'rw+')):
+  if not (open(beta_path, 'r+')):
     raise svntest.Failure
 
   # Check that a directory scheduled to be added, but physically
