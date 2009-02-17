@@ -72,9 +72,17 @@ extern "C" {
  * The change from 9 to 10 was the addition of tree-conflicts, file
  * externals and a different canonicalization of urls.
  *
+ * The change from 10 to 11 was a complete rewrite of the wc datastore,
+ * which resulted in centralization and migration of data to an sqlite
+ * datebase.
+ *
  * Please document any further format changes here.
  */
+#ifdef FROM_EXPLORE_WC
+#define SVN_WC__VERSION       11
+#else
 #define SVN_WC__VERSION       10
+#endif
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
@@ -88,6 +96,9 @@ extern "C" {
 /* A version < this can have urls that aren't canonical according to the new
    rules. See issue #2475. */
 #define SVN_WC__CHANGED_CANONICAL_URLS 10
+
+/* A version < this is pre-wc-ng. */
+#define SVN_WC__WC_NG_VERSION 11
 
 /*** Update traversals. ***/
 
