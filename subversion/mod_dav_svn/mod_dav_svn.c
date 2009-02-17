@@ -166,7 +166,7 @@ create_dir_config(apr_pool_t *p, char *dir)
 
   conf->root_dir = dir;
   conf->bulk_updates = CONF_FLAG_ON;
-  conf->v2_protocol = CONF_FLAG_ON;
+  conf->v2_protocol = CONF_FLAG_OFF;
 
   return conf;
 }
