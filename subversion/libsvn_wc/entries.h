@@ -245,6 +245,15 @@ svn_wc__write_entry_old(svn_stringbuf_t *buf,
                         const svn_wc_entry_t *this_dir,
                         apr_pool_t *pool);
 
+svn_error_t *
+svn_wc__entries_init_old(const char *path,
+                         const char *uuid,
+                         const char *url,
+                         const char *repos,
+                         svn_revnum_t initial_rev,
+                         svn_depth_t depth,
+                         apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

@@ -1474,6 +1474,9 @@ svn_wc__entries_init(const char *path,
                      svn_depth_t depth,
                      apr_pool_t *pool)
 {
+  return svn_wc__entries_init_old(path, uuid, url, repos, initial_rev,
+                                  depth, pool);
+#ifdef FROM_EXPLORE_WC
   svn_stream_t *stream;
   const char *temp_file_path;
   svn_node_kind_t kind;
@@ -1496,8 +1499,6 @@ svn_wc__entries_init(const char *path,
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
                                     path, SVN_WC__ADM_ENTRIES, pool, pool));
-
-#ifdef FROM_EXPLORE_WC
 
   /* Check that the entries sqlite database does not yet exist. */
   SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
@@ -1526,8 +1527,6 @@ svn_wc__entries_init(const char *path,
   SVN_ERR(svn_sqlite__bindf(stmt, "s", abs_path));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-#endif /* FROM_EXPLORE_WC */
-
   /* Add an entry for the dir itself.  The directory has no name.  It
      might have a UUID, but otherwise only the revision and default
      ancestry are present as XML attributes, and possibly an
@@ -1542,12 +1541,8 @@ svn_wc__entries_init(const char *path,
   if (initial_rev > 0)
     entry->incomplete = TRUE;
 
-  SVN_ERR(svn_wc__write_entry_old(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry,
-                                  pool));
-#ifdef FROM_EXPLORE_WC
   SVN_ERR(write_entry(accum, wc_db, wc_id, entry, SVN_WC_ENTRY_THIS_DIR, entry,
                       pool));
-#endif
 
   len = accum->len;
   SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
@@ -1560,13 +1555,10 @@ svn_wc__entries_init(const char *path,
   SVN_ERR(svn_wc__close_adm_stream(stream, temp_file_path, path,
                                    SVN_WC__ADM_ENTRIES, pool));
 
-#ifdef FROM_EXPLORE_WC
   /* Commit the sqlite transaction and close the database. */
   SVN_ERR(svn_sqlite__transaction_commit(wc_db));
   return svn_sqlite__close(wc_db, SVN_NO_ERROR);
-#endif
-
-  return SVN_NO_ERROR;
+#endif /* FROM_EXPLORE_WC */
 }
 
 

@@ -1650,3 +1650,60 @@ svn_wc__entries_write_old(apr_hash_t *entries,
 
   return err;
 }
+
+
+
+svn_error_t *
+svn_wc__entries_init_old(const char *path,
+                         const char *uuid,
+                         const char *url,
+                         const char *repos,
+                         svn_revnum_t initial_rev,
+                         svn_depth_t depth,
+                         apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  const char *temp_file_path;
+  svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
+                                                 SVN_WC__VERSION);
+  svn_wc_entry_t *entry = alloc_entry(pool);
+  apr_size_t len;
+
+  SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
+  SVN_ERR_ASSERT(depth == svn_depth_empty
+                 || depth == svn_depth_files
+                 || depth == svn_depth_immediates
+                 || depth == svn_depth_infinity);
+
+  /* Create the entries file, which must not exist prior to this. */
+  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
+                                    path, SVN_WC__ADM_ENTRIES, pool, pool));
+
+  /* Add an entry for the dir itself.  The directory has no name.  It
+     might have a UUID, but otherwise only the revision and default
+     ancestry are present as XML attributes, and possibly an
+     'incomplete' flag if the revnum is > 0. */
+
+  entry->kind = svn_node_dir;
+  entry->url = url;
+  entry->revision = initial_rev;
+  entry->uuid = uuid;
+  entry->repos = repos;
+  entry->depth = depth;
+  if (initial_rev > 0)
+    entry->incomplete = TRUE;
+
+  SVN_ERR(svn_wc__write_entry_old(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry,
+                                  pool));
+
+  len = accum->len;
+  SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
+            apr_psprintf(pool,
+                         _("Error writing entries file for '%s'"),
+                         svn_path_local_style(path, pool)));
+
+  /* Now we have a `entries' file with exactly one entry, an entry
+     for this dir.  Close the file and sync it up. */
+  return svn_wc__close_adm_stream(stream, temp_file_path, path,
+                                  SVN_WC__ADM_ENTRIES, pool);
+}
