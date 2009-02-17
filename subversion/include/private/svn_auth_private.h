@@ -143,9 +143,9 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
    apr_pool_t *pool);
 
 /* Common implementation for ssl_client_cert_pw_file_save_credentials and
-   windows_ssl_client_cert_pw_file_save_credentials. Uses PARAMETERS and 
-   REALMSTRING to save a set of CREDENTIALS to the ssl client cert auth 
-   provider's passphrase cache. PASSPHRASE_SET is used to store the 
+   windows_ssl_client_cert_pw_file_save_credentials. Uses PARAMETERS and
+   REALMSTRING to save a set of CREDENTIALS to the ssl client cert auth
+   provider's passphrase cache. PASSPHRASE_SET is used to store the
    passphrase. PASSTYPE identifies the type of the cached passphrase.
    Allocates from POOL. */
 svn_error_t *

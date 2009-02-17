@@ -2,7 +2,7 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1015,7 +1015,7 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
   if (err && ib->ctx->notify_func2)
     {
       const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
-      svn_wc_notify_t *notifier = 
+      svn_wc_notify_t *notifier =
         svn_wc_create_notify(path,
                              svn_wc_notify_failed_external,
                              ib->pool);
@@ -1163,8 +1163,8 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   if (ib.parent_dir[len] == '/')
     ++len;
   ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
-                                                 ib.parent_dir + len,
-                                                 cb->pool);
+                                                  ib.parent_dir + len,
+                                                  cb->pool);
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified

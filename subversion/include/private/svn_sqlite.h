@@ -78,13 +78,13 @@ svn_sqlite__get_schema_version(int *version,
    creating/upgrading to LATEST_SCHEMA if needed using the instructions
    in UPGRADE_SQL. The resulting DB is allocated in RESULT_POOL, and any
    temporary allocations are made in SCRATCH_POOL.
-   
+
    STATEMENTS is an array of strings which may eventually be executed, the
    last element of which should be NULL.  These strings are not duplicated
    internally, and should have a lifetime at least as long as RESULT_POOL.
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
-   
+
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
@@ -143,7 +143,7 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
 const void *
 svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len);
 
-/* Wrapper around sqlite3_column_text. 
+/* Wrapper around sqlite3_column_text.
    If RESULT_POOL is not NULL, allocate the return value in it.  Otherwise, the
    value will become invalid on the next invocation of svn_sqlite__column_* */
 const char *
@@ -200,7 +200,7 @@ svn_error_t *
 svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
                              void *cb_baton);
-                            
+
 
 #ifdef __cplusplus
 }

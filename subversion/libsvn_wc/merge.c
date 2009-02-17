@@ -770,7 +770,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
       /* If there is no interactive conflict resolution then we are effectively
          postponing conflict resolution. */
       result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                             NULL, pool);      
+                                             NULL, pool);
     }
   else
     {
@@ -860,7 +860,6 @@ merge_text_file(const char *left,
                 svn_wc_conflict_version_t *left_version,
                 svn_wc_conflict_version_t *right_version,
                 const char *copyfrom_text,
-                const char *result_target,
                 const char *detranslated_target,
                 const svn_prop_t *mimeprop,
                 const char *merge_dirpath,
@@ -870,6 +869,7 @@ merge_text_file(const char *left,
   svn_diff_file_options_t *options;
   svn_boolean_t contains_conflicts;
   apr_file_t *result_f;
+  const char *result_target;
 
   /* Open a second temporary file for writing; this is where diff3
      will write the merged results.  We want to use a tempfile
@@ -1176,7 +1176,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 {
   const char *merge_dirpath;
   const char *merge_filename;
-  const char *detranslated_target, *result_target, *working_text;
+  const char *detranslated_target, *working_text;
   svn_boolean_t is_binary = FALSE;
   const svn_wc_entry_t *entry;
   const svn_prop_t *mimeprop;
@@ -1253,7 +1253,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                             left_version,
                             right_version,
                             copyfrom_text,
-                            result_target,
                             detranslated_target,
                             mimeprop,
                             merge_dirpath,

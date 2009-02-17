@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -414,7 +414,7 @@
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp)
 {
   $1 = StringValuePtr($input);
-  temp = RSTRING($input)->len;
+  temp = RSTRING_LEN($input);
   $2 = ($2_ltype)&temp;
 }
 #endif
@@ -752,8 +752,11 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL) || defined(SWIGRUBY)
 %include svn_md5_h.swg
+#endif
+
+#ifdef SWIGPERL
 %include svn_diff_h.swg
 %include svn_error_h.swg
 

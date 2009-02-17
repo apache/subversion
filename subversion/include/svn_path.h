@@ -538,8 +538,8 @@ svn_path_url_add_component2(const char *url,
 SVN_DEPRECATED
 const char *
 svn_path_url_add_component(const char *url,
-                            const char *component,
-                            apr_pool_t *pool);
+                           const char *component,
+                           apr_pool_t *pool);
 
 /**
  * Convert @a iri (Internationalized URI) to an URI.

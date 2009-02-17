@@ -1674,7 +1674,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_dirent_join),
     SVN_TEST_PASS(test_dirent_basename),
     SVN_TEST_PASS(test_uri_basename),
-    SVN_TEST_PASS(test_dirent_dirname),	
+    SVN_TEST_PASS(test_dirent_dirname),
     SVN_TEST_PASS(test_uri_dirname),
     SVN_TEST_PASS(test_dirent_canonicalize),
     SVN_TEST_PASS(test_uri_canonicalize),

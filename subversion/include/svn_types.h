@@ -602,7 +602,7 @@ typedef struct svn_log_changed_path2_t
   svn_node_kind_t node_kind;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
-     Also, if you add fields here, you have to update 
+     Also, if you add fields here, you have to update
      svn_log_changed_path2_dup(). */
 } svn_log_changed_path2_t;
 
@@ -611,7 +611,7 @@ typedef struct svn_log_changed_path2_t
  * initialized to NULL, None or empty values.
  *
  * @note To allow for extending the @c svn_log_changed_path2_t structure in
- * future releases, this function should always be used to allocate the 
+ * future releases, this function should always be used to allocate the
  * structure.
  *
  * @since New in 1.6.
@@ -672,7 +672,7 @@ typedef struct svn_log_entry_t
   /** A hash containing as keys every path committed in @a revision; the
    * values are (@c svn_log_changed_path_t *) stuctures.
    *
-   * The subversion core libraries will always set this field to the same 
+   * The subversion core libraries will always set this field to the same
    * value as changed_paths2 for compatibity reasons.
    *
    * @deprecated Provided for backward compatibility with the 1.5 API.
@@ -707,10 +707,10 @@ typedef struct svn_log_entry_t
   /** A hash containing as keys every path committed in @a revision; the
    * values are (@c svn_log_changed_path2_t *) stuctures.
    *
-   * If this value is not @c NULL, it MUST have the same value as 
+   * If this value is not @c NULL, it MUST have the same value as
    * changed_paths or svn_log_entry_dup() will not create an identical copy.
    *
-   * The subversion core libraries will always set this field to the same 
+   * The subversion core libraries will always set this field to the same
    * value as changed_paths for compatibity with users assuming an older
    * version.
    *
@@ -719,7 +719,7 @@ typedef struct svn_log_entry_t
   apr_hash_t *changed_paths2;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
-     Also, if you add fields here, you have to update 
+     Also, if you add fields here, you have to update
      svn_log_entry_dup(). */
 } svn_log_entry_t;
 

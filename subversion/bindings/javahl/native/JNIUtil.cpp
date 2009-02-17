@@ -797,8 +797,8 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
          on network drives).
 
          This 'feature'is now removed as it penalizes every correct
-         path passed, and also breaks behavior of e.g. 
-           'svn status .' returns '!' file, because there is only a "File" 
+         path passed, and also breaks behavior of e.g.
+           'svn status .' returns '!' file, because there is only a "File"
              on disk.
             But when you then call 'svn status file', you get '? File'.
 
