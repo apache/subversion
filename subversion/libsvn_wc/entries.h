@@ -69,10 +69,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_LOCK_OWNER         "lock-owner"
 #define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
 #define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
-#define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
-#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
-#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
-#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
 #define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
@@ -153,10 +149,6 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_LOCK_OWNER         APR_INT64_C(0x0000000000800000)
 #define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       APR_INT64_C(0x0000000001000000)
 #define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE APR_INT64_C(0x0000000002000000)
-#define SVN_WC__ENTRY_MODIFY_HAS_PROPS          APR_INT64_C(0x0000000004000000)
-#define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      APR_INT64_C(0x0000000008000000)
-#define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     APR_INT64_C(0x0000000010000000)
-#define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x0000000020000000)
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
@@ -235,6 +227,16 @@ svn_wc__tweak_entry(apr_hash_t *entries,
                     svn_boolean_t allow_removal,
                     svn_boolean_t *write_required,
                     apr_pool_t *pool);
+
+/* For internal use by entries.c to read/write old-format working copies. */
+svn_error_t *
+svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__entries_write_old(apr_hash_t *entries,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
 
 
 #ifdef __cplusplus
