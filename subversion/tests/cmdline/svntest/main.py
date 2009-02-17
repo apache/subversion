@@ -189,7 +189,7 @@ config_file = None
 
 # Global variable indicating what the minor version of the server
 # tested against is (4 for 1.4.x, for example).
-server_minor_version = 5
+server_minor_version = 6
 
 # Global variable indicating if this is a child process and no cleanup
 # of global directories is needed.
@@ -676,6 +676,8 @@ def create_repos(path):
   opts = ("--bdb-txn-nosync",)
   if server_minor_version < 5:
     opts += ("--pre-1.5-compatible",)
+  elif server_minor_version < 6:
+    opts += ("--pre-1.6-compatible",)
   if fs_type is not None:
     opts += ("--fs-type=" + fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
@@ -1512,8 +1514,8 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == '--server-minor-version':
       server_minor_version = int(val)
-      if server_minor_version < 4 or server_minor_version > 6:
-        print("ERROR: test harness only supports server minor version 4 or 5")
+      if server_minor_version < 4 or server_minor_version > 7:
+        print("ERROR: test harness only supports server minor versions 4-6")
         sys.exit(1)
 
     elif opt == '--use-jsvn':
