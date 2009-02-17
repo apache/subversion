@@ -207,7 +207,7 @@ compat2_validator(void *baton,
   struct compat2_baton *cb = baton;
   /* The old callback type doesn't set root_url. */
   return cb->validator(cb->baton, uuid,
-                       (root_url ? root_url : url), (root_url ? TRUE : FALSE),
+                       (root_url ? root_url : url), (root_url != NULL),
                        pool);
 }
 

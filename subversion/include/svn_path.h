@@ -508,7 +508,7 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  * should not begin with '/', however; if it does, the behavior is
  * undefined.
  *
- * @a url need not be a canonical path; it may have a trailing '/'.
+ * @a url must be in canonical format; it may not have a trailing '/'.
  *
  * @note To add a component that is already URI-encoded, use
  *       <tt>svn_path_join(url, component, pool)</tt> instead.
@@ -522,7 +522,20 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  *
  *       We may implement that someday, which is why leading '/' is
  *       merely undefined right now.
+ *
+ * @since New in 1.6.
  */
+const char *
+svn_path_url_add_component2(const char *url,
+                            const char *component,
+                            apr_pool_t *pool);
+
+/** Like svn_path_url_add_component2, but allows path components that
+ * end with a trailing '/'
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 const char *
 svn_path_url_add_component(const char *url,
                            const char *component,

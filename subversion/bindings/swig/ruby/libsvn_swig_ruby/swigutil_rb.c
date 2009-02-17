@@ -507,7 +507,6 @@ svn_swig_rb_destroyer_destroy(VALUE self, VALUE target)
 void
 svn_swig_rb_initialize(void)
 {
-  apr_pool_t *pool;
   VALUE mSvnConverter, mSvnLocale, mSvnGetText, mSvnDestroyer;
 
   check_apr_status(apr_initialize(), rb_eLoadError, "cannot initialize APR: %s");
@@ -620,7 +619,7 @@ rb_holder_pop(VALUE holder, VALUE obj)
 
   if (!NIL_P(objs)) {
     result = rb_ary_pop(objs);
-    if (RARRAY(objs)->len == 0) {
+    if (RARRAY_LEN(objs) == 0) {
       rb_hash_delete(holder, key);
     }
   }
@@ -749,8 +748,8 @@ svn_swig_rb_set_pool(VALUE target, VALUE pool)
     long i;
     svn_boolean_t set = FALSE;
 
-    for (i = 0; i < RARRAY(target)->len; i++) {
-      if (svn_swig_rb_set_pool(RARRAY(target)->ptr[i], pool))
+    for (i = 0; i < RARRAY_LEN(target); i++) {
+      if (svn_swig_rb_set_pool(RARRAY_PTR(target)[i], pool))
         set = TRUE;
     }
     return set;
@@ -1017,7 +1016,7 @@ svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash, apr_pool_t *pool)
     int i, len;
     apr_array_header_t *result;
 
-    len = RARRAY(array_or_hash)->len;
+    len = RARRAY_LEN(array_or_hash);
     result = apr_array_make(pool, len, sizeof(svn_prop_t));
     result->nelts = len;
     for (i = 0; i < len; i++) {
@@ -1071,7 +1070,7 @@ svn_swig_rb_to_apr_array_prop(VALUE array_or_hash, apr_pool_t *pool)
     int i, len;
     apr_array_header_t *result;
 
-    len = RARRAY(array_or_hash)->len;
+    len = RARRAY_LEN(array_or_hash);
     result = apr_array_make(pool, len, sizeof(svn_prop_t *));
     result->nelts = len;
     for (i = 0; i < len; i++) {
@@ -1294,7 +1293,7 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_merge_range,
                           c2r_merge_range_dup, EMPTY_CPP_ARGUMENT,
                           svn_merge_range_t *, NULL)
 
-VALUE
+static VALUE
 c2r_merge_range_array(void *value, void *ctx)
 {
   return svn_swig_rb_apr_array_to_array_merge_range(value);
@@ -1326,7 +1325,7 @@ svn_swig_rb_array_to_apr_array_revision_range(VALUE array, apr_pool_t *pool)
   apr_array_header_t *apr_ary;
 
   Check_Type(array, T_ARRAY);
-  len = RARRAY(array)->len;
+  len = RARRAY_LEN(array);
   apr_ary = apr_array_make(pool, len, sizeof(svn_opt_revision_range_t *));
   apr_ary->nelts = len;
   for (i = 0; i < len; i++) {
@@ -1335,7 +1334,7 @@ svn_swig_rb_array_to_apr_array_revision_range(VALUE array, apr_pool_t *pool)
 
     value = rb_ary_entry(array, i);
     if (RTEST(rb_obj_is_kind_of(value, rb_cArray))) {
-      if (RARRAY(value)->len != 2)
+      if (RARRAY_LEN(value) != 2)
         rb_raise(rb_eArgError,
                  "revision range should be [start, end]: %s",
                  r2c_inspect(value));
@@ -1361,7 +1360,7 @@ name(VALUE array, apr_pool_t *pool)                               \
   apr_array_header_t *apr_ary;                                    \
                                                                   \
   Check_Type(array, T_ARRAY);                                     \
-  len = RARRAY(array)->len;                                       \
+  len = RARRAY_LEN(array);                                       \
   apr_ary = apr_array_make(pool, len, sizeof(type));              \
   apr_ary->nelts = len;                                           \
   for (i = 0; i < len; i++) {                                     \
@@ -1421,7 +1420,7 @@ c2r_hash_with_key_convert(apr_hash_t *hash,
   return r_hash;
 }
 
-VALUE
+static VALUE
 c2r_hash(apr_hash_t *hash,
          c2r_func value_conv,
          void *ctx)
@@ -1473,7 +1472,7 @@ svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash)
   return svn_swig_rb_apr_hash_to_hash_svn_string(prop_hash);
 }
 
-VALUE
+static VALUE
 c2r_revnum(void *value, void *ctx)
 {
   svn_revnum_t *num = value;
@@ -1590,7 +1589,13 @@ callback_rescue(VALUE baton)
 {
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
-  *(rescue_baton->err) = r2c_svn_err(ruby_errinfo, NULL, NULL);
+  *(rescue_baton->err) = r2c_svn_err(
+#ifdef HAVE_RB_ERRINFO
+                                     rb_errinfo(),
+#else
+                                     ruby_errinfo,
+#endif
+                                     NULL, NULL);
   svn_swig_rb_push_pool(rescue_baton->pool);
 
   return Qnil;
@@ -3131,8 +3136,8 @@ read_handler_rbio(void *baton, char *buffer, apr_size_t *len)
   if (NIL_P(result)) {
     *len = 0;
   } else {
-    memcpy(buffer, StringValuePtr(result), RSTRING(result)->len);
-    *len = RSTRING(result)->len;
+    memcpy(buffer, StringValuePtr(result), RSTRING_LEN(result));
+    *len = RSTRING_LEN(result);
   }
 
   return err;

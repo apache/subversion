@@ -354,7 +354,7 @@ svn_handle_warning(FILE *stream,
     return svn_error__malfunction(TRUE, __FILE__, __LINE__, NULL); \
   } while (0)
 
-/** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning 
+/** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning
  * an error to the calling function.
  *
  * If possible you should use SVN_ERR_MALFUNCTION() instead.
@@ -392,7 +392,7 @@ svn_handle_warning(FILE *stream,
       SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
   } while (0)
 
-/** Similar to SVN_ERR_ASSERT(), but without the option of returning 
+/** Similar to SVN_ERR_ASSERT(), but without the option of returning
  * an error to the calling function.
  *
  * If possible you should use SVN_ERR_ASSERT() instead.
@@ -417,8 +417,8 @@ svn_handle_warning(FILE *stream,
  * source file @a file at line @a line, and was an assertion failure of the
  * expression @a expr, or, if @a expr is null, an unconditional error.
  *
- * If @a can_return is true, the handler can return an error object 
- * that is returned by the caller. If @a can_return is false the 
+ * If @a can_return is true, the handler can return an error object
+ * that is returned by the caller. If @a can_return is false the
  * method should never return. (The caller will call abort())
  *
  * @since New in 1.6.
@@ -441,7 +441,7 @@ svn_error__malfunction(svn_boolean_t can_return,
  * If @a can_return is true a function of this type must do one of:
  *   - Return an error object describing the error, using an error code in
  *     the category SVN_ERR_MALFUNC_CATEGORY_START.
- *   - Never return. 
+ *   - Never return.
  *
  * The function may alter its behaviour according to compile-time
  * and run-time and even interactive conditions.

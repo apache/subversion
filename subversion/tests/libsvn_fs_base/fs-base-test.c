@@ -1517,11 +1517,11 @@ orphaned_textmod_change(const char **msg,
       svn_fs_path_change_t *change = apr_hash_get(changed_paths, "/iota",
                                                   APR_HASH_KEY_STRING);
       if (change && change->text_mod)
-        return svn_error_create(SVN_ERR_TEST_FAILED, NULL, 
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "Got unexpected textmods changed path "
                                 "for 'iota'");
       else
-        return svn_error_create(SVN_ERR_TEST_FAILED, NULL, 
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "Got non-empty changed paths hash where empty "
                                 "one expected");
     }

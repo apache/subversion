@@ -1751,7 +1751,7 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
   baton->diff_copy_from = opt_state->diff_copy_from;
   baton->full_paths = opt_state->full_paths;
   baton->copy_info = opt_state->copy_info;
-  baton->is_revision = opt_state->txn ? FALSE : TRUE;
+  baton->is_revision = opt_state->txn == NULL;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup(pool, opt_state->txn);
   baton->diff_options = svn_cstring_split(opt_state->extensions
@@ -2027,7 +2027,7 @@ subcommand_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_tree(c, opt_state->arg1 ? opt_state->arg1 : "",
                   opt_state->show_ids, opt_state->full_paths,
-                  opt_state->non_recursive ? FALSE : TRUE, pool));
+                  ! opt_state->non_recursive, pool));
   return SVN_NO_ERROR;
 }
 

@@ -277,7 +277,7 @@ read_digest_file(apr_hash_t **children_p,
 
       if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile(fs, path);
-      lock->is_dav_comment = (val[0] == '1') ? TRUE : FALSE;
+      lock->is_dav_comment = (val[0] == '1');
 
       if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile(fs, path);

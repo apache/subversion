@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -128,7 +128,7 @@ def match_xml_element(str, exprs):
       e_atts = {}
       if len(expr) > 1:
         e_atts = expr[1]
-      if not same_dict(e_atts, atts):
+      if e_atts != atts:
         continue
       # compare element content (text only)
       e_content = ''
@@ -139,17 +139,6 @@ def match_xml_element(str, exprs):
       # success!
       exprs.remove(expr)
   return (str, exprs)
-
-def same_dict(d1, d2):
-  "Helper function to test if 2 Python dictionaries have the same content"
-    # Might be simpler to use sets, but they first appear in Python 2.3,
-    # darn it...
-  if len(d1) != len(d2):
-    return False
-  for (key, val) in d1.items():
-    if (key not in d2 or d2[key] != val):
-      return False
-  return True
 
 def info_with_tree_conflicts(sbox):
   "info with tree conflicts"
@@ -209,7 +198,7 @@ def info_with_tree_conflicts(sbox):
         "Tree conflict missing in svn info -R output:\n"
         "  Expected: '%s'\n"
         "  Found: '%s'" % (expected, output))
-  
+
 def info_on_added_file(sbox):
   """info on added file"""
 

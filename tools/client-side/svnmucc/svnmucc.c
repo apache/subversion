@@ -89,8 +89,8 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     apr_pool_t *pool)
 {
   SVN_ERR(svn_ra_create_callbacks(callbacks, pool));
-  
-  SVN_ERR(svn_cmdline_create_auth_baton(&(*callbacks)->auth_baton, 
+
+  SVN_ERR(svn_cmdline_create_auth_baton(&(*callbacks)->auth_baton,
                                         non_interactive,
                                         username, password, NULL, FALSE,
                                         FALSE, NULL, NULL, NULL, pool));

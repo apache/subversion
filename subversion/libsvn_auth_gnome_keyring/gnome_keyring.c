@@ -384,27 +384,33 @@ simple_gnome_keyring_first_creds(void **credentials,
                                  const char *realmstring,
                                  apr_pool_t *pool)
 {
-  svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                 APR_HASH_KEY_STRING);
-  void *unlock_prompt_baton =
-    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
-                 APR_HASH_KEY_STRING);
-
-  char *keyring_password;
-  const char *default_keyring = get_default_keyring_name(pool);
-
-  if (check_keyring_is_locked(default_keyring))
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+  if (! non_interactive)
     {
-      if (unlock_prompt_func)
+      svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
+        apr_hash_get(parameters,
+                     SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                     APR_HASH_KEY_STRING);
+      void *unlock_prompt_baton =
+        apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                     APR_HASH_KEY_STRING);
+
+      char *keyring_password;
+      const char *default_keyring = get_default_keyring_name(pool);
+
+      if (check_keyring_is_locked(default_keyring))
         {
-          SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                        default_keyring,
-                                        unlock_prompt_baton,
-                                        pool));
-          unlock_gnome_keyring(default_keyring, keyring_password,
-                               pool);
+          if (unlock_prompt_func)
+            {
+              SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                            default_keyring,
+                                            unlock_prompt_baton,
+                                            pool));
+              unlock_gnome_keyring(default_keyring, keyring_password,
+                                   pool);
+            }
         }
     }
 
@@ -425,27 +431,33 @@ simple_gnome_keyring_save_creds(svn_boolean_t *saved,
                                 const char *realmstring,
                                 apr_pool_t *pool)
 {
-  svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                 APR_HASH_KEY_STRING);
-  void *unlock_prompt_baton =
-    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
-                 APR_HASH_KEY_STRING);
-
-  char *keyring_password;
-  const char *default_keyring = get_default_keyring_name(pool);
-
-  if (check_keyring_is_locked(default_keyring))
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+  if (! non_interactive)
     {
-      if (unlock_prompt_func)
+      svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
+        apr_hash_get(parameters,
+                     SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                     APR_HASH_KEY_STRING);
+      void *unlock_prompt_baton =
+        apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                     APR_HASH_KEY_STRING);
+
+      char *keyring_password;
+      const char *default_keyring = get_default_keyring_name(pool);
+
+      if (check_keyring_is_locked(default_keyring))
         {
-          SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                        default_keyring,
-                                        unlock_prompt_baton,
-                                        pool));
-          unlock_gnome_keyring(default_keyring, keyring_password,
-                               pool);
+          if (unlock_prompt_func)
+            {
+              SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                            default_keyring,
+                                            unlock_prompt_baton,
+                                            pool));
+              unlock_gnome_keyring(default_keyring, keyring_password,
+                                   pool);
+            }
         }
     }
 
@@ -503,27 +515,33 @@ ssl_client_cert_pw_gnome_keyring_first_creds(void **credentials,
                                              const char *realmstring,
                                              apr_pool_t *pool)
 {
-  svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                 APR_HASH_KEY_STRING);
-  void *unlock_prompt_baton =
-    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
-                 APR_HASH_KEY_STRING);
-
-  char *keyring_password;
-  const char *default_keyring = get_default_keyring_name(pool);
-
-  if (check_keyring_is_locked(default_keyring))
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+  if (! non_interactive)
     {
-      if (unlock_prompt_func)
+      svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
+        apr_hash_get(parameters,
+                     SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                     APR_HASH_KEY_STRING);
+      void *unlock_prompt_baton =
+        apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                     APR_HASH_KEY_STRING);
+
+      char *keyring_password;
+      const char *default_keyring = get_default_keyring_name(pool);
+
+      if (check_keyring_is_locked(default_keyring))
         {
-          SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                        default_keyring,
-                                        unlock_prompt_baton,
-                                        pool));
-          unlock_gnome_keyring(default_keyring, keyring_password,
-                               pool);
+          if (unlock_prompt_func)
+            {
+              SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                            default_keyring,
+                                            unlock_prompt_baton,
+                                            pool));
+              unlock_gnome_keyring(default_keyring, keyring_password,
+                                   pool);
+            }
         }
     }
 
@@ -546,27 +564,33 @@ ssl_client_cert_pw_gnome_keyring_save_creds(svn_boolean_t *saved,
                                             const char *realmstring,
                                             apr_pool_t *pool)
 {
-  svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                 APR_HASH_KEY_STRING);
-  void *unlock_prompt_baton =
-    apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
-                 APR_HASH_KEY_STRING);
-
-  char *keyring_password;
-  const char *default_keyring = get_default_keyring_name(pool);
-
-  if (check_keyring_is_locked(default_keyring))
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+  if (! non_interactive)
     {
-      if (unlock_prompt_func)
+      svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
+        apr_hash_get(parameters,
+                     SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                     APR_HASH_KEY_STRING);
+      void *unlock_prompt_baton =
+        apr_hash_get(parameters, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                     APR_HASH_KEY_STRING);
+
+      char *keyring_password;
+      const char *default_keyring = get_default_keyring_name(pool);
+
+      if (check_keyring_is_locked(default_keyring))
         {
-          SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                        default_keyring,
-                                        unlock_prompt_baton,
-                                        pool));
-          unlock_gnome_keyring(default_keyring, keyring_password,
-                               pool);
+          if (unlock_prompt_func)
+            {
+              SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                            default_keyring,
+                                            unlock_prompt_baton,
+                                            pool));
+              unlock_gnome_keyring(default_keyring, keyring_password,
+                                   pool);
+            }
         }
     }
 

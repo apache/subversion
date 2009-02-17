@@ -26,6 +26,7 @@
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_atomic.h"
 
 
 #ifdef SVN_SQLITE_INLINE
@@ -289,10 +290,24 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
   return SVN_NO_ERROR;
 }
 
-const char *
-svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column)
+const void *
+svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len)
 {
-  return (const char *) sqlite3_column_text(stmt->s3stmt, column);
+  const void *val = sqlite3_column_blob(stmt->s3stmt, column);
+  *len = sqlite3_column_bytes(stmt->s3stmt, column);
+  return val;
+}
+
+const char *
+svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
+                        apr_pool_t *result_pool)
+{
+  const char *result = (const char *) sqlite3_column_text(stmt->s3stmt, column);
+
+  if (result_pool)
+    result = apr_pstrdup(result_pool, result);
+
+  return result;
 }
 
 svn_revnum_t
@@ -304,8 +319,7 @@ svn_sqlite__column_revnum(svn_sqlite__stmt_t *stmt, int column)
 svn_boolean_t
 svn_sqlite__column_boolean(svn_sqlite__stmt_t *stmt, int column)
 {
-  return (sqlite3_column_int64(stmt->s3stmt, column) == 0
-          ? FALSE : TRUE);
+  return (sqlite3_column_int64(stmt->s3stmt, column) != 0);
 }
 
 int
@@ -410,6 +424,19 @@ upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_schema(int *version, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__prepare(&stmt, db, "PRAGMA user_version;", scratch_pool));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+
+  *version = svn_sqlite__column_int(stmt, 0);
+
+  return svn_sqlite__finalize(stmt);
+}
+
 
 /* Check the schema format of the database, upgrading it if necessary.
    Return SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA if the schema format is too new,
@@ -419,16 +446,10 @@ static svn_error_t *
 check_format(svn_sqlite__db_t *db, int latest_schema,
              const char * const *upgrade_sql, apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
   int current_schema;
 
-  SVN_ERR(svn_sqlite__prepare(&stmt, db, "PRAGMA user_version;", scratch_pool));
-  SVN_ERR(svn_sqlite__step_row(stmt));
-
   /* Validate that the schema exists as expected. */
-  current_schema = svn_sqlite__column_int(stmt, 0);
-
-  SVN_ERR(svn_sqlite__finalize(stmt));
+  SVN_ERR(get_schema(&current_schema, db, scratch_pool));
 
   if (current_schema == latest_schema)
     return SVN_NO_ERROR;
@@ -442,10 +463,13 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
                            current_schema);
 }
 
+static volatile svn_atomic_t sqlite_init_state;
+
 /* If possible, verify that SQLite was compiled in a thread-safe
    manner. */
+/* Don't call this function directly!  Use svn_atomic__init_once(). */
 static svn_error_t *
-init_sqlite(void)
+init_sqlite(apr_pool_t *pool)
 {
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
     return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
@@ -469,10 +493,56 @@ init_sqlite(void)
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
 
-  /* NOTE: if more work is performed here, then consider using
-     svn_atomic__init_once() for the call to this function. */
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__get_schema_version(int *version,
+                               const char *path,
+                               apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t db;
+
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+  SQLITE_ERR(sqlite3_open(path, &db.db3), &db);
+  SVN_ERR(get_schema(version, &db, scratch_pool));
+  SQLITE_ERR(sqlite3_close(db.db3), &db);
 
   return SVN_NO_ERROR;
+}
+
+/* APR cleanup function used to close the database when its pool is destoryed.
+   DATA should be the svn_sqlite__db_t handle for the database. */
+static apr_status_t
+close_apr(void *data)
+{
+  svn_sqlite__db_t *db = data;
+  svn_error_t *err = SVN_NO_ERROR;
+  int result;
+  int i;
+
+  /* Finalize any existing prepared statements. */
+  for (i = 0; i < db->nbr_statements; i++)
+    {
+      if (db->prepared_stmts[i])
+        err = svn_error_compose_create(
+                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
+    }
+
+  result = sqlite3_close(db->db3);
+
+  /* If there's a pre-existing error, return it. */
+  if (err)
+    {
+      result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
+
+  if (result != SQLITE_OK)
+    return SQLITE_ERROR_CODE(result);
+
+  return APR_SUCCESS;
 }
 
 svn_error_t *
@@ -481,17 +551,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  static svn_boolean_t sqlite_initialized = FALSE;
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
 
-  if (! sqlite_initialized)
-    {
-      /* There is a potential initialization race condition here, but
-         it currently isn't worth guarding against (e.g. with a mutex). */
-      SVN_ERR(init_sqlite());
-      sqlite_initialized = TRUE;
-    }
-
-  /* ### use a pool cleanup to close this? (instead of __close()) */
   *db = apr_palloc(result_pool, sizeof(**db));
 
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
@@ -578,28 +639,27 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
     (*db)->nbr_statements = 0;
 
   (*db)->result_pool = result_pool;
+  apr_pool_cleanup_register(result_pool, *db, close_apr, apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err)
+svn_sqlite__with_transaction(svn_sqlite__db_t *db,
+                             svn_sqlite__transaction_callback_t cb_func,
+                             void *cb_baton)
 {
-  int result;
-  int i;
+  svn_error_t *err;
 
-  /* Finalize any existing prepared statements. */
-  for (i = 0; i < db->nbr_statements; i++)
+  SVN_ERR(svn_sqlite__transaction_begin(db));
+  err = cb_func(cb_baton, db);
+
+  /* Commit or rollback the sqlite transaction. */
+  if (err)
     {
-      if (db->prepared_stmts[i])
-        err = svn_error_compose_create(
-                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
+      svn_error_clear(svn_sqlite__transaction_rollback(db));
+      return err;
     }
-  
-  result = sqlite3_close(db->db3);
-  /* If there's a pre-existing error, return it. */
-  /* ### If the connection close also fails, say something about it as well? */
-  SVN_ERR(err);
-  SQLITE_ERR(result, db);
-  return SVN_NO_ERROR;
+  else
+    return svn_sqlite__transaction_commit(db);
 }

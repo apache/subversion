@@ -180,7 +180,7 @@
 # zero byte               ゼロバイト文字
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.6\n"
+"Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
 "PO-Revision-Date: 2007-10-28 01:23+0900\n"

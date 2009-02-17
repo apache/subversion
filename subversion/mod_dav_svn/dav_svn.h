@@ -768,7 +768,7 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line);
  *   return dav_svn__final_flush_or_error(r, bb, output, derr, resource->pool);
  *
  * SOME BACKGROUND INFO:
- * 
+ *
  * We don't flush the brigade unless there's something in it to
  * flush; that way, we have the opportunity to package a dav_error up
  * for transmission back to the client.

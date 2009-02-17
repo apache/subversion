@@ -297,12 +297,12 @@ is_valid_node_revision_skel(svn_skel_t *skel)
 static svn_boolean_t
 is_valid_copy_skel(svn_skel_t *skel)
 {
-  return (((svn_skel__list_length(skel) == 4)
-           && (svn_skel__matches_atom(skel->children, "copy")
-               || svn_skel__matches_atom(skel->children, "soft-copy"))
-           && skel->children->next->is_atom
-           && skel->children->next->next->is_atom
-           && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
+  return ((svn_skel__list_length(skel) == 4)
+          && (svn_skel__matches_atom(skel->children, "copy")
+              || svn_skel__matches_atom(skel->children, "soft-copy"))
+          && skel->children->next->is_atom
+          && skel->children->next->next->is_atom
+          && skel->children->next->next->next->is_atom);
 }
 
 
@@ -640,7 +640,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
               noderev->has_mergeinfo = atoi(apr_pstrmemdup(pool,
                                                            cur_skel->data,
                                                            cur_skel->len))
-                                         ? TRUE : FALSE;
+                                         != 0;
               noderev->mergeinfo_count =
                 apr_atoi64(apr_pstrmemdup(pool,
                                           cur_skel->next->data,
