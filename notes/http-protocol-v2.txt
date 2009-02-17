@@ -305,3 +305,7 @@ need.
       'If-match:' headers to facilitate server-side out-of-dateness
       checks.  (TODO:  value of header is probably an etag?)
 
+      [### If we're talking about custom protocols anyway, why use an
+           'If-match' header with an Etag value?  Why not use a custom
+           'SVN-Base-Revision' header that carries the value given us
+           via the commit editor?]
