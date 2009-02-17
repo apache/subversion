@@ -238,8 +238,8 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t show_hidden,
                          apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_wc__entries_write_old(apr_hash_t *entries,
                           svn_wc_adm_access_t *adm_access,

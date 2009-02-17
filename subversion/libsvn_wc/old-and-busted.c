@@ -685,15 +685,13 @@ struct entries_accumulator
   /* The parser that's parsing it, for signal_expat_bailout(). */
   svn_xml_parser_t *parser;
 
-  /* Should we include 'deleted' entries in the hash? */
-  svn_boolean_t show_hidden;
-
   /* Don't leave home without one. */
   apr_pool_t *pool;
 
   /* Cleared before handling each entry. */
   apr_pool_t *scratch_pool;
 };
+
 
 /* Is the entry in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
@@ -703,6 +701,7 @@ entry_is_hidden(const svn_wc_entry_t *entry)
   return ((entry->deleted && entry->schedule != svn_wc_schedule_add)
           || entry->absent);
 }
+
 
 /* Called whenever we find an <open> tag of some kind. */
 static void
@@ -732,8 +731,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
      have made it into SVN_WC_ENTRY_THIS_DIR. */
-  if (!entry_is_hidden(entry) || accum->show_hidden)
-    apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
+  apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
 }
 
 /* Parse BUF of size SIZE as an entries file in XML format, storing the parsed
@@ -742,7 +740,6 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
 static svn_error_t *
 parse_entries_xml(svn_wc_adm_access_t *adm_access,
                   apr_hash_t *entries,
-                  svn_boolean_t show_hidden,
                   const char *buf,
                   apr_size_t size,
                   apr_pool_t *pool)
@@ -752,7 +749,6 @@ parse_entries_xml(svn_wc_adm_access_t *adm_access,
 
   /* Set up userData for the XML parser. */
   accum.entries = entries;
-  accum.show_hidden = show_hidden;
   accum.pool = svn_wc_adm_access_pool(adm_access);
   accum.scratch_pool = svn_pool_create(pool);
 
@@ -781,6 +777,8 @@ parse_entries_xml(svn_wc_adm_access_t *adm_access,
 
   return SVN_NO_ERROR;
 }
+
+
 
 /* Use entry SRC to fill in blank portions of entry DST.  SRC itself
    may not have any blanks, of course.
@@ -872,13 +870,11 @@ resolve_to_defaults(apr_hash_t *entries,
   return SVN_NO_ERROR;
 }
 
-/* Fill the entries cache in ADM_ACCESS. Either the full hash cache will be
-   populated, if SHOW_HIDDEN is TRUE, or the truncated hash cache will be
-   populated if SHOW_HIDDEN is FALSE.  POOL is used for local memory
-   allocation, the access baton pool is used for the cache. */
+/* Fill the entries cache in ADM_ACCESS. The full hash cache will be
+   populated.  POOL is used for local memory allocation, the access baton
+   pool is used for the cache. */
 svn_error_t *
 svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t show_hidden,
                          apr_pool_t *scratch_pool)
 {
   apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
@@ -903,8 +899,8 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
   /* If the first byte of the file is not a digit, then it is probably in XML
      format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
-    SVN_ERR(parse_entries_xml(adm_access, entries, show_hidden,
-                              buf->data, buf->len, scratch_pool));
+    SVN_ERR(parse_entries_xml(adm_access, entries, buf->data, buf->len,
+                              scratch_pool));
   else
     {
       const char *val;
@@ -948,18 +944,14 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
           ++curp;
           ++entryno;
 
-          if ((entry->depth != svn_depth_exclude)
-              || (!entry_is_hidden(entry) || show_hidden))
-            {
-              apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
-            }
+          apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
         }
     }
 
   /* Fill in any implied fields. */
   SVN_ERR(resolve_to_defaults(entries, result_pool));
 
-  svn_wc__adm_access_set_entries(adm_access, show_hidden, entries);
+  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
   return SVN_NO_ERROR;
 }
