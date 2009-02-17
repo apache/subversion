@@ -238,6 +238,13 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                           svn_wc_adm_access_t *adm_access,
                           apr_pool_t *pool);
 
+svn_error_t *
+svn_wc__write_entry_old(svn_stringbuf_t *buf,
+                        const svn_wc_entry_t *entry,
+                        const char *name,
+                        const svn_wc_entry_t *this_dir,
+                        apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
