@@ -276,6 +276,9 @@ do_bool_attr(svn_boolean_t *entry_flag,
   return SVN_NO_ERROR;
 }
 
+
+#ifdef NOT_USED_YET
+
 /**
  * Parse the string at *STR as an revision and save the result in
  * *OPT_REV.  After returning successfully, *STR points at next
@@ -387,6 +390,7 @@ unserialize_file_external(const char **path_result,
   return SVN_NO_ERROR;
 }
 
+
 /* Serialize into STR the file external path, peg revision number and
    the operative revision number into a format that
    unserialize_file_external() can parse.  The format is
@@ -421,6 +425,9 @@ serialize_file_external(const char **str,
 
   return SVN_NO_ERROR;
 }
+
+#endif /* NOT_USED_YET */
+
 
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
@@ -1128,7 +1135,7 @@ get_repos_info(const char **repos_root,
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                              _("No REPOSITORY table entry for id '%ld'"),
-                             repos_id);
+                             (long int)repos_id);
 
   *repos_root = svn_sqlite__column_text(stmt, 0, result_pool);
   *repos_uuid = svn_sqlite__column_text(stmt, 1, result_pool);
