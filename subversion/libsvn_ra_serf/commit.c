@@ -1339,27 +1339,39 @@ add_directory(const char *path,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *add_dir_ctx;
   apr_status_t status;
-
-  /* Ensure our parent is checked out. */
-  SVN_ERR(checkout_dir(parent));
+  const char *mkcol_target;
 
   dir = apr_pcalloc(dir_pool, sizeof(*dir));
 
   dir->pool = dir_pool;
-
   dir->parent_dir = parent;
   dir->commit = parent->commit;
-
   dir->added = TRUE;
   dir->base_revision = SVN_INVALID_REVNUM;
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
   dir->name = apr_pstrdup(dir->pool, path);
-  dir->url =
-      svn_path_url_add_component(parent->commit->checked_in_url,
-                                 path, dir->pool);
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
+
+  if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
+    {
+      dir->url = svn_path_url_add_component(parent->commit->txn_root_url,
+                                            path, dir->pool);
+      mkcol_target = dir->url;
+    }
+  else
+    {
+      /* Ensure our parent is checked out. */ 
+      SVN_ERR(checkout_dir(parent));
+
+      dir->url = svn_path_url_add_component(parent->commit->checked_in_url,
+                                            path, dir->pool);
+      mkcol_target = svn_path_url_add_component(parent->checkout->resource_url,
+                                                svn_path_basename(path,
+                                                                  dir->pool),
+                                                dir->pool);
+    }
 
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
   handler->conn = dir->commit->conn;
@@ -1372,10 +1384,7 @@ add_directory(const char *path,
   if (!dir->copy_path)
     {
       handler->method = "MKCOL";
-      handler->path = svn_path_url_add_component(parent->checkout->resource_url,
-                                                 svn_path_basename(path,
-                                                                   dir->pool),
-                                                 dir->pool);
+      handler->path = mkcol_target;
     }
   else
     {
@@ -1580,9 +1589,6 @@ add_file(const char *path,
   const char *deleted_parent = path;
   const char *head_target_url = NULL;
 
-  /* Ensure our directory has been checked out */
-  SVN_ERR(checkout_dir(dir));
-
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
 
@@ -1591,18 +1597,16 @@ add_file(const char *path,
   new_file->parent_dir = dir;
   new_file->commit = dir->commit;
   new_file->name = apr_pstrdup(new_file->pool, path);
-
   new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
   new_file->copy_path = copy_path;
   new_file->copy_revision = copy_revision;
-
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
   /* Ensure that the file doesn't exist by doing a HEAD on the
-   * resource.  If we're using HTTP v2, we'll just look into the
-   * transaction root tree for this thing.  */
+     resource.  If we're using HTTP v2, we'll just look into the
+     transaction root tree for this thing.  */
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
       new_file->url = svn_path_url_add_component(dir->commit->txn_root_url,
@@ -1610,12 +1614,15 @@ add_file(const char *path,
       head_target_url = new_file->url;
     }
   /* Otherwise, we'll look at the public HEAD URL, but only if we
-   * haven't deleted it in this commit already - directly, or
-   * indirectly through its parent directories - or if the parent
-   * directory was also added (without history) in this commit.
+     haven't deleted it in this commit already - directly, or
+     indirectly through its parent directories - or if the parent
+     directory was also added (without history) in this commit.
    */
   else
     {
+      /* Ensure our parent directory has been checked out */
+      SVN_ERR(checkout_dir(dir));
+
       new_file->url =
         svn_path_url_add_component(dir->checkout->resource_url,
                                    svn_path_basename(path, new_file->pool),
@@ -1937,13 +1944,17 @@ close_edit(void *edit_baton,
   svn_ra_serf__simple_request_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
   svn_boolean_t *merge_done;
+  const char *merge_target =
+    ctx->activity_url ? ctx->activity_url : ctx->txn_url;
+  apr_size_t merge_target_len =
+    ctx->activity_url ? ctx->activity_url_len : strlen(ctx->txn_url);
 
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__merge_create_req(&merge_ctx, ctx->session,
                                         ctx->session->conns[0],
                                         ctx->session->repos_url.path,
-                                        ctx->activity_url,
-                                        ctx->activity_url_len,
+                                        merge_target,
+                                        merge_target_len,
                                         ctx->lock_tokens,
                                         ctx->keep_locks,
                                         pool));
@@ -1994,8 +2005,9 @@ abort_edit(void *edit_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *delete_ctx;
 
-  /* If an activity wasn't even created, don't bother trying to delete it. */
-  if (! ctx->activity_url)
+  /* If an activity or transaction wasn't even created, don't bother
+     trying to delete it. */
+  if (! (ctx->activity_url || ctx->txn_url))
     return SVN_NO_ERROR;
 
   /* DELETE our aborted activity */
