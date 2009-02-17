@@ -727,7 +727,9 @@ complete_directory(struct edit_baton *eb,
       if (current_entry->deleted)
         {
           if (current_entry->schedule != svn_wc_schedule_add)
-            svn_wc__entry_remove(entries, name);
+            SVN_ERR(svn_wc__entry_remove(
+                             entries, svn_wc_adm_access_path(adm_access),
+                             name, subpool));
           else
             {
               svn_wc_entry_t tmpentry;
@@ -746,7 +748,9 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          svn_wc__entry_remove(entries, name);
+          SVN_ERR(svn_wc__entry_remove(
+                                entries, svn_wc_adm_access_path(adm_access),
+                                name, subpool));
         }
       else if (current_entry->kind == svn_node_dir)
         {
@@ -762,7 +766,9 @@ complete_directory(struct edit_baton *eb,
                        && (! current_entry->absent)
                        && (current_entry->schedule != svn_wc_schedule_add))
               {
-                svn_wc__entry_remove(entries, name);
+                SVN_ERR(svn_wc__entry_remove(
+                             entries, svn_wc_adm_access_path(adm_access),
+                             name, subpool));
                 if (eb->notify_func)
                   {
                     svn_wc_notify_t *notify
@@ -1959,7 +1965,9 @@ do_entry_deletion(struct edit_baton *eb,
       apr_hash_t *entries;
       const char *base_name = svn_path_basename(full_path, pool);
       SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, TRUE, pool));
-      svn_wc__entry_remove(entries, base_name);
+      SVN_ERR(svn_wc__entry_remove(
+                        entries, svn_wc_adm_access_path(parent_adm_access),
+                        base_name, pool));
       SVN_ERR(svn_wc__entries_write(entries, parent_adm_access, pool));
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
