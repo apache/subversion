@@ -252,6 +252,12 @@ svn_wc__write_entry_old(svn_stringbuf_t *buf,
                         const svn_wc_entry_t *this_dir,
                         apr_pool_t *pool);
 
+/* Resolve any missing information in ENTRIES by deducing from the
+   directory's own entry (which must already be present in ENTRIES). */
+svn_error_t *
+svn_wc__resolve_to_defaults(apr_hash_t *entries,
+                            apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

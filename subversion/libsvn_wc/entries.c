@@ -1153,7 +1153,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
     }
 
   /* Fill in any implied fields. */
-  SVN_ERR(resolve_to_defaults(entries, result_pool));
+  SVN_ERR(svn_wc__resolve_to_defaults(entries, result_pool));
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
   return SVN_NO_ERROR;

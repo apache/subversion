@@ -812,12 +812,9 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     }
 }
 
-
-/* Resolve any missing information in ENTRIES by deducing from the
-   directory's own entry (which must already be present in ENTRIES). */
-static svn_error_t *
-resolve_to_defaults(apr_hash_t *entries,
-                    apr_pool_t *pool)
+svn_error_t *
+svn_wc__resolve_to_defaults(apr_hash_t *entries,
+                            apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_wc_entry_t *default_entry
@@ -954,7 +951,7 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
     }
 
   /* Fill in any implied fields. */
-  SVN_ERR(resolve_to_defaults(entries, result_pool));
+  SVN_ERR(svn_wc__resolve_to_defaults(entries, result_pool));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
