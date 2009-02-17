@@ -46,6 +46,7 @@
 
 
 
+
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
 {
@@ -61,6 +62,8 @@ alloc_entry(apr_pool_t *pool)
   entry->file_external_rev.kind = svn_opt_revision_unspecified;
   return entry;
 }
+
+
 
 /* Read an escaped byte on the form 'xHH' from [*BUF, END), placing
    the byte in *RESULT.  Advance *BUF to point after the escape
@@ -538,9 +541,14 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* cachable-props string. */
-  SVN_ERR(read_val(&entry->cachable_props, buf, end));
-  if (entry->cachable_props)
-    entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
+  {
+    const char *unused_value;
+    SVN_ERR(read_val(&unused_value, buf, end));
+
+    /* Use the empty string for cachable_props, indicating that we no
+       longer attempt to cache any properties. */
+    entry->cachable_props = "";
+  }
   MAYBE_DONE;
 
   /* present-props string. */
@@ -635,7 +643,7 @@ read_entry(svn_wc_entry_t **new_entry,
 
         entry->depth = svn_depth_from_word(result);
 
-        /* Verify the depth value: 
+        /* Verify the depth value:
            THIS_DIR should not have an excluded value and SUB_DIR should only
            have excluded value. Remember that infinity value is not stored and
            should not show up here. Otherwise, something bad may have
@@ -676,6 +684,8 @@ read_entry(svn_wc_entry_t **new_entry,
   return SVN_NO_ERROR;
 }
 
+
+
 /* Used when reading an entries file in XML format. */
 struct entries_accumulator
 {
@@ -692,15 +702,6 @@ struct entries_accumulator
   apr_pool_t *scratch_pool;
 };
 
-
-/* Is the entry in a 'hidden' state in the sense of the 'show_hidden'
- * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
-static svn_boolean_t
-entry_is_hidden(const svn_wc_entry_t *entry)
-{
-  return ((entry->deleted && entry->schedule != svn_wc_schedule_add)
-          || entry->absent);
-}
 
 
 /* Called whenever we find an <open> tag of some kind. */
@@ -805,10 +806,8 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     {
       dst->uuid = src->uuid;
     }
-
-  if (! dst->cachable_props)
-    dst->cachable_props = src->cachable_props;
 }
+
 
 /* Resolve any missing information in ENTRIES by deducing from the
    directory's own entry (which must already be present in ENTRIES). */
@@ -869,6 +868,8 @@ resolve_to_defaults(apr_hash_t *entries,
 
   return SVN_NO_ERROR;
 }
+
+
 
 /* Fill the entries cache in ADM_ACCESS. The full hash cache will be
    populated.  POOL is used for local memory allocation, the access baton
@@ -957,16 +958,16 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
 }
 
 
+
 
 /* *******************
-
-   Below is code to write the old-format 'entries' file. This code will
-   eventually disappear, as the eventual plan is to NEVER write the old
-   format. A working copy must be upgraded before use, so (eventually)
-   this functionality will not be required.
-
-   ******************* */
-
+ *
+ * Below is code to write the old-format 'entries' file. This code will
+ * eventually disappear, as the eventual plan is to NEVER write the old
+ * format. A working copy must be upgraded before use, so (eventually)
+ * this functionality will not be required.
+ *
+ * ******************* */
 
 /* If STR is non-null, append STR to BUF, terminating it with a
    newline, escaping bytes that needs escaping, using POOL for
