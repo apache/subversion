@@ -65,7 +65,8 @@ enum statement_keys {
   STMT_SELECT_ACTUAL_NODE,
   STMT_DELETE_BASE_NODE,
   STMT_DELETE_WORKING_NODE,
-  STMT_DELETE_ACTUAL_NODE
+  STMT_DELETE_ACTUAL_NODE,
+  STMT_SELECT_BASE_NODE_BY_RELPATH
 };
 
 static const char * const statements[] = {
@@ -125,6 +126,10 @@ static const char * const statements[] = {
   "delete from working_node where wc_id = ?1 and local_relpath = ?2;",
 
   "delete from actual_node where wc_id = ?1 and local_relpath = ?2;",
+
+  "select repos_relpath, root, uuid "
+  "from base_node, repository "
+  "where local_relpath = ?1 and repository.id = base_node.repos_id;",
 
   NULL
   };
@@ -1143,6 +1148,61 @@ get_repos_info(const char **repos_root,
   return svn_sqlite__reset(stmt);
 }
 
+/* This function exists for one purpose: to find the expected future url of
+   an entry which is schedule-add.  In a centralized metadata storage
+   situation, this is pretty easy, but in the current one-db-per-.svn scenario,
+   we need to jump through some hoops, so here it is. */
+static svn_error_t *
+find_working_add_entry_url_stuffs(const char *adm_access_path,
+                                  svn_wc_entry_t *entry,
+                                  const char *relative_path,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  const char *wc_db_path = db_path(adm_access_path, scratch_pool);
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_sqlite__db_t *wc_db;
+
+  /* Open parent database. */
+  /*fprintf(stderr, "%d: access path: '%s'; relative path: '%s'; db path: '%s'\n",
+            __LINE__, adm_access_path, relative_path, wc_db_path);*/
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path,
+                           svn_sqlite__mode_readwrite, statements,
+                           SVN_WC__VERSION, upgrade_sql, scratch_pool,
+                           scratch_pool));
+
+  /* Check to see if a base_node exists for the directory. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                    STMT_SELECT_BASE_NODE_BY_RELPATH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", SVN_WC_ENTRY_THIS_DIR));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  /* If so, cat the url with the existing relative path, put that in
+     entry->url and return. */
+  if (have_row)
+    {
+      const char *base = svn_sqlite__column_text(stmt, 0, NULL);
+
+      entry->repos = svn_sqlite__column_text(stmt, 1, result_pool);
+      entry->uuid = svn_sqlite__column_text(stmt, 2, result_pool);
+      entry->url = svn_path_join_many(result_pool, entry->repos, base,
+                                      relative_path, NULL);
+      return svn_sqlite__reset(stmt);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* If not, move a path segement from adm_access_path to relative_path and
+     recurse. */
+  return find_working_add_entry_url_stuffs(
+                    svn_path_dirname(adm_access_path, scratch_pool),
+                    entry,
+                    svn_path_join(svn_path_basename(adm_access_path,
+                                                    scratch_pool),
+                                  relative_path, scratch_pool),
+                    result_pool, scratch_pool);
+}
+
 /* Fill the entries cache in ADM_ACCESS. The full hash cache will be
    populated.  SCRATCH_POOL is used for local memory allocation, the access
    baton pool is used for the cache. */
@@ -1282,6 +1342,18 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (working_node->checksum)
         entry->checksum = svn_checksum_to_cstring(working_node->checksum,
                                                   result_pool);
+
+      SVN_ERR(find_working_add_entry_url_stuffs(
+                        entry->name[0] == 0
+                            ? svn_path_dirname(svn_wc_adm_access_path(
+                                            adm_access), scratch_pool)
+                            : svn_wc_adm_access_path(adm_access),
+                        entry,
+                        entry->name[0] == 0
+                            ? svn_path_basename(svn_wc_adm_access_path(
+                                                   adm_access), scratch_pool)
+                            : entry->name,
+                        result_pool, scratch_pool));
       entry->kind = working_node->kind;
       entry->revision = 0;
 
