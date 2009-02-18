@@ -1640,6 +1640,15 @@ merging_commit(const char **msg,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
+
+    /* ### FIXME: It is at this point that our test stops being valid,
+       ### hence its expected failure.  The following call will now
+       ### conflict on /A/D/H, causing revision 6 *not* to be created,
+       ### and the remainer of this test (which was written long ago)
+       ### to suffer from a shift in the expected state and behavior
+       ### of the filesystem as a result of this commit not happening.
+    */
+
     SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
     /*********************************************************************/
     /* REVISION 6 */
