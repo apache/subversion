@@ -93,6 +93,15 @@ test_commit_txn(svn_revnum_t *new_rev,
              "commit conflicted at '%s', but expected conflict at '%s')",
              conflict, expected_conflict);
         }
+
+      /* The svn_fs_commit_txn() API promises to set *NEW_REV to an
+         invalid revision number in the case of a conflict.  */
+      if (SVN_IS_VALID_REVNUM(*new_rev))
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, NULL,
+             "conflicting commit returned valid new revision");
+        }
     }
   else if (err)   /* commit failed, but not due to conflict */
     {
