@@ -97,18 +97,3 @@ Candidate changes for 1.5.6:
      
 Approved changes:
 =================
-
- * r32448
-   Copy properties of 'svn add'ed but uncommitted files.
-   Justification:
-     Makes sure that auto and normal props that are applied to a file actually
-     get committed when a new file is renamed before this first commit.
-     (Reported as AnkhSVN bug)
-   Note:
-     The second hunk in copy_tests.py (adding mergeinfo expectation) has
-     been reverted on trunk, I suppose it should be reverted after merging.
-     Yes, it can be, that is a holdover from when WC to WC copies created
-     empty mergeinfo on the target.  Accepting mine-conflict on copy_tests.py
-     will give the correct result -- pburba.
-   Votes:
-     +1: rhuijben, danielsh, pburba
