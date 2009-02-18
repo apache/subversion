@@ -17,6 +17,32 @@ Candidate changes:
 
   No candidate changes at the moment!
 
-Approved changes:
+Status of 1.6.1:
+================
+
+Candidate changes:
+
+ * r35930
+   Adjust basic_tests.py 12 for compatability with Windows and Python 2.5+.
+   Justification:
+     Stops spurious test failures.
+    Votes:
+     +1: pburba
+
+ * r35943
+   Avoid some tree_conflict_tests.py cleanup errors on Windows with BDB
+   when building multiple sandboxes in the same test.
+   Justification:
+     Stops spurious test failures.
+    Votes:
+     +1: pburba
+
+ * r35950
+   Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
+    Votes:
+     +1: pburba
+     
+Approved changes (all releases):
+================================
 
   No approved changes at the moment!
