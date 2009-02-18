@@ -64,6 +64,13 @@ class TestCase_kwextract(unittest.TestCase):
         self.assertEqual(svnmerge.kwextract("$Rev: $"), "<unknown>")
         self.assertEqual(svnmerge.kwextract("$Date$"), "<unknown>")
 
+def reset_svnmerge():
+    svnmerge.opts = svnmerge.default_opts.copy()
+    svnmerge._cache_svninfo = {}
+    svnmerge._cache_reporoot = {}
+    svnmerge.PathIdentifier.locobjs = {}
+    svnmerge.PathIdentifier.repo_hints = {}
+
 class TestCase_launch(unittest.TestCase):
     if os.name == "nt":
         cmd = "attrib"
@@ -189,6 +196,41 @@ class TestCase_RevisionSet(unittest.TestCase):
         rs = svnmerge.RevisionSet("")
         self.assertEqual(str(rs), "")
 
+class TestCase_PathIdentifier(unittest.TestCase):
+    rrp = "/trunk/contrib/client-side/svnmerge"
+    uuid = "65390229-12b7-0310-b90b-f21a5aa7ec8e"
+    uuidrl = 'uuid://'+uuid+rrp
+    url= "http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge"
+    ext = "uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/trunk/contrib/client-side/svnmerge"
+    def try_pathid(self, rrp, uuid, url, ext, expected_str, expected_formats):
+        l = svnmerge.PathIdentifier(rrp, uuid, url, ext)
+        self.assertEqual(str(l), expected_str,
+            "str() gave '%s' instead of '%s'" % (str(l), expected_str))
+        for k, v in expected_formats.items():
+            self.assertEqual(l.format(k), v,
+                "format('%s') gave '%s' instead of '%s'" % (k, l.format(k), v))
+        reset_svnmerge()
+
+    def test_PathIdentifier_just_path(self):
+        self.try_pathid(self.rrp, None, None, None,
+                self.rrp, { 'path' : self.rrp })
+
+    def test_PathIdentifier_uuid(self):
+        self.try_pathid(self.rrp, self.uuid, None, None,
+                self.uuidrl, { 'path' : self.rrp, 'uuid' : self.uuidrl })
+
+    def test_PathIdentifier_url(self):
+        self.try_pathid(self.rrp, None, self.url, None,
+                self.url, { 'path' : self.rrp, 'url' : self.url })
+
+    def test_PathIdentifier_prefer_url(self):
+        self.try_pathid(self.rrp, self.uuid, self.url, None,
+                self.url, { 'path' : self.rrp, 'url' : self.url, 'uuid' : self.uuidrl })
+
+    def test_PathIdentifier_external_form(self):
+        self.try_pathid(self.rrp, self.uuid, self.url, self.ext,
+                self.ext, { 'path' : self.rrp, 'url' : self.url, 'uuid' : self.uuidrl })
+
 class TestCase_MinimalMergeIntervals(unittest.TestCase):
     def test_basic(self):
         rs = svnmerge.RevisionSet("4-8,12,18,24")
@@ -207,10 +249,9 @@ class TestCase_SvnMerge(unittest.TestCase):
         sys.stdout = sys.stderr = out
         try:
             try:
-                # Clear svnmerge's internal cache before running any
+                # Clear svnmerge's internal caches before running any
                 # commands.
-                svnmerge._cache_svninfo = {}
-                svnmerge._cache_reporoot = {}
+                reset_svnmerge()
 
                 ret = svnmerge.main(args)
             except SystemExit, e:
@@ -296,32 +337,6 @@ class TestCase_CommandLineOptions(TestCase_SvnMerge):
         out = self.svnmerge("init -V")
         self.assert_(out.find("Giovanni Bajo") >= 0)
 
-    def testOptionOrder(self):
-        """Make sure you can intermix command name, arguments and
-        options in any order."""
-        self.svnmerge("--log avail",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("-l avail",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("-r123 merge",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("-s -v -r92481 merge",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("--log merge",
-                      error=True,
-                      match=r"option --log not recognized")
-        self.svnmerge("--diff foobar", error=True, match=r"foobar")
-
-        # This requires gnu_getopt support to be parsed
-        if hasattr(getopt, "gnu_getopt"):
-            self.svnmerge("-r123 merge . --log",
-                          error=True,
-                          match=r"option --log not recognized")
-
 def temp_path():
     try:
         return os.environ["TEMP"]
@@ -389,6 +404,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
            tags/                      2
         """
         self.cwd = os.getcwd()
+        reset_svnmerge()
 
         test_path = get_test_path()
         template_path = get_template_path()
@@ -808,7 +824,9 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         p = self.getproperty()
-        self.assert_(re.search("/branches/testYYY-branch:1-\d+? /trunk:1-\d+?", p))
+        # properties come back in arbitrary order, so search for them individually
+        self.assertTrue(re.search("/branches/testYYY-branch:1-\d+?", p))
+        self.assertTrue(re.search("/trunk:1-\d+?", p))
 
         open("test1", "a").write("foo")
 
@@ -1015,10 +1033,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 19")
 
         # Merge into trunk
-        self.svnmerge("merge -vv -S branch2",
+        self.svnmerge("merge -vv -S /branches/test-branch2",
                       match=r"merge --force -r 18:19")
         p = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
+
+        # allow properties to come back in arbitrary order
+        self.assertTrue(re.search("/branches/test-branch2:1-19", p))
+        self.assertTrue(re.search("/branches/test-branch:1-16", p))
 
         self.svnmerge("integrated -S branch2", match=r"^14-19$")
         self.svnmerge("integrated -S ../test-branch", match=r"^13-16$")
@@ -1304,6 +1325,94 @@ D    test3"""
         # The procedure above should have not misencoded the message
         self.launch('svn log -r 16', match=commit_msg.encode(output_encoding))
 
+
+    def test_pathid_fns(self):
+        # (see also TestCase_pathid_fns for tests that don't need a repos)
+        os.chdir("..")
+        self.assertEqual(svnmerge.pathid_to_url( "/branches/testYYY-branch", "./trunk"),
+                         "%s/branches/testYYY-branch" % self.test_repo_url)
+
+        self.assertTrue(
+            svnmerge.equivalent_pathids("/branches/testYYY-branch",
+                                       "/branches/testYYY-branch",
+                                       "./trunk"))
+
+        self.assertFalse(
+            svnmerge.equivalent_pathids("/branches/test-branch",
+                                       "/branches/testYYY-branch",
+                                       "./trunk"))
+
+    def test_invalid_url(self):
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"]) # warm up svnmerge
+        self.assertEqual(svnmerge.get_svninfo("file://foo/bar"), {})
+
+    def test_dict_from_revlist_prop(self):
+        locdict = svnmerge.dict_from_revlist_prop("/trunk:1-10 uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/branches/foo:20-30")
+        for k, v in locdict.items():
+            if str(k) == '/trunk':
+                self.assertEqual(str(v), '1-10')
+            elif str(k) == 'uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/branches/foo':
+                self.assertEqual(str(v), '20-30')
+            else:
+                self.fail("Unknown pathid '%s'" % k)
+
+    def test_pathid_fns(self):
+        os.chdir("..")
+
+        # run svnmerge once to get things rolling
+        self.svnmerge("init", error=True)
+
+        branch = svnmerge.PathIdentifier.from_target("test-branch")
+        trunk = svnmerge.PathIdentifier.from_target("trunk")
+        yy = svnmerge.PathIdentifier.from_target("%s/branches/testYYY-branch" % self.test_repo_url)
+        branchurl = svnmerge.PathIdentifier.from_target("%s/branches/test-branch" % self.test_repo_url)
+        trunkurl = svnmerge.PathIdentifier.from_target("%s/trunk" % self.test_repo_url)
+
+        self.assertTrue(branchurl == branch)
+        self.assertFalse(branchurl != branch)
+        self.assertTrue(trunkurl == trunk)
+        self.assertTrue(yy != trunk)
+
+    def test_PathIdentifier_hint_url(self):
+        os.chdir("..")
+        # prime the cache with our repo URL
+        svnmerge.PathIdentifier.hint(self.test_repo_url + '/trunk')
+        expected = svnmerge.PathIdentifier.locobjs['/trunk']
+
+        # and then we should get the same pathid for all of these
+        self.assertEqual(expected, svnmerge.PathIdentifier.from_target('trunk'))
+        self.assertEqual(expected, svnmerge.PathIdentifier.from_target(self.test_repo_url + '/trunk'))
+
+    def test_is_pathid(self):
+        os.chdir("..")
+        l = svnmerge.PathIdentifier.from_target('trunk')
+        self.assertTrue(svnmerge.is_pathid(l))
+
+    def testOptionOrder(self):
+        """Make sure you can intermix command name, arguments and options in any order."""
+        # this is under TestCase_TestRepo because it assumes that '.' is a svn working dir
+        self.svnmerge("--log avail",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("-l avail",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("-r123 merge",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("-s -v -r92481 merge",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("--log merge",
+                      error=True,
+                      match=r"option --log not recognized")
+        self.svnmerge("--diff foobar", error=True, match=r"foobar")
+
+        # This requires gnu_getopt support to be parsed
+        if hasattr(getopt, "gnu_getopt"):
+            self.svnmerge("-r123 merge . --log",
+                          error=True,
+                          match=r"option --log not recognized")
 
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing
