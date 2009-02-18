@@ -23,7 +23,7 @@ Candidate changes for 1.5.6:
      Tests that often fail for the wrong reason, might hide real issues
      with our releases.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
  * r34919, r34924
    Make svn client to use the 'LFS' capability of 'neon' to allow commits 
@@ -63,10 +63,8 @@ Candidate changes for 1.5.6:
     Note: Will conflict if r35297 group is not applied first.  Assuming
     r35297 is already merged, accept theirs-conflict on
     subversion\tests\libsvn_subr\mergeinfo-test.c to avoid a minor conflict.
-    avoid a minor conflict.
     Votes:
-     +1: pburba (r35466 only)
-     +1: rhuijben
+     +1: rhuijben, pburba
 
  * r35516
    Prevent svnmerge-migrate-history.py from committing non-canonical
@@ -95,8 +93,11 @@ Candidate changes for 1.5.6:
      Calling Windows 10 times slower than unix because we implemented things
      the wrong way is BAD.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
      
+Approved changes:
+=================
+
  * r32448
    Copy properties of 'svn add'ed but uncommitted files.
    Justification:
@@ -106,8 +107,8 @@ Candidate changes for 1.5.6:
    Note:
      The second hunk in copy_tests.py (adding mergeinfo expectation) has
      been reverted on trunk, I suppose it should be reverted after merging.
+     Yes, it can be, that is a holdover from when WC to WC copies created
+     empty mergeinfo on the target.  Accepting mine-conflict on copy_tests.py
+     will give the correct result -- pburba.
    Votes:
-     +1: rhuijben, danielsh
-
-Approved changes:
-=================
+     +1: rhuijben, danielsh, pburba
