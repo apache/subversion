@@ -45,7 +45,8 @@ CREATE TABLE REPOSITORY (
 CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* absolute path in the local filesystem.  NULL if storing metadata in the wc */
+  /* absolute path in the local filesystem.  NULL if storing metadata in
+     the wcroot itself. */
   local_abspath  TEXT
   );
 
