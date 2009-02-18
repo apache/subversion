@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-02-18 12:23+0100\n"
-"PO-Revision-Date: 2009-02-18 13:19+0100\n"
+"PO-Revision-Date: 2009-02-18 13:28+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6649,7 +6649,7 @@ msgstr "L'URL '%s' du répertoire '%s' différe de celle attendue '%s'"
 #: ../libsvn_wc/update_editor.c:2346
 #, c-format
 msgid "Failed to add directory '%s': a versioned directory of the same name already exists"
-msgstr "Échec de l'ajout du répertoire '%s' : un répertoire non versionné de même nom existe déjà"
+msgstr "Échec de l'ajout du répertoire '%s' : un répertoire versionné de même nom existe déjà"
 
 #: ../libsvn_wc/update_editor.c:2392
 #, c-format
