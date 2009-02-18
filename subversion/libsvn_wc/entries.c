@@ -2061,6 +2061,14 @@ svn_wc__entry_remove(apr_hash_t *entries,
       /* ### fine for now. old-style working copy. */
       svn_error_clear(err);
     }
+  else if (err->apr_err == SVN_ERR_SQLITE_ERROR)
+    {
+      /* ### would be nice to know this is "database not found" or a real
+         ### problem... but we don't. for now, just assume *any* db error
+         ### means that the database wasn't found. and that is just fine...
+         ### it means an old-style working copy. */
+      svn_error_clear(err);
+    }
   else
     return err;
 
