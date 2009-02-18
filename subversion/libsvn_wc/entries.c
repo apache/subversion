@@ -207,22 +207,7 @@ typedef struct {
 
 
 
-/** Overview **/
 
-/* The administrative `entries' file tracks information about files
-   and subdirs within a particular directory.
-
-   See the section on the `entries' file in libsvn_wc/README, for
-   concrete information about the XML format.
-*/
-
-
-/*--------------------------------------------------------------- */
-
-
-/*** Working with the entries sqlite database ***/
-
-#ifdef FROM_EXPLORE_WC
 
 /* Return the location of the sqlite database containing the entry information
    for PATH in the filesystem.  Allocate in RESULT_POOL. ***/
@@ -233,7 +218,14 @@ db_path(const char *path,
   return svn_wc__adm_child(path, "wc.db", result_pool);
 }
 
-#endif
+static svn_boolean_t
+should_create_next_gen(void)
+{
+  /* ### this is temporary. developers will use this while wc-ng is being
+     ### developed. in the future, we will *always* create a next gen wc. */
+  return getenv("SVN_ENABLE_NG") != NULL;
+}
+
 
 
 /*** reading and writing the entries file ***/
@@ -683,8 +675,6 @@ take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 }
 
 
-#ifdef FROM_EXPLORE_WC
-
 /* Select all the rows from base_node table in WC_DB and put them into *NODES,
    allocated in RESULT_POOL. */
 static svn_error_t *
@@ -963,10 +953,10 @@ find_working_add_entry_url_stuffs(const char *adm_access_path,
   svn_sqlite__db_t *wc_db;
 
   /* Open parent database. */
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path,
-                           svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION, upgrade_sql, scratch_pool,
-                           scratch_pool));
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
+                           statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                           scratch_pool, scratch_pool));
 
   /* Check to see if a base_node exists for the directory. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
@@ -999,8 +989,6 @@ find_working_add_entry_url_stuffs(const char *adm_access_path,
                     result_pool, scratch_pool);
 }
 
-#endif /* FROM_EXPLORE_WC */
-
 
 /* Fill the entries cache in ADM_ACCESS. The full hash cache will be
    populated.  SCRATCH_POOL is used for local memory allocation, the access
@@ -1009,9 +997,6 @@ static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
              apr_pool_t *scratch_pool)
 {
-  return svn_wc__read_entries_old(adm_access, scratch_pool);
-
-#ifdef FROM_EXPLORE_WC
   apr_hash_t *base_nodes;
   apr_hash_t *working_nodes;
   apr_hash_t *actual_nodes;
@@ -1019,14 +1004,21 @@ read_entries(svn_wc_adm_access_t *adm_access,
   apr_hash_index_t *hi;
   const char *repos_root = NULL;
   const char *repos_uuid = NULL;
-  apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
-  apr_hash_t *entries = apr_hash_make(result_pool);
-  const char *wc_db_path = db_path(svn_wc_adm_access_path(adm_access),
-                                   scratch_pool);
+  apr_pool_t *result_pool;
+  apr_hash_t *entries;
+  const char *wc_db_path;
   
+  if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
+    return svn_wc__read_entries_old(adm_access, scratch_pool);
+
+  result_pool = svn_wc_adm_access_pool(adm_access);
+  entries = apr_hash_make(result_pool);
+  wc_db_path = db_path(svn_wc_adm_access_path(adm_access), scratch_pool);
+
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readwrite,
-                           statements, SVN_WC__VERSION, upgrade_sql,
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
+                           statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
                            scratch_pool, scratch_pool));
 
   /* The basic strategy here is to get all the node information from the
@@ -1167,7 +1159,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
   return SVN_NO_ERROR;
-#endif
 }
 
 /* For non-directory PATHs full entry information is obtained by reading
@@ -1267,8 +1258,6 @@ svn_wc_entries_read(apr_hash_t **entries,
   *entries = new_entries;
   return SVN_NO_ERROR;
 }
-
-#ifdef FROM_EXPLORE_WC
 
 
 static svn_error_t *
@@ -1736,20 +1725,18 @@ entries_write_body(void *baton,
   return SVN_NO_ERROR;
 }
 
-#endif /* FROM_EXPLORE_WC */
-
 
 svn_error_t *
 svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
-  return svn_wc__entries_write_old(entries, adm_access, pool);
-
-#ifdef FROM_EXPLORE_WC
   svn_sqlite__db_t *wc_db;
   const svn_wc_entry_t *this_dir;
   struct entries_write_txn_baton ewtb;
+
+  if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
+    return svn_wc__entries_write_old(entries, adm_access, pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -1767,8 +1754,10 @@ svn_wc__entries_write(apr_hash_t *entries,
   /* Open the wc.db sqlite database. */
   SVN_ERR(svn_sqlite__open(&wc_db,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
-                           svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION, upgrade_sql, pool, pool));
+                           svn_sqlite__mode_readwrite,
+                           statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                           pool, pool));
 
   /* Do the work in a transaction. */
   ewtb.entries = entries;
@@ -1780,7 +1769,6 @@ svn_wc__entries_write(apr_hash_t *entries,
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
 
   return SVN_NO_ERROR;
-#endif /* FROM_EXPLORE_WC */
 }
 
 
@@ -2010,8 +1998,6 @@ fold_entry(apr_hash_t *entries,
 }
 
 
-#ifdef FROM_EXPLORE_WC
-
 /* Actually do the sqlite removal work within a transaction.
    This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
@@ -2046,8 +2032,6 @@ entry_remove_body(void *baton,
   return SVN_NO_ERROR;
 }
 
-#endif /* FROM_EXPLORE_WC */
-
 
 svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
@@ -2055,24 +2039,30 @@ svn_wc__entry_remove(apr_hash_t *entries,
                      const char *name,
                      apr_pool_t *scratch_pool)
 {
-#ifdef FROM_EXPLORE_WC
   svn_sqlite__db_t *wc_db;
-#endif
+  svn_error_t *err;
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
-#ifdef FROM_EXPLORE_WC
   /* Also remove from the sqlite database. */
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db, db_path(parent_dir, scratch_pool),
-                           svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION, upgrade_sql,
-                           scratch_pool, scratch_pool));
-
-  /* Do the work in a transaction, for consistency. */
-  SVN_ERR(svn_sqlite__with_transaction(wc_db, entry_remove_body,
-                                       (void *) name));
-#endif
+  err = svn_sqlite__open(&wc_db, db_path(parent_dir, scratch_pool),
+                         svn_sqlite__mode_readwrite, statements,
+                         SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                         scratch_pool, scratch_pool);
+  if (err == NULL)
+    {
+      /* Do the work in a transaction, for consistency. */
+      SVN_ERR(svn_sqlite__with_transaction(wc_db, entry_remove_body,
+                                           /* non-const */ (void *)name));
+    }
+  else if (APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* ### fine for now. old-style working copy. */
+      svn_error_clear(err);
+    }
+  else
+    return err;
 
   return SVN_NO_ERROR;
 }
@@ -2541,10 +2531,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 
 
 
-/*** Initialization of the entries file. ***/
-
-#ifdef FROM_EXPLORE_WC
-
 /* Baton for use with init_body() */
 struct init_txn_baton
 {
@@ -2596,7 +2582,6 @@ init_body(void *baton,
                      SVN_WC_ENTRY_THIS_DIR, entry, itb->scratch_pool);
 }
 
-#endif
 
 svn_error_t *
 svn_wc__entries_init(const char *path,
@@ -2607,13 +2592,14 @@ svn_wc__entries_init(const char *path,
                      svn_depth_t depth,
                      apr_pool_t *pool)
 {
-  return svn_wc__entries_init_old(path, uuid, url, repos, initial_rev,
-                                  depth, pool);
-#ifdef FROM_EXPLORE_WC
   svn_node_kind_t kind;
   svn_sqlite__db_t *wc_db;
   const char *wc_db_path = db_path(path, pool);
   struct init_txn_baton itb;
+
+  if (!should_create_next_gen())
+    return svn_wc__entries_init_old(path, uuid, url, repos, initial_rev,
+                                    depth, pool);
 
   SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
@@ -2630,8 +2616,9 @@ svn_wc__entries_init(const char *path,
 
   /* Create the entries database, and start a transaction. */
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
-                           statements, SVN_WC__VERSION, upgrade_sql, pool,
-                           pool));
+                           statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                           pool, pool));
 
   /* Do the body of the work within an sqlite transaction. */
   itb.uuid = uuid;
@@ -2641,7 +2628,6 @@ svn_wc__entries_init(const char *path,
   itb.depth = depth;
   itb.scratch_pool = pool;
   return svn_sqlite__with_transaction(wc_db, init_body, &itb);
-#endif /* FROM_EXPLORE_WC */
 }
 
 
