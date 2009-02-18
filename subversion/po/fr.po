@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-13 09:49+0100\n"
-"PO-Revision-Date: 2009-02-13 11:55+0100\n"
+"POT-Creation-Date: 2009-02-18 13:24+0100\n"
+"PO-Revision-Date: 2009-02-18 13:26+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1328,11 +1328,11 @@ msgstr "Erreur lors du nettoyage d'après-propagation (post-commit), détails :
 msgid "Are all the targets part of the same working copy?"
 msgstr "Les cibles font-elles parties de la même copie de travail ?"
 
-#: ../libsvn_client/commit.c:1286
-msgid "Cannot non-recursively commit a directory deletion"
-msgstr "Propagation non récursive de la suppression d'un répertoire impossible"
+#: ../libsvn_client/commit.c:1290
+msgid "Cannot non-recursively commit a directory deletion of a directory with child nodes"
+msgstr "Propagation non récursive de la suppression d'un répertoire avec des sous-répertoires impossible"
 
-#: ../libsvn_client/commit.c:1335
+#: ../libsvn_client/commit.c:1341
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "Une URL '%s' ne peut être la cible d'une propagation (commit)"
@@ -1425,7 +1425,7 @@ msgid "Standard properties can't be set explicitly as revision properties"
 msgstr "Les propriétés standards ne peuvent être définies explicitement comme des propriétés de révision"
 
 #: ../libsvn_client/copy.c:417 ../libsvn_client/copy.c:1541
-#: ../libsvn_client/update.c:141
+#: ../libsvn_client/update.c:142
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Le chemin '%s' n'est pas un répertoire"
@@ -1515,8 +1515,8 @@ msgid "'%s' is in the way of the resource actually under version control"
 msgstr "'%s' obstrue le chemin de la ressource actuellement sous contrôle de version"
 
 #: ../libsvn_client/delete.c:56 ../libsvn_wc/adm_ops.c:3137
-#: ../libsvn_wc/entries.c:1467 ../libsvn_wc/entries.c:2509
-#: ../libsvn_wc/entries.c:3138 ../libsvn_wc/update_editor.c:4072
+#: ../libsvn_wc/entries.c:1463 ../libsvn_wc/entries.c:2486
+#: ../libsvn_wc/entries.c:3114 ../libsvn_wc/update_editor.c:4087
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' n'est pas versionné"
@@ -1607,7 +1607,7 @@ msgstr "Désolé, appel de svn_client_diff4 de manière non encore supportée"
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
 msgstr "Seules les différences entre des copies de référence et leurs fichiers de travail sont supportées pour l'instant"
 
-#: ../libsvn_client/diff.c:1302 ../libsvn_client/switch.c:152
+#: ../libsvn_client/diff.c:1302 ../libsvn_client/switch.c:153
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "Le répertoire '%s' n'a pas d'URL associée"
@@ -1635,8 +1635,8 @@ msgstr "'%s' existe et n'est pas un répertoire"
 msgid "'%s' already exists"
 msgstr "'%s' existe déjà"
 
-#: ../libsvn_client/export.c:768 ../libsvn_wc/adm_crawler.c:960
-#: ../libsvn_wc/update_editor.c:3758 ../libsvn_wc/update_editor.c:4448
+#: ../libsvn_client/export.c:768 ../libsvn_wc/adm_crawler.c:994
+#: ../libsvn_wc/update_editor.c:3773 ../libsvn_wc/update_editor.c:4463
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Sommes de contrôle différentes pour '%s' ; '%s' attendu, '%s' obtenu"
@@ -1757,7 +1757,7 @@ msgid "When specifying working copy paths, only one target may be given"
 msgstr "Une seule cible à préciser pour un chemin dans une copie de travail"
 
 #: ../libsvn_client/log.c:471 ../libsvn_client/status.c:296
-#: ../libsvn_client/update.c:155
+#: ../libsvn_client/update.c:156
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "L'entrée '%s' n'a pas d'URL associée"
@@ -1962,13 +1962,13 @@ msgstr "Chemin '%s' sans révision propagée"
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "Type de révision demandé inconnu pour '%s'"
 
-#: ../libsvn_client/switch.c:98
+#: ../libsvn_client/switch.c:99
 #, c-format
 msgid "Cannot both exclude and switch a path"
 msgstr "Impossible d'exclure (exclude) et de réaiguiller (switch) en même temps un chemin"
 
-#: ../libsvn_client/switch.c:170 ../libsvn_ra_local/ra_plugin.c:193
-#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4641
+#: ../libsvn_client/switch.c:171 ../libsvn_ra_local/ra_plugin.c:193
+#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4656
 #, c-format
 msgid ""
 "'%s'\n"
@@ -5052,7 +5052,7 @@ msgid "Can't read directory '%s'"
 msgstr "Impossible de lire le répertoire '%s'"
 
 #: ../libsvn_subr/io.c:931 ../libsvn_subr/io.c:1928 ../libsvn_subr/io.c:1979
-#: ../libsvn_subr/io.c:2031 ../libsvn_subr/io.c:3209
+#: ../libsvn_subr/io.c:2031 ../libsvn_subr/io.c:3215
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "Erreur de fermeture du répertoire '%s'"
@@ -5141,7 +5141,7 @@ msgstr "Impossible d'obtenir le nom de fichier"
 msgid "Can't remove file '%s'"
 msgstr "Impossible de supprimer le fichier '%s'"
 
-#: ../libsvn_subr/io.c:1850 ../libsvn_subr/io.c:3056 ../libsvn_subr/io.c:3146
+#: ../libsvn_subr/io.c:1850 ../libsvn_subr/io.c:3062 ../libsvn_subr/io.c:3152
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "Impossible d'ouvrir le répertoire '%s'"
@@ -5315,47 +5315,47 @@ msgstr "Impossible de lire la longueur de la ligne dans le fichier '%s'"
 msgid "Can't read length line in stream"
 msgstr "Impossible de lire la longueur de la ligne dans le flux"
 
-#: ../libsvn_subr/io.c:2904
+#: ../libsvn_subr/io.c:2910
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "Impossible de déplacer '%s' vers '%s'"
 
-#: ../libsvn_subr/io.c:2985
+#: ../libsvn_subr/io.c:2991
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "Impossible de créer le répertoire '%s'"
 
-#: ../libsvn_subr/io.c:2996 ../libsvn_wc/copy.c:640
+#: ../libsvn_subr/io.c:3002 ../libsvn_wc/copy.c:640
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Impossible de cacher le répertoire '%s'"
 
-#: ../libsvn_subr/io.c:3074
+#: ../libsvn_subr/io.c:3080
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "Impossible de supprimer le répertoire '%s'"
 
-#: ../libsvn_subr/io.c:3092
+#: ../libsvn_subr/io.c:3098
 #, c-format
 msgid "Can't read directory"
 msgstr "Impossible de lire le répertoire"
 
-#: ../libsvn_subr/io.c:3165
+#: ../libsvn_subr/io.c:3171
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "Impossible de lire l'entrée de répertoire dans '%s'"
 
-#: ../libsvn_subr/io.c:3290
+#: ../libsvn_subr/io.c:3296
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "Impossible de vérifier le répertoire '%s'"
 
-#: ../libsvn_subr/io.c:3350
+#: ../libsvn_subr/io.c:3356
 #, c-format
 msgid "Reading '%s'"
 msgstr "Lecture de '%s'"
 
-#: ../libsvn_subr/io.c:3366
+#: ../libsvn_subr/io.c:3372
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "La première ligne de '%s' contient des caractères non-numériques"
@@ -5727,7 +5727,7 @@ msgstr "SQLite dont être compilé et exécuté en mode 'thread-safe'"
 msgid "Expected SQLite database not found: %s"
 msgstr "Base de données SQLite non trouvée : %s"
 
-#: ../libsvn_subr/subst.c:1419 ../libsvn_wc/props.c:2375
+#: ../libsvn_subr/subst.c:1419 ../libsvn_wc/props.c:2368
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "Le fichier '%s' a des sauts de ligne incohérents"
@@ -5824,11 +5824,11 @@ msgstr "Versions incompatibles dans '%s', %d.%d.%d%s contre %d.%d.%d%s attendu"
 msgid "Malformed XML: %s at line %ld"
 msgstr "XML malformé: %s à la ligne %ld"
 
-#: ../libsvn_wc/adm_crawler.c:717
+#: ../libsvn_wc/adm_crawler.c:751
 msgid "Error aborting report"
 msgstr "Erreur en interrompant un rapport"
 
-#: ../libsvn_wc/adm_crawler.c:971
+#: ../libsvn_wc/adm_crawler.c:1005
 #, c-format
 msgid "While preparing '%s' for commit"
 msgstr "En préparant la propagation (commit) de '%s'"
@@ -5996,28 +5996,36 @@ msgstr "Copie vers '%s' impossible : il n'est pas dans le dépôt '%s' ; il es
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Copie de '%s' impossible car il doit être supprimé"
 
-#: ../libsvn_wc/crop.c:215
+#: ../libsvn_wc/crop.c:206
+msgid "Can only crop a working copy with a restrictive depth"
+msgstr "Impossible de restreindre une copie de travail avec une profondeur réduite"
+
+#: ../libsvn_wc/crop.c:213
+msgid "Can only crop directories"
+msgstr "On ne peut restreindre que des répertoires"
+
+#: ../libsvn_wc/crop.c:219
 #, c-format
 msgid "Cannot crop '%s': it is going to be removed from repository. Try commit instead"
 msgstr "Impossible de tronquer '%s' : il vait être effacé du dépôt ; essayer de propager d'abord"
 
-#: ../libsvn_wc/crop.c:230
+#: ../libsvn_wc/crop.c:234
 #, c-format
 msgid "Cannot exclude current directory"
 msgstr "Impossible d'exclure le répertoire courant"
 
-#: ../libsvn_wc/crop.c:235
+#: ../libsvn_wc/crop.c:239
 #, c-format
 msgid "Cannot exclude root directory"
 msgstr "Impossible d'exclure le répertoire racine"
 
-#: ../libsvn_wc/crop.c:265
+#: ../libsvn_wc/crop.c:269
 #, c-format
 msgid "Cannot crop '%s': it is a switched path"
 msgstr "Impossible de tronquer '%s' c'est un chemin ré-aiguillé"
 
 #: ../libsvn_wc/entries.c:97 ../libsvn_wc/entries.c:545
-#: ../libsvn_wc/entries.c:817 ../libsvn_wc/entries.c:1067
+#: ../libsvn_wc/entries.c:823 ../libsvn_wc/entries.c:1073
 #, c-format
 msgid "Entry '%s' has invalid '%s' value"
 msgstr "L'entrée '%s' a une valeur '%s' invalide"
@@ -6055,112 +6063,112 @@ msgstr "Rencontre inattendue d'un \\\\0 dans un fichier externe '%s'"
 msgid "Illegal file external revision kind %d for path '%s'"
 msgstr "Type de révision d'un fichier externe %d illégal pour le chemin '%s'"
 
-#: ../libsvn_wc/entries.c:503 ../libsvn_wc/entries.c:792
+#: ../libsvn_wc/entries.c:503 ../libsvn_wc/entries.c:798
 #, c-format
 msgid "Entry '%s' has invalid node kind"
 msgstr "L'entrée '%s' a un type de nœud invalide"
 
-#: ../libsvn_wc/entries.c:524 ../libsvn_wc/entries.c:769
+#: ../libsvn_wc/entries.c:524 ../libsvn_wc/entries.c:775
 #, c-format
 msgid "Entry for '%s' has invalid repository root"
 msgstr "Racine de dépôt invalide pour l'entrée '%s'"
 
-#: ../libsvn_wc/entries.c:689
+#: ../libsvn_wc/entries.c:695
 #, c-format
 msgid "Entry '%s' has invalid depth"
 msgstr "L'entrée '%s' a une profondeur invalide"
 
-#: ../libsvn_wc/entries.c:1210
+#: ../libsvn_wc/entries.c:1209
 #, c-format
 msgid "XML parser failed in '%s'"
 msgstr "Échec de l'analyseur XML dans '%s'"
 
-#: ../libsvn_wc/entries.c:1269
+#: ../libsvn_wc/entries.c:1265
 msgid "Missing default entry"
 msgstr "Entrée par défaut manquante"
 
-#: ../libsvn_wc/entries.c:1274
+#: ../libsvn_wc/entries.c:1270
 msgid "Default entry has no revision number"
 msgstr "L'entrée par défaut n'a pas de numéro de révision"
 
-#: ../libsvn_wc/entries.c:1279
+#: ../libsvn_wc/entries.c:1275
 msgid "Default entry is missing URL"
 msgstr "L'entrée par défaut n'a pas d'URL"
 
-#: ../libsvn_wc/entries.c:1360
+#: ../libsvn_wc/entries.c:1356
 #, c-format
 msgid "Invalid version line in entries file of '%s'"
 msgstr "Ligne de version invalide dans le fichier d'entrées pour '%s'"
 
-#: ../libsvn_wc/entries.c:1376
+#: ../libsvn_wc/entries.c:1372
 msgid "Missing entry terminator"
 msgstr "Terminaison d'entrée (entry) manquante"
 
-#: ../libsvn_wc/entries.c:1379
+#: ../libsvn_wc/entries.c:1375
 msgid "Invalid entry terminator"
 msgstr "Terminaison d'entrée (entry) invalide"
 
-#: ../libsvn_wc/entries.c:1383
+#: ../libsvn_wc/entries.c:1379
 #, c-format
 msgid "Error at entry %d in entries file for '%s':"
 msgstr "Erreur à l'entrée (entry) %d du fichier d'entrées pour '%s'"
 
-#: ../libsvn_wc/entries.c:2141
+#: ../libsvn_wc/entries.c:2122
 #, c-format
 msgid "No default entry in directory '%s'"
 msgstr "Aucune entrée par défaut dans le répertoire '%s'"
 
-#: ../libsvn_wc/entries.c:2199
+#: ../libsvn_wc/entries.c:2180
 #, c-format
 msgid "Error writing to '%s'"
 msgstr "Erreur d'écriture sur '%s'"
 
-#: ../libsvn_wc/entries.c:2536
+#: ../libsvn_wc/entries.c:2513
 #, c-format
 msgid "Can't add '%s' to deleted directory; try undeleting its parent directory first"
 msgstr "'%s' ne peut être ajouté à un répertoire supprimé ; essayer d'abord de rétablir le répertoire parent"
 
-#: ../libsvn_wc/entries.c:2542
+#: ../libsvn_wc/entries.c:2519
 #, c-format
 msgid "Can't replace '%s' in deleted directory; try undeleting its parent directory first"
 msgstr "'%s' ne peut être remplacé dans un répertoire supprimé ; essayer d'abord de rétablir le répertoire parent"
 
-#: ../libsvn_wc/entries.c:2551
+#: ../libsvn_wc/entries.c:2528
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr "'%s' est noté comme absent, et ne peut donc être en attente pour ajout"
 
-#: ../libsvn_wc/entries.c:2580
+#: ../libsvn_wc/entries.c:2557
 #, c-format
 msgid "Entry '%s' is already under version control"
 msgstr "L'entrée '%s' est déjà sous contrôle de version"
 
-#: ../libsvn_wc/entries.c:2681
+#: ../libsvn_wc/entries.c:2658
 #, c-format
 msgid "Entry '%s' has illegal schedule"
 msgstr "L'entrée '%s' a une programmation invalide"
 
-#: ../libsvn_wc/entries.c:2839
+#: ../libsvn_wc/entries.c:2818
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "Pas d'entrée : '%s'"
 
-#: ../libsvn_wc/entries.c:2975
+#: ../libsvn_wc/entries.c:2951
 #, c-format
 msgid "Error writing entries file for '%s'"
 msgstr "Erreur à l'écriture du fichier d'entrées pour '%s'"
 
-#: ../libsvn_wc/entries.c:3028
+#: ../libsvn_wc/entries.c:3004
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "Le répertoire '%s' n'a pas d'entrée THIS_DIR"
 
-#: ../libsvn_wc/entries.c:3154
+#: ../libsvn_wc/entries.c:3130
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' possède un type de nœud non reconnu"
 
-#: ../libsvn_wc/entries.c:3420
+#: ../libsvn_wc/entries.c:3396
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Découverte inattendue de '%s' : chemin marqué comme manquant"
@@ -6258,7 +6266,7 @@ msgstr "Attribut 'dest' manquant dans '%s'"
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "Attribut 'timestamp' manquant dans '%s'"
 
-#: ../libsvn_wc/log.c:787 ../libsvn_wc/props.c:521
+#: ../libsvn_wc/log.c:787 ../libsvn_wc/props.c:514
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "Erreur en récupérant l'heure d'effet sur '%s'"
@@ -6346,12 +6354,12 @@ msgstr "Impossible d'ouvrir le journal"
 msgid "Error recording tree conflicts in '%s'"
 msgstr "Erreur en enregistrant les conflits d'arborescence pour '%s'"
 
-#: ../libsvn_wc/log.c:2485
+#: ../libsvn_wc/log.c:2483
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Erreur à l'écriture dans le journal pour '%s'"
 
-#: ../libsvn_wc/log.c:2532
+#: ../libsvn_wc/log.c:2530
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s' n'est pas un répertoire d'une copie de travail"
@@ -6364,20 +6372,20 @@ msgstr "L'appel pour gestion de conflit viole l'API : aucun résultat retourné
 msgid "Conflict callback violated API: returned no merged file"
 msgstr "L'appel de gestion de conflit viole l'API : retourne \"pas de fusion\""
 
-#: ../libsvn_wc/props.c:594
+#: ../libsvn_wc/props.c:587
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
 msgstr "Fin de ligne manquante dans le fichier wcprops pour '%s'"
 
-#: ../libsvn_wc/props.c:1281
+#: ../libsvn_wc/props.c:1274
 msgid "Conflict callback violated API: returned no results."
 msgstr "L'appel pour gestion de conflit viole l'API : aucun résultat retourné."
 
-#: ../libsvn_wc/props.c:1321
+#: ../libsvn_wc/props.c:1314
 msgid "Conflict callback violated API: returned no merged file."
 msgstr "L'appel de gestion de conflit viole l'API : retourne \"pas de fusion\"."
 
-#: ../libsvn_wc/props.c:1415
+#: ../libsvn_wc/props.c:1408
 #, c-format
 msgid ""
 "Trying to add new property '%s' with value '%s',\n"
@@ -6386,7 +6394,7 @@ msgstr ""
 "Tentative de d'ajout d'une propriété '%s' de valeur '%s',\n"
 "mais elle existe déjà avec la valeur '%s'."
 
-#: ../libsvn_wc/props.c:1430
+#: ../libsvn_wc/props.c:1423
 #, c-format
 msgid ""
 "Trying to create property '%s' with value '%s',\n"
@@ -6395,7 +6403,7 @@ msgstr ""
 "Tentative de création de la propriété '%s' de valeur '%s',\n"
 "mais elle a été locallement effacée."
 
-#: ../libsvn_wc/props.c:1504
+#: ../libsvn_wc/props.c:1497
 #, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s'\n"
@@ -6404,7 +6412,7 @@ msgstr ""
 "Tentative d'effacement la propriété '%s' de valeur '%s',\n"
 "mais valeur déjà modifiée de '%s' en '%s'."
 
-#: ../libsvn_wc/props.c:1525
+#: ../libsvn_wc/props.c:1518
 #, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s'\n"
@@ -6413,7 +6421,7 @@ msgstr ""
 "Tentative d'effacement de la propriété '%s' de valeur '%s',\n"
 "mais elle existe déjà avec la valeur '%s'."
 
-#: ../libsvn_wc/props.c:1598 ../libsvn_wc/props.c:1712
+#: ../libsvn_wc/props.c:1591 ../libsvn_wc/props.c:1705
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6422,7 +6430,7 @@ msgstr ""
 "Tentative de modification de la propriété '%s' de '%s' en '%s',\n"
 "mais elle a été localement effacée."
 
-#: ../libsvn_wc/props.c:1691
+#: ../libsvn_wc/props.c:1684
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6431,7 +6439,7 @@ msgstr ""
 "Essai de modifier la propriété '%s' de '%s' à '%s',\n"
 "mais elle existe déjà avec la valeur '%s'."
 
-#: ../libsvn_wc/props.c:1697
+#: ../libsvn_wc/props.c:1690
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6440,7 +6448,7 @@ msgstr ""
 "Tentative de modifier la propriété '%s' de '%s' en '%s',\n"
 "mais elle a déjà été localement modifiée de '%s' en '%s'."
 
-#: ../libsvn_wc/props.c:1705
+#: ../libsvn_wc/props.c:1698
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6449,7 +6457,7 @@ msgstr ""
 "Tentative de modification de la propriété '%s' de '%s' à '%s',\n"
 "mais elle a été ajoutée localement avec la valeur '%s'."
 
-#: ../libsvn_wc/props.c:1718
+#: ../libsvn_wc/props.c:1711
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6458,62 +6466,62 @@ msgstr ""
 "Tentative de modificat de la propriété '%s' de '%s' en '%s',\n"
 "mais elle n'existe pas."
 
-#: ../libsvn_wc/props.c:2087 ../libsvn_wc/props.c:2114
-#: ../libsvn_wc/props.c:2241 ../libsvn_wc/props.c:2461
+#: ../libsvn_wc/props.c:2080 ../libsvn_wc/props.c:2107
+#: ../libsvn_wc/props.c:2234 ../libsvn_wc/props.c:2454
 msgid "Failed to load properties from disk"
 msgstr "Échec au chargement des propriétés à partir du disque"
 
-#: ../libsvn_wc/props.c:2236 ../libsvn_wc/props.c:2405
+#: ../libsvn_wc/props.c:2229 ../libsvn_wc/props.c:2398
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "La propriété '%s' n'est pas une propriété d'entrée"
 
-#: ../libsvn_wc/props.c:2280
+#: ../libsvn_wc/props.c:2273
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "Définition de '%s' sur un répertoire ('%s') impossible"
 
-#: ../libsvn_wc/props.c:2288
+#: ../libsvn_wc/props.c:2281
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "Définition de '%s' sur un fichier ('%s') impossible"
 
-#: ../libsvn_wc/props.c:2294
+#: ../libsvn_wc/props.c:2287
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "'%s' n'est ni un fichier ni un répertoire"
 
-#: ../libsvn_wc/props.c:2356
+#: ../libsvn_wc/props.c:2349
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "Le fichier '%s' a un type mime binaire"
 
-#: ../libsvn_wc/props.c:2572
+#: ../libsvn_wc/props.c:2565
 #, c-format
 msgid "Unrecognized line ending style for '%s'"
 msgstr "Style de fin de ligne non reconnu pour '%s'"
 
-#: ../libsvn_wc/props.c:2959 ../libsvn_wc/props.c:3035
+#: ../libsvn_wc/props.c:2952 ../libsvn_wc/props.c:3028
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Erreur d'analyse de la propriété %s sur '%s' : '%s'"
 
-#: ../libsvn_wc/props.c:3004
+#: ../libsvn_wc/props.c:2997
 #, c-format
 msgid "Can't split line into components: '%s'"
 msgstr "Impossible de découper la ligne en composants : '%s'"
 
-#: ../libsvn_wc/props.c:3060
+#: ../libsvn_wc/props.c:3053
 #, c-format
 msgid "Invalid %s property on '%s': cannot use two absolute URLs ('%s' and '%s') in an external; one must be a path where an absolute or relative URL is checked out to"
 msgstr "Propriété %s invalide sur '%s' : on ne peut utiliser deux URLs absolues ('%s' et '%s') comme référence externe ; l'une doit être un chemin vers lequel une URL relative ou absolue va être extraite"
 
-#: ../libsvn_wc/props.c:3069 ../libsvn_wc/props.c:3077
+#: ../libsvn_wc/props.c:3062 ../libsvn_wc/props.c:3070
 #, c-format
 msgid "Invalid %s property on '%s': cannot use a URL '%s' as the target directory for an external definition"
 msgstr "Propriété %s invalide sur '%s' : on ne peut utiliser une URL '%s' comme répertoire destination d'une référence externe"
 
-#: ../libsvn_wc/props.c:3115
+#: ../libsvn_wc/props.c:3108
 #, c-format
 msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
 msgstr "Propriété %s invalide sur '%s' : la cible '%s' est un chemin absolu ou utilise '..'"
@@ -6600,87 +6608,92 @@ msgstr "Échec de l'ajout du répertoire '%s' : un objet de ce nom existe déj�
 msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
 msgstr "Échec de l'ajout du répertoire '%s' : un répertoire non versionné de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:2311
+#: ../libsvn_wc/update_editor.c:2319
 #, c-format
-msgid "UUID mismatch: existing dir '%s' was checked out from a different repository"
+msgid "UUID mismatch: existing directory '%s' was checked out from a different repository"
 msgstr "UUID distincts : le répertoire '%s' concerne un autre dépôt"
 
-#: ../libsvn_wc/update_editor.c:2318
+#: ../libsvn_wc/update_editor.c:2327
 #, c-format
-msgid "URL '%s' of existing dir '%s' does not match expected URL '%s'"
+msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
 msgstr "L'URL '%s' du répertoire '%s' différe de celle attendue '%s'"
 
-#: ../libsvn_wc/update_editor.c:2364
+#: ../libsvn_wc/update_editor.c:2335
+#, c-format
+msgid "Failed to add directory '%s': a versioned directory of the same name already exists"
+msgstr "Échec de l'ajout du répertoire '%s' : un répertoire versionné de même nom existe déjà"
+
+#: ../libsvn_wc/update_editor.c:2381
 #, c-format
 msgid "Failed to add directory '%s': object of the same name as the administrative directory"
 msgstr "Échec à l'ajout du répertoire '%s' : objet du même nom que le répertoire d'administration"
 
-#: ../libsvn_wc/update_editor.c:2398
+#: ../libsvn_wc/update_editor.c:2415
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr "Échec à l'ajout du répertoire '%s' : copie en provenance (copyfrom) non encore supportée"
 
-#: ../libsvn_wc/update_editor.c:2842
+#: ../libsvn_wc/update_editor.c:2859
 msgid "Couldn't do property merge"
 msgstr "Fusion de propriété impossible"
 
-#: ../libsvn_wc/update_editor.c:2922
+#: ../libsvn_wc/update_editor.c:2939
 #, c-format
 msgid "Failed to mark '%s' absent: item of the same name is already scheduled for addition"
 msgstr "Échec du marquage de '%s' comme absent : un objet de même nom est déjà en attente pour ajout"
 
-#: ../libsvn_wc/update_editor.c:3012
+#: ../libsvn_wc/update_editor.c:3029
 msgid "Destination directory of add-with-history is missing a URL"
 msgstr "Répertoire destination de 'add-with-history' (ajout avec historique) sans URL"
 
-#: ../libsvn_wc/update_editor.c:3027
+#: ../libsvn_wc/update_editor.c:3044
 msgid "Destination URLs are broken"
 msgstr "Les URLs destination sont incorrectes"
 
-#: ../libsvn_wc/update_editor.c:3287
+#: ../libsvn_wc/update_editor.c:3304
 msgid "No fetch_func supplied to update_editor"
 msgstr "Pas de 'fetch_func' fourni à 'update_editor'"
 
-#: ../libsvn_wc/update_editor.c:3361
+#: ../libsvn_wc/update_editor.c:3378
 msgid "Bad copyfrom arguments received"
 msgstr "Mauvais arguments pour la source d'une copie"
 
-#: ../libsvn_wc/update_editor.c:3416
+#: ../libsvn_wc/update_editor.c:3433
 #, c-format
 msgid "Failed to add file '%s': a non-file object of the same name already exists"
 msgstr "Échec de l'ajout du fichier '%s' : un objet de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:3428
+#: ../libsvn_wc/update_editor.c:3445
 #, c-format
 msgid "Failed to add file '%s': an unversioned file of the same name already exists"
 msgstr "Échec à l'ajout du fichier '%s' : un fichier non versionné de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:3467
+#: ../libsvn_wc/update_editor.c:3481
 #, c-format
 msgid "UUID mismatch: existing file '%s' was checked out from a different repository"
 msgstr "UUID distinct : le fichier '%s' vient d'un autre dépôt"
 
-#: ../libsvn_wc/update_editor.c:3474
+#: ../libsvn_wc/update_editor.c:3489
 #, c-format
 msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
 msgstr "l'URL '%s' du fichier '%s' différe de celle attendue '%s'"
 
-#: ../libsvn_wc/update_editor.c:3570
+#: ../libsvn_wc/update_editor.c:3585
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Le fichier '%s' du répertoire '%s' n'est pas versionné"
 
-#: ../libsvn_wc/update_editor.c:3767
+#: ../libsvn_wc/update_editor.c:3782
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "Somme de contrôle différente pour '%s' ; stocké '%s', actuel '%s'"
 
-#: ../libsvn_wc/update_editor.c:5106
+#: ../libsvn_wc/update_editor.c:5121
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' n'a pas d'ancêtre"
 
-#: ../libsvn_wc/update_editor.c:5313
+#: ../libsvn_wc/update_editor.c:5328
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "L'URL source '%s' concerne un dépôt différent de '%s'"
