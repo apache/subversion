@@ -29,6 +29,7 @@
 
 #include "win32_crashrpt.h"
 #include "win32_crashrpt_dll.h"
+#include "Winver.h"
 
 /*** Global variables ***/
 HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
@@ -37,8 +38,6 @@ HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 #define CRASHREPORT_EMAIL "svn-breakage@subversion.tigris.org"
 
 #define DBGHELP_DLL "dbghelp.dll"
-
-#define VERSION_DLL "version.dll"
 
 #define LOGFILE_PREFIX "svn-crash-log"
 
@@ -589,31 +588,21 @@ static BOOL
 check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
                       WORD exp_qfe)
 {
-  HANDLE version_dll = LoadLibrary(VERSION_DLL);
-  GETFILEVERSIONINFOSIZE GetFileVersionInfoSize_ =
-         (GETFILEVERSIONINFOSIZE)GetProcAddress(version_dll,
-                                                "GetFileVersionInfoSizeA");
-  GETFILEVERSIONINFO GetFileVersionInfo_ =
-         (GETFILEVERSIONINFO)GetProcAddress(version_dll,
-                                            "GetFileVersionInfoA");
-  VERQUERYVALUE VerQueryValue_ =
-         (VERQUERYVALUE)GetProcAddress(version_dll, "VerQueryValueA");
-
   DWORD version     = 0,
         exp_version = MAKELONG(MAKEWORD(exp_qfe, exp_build),
                                MAKEWORD(exp_minor, exp_major));
   DWORD h = 0;
-  DWORD resource_size = GetFileVersionInfoSize_(DBGHELP_DLL, &h);
+  DWORD resource_size = GetFileVersionInfoSize(DBGHELP_DLL, &h);
 
   if (resource_size)
     {
       void *resource_data = malloc(resource_size);
-      if (GetFileVersionInfo_(DBGHELP_DLL, h, resource_size,
+      if (GetFileVersionInfo(DBGHELP_DLL, h, resource_size,
                               resource_data) != FALSE)
         {
           void *buf = NULL;
           UINT len;
-          if (VerQueryValue_(resource_data, "\\", &buf, &len))
+          if (VerQueryValue(resource_data, "\\", &buf, &len))
             {
               VS_FIXEDFILEINFO *info = (VS_FIXEDFILEINFO*)buf;
               version = MAKELONG(MAKEWORD(LOWORD(info->dwFileVersionLS),
@@ -624,8 +613,6 @@ check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
         }
       free(resource_data);
     }
-
-   FreeLibrary(version_dll);
 
    if (version >= exp_version)
      return TRUE;
