@@ -66,6 +66,8 @@ def encode_multipart_form(params, boundary):
         lines.append('Content-Disposition: form-data; name="%s"' % key)
         lines.append('')
         lines.append(params[key])
+
+    lines.append('--' + boundary)
     return '\r\n'.join(lines)
 
 
@@ -93,9 +95,8 @@ def add_items(opener, folderId, release_name):
                 'status' : status,
                 'description' : '%s (MD5: %s)' % (desc, md5sums[filename]),
                 'type': 'link',
-                'url': 'http://subversion.tigris.org/downloads/%s' % filename,
-                'maxDepth': '',
-                'Button': 'Submit',
+                'docUrl': 'http://subversion.tigris.org/downloads/%s' \
+                                                                    % filename,
             }
 
             headers = {
@@ -113,7 +114,7 @@ def add_items(opener, folderId, release_name):
             filename = filename + '.asc'
             params['name'] = filename
             params['description'] = 'PGP signatures for %s' % desc
-            params['url'] = 'http://subversion.tigris.org/downloads/%s' % \
+            params['docUrl'] = 'http://subversion.tigris.org/downloads/%s' % \
                                                                       filename
             data = encode_multipart_form(params, boundary)
             request = urllib2.Request(folder_add_url, data, headers)
