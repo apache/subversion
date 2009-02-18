@@ -22,7 +22,11 @@ post-to-tigris.py <username> <password> <folderId> <release>
     release - the full name of the release, such as 1.5.0-beta1
 '''
 
-import sys, cookielib, urllib2, urllib, re
+import sys, cookielib, urllib2, urllib, re, socket
+
+# Set the socket timeout so that we don't wait all day for tigris.org to
+# respond
+socket.setdefaulttimeout(5)
 
 
 def login(username, password, folderId):
@@ -71,6 +75,20 @@ def encode_multipart_form(params, boundary):
     return '\r\n'.join(lines)
 
 
+def add_single_item(opener, url, headers, data):
+    "Add a single item to the release folder"
+    request = urllib2.Request(url, data, headers)
+    request.add_header('Content-Length', len(data))
+
+    # Here we try to open the request.  The initial POST will succeed, but
+    # the connection will hang on a subsequent GET.  The socket will timeout,
+    # resulting in the exception, which we catch and go on our merry way.
+    try:
+        opener.open(request)
+    except urllib2.URLError, e:
+        print 'URL open failed: %s, continuing...' % e.reason
+
+
 def add_items(opener, folderId, release_name):
     "Add the 12(!) items for a release to the given folder"
     folder_add_url = 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%d&action=Add%%20document' % folderId
@@ -100,15 +118,12 @@ def add_items(opener, folderId, release_name):
             }
 
             headers = {
-                'Referer' : 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%s' % folderId,
                 'Content-Type' : 'multipart/form-data; boundary=%s' % boundary
               }
 
             # Add file
             data = encode_multipart_form(params, boundary)
-            request = urllib2.Request(folder_add_url, data, headers)
-            request.add_header('Content-Length', len(data))
-            opener.open(request)
+            add_single_item(opener, folder_add_url, headers, data)
 
             # Add signature
             filename = filename + '.asc'
@@ -117,9 +132,7 @@ def add_items(opener, folderId, release_name):
             params['docUrl'] = 'http://subversion.tigris.org/downloads/%s' % \
                                                                       filename
             data = encode_multipart_form(params, boundary)
-            request = urllib2.Request(folder_add_url, data, headers)
-            request.add_header('Content-Length', len(data))
-            opener.open(request)
+            add_single_item(opener, folder_add_url, headers, data)
 
 
 def main():
