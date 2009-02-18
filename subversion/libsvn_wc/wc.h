@@ -78,11 +78,12 @@ extern "C" {
  *
  * Please document any further format changes here.
  */
-#ifdef FROM_EXPLORE_WC
-#define SVN_WC__VERSION       11
-#else
-#define SVN_WC__VERSION       10
-#endif
+
+#define SVN_WC__VERSION 10
+
+/* ### only used by devs temporarily during 1.7 development. */
+#define SVN_WC__VERSION_EXPERIMENTAL 11
+
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5

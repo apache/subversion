@@ -98,7 +98,7 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
            "please check out your working copy again"),
          svn_path_local_style(path, pool), wc_format);
     }
-  else if (wc_format > SVN_WC__VERSION)
+  else if (wc_format > SVN_WC__VERSION_EXPERIMENTAL)
     {
       /* This won't do us much good for the 1.4<->1.5 crossgrade,
          since 1.4.x clients don't refer to this FAQ entry, but at
