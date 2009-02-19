@@ -15,12 +15,35 @@ Status of 1.6.0:
 
 Candidate changes:
 
+ * r35930
+   Adjust basic_tests.py 12 for compatability with Windows and Python 2.5+.
+   Justification:
+     Stops spurious test failures.
+    Votes:
+     +1: pburba
+     +1: gstein (for 1.6.1)
+
+ * r35943
+   Avoid some tree_conflict_tests.py cleanup errors on Windows with BDB
+   when building multiple sandboxes in the same test.
+   Justification:
+     Stops spurious test failures.
+    Votes:
+     +1: pburba
+     +1: gstein (for 1.6.1)
+
+ * r35950
+   Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
+    Votes:
+     +1: pburba
+     +1: gstein (for 1.6.1)
+     
  * r35967
    Add support to build and use SQLite amalgamation version on Windows.
    This change implements the same behavior as *nix build system does.
    Votes:
-     +1: rhuijben (not strictly for 1.6.0)
-     +1: gstein, pburba (for 1.6.1)
+     +1: rhuijben, pburba (not strictly for 1.6.0)
+     +1: gstein (for 1.6.1)
 
  * r35968,r35974
    Buffer overflow on ensuring a 0 byte string buffer
@@ -35,26 +58,6 @@ Status of 1.6.1:
 ================
 
 Candidate changes:
-
- * r35930
-   Adjust basic_tests.py 12 for compatability with Windows and Python 2.5+.
-   Justification:
-     Stops spurious test failures.
-    Votes:
-     +1: pburba, gstein
-
- * r35943
-   Avoid some tree_conflict_tests.py cleanup errors on Windows with BDB
-   when building multiple sandboxes in the same test.
-   Justification:
-     Stops spurious test failures.
-    Votes:
-     +1: pburba, gstein
-
- * r35950
-   Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
-    Votes:
-     +1: pburba, gstein
 
  * r35977
    Remove the implicit recanonicalize in svn_path_url_add_component2 that
