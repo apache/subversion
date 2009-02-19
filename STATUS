@@ -66,6 +66,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, gstein
 
+ * r35981
+   libsvn_ra_serf: Following RFC2617, verify authentication header tokens
+   case insensitive.
+   Justification:
+     Enables using serf from behind Microsoft ISA proxy servers.
+     See http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1191733
+   Votes:
+     +1: rhuijben
+
 Approved changes (all releases):
 ================================
 
