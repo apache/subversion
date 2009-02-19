@@ -438,6 +438,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 const char *repos_uuid,
                                 svn_revnum_t revision,
                                 svn_wc__db_kind_t kind,
+                                svn_wc__db_status_t status,
                                 apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -445,9 +446,9 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_absent_dir
-                 || kind == svn_wc__db_kind_absent_file
-                 || kind == svn_wc__db_kind_absent_symlink);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_absent
+                 || status == svn_wc__db_status_excluded
+                 || status == svn_wc__db_status_not_present);
 
   NOT_IMPLEMENTED();
 }
@@ -742,21 +743,6 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(target != NULL);
-
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
-svn_wc__db_op_add_absent_node(svn_wc__db_t *db,
-                              const char *local_abspath,
-                              svn_wc__db_kind_t kind,
-                              apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_absent_dir
-                 || kind == svn_wc__db_kind_absent_file
-                 || kind == svn_wc__db_kind_absent_symlink);
 
   NOT_IMPLEMENTED();
 }
