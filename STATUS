@@ -20,7 +20,8 @@ Candidate changes:
    This change implements the same behavior as *nix build system does.
    Votes:
      +1: rhuijben (not strictly for 1.6.0)
-     
+     +1: gstein (for 1.6.1)
+
  * r35968,r35974
    Buffer overflow on ensuring a 0 byte string buffer
    Justification:
@@ -28,7 +29,7 @@ Candidate changes:
      arbitrary ram (worse). r35974 fixes the exact allocating behavior tested
      from the string tests.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
 Status of 1.6.1:
 ================
@@ -40,7 +41,7 @@ Candidate changes:
    Justification:
      Stops spurious test failures.
     Votes:
-     +1: pburba
+     +1: pburba, gstein
 
  * r35943
    Avoid some tree_conflict_tests.py cleanup errors on Windows with BDB
@@ -48,13 +49,13 @@ Candidate changes:
    Justification:
      Stops spurious test failures.
     Votes:
-     +1: pburba
+     +1: pburba, gstein
 
  * r35950
    Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
     Votes:
-     +1: pburba
-     
+     +1: pburba, gstein
+
  * r35977
    Remove the implicit recanonicalize in svn_path_url_add_component2 that
    should have been part of r35732 that started asserting its behavior.
@@ -63,8 +64,8 @@ Candidate changes:
      part of svn update before the ra session is opened). All inputs are
      guaranteed to be pre-canonicalized.
    Votes:
-     +1: rhuijben
-     
+     +1: rhuijben, gstein
+
 Approved changes (all releases):
 ================================
 
