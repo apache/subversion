@@ -45,9 +45,3 @@ Candidate changes:
 
 Approved changes:
 =================
- 
- * r35967
-   Add support to build and use SQLite amalgamation version on Windows.
-   This change implements the same behavior as *nix build system does.
-   Votes:
-     +1: rhuijben, pburba, gstein
