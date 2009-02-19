@@ -178,7 +178,7 @@ svn_ra_serf__handle_auth(int code,
          as that may have changed. (ex. fallback from ntlm to basic.) */
       for (prot = serf_auth_protocols; prot->code != 0; ++prot)
         {
-          if (code == prot->code && strcmp(auth_name, prot->auth_name) == 0)
+          if (code == prot->code && strcasecmp(auth_name, prot->auth_name) == 0)
             {
               svn_serf__auth_handler_func_t handler = prot->handle_func;
               svn_error_t *err = NULL;
@@ -265,7 +265,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
       char *attr;
 
       attr = apr_strtok(auth_attr, "=", &last);
-      if (strcmp(attr, "realm") == 0)
+      if (strcasecmp(attr, "realm") == 0)
         {
           realm_name = apr_strtok(NULL, "=", &last);
           if (realm_name[0] == '\"')
