@@ -23,6 +23,18 @@ Candidate changes:
    Votes:
      +1: hwright, pburba
 
+ * r36009
+   Bump recommended and shipped SQLite version.
+   Justification:
+     I normally wouldn't care to nominate this, but since we are still in RC
+     stage, we should go ahead and use the latest version of SQLite, if
+     possible.
+   Note:
+     We can still ship the newer version without this change, but it makes
+     sense to be recommending it in configure.
+   Votes:
+     +1: hwright
+
  * r35981
    libsvn_ra_serf: Following RFC2617, verify authentication header tokens
    case insensitive.
