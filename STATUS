@@ -45,11 +45,6 @@ Candidate changes:
 
 Approved changes:
 =================
-     
-* r35950
-   Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
-    Votes:
-     +1: pburba, rhuijben, gstein
  
  * r35967
    Add support to build and use SQLite amalgamation version on Windows.
