@@ -40,8 +40,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-18 18:40-0200\n"
-"PO-Revision-Date: 2009-02-18 19:15-0200\n"
+"POT-Creation-Date: 2009-02-19 14:20-0200\n"
+"PO-Revision-Date: 2009-02-19 14:22-0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1205,8 +1205,8 @@ msgid "New entry name required when importing a file"
 msgstr "Se requiere un nuevo nombre de entrada para importar un archivo"
 
 #: ../libsvn_client/commit.c:576 ../libsvn_wc/adm_ops.c:1019
-#: ../libsvn_wc/questions.c:71 ../libsvn_wc/wc_db.c:248
-#: ../libsvn_wc/wc_db.c:264
+#: ../libsvn_wc/questions.c:71 ../libsvn_wc/wc_db.c:283
+#: ../libsvn_wc/wc_db.c:299
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' no existe"
@@ -2108,19 +2108,17 @@ msgid "Only SHA1 checksums can be used as keys in the checksum-reps table.\n"
 msgstr ""
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:130
-#, fuzzy, c-format
+#, c-format
 msgid "Representation key for checksum '%s' exists in filesystem '%s'."
-msgstr "El nodo origen de '%s' ya existe en el sistema de archivos '%s'"
+msgstr "La clave de representación para la suma de verificación '%s' ya existe en el sistema de archivos '%s'."
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:137
-#, fuzzy
 msgid "storing checksum-reps record"
-msgstr "almacenar registro de copia"
+msgstr "almacenando registro 'checksum-reps'"
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:181
-#, fuzzy
 msgid "allocating new representation reuse ID (getting 'next-key')"
-msgstr "reservar espacio para nueva representación (obteniendo next-key)"
+msgstr "reservando ID de reutilización para nueva representación (obteniendo 'next-key')"
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:202
 #: ../libsvn_fs_base/bdb/copies-table.c:128
@@ -2428,9 +2426,9 @@ msgid "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
 msgstr "No hay un registro en la tabla 'node-origins' para el id de nodo '%s' en el sistema de archivos '%s'"
 
 #: ../libsvn_fs_base/err.c:167
-#, fuzzy, c-format
+#, c-format
 msgid "No record in 'checksum-reps' table for checksum '%s' in filesystem '%s'"
-msgstr "No hay un registro en la tabla 'node-origins' para el id de nodo '%s' en el sistema de archivos '%s'"
+msgstr "No hay un registro en la tabla 'checksums-reps' para la suma de verificación '%s' en el sistema de archivos '%s'"
 
 #: ../libsvn_fs_base/fs.c:81
 #, c-format
@@ -2664,9 +2662,9 @@ msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "La transacción '%s' está desactualizada con respecto a la revisión '%s'"
 
 #: ../libsvn_fs_base/tree.c:2857
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot deltify revisions prior to r%ld"
-msgstr "No se puede especificar un rango de revisiones conjuntamente con dos URLs"
+msgstr "No se pueden 'deltificar' revisiones anteriores a r%ld"
 
 #: ../libsvn_fs_base/tree.c:2974 ../libsvn_fs_fs/tree.c:1911
 msgid "The root directory cannot be deleted"
@@ -2813,9 +2811,9 @@ msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Versión de cargador FS (%d) no admitida para fsfs"
 
 #: ../libsvn_fs_fs/fs_fs.c:263
-#, fuzzy, c-format
+#, c-format
 msgid "Revision file '%s' does not exist, and r%ld is not packed"
-msgstr "'%s' no existe en la revisión %ld"
+msgstr "El archivo de revisión '%s' no existe, y r%ld no está empaquetado"
 
 #: ../libsvn_fs_fs/fs_fs.c:499
 #, c-format
@@ -3170,9 +3168,9 @@ msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' en la revisión %ld es un objeto no relacionado"
 
 #: ../libsvn_ra/compat.c:838 ../libsvn_ra/ra_loader.c:1059
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid peg revision %ld"
-msgstr "Revisión final inválida %ld"
+msgstr "Revisión peg inválida %ld"
 
 #: ../libsvn_ra/compat.c:841 ../libsvn_ra/ra_loader.c:1062
 #: ../libsvn_repos/rev_hunt.c:203 ../libsvn_repos/rev_hunt.c:318
@@ -3181,9 +3179,8 @@ msgid "Invalid end revision %ld"
 msgstr "Revisión final inválida %ld"
 
 #: ../libsvn_ra/compat.c:844 ../libsvn_ra/ra_loader.c:1065
-#, fuzzy
 msgid "Peg revision must precede end revision"
-msgstr "La revisión del comienzo debe preceder a la del final"
+msgstr "La revisión peg debe preceder a la del final"
 
 #: ../libsvn_ra/ra_loader.c:229
 #, c-format
@@ -3455,9 +3452,8 @@ msgstr "Respuesta inválida del servidor a petición dated-rev"
 
 #: ../libsvn_ra_neon/get_deleted_rev.c:165
 #: ../libsvn_ra_serf/get_deleted_rev.c:233
-#, fuzzy
 msgid "'get-deleted-rev' REPORT not implemented"
-msgstr "El REPORT 'get-file-revs' no está implementado"
+msgstr "El REPORT 'get-deleted-rev' no está implementado"
 
 #: ../libsvn_ra_neon/get_location_segments.c:117
 #: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1580
@@ -5327,9 +5323,9 @@ msgid "Unable to parse reversed revision range '%ld-%ld'"
 msgstr ""
 
 #: ../libsvn_subr/mergeinfo.c:427
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to parse revision range '%ld-%ld' with same start and end revisions"
-msgstr "La revisión de comienzo %ld es mayor que la de final %ld"
+msgstr "No se pudo interpretar el rango de revisiones '%ld-%ld' con los mismas revisiones como comienzo y final"
 
 #: ../libsvn_subr/mergeinfo.c:464 ../libsvn_subr/mergeinfo.c:471
 #, c-format
@@ -5357,19 +5353,19 @@ msgstr "No se pudo interpretar la cadena mergeinfo '%s'"
 
 #: ../libsvn_subr/mergeinfo.c:1553
 msgid "NULL mergeinfo catalog\n"
-msgstr ""
+msgstr "catálogo mergeinfo nulo\n"
 
 #: ../libsvn_subr/mergeinfo.c:1558
 msgid "empty mergeinfo catalog\n"
-msgstr ""
+msgstr "catálogo mergeinfo vacío\n"
 
 #: ../libsvn_subr/mergeinfo.c:1591
 msgid "NULL mergeinfo\n"
-msgstr ""
+msgstr "mergeinfo nulo\n"
 
 #: ../libsvn_subr/mergeinfo.c:1596
 msgid "empty mergeinfo\n"
-msgstr ""
+msgstr "mergeinfo vacío\n"
 
 #: ../libsvn_subr/nls.c:85
 #, c-format
@@ -5452,17 +5448,17 @@ msgstr ""
 "por CollabNet (http://www.Collab.Net/).\n"
 "\n"
 
-#: ../libsvn_subr/path.c:996
+#: ../libsvn_subr/path.c:994
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' no es un nombre ni de archivo ni de directorio"
 
-#: ../libsvn_subr/path.c:1029
+#: ../libsvn_subr/path.c:1027
 #, c-format
 msgid "Can't determine the native path encoding"
 msgstr "No se pudo determinar la codificación nativa usada en las rutas"
 
-#: ../libsvn_subr/path.c:1139
+#: ../libsvn_subr/path.c:1137
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Carácter de control '0x%02x' inválido en la ruta '%s'"
@@ -5782,7 +5778,7 @@ msgid "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and 
 msgstr "Su directorio .svn/tmp puede no estar presente o estar corrupto; corra 'svn cleanup' e intente nuevamente"
 
 #: ../libsvn_wc/adm_files.c:598 ../libsvn_wc/lock.c:573
-#: ../libsvn_wc/lock.c:818 ../libsvn_wc/wc_db.c:272
+#: ../libsvn_wc/lock.c:818 ../libsvn_wc/wc_db.c:307
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' no es una copia de trabajo"
@@ -5833,9 +5829,9 @@ msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr "No se pudo encontrar la entrada del directorio padre al intentar añadir '%s'"
 
 #: ../libsvn_wc/adm_ops.c:1440
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create an entry with a reserved name while trying to add '%s'"
-msgstr "No se pudo encontrar la entrada del directorio padre al intentar añadir '%s'"
+msgstr "No se puede crear una entrada con un nombre reservado mientras se intenta añadir '%s'"
 
 #: ../libsvn_wc/adm_ops.c:1445
 #, c-format
@@ -5983,17 +5979,17 @@ msgstr "La entrada '%s' tiene un tipo de nodo inválido"
 
 #: ../libsvn_wc/entries.c:909
 msgid "No WC table entry"
-msgstr ""
+msgstr "No hay una entrada de tabla WC (copia de trabajo)"
 
 #: ../libsvn_wc/entries.c:930
 #, c-format
 msgid "No REPOSITORY table entry for id '%ld'"
-msgstr ""
+msgstr "No hay una entrada de tabla REPOSITORY para el id '%ld'"
 
 #: ../libsvn_wc/entries.c:1683
-#, fuzzy, c-format
+#, c-format
 msgid "No REPOSITORY table entry for uuid '%s'"
-msgstr "No hay una entrada para '%s'"
+msgstr "No hay una entrada de tabla REPOSITORY para el uuid '%s'"
 
 #: ../libsvn_wc/entries.c:1750 ../libsvn_wc/old-and-busted.c:1578
 #, c-format
@@ -6227,9 +6223,9 @@ msgid "Couldn't open log"
 msgstr "No se pudo abrir el log"
 
 #: ../libsvn_wc/log.c:1859
-#, fuzzy, c-format
+#, c-format
 msgid "Error recording tree conflicts in '%s'"
-msgstr "Error restituyendo el texto de '%s'"
+msgstr "Error registrando conflictos de árbol en '%s'"
 
 #: ../libsvn_wc/log.c:2473
 #, c-format
@@ -6283,9 +6279,9 @@ msgid "Illegal file external revision kind %d for path '%s'"
 msgstr "Archivo no encontrado: revisión %ld, ruta '%s'"
 
 #: ../libsvn_wc/old-and-busted.c:661
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has invalid depth"
-msgstr "La entrada '%s' tiene un tipo de nodo inválido"
+msgstr "La entrada '%s' tiene una profundidad inválida"
 
 #: ../libsvn_wc/old-and-busted.c:774
 #, c-format
@@ -6545,9 +6541,8 @@ msgid "Error parsing tree conflict skel"
 msgstr "Error analizando parámetros"
 
 #: ../libsvn_wc/tree_conflicts.c:516
-#, fuzzy
 msgid "Attempt to add tree conflict that already exists"
-msgstr "Se intentó crear una entrada que ya existe"
+msgstr "Se intentó añadir un conflicto de árbol que ya existe"
 
 #: ../libsvn_wc/update_editor.c:697
 #, c-format
@@ -6625,9 +6620,9 @@ msgid "Failed to add file '%s': a non-file object of the same name already exist
 msgstr "No se pudo añadir el archivo '%s': ya existe un objeto del mismo nombre que no es un archivo"
 
 #: ../libsvn_wc/update_editor.c:3456
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to add file '%s': an unversioned file of the same name already exists"
-msgstr "Falló el añadido del directorio '%s': ya existe un directorio no versionado del mismo nombre"
+msgstr "Falló el añadido del archivo '%s': ya existe un archivo no versionado del mismo nombre"
 
 #: ../libsvn_wc/update_editor.c:3492
 #, fuzzy, c-format
@@ -6635,9 +6630,9 @@ msgid "UUID mismatch: existing file '%s' was checked out from a different reposi
 msgstr "El URL origen '%s' es de un repositorio diferente"
 
 #: ../libsvn_wc/update_editor.c:3500
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
-msgstr "El UUID del repsitorio '%s' no coincide con el esperado '%s'"
+msgstr "El URL '%s' del archivo existente '%s' no coincide con el URL esperado '%s'"
 
 #: ../libsvn_wc/update_editor.c:3596
 #, c-format
@@ -6688,9 +6683,8 @@ msgid "Skipping binary file: '%s'\n"
 msgstr "Omitiendo el archivo binario: '%s'\n"
 
 #: ../svn/changelist-cmd.c:53 ../svn/main.c:1529
-#, fuzzy
 msgid "Changelist names must not be empty"
-msgstr "La lista de cambios no coincide"
+msgstr "Los nombres de listas de cambios no deben estar vacíos"
 
 #: ../svn/checkout-cmd.c:130 ../svn/switch-cmd.c:138
 #, c-format
@@ -7449,14 +7443,13 @@ msgstr ""
 "                            'files', 'immediates', o 'infinity')"
 
 #: ../svn/main.c:189
-#, fuzzy
 msgid ""
 "set new working copy depth to ARG ('empty',\n"
 "                            'exclude', 'files', 'immediates', or 'infinity')"
 msgstr ""
-"establece la profundiad de la copia de\n"
+"establece la nueva profundiad de la copia de\n"
 "                            trabajo a PAR ('empty',\n"
-"                            'files', 'immediates', o 'infinity')"
+"                            'exclude', 'files', 'immediates', o 'infinity')"
 
 #: ../svn/main.c:192 ../svnlook/main.c:141
 msgid "output in XML"
@@ -7614,9 +7607,8 @@ msgid "retrieve all revision properties"
 msgstr "obtener todas las propiedades de revisión"
 
 #: ../svn/main.c:260
-#, fuzzy
 msgid "retrieve no revision properties"
-msgstr "obtener todas las propiedades de revisión"
+msgstr "no obtener propiedades de revisión"
 
 #: ../svn/main.c:262
 msgid ""
@@ -8903,9 +8895,8 @@ msgid "Caught signal"
 msgstr "Se atrapó una señal"
 
 #: ../svn/main.c:1078
-#, fuzzy
 msgid "Invalid syntax of argument of --config-option"
-msgstr "Parámetro inválido '%s' en las opciones para diff"
+msgstr "Sintaxis inválida en el argumento de --config-option"
 
 #: ../svn/main.c:1198 ../svnlook/main.c:2196
 msgid "Non-numeric limit argument given"
@@ -8944,9 +8935,9 @@ msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infini
 msgstr "'%s' no es una profundidad válida; pruebe 'empty', 'files', 'immediates', o 'infinity'"
 
 #: ../svn/main.c:1391
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or 'infinity'"
-msgstr "'%s' no es una profundidad válida; pruebe 'empty', 'files', 'immediates', o 'infinity'"
+msgstr "'%s' no es una profundidad válida; pruebe 'exclude', 'empty', 'files', 'immediates', o 'infinity'"
 
 #: ../svn/main.c:1510
 #, c-format
@@ -9382,9 +9373,9 @@ msgid "Cannot specify revision for deleting versioned property '%s'"
 msgstr "No se puede especificar una revisión al borrar la propiedad versionada '%s'"
 
 #: ../svn/propdel-cmd.c:145
-#, fuzzy, c-format
+#, c-format
 msgid "Attempting to delete nonexistent property '%s'"
-msgstr "Se intentó abrir nodo hijo '%s' inexistente"
+msgstr "Intentando borrar propiedad '%s' inexistente"
 
 #: ../svn/propedit-cmd.c:65 ../svn/propset-cmd.c:89
 msgid "--encoding option applies only to textual Subversion-controlled properties"
@@ -9634,14 +9625,16 @@ msgstr ""
 msgid "Use --force to override this restriction"
 msgstr "Use --force para pasar por alto esta restricción"
 
+# La traducción debería ser ninguno, pero como el género no está claro, y
+# aparentemene se utiliza en lugares donde le correspondería géneros
+# diferentes, lo dejo en 'nada'.
 #: ../svn/util.c:1023 ../svn/util.c:1056
-#, fuzzy
 msgid "none"
-msgstr "no"
+msgstr "nada"
 
 #: ../svn/util.c:1025
 msgid "dir"
-msgstr ""
+msgstr "dir"
 
 #: ../svn/util.c:1027
 msgid "file"
@@ -9652,18 +9645,16 @@ msgid "update"
 msgstr "actualizar"
 
 #: ../svn/util.c:1060
-#, fuzzy
 msgid "switch"
-msgstr "Conmutado (switch) inválido"
+msgstr "conmutado"
 
 #: ../svn/util.c:1062
 msgid "merge"
-msgstr ""
+msgstr "fusionado"
 
 #: ../svn/util.c:1064
-#, fuzzy
 msgid "unknown operation"
-msgstr "Método de autorización desconocido"
+msgstr "operación desconocida"
 
 #: ../svn/util.c:1166
 msgid "(invalid date)"
@@ -10365,10 +10356,9 @@ msgid "Don't filter revision properties."
 msgstr "No filtrar propiedades de las revisiones."
 
 #: ../svndumpfilter/main.c:897
-#, fuzzy
 msgid "Pass contents of file ARG as additional args"
 msgstr ""
-"pasar el contenido del archivo PAR\n"
+"Pasar el contenido del archivo PAR\n"
 "                             como parámetros adicionales"
 
 #: ../svndumpfilter/main.c:908
@@ -10676,7 +10666,6 @@ msgstr ""
 "Muestra el mensaje de log.\n"
 
 #: ../svnlook/main.c:240
-#, fuzzy
 msgid ""
 "usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
 "                           2. svnlook propget --revprop REPOS_PATH PROPNAME\n"
@@ -10684,13 +10673,13 @@ msgid ""
 "Print the raw value of a property on a path in the repository.\n"
 "With --revprop, print the raw value of a revision property.\n"
 msgstr ""
-"uso: svnlook propget RUTA_REPOSITORIO NOMBRE_PROPIEDAD [RUTA_EN_REPOSITORIO]\n"
+"uso: svnlook propget RUTA_REPOSITORIO NOMBRE_PROPIEDAD RUTA_EN_REPOSITORIO\n"
+"                           2. svnlook propget --revprop RUTA_REPOSITORIO NOMBRE_PROPIEDAD\n"
 "\n"
 "Muestra el valor crudo de una propiedad en una ruta en el repositorio.\n"
 "Con --revprop muestra el valor crudo de una propiedad de revisión.\n"
 
 #: ../svnlook/main.c:249
-#, fuzzy
 msgid ""
 "usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
 "                             2. svnlook proplist --revprop REPOS_PATH\n"
@@ -10699,7 +10688,8 @@ msgid ""
 "with the --revprop option, revision properties.\n"
 "With -v, show the property values too.\n"
 msgstr ""
-"uso: svnlook proplist RUTA_REPOSITORIO [RUTA_EN_REPOSITORIO]\n"
+"uso: 1. svnlook proplist RUTA_REPOSITORIO RUTA_EN_REPOSITORIO\n"
+"                             2. svnlook proplist --revprop RUTA_REPOSITORIO\n"
 "\n"
 "Lista las propiedades de una ruta en el repositorio o,\n"
 "con la opción --revprop, propiedades de revisión.\n"
@@ -10896,7 +10886,6 @@ msgid "Invalid revision number supplied"
 msgstr "Se especificó un número de revisión inválido"
 
 #: ../svnlook/main.c:2244
-#, fuzzy
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments cannot co-exist"
 msgstr "Los parámetros '--transaction' (-t) y '--revision' (-r) no pueden coexistir"
 
@@ -11397,9 +11386,9 @@ msgid "Source Repository UUID: %s\n"
 msgstr "UUID del repositorio origen: %s\n"
 
 #: ../svnsync/main.c:1860
-#, fuzzy, c-format
+#, c-format
 msgid "Last Merged Revision: %s\n"
-msgstr "Revisión del último cambio: %ld\n"
+msgstr "Última revisión fusionada: %s\n"
 
 #: ../svnsync/main.c:1877
 msgid ""
