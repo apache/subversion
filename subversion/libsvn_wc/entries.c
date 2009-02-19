@@ -1464,7 +1464,6 @@ write_entry(svn_sqlite__db_t *wc_db,
             apr_pool_t *pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t got_row;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
@@ -1479,8 +1478,7 @@ write_entry(svn_sqlite__db_t *wc_db,
         SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
                                           STMT_DELETE_WORKING_NODE));
         SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, name));
-        SVN_ERR(svn_sqlite__step(&got_row, stmt));
-        SVN_ERR(svn_sqlite__reset(stmt));
+        SVN_ERR(svn_sqlite__step_done(stmt));
         break;
 
       case svn_wc_schedule_add:
@@ -1490,8 +1488,7 @@ write_entry(svn_sqlite__db_t *wc_db,
         SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
                                           STMT_DELETE_BASE_NODE));
         SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, name));
-        SVN_ERR(svn_sqlite__step(&got_row, stmt));
-        SVN_ERR(svn_sqlite__reset(stmt));
+        SVN_ERR(svn_sqlite__step_done(stmt));
         break;
 
       case svn_wc_schedule_delete:
@@ -2006,7 +2003,6 @@ entry_remove_body(void *baton,
 {
   const char *local_relpath = baton;
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t got_row;  /* Meaningless when doing a delete. */
   apr_int64_t wc_id;
 
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
@@ -2014,20 +2010,17 @@ entry_remove_body(void *baton,
   /* Remove the base node. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&got_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Remove the working node. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&got_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Remove the actual node. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&got_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
