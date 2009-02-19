@@ -45,14 +45,6 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r35943
-   Avoid some tree_conflict_tests.py cleanup errors on Windows with BDB
-   when building multiple sandboxes in the same test.
-   Justification:
-     Stops spurious test failures.
-    Votes:
-     +1: pburba, rhuijben, gstein
      
 * r35950
    Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
