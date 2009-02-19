@@ -944,8 +944,6 @@ svn_path_url_add_component2(const char *url,
                             apr_pool_t *pool)
 {
   assert(svn_path_is_canonical(url, pool));
-  /* URL can have trailing '/' */
-  url = svn_path_canonicalize(url, pool);
 
   return svn_path_join(url, svn_path_uri_encode(component, pool), pool);
 }
