@@ -142,9 +142,9 @@ svn_ra_serf__handle_auth(int code,
                          apr_pool_t *pool)
 {
   serf_bucket_t *hdrs;
-  const svn_ra_serf__auth_protocol_t *prot;
-  char *auth_name, *auth_attr, *auth_hdr, *header, *header_attr;
-  svn_error_t *cached_err;
+  const svn_ra_serf__auth_protocol_t *prot = NULL;
+  char *auth_name = NULL, *auth_attr, *auth_hdr=NULL, *header, *header_attr;
+  svn_error_t *cached_err = SVN_NO_ERROR;
 
   hdrs = serf_bucket_response_get_headers(response);
   if (code == 401)
