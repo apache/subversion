@@ -20,7 +20,7 @@ Candidate changes:
    This change implements the same behavior as *nix build system does.
    Votes:
      +1: rhuijben (not strictly for 1.6.0)
-     +1: gstein (for 1.6.1)
+     +1: gstein, pburba (for 1.6.1)
 
  * r35968,r35974
    Buffer overflow on ensuring a 0 byte string buffer
