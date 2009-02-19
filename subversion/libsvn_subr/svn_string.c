@@ -219,7 +219,8 @@ svn_string_find_char_backward(const svn_string_t *str, char ch)
 /* svn_stringbuf functions */
 
 static svn_stringbuf_t *
-create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize, apr_pool_t *pool)
+create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
+                 apr_pool_t *pool)
 {
   svn_stringbuf_t *new_string;
 
