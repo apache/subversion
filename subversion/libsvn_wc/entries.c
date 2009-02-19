@@ -56,7 +56,6 @@ enum statement_keys {
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
-  STMT_INSERT_CHANGELIST,
   STMT_SELECT_REPOSITORY,
   STMT_SELECT_WCROOT_NULL,
   STMT_SELECT_REPOSITORY_BY_ID,
@@ -79,28 +78,25 @@ static const char * const statements[] = {
   "values (?1);",
 
   "insert or replace into base_node "
-    "(wc_id, local_relpath, repos_id, repos_relpath, parent_id, revnum, "
-     "kind, checksum, translated_size, changed_rev, changed_date, "
+    "(wc_id, local_relpath, repos_id, repos_relpath, parent_id, presence, "
+     "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
      "changed_author, depth, last_mod_time, properties, incomplete_children)"
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16);",
+          "?15, ?16, ?17);",
 
   "insert or replace into working_node "
     "(wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_id, "
      "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
      "translated_size, changed_rev, changed_date, changed_author, depth, "
-     "last_mod_time, properties, changelist_id, tree_conflict_data) "
+     "last_mod_time, properties) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16, ?17, ?18, ?19);",
+          "?15, ?16, ?17);",
 
   "insert or replace into actual_node "
     "(wc_id, local_relpath, properties, conflict_old, conflict_new, "
-     "conflict_working, prop_reject, changelist_id) "
-  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);",
-
-  "insert or replace into changelist "
-    "(wc_id, name) "
-  "values (?1, ?2);",
+     "conflict_working, prop_reject, changelist, text_mod, "
+     "tree_conflict_data) "
+  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10);",
 
   "select id, root from repository where uuid = ?1;",
 
@@ -109,18 +105,20 @@ static const char * const statements[] = {
   "select root, uuid from repository where id = ?1;",
 
   "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_id, "
-    "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
-    "changed_author, depth, last_mod_time, properties, incomplete_children "
+    "presence, revnum, kind, checksum, translated_size, "
+    "changed_rev, changed_date, changed_author, depth, last_mod_time, "
+    "properties, incomplete_children "
   "from base_node;",
 
   "select id, wc_id, local_relpath, parent_relpath, kind, copyfrom_repos_id, "
     "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
     "translated_size, changed_rev, changed_date, changed_author, depth, "
-    "last_mod_time, properties, changelist_id, tree_conflict_data "
+    "last_mod_time, properties "
   "from working_node;",
 
   "select id, wc_id, local_relpath, properties, conflict_old, conflict_new, "
-     "conflict_working, prop_reject, changelist_id "
+     "conflict_working, prop_reject, changelist, text_mod, "
+     "tree_conflict_data "
   "from actual_node;",
 
   "delete from base_node where wc_id = ?1 and local_relpath = ?2;",
@@ -181,8 +179,6 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
-  apr_int64_t changelist_id;
-  const char *tree_conflict_data;
 } db_working_node_t;
 
 typedef struct {
@@ -194,17 +190,14 @@ typedef struct {
   const char *conflict_new;
   const char *conflict_working;
   const char *prop_reject;
-  apr_int64_t changelist_id;
+  const char *changelist;
+  /* ### enum for text_mod */
+  const char *tree_conflict_data;
 } db_actual_node_t;
 
 typedef struct {
-  apr_int64_t id;
-  apr_int64_t wc_id;
-  const char *name;
-} db_changelist_t;
-
-typedef struct {
-  const char *url;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
   const char *lock_token;
   const char *lock_owner;
   const char *lock_comment;
@@ -716,36 +709,40 @@ fetch_base_nodes(apr_hash_t **nodes,
       if (!svn_sqlite__column_is_null(stmt, 5))
         base_node->parent_id = svn_sqlite__column_int(stmt, 5);
 
-      base_node->revision = svn_sqlite__column_int(stmt, 6);
-      base_node->kind = svn_node_kind_from_word(
-                                    svn_sqlite__column_text(stmt, 7, NULL));
+      /* ### presence */
 
-      if (!svn_sqlite__column_is_null(stmt, 8))
+      base_node->revision = svn_sqlite__column_int(stmt, 7);
+
+      /* ### kind might be "symlink" or "unknown" */
+      base_node->kind = svn_node_kind_from_word(
+                                    svn_sqlite__column_text(stmt, 8, NULL));
+
+      if (!svn_sqlite__column_is_null(stmt, 9))
         {
-          const char *digest = svn_sqlite__column_text(stmt, 8, NULL);
+          const char *digest = svn_sqlite__column_text(stmt, 9, NULL);
           svn_checksum_kind_t kind = (digest[1] == 'm'
                                       ? svn_checksum_md5 : svn_checksum_sha1);
           SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, kind,
                                          digest + 6, result_pool));
         }
 
-      base_node->translated_size = svn_sqlite__column_int(stmt, 9);
+      base_node->translated_size = svn_sqlite__column_int(stmt, 10);
 
-      base_node->changed_rev = svn_sqlite__column_int(stmt, 10);
-      base_node->changed_date = svn_sqlite__column_int(stmt, 11);
-      base_node->changed_author = svn_sqlite__column_text(stmt, 12,
+      base_node->changed_rev = svn_sqlite__column_int(stmt, 11);
+      base_node->changed_date = svn_sqlite__column_int(stmt, 12);
+      base_node->changed_author = svn_sqlite__column_text(stmt, 13,
                                                           result_pool);
 
       base_node->depth = svn_depth_from_word(
-                                    svn_sqlite__column_text(stmt, 13, NULL));
-      base_node->last_mod_time = svn_sqlite__column_int(stmt, 14);
+                                    svn_sqlite__column_text(stmt, 14, NULL));
+      base_node->last_mod_time = svn_sqlite__column_int(stmt, 15);
 
-      val = svn_sqlite__column_blob(stmt, 15, &len);
+      val = svn_sqlite__column_blob(stmt, 16, &len);
       SVN_ERR(svn_skel__parse_proplist(&base_node->properties,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
 
-      base_node->incomplete_children = svn_sqlite__column_boolean(stmt, 16);
+      base_node->incomplete_children = svn_sqlite__column_boolean(stmt, 17);
 
       apr_hash_set(*nodes, base_node->local_relpath, APR_HASH_KEY_STRING,
                    base_node);
@@ -827,13 +824,6 @@ fetch_working_nodes(apr_hash_t **nodes,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
 
-      if (!svn_sqlite__column_is_null(stmt, 18))
-        working_node->changelist_id = svn_sqlite__column_int(stmt, 18);
-
-      if (!svn_sqlite__column_is_null(stmt, 19))
-        working_node->tree_conflict_data = svn_sqlite__column_text(stmt, 19,
-                                                                result_pool);
-
       apr_hash_set(*nodes, working_node->local_relpath, APR_HASH_KEY_STRING,
                    working_node);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -893,7 +883,14 @@ fetch_actual_nodes(apr_hash_t **nodes,
                                                            result_pool);
 
       if (!svn_sqlite__column_is_null(stmt, 8))
-        actual_node->changelist_id = svn_sqlite__column_int(stmt, 8);
+        actual_node->changelist = svn_sqlite__column_text(stmt, 8,
+                                                          result_pool);
+
+      /* ### column 9 is text_mod */
+
+      if (!svn_sqlite__column_is_null(stmt, 10))
+        actual_node->tree_conflict_data = svn_sqlite__column_text(stmt, 9,
+                                                                  result_pool);
 
       apr_hash_set(*nodes, actual_node->local_relpath, APR_HASH_KEY_STRING,
                    actual_node);
@@ -1090,11 +1087,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (working_node && (working_node->copyfrom_repos_path != NULL))
         entry->copied = TRUE;
 
-      if (working_node && (working_node->tree_conflict_data != NULL))
-        entry->tree_conflict_data = apr_pstrdup(result_pool,
-                                             working_node->tree_conflict_data);
-
-
       if (base_node->checksum)
         entry->checksum = svn_checksum_to_cstring(base_node->checksum,
                                                   result_pool);
@@ -1111,6 +1103,13 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       if (actual_node && (actual_node->prop_reject != NULL))
         entry->prejfile = apr_pstrdup(result_pool, actual_node->prop_reject);
+
+      if (actual_node && actual_node->changelist != NULL)
+        entry->changelist = apr_pstrdup(result_pool, actual_node->changelist);
+
+      if (actual_node && (actual_node->tree_conflict_data != NULL))
+        entry->tree_conflict_data = apr_pstrdup(result_pool,
+                                              actual_node->tree_conflict_data);
 
       entry->depth = base_node->depth;
       entry->revision = base_node->revision;
@@ -1289,28 +1288,32 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   if (base_node->parent_id)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 5, base_node->parent_id));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, base_node->revision));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 7,
+  SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal")); /* ### presence */
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
+
+  /* ### kind might be "symlink" or "unknown" */
+  SVN_ERR(svn_sqlite__bind_text(stmt, 8,
                                 svn_node_kind_to_word(base_node->kind)));
 
   if (base_node->checksum)
     {
       const char *kind_str = (base_node->checksum->kind == svn_checksum_md5
                               ? "$md5 $" : "$sha1$");
-      SVN_ERR(svn_sqlite__bind_text(stmt, 8, apr_pstrcat(scratch_pool,
+      SVN_ERR(svn_sqlite__bind_text(stmt, 9, apr_pstrcat(scratch_pool,
                     kind_str, svn_checksum_to_cstring(base_node->checksum,
                                                       scratch_pool), NULL)));
     }
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 9, base_node->translated_size));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->changed_rev));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_date));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 12, base_node->changed_author));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_rev));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 12, base_node->changed_date));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 13, base_node->changed_author));
 
-  SVN_ERR(svn_sqlite__bind_text(stmt, 13, svn_depth_to_word(base_node->depth)));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 14, svn_depth_to_word(base_node->depth)));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 14, base_node->last_mod_time));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 15, base_node->last_mod_time));
 
   if (base_node->properties)
     SVN_ERR(svn_skel__unparse_proplist(&skel, base_node->properties,
@@ -1319,9 +1322,9 @@ insert_base_node(svn_sqlite__db_t *wc_db,
     skel = svn_skel__make_empty_list(scratch_pool);
 
   properties = svn_skel__unparse(skel, scratch_pool);
-  SVN_ERR(svn_sqlite__bind_blob(stmt, 15, properties->data, properties->len));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 16, properties->data, properties->len));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 16, base_node->incomplete_children));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 17, base_node->incomplete_children));
 
   /* Execute and reset the insert clause. */
   return svn_sqlite__insert(NULL, stmt);
@@ -1390,12 +1393,6 @@ insert_working_node(svn_sqlite__db_t *wc_db,
   properties = svn_skel__unparse(skel, scratch_pool);
   SVN_ERR(svn_sqlite__bind_blob(stmt, 17, properties->data, properties->len));
 
-  if (working_node->changelist_id > 0)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 18, working_node->changelist_id));
-
-  if (working_node->tree_conflict_data)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 19, working_node->tree_conflict_data));
-
   /* Execute and reset the insert clause. */
   return svn_sqlite__insert(NULL, stmt);
 }
@@ -1433,29 +1430,18 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
   if (actual_node->prop_reject)
     SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->prop_reject));
 
-  if (actual_node->changelist_id > 0)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, actual_node->changelist_id));
+  if (actual_node->changelist)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, actual_node->changelist));
+
+  /* ### column 9 is text_mod */
+
+  if (actual_node->tree_conflict_data)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 10, actual_node->tree_conflict_data));
 
   /* Execute and reset the insert clause. */
   return svn_sqlite__insert(NULL, stmt);
 }
 
-static svn_error_t *
-insert_changelist(svn_sqlite__db_t *wc_db,
-                  db_changelist_t *changelist,
-                  apr_int64_t *changelist_id,
-                  apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_CHANGELIST));
-
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t) changelist->wc_id,
-                            changelist->name));
-
-  /* Execute and reset the insert clause. */
-  return svn_sqlite__insert(changelist_id, stmt);
-}
 
 /* Write the information for ENTRY to WC_DB.  The WC_ID, REPOS_ID and
    REPOS_ROOT will all be used for writing ENTRY. */
@@ -1541,25 +1527,16 @@ write_entry(svn_sqlite__db_t *wc_db,
 
   if (entry->changelist)
     {
-      db_changelist_t changelist;
-      apr_int64_t changelist_id;
-
-      changelist.wc_id = wc_id;
-      changelist.name = entry->changelist;
-
-      SVN_ERR(insert_changelist(wc_db, &changelist, &changelist_id,
-                                scratch_pool));
-
-      if (working_node)
-        working_node->changelist_id = changelist_id;
-      if (actual_node)
-        actual_node->changelist_id = changelist_id;
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->changelist = entry->changelist;
     }
+
+  /* ### set the text_mod value? */
 
   if (entry->tree_conflict_data)
     {
-      working_node = MAYBE_ALLOC(working_node, scratch_pool);
-      working_node->tree_conflict_data = entry->tree_conflict_data;
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->tree_conflict_data = entry->tree_conflict_data;
     }
 
   /* Insert the base node. */
