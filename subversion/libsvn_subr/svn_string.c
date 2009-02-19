@@ -236,7 +236,7 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize, apr_pool_t *
 svn_stringbuf_t *
 svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 {
-  char *data = apr_palloc(pool, blocksize);
+  char *data = apr_palloc(pool, ++blocksize); /* + space for '\0' */
 
   data[0] = '\0';
 
