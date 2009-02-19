@@ -33,13 +33,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r35977
-   Remove the implicit recanonicalize in svn_path_url_add_component2 that
-   should have been part of r35732 that started asserting its behavior.
-   Justification:
-     Stops recanonicalizing +- everywhere. (Is by far the most CPU intensive
-     part of svn update before the ra session is opened). All inputs are
-     guaranteed to be pre-canonicalized.
-   Votes:
-     +1: rhuijben, gstein, pburba
