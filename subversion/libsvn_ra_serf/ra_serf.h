@@ -204,7 +204,32 @@ struct svn_ra_serf__session_t {
 
   /* Repository UUID */
   const char *uuid;
+
+  /*** HTTP v2 protocol stuff. ***
+   *
+   * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
+   * response headers, it has sent all of them.  Specifically, we'll
+   * be looking at the presence of the "me resource" as a flag that
+   * the server supports v2 of our HTTP protocol.
+   */
+
+  /* The "me resource".  Typically used as a target for REPORTs that
+     are path-agnostic.  If we have this, we can speak HTTP v2 to the
+     server.  */
+  const char *me_resource;
+
+  /* Opaque URL "stubs".  If the OPTIONS response returns these, then
+     we know we're using HTTP protocol v2. */
+  const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
+  const char *rev_root_stub;    /* for accessing REV/PATH pairs */
+  const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
+  const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
+
+  /*** End HTTP v2 stuff ***/
+
 };
+
+#define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -999,13 +1024,19 @@ svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx);
 const char *
 svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx);
 
+svn_revnum_t
+svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
+
 svn_error_t *
 svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
 
 svn_error_t *
 svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx);
 
-/* Create an OPTIONS request */
+/* Create an OPTIONS request.  When run, ask for an
+   activity-collection-set in the request body (retrievable via
+   accessor above) and also parse the server's capability headers into
+   the SESSION->capabilites hash. */
 svn_error_t *
 svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 svn_ra_serf__session_t *session,
@@ -1013,22 +1044,43 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Try to discover our current root @a VCC_URL and the resultant @a REL_PATH
- * based on @a ORIG_PATH for the @a SESSION on @a CONN.
- * REL_PATH will be URI decoded.
+/* Set @a VCC_URL to the default VCC for our repository based on @a
+ * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
+ * repository root URLs are cached in @a SESSION.  Use @a CONN for any
+ * required network communications if it is non-NULL; otherwise use the
+ * default connection.
  *
- * @a REL_PATH may be NULL if the caller is not interested in the relative
- * path.
+ * All temporary allocations will be made in @a POOL. */
+svn_error_t *
+svn_ra_serf__discover_vcc(const char **vcc_url,
+                          svn_ra_serf__session_t *session,
+                          svn_ra_serf__connection_t *conn,
+                          apr_pool_t *pool);
+
+/* Set @a REPORT_TARGET to the URI of the resource at which generic
+ * (path-agnostic) REPORTs should be aimed for @a SESSION.  Use @a
+ * CONN for any required network communications if it is non-NULL;
+ * otherwise use the default connection.
  *
  * All temporary allocations will be made in @a POOL.
  */
 svn_error_t *
-svn_ra_serf__discover_root(const char **vcc_url,
-                           const char **rel_path,
-                           svn_ra_serf__session_t *session,
-                           svn_ra_serf__connection_t *conn,
-                           const char *orig_path,
-                           apr_pool_t *pool);
+svn_ra_serf__report_resource(const char **report_target,
+                             svn_ra_serf__session_t *session,
+                             svn_ra_serf__connection_t *conn,
+                             apr_pool_t *pool);
+
+/* Set @a REL_PATH to a path (not URI-encoded) relative to the root of
+ * the repository pointed to by @a SESSION, based on original path
+ * (URI-encoded) @a ORIG_PATH.  Use @a CONN for any required network
+ * communications if it is non-NULL; otherwise use the default
+ * connection.  Use POOL for allocations.  */
+svn_error_t *
+svn_ra_serf__get_relative_path(const char **rel_path,
+                               const char *orig_path,
+                               svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
+                               apr_pool_t *pool);
 
 /* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
  * the path relative to that url for URL in REVISION using SESSION.
@@ -1041,16 +1093,38 @@ svn_ra_serf__discover_root(const char **vcc_url,
  * REVISION was set to SVN_INVALID_REVNUM, this will return the current
  * HEAD revision.
  *
+ * If non-NULL, use CONN for communications with the server;
+ * otherwise, use the default connection.
+ *
  * Use POOL for all allocations.
  */
 svn_error_t *
 svn_ra_serf__get_baseline_info(const char **bc_url,
                                const char **bc_relative,
                                svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
                                const char *url,
                                svn_revnum_t revision,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool);
+
+/* Set YOUNGEST_REVNUM to the head revision of the repository opened
+ * by SESSION.
+ *
+ * NOTE: this function will first attempt to return a *cached* revnum
+ * within the session_t; if not available, it makes a network request
+ * to discover it.  As such, this routine is best called by internal
+ * routines which need a value for HEAD which is "recent enough".
+ * Routines which absolutely need the latest value to be fetched by
+ * network request should call svn_ra_serf__get_baseline_info() instead.
+ *
+ * Use POOL for all allocations.
+ */
+svn_error_t *
+svn_ra_serf__get_youngest_rev(svn_revnum_t *youngest_revnum,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *pool);
+
 
 /** RA functions **/
 
@@ -1234,6 +1308,14 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_mergeinfo_inheritance_t inherit,
                                          svn_boolean_t include_descendants,
                                          apr_pool_t *pool);
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   SERF_SESS->capabilities with the server's capabilities as read
+   from the response headers.  Use POOL only for temporary allocation. */
+svn_error_t *
+svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
+                                   apr_pool_t *pool);
 
 /* Implements the has_capability RA layer function. */
 svn_error_t *

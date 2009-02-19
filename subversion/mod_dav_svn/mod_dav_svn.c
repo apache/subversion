@@ -75,6 +75,7 @@ typedef struct {
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
+  enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
@@ -165,6 +166,7 @@ create_dir_config(apr_pool_t *p, char *dir)
 
   conf->root_dir = dir;
   conf->bulk_updates = CONF_FLAG_ON;
+  conf->v2_protocol = CONF_FLAG_OFF;
 
   return conf;
 }
@@ -187,6 +189,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
+  newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   /* Prefer our parent's value over our new one - hence the swap. */
@@ -263,6 +266,20 @@ SVNAllowBulkUpdates_cmd(cmd_parms *cmd, void *config, int arg)
     conf->bulk_updates = CONF_FLAG_ON;
   else
     conf->bulk_updates = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+
+static const char *
+SVNAdvertiseV2Protocol_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->v2_protocol = CONF_FLAG_ON;
+  else
+    conf->v2_protocol = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -485,6 +502,41 @@ dav_svn__get_special_uri(request_rec *r)
 }
 
 
+const char *
+dav_svn__get_me_resource_uri(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/me", NULL);
+}
+
+
+const char *
+dav_svn__get_rev_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rev", NULL);
+}
+
+
+const char *
+dav_svn__get_rev_root_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rvr", NULL);
+}
+
+
+const char *
+dav_svn__get_txn_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txn", NULL);
+}
+
+
+const char *
+dav_svn__get_txn_root_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txr", NULL);
+}
+
+
 svn_boolean_t
 dav_svn__get_autoversioning_flag(request_rec *r)
 {
@@ -502,6 +554,16 @@ dav_svn__get_bulk_updates_flag(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->bulk_updates == CONF_FLAG_ON;
+}
+
+
+svn_boolean_t
+dav_svn__get_v2_protocol_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->v2_protocol == CONF_FLAG_ON;
 }
 
 
@@ -670,6 +732,23 @@ merge_xml_in_filter(ap_filter_t *f,
   return APR_SUCCESS;
 }
 
+
+/* Repsonse handler for POST requests (protocol-v2 commits).  */
+static int dav_svn__handler(request_rec *r)
+{
+  /* HTTP-defined Methods we handle */
+  r->allowed = 0
+    | (AP_METHOD_BIT << M_POST);
+
+  if (r->method_number == M_POST) {
+    return dav_svn__method_post(r);
+  }
+
+  return DECLINED;
+}
+
+
+
 
 
 /** Module framework stuff **/
@@ -731,6 +810,12 @@ static const command_rec cmds[] =
                "only skeletal reports that require additional per-file "
                "downloads."),
 
+  /* per directory/location */
+  AP_INIT_FLAG("SVNAdvertiseV2Protocol", SVNAdvertiseV2Protocol_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "enables server advertising of support for version 2 of "
+               "Subversion's HTTP protocol."),
+
   { NULL }
 };
 
@@ -760,6 +845,9 @@ register_hooks(apr_pool_t *pconf)
                            AP_FTYPE_RESOURCE);
   ap_hook_insert_filter(merge_xml_filter_insert, NULL, NULL,
                         APR_HOOK_MIDDLE);
+
+  /* general request handler for methods which mod_dav DECLINEs. */
+  ap_hook_handler(dav_svn__handler, NULL, NULL, APR_HOOK_LAST);
 
   /* live property handling */
   dav_hook_gather_propsets(dav_svn__gather_propsets, NULL, NULL,
