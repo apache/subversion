@@ -15,7 +15,7 @@ Status of 1.6.0:
 
 Candidate changes:
   
- * r35968,r35974
+ * r35968, r35974
    Buffer overflow on ensuring a 0 byte string buffer
    Justification:
      This bug aborts our client if the OS catches it (bad) or overwrites
