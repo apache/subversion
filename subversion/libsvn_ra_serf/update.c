@@ -2331,7 +2331,7 @@ finish_report(void *report_baton,
 
   /* Ensure that we opened and closed our root dir and that we closed
    * all of our children. */
-  if (closed_root == FALSE)
+  if (closed_root == FALSE && report->root_dir != NULL)
     {
       SVN_ERR(close_all_dirs(report->root_dir));
     }
