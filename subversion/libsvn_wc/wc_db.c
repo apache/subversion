@@ -42,12 +42,19 @@
  *
  * Every (semi-)public entrypoint in this file has a set of assertions on
  * the parameters passed into the function. Since this is a brand new API,
- * we want to make sure that everybody calls it properly. And without any
- * doubt about what is being passed.
+ * we want to make sure that everybody calls it properly. The original WC
+ * code had years to catch stray bugs, but we do not have that luxury in
+ * the wc-nb rewrite. Any extra assurances that we can find will be
+ * welcome. The asserts will ensure we have no doubt about the values
+ * passed into the function.
  *
  * Some parameters are *not* specifically asserted. Typically, these are
  * params that will be used immediately, so something like a NULL value
  * will be obvious.
+ *
+ * ### near 1.7 release, it would be a Good Thing to review the assertions
+ * ### and decide if any can be removed or switched to assert() in order
+ * ### to remove their runtime cost in the production release.
  *
  *
  * DATABASE OPERATIONS
