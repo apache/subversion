@@ -248,7 +248,8 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
-  svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size + 1, pool);
+  /* Ensure string buffer of size + 1 */
+  svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
 
   memcpy(strbuf->data, bytes, size);
 
