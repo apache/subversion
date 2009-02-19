@@ -346,6 +346,7 @@ svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
 {
   SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
+  SQLITE_ERR(sqlite3_clear_bindings(stmt->s3stmt), stmt->db);
   return SVN_NO_ERROR;
 }
 
