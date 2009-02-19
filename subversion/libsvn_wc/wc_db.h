@@ -71,32 +71,61 @@ typedef enum {
  * ### of something that's being stored in the DB.
  *
  * ### KFF: Does this overlap too much with what svn_node_kind_t does?
- * ### Also, does it make sense to encode 'absent' across these types,
- * ### rather than just having a separate 'absent' flag?  In general,
- * ### the interfaces in here give a lot of prominence to absence; I'm
- * ### wondering why we're treating it so specially.
+ *
+ * ### gjs: possibly. but that doesn't have a symlink kind. and that
+ * ###   cannot simply be added. it would surprise too much code.
+ * ###   (we could probably create svn_node_kind2_t though)
  */
 typedef enum {
     svn_wc__db_kind_dir,
     svn_wc__db_kind_file,
-    svn_wc__db_kind_symlink,
+    svn_wc__db_kind_symlink
 
-    svn_wc__db_kind_absent_dir,
-    svn_wc__db_kind_absent_file,
-    svn_wc__db_kind_absent_symlink
 } svn_wc__db_kind_t;
 
 
+/** Enumerated values describing the state of a node. */
 typedef enum {
+    /* The node is present and has no known modifications applied to it. */
     svn_wc__db_status_normal,
-    svn_wc__db_status_changed,  /* ### text may be modified. or props_mod. */
-    svn_wc__db_status_added,  /* ### no history. text_mod set to TRUE */
-    svn_wc__db_status_moved_src,  /* ### deleted */
-    svn_wc__db_status_moved_dst,  /* ### has history */
-    svn_wc__db_status_copied,  /* ### has history */
-    svn_wc__db_status_deleted  /* ### text_mod, prop_mod will be FALSE */
 
-    /* ### copied+changed?  moved_dst+changed? */
+    /* The node is present and has known text or property modifications. */
+    svn_wc__db_status_changed,
+
+    /* The node has been added (potentially obscuring a delete or move of
+       the BASE node; see BASE_SHADOWED param). The text will be marked as
+       modified, and if properties exist, they will be marked as modified. */
+    svn_wc__db_status_added,
+
+    /* This node is no longer present because it was the source of a move. */
+    svn_wc__db_status_moved_src,
+
+    /* This node has been added with history, based on the move source.
+       Text and property modifications are based on whether changes have
+       been made against their pristine versions. */
+    svn_wc__db_status_moved_dst,
+
+    /* This node has been added with history, based on the copy source.
+       Text and property modifications are based on whether changes have
+       been made against their pristine versions. */
+    svn_wc__db_status_copied,
+
+    /* This node has been deleted. No text or property modifications
+       will be present. */
+    svn_wc__db_status_deleted,
+
+    /* This node was named by the server, but no information was provided. */
+    svn_wc__db_status_absent,
+
+    /* This node has been administratively excluded. */
+    svn_wc__db_status_excluded,
+
+    /* This node is not present in this revision. This typically happens
+       when a node is deleted and committed without updating its parent.
+       The parent revision indicates it should be present, but this node's
+       revision states otherwise. */
+    svn_wc__db_status_not_present
+
 } svn_wc__db_status_t;
 
 
@@ -341,16 +370,20 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### keep the revision?
+/** Create a node that is present in name only.
  *
- * ### KFF: What are the possible reasons for absence?
+ * The new node will be located at LOCAL_ABSPATH, and correspond to the
+ * repository node described by <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID>
+ * at revision REVISION.
  *
- *   - excluded (as in 'svn_depth_exclude')
- *   - ...?  I know there's more, but I can't think of it now.
+ * The node's kind is described by KIND, and the reason for its absence
+ * is specified by STATUS. Only three values are allowed for STATUS:
  *
- * ### I think it would help to list out the causes of absence;
- * ### that'll help us think about questions like whether we need
- * ### 'revision' or not.
+ *   svn_wc__db_status_absent
+ *   svn_wc__db_status_excluded
+ *   svn_wc__db_status_not_present
+ *
+ * Any temporary allocations are made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
@@ -360,6 +393,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 const char *repos_uuid,
                                 svn_revnum_t revision,
                                 svn_wc__db_kind_t kind,
+                                svn_wc__db_status_t status,
                                 apr_pool_t *scratch_pool);
 
 
@@ -615,7 +649,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
    ### metadata is present. caller needs to "set" all information recursively.
    ### and caller definitely has to populate ACTUAL. */
 /* ### mark node as absent? adding children or props: auto-convert away
-   ### from absent? */
+   ### from absent? ... or not "absent" but an "incomplete" status? */
 svn_error_t *
 svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -650,13 +684,6 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           apr_hash_t *props,
                           const char *target,
                           apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_op_add_absent_node(svn_wc__db_t *db,
-                              const char *local_abspath,
-                              svn_wc__db_kind_t kind,
-                              apr_pool_t *scratch_pool);
 
 
 svn_error_t *
