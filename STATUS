@@ -15,25 +15,6 @@ Status of 1.6.0:
 
 Candidate changes:
   
- * r35968, r35974
-   Buffer overflow on ensuring a 0 byte string buffer
-   Justification:
-     This bug aborts our client if the OS catches it (bad) or overwrites
-     arbitrary ram (worse). r35974 fixes the exact allocating behavior tested
-     from the string tests.
-   Votes:
-     +1: rhuijben, gstein
-
- * r35977
-   Remove the implicit recanonicalize in svn_path_url_add_component2 that
-   should have been part of r35732 that started asserting its behavior.
-   Justification:
-     Stops recanonicalizing +- everywhere. (Is by far the most CPU intensive
-     part of svn update before the ra session is opened). All inputs are
-     guaranteed to be pre-canonicalized.
-   Votes:
-     +1: rhuijben, gstein
-
  * r35981
    libsvn_ra_serf: Following RFC2617, verify authentication header tokens
    case insensitive.
@@ -59,3 +40,22 @@ Approved changes:
    Votes:
      +1: rhuijben, pburba, zhakov
      +1: gstein (for 1.6.1)
+
+ * r35968, r35974
+   Buffer overflow on ensuring a 0 byte string buffer
+   Justification:
+     This bug aborts our client if the OS catches it (bad) or overwrites
+     arbitrary ram (worse). r35974 fixes the exact allocating behavior tested
+     from the string tests.
+   Votes:
+     +1: rhuijben, gstein, pburba
+
+ * r35977
+   Remove the implicit recanonicalize in svn_path_url_add_component2 that
+   should have been part of r35732 that started asserting its behavior.
+   Justification:
+     Stops recanonicalizing +- everywhere. (Is by far the most CPU intensive
+     part of svn update before the ra session is opened). All inputs are
+     guaranteed to be pre-canonicalized.
+   Votes:
+     +1: rhuijben, gstein, pburba
