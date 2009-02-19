@@ -14,7 +14,15 @@ Status of 1.6.0:
 ================
 
 Candidate changes:
-  
+ 
+ * r35945, r35948
+   Mark fs-tests 18 as XFAIL.
+   Justification:
+     The test as been XFAIL for a long time, and returning it to be so isn't
+     a problem.  A passing test suite is always Good.
+   Votes:
+     +1: hwright, pburba
+
  * r35981
    libsvn_ra_serf: Following RFC2617, verify authentication header tokens
    case insensitive.
