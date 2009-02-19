@@ -33,258 +33,190 @@ REQUIREMENTS
 ============
 
 Write a new HTTP protocol for svn ("HTTP v2").  Map RA requests
-directly to HTTP requests.
+directly to HTTP requests.  Subversion over HTTP should:
 
-  * svn over HTTP should be much faster (eliminate extra turnarounds)
- 
-  * svn over HTTP should be almost as easy to extend as svnserve.
-
-  * svn over HTTP should be comprehensible to devs and users both
-    (require no knowledge of DeltaV concepts).
-
-  * svn over HTTP should be designed for optimum cacheability by web
-    proxies.
-
-  * svn over HTTP should make use of pipelined and parallel requests
-    when possible.
+ * be much faster (eliminate extra turnarounds)
+ * be almost as easy to extend as Subversionserve
+ * be comprehensible to devs and users without knowledge of DeltaV concepts
+ * be designed for optimum cacheability by web proxies
+ * make use of pipelined and parallel requests when possible
 
 
-
-Our Plans, in a Nutshell
+OUR PLANS, IN A NUTSHELL
 ========================
 
-* Phase 1:  Remove all DeltaV mechanics & formalities
+ * Phase 1:  Remove all DeltaV mechanics & formalities
 
-  - get rid of all the PROPFIND 'discovery' turnarounds.
-  - stop doing CHECKOUT requests before each PUT
-  - publish a public URI syntax for browsing historical objects
+   - Get rid of all the PROPFIND 'discovery' turnarounds.
+   - Stop doing CHECKOUT requests before each PUT
+   - Publish a public URI syntax for browsing historical objects
 
-* Phase 2:  Speed up commits
+ * Phase 2:  Speed up commits
 
-  - make PUT requests pipelined, the way ra_svn does.
+   - Make PUT requests pipelined, the way ra_svn does.
 
-* Phase 3:  (maybe) get rid of XML in request/response bodies
+ * Phase 3:  (maybe) get rid of XML in request/response bodies
 
-  - if there's a worthwhile speed gain, use serialized Thrift objects.
+   - If there's a worthwhile speed gain, use serialized Thrift objects.
 
 
-
-Phase 1 in Detail
+PHASE 1 IN DETAIL
 =================
 
-At the moment, ra_serf has to 'discover' and manipulate the following
-DeltaV objects:
+ * Deprecated DeltaV resources and resource types:
 
-   - Version Controlled Resource (VCC) :  !svn/vcc
-   - Baseline resource:                   !svn/bln
-   - Working baseline resource:           !svn/wbl
-   - Baseline collection resource:        !svn/bc/REV/
-   - Activity collection:                 !svn/act/activityUUID/
-   - Versioned resource:                  !svn/ver/REV/path
-   - Working resource:                    !svn/wrk/activityUUID/path
+   In compliance with the DeltaV spec, Subversion clients prior using
+   that standard protocol have to "discover" and manipulate the
+   following DeltaV objects:
 
-All of these objects will be deprecated and no longer used.
-mod_dav_svn will still support older clients, of course, but new
-clients will be able to automatically construct all of the URIs they
-need.
+     - Version Controlled Resource (VCC):   !svn/vcc
+     - Baseline resource:                   !svn/bln
+     - Working baseline resource:           !svn/wbl
+     - Baseline collection resource:        !svn/bc/REV/
+     - Activity collection:                 !svn/act/ACTIVITY-UUID/
+     - Versioned resource:                  !svn/ver/REV/path
+     - Working resource:                    !svn/wrk/ACTIVITY-UUID/path
 
+   All of these objects will be deprecated and no longer used.
+   mod_dav_svn will still support older clients, of course, but new
+   clients will be able to automatically construct all of the URIs
+   they need.
+
+ * New resources and resource types:
+
+   The following are some new resource and resource type concepts
+   we're introducing in HTTP protocol v2:
+
+     - me resource (!svn/me)
+
+       Represents the "repository itself".  This is the URI that
+       custom REPORTS are sent against.  (This eliminates our need for
+       the VCC resource.)
+
+     - revision resource (!svn/rev/REV)
+  
+       Represents a Subversion revision at the metadata level, and
+       maps conceptually to a "revision" in the FS layer.  Standard
+       PROPFIND and PROPATCH requests can be used against a revision
+       resource, with the understanding that the name/value pairs
+       being accessed are unversioned revision props, rather than file
+       or directory props.  (This eliminates our need for baseline or
+       working baseline resources.)
+
+     - revision root resource (!svn/rvr/REV/[PATH])
+
+       Represents the directory tree snapshot associated with a
+       Subversion revision, and maps conceptually to a revision-type
+       svn_fs_root_t/path pair in the FS layer.  GET, PROPFIND, and
+       certain REPORT requests can be issued against these resources.
+
+     - transaction resource (!svn/txn/TXN-NAME)
+
+       Represents a Subversion commit transaction, and maps
+       conceptually to an svn_fs_txn_t in the FS layer.  PROPFIND and
+       PROPATCH requests can be used against a transaction resource,
+       with the understanding that the name/value pairs being accessed
+       are unversioned transaction props, rather than file or directory
+       props.
+
+
+     - transaction root resource (!svn/txr/TXN-NAME/[PATH])
+
+       Represents the directory tree snapshot associated with a
+       Subversion commit transaction, and maps conceptually to a
+       transaction-type svn_fs_root_t/path pair in the FS layer.
+       Various read- and write-type requests can be issued against
+       these resources (MKCOL, PUT, PROPFIND, PROPPATCH, GET, etc.).
 
  * Opening an RA session:
 
    ra_serf will send an OPTIONS request when creating a new
    ra_session.  mod_dav_svn will send back what it already sends now,
-   but will also return new information:
-
-         youngest revision:  number
-         "me resource" URI:  !svn/me
-             revision stub:  !svn/rev
-        revision root stub:  !svn/bc   [TODO: make this !svn/rvr]
-          transaction stub:  !svn/txn
-     transaction root stub:  !svn/txr
-
-   The presence of these new stubs tells ra_serf that this is a new
-   server, and that the new streamlined HTTP protocol can be used.
-   ra_serf then caches them in the ra_session object.  If these new
-   OPTIONS responses are not returned, ra_serf falls back to 'classic'
-   DeltaV protocol.
-
-
- * What the new stubs are used for:
-
-   - me resource:  represents the "repository itself".  This is the URI
-     that custom REPORTS are sent against.
-
-     Note:  this eliminates our need for the VCC resource.
-
-   - revision stub: represents an opaque string to append to, whenever
-     the client wants to access a revision's revprops (either reading
-     or writing).  Specifically, /REV is appended, e.g.:
-
-          PROPFIND !svn/rev/2398
-
-     This maps conceptually to a "revision" in the FS.
-
-     Standard PROPFIND and PROPATCH requests can be used against the
-     constructed URI, with the understanding that the name/value pairs
-     being accessed are unversioned revision props, rather than file
-     or directory props.
-
-     Note:  this eliminates our need for baseline (bln) or working
-     baseline (wbl) resources.
-
-   - revision root stub: an opaque string to append to, whenever the
-     client wants to refer to a (pegrev, path) in the repository.
-     Specifically, /REV/[PATH] are appended, e.g.:
-
-          GET !svn/bc/2398/trunk/foo.c
-
-     This maps conceptually to a "revision root" FS object.
-
-     Note:  that this syntax is already the one mod_dav_svn understands;
-     what's changing here is that we no longer need to do a bunch of
-     PROPFINDs to discover it -- we get the stub right up front when
-     the session is opened.
-
-   - transaction stub: represents an opaque string to append to
-     whenever the client wants to access an uncommitted transaction's
-     properties.  Specifically, /TXN_NAME is appended, e.g.:
-
-          PROPFIND !svn/txn/e4b
-
-     This maps conceptually to an svn_fs_txn_t in the FS.
-
-   - transaction root stub: an opaque string to append to, whenever the
-     client wants to refer to a (txn-name, path) in the repository.
-     Specifically, /TXN_NAME/[PATH] are appended, e.g.:
-
-          GET !svn/txr/e4b/trunk/foo.c
-
-     This maps conceptually to a "txn root" FS object.
-
-
- * Simple read requests
-
-   These RA functions each send single request/response, either GET or
-   PROPFIND.
-
-   The only changes here is that we no longer need to "discover"
-   pegrev or revision URIs with extra turnarounds; instead we construct
-   them directly.
-
-    get-latest-rev    -> already present in ra_session (via OPTIONS)
-
-    get-file          -> GET (against a pegrev URI)
-
-    get-dir           -> PROPFIND depth 1 (against a pegrev URI)
-
-    rev-prop          -> PROPFIND (against a revision URI)
-
-    rev-proplist      -> PROPFIND (against a revision URI, but recursive)
-
-    check-path        -> PROPFIND (against a pegrev URI)
-
-    stat              -> PROPFIND (against a pegrev URI)
-
-    get-lock          -> PROPFIND (against a public HEAD URI)
-
-
- * Complex read requests
-
-   These RA functions are each accomplished in a single REPORT
-   request/response.
-
-   These REPORTs are not changing, except that they'll be sent against
-   the "me resource" URI (!svn/me) rather than a VCC URI.  Again, we're
-   eliminating all "discovery" turnarounds which used to preceed these
-   requests.
-
-   log                      -> REPORT (against a pegrev URI)
-
-   get-dated-rev            -> REPORT (against "me resource")
-
-   get-locations            -> REPORT (against a pegrev URI)
-
-   get-locations-segments   -> REPORT (against a pegrev URI)
-
-   get-file-revs            -> REPORT (against a pegrev URI)
-
-   get-locks                -> REPORT (against a public HEAD URI)
-
-   get-mergeinfo            -> REPORT (against a pegrev URI)
-
-   replay                   -> REPORT (against "me resource")
-
-   replay-range             -> pipelined REPORT requests (against "me
-                               resource") on each revision in the range
-
-
-* The "update" family of requests
-
-   update
-   switch
-   status
-   diff
-
-   For these RA functions, the existing ra_serf strategy stays the same:
-
-    1. Client sends custom REPORT describing state of working copy;
-       it does *not* request text-deltas in response (the way ra_neon does).
-
-    2. Server responds with a 'skeletal' editor-drive.
-
-    3. Client pipelines bunches of GET and PROPFIND requests.
-
-
-   The only changes we plan to make:
-
-    - the REPORT happens against the new '"me resource"', rather than a
-      discovered VCC URI.
-
-    - no need to cache the !svn/ver "wcprops" in the working copy
-      anymore, since our commit process has changed (see below).
-
-    - no need to do any PROPFIND discovery of pegrev objects to fetch;
-      client can construct them at will using the 'pegrev stub' it
-      received when the ra_session began.
-
-
-* Simple write requests
-
-   change-rev-prop          -> PROPPATCH (against a revision URI)
-
-   lock                     -> LOCK (against a public HEAD URI)
-
-   unlock                   -> UNLOCK (against a public HEAD URI)
-
-
-* Commit process
-
-  This will change significantly.  The current methodology looks like:
-
-      OPTIONS to start ra_session
-      PROPFINDs to discover various opaque URIs
-      MKACTIVITY to create a transaction
-      for each changed object:
+   but will also return new information as custom headers in the
+   OPTIONS response:
+
+     SVN-Youngest-Rev:  REV
+     SVN-Me-Resource:  /REPOS-ROOT/!svn/me
+
+   Additionally, this response will contain some new URL stub values:
+
+     SVN-Rev-Stub:  /REPOS-ROOT/!svn/rev
+     SVN-Rev-Root-Stub:  /REPOS-ROOT/!svn/rvr
+     SVN-Txn-Stub:  /REPOS-ROOT/!svn/txn
+     SVN-Txn-Root-Stub:  /REPOS-ROOT/!svn/txr
+
+   The presence of these new stubs (which can be appended to by the
+   client to create full-fledged resource URLs) tells ra_serf that
+   this is a new server, and that the new streamlined HTTP protocol
+   can be used.  ra_serf then caches them in the ra_session object.
+   If these new OPTIONS responses are not returned, ra_serf falls back
+   to 'classic' DeltaV protocol.
+
+   NOTE:  Recall that the !svn, while shown in this document as its
+   default value, can be changed via server configuration.  Clients
+   MUST NOT assume that the "special URI" is "!svn".  We're just
+   trying to keep this document as readable as possible.
+
+ * Changes to Read Requests
+
+   Most of the read requests performed by ra_serf fall into one of a
+   few categories, issuing GETs, PROPFINDs, or REPORTs against public
+   URIs, baseline collection URIs, or the default VCC (with some
+   exceptions).  Now, these will all be changed to use the new
+   resources, all of which have URLs that can be constructed from the
+   information returned by the new OPTIONS response information.
+
+   The implementations of the higher level Subversion update, switch,
+   status -u, and diff operations in a given RA module share almost
+   all their code.  They really are just that similar to one another.
+   Like the changes to the other read requests, this family of
+   requests will now operate against our new resources.  But
+   additionally, we'll be able to stop using the "wcprops" abstraction
+   layer, which is today used to cache version resource URLs in
+   Subversion's working copy layer (since the client can construct
+   URLs as easily as it can fetch them from a cache).
+
+ * Simple Write Requests
+
+   The 'lock' and 'unlock' operations won't change, because they
+   already operate on public HEAD URIs today.  But revprop changes
+   will now happen as PROPPATCH's against a resource URI (which can be
+   constructed by the client).
+
+ * Commits
+
+   Commits will change significantly.  The current methodology looks like:
+
+     OPTIONS to start ra_session
+     PROPFINDs to discover various opaque URIs
+     MKACTIVITY to create a transaction
+     try:
+       for each changed object:
          CHECKOUT object to get working resource
-         {PUT, PROPPATCH, DELETE, COPY} working resource
+         PUT/PROPPATCH/DELETE/COPY working resource
          MKCOL to create new directories
-      MERGE to commit the transaction
+       MERGE to commit the transaction
+     finally:
+       DELETE the activity
 
-  The new sequence looks like:
+   The new sequence is simpler, and looks like:
 
-      OPTIONS to start ra_session
-      POST against "me resource", to create a transaction
-      for each changed object:
-         {PUT, PROPPATCH, DELETE, COPY, MKCOL} against transaction resources
-      MERGE to commit the transaction
+     OPTIONS to start ra_session
+     POST against "me resource", to create a transaction
+     try:
+       for each changed object:
+         PUT/PROPPATCH/DELETE/COPY/MKCOL against transaction resources
+       MERGE to commit the transaction
+     except:
+       DELETE the transaction resource
 
-  Specific new changes:
+   Specific new changes:
 
-    - The activity-UUID-to-Subversion-txn-name abstraction is gone.
-      We now expose the Subversion txn names explicitly through the
-      protocol.
+     - The activity-UUID-to-Subversion-txn-name abstraction is gone.
+       We now expose the Subversion txn names explicitly through the
+       protocol.
 
-    - The new POST request replaces the MKACTIVITY request.
+     - The new POST request replaces the MKACTIVITY request.
 
        - no more need to "discover" the activity URI;  !svn/act/ is gone.
 
@@ -294,24 +226,106 @@ need.
          which can then be appended to the transaction stub and
          transaction root stub as necessary.
 
-    - Once the commit transaction is created, the client is free to
-      send write requests against transaction resources it constructs itself.
+     - Once the commit transaction is created, the client is free to
+       send write requests against transaction resources it constructs
+       itself.  This eliminates the CHECKOUT requests, and also
+       removes our need to use versioned resources (!svn/ver) or
+       working resources (!svn/wrk).
 
-      NOTE:  this eliminates the CHECKOUT requests, and also removes
-      our need to use versioned resources (!svn/ver) or working
-      resources (!svn/wrk).
+     - When modifying transaction resources, clients should send
+       'If-match:' headers (whose value carries the base revision) to
+       facilitate server-side out-of-dateness checks.
 
-    - When modifying transaction resources, clients should send
-      'If-match:' headers to facilitate server-side out-of-dateness
-      checks.  (TODO:  value of header is probably an etag?)
+TODO
+====
 
-      [### If we're talking about custom protocols anyway, why use an
-           'If-match' header with an Etag value?  Why not use a custom
-           'SVN-Base-Revision' header that carries the value given us
-           via the commit editor?
-           
-       A:  Because If-Match is standard HTTP, and proxies can/should
-           know about etags to improve the overall performance.
-           
-           Just jam that base-revision into the etag. In fact, I think
-           when mod_dav_svn makes up an etag, it uses that mechanism. ]
+ * Teach mod_dav_svn to answer the OPTIONS request with these
+   additional pieces of information:
+
+      repository root URI    [DONE]
+      repository UUID        [DONE]
+      youngest revision      [DONE]
+      me resource URI        [DONE]
+      revision stub          [DONE]
+      revision root stub     [DONE]
+      transaction stub       [DONE]
+      transaction root stub  [DONE]
+
+ * Teach mod_dav_svn to recognize and correctly interpret URLs which
+   make use of the new URI stubs:
+
+      me resource URI       -> !svn/me   [DONE]
+      revision stub         -> !svn/rev  [STARTED]
+      revision root stub    -> !svn/rvr  [DONE]
+      transaction stub      -> !svn/txn  [STARTED]
+      transaction root stub -> !svn/txr  [STARTED]
+
+ * Teach mod_dav_svn to handle POST against the "me resource",
+   returning a transaction URI stub and transaction prop URI stub for
+   further use in the commit.  [DONE]
+
+ * Teach mod_dav_svn to notice and use 'If-match' headers in write
+   requests aimed at transaction root resources.
+
+      PROPPATCH
+      DELETE
+      PUT
+      MKCOL
+      COPY
+      MOVE
+      ...
+      
+ * Teach ra_serf operations to not do the multi-PROPFIND dance any
+   more, but to fetch the information they seek from mod_dav_svn using
+   the new stub URIs:
+
+      get-file              -> GET (against pegrev URI)            [DONE]
+      get-dir               -> PROPFIND (against pegrev URI)       [DONE]
+      rev-prop              -> PROPFIND (against revision URI)     [DONE]
+      rev-proplist          -> PROPFIND (against revision URI)     [DONE]
+      check-path            -> PROPFIND (against pegrev URI)       [DONE]
+      stat                  -> PROPFIND (against pegrev URI)       [DONE]
+      get-lock              -> PROPFIND (against public HEAD URI)  [DONE]
+
+ * Teach ra_serf REPORT-type requests to use the URI stubs where
+   applicable, too:
+
+      log                   -> REPORT (against pegrev URI)      [DONE]
+      get-dated-rev         -> REPORT (against "me resource")   [DONE]
+      get-deleted-rev       -> REPORT (against pegrev URI)      [DONE]
+      get-locations         -> REPORT (against pegrev URI)      [DONE]
+      get-location-segments -> REPORT (against pegrev URI)      [DONE]
+      get-file-revs         -> REPORT (against pegrev URI)      [DONE]
+      get-locks             -> REPORT (against public HEAD URI) [DONE]
+      get-mergeinfo         -> REPORT (against pegrev URI)      [DONE]
+      replay                -> REPORT (against "me resource")   [DONE]
+      replay-range          -> REPORTs (against "me resource")  [DONE]
+
+ * Teach ra_serf simple write requests to use new URI stubs:
+
+      change-rev-prop       -> PROPPATCH (against revision URI)  [DONE]
+      lock                  -> LOCK (against public HEAD URI)    [DONE]
+      unlock                -> UNLOCK (against public HEAD URI)  [DONE]
+
+ * Teach ra_serf to do update-style REPORTs a little differently:
+
+    - REPORT against the new "me resource" instead of VCC URI  [DONE]
+    - eliminate now-unnecessary wcprops cache
+    - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
+
+ * Rework ra_serf commit editor implementation to use new direct
+   methods as described in the design doc.
+
+    - use POST to 'me' resource to get txn name          [DONE]
+    - set revprops using PROPPATCH on the txn resource   [DONE]
+    - abort edit with DELETE against the txn resource    [DONE]
+    - send write requests against txn and txn root URLs  [STARTED]
+    - enable pipelined PUTs                              [OUT-OF-SCOPE]
+
+ * Optional:  Do some of this stuff for ra_neon, too:
+
+    - get and cache UUID and repos_root from OPTIONS         [DONE]
+    - get me resource, and pegrev stub from OPTIONS          [DONE]
+    - use me resource instead of the VCC                     [STARTED]
+    - use pegrev stubs instead of get_baseline_info() walks  [STARTED]
+    - use rev stubs for revprop stuff
