@@ -15,7 +15,27 @@ Status of 1.6.0:
 
 Candidate changes:
 
-  No candidate changes at the moment!
+ * r35894
+   Whitespace cleanup on *.
+   Justification:
+     If we decide to merge anything we should also merge the whitespace
+     cleanup to help future merges. Otherwise it should be moved to 1.6.1.
+   Votes:
+     +1: rhuijben (not strictly for 1.6.0)
+     
+ * r35967
+   Add support to build and use SQLite amalgamation version on Windows.
+   This change implements the same behavior as *nix build system does.
+   Votes:
+     +1: rhuijben (not strictly for 1.6.0)
+     
+ * r35968
+   Buffer overflow on ensuring a 0 byte string buffer
+   Justification:
+     This bug aborts our client if the OS catches it (bad) or overwrites
+     arbitrary ram (worse).
+   Votes:
+     +1: rhuijben
 
 Status of 1.6.1:
 ================
