@@ -468,6 +468,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 33,
              "The working copy is missing")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_NOT_SYMLINK,
+             SVN_ERR_WC_CATEGORY_START + 34,
+             "The specified node is not a symlink")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

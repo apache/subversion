@@ -77,9 +77,18 @@ typedef enum {
  * ###   (we could probably create svn_node_kind2_t though)
  */
 typedef enum {
+    /* The node is a directory. */
     svn_wc__db_kind_dir,
+
+    /* The node is a file. */
     svn_wc__db_kind_file,
-    svn_wc__db_kind_symlink
+
+    /* The node is a symbolic link. */
+    svn_wc__db_kind_symlink,
+
+    /* The type of the node is not known, due to its absence, exclusion,
+       deletion, or incomplete status. */
+    svn_wc__db_kind_unknown
 
 } svn_wc__db_kind_t;
 
@@ -124,7 +133,12 @@ typedef enum {
        when a node is deleted and committed without updating its parent.
        The parent revision indicates it should be present, but this node's
        revision states otherwise. */
-    svn_wc__db_status_not_present
+    svn_wc__db_status_not_present,
+
+    /* This node is known, but its information is incomplete. Generally,
+       it should be treated similar to the other missing status values
+       until some (later) process updates the node with its data. */
+    svn_wc__db_status_incomplete
 
 } svn_wc__db_status_t;
 
@@ -295,10 +309,26 @@ svn_wc__db_close(svn_wc__db_t *db,
  * @{
  */
 
-/* ### base_add_* can also replace. should be okay? */
-
-/* ### props are NOT optional. caller must hold data until the props
- * ### are available. same for children: must be provided.
+/** Add or replace a directory in the BASE tree.
+ *
+ * The directory is located at LOCAL_ABSPATH on the local filesystem, and
+ * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
+ * repository, at revision REVISION.
+ *
+ * The directory properties are given by the PROPS hash (which is
+ * const char *name => const svn_string_t *).
+ *
+ * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
+ * CHANGED_AUTHOR>.
+ *
+ * The directory's children are listed in CHILDREN, as an array of
+ * const char *. The child nodes do NOT have to exist when this API
+ * is called.
+ *
+ * This subsystem does not use DEPTH, but it can be recorded here in
+ * the BASE tree for higher-level code to use.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
@@ -316,8 +346,23 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               apr_pool_t *scratch_pool);
 
 
-/* ### props are NOT optional. caller must hold data until the props
-   ### are available. */
+/** Add or replace a directory in the BASE tree.
+ *
+ * The directory is located at LOCAL_ABSPATH on the local filesystem, and
+ * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
+ * repository, at revision REVISION.
+ *
+ * The directory properties are given by the PROPS hash (which is
+ * const char *name => const svn_string_t *).
+ *
+ * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
+ * CHANGED_AUTHOR>.
+ *
+ * The checksum of the file contents is given in CHECKSUM. An entry in
+ * the pristine text base is NOT required when this API is called.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *local_abspath,
@@ -333,9 +378,23 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
-/* ### what data to keep for a symlink?
+/** Add or replace a symlink in the BASE tree.
  *
- * ### KFF: This is an interesting question, because currently
+ * The symlink is located at LOCAL_ABSPATH on the local filesystem, and
+ * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
+ * repository, at revision REVISION.
+ *
+ * The symlink's properties are given by the PROPS hash (which is
+ * const char *name => const svn_string_t *).
+ *
+ * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
+ * CHANGED_AUTHOR>.
+ *
+ * The target of the symlink is specified by TARGET.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
+ */
+/* ### KFF: This is an interesting question, because currently
  * ### symlinks are versioned as regular files with the svn:special
  * ### property; then the file's text contents indicate that it is a
  * ### symlink and where that symlink points.  That's for portability:
@@ -354,6 +413,13 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
  * ###
  * ### I'm still feeling my way around this problem; just pointing out
  * ### the issues.
+ *
+ * ### gjs: symlinks are stored in the database as first-class objects,
+ * ###   rather than in the filesystem as "special" regular files. thus,
+ * ###   all portability concerns are moot. higher-levels can figure out
+ * ###   how to represent the link in ACTUAL. higher-levels can also
+ * ###   deal with translating to/from the svn:special property and
+ * ###   the plain-text file contents.
  */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
@@ -370,7 +436,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/** Create a node that is present in name only.
+/** Create a node in the BASE tree that is present in name only.
  *
  * The new node will be located at LOCAL_ABSPATH, and correspond to the
  * repository node described by <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID>
@@ -383,7 +449,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
  *   svn_wc__db_status_excluded
  *   svn_wc__db_status_not_present
  *
- * Any temporary allocations are made in SCRATCH_POOL.
+ * All temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
@@ -397,18 +463,50 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
+/** Remove a node from the BASE tree.
+ *
+ * The node to remove is indicated by LOCAL_ABSPATH from the local
+ * filesystem.
+ *
+ * Note that no changes are made to the local filesystem; LOCAL_ABSPATH
+ * is merely the key to figure out which BASE node to remove.
+ *
+ * If the node is a directory, then ALL child nodes will be removed
+ * from the BASE tree, too.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
-svn_wc__db_base_delete(svn_wc__db_t *db,
+svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
 
-/* ### NULL may be given for OUT params
-   ### @a switched means this directory is different from what parent/filename
-   ### would imply for @a repos_relpath.
-*/
+/** Retrieve information about a node in the BASE tree.
+ *
+ * For the BASE node implied by LOCAL_ABSPATH from the local filesystem,
+ * return information in the provided OUT parameters. Each OUT parameter
+ * may be NULL, indicating that specific item is not requested.
+ *
+ * The OUT parameters are: KIND, STATUS, REVISION, REPOS_RELPATH,
+ * REPOS_ROOT_URL, REPOS_UUID, CHANGED_REV, CHANGED_DATE, CHANGED_AUTHOR,
+ * DEPTH, CHECKSUM, TRANSLATED_SIZE, SWITCHED.
+ *
+ * If DEPTH is requested, and the node is NOT a directory, then
+ * the value will be set to svn_depth_empty.
+ *
+ * If CHECKSUM is requested, and the node is NOT a file, then it will
+ * be set to NULL.
+ *
+ * If TRANSLATED_SIZE is requested, and the node is NOT a file, then
+ * it will be set to 0.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
+                         svn_wc__db_status_t *status,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,
@@ -419,13 +517,21 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_depth_t *depth,  /* ### for dirs only */
                          const svn_checksum_t **checksum,  /* ### files only */
                          svn_filesize_t *translated_size,
-                         svn_boolean_t *switched,  /* ### derived */
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 
+/** Return a property's value from a node in the BASE tree.
+ *
+ * This is a convenience function to return a single property from the
+ * BASE tree node indicated by LOCAL_ABSPATH. The property's name is
+ * given in PROPNAME, and the value returned in PROPVAL.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
                          svn_wc__db_t *db,
@@ -435,7 +541,14 @@ svn_wc__db_base_get_prop(const svn_string_t **propval,
                          apr_pool_t *scratch_pool);
 
 
-/* ### KFF: hash mapping 'const char *' prop names to svn_string_t vals?
+/** Return all properties of the given BASE tree node.
+ *
+ * All of the properties for the node indicated by LOCAL_ABSPATH will be
+ * returned in PROPS as a mapping of const char * names to
+ * const svn_string_t * values.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_get_props(apr_hash_t **props,
@@ -445,13 +558,17 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
 
 
-/* ### return some basic info for each child? e.g. kind
+/** Return a list of the BASE tree node's children's names.
  *
- * ### KFF: perhaps you want an array of 'svn_dirent_t's?  Oh, but
- * ### they don't store the names... Well, but maybe you want
- * ### *children to be a hash anyway, not an array, so you can get the
- * ### name->child mapping and have children able to be looked up in
- * ### constant time.
+ * For the node indicated by LOCAL_ABSPATH, this function will return
+ * the names of all of its children in the array CHILDREN. The array
+ * elements are const char * values.
+ *
+ * If the node is not a directory, then SVN_ERR_WC_NOT_DIRECTORY will
+ * be returned.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_get_children(const apr_array_header_t **children,
@@ -461,7 +578,17 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *scratch_pool);
 
 
-/* ### KFF: Hm, yeah, see earlier about symlink questions. */
+/** Return the target of the symlink at the give BASE tree node.
+ *
+ * For the node indicated by LOCAL_ABSPATH, the symlink's target will
+ * be returned in TARGET.
+ *
+ * If the node is not a symlink, then SVN_ERR_WC_NOT_SYMLINK will
+ * be returned.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_get_symlink_target(const char **target,
                                    svn_wc__db_t *db,

@@ -455,7 +455,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_base_delete(svn_wc__db_t *db,
+svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool)
 {
@@ -467,6 +467,7 @@ svn_wc__db_base_delete(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
+                         svn_wc__db_status_t *status,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,
@@ -477,7 +478,6 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_depth_t *depth,
                          const svn_checksum_t **checksum,
                          svn_filesize_t *translated_size,
-                         svn_boolean_t *switched,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
