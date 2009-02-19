@@ -15,14 +15,6 @@ Status of 1.6.0:
 
 Candidate changes:
 
- * r35894
-   Whitespace cleanup on *.
-   Justification:
-     If we decide to merge anything we should also merge the whitespace
-     cleanup to help future merges. Otherwise it should be moved to 1.6.1.
-   Votes:
-     +1: rhuijben (not strictly for 1.6.0)
-     
  * r35967
    Add support to build and use SQLite amalgamation version on Windows.
    This change implements the same behavior as *nix build system does.
@@ -62,6 +54,16 @@ Candidate changes:
    Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
     Votes:
      +1: pburba
+     
+ * r35977
+   Remove the implicit recanonicalize in svn_path_url_add_component2 that
+   should have been part of r35732 that started asserting its behavior.
+   Justification:
+     Stops recanonicalizing +- everywhere. (Is by far the most CPU intensive
+     part of svn update before the ra session is opened). All inputs are
+     guaranteed to be pre-canonicalized.
+   Votes:
+     +1: rhuijben
      
 Approved changes (all releases):
 ================================
