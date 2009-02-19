@@ -43,14 +43,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, gstein
  
- * r35967
-   Add support to build and use SQLite amalgamation version on Windows.
-   This change implements the same behavior as *nix build system does.
-   Votes:
-     +1: rhuijben, pburba
-     +1: gstein (for 1.6.1)
-
-
 Status of 1.6.1:
 ================
 
@@ -60,3 +52,10 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r35967
+   Add support to build and use SQLite amalgamation version on Windows.
+   This change implements the same behavior as *nix build system does.
+   Votes:
+     +1: rhuijben, pburba, zhakov
+     +1: gstein (for 1.6.1)
