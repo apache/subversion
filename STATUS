@@ -20,7 +20,7 @@ Candidate changes:
    Justification:
      Stops spurious test failures.
     Votes:
-     +1: pburba
+     +1: pburba, rhuijben
      +1: gstein (for 1.6.1)
 
  * r35943
@@ -29,13 +29,13 @@ Candidate changes:
    Justification:
      Stops spurious test failures.
     Votes:
-     +1: pburba
+     +1: pburba, rhuijben
      +1: gstein (for 1.6.1)
 
  * r35950
    Make fsfs implementation of svn_fs_commit_txn adhere to API promises.
     Votes:
-     +1: pburba
+     +1: pburba, rhuijben
      +1: gstein (for 1.6.1)
      
  * r35967
