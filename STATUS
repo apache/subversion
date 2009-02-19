@@ -37,12 +37,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r35945, r35948
-   Mark fs-tests 18 as XFAIL.
-   Justification:
-     The test as been XFAIL for a long time, and returning it to be so isn't
-     a problem.  A passing test suite is always Good.
-   Votes:
-     +1: hwright, pburba, cmpilato
-
