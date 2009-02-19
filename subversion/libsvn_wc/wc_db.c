@@ -22,7 +22,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_wc.h"
 
 #include "wc.h"
@@ -31,6 +31,32 @@
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
+
+
+#define NOT_IMPLEMENTED() \
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
+
+
+/*
+ * PARAMETER ASSERTIONS
+ *
+ * Every (semi-)public entrypoint in this file has a set of assertions on
+ * the parameters passed into the function. Since this is a brand new API,
+ * we want to make sure that everybody calls it properly. And without any
+ * doubt about what is being passed.
+ *
+ * Some parameters are *not* specifically asserted. Typically, these are
+ * params that will be used immediately, so something like a NULL value
+ * will be obvious.
+ *
+ *
+ * DATABASE OPERATIONS
+ *
+ * Each function should leave the database in a consistent state. If it
+ * does *not*, then the implication is some other function needs to be
+ * called to restore consistency. Subtle requirements like that are hard
+ * to maintain over a long period of time, so this API will not allow it.
+ */
 
 
 struct svn_wc__db_t {
@@ -68,7 +94,7 @@ struct svn_wc__db_pdh_t {
 static svn_error_t *
 get_pristine_fname(const char **path,
                    svn_wc__db_pdh_t *pdh,
-                   svn_checksum_t *checksum,
+                   const svn_checksum_t *checksum,
                    svn_boolean_t create_subdir,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
@@ -88,8 +114,8 @@ get_pristine_fname(const char **path,
 
   if (create_subdir)
     {
-      const char *subdir_path = svn_path_join(pdh->base_dir, subdir,
-                                              scratch_pool);
+      const char *subdir_path = svn_dirent_join(pdh->base_dir, subdir,
+                                                scratch_pool);
       svn_error_t *err;
 
       err = svn_io_dir_make(subdir_path, APR_OS_DEFAULT, scratch_pool);
@@ -103,13 +129,13 @@ get_pristine_fname(const char **path,
 #endif
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
-  *path = svn_path_join_many(result_pool,
-                             pdh->base_dir,
+  *path = svn_dirent_join_many(result_pool,
+                               pdh->base_dir,
 #ifndef SVN__SKIP_SUBDIR
-                             subdir,
+                               subdir,
 #endif
-                             hexdigest,
-                             NULL);
+                               hexdigest,
+                               NULL);
   return SVN_NO_ERROR;
 }
 
@@ -124,6 +150,8 @@ open_one_directory(svn_wc__db_t *db,
   svn_boolean_t special;
   svn_wc__db_pdh_t *pdh;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(path));
+
   /* If the file is special, then we need to refer to the encapsulating
      directory instead, rather than resolving through a symlink to a
      file or directory. */
@@ -135,7 +163,7 @@ open_one_directory(svn_wc__db_t *db,
   if (kind != svn_node_dir)
     {
       /* ### doesn't seem that we need to keep the original path */
-      path = svn_path_dirname(path, scratch_pool);
+      path = svn_dirent_dirname(path, scratch_pool);
     }
 
   pdh = apr_hash_get(db->dir_data, path, APR_HASH_KEY_STRING);
@@ -152,7 +180,7 @@ open_one_directory(svn_wc__db_t *db,
   /* ### need to fix this to use a symbol for ".svn". we shouldn't need
      ### to use join_many since we know "/" is the separator for
      ### internal canonical paths */
-  pdh->base_dir = svn_path_join(path, ".svn/pristine", result_pool);
+  pdh->base_dir = svn_dirent_join(path, ".svn/pristine", result_pool);
 
   /* Make sure the key lasts as long as the hash. Note that if we did
      not call dirname(), then this path is the provided path, but we
@@ -183,14 +211,14 @@ new_db_state(svn_wc__db_openmode_t mode,
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                const char *path,
+                const char *local_abspath,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   *db = new_db_state(mode, config, result_pool);
 
-  return open_one_directory(*db, path, result_pool, scratch_pool);
+  return open_one_directory(*db, local_abspath, result_pool, scratch_pool);
 }
 
 
@@ -246,7 +274,7 @@ svn_wc__db_version(int *version,
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err && err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT)
     return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
-                             svn_path_local_style(path, scratch_pool));
+                             svn_dirent_local_style(path, scratch_pool));
   else if (!err)
     return SVN_NO_ERROR;
 
@@ -262,7 +290,7 @@ svn_wc__db_version(int *version,
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
               || APR_STATUS_IS_ENOTDIR(err->apr_err)))
     return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
-                             svn_path_local_style(path, scratch_pool));
+                             svn_dirent_local_style(path, scratch_pool));
   else if (!err)
     return SVN_NO_ERROR;
 
@@ -270,68 +298,266 @@ svn_wc__db_version(int *version,
      bail. */
   return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
                            _("'%s' is not a working copy"),
-                           svn_path_local_style(path, scratch_pool));
+                           svn_dirent_local_style(path, scratch_pool));
 }
 
 
 svn_error_t *
 svn_wc__db_txn_begin(svn_wc__db_t *db,
-                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
 svn_wc__db_txn_rollback(svn_wc__db_t *db,
-                        apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
 svn_wc__db_txn_commit(svn_wc__db_t *db,
-                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__db_txn_rollback(db, result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_txn_rollback(db, scratch_pool));
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
-                              svn_wc__db_t *db,
-                              const char *dirpath,
-                              apr_pool_t *result_pool,
+svn_wc__db_base_add_directory(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const char *repos_relpath,
+                              const char *repos_root_url,
+                              const char *repos_uuid,
+                              svn_revnum_t revision,
+                              const apr_hash_t *props,
+                              svn_revnum_t changed_rev,
+                              apr_time_t changed_date,
+                              const char *changed_author,
+                              const apr_array_header_t *children,
+                              svn_depth_t depth,
                               apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(repos_uuid != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
+  SVN_ERR_ASSERT(changed_date > 0);
+  SVN_ERR_ASSERT(changed_author != NULL);
+  SVN_ERR_ASSERT(children != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_add_file(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *repos_relpath,
+                         const char *repos_root_url,
+                         const char *repos_uuid,
+                         svn_revnum_t revision,
+                         const apr_hash_t *props,
+                         svn_revnum_t changed_rev,
+                         apr_time_t changed_date,
+                         const char *changed_author,
+                         const svn_checksum_t *checksum,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(repos_uuid != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
+  SVN_ERR_ASSERT(changed_date > 0);
+  SVN_ERR_ASSERT(changed_author != NULL);
+  SVN_ERR_ASSERT(checksum != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_add_symlink(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const char *repos_relpath,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
+                            svn_revnum_t revision,
+                            const apr_hash_t *props,
+                            svn_revnum_t changed_rev,
+                            apr_time_t changed_date,
+                            const char *changed_author,
+                            const char *target,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(repos_uuid != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
+  SVN_ERR_ASSERT(changed_date > 0);
+  SVN_ERR_ASSERT(changed_author != NULL);
+  SVN_ERR_ASSERT(target != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *repos_relpath,
+                                const char *repos_root_url,
+                                const char *repos_uuid,
+                                svn_revnum_t revision,
+                                svn_wc__db_kind_t kind,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(repos_uuid != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_absent_dir
+                 || kind == svn_wc__db_kind_absent_file
+                 || kind == svn_wc__db_kind_absent_symlink);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_delete(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
+                         svn_revnum_t *revision,
+                         const char **repos_relpath,
+                         const char **repos_root_url,
+                         const char **repos_uuid,
+                         svn_revnum_t *changed_rev,
+                         apr_time_t *changed_date,
+                         const char **changed_author,
+                         svn_depth_t *depth,
+                         const svn_checksum_t **checksum,
+                         svn_filesize_t *translated_size,
+                         svn_boolean_t *switched,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_prop(const svn_string_t **propval,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *propname,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_props(apr_hash_t **props,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_children(const apr_array_header_t **children,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_symlink_target(const char **target,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_pristine_get_handle(svn_wc__db_pdh_t **pdh,
+                               svn_wc__db_t *db,
+                               const char *local_dir_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+
   /* ### need to fix this up. we'll probably get called with a subdirectory
-     ### of some dirpath that we opened originally. that means we probably
+     ### of the path that we opened originally. that means we probably
      ### won't have the subdir in the hash table. need to be able to
      ### incrementally grow the hash of per-dir structures. */
 
-  *pdh = apr_hash_get(db->dir_data, dirpath, APR_HASH_KEY_STRING);
+  *pdh = apr_hash_get(db->dir_data, local_dir_abspath, APR_HASH_KEY_STRING);
 
   if (*pdh == NULL)
     {
       /* Oops. We haven't seen this WC directory before. Let's get it into
          our hash of per-directory information. */
-      SVN_ERR(open_one_directory(db, dirpath, result_pool, scratch_pool));
+      SVN_ERR(open_one_directory(db, local_dir_abspath,
+                                 result_pool, scratch_pool));
 
-      *pdh = apr_hash_get(db->dir_data, dirpath, APR_HASH_KEY_STRING);
+      *pdh = apr_hash_get(db->dir_data, local_dir_abspath, APR_HASH_KEY_STRING);
 
       SVN_ERR_ASSERT(*pdh != NULL);
     }
@@ -343,7 +569,7 @@ svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
 svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_wc__db_pdh_t *pdh,
-                         svn_checksum_t *checksum,
+                         const svn_checksum_t *checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -359,7 +585,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 svn_error_t *
 svn_wc__db_pristine_write(svn_stream_t **contents,
                           svn_wc__db_pdh_t *pdh,
-                          svn_checksum_t *checksum,
+                          const svn_checksum_t *checksum,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -378,41 +604,387 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 
 svn_error_t *
+svn_wc__db_pristine_get_tempdir(const char **temp_dir,
+                                svn_wc__db_pdh_t *pdh,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_pristine_install(svn_wc__db_pdh_t *pdh,
+                            const char *local_abspath,
+                            const svn_checksum_t *checksum,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
                           int *refcount,
                           svn_wc__db_pdh_t *pdh,
-                          svn_checksum_t *checksum,
+                          const svn_checksum_t *checksum,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
 svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
 svn_wc__db_pristine_incref(int *new_refcount,
                            svn_wc__db_pdh_t *pdh,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
 svn_wc__db_pristine_decref(int *new_refcount,
                            svn_wc__db_pdh_t *pdh,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  NOT_IMPLEMENTED();
+}
+
+svn_error_t *
+svn_wc__db_op_copy(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_copy_url(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       const char *copyfrom_repos_relpath,
+                       const char *copyfrom_root_url,
+                       const char *copyfrom_uuid,
+                       svn_revnum_t copyfrom_revision,
+                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(copyfrom_repos_relpath != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_absolute(copyfrom_root_url));
+  SVN_ERR_ASSERT(copyfrom_uuid != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(copyfrom_revision));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_add_directory(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_hash_t *props,
+                            const apr_array_header_t *children,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(children != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_add_file(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_hash_t *props,
+                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(props != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_add_symlink(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_hash_t *props,
+                          const char *target,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(target != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_add_absent_node(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              svn_wc__db_kind_t kind,
+                              apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_absent_dir
+                 || kind == svn_wc__db_kind_absent_file
+                 || kind == svn_wc__db_kind_absent_symlink);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_set_prop(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       const char *propname,
+                       const svn_string_t *propval,
+                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_set_props(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_hash_t *props,
+                        apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_delete(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_move(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_modified(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_add_to_changelist(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *changelist,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_op_revert(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     svn_depth_t depth,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_read_info(svn_wc__db_status_t *status,
+                     svn_wc__db_kind_t *kind,
+                     svn_revnum_t *revision,
+                     const char **repos_relpath,
+                     const char **repos_root_url,
+                     const char **repos_uuid,
+                     svn_revnum_t *changed_rev,
+                     apr_time_t *changed_date,
+                     const char **changed_author,
+                     svn_depth_t *depth,
+                     const svn_checksum_t **checksum,
+                     svn_filesize_t *translated_size,
+                     const char **changelist,
+                     const char **original_repos_relpath,
+                     const char **original_root_url,
+                     const char **original_uuid,
+                     svn_revnum_t *original_revision,
+                     svn_boolean_t *text_mod,
+                     svn_boolean_t *props_mod,
+                     svn_boolean_t *base_shadowed,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_read_prop(const svn_string_t **propval,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     const char *propname,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_read_props(apr_hash_t **props,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_read_pristine_props(apr_hash_t **props,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_read_children(const apr_array_header_t **children,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_read_symlink_target(const char **target,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_global_relocate(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           const char *from_url,
+                           const char *to_url,
+                           svn_depth_t depth,
+                           apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_global_commit(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         svn_revnum_t new_revision,
+                         apr_time_t new_date,
+                         const char *new_author,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
+  SVN_ERR_ASSERT(new_date > 0);
+  SVN_ERR_ASSERT(new_author != NULL);
+
+  NOT_IMPLEMENTED();
 }
