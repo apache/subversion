@@ -940,6 +940,7 @@ def is_wc(dir):
     return os.path.isdir(os.path.join(dir, ".svn")) or \
            os.path.isdir(os.path.join(dir, "_svn"))
 
+_cache_svninfo = {}
 def get_svninfo(target):
     """Extract the subversion information for a target (through 'svn info').
     This function uses an internal cache to let clients query information
