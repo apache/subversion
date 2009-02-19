@@ -17,13 +17,18 @@
  */
 
 /*
- * the KIND column in these tables has one of six values:
- *   DIRECTORY
- *   FILE
- *   SYMLINK
- *   (absent) DIRECTORY
- *   (absent) FILE
- *   (absent) SYMLINK
+ * the KIND column in these tables has one of five values:
+ *   "none"
+ *   "file"
+ *   "dir"
+ *   "symlink"
+ *   "unknown"
+ *
+ * the PRESENCE column in these tables has one of four values:
+ *   "normal"
+ *   "absent"
+ *   "excluded"
+ *   "incomplete"
  */
 
 
@@ -76,7 +81,11 @@ CREATE TABLE BASE_NODE (
      NULL if this is the wcroot node. */
   parent_id  INTEGER,
 
-  revnum  INTEGER NOT NULL,
+  /* is this node "present" or has it been excluded for some reason? */
+  presence  TEXT NOT NULL,
+
+  /* this could be NULL for non-present nodes -- no info. */
+  revnum  INTEGER,
 
   /* file/dir/special. none says this node is NOT present at this REV. */
   kind  TEXT NOT NULL,
@@ -87,10 +96,11 @@ CREATE TABLE BASE_NODE (
   checksum  TEXT,
   translated_size  INTEGER,
 
-  /* Information about the last change to this node */
-  changed_rev  INTEGER NOT NULL,
-  changed_date  INTEGER NOT NULL,  /* an APR date/time (usec since 1970) */
-  changed_author  TEXT NOT NULL,
+  /* Information about the last change to this node. these could be
+     NULL for non-present nodes, when we have no info. */
+  changed_rev  INTEGER,
+  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author  TEXT,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
   depth  TEXT,
@@ -100,11 +110,14 @@ CREATE TABLE BASE_NODE (
      ### question which is better answered some other way. */
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
-  /* serialized skel of this node's properties. */
-  properties  BLOB NOT NULL,
+  /* serialized skel of this node's properties. could be NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB,
 
   /* this node is a directory, and all of its child nodes have not (yet)
      been created [for this revision number]. Note: boolean value. */
+  /* ### this will probably disappear in favor of incomplete child
+     ### nodes */
   incomplete_children  INTEGER
   );
 
@@ -126,6 +139,8 @@ CREATE TABLE PRISTINE (
      ### and (thus) the pristine copy is incomplete/unusable. */
   size  INTEGER,
 
+  /* ### this will probably go away, in favor of counting references
+     ### that exist in BASE_NODE and WORKING_NODE. */
   refcount  INTEGER NOT NULL
   );
 
@@ -142,6 +157,8 @@ CREATE TABLE WORKING_NODE (
   /* parent's local_relpath for aggregating children of a given parent.
      this will be "" if the parent is the wcroot. */
   parent_relpath  TEXT NOT NULL,
+
+  /* ### might need PRESENCE here? *only* incomplete, if so. */
 
   /* kind==none implies this node was deleted or moved (see moved_to).
      other kinds:
@@ -185,13 +202,7 @@ CREATE TABLE WORKING_NODE (
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
   /* serialized skel of this node's properties. */
-  properties  BLOB NOT NULL,
-
-  /* if not NULL, this node is part of a changelist. */
-  changelist_id  INTEGER,
-
-  /* if a directory, serialized data for all of tree conflicts therein. */
-  tree_conflict_data  TEXT
+  properties  BLOB NOT NULL
   );
 
 CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
@@ -217,31 +228,27 @@ CREATE TABLE ACTUAL_NODE (
   conflict_working  TEXT,
   prop_reject  TEXT,  /* ### is this right? */
 
-  changelist_id  INTEGER
+  /* if not NULL, this node is part of a changelist. */
+  changelist  TEXT,
+  
+  /* ### need to determine values. "unknown" (no info), "admin" (they
+     ### used something like 'svn edit'), "noticed" (saw a mod while
+     ### scanning the filesystem). */
+  text_mod  TEXT,
+
+  /* if a directory, serialized data for all of tree conflicts therein. */
+  tree_conflict_data  TEXT
   );
 
-
-/* ------------------------------------------------------------------------- */
-
-CREATE TABLE CHANGELIST (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  /* what WCROOT is this changelist part of, or NULL if the metadata is
-     in the wcroot. */
-  wc_id  INTEGER,
-
-  name  TEXT NOT NULL
-  );
-
-CREATE UNIQUE INDEX I_CHANGELIST ON CHANGELIST (wc_id, name);
-CREATE UNIQUE INDEX I_CL_LIST ON CHANGELIST (wc_id);
+CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE LOCK (
-  /* URL of the node which is locked */
-  url  TEXT NOT NULL PRIMARY KEY,
+  /* what repository location is locked */
+  repos_id  INTEGER NOT NULL,
+  repos_relpath  TEXT NOT NULL,
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
@@ -249,7 +256,9 @@ CREATE TABLE LOCK (
   /* ### make the following fields NOT NULL ? */
   lock_owner  TEXT,
   lock_comment  TEXT,
-  lock_date  INTEGER   /* an APR date/time (usec since 1970) */
+  lock_date  INTEGER,   /* an APR date/time (usec since 1970) */
+  
+  PRIMARY KEY (repos_id, repos_relpath)
   );
 
 
