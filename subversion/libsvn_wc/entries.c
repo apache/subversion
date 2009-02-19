@@ -66,7 +66,9 @@ enum statement_keys {
   STMT_DELETE_BASE_NODE,
   STMT_DELETE_WORKING_NODE,
   STMT_DELETE_ACTUAL_NODE,
-  STMT_SELECT_BASE_NODE_BY_RELPATH
+  STMT_SELECT_BASE_NODE_BY_RELPATH,
+  STMT_DELETE_ALL_WORKING,
+  STMT_DELETE_ALL_BASE
 };
 
 static const char * const statements[] = {
@@ -130,6 +132,10 @@ static const char * const statements[] = {
   "select repos_relpath, root, uuid "
   "from base_node, repository "
   "where local_relpath = ?1 and repository.id = base_node.repos_id;",
+
+  "delete from working_node;",
+
+  "delete from base_node;",
 
   NULL
   };
@@ -1689,6 +1695,13 @@ entries_write_body(void *baton,
       repos_id = 0;
       repos_root = NULL;
     }
+
+  /* Remove all WORKING and BASE nodes for this directory, since we're about
+     to replace 'em. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_WORKING));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_BASE));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
