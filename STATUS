@@ -46,13 +46,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r35930
-   Adjust basic_tests.py 12 for compatability with Windows and Python 2.5+.
-   Justification:
-     Stops spurious test failures.
-    Votes:
-     +1: pburba, rhuijben, gstein
-
  * r35943
    Avoid some tree_conflict_tests.py cleanup errors on Windows with BDB
    when building multiple sandboxes in the same test.
