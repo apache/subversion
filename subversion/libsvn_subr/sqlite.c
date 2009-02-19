@@ -171,7 +171,8 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
 svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt)
 {
-  return step_with_expectation(stmt, FALSE);
+  SVN_ERR(step_with_expectation(stmt, FALSE));
+  return svn_sqlite__reset(stmt);
 }
 
 svn_error_t *

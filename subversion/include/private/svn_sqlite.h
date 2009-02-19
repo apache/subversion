@@ -39,8 +39,8 @@ typedef enum svn_sqlite__mode_e {
 } svn_sqlite__mode_t;
 
 
-/* Steps the given statement; raises an SVN error (and finalizes the
-   statement) if it doesn't return SQLITE_DONE. */
+/* Steps the given statement; if it returns SQLITE_DONE, resets the statement.
+   Otherwise, raises an SVN error.  */
 svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt);
 
