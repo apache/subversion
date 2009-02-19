@@ -225,8 +225,8 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
                                      "S:get-locations");
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_revision, NULL,
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                         NULL, NULL, peg_revision, NULL,
                                          pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);

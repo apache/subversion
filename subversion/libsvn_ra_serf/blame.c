@@ -432,8 +432,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
                                      "S:file-revs-report");
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, session->repos_url.path,
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                         NULL, session->repos_url.path,
                                          end, NULL, pool));
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
