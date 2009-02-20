@@ -18,17 +18,17 @@
 
 /*
  * the KIND column in these tables has one of five values:
- *   "none"
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
  *
- * the PRESENCE column in these tables has one of four values:
+ * the PRESENCE column in these tables has one of five values:
  *   "normal"
- *   "absent"
- *   "excluded"
- *   "incomplete"
+ *   "absent" -- server has declared it "absent" (ie. authz failure)
+ *   "excluded" -- administratively excluded
+ *   "not-present" -- node not present at this REV
+ *   "incomplete" -- state hasn't been filled in
  */
 
 
@@ -73,7 +73,9 @@ CREATE TABLE BASE_NODE (
   /* the repository this node is part of, and the relative path [to its
      root] within that repository.  these may be NULL, implying it should
      be derived from the parent and local_relpath.  non-NULL typically
-     indicates a switched node. */
+     indicates a switched node.
+
+     Note: they must both be NULL, or both non-NULL. */
   repos_id  INTEGER,
   repos_relpath  TEXT,
 
@@ -84,15 +86,16 @@ CREATE TABLE BASE_NODE (
   /* is this node "present" or has it been excluded for some reason? */
   presence  TEXT NOT NULL,
 
+  /* what kind of node is this? may be "unknown" if the node is not present */
+  kind  TEXT NOT NULL,
+
   /* this could be NULL for non-present nodes -- no info. */
   revnum  INTEGER,
 
-  /* file/dir/special. none says this node is NOT present at this REV. */
-  kind  TEXT NOT NULL,
-
   /* if this node is a file, then the checksum and its translated size
      (given the properties on this file) are specified by the following
-     two fields. */
+     two fields. translated_size may be NULL if the size has not (yet)
+     been computed. */
   checksum  TEXT,
   translated_size  INTEGER,
 
@@ -158,14 +161,42 @@ CREATE TABLE WORKING_NODE (
      this will be "" if the parent is the wcroot. */
   parent_relpath  TEXT NOT NULL,
 
-  /* ### might need PRESENCE here? *only* incomplete, if so. */
+  /* is this node "present" or has it been excluded for some reason?
+     only allowed values: normal, not-present, incomplete. (the others
+     do not make sense for the WORKING tree)
 
-  /* kind==none implies this node was deleted or moved (see moved_to).
-     other kinds:
-       if a BASE_NODE exists at the same local_relpath, then this is a
-       replaced item (possibly copied or moved here), which implies the
-       base node should be deleted or moved (see moved_to). */
+     presence=not-present means this node has been deleted or moved
+     (see moved_to). for presence=normal: if a BASE_NODE exists at
+     the same local_relpath, then this is a replaced item (possibly
+     copied or moved here), which implies the base node should be
+     deleted or moved (see moved_to).
+
+     beware: a "not-present" value could refer to the deletion of the
+     BASE node, or it could refer to the deletion of a child of a
+     copied/moved tree (scan upwards for copyfrom data). */
+  presence  TEXT NOT NULL,
+
+  /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
+
+  /* if this node was added-with-history AND is a file, then the checksum
+     and its translated size (given the properties on this file) are
+     specified by the following two fields. translated_size may be NULL
+     if the size has not (yet) been computed. */
+  checksum  TEXT,
+  translated_size  INTEGER,
+
+  /* if this node was added-with-history, then the following fields will
+     be NOT NULL */
+  changed_rev  INTEGER,
+  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author  TEXT,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  /* ### depth on WORKING? seems this is a BASE-only concept. how do
+     ### you do "files" on an added-directory? can't really ignore
+     ### the subdirs! */
+  depth  TEXT,
 
   /* Where this node was copied from. Set only on the root of the copy,
      and implied for all children. */
@@ -178,35 +209,27 @@ CREATE TABLE WORKING_NODE (
   moved_from  TEXT,
 
   /* If this node was moved (rather than just deleted), this specifies
-     where the BASE node was moved to. */
+     where the BASE node was moved to.
+
+     ### uh oh. what if the BASE is moved, then a directory is copied
+     ### here, then a child is moved? does "moved_to" apply to the BASE,
+     ### to to the replacing nodes?
+     ### answer: only use moved_to for the *root* of a moved tree. thus,
+     ### any moves below that point *must* apply to the replacing nodes. */
   moved_to  TEXT,
-
-  /* if this node was added-with-history AND is a file, then the checksum
-     and its translated size (given the properties on this file) are
-     specified by the following two fields. */
-  checksum  TEXT,
-  translated_size  INTEGER,
-
-  /* if this node was added-with-history, then the following fields will
-     be NOT NULL */
-  changed_rev  INTEGER,
-  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
-  changed_author  TEXT,
-
-  /* NULL depth means "default" (typically svn_depth_infinity) */
-  depth  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
      ### question which is better answered some other way. */
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
-  /* serialized skel of this node's properties. */
-  properties  BLOB NOT NULL
+  /* serialized skel of this node's properties. could be NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB
   );
 
 CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
-CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (parent_relpath);
+CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -217,6 +240,10 @@ CREATE TABLE ACTUAL_NODE (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER,
   local_relpath  TEXT NOT NULL,
+
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. */
+  parent_relpath  TEXT NOT NULL,
 
   /* serialized skel of this node's properties. NULL implies no change to
      the properties, relative to WORKING/BASE as appropriate. */
