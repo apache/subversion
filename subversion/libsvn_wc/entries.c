@@ -700,7 +700,6 @@ fetch_base_nodes(apr_hash_t **nodes,
   while (have_row)
     {
       apr_size_t len;
-      const void *val;
       db_base_node_t *base_node = apr_pcalloc(result_pool,
                                               sizeof(*base_node));
 
@@ -745,10 +744,13 @@ fetch_base_nodes(apr_hash_t **nodes,
                                     svn_sqlite__column_text(stmt, 14, NULL));
       base_node->last_mod_time = svn_sqlite__column_int(stmt, 15);
 
-      val = svn_sqlite__column_blob(stmt, 16, &len);
-      SVN_ERR(svn_skel__parse_proplist(&base_node->properties,
+      if (!svn_sqlite__column_is_null(stmt, 16))
+        {
+          const void *val = svn_sqlite__column_blob(stmt, 16, &len);
+          SVN_ERR(svn_skel__parse_proplist(&base_node->properties,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
+        }
 
       base_node->incomplete_children = svn_sqlite__column_boolean(stmt, 17);
 
@@ -1290,8 +1292,6 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  const svn_stringbuf_t *properties;
-  svn_skel_t *skel;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_BASE_NODE));
 
@@ -1335,13 +1335,16 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 15, base_node->last_mod_time));
 
   if (base_node->properties)
-    SVN_ERR(svn_skel__unparse_proplist(&skel, base_node->properties,
-                                       scratch_pool));
-  else
-    skel = svn_skel__make_empty_list(scratch_pool);
+    {
+      svn_skel_t *skel;
+      svn_stringbuf_t *properties;
 
-  properties = svn_skel__unparse(skel, scratch_pool);
-  SVN_ERR(svn_sqlite__bind_blob(stmt, 16, properties->data, properties->len));
+      SVN_ERR(svn_skel__unparse_proplist(&skel, base_node->properties,
+                                         scratch_pool));
+      properties = svn_skel__unparse(skel, scratch_pool);
+      SVN_ERR(svn_sqlite__bind_blob(stmt, 16, properties->data,
+                                    properties->len));
+    }
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 17, base_node->incomplete_children));
 
@@ -1429,8 +1432,6 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_stringbuf_t *properties;
-  svn_skel_t *skel;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_ACTUAL_NODE));
 
@@ -1439,13 +1440,16 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, actual_node->parent_relpath));
 
   if (actual_node->properties)
-    SVN_ERR(svn_skel__unparse_proplist(&skel, actual_node->properties,
-                                       scratch_pool));
-  else
-    skel = svn_skel__make_empty_list(scratch_pool);
+    {
+      svn_skel_t *skel;
+      svn_stringbuf_t *properties;
 
-  properties = svn_skel__unparse(skel, scratch_pool);
-  SVN_ERR(svn_sqlite__bind_blob(stmt, 4, properties->data, properties->len));
+      SVN_ERR(svn_skel__unparse_proplist(&skel, actual_node->properties,
+                                         scratch_pool));
+      properties = svn_skel__unparse(skel, scratch_pool);
+      SVN_ERR(svn_sqlite__bind_blob(stmt, 4, properties->data,
+                                    properties->len));
+    }
 
   if (actual_node->conflict_old)
     {
