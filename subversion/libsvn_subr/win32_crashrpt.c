@@ -29,7 +29,7 @@
 
 #include "win32_crashrpt.h"
 #include "win32_crashrpt_dll.h"
-#include "Winver.h"
+#include <Winver.h>
 
 /*** Global variables ***/
 HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
