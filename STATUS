@@ -45,6 +45,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r36027, r36035
+   Store 64-bit values pulled from the rep cache database.
+   Justification:
+     Possibly data corruption on repositories with shard reps in large rev
+     files.
+   Notes:
+     r36027 addes the proper API, and r36035 uses it.
+   Votes:
+     +1: hwright
+
 Status of 1.6.1:
 ================
 
