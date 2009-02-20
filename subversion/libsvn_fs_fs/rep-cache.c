@@ -104,9 +104,9 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
       *rep = apr_pcalloc(pool, sizeof(**rep));
       (*rep)->sha1_checksum = svn_checksum_dup(checksum, pool);
       (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->offset = svn_sqlite__column_int(stmt, 1);
-      (*rep)->size = svn_sqlite__column_int(stmt, 2);
-      (*rep)->expanded_size = svn_sqlite__column_int(stmt, 3);
+      (*rep)->offset = svn_sqlite__column_int64(stmt, 1);
+      (*rep)->size = svn_sqlite__column_int64(stmt, 2);
+      (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
   else
     *rep = NULL;
