@@ -262,6 +262,15 @@ svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...)
 }
 
 svn_error_t *
+svn_sqlite__bind_int(svn_sqlite__stmt_t *stmt,
+                     int slot,
+                     int val)
+{
+  SQLITE_ERR(sqlite3_bind_int(stmt->s3stmt, slot, val), stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt,
                        int slot,
                        apr_int64_t val)
@@ -329,6 +338,12 @@ int
 svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column)
 {
   return sqlite3_column_int(stmt->s3stmt, column);
+}
+
+apr_int64_t
+svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column)
+{
+  return sqlite3_column_int64(stmt->s3stmt, column);
 }
 
 svn_boolean_t
