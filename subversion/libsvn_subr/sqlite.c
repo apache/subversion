@@ -314,6 +314,8 @@ svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
 svn_revnum_t
 svn_sqlite__column_revnum(svn_sqlite__stmt_t *stmt, int column)
 {
+  if (svn_sqlite__column_is_null(stmt, column))
+    return SVN_INVALID_REVNUM;
   return (svn_revnum_t) sqlite3_column_int64(stmt->s3stmt, column);
 }
 
