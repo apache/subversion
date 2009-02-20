@@ -25,8 +25,25 @@ Candidate changes:
      We can still ship the newer version without this change, but it makes
      sense to be recommending it in configure.
    Votes:
-     +1: hwright
+     +1: hwright, rhuijben
 
+ * r35985, r36017
+   Resolve serf NULL dereference from an invalid switch operation. r36017
+   makes sure switch_tests.py 10 still fails after this crash. (35985 doesn't
+   fix the issue tested for).
+   Justification:
+     Null dereferences in a library are bad. (And crashes that delay the
+     testrun until a user accepts the failure just delay our releases).
+   Votes:
+     +1: rhuijben
+
+ * r35982
+   Resolve possible uninitialized pointer references on receiving an invalid
+   authentication header.
+   Justification:
+     Allows a server to crash the library.
+   Votes:
+     +1: rhuijben
 
 Status of 1.6.1:
 ================
