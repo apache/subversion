@@ -56,17 +56,14 @@ Candidate changes:
      +1: hwright, rhuijben
      
  * <needs-branch> (1.6.0 only)
-   I would like to redefine svn_dirent_basename to behave like 
-   svn_dirent_entryname. (Return "" on roots instead of returning the root 
-   itself as it does now.)
-   If this doesn't go in 1.6.0 we have to deprecate svn_dirent_split and
-   svn_dirent_basename for 1.7.0.
+   I would like to pull svn_dirent_basename and svn_dirent_split from the
+   public api to allow redefining its behavior for 1.7. 
+   (Currently only subversion/libsvn_client/add.c uses one of these functions,
+    this caller can use svn_path_basename; or it can use this function as
+    internal function)
    Justification:
      The current dirent_basename api design makes it very hard to resolve
      issues like #2556 ('cd e:\; svn update e:\' fails).
-     (There is currently only a single caller of these 2 functions in our 
-      1.6.0 codebase, but it might break third party users if we fix this
-      in a patch release.)
    Votes:
      +1: rhuijben
 
