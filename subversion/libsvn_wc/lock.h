@@ -42,11 +42,9 @@ extern "C" {
    feature.
 
    PATH is the directory to lock, and the lock is returned in
-   *ADM_ACCESS.  ASSOCIATED can be another lock in which case the locks
-   will be in the same set, or it can be NULL.
+   *ADM_ACCESS.
 */
 svn_error_t *svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
-                                          svn_wc_adm_access_t *associated,
                                           const char *path, apr_pool_t *pool);
 
 
