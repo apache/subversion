@@ -1511,7 +1511,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
                   parent_dir = svn_dirent_dirname(target, subpool);
 
-                  if (strmcp(parent_dir, target) == 0)
+                  if (strcmp(parent_dir, target) == 0)
                     break; /* Reached root directory */
                   else
                     target = parent_dir;
@@ -1521,7 +1521,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       svn_pool_destroy(subpool);
     }
-
+s
   SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
                            TRUE,  /* Write lock */
                            lock_base_dir_recursive ? -1 : 0, /* lock levels */
