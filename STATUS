@@ -26,6 +26,7 @@ Candidate changes:
      sense to be recommending it in configure.
    Votes:
      +1: hwright, rhuijben
+     +0: gstein (ie. only if a new tarball is constructed)
 
  * r35985, r36017
    Resolve serf NULL dereference from an invalid switch operation. r36017
@@ -36,6 +37,7 @@ Candidate changes:
      testrun until a user accepts the failure just delay our releases).
    Votes:
      +1: rhuijben
+     +1: gstein (for 1.6.1)
 
  * r35982
    Resolve possible uninitialized pointer references on receiving an invalid
@@ -44,6 +46,7 @@ Candidate changes:
      Allows a server to crash the library.
    Votes:
      +1: rhuijben
+     +1: gstein (for 1.6.1)
 
  * r36027, r36035
    Store 64-bit values pulled from the rep cache database.
@@ -54,6 +57,7 @@ Candidate changes:
      r36027 addes the proper API, and r36035 uses it.
    Votes:
      +1: hwright, rhuijben
+     +0: gstein (ie. only if a new tarball is constructed)
      
  * <needs-branch> (1.6.0 only)
    I would like to pull svn_dirent_basename and svn_dirent_split from the
@@ -65,7 +69,8 @@ Candidate changes:
      The current dirent_basename api design makes it very hard to resolve
      issues like #2556 ('cd e:\; svn update e:\' fails).
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
+
 
 Status of 1.6.1:
 ================
