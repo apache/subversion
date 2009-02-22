@@ -632,15 +632,8 @@ make_empty_adm(const char *path, apr_pool_t *pool)
 
 
 static svn_error_t *
-init_adm_tmp_area(const svn_wc_adm_access_t *adm_access,
-                  apr_pool_t *pool)
+init_adm_tmp_area(const char *path, apr_pool_t *pool)
 {
-  const char *path;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  path = svn_wc_adm_access_path(adm_access);
-
   /* SVN_WC__ADM_TMP */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
 
@@ -690,7 +683,7 @@ init_adm(const char *path,
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROPS, FALSE, pool));
 
   /** Init the tmp area. ***/
-  SVN_ERR(init_adm_tmp_area(adm_access, pool));
+  SVN_ERR(init_adm_tmp_area(path, pool));
 
   /** Initialize each administrative file. */
 
@@ -777,6 +770,7 @@ svn_error_t *
 svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
                              apr_pool_t *scratch_pool)
 {
+  const char *path = svn_wc_adm_access_path(adm_access);
   const char *tmp_path;
 
   /* If the admin area doesn't even *exist*, then the temp area is
@@ -787,13 +781,12 @@ svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                               SVN_WC__ADM_TMP, scratch_pool);
+  tmp_path = svn_wc__adm_child(path, SVN_WC__ADM_TMP, scratch_pool);
 
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
 
   /* Now, rebuild the tmp area. */
-  return init_adm_tmp_area(adm_access, scratch_pool);
+  return init_adm_tmp_area(path, scratch_pool);
 }
 
 
