@@ -38,11 +38,13 @@ CREATE TABLE REPOSITORY (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
   /* the root URL of the repository */
-  root  TEXT NOT NULL,
+  root  TEXT UNIQUE NOT NULL,
 
   /* the UUID of the repository */
-  uuid  TEXT NOT NULL
+  uuid  TEXT UNIQUE NOT NULL
   );
+
+CREATE UNIQUE INDEX I_UUID ON REPOSITORY (uuid);
 
 
 /* ------------------------------------------------------------------------- */
@@ -107,6 +109,9 @@ CREATE TABLE BASE_NODE (
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
   depth  TEXT,
+
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
@@ -197,6 +202,9 @@ CREATE TABLE WORKING_NODE (
      ### you do "files" on an added-directory? can't really ignore
      ### the subdirs! */
   depth  TEXT,
+
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
 
   /* Where this node was copied from. Set only on the root of the copy,
      and implied for all children. */
