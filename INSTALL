@@ -795,13 +795,13 @@ II.   INSTALLATION
   E.1 Prerequisites
 
       * Visual Studio 6 and service pack. It can be built with later versions
-        of Visual Studio (Visual Studio.NET 2002, 2003, 2005 and Visual C++
-        Express 2005) but these instructions assume VS6.
-      * A recent Windows SDK.
+        of Visual Studio (Visual Studio.NET 2002, 2003, 2005, 2008 and Visual
+        C++ Express 2005, 2008) but these instructions assume VS6.
+      * A recent Windows SDK. (Not needed with Visual Studio 2005 and later)
         If you are using Visual Studio 6, you need the latest SDK which
         is compatible with VC6, which is the one from february 2003.
         You can get it from MSDN:
-        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
+        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm        
       * Python 2.4 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
@@ -814,13 +814,11 @@ II.   INSTALLATION
         for building the client components.  Neon is included in the zip file
         distribution.  (0.25.0+ compiles, but does not properly support all
         HTTP auth types.)
-      * Apache apr, apr-util, and apr-iconv libraries, version 0.9.12.
-        Included in both the Subversion dependencies ZIP file and the
-        Apache 2.0.58 source zip.  If you are building from a Subversion
-        checkout and have not downloaded Apache 2, then get these 3
-        libraries from http://www.apache.org/dist/apr/.  Note that
-        the 1.x APR releases are not yet functional with Subversion --
-        see the note on '[Optional] Apache 2 source' below.
+      * Apache apr, apr-util, and optionally apr-iconv libraries, version 
+        0.9.12 or later. Included in both the Subversion dependencies ZIP file
+        and the Apache 2 source zip.  If you are building from a Subversion
+        checkout and have not downloaded Apache 2, then get these 3 libraries
+        from http://www.apache.org/dist/apr/.
       * ZLib 1.2 or higher is required and is included in the Subversion
         dependencies zip file or can be obtained from http://www.zlib.org
       * Either a Subversion client binary from http://subversion.tigris.org/ to
@@ -875,13 +873,6 @@ II.   INSTALLATION
       "--with-openssl" to the gen-make.py script. See Section I.11 for
       more details.
 
-      If you are installing under Win9x or NT4 (and do not have Internet
-      Explorer 5 or later) and svn.exe doesn't run, try installing
-      shfolder.dll from here (wrapped url):
-
-          http://download.microsoft.com/download/platformsdk/Redist/
-          5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
-
   E.3 Preparation
 
       This section describes how to unpack the files to make a build tree.
@@ -894,10 +885,10 @@ II.   INSTALLATION
         or unpack the zip file distribution and rename the directory to
         src-trunk.
 
-      * Install Visual Studio 6. You either have to tell the installer to
-        register environment variables or run VCVARS32.BAT before building
-        anything.  If you are using a newer Visual Studio, use the
-        'Visual Studio 200x Command Prompt' on the Start menu.
+      * Install Visual Studio Environment. You either have to tell the
+        installer to register environment variables or run VCVARS32.BAT
+        before building anything.  If you are using a newer Visual Studio, 
+        use the 'Visual Studio 200x Command Prompt' on the Start menu.
       * Install and register a recent Windows Core SDK if you are using
         Visual Studio 6. This is a quote from the Microsoft February 2003
         SDK documentation:
