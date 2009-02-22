@@ -54,7 +54,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
-    self.sqlite_path = 'sqlite'
+    self.sqlite_path = 'sqlite-amalgamation'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None,
                            'libsvn_auth_kwallet': None,
@@ -752,6 +752,10 @@ class WinGeneratorBase(GeneratorBase):
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
                    "_CRT_SECURE_NO_DEPRECATE=",
                    "_CRT_NONSTDC_NO_DEPRECATE="]
+
+    if self.sqlite_inline:
+      fakedefines.append("SVN_SQLITE_INLINE")
+
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
@@ -854,10 +858,12 @@ class WinGeneratorBase(GeneratorBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.extend([
-                         self.apath(self.zlib_path),
-                         self.apath(self.sqlite_path, 'inc'),
-                         ])
+    fakeincludes.append(self.apath(self.zlib_path))
+
+    if self.sqlite_inline:
+      fakeincludes.append(self.apath(self.sqlite_path))
+    else:
+      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
@@ -876,8 +882,11 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
-                    self.apath(self.sqlite_path, "lib"),
                     ]
+
+    if not self.sqlite_inline:
+      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
+      
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -955,7 +964,7 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
-      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)' and not self.sqlite_inline:
         nondeplibs.append('sqlite3.lib')
 
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
@@ -1352,17 +1361,25 @@ class WinGeneratorBase(GeneratorBase):
     "Find the Sqlite library and version"
 
     header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
-    lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
 
-    if not os.path.exists(header_file):
-      sys.stderr.write("ERROR: '%s' not found.\n" % header_file)
-      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-      sys.exit(1)
-
-    if not os.path.exists(lib_file):
-      sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
-      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-      sys.exit(1)
+    # First check for compiled version of SQLite.
+    if os.path.exists(header_file):
+      # Compiled SQLite seems found, check for sqlite3.lib file.
+      lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
+      if not os.path.exists(lib_file):
+        sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
+        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+        sys.exit(1)
+      self.sqlite_inline = False
+    else:
+      # Compiled SQLite not found. Try amalgamation version.
+      amalg_file = os.path.join(self.sqlite_path, 'sqlite3.c')
+      if not os.path.exists(amalg_file):
+        sys.stderr.write("ERROR: SQLite not found in '%s' directory.\n" % self.sqlite_path)
+        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+        sys.exit(1)
+      header_file = os.path.join(self.sqlite_path, 'sqlite3.h')
+      self.sqlite_inline = True
 
     fp = open(header_file)
     txt = fp.read()
@@ -1370,6 +1387,7 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', txt, re.M)
 
     version = tuple(map(int, vermatch.groups()))
+    
 
     self.sqlite_version = '%d.%d.%d' % version
 
@@ -1377,9 +1395,11 @@ class WinGeneratorBase(GeneratorBase):
 
     major, minor, patch = version
     if major < 3 or (major == 3 and minor < 4):
-      msg = "WARNING: SQLite 3.4.0 or higher is required (%s found)\n"
-
-    sys.stderr.write(msg % self.sqlite_version)
+      sys.stderr.write("ERROR: SQLite 3.4.0 or higher is required "
+                       "(%s found)\n" % self.sqlite_version);
+      sys.exit(1)
+    else:
+      sys.stderr.write(msg % self.sqlite_version)
 
   def _create_sqlite_headers(self):
     "Transform sql files into header files"
@@ -1387,6 +1407,7 @@ class WinGeneratorBase(GeneratorBase):
     import transform_sql
     sql_sources = [
       os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),
+      os.path.join('subversion', 'libsvn_wc', 'wc-metadata'),
       ]
     for sql in sql_sources:
       transform_sql.main(open(sql + '.sql', 'r'),

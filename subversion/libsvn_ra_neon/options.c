@@ -118,14 +118,15 @@ static const char *capability_no = "no";
 static const char *capability_server_yes = "server-yes";
 
 
-/* Store in RAS the capabilities discovered from REQ's headers.
-   Use POOL for temporary allocation only. */
+/* Store in RAS the capabilities and other interesting tidbits of
+   information discovered from REQ's headers.  Use POOL for temporary
+   allocation only. */
 static void
 parse_capabilities(ne_request *req,
                    svn_ra_neon__session_t *ras,
                    apr_pool_t *pool)
 {
-  const char *header_value;
+  const char *val;
 
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
@@ -136,8 +137,8 @@ parse_capabilities(ne_request *req,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
-  header_value = ne_get_response_header(req, "dav");
-  if (header_value)
+  val = ne_get_response_header(req, "dav");
+  if (val)
     {
       /* Multiple headers of the same name will have been merged
          together by the time we see them (either by an intermediary,
@@ -153,14 +154,14 @@ parse_capabilities(ne_request *req,
 
           Here we might see:
 
-          header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
+          val == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
 
           (Deliberately not line-wrapping that, so you can see what
           we're about to parse.)
       */
 
       apr_array_header_t *vals =
-        svn_cstring_split(header_value, ",", TRUE, pool);
+        svn_cstring_split(val, ",", TRUE, pool);
 
       /* Right now we only have a few capabilities to detect, so
          just seek for them directly.  This could be written
@@ -185,6 +186,49 @@ parse_capabilities(ne_request *req,
                                       vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                      APR_HASH_KEY_STRING, capability_yes);
+    }
+
+  /* Not strictly capabilities, but while we're here, we might as well... */
+#if 0
+  if ((val = ne_get_response_header(req, SVN_DAV_YOUNGEST_REV_HEADER)))
+    {
+    }
+#endif
+  if ((val = ne_get_response_header(req, SVN_DAV_REPOS_UUID_HEADER)))
+    {
+      ras->uuid = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_ROOT_URI_HEADER)))
+    {
+      ne_uri root = ras->root;
+      char *root_uri;
+
+      root.path = (char *)val;
+      root_uri = ne_uri_unparse(&root);
+      ras->repos_root = apr_pstrdup(ras->pool, root_uri);
+      free(root_uri);
+    }
+
+  /* HTTP v2 stuff */
+  if ((val = ne_get_response_header(req, SVN_DAV_ME_RESOURCE_HEADER)))
+    {
+      ras->me_resource = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_REV_ROOT_STUB_HEADER)))
+    {
+      ras->rev_root_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_REV_STUB_HEADER)))
+    {
+      ras->rev_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_TXN_ROOT_STUB_HEADER)))
+    {
+      ras->txn_root_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_TXN_STUB_HEADER)))
+    {
+      ras->txn_stub = apr_pstrdup(ras->pool, val);
     }
 }
 

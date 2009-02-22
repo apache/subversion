@@ -3,6 +3,12 @@
 # Creates entries on the tigris file manager for a release, using the
 # contents of:
 #   md5sums
+#
+# Note: this file is not guaranteed to work with Python 3.  In fact, it
+# probably doesn't.  Since the RM is really the only guy who uses and 
+# develops this script, and he currently has Python 2.x, let's forgo worrying
+# about Python 3 compatibility until it becomes a real problem.  It makes
+# the script simpler to develop and maintain.  -hkw
 
 
 usage = '''\
@@ -16,25 +22,18 @@ post-to-tigris.py <username> <password> <folderId> <release>
     release - the full name of the release, such as 1.5.0-beta1
 '''
 
-import sys, cookielib, re
-try:
-  # Python >=3.0
-  from urllib.parse import urlencode as urllib_parse_urlencode
-  from urllib.request import build_opener as urllib_request_build_opener
-  from urllib.request import HTTPCookieProcessor as urllib_request_HTTPCookieProcessor
-  from urllib.request import Request as urllib_request_Request
-except ImportError:
-  # Python <3.0
-  from urllib import urlencode as urllib_parse_urlencode
-  from urllib2 import build_opener as urllib_request_build_opener
-  from urllib2 import HTTPCookieProcessor as urllib_request_HTTPCookieProcessor
-  from urllib2 import Request as urllib_request_Request
+import sys, cookielib, urllib2, urllib, re, socket
+
+# Set the socket timeout so that we don't wait all day for tigris.org to
+# respond
+socket.setdefaulttimeout(5)
+
 
 def login(username, password, folderId):
     '''Login to tigris.org, using the provided username and password.
        Return the OpenDirector object for future use.'''
     cj = cookielib.CookieJar()
-    opener = urllib_request_build_opener(urllib_request_HTTPCookieProcessor(cj))
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 
     folderURL = 'http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=%d' % folderId,
     params = {
@@ -42,8 +41,8 @@ def login(username, password, folderId):
         'loginID' : username,
         'password' : password,
       }
-    request = urllib_request_Request('http://www.tigris.org/servlets/TLogin',
-                                     urllib_parse_urlencode(params))
+    request = urllib2.Request('http://www.tigris.org/servlets/TLogin',
+                               urllib.urlencode(params))
     # We open the above request, grabbing the appropriate credentials for
     # future interactions.
     opener.open(request)
@@ -63,9 +62,37 @@ def get_md5sums():
     return sums
 
 
+def encode_multipart_form(params, boundary):
+    "Encode the given params to be output as a multipart POST"
+    lines = []
+    for key in params:
+        lines.append('--' + boundary)
+        lines.append('Content-Disposition: form-data; name="%s"' % key)
+        lines.append('')
+        lines.append(params[key])
+
+    lines.append('--' + boundary)
+    return '\r\n'.join(lines)
+
+
+def add_single_item(opener, url, headers, data):
+    "Add a single item to the release folder"
+    request = urllib2.Request(url, data, headers)
+    request.add_header('Content-Length', len(data))
+
+    # Here we try to open the request.  The initial POST will succeed, but
+    # the connection will hang on a subsequent GET.  The socket will timeout,
+    # resulting in the exception, which we catch and go on our merry way.
+    try:
+        opener.open(request)
+    except urllib2.URLError, e:
+        print 'URL open failed: %s, continuing...' % e.reason
+
+
 def add_items(opener, folderId, release_name):
     "Add the 12(!) items for a release to the given folder"
     folder_add_url = 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%d&action=Add%%20document' % folderId
+    boundary = '----------A_boundary_goes_here_$'
 
     if re.match('^\d*\.\d*\.\d*$', release_name):
       status = 'Stable'
@@ -86,24 +113,26 @@ def add_items(opener, folderId, release_name):
                 'status' : status,
                 'description' : '%s (MD5: %s)' % (desc, md5sums[filename]),
                 'type': 'link',
-                'url': 'http://subversion.tigris.org/downloads/%s' % filename,
-                'maxDepth': '',
+                'docUrl': 'http://subversion.tigris.org/downloads/%s' \
+                                                                    % filename,
             }
 
+            headers = {
+                'Content-Type' : 'multipart/form-data; boundary=%s' % boundary
+              }
+
             # Add file
-            request = urllib_request_Request(folder_add_url,
-                                             urllib_parse_urlencode(params))
-            opener.open(request)
+            data = encode_multipart_form(params, boundary)
+            add_single_item(opener, folder_add_url, headers, data)
 
             # Add signature
             filename = filename + '.asc'
             params['name'] = filename
             params['description'] = 'PGP signatures for %s' % desc
-            params['url'] = 'http://subversion.tigris.org/downloads/%s' % \
+            params['docUrl'] = 'http://subversion.tigris.org/downloads/%s' % \
                                                                       filename
-            request = urllib_request_Request(folder_add_url,
-                                             urllib_parse_urlencode(params))
-            opener.open(request)
+            data = encode_multipart_form(params, boundary)
+            add_single_item(opener, folder_add_url, headers, data)
 
 
 def main():

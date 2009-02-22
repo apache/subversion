@@ -93,6 +93,15 @@ test_commit_txn(svn_revnum_t *new_rev,
              "commit conflicted at '%s', but expected conflict at '%s')",
              conflict, expected_conflict);
         }
+
+      /* The svn_fs_commit_txn() API promises to set *NEW_REV to an
+         invalid revision number in the case of a conflict.  */
+      if (SVN_IS_VALID_REVNUM(*new_rev))
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, NULL,
+             "conflicting commit returned valid new revision");
+        }
     }
   else if (err)   /* commit failed, but not due to conflict */
     {
@@ -1631,7 +1640,16 @@ merging_commit(const char **msg,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
+
+    /* ### FIXME: It is at this point that our test stops being valid,
+       ### hence its expected failure.  The following call will now
+       ### conflict on /A/D/H, causing revision 6 *not* to be created,
+       ### and the remainer of this test (which was written long ago)
+       ### to suffer from a shift in the expected state and behavior
+       ### of the filesystem as a result of this commit not happening.
+    */
+
+    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -1682,7 +1700,7 @@ merging_commit(const char **msg,
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
       SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
       SVN_ERR(svn_fs_make_dir(txn_root, "A/D/H", pool));
-      SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
+      SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
       revisions[revision_count++] = after_rev;
 
       /*********************************************************************/
@@ -1694,6 +1712,7 @@ merging_commit(const char **msg,
         SVN_ERR(svn_fs_begin_txn
                 (&txn, fs, revisions[revision_count - 1], pool));
         SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+        SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
         SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
         revisions[revision_count++] = after_rev;
       }
@@ -4941,7 +4960,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(fetch_youngest_rev),
     SVN_TEST_PASS(basic_commit),
     SVN_TEST_PASS(test_tree_node_validation),
-    SVN_TEST_PASS(merging_commit),
+    SVN_TEST_XFAIL(merging_commit), /* Needs to be written to match new
+                                        merge() algorithm expectations */
     SVN_TEST_PASS(copy_test),
     SVN_TEST_PASS(commit_date),
     SVN_TEST_PASS(check_old_revisions),

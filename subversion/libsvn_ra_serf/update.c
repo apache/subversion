@@ -2016,7 +2016,7 @@ link_path(void *report_baton,
           apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  const char *link, *vcc_url;
+  const char *link, *report_target;
   apr_uri_t uri;
   apr_status_t status;
 
@@ -2031,8 +2031,10 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, report->sess,
-                                     report->sess->conns[0], uri.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess,
+                                       NULL, pool));
+  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
+                                         NULL, pool));
 
   /* Copy parameters to reporter's pool. */
   lock_token = apr_pstrdup(report->pool, lock_token);
@@ -2125,7 +2127,7 @@ finish_report(void *report_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_ra_serf__list_t *done_list;
-  const char *vcc_url;
+  const char *report_target;
   apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
@@ -2136,19 +2138,10 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, sess, sess->conns[0],
-                                      sess->repos_url.path, pool));
-
-  if (!vcc_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested version-controlled-configuration "
-                                "value"));
-    }
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
 
   /* create and deliver request */
-  report->path = vcc_url;
+  report->path = report_target;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
@@ -2331,7 +2324,7 @@ finish_report(void *report_baton,
 
   /* Ensure that we opened and closed our root dir and that we closed
    * all of our children. */
-  if (closed_root == FALSE)
+  if (closed_root == FALSE && report->root_dir != NULL)
     {
       SVN_ERR(close_all_dirs(report->root_dir));
     }
@@ -2605,17 +2598,11 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
    */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *vcc_url, *rel_path, *baseline_url;
-
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_path,
-                                         session, conn, fetch_url, pool));
-
-      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
-                                          revision, "0", baseline_props, pool));
-
-      baseline_url = svn_ra_serf__get_ver_prop(fetch_props, vcc_url, revision,
-                                               "DAV:", "baseline-collection");
-
+      const char *baseline_url, *rel_path;
+      
+      SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
+                                             session, conn, fetch_url,
+                                             revision, NULL, pool));
       fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }

@@ -151,6 +151,18 @@ char *
 svn_dirent_basename(const char *dirent,
                     apr_pool_t *pool);
 
+/** Gets the name of the specified canonicalized @a dirent as it is known 
+ * within its parent directory. If the @a dirent is root, return "". The 
+ * returned value will not have slashes in it.
+ *
+ * Where @a dirent doesn't specify a root, it's value is identical to that
+ * returned by svn_dirent_basename()
+ *
+ * @since New in 1.7.
+ */
+char *
+svn_dirent_entryname(const char *dirent,
+                     apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a dirent, defined as
  * the dirent with its basename removed.
@@ -177,16 +189,16 @@ svn_dirent_dirname(const char *dirent,
  * If @a dirent has two or more components, the separator between @a dirpath
  * and @a base_name is not included in either of the new names.
  *
- *   examples:
+ * Examples:
  *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
  *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
  *             - <pre>"/"             ==>  "/"  and "/"</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
- *             - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
+ *  Windows:   - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
  *             - <pre>"X:/foo"        ==>  "X:/" and "foo"</pre>
- *  posix:     - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
- *  windows:   - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
+ *             - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
+ *  Posix:     - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
  *
  * @since New in 1.6.
  */
@@ -195,6 +207,39 @@ svn_dirent_split(const char *dirent,
                  const char **dirpath,
                  const char **base_name,
                  apr_pool_t *pool);
+
+/** Divide the canonicalized @a dirent into @a *dirpath and @a entry_name,
+ *  allocated in @a pool.
+ *
+ * If @a dirpath or @a entry_name is NULL, then don't set that one.
+ *
+ * Either @a dirpath or @a entry_name may be @a dirent's own address, but they
+ * may not both be the same address, or the results are undefined.
+ *
+ * @a entry_name is the name of @dirent as it is known in its parent directory
+ * @a dirpath.  If @a dirent specifies a root directory @a entry_name is ""
+ *
+ * If @a dirent has two or more components, the separator between @a dirpath
+ * and @a base_name is not included in either of the new names.
+ *
+ * Examples:
+ *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
+ *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
+ *             - <pre>"/"             ==>  "/"  and ""</pre>
+ *             - <pre>"bar"           ==>  ""   and "bar"</pre>
+ *             - <pre>""              ==>  ""   and ""</pre>
+ *  Windows:   - <pre>"X:/"           ==>  "X:/" and ""</pre>
+ *             - <pre>"X:/foo"        ==>  "X:/" and "foo"</pre>
+ *             - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
+ *  Posix:     - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
+ *
+ * @since New in 1.7.
+ */
+void
+svn_dirent_splitentry(const char *dirent,
+                      const char **dirpath,
+                      const char **entry_name,
+                      apr_pool_t *pool);
 
 /** Divide the canonicalized @a uri into @a *dirpath and @a
  * *base_name, allocated in @a pool.

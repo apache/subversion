@@ -505,7 +505,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   if (! path)
     return SVN_NO_ERROR;
 
-  err = svn_io_check_path(path, &kind, pool);
+  err = svn_io_check_resolved_path(path, &kind, pool);
   if (err)
     {
       /* Don't throw an error, but don't continue. */

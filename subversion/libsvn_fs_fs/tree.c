@@ -1608,7 +1608,7 @@ merge_changes(dag_node_t *ancestor_node,
 
 svn_error_t *
 svn_fs_fs__commit_txn(const char **conflict_p,
-                      svn_revnum_t *new_rev_p,
+                      svn_revnum_t *new_rev,
                       svn_fs_txn_t *txn,
                       apr_pool_t *pool)
 {
@@ -1653,7 +1653,6 @@ svn_fs_fs__commit_txn(const char **conflict_p,
    */
 
   svn_error_t *err = SVN_NO_ERROR;
-  svn_revnum_t new_rev;
   svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
   svn_fs_t *fs = txn->fs;
 
@@ -1664,7 +1663,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Initialize output params. */
-  new_rev = SVN_INVALID_REVNUM;
+  *new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
 
@@ -1709,7 +1708,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       txn->base_rev = youngish_rev;
 
       /* Try to commit. */
-      err = svn_fs_fs__commit(&new_rev, fs, txn, iterpool);
+      err = svn_fs_fs__commit(new_rev, fs, txn, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
@@ -1730,8 +1729,6 @@ svn_fs_fs__commit_txn(const char **conflict_p,
         }
       else
         {
-          /* Set the return value -- our brand spankin' new revision! */
-          *new_rev_p = new_rev;
           err = SVN_NO_ERROR;
           goto cleanup;
         }

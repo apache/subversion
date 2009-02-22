@@ -142,9 +142,9 @@ svn_ra_serf__handle_auth(int code,
                          apr_pool_t *pool)
 {
   serf_bucket_t *hdrs;
-  const svn_ra_serf__auth_protocol_t *prot;
-  char *auth_name, *auth_attr, *auth_hdr, *header, *header_attr;
-  svn_error_t *cached_err;
+  const svn_ra_serf__auth_protocol_t *prot = NULL;
+  char *auth_name = NULL, *auth_attr, *auth_hdr=NULL, *header, *header_attr;
+  svn_error_t *cached_err = SVN_NO_ERROR;
 
   hdrs = serf_bucket_response_get_headers(response);
   if (code == 401)
@@ -178,7 +178,7 @@ svn_ra_serf__handle_auth(int code,
          as that may have changed. (ex. fallback from ntlm to basic.) */
       for (prot = serf_auth_protocols; prot->code != 0; ++prot)
         {
-          if (code == prot->code && strcmp(auth_name, prot->auth_name) == 0)
+          if (code == prot->code && strcasecmp(auth_name, prot->auth_name) == 0)
             {
               svn_serf__auth_handler_func_t handler = prot->handle_func;
               svn_error_t *err = NULL;
@@ -265,7 +265,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
       char *attr;
 
       attr = apr_strtok(auth_attr, "=", &last);
-      if (strcmp(attr, "realm") == 0)
+      if (strcasecmp(attr, "realm") == 0)
         {
           realm_name = apr_strtok(NULL, "=", &last);
           if (realm_name[0] == '\"')

@@ -402,11 +402,9 @@ I.    INTRODUCTION
       or if you are building a Subversion client that will only speak
       to remote (networked) repositories, you don't need it.
 
-      The current recommended version is 4.4.20, which brings
+      The current recommended version is 4.4.20 or newer, which brings
       auto-recovery functionality to the Berkeley DB database
-      environment.  (Preliminary testing indicates that Subversion
-      will also work with Berkeley DB 4.5 once APR grows support for
-      that release.)
+      environment.
 
       If you must use an older version of Berkeley DB, we *strongly*
       recommend using 4.3 or 4.2 over the 4.1 or 4.0 versions.  Not
@@ -422,13 +420,13 @@ I.    INTRODUCTION
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries, add something like this:
 
-          --with-berkeley-db=/usr/local/BerkeleyDB.4.4
+          --with-berkeley-db=db.h:/usr/local/include/db4.7:/usr/local/lib/db4.7:db-4.7
 
       to your `configure' switches, and the build process will use the
-      Berkeley library in the named directory.  You may need to use a
-      different path, of course.  Note that in order for the detection
-      to succeed, the dynamic linker must be able to find the libraries
-      at configure time.
+      Berkeley DB header and library in the named directories.  You may
+      need to use a different path, of course.  Note that in order for
+      the detection to succeed, the dynamic linker must be able to find
+      the libraries at configure time.
 
       If you are on the Windows platform and want to build Subversion,
       a precompiled version of the Berkeley DB library is available for

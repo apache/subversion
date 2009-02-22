@@ -191,6 +191,9 @@ struct edit_baton
   /* The URL to the root of the repository, or NULL. */
   const char *repos;
 
+  /* The UUID of the repos, or NULL. */
+  const char *uuid;
+
   /* External diff3 to use for merges (can be null, in which case
      internal merge code is used). */
   const char *diff3_cmd;
@@ -724,7 +727,9 @@ complete_directory(struct edit_baton *eb,
       if (current_entry->deleted)
         {
           if (current_entry->schedule != svn_wc_schedule_add)
-            svn_wc__entry_remove(entries, name);
+            SVN_ERR(svn_wc__entry_remove(
+                             entries, svn_wc_adm_access_path(adm_access),
+                             name, subpool));
           else
             {
               svn_wc_entry_t tmpentry;
@@ -743,7 +748,9 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          svn_wc__entry_remove(entries, name);
+          SVN_ERR(svn_wc__entry_remove(
+                                entries, svn_wc_adm_access_path(adm_access),
+                                name, subpool));
         }
       else if (current_entry->kind == svn_node_dir)
         {
@@ -759,7 +766,9 @@ complete_directory(struct edit_baton *eb,
                        && (! current_entry->absent)
                        && (current_entry->schedule != svn_wc_schedule_add))
               {
-                svn_wc__entry_remove(entries, name);
+                SVN_ERR(svn_wc__entry_remove(
+                             entries, svn_wc_adm_access_path(adm_access),
+                             name, subpool));
                 if (eb->notify_func)
                   {
                     svn_wc_notify_t *notify
@@ -1019,7 +1028,7 @@ prep_directory(struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR(svn_wc_ensure_adm3(db->path, NULL,
+  SVN_ERR(svn_wc_ensure_adm3(db->path, db->edit_baton->uuid,
                              ancestor_url, repos,
                              ancestor_revision, db->ambient_depth, pool));
 
@@ -1956,7 +1965,9 @@ do_entry_deletion(struct edit_baton *eb,
       apr_hash_t *entries;
       const char *base_name = svn_path_basename(full_path, pool);
       SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, TRUE, pool));
-      svn_wc__entry_remove(entries, base_name);
+      SVN_ERR(svn_wc__entry_remove(
+                        entries, svn_wc_adm_access_path(parent_adm_access),
+                        base_name, pool));
       SVN_ERR(svn_wc__entries_write(entries, parent_adm_access, pool));
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
@@ -4664,6 +4675,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->target_revision          = target_revision;
   eb->switch_url               = switch_url;
   eb->repos                    = entry ? entry->repos : NULL;
+  eb->uuid                     = entry ? entry->uuid : NULL;
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;

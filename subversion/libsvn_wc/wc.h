@@ -72,9 +72,18 @@ extern "C" {
  * The change from 9 to 10 was the addition of tree-conflicts, file
  * externals and a different canonicalization of urls.
  *
+ * The change from 10 to 11 was a complete rewrite of the wc datastore,
+ * which resulted in centralization and migration of data to an sqlite
+ * datebase.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       10
+
+#define SVN_WC__VERSION 10
+
+/* ### only used by devs temporarily during 1.7 development. */
+#define SVN_WC__VERSION_EXPERIMENTAL 11
+
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
@@ -88,6 +97,9 @@ extern "C" {
 /* A version < this can have urls that aren't canonical according to the new
    rules. See issue #2475. */
 #define SVN_WC__CHANGED_CANONICAL_URLS 10
+
+/* A version < this is pre-wc-ng. */
+#define SVN_WC__WC_NG_VERSION 11
 
 /*** Update traversals. ***/
 
@@ -166,15 +178,6 @@ struct svn_wc_traversal_info_t
 /* Possible contents of the killme file.  If present, signals that the
    administrative area only should be deleted. */
 #define SVN_WC__KILL_ADM_ONLY           "adm-only"
-
-
-/* A space separated list of properties that we cache presence/absence of.
- *
- * Note that each entry contains information about which properties are cached
- * in that particular entry.  This constant is only used when writing entries.
- */
-#define SVN_WC__CACHABLE_PROPS                                         \
-SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK
 
 
 /* A few declarations for stuff in util.c.

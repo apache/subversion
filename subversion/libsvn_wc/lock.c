@@ -244,7 +244,7 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
   /* We can upgrade all formats that are accepted by
      svn_wc__check_format. */
-  if (adm_access->wc_format != SVN_WC__VERSION)
+  if (adm_access->wc_format < SVN_WC__VERSION)
     {
       svn_boolean_t cleanup_required;
       svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);

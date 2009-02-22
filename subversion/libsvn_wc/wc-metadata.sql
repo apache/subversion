@@ -17,13 +17,18 @@
  */
 
 /*
- * the KIND column in these tables has one of six values:
- *   DIRECTORY
- *   FILE
- *   SYMLINK
- *   (absent) DIRECTORY
- *   (absent) FILE
- *   (absent) SYMLINK
+ * the KIND column in these tables has one of five values:
+ *   "file"
+ *   "dir"
+ *   "symlink"
+ *   "unknown"
+ *
+ * the PRESENCE column in these tables has one of five values:
+ *   "normal"
+ *   "absent" -- server has declared it "absent" (ie. authz failure)
+ *   "excluded" -- administratively excluded
+ *   "not-present" -- node not present at this REV
+ *   "incomplete" -- state hasn't been filled in
  */
 
 
@@ -45,7 +50,8 @@ CREATE TABLE REPOSITORY (
 CREATE TABLE WCROOT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* absolute path in the local filesystem.  NULL if storing metadata in the wc */
+  /* absolute path in the local filesystem.  NULL if storing metadata in
+     the wcroot itself. */
   local_abspath  TEXT
   );
 
@@ -67,7 +73,9 @@ CREATE TABLE BASE_NODE (
   /* the repository this node is part of, and the relative path [to its
      root] within that repository.  these may be NULL, implying it should
      be derived from the parent and local_relpath.  non-NULL typically
-     indicates a switched node. */
+     indicates a switched node.
+
+     Note: they must both be NULL, or both non-NULL. */
   repos_id  INTEGER,
   repos_relpath  TEXT,
 
@@ -75,21 +83,27 @@ CREATE TABLE BASE_NODE (
      NULL if this is the wcroot node. */
   parent_id  INTEGER,
 
-  revnum  INTEGER NOT NULL,
+  /* is this node "present" or has it been excluded for some reason? */
+  presence  TEXT NOT NULL,
 
-  /* file/dir/special. none says this node is NOT present at this REV. */
+  /* what kind of node is this? may be "unknown" if the node is not present */
   kind  TEXT NOT NULL,
+
+  /* this could be NULL for non-present nodes -- no info. */
+  revnum  INTEGER,
 
   /* if this node is a file, then the checksum and its translated size
      (given the properties on this file) are specified by the following
-     two fields. */
+     two fields. translated_size may be NULL if the size has not (yet)
+     been computed. */
   checksum  TEXT,
   translated_size  INTEGER,
 
-  /* Information about the last change to this node */
-  changed_rev  INTEGER NOT NULL,
-  changed_date  INTEGER NOT NULL,  /* an APR date/time (usec since 1970) */
-  changed_author  TEXT NOT NULL,
+  /* Information about the last change to this node. these could be
+     NULL for non-present nodes, when we have no info. */
+  changed_rev  INTEGER,
+  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author  TEXT,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
   depth  TEXT,
@@ -99,11 +113,14 @@ CREATE TABLE BASE_NODE (
      ### question which is better answered some other way. */
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
-  /* serialized skel of this node's properties. */
-  properties  BLOB NOT NULL,
+  /* serialized skel of this node's properties. could be NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB,
 
   /* this node is a directory, and all of its child nodes have not (yet)
      been created [for this revision number]. Note: boolean value. */
+  /* ### this will probably disappear in favor of incomplete child
+     ### nodes */
   incomplete_children  INTEGER
   );
 
@@ -125,6 +142,8 @@ CREATE TABLE PRISTINE (
      ### and (thus) the pristine copy is incomplete/unusable. */
   size  INTEGER,
 
+  /* ### this will probably go away, in favor of counting references
+     ### that exist in BASE_NODE and WORKING_NODE. */
   refcount  INTEGER NOT NULL
   );
 
@@ -142,12 +161,42 @@ CREATE TABLE WORKING_NODE (
      this will be "" if the parent is the wcroot. */
   parent_relpath  TEXT NOT NULL,
 
-  /* kind==none implies this node was deleted or moved (see moved_to).
-     other kinds:
-       if a BASE_NODE exists at the same local_relpath, then this is a
-       replaced item (possibly copied or moved here), which implies the
-       base node should be deleted or moved (see moved_to). */
+  /* is this node "present" or has it been excluded for some reason?
+     only allowed values: normal, not-present, incomplete. (the others
+     do not make sense for the WORKING tree)
+
+     presence=not-present means this node has been deleted or moved
+     (see moved_to). for presence=normal: if a BASE_NODE exists at
+     the same local_relpath, then this is a replaced item (possibly
+     copied or moved here), which implies the base node should be
+     deleted or moved (see moved_to).
+
+     beware: a "not-present" value could refer to the deletion of the
+     BASE node, or it could refer to the deletion of a child of a
+     copied/moved tree (scan upwards for copyfrom data). */
+  presence  TEXT NOT NULL,
+
+  /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
+
+  /* if this node was added-with-history AND is a file, then the checksum
+     and its translated size (given the properties on this file) are
+     specified by the following two fields. translated_size may be NULL
+     if the size has not (yet) been computed. */
+  checksum  TEXT,
+  translated_size  INTEGER,
+
+  /* if this node was added-with-history, then the following fields will
+     be NOT NULL */
+  changed_rev  INTEGER,
+  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author  TEXT,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  /* ### depth on WORKING? seems this is a BASE-only concept. how do
+     ### you do "files" on an added-directory? can't really ignore
+     ### the subdirs! */
+  depth  TEXT,
 
   /* Where this node was copied from. Set only on the root of the copy,
      and implied for all children. */
@@ -160,41 +209,27 @@ CREATE TABLE WORKING_NODE (
   moved_from  TEXT,
 
   /* If this node was moved (rather than just deleted), this specifies
-     where the BASE node was moved to. */
+     where the BASE node was moved to.
+
+     ### uh oh. what if the BASE is moved, then a directory is copied
+     ### here, then a child is moved? does "moved_to" apply to the BASE,
+     ### to to the replacing nodes?
+     ### answer: only use moved_to for the *root* of a moved tree. thus,
+     ### any moves below that point *must* apply to the replacing nodes. */
   moved_to  TEXT,
-
-  /* if this node was added-with-history AND is a file, then the checksum
-     and its translated size (given the properties on this file) are
-     specified by the following two fields. */
-  checksum  TEXT,
-  translated_size  INTEGER,
-
-  /* if this node was added-with-history, then the following fields will
-     be NOT NULL */
-  changed_rev  INTEGER,
-  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
-  changed_author  TEXT,
-
-  /* NULL depth means "default" (typically svn_depth_infinity) */
-  depth  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
      ### question which is better answered some other way. */
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
-  /* serialized skel of this node's properties. */
-  properties  BLOB NOT NULL,
-
-  /* if not NULL, this node is part of a changelist. */
-  changelist_id  INTEGER,
-
-  /* if a directory, serialized data for all of tree conflicts therein. */
-  tree_conflict_data  TEXT
+  /* serialized skel of this node's properties. could be NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB
   );
 
 CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
-CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (parent_relpath);
+CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -206,6 +241,10 @@ CREATE TABLE ACTUAL_NODE (
   wc_id  INTEGER,
   local_relpath  TEXT NOT NULL,
 
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. */
+  parent_relpath  TEXT NOT NULL,
+
   /* serialized skel of this node's properties. NULL implies no change to
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
@@ -216,31 +255,27 @@ CREATE TABLE ACTUAL_NODE (
   conflict_working  TEXT,
   prop_reject  TEXT,  /* ### is this right? */
 
-  changelist_id  INTEGER
+  /* if not NULL, this node is part of a changelist. */
+  changelist  TEXT,
+  
+  /* ### need to determine values. "unknown" (no info), "admin" (they
+     ### used something like 'svn edit'), "noticed" (saw a mod while
+     ### scanning the filesystem). */
+  text_mod  TEXT,
+
+  /* if a directory, serialized data for all of tree conflicts therein. */
+  tree_conflict_data  TEXT
   );
 
-
-/* ------------------------------------------------------------------------- */
-
-CREATE TABLE CHANGELIST (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  /* what WCROOT is this changelist part of, or NULL if the metadata is
-     in the wcroot. */
-  wc_id  INTEGER,
-
-  name  TEXT NOT NULL
-  );
-
-CREATE UNIQUE INDEX I_CHANGELIST ON CHANGELIST (wc_id, name);
-CREATE UNIQUE INDEX I_CL_LIST ON CHANGELIST (wc_id);
+CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE LOCK (
-  /* URL of the node which is locked */
-  url  TEXT NOT NULL PRIMARY KEY,
+  /* what repository location is locked */
+  repos_id  INTEGER NOT NULL,
+  repos_relpath  TEXT NOT NULL,
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
@@ -248,7 +283,9 @@ CREATE TABLE LOCK (
   /* ### make the following fields NOT NULL ? */
   lock_owner  TEXT,
   lock_comment  TEXT,
-  lock_date  INTEGER   /* an APR date/time (usec since 1970) */
+  lock_date  INTEGER,   /* an APR date/time (usec since 1970) */
+  
+  PRIMARY KEY (repos_id, repos_relpath)
   );
 
 

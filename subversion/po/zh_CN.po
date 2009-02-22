@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-06 09:47+0800\n"
-"PO-Revision-Date: 2009-02-06 10:17+0800\n"
+"POT-Creation-Date: 2009-02-19 10:36+0800\n"
+"PO-Revision-Date: 2009-02-19 10:22+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -318,6 +318,12 @@ msgstr "无法删除外部文件"
 
 msgid "Cannot move a file external"
 msgstr "无法移动外部文件"
+
+msgid "Something's amiss with the wc sqlite database"
+msgstr "工作副本的 SQLite 数据库有错误"
+
+msgid "The working copy is missing"
+msgstr "工作副本丢失"
 
 msgid "General filesystem error"
 msgstr "普通文件系统错误"
@@ -945,8 +951,10 @@ msgstr "清理 post-commit 出错 (细节如下): "
 msgid "Are all the targets part of the same working copy?"
 msgstr "是否所有目标都属于同一工作副本？"
 
-msgid "Cannot non-recursively commit a directory deletion"
-msgstr "无法以非递归提交方式删除目录"
+msgid ""
+"Cannot non-recursively commit a directory deletion of a directory with child "
+"nodes"
+msgstr "无法以非递归提交方式删除有子节点的目录"
 
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
@@ -4694,11 +4702,17 @@ msgstr "无法复制到“%s”，因为它不在版本库“%s”中；它来�
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "无法复制到“%s”，因为它已调度删除"
 
+msgid "Can only crop a working copy with a restrictive depth"
+msgstr "只能修剪工作副本到有限深度"
+
+msgid "Can only crop directories"
+msgstr "只能修剪目录"
+
 #, c-format
 msgid ""
 "Cannot crop '%s': it is going to be removed from repository. Try commit "
 "instead"
-msgstr "无法获取 “%s”: 它将要从版本库中删除；请先提交"
+msgstr "无法修剪 “%s”: 它将要从版本库中删除；请先提交"
 
 #, c-format
 msgid "Cannot exclude current directory"
@@ -4710,83 +4724,34 @@ msgstr "无法排除根目录"
 
 #, c-format
 msgid "Cannot crop '%s': it is a switched path"
-msgstr "无法获取 “%s”：它是已切换的路径"
+msgstr "无法修剪 “%s”：它是已切换的路径"
 
 #, c-format
 msgid "Entry '%s' has invalid '%s' value"
 msgstr "入口“%s”有无效值“%s”"
-
-msgid "Invalid escape sequence"
-msgstr "无效的转义序列"
-
-msgid "Invalid escaped character"
-msgstr "无效的转义字符"
-
-msgid "Unexpected end of entry"
-msgstr "入口意外结束"
-
-#, c-format
-msgid "Entry contains non-canonical path '%s'"
-msgstr "入口包含不规范的路径 “%s”"
-
-#, c-format
-msgid "Invalid value for field '%s'"
-msgstr "“%s”域的值无效"
-
-#, c-format
-msgid "Found an unexpected \\0 in the file external '%s'"
-msgstr "在外部引用的文件 “%s” 中，发现不期望的 \\0"
-
-#, c-format
-msgid "Illegal file external revision kind %d for path '%s'"
-msgstr "非法的外部引用文件的版本类型 %d，在路径 “%s” 中"
-
-#, c-format
-msgid "Entry '%s' has invalid node kind"
-msgstr "入口“%s”有无效的节点种类"
 
 #, c-format
 msgid "Entry for '%s' has invalid repository root"
 msgstr "“%s”条目的版本库根目录无效"
 
 #, c-format
-msgid "Entry '%s' has invalid depth"
-msgstr "入口 “%s” 有无效的深度"
+msgid "Entry '%s' has invalid node kind"
+msgstr "入口“%s”有无效的节点种类"
+
+msgid "No WC table entry"
+msgstr "没有 WC 表入口"
 
 #, c-format
-msgid "XML parser failed in '%s'"
-msgstr "XML 解析器失败于“%s”"
-
-msgid "Missing default entry"
-msgstr "丢失默认条目"
-
-msgid "Default entry has no revision number"
-msgstr "默认条目没有版本号"
-
-msgid "Default entry is missing URL"
-msgstr "默认条目没有URL"
+msgid "No REPOSITORY table entry for id '%ld'"
+msgstr "对于标识 '%ld' 没有 REPOSITORY 表入口"
 
 #, c-format
-msgid "Invalid version line in entries file of '%s'"
-msgstr "“%s”文件中的版本行无效"
-
-msgid "Missing entry terminator"
-msgstr "条目终结符丢失"
-
-msgid "Invalid entry terminator"
-msgstr "无效的条目终止符"
-
-#, c-format
-msgid "Error at entry %d in entries file for '%s':"
-msgstr "条目文件中的条目 %d 出错于 “%s”"
+msgid "No REPOSITORY table entry for uuid '%s'"
+msgstr "对于 uuid '%s' 没有 REPOSITORY 表入口"
 
 #, c-format
 msgid "No default entry in directory '%s'"
 msgstr "在目录“%s”中没有默认入口"
-
-#, c-format
-msgid "Error writing to '%s'"
-msgstr "写入“%s”出错"
 
 #, c-format
 msgid ""
@@ -4816,8 +4781,8 @@ msgid "No such entry: '%s'"
 msgstr "无此条目:“%s”"
 
 #, c-format
-msgid "Error writing entries file for '%s'"
-msgstr "写入“%s”的入口文件出错"
+msgid "Existing sqlite database found at '%s'"
+msgstr "在 '%s' 发现已有的 SQLite 数据库"
 
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
@@ -4989,6 +4954,70 @@ msgstr "冲突的回调函数违反 API：没有返回结果。"
 
 msgid "Conflict callback violated API: returned no merged file"
 msgstr "冲突的回调函数违反 API：没有返回合并文件。"
+
+msgid "Invalid escape sequence"
+msgstr "无效的转义序列"
+
+msgid "Invalid escaped character"
+msgstr "无效的转义字符"
+
+msgid "Unexpected end of entry"
+msgstr "入口意外结束"
+
+#, c-format
+msgid "Entry contains non-canonical path '%s'"
+msgstr "入口包含不规范的路径 “%s”"
+
+#, c-format
+msgid "Invalid value for field '%s'"
+msgstr "“%s”域的值无效"
+
+#, c-format
+msgid "Found an unexpected \\0 in the file external '%s'"
+msgstr "在外部引用的文件 “%s” 中，发现不期望的 \\0"
+
+#, c-format
+msgid "Illegal file external revision kind %d for path '%s'"
+msgstr "非法的外部引用文件的版本类型 %d，在路径 “%s” 中"
+
+#, c-format
+msgid "Entry '%s' has invalid depth"
+msgstr "入口 “%s” 有无效的深度"
+
+#, c-format
+msgid "XML parser failed in '%s'"
+msgstr "XML 解析器失败于“%s”"
+
+msgid "Missing default entry"
+msgstr "丢失默认条目"
+
+msgid "Default entry has no revision number"
+msgstr "默认条目没有版本号"
+
+msgid "Default entry is missing URL"
+msgstr "默认条目没有URL"
+
+#, c-format
+msgid "Invalid version line in entries file of '%s'"
+msgstr "“%s”文件中的版本行无效"
+
+msgid "Missing entry terminator"
+msgstr "条目终结符丢失"
+
+msgid "Invalid entry terminator"
+msgstr "无效的条目终止符"
+
+#, c-format
+msgid "Error at entry %d in entries file for '%s':"
+msgstr "条目文件中的条目 %d 出错于 “%s”"
+
+#, c-format
+msgid "Error writing to '%s'"
+msgstr "写入“%s”出错"
+
+#, c-format
+msgid "Error writing entries file for '%s'"
+msgstr "写入“%s”的入口文件出错"
 
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
@@ -5195,6 +5224,22 @@ msgstr "无法新增目录“%s”: 同名未版本控制目录对象已存在"
 
 #, c-format
 msgid ""
+"UUID mismatch: existing directory '%s' was checked out from a different "
+"repository"
+msgstr "UUID 不匹配: 现有目录 '%s' 是从其它版本库检出"
+
+#, c-format
+msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
+msgstr "URL '%s' 对于现有目录 '%s' 不匹配，期望的 URL 是 '%s'"
+
+#, c-format
+msgid ""
+"Failed to add directory '%s': a versioned directory of the same name already "
+"exists"
+msgstr "增加目录 '%s' 失败: 同名受版本控制的目录已存在"
+
+#, c-format
+msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
 "directory"
 msgstr "无法增加目录“%s”: 对象与管理目录同名"
@@ -5230,8 +5275,18 @@ msgid ""
 msgstr "无法新增文件“%s”: 同名非文件对象已存在"
 
 #, c-format
-msgid "Failed to add file '%s': object of the same name already exists"
-msgstr "无法增加文件“%s”: 同名对象已存在"
+msgid ""
+"Failed to add file '%s': an unversioned file of the same name already exists"
+msgstr "增加文件 '%s' 失败: 同名未版本控制的文件已存在"
+
+#, c-format
+msgid ""
+"UUID mismatch: existing file '%s' was checked out from a different repository"
+msgstr "UUID 不匹配: 现有文件 '%s' 来自其它版本库"
+
+#, c-format
+msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
+msgstr "URL '%s' 对于现有文件 '%s' 不匹配，期望的 URL 是 '%s'"
 
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"

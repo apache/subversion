@@ -43,9 +43,10 @@ extern "C" {
 /** Context data structure for interacting with the administrative data. */
 typedef struct svn_wc__db_t svn_wc__db_t;
 
-/**
- * Directory handle for working with pristine files associatd with a specific
- * BASE/WORKING/ACTUAL directory.
+/** Pristine Directory Handle
+ *
+ * Handle for working with pristine files associated with a specific
+ * directory on the local filesystem.
  */
 typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
 
@@ -70,32 +71,75 @@ typedef enum {
  * ### of something that's being stored in the DB.
  *
  * ### KFF: Does this overlap too much with what svn_node_kind_t does?
- * ### Also, does it make sense to encode 'absent' across these types,
- * ### rather than just having a separate 'absent' flag?  In general,
- * ### the interfaces in here give a lot of prominence to absence; I'm
- * ### wondering why we're treating it so specially.
+ *
+ * ### gjs: possibly. but that doesn't have a symlink kind. and that
+ * ###   cannot simply be added. it would surprise too much code.
+ * ###   (we could probably create svn_node_kind2_t though)
  */
 typedef enum {
+    /* The node is a directory. */
     svn_wc__db_kind_dir,
+
+    /* The node is a file. */
     svn_wc__db_kind_file,
+
+    /* The node is a symbolic link. */
     svn_wc__db_kind_symlink,
 
-    svn_wc__db_kind_absent_dir,
-    svn_wc__db_kind_absent_file,
-    svn_wc__db_kind_absent_symlink
+    /* The type of the node is not known, due to its absence, exclusion,
+       deletion, or incomplete status. */
+    svn_wc__db_kind_unknown
+
 } svn_wc__db_kind_t;
 
 
+/** Enumerated values describing the state of a node. */
 typedef enum {
+    /* The node is present and has no known modifications applied to it. */
     svn_wc__db_status_normal,
-    svn_wc__db_status_changed,  /* ### text may be modified. or props_mod. */
-    svn_wc__db_status_added,  /* ### no history. text_mod set to TRUE */
-    svn_wc__db_status_moved_src,  /* ### deleted */
-    svn_wc__db_status_moved_dst,  /* ### has history */
-    svn_wc__db_status_copied,  /* ### has history */
-    svn_wc__db_status_deleted  /* ### text_mod, prop_mod will be FALSE */
 
-    /* ### copied+changed?  moved_dst+changed? */
+    /* The node is present and has known text or property modifications. */
+    svn_wc__db_status_changed,
+
+    /* The node has been added (potentially obscuring a delete or move of
+       the BASE node; see BASE_SHADOWED param). The text will be marked as
+       modified, and if properties exist, they will be marked as modified. */
+    svn_wc__db_status_added,
+
+    /* This node is no longer present because it was the source of a move. */
+    svn_wc__db_status_moved_src,
+
+    /* This node has been added with history, based on the move source.
+       Text and property modifications are based on whether changes have
+       been made against their pristine versions. */
+    svn_wc__db_status_moved_dst,
+
+    /* This node has been added with history, based on the copy source.
+       Text and property modifications are based on whether changes have
+       been made against their pristine versions. */
+    svn_wc__db_status_copied,
+
+    /* This node has been deleted. No text or property modifications
+       will be present. */
+    svn_wc__db_status_deleted,
+
+    /* This node was named by the server, but no information was provided. */
+    svn_wc__db_status_absent,
+
+    /* This node has been administratively excluded. */
+    svn_wc__db_status_excluded,
+
+    /* This node is not present in this revision. This typically happens
+       when a node is deleted and committed without updating its parent.
+       The parent revision indicates it should be present, but this node's
+       revision states otherwise. */
+    svn_wc__db_status_not_present,
+
+    /* This node is known, but its information is incomplete. Generally,
+       it should be treated similar to the other missing status values
+       until some (later) process updates the node with its data. */
+    svn_wc__db_status_incomplete
+
 } svn_wc__db_status_t;
 
 
@@ -159,10 +203,11 @@ typedef enum {
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                const char *path,
+                const char *local_abspath,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
+
 
 /**
  * In most cases, svn operations will deal with multiple targets. Each
@@ -185,51 +230,61 @@ svn_wc__db_open_many(svn_wc__db_t **db,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+
+/* This function answers at simple question: what format version of the wc
+   exists at PATH.  The reason it takes a PATH instead of an existing db
+   handle is because it may need to use legacy, pre-wc-ng methods to determine
+   what that version is, and such versions don't have any db to open. 
+   
+   If no working copy exists at PATH, return SVN_ERR_WC_MISSING. */
+svn_error_t *
+svn_wc__db_version(int *version,
+                   const char *path,
+                   apr_pool_t *scratch_pool);
+                   
+
+/* ### the transaction stuff is not final. gstein thinks, "toss" */
+
 /**
  * Start a transaction for the database(s) which are part of @a db.
  *
- * Any results will be alloated in @a result_pool, and temporary allocations
- * will be made in @a scratch_pool.
+ * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_txn_begin(svn_wc__db_t *db,
-                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
+
 
 /**
  * Rollback any changes to @a db which have happened since the last
  * call to svn_wc__db_txn_begin().  If a transaction is not currently in
  * progress, nothing occurs.
  *
- * Any results will be alloated in @a result_pool, and temporary allocations
- * will be made in @a scratch_pool.
+ * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_txn_rollback(svn_wc__db_t *db,
-                        apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
 
 /**
  * Commit the currently active transaction for @a db.  If a transaction is not
  * currently in progress, nothing occurs.
  *
- * Any results will be alloated in @a result_pool, and temporary allocations
- * will be made in @a scratch_pool.
+ * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_txn_commit(svn_wc__db_t *db,
-                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
+
 
 /**
  * Close @a db, and rollback any pending transaction associated with it.
  *
- * Any results will be alloated in @a result_pool, and temporary allocations
- * will be made in @a scratch_pool.
+ * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);
 
 /** @} */
@@ -254,61 +309,92 @@ svn_wc__db_close(svn_wc__db_t *db,
  * @{
  */
 
-/* ### should we allow props to be optional? any reason for that? toss
-   ### the set_props() interface? */
-
-/* ### base_add_* can also replace. should be okay? */
-
-/* ### props optional. children must be known before calling (but may be
- * ### NULL or a zero-length array to indicate "no children").
+/** Add or replace a directory in the BASE tree.
  *
- * ### KFF: By the way, I like the convention of using "scratch_pool"
- * ### to indicate "pool in which temporary work may be done, but no
- * ### results allocated (so you can feel free to clear or destroy it
- * ### after this call)".  I presume that's what it means?
+ * The directory is located at LOCAL_ABSPATH on the local filesystem, and
+ * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
+ * repository, at revision REVISION.
+ *
+ * The directory properties are given by the PROPS hash (which is
+ * const char *name => const svn_string_t *).
+ *
+ * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
+ * CHANGED_AUTHOR>.
+ *
+ * The directory's children are listed in CHILDREN, as an array of
+ * const char *. The child nodes do NOT have to exist when this API
+ * is called.
+ *
+ * This subsystem does not use DEPTH, but it can be recorded here in
+ * the BASE tree for higher-level code to use.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
-                              const char *local_path,
-                              const char *repos_path,
+                              const char *local_abspath,
+                              const char *repos_relpath,
+                              const char *repos_root_url,
+                              const char *repos_uuid,
                               svn_revnum_t revision,
                               const apr_hash_t *props,
                               svn_revnum_t changed_rev,
                               apr_time_t changed_date,
                               const char *changed_author,
-                              const char *repos_base_url,
-                              const char *repos_uuid,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
                               apr_pool_t *scratch_pool);
 
 
-/* ### props are optional */
+/** Add or replace a directory in the BASE tree.
+ *
+ * The directory is located at LOCAL_ABSPATH on the local filesystem, and
+ * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
+ * repository, at revision REVISION.
+ *
+ * The directory properties are given by the PROPS hash (which is
+ * const char *name => const svn_string_t *).
+ *
+ * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
+ * CHANGED_AUTHOR>.
+ *
+ * The checksum of the file contents is given in CHECKSUM. An entry in
+ * the pristine text base is NOT required when this API is called.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
-                         const char *local_path,
-                         const char *repos_path,
+                         const char *local_abspath,
+                         const char *repos_relpath,
+                         const char *repos_root_url,
+                         const char *repos_uuid,
                          svn_revnum_t revision,
                          const apr_hash_t *props,
                          svn_revnum_t changed_rev,
                          apr_time_t changed_date,
                          const char *changed_author,
-                         const char *repos_base_url,
-                         const char *repos_uuid,
-                         svn_checksum_t *checksum,
+                         const svn_checksum_t *checksum,
                          apr_pool_t *scratch_pool);
 
 
-svn_error_t *
-svn_wc__db_base_set_props(svn_wc__db_t *db,
-                          const char *path,
-                          apr_hash_t *props,
-                          apr_pool_t *scratch_pool);
-
-
-/* ### what data to keep for a symlink? props optional.
+/** Add or replace a symlink in the BASE tree.
  *
- * ### KFF: This is an interesting question, because currently
+ * The symlink is located at LOCAL_ABSPATH on the local filesystem, and
+ * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
+ * repository, at revision REVISION.
+ *
+ * The symlink's properties are given by the PROPS hash (which is
+ * const char *name => const svn_string_t *).
+ *
+ * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
+ * CHANGED_AUTHOR>.
+ *
+ * The target of the symlink is specified by TARGET.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
+ */
+/* ### KFF: This is an interesting question, because currently
  * ### symlinks are versioned as regular files with the svn:special
  * ### property; then the file's text contents indicate that it is a
  * ### symlink and where that symlink points.  That's for portability:
@@ -327,123 +413,186 @@ svn_wc__db_base_set_props(svn_wc__db_t *db,
  * ###
  * ### I'm still feeling my way around this problem; just pointing out
  * ### the issues.
+ *
+ * ### gjs: symlinks are stored in the database as first-class objects,
+ * ###   rather than in the filesystem as "special" regular files. thus,
+ * ###   all portability concerns are moot. higher-levels can figure out
+ * ###   how to represent the link in ACTUAL. higher-levels can also
+ * ###   deal with translating to/from the svn:special property and
+ * ###   the plain-text file contents.
  */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
-                            const char *local_path,
-                            const char *repos_path,
+                            const char *local_abspath,
+                            const char *repos_relpath,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
                             svn_revnum_t revision,
                             const apr_hash_t *props,
                             svn_revnum_t changed_rev,
                             apr_time_t changed_date,
                             const char *changed_author,
-                            const char *repos_base_url,
-                            const char *repos_uuid,
                             const char *target,
                             apr_pool_t *scratch_pool);
 
 
-/* ### keep the revision?
+/** Create a node in the BASE tree that is present in name only.
  *
- * ### KFF: What are the possible reasons for absence?
+ * The new node will be located at LOCAL_ABSPATH, and correspond to the
+ * repository node described by <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID>
+ * at revision REVISION.
  *
- *   - excluded (as in 'svn_depth_exclude')
- *   - ...?  I know there's more, but I can't think of it now.
+ * The node's kind is described by KIND, and the reason for its absence
+ * is specified by STATUS. Only three values are allowed for STATUS:
  *
- * ### I think it would help to list out the causes of absence;
- * ### that'll help us think about questions like whether we need
- * ### 'revision' or not.
+ *   svn_wc__db_status_absent
+ *   svn_wc__db_status_excluded
+ *   svn_wc__db_status_not_present
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
-                                const char *path,
+                                const char *local_abspath,
+                                const char *repos_relpath,
+                                const char *repos_root_url,
+                                const char *repos_uuid,
                                 svn_revnum_t revision,
                                 svn_wc__db_kind_t kind,
+                                svn_wc__db_status_t status,
                                 apr_pool_t *scratch_pool);
 
 
+/** Remove a node from the BASE tree.
+ *
+ * The node to remove is indicated by LOCAL_ABSPATH from the local
+ * filesystem.
+ *
+ * Note that no changes are made to the local filesystem; LOCAL_ABSPATH
+ * is merely the key to figure out which BASE node to remove.
+ *
+ * If the node is a directory, then ALL child nodes will be removed
+ * from the BASE tree, too.
+ *
+ * All temporary allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
-svn_wc__db_base_delete(svn_wc__db_t *db,
-                       const char *path,
+svn_wc__db_base_remove(svn_wc__db_t *db,
+                       const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
 
-/* ### revision is for dst_path ("after moving src_path to dst_path,
- * ### mark the new nodes (node?) as being at that revision")
+/** Retrieve information about a node in the BASE tree.
  *
- * ### KFF: Hrm?  Do you mean src_path?
+ * For the BASE node implied by LOCAL_ABSPATH from the local filesystem,
+ * return information in the provided OUT parameters. Each OUT parameter
+ * may be NULL, indicating that specific item is not requested.
+ *
+ * The OUT parameters are: KIND, STATUS, REVISION, REPOS_RELPATH,
+ * REPOS_ROOT_URL, REPOS_UUID, CHANGED_REV, CHANGED_DATE, CHANGED_AUTHOR,
+ * DEPTH, CHECKSUM, TRANSLATED_SIZE, SWITCHED.
+ *
+ * If DEPTH is requested, and the node is NOT a directory, then
+ * the value will be set to svn_depth_empty.
+ *
+ * If CHECKSUM is requested, and the node is NOT a file, then it will
+ * be set to NULL.
+ *
+ * If TRANSLATED_SIZE is requested, and the node is NOT a file, then
+ * it will be set to 0.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_base_move(svn_wc__db_t *db,
-                     const char *src_path,
-                     const char *dst_path,
-                     svn_revnum_t revision,
-                     apr_pool_t *scratch_pool);
-
-
-/* ### NULL may be given for OUT params
-   ### @a switched means this directory is different from what parent/filename
-   ### would imply for @a repos_path.
-*/
-svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
+                         svn_wc__db_status_t *status,
                          svn_revnum_t *revision,
-                         const char **repos_path,
+                         const char **repos_relpath,
+                         const char **repos_root_url,
+                         const char **repos_uuid,
                          svn_revnum_t *changed_rev,
                          apr_time_t *changed_date,
                          const char **changed_author,
-                         svn_depth_t *depth,
-                         svn_checksum_t **checksum,  /* ### for files only */
-                         svn_filesize_t *actual_size,
-                         svn_boolean_t *switched,  /* ### derived */
-                         const char **repos_base_url,
-                         const char **repos_uuid,
+                         svn_depth_t *depth,  /* ### for dirs only */
+                         const svn_checksum_t **checksum,  /* ### files only */
+                         svn_filesize_t *translated_size,
                          svn_wc__db_t *db,
-                         const char *path,
+                         const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 
+/** Return a property's value from a node in the BASE tree.
+ *
+ * This is a convenience function to return a single property from the
+ * BASE tree node indicated by LOCAL_ABSPATH. The property's name is
+ * given in PROPNAME, and the value returned in PROPVAL.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
                          svn_wc__db_t *db,
-                         const char *path,
+                         const char *local_abspath,
                          const char *propname,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 
-/* ### KFF: hash mapping 'const char *' prop names to svn_string_t vals?
+/** Return all properties of the given BASE tree node.
+ *
+ * All of the properties for the node indicated by LOCAL_ABSPATH will be
+ * returned in PROPS as a mapping of const char * names to
+ * const svn_string_t * values.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_get_props(apr_hash_t **props,
                           svn_wc__db_t *db,
-                          const char *path,
+                          const char *local_abspath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
 
-/* ### return some basic info for each child? e.g. kind
+/** Return a list of the BASE tree node's children's names.
  *
- * ### KFF: perhaps you want an array of 'svn_dirent_t's?  Oh, but
- * ### they don't store the names... Well, but maybe you want
- * ### *children to be a hash anyway, not an array, so you can get the
- * ### name->child mapping and have children able to be looked up in
- * ### constant time.
+ * For the node indicated by LOCAL_ABSPATH, this function will return
+ * the names of all of its children in the array CHILDREN. The array
+ * elements are const char * values.
+ *
+ * If the node is not a directory, then SVN_ERR_WC_NOT_DIRECTORY will
+ * be returned.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_base_get_children(const apr_array_header_t **children,
                              svn_wc__db_t *db,
-                             const char *path,
+                             const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
 
-/* ### KFF: Hm, yeah, see earlier about symlink questions. */
+/** Return the target of the symlink at the give BASE tree node.
+ *
+ * For the node indicated by LOCAL_ABSPATH, the symlink's target will
+ * be returned in TARGET.
+ *
+ * If the node is not a symlink, then SVN_ERR_WC_NOT_SYMLINK will
+ * be returned.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_base_get_symlink_target(const char **target,
                                    svn_wc__db_t *db,
-                                   const char *path,
+                                   const char *local_abspath,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
@@ -517,32 +666,52 @@ typedef enum {
    ### can then be used for further operations on pristine files associated
    ### with the BASE/WORKING/ACTUAL contents in that directory. */
 svn_error_t *
-svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
-                              svn_wc__db_t *db,
-                              const char *dirpath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
+svn_wc__db_pristine_get_handle(svn_wc__db_pdh_t **pdh,
+                               svn_wc__db_t *db,
+                               const char *local_dir_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 
 /* ### @a contents may NOT be NULL. */
 svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_wc__db_pdh_t *pdh,
-                         svn_checksum_t *checksum,
+                         const svn_checksum_t *checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 
 /* ### caller pushes contents into storage, keyed by @a checksum.
    ### note: if caller has a source stream, then it should use
-   ###   svn_stream_copy to pull/push the content into storage. */
+   ###   svn_stream_copy3 to pull/push the content into storage. */
 /* ### @a contents may NOT be NULL. */
 svn_error_t *
 svn_wc__db_pristine_write(svn_stream_t **contents,
                           svn_wc__db_pdh_t *pdh,
-                          svn_checksum_t *checksum,
+                          const svn_checksum_t *checksum,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
+
+
+/* ### get a tempdir to drop files for later installation. */
+svn_error_t *
+svn_wc__db_pristine_get_tempdir(const char **temp_dir,
+                                svn_wc__db_pdh_t *pdh,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+
+/* ### Given a file sitting in a tempdir (specified by _get_tempdir),
+   ### install the sucker into the pristine datastore for the given checksum.
+   ### This is used for files where we don't know the checksum ahead of
+   ### time, so we drop it into a temp area first, computing the checksum
+   ### as we write it there. */
+svn_error_t *
+svn_wc__db_pristine_install(svn_wc__db_pdh_t *pdh,
+                            const char *local_abspath,
+                            const svn_checksum_t *checksum,
+                            apr_pool_t *scratch_pool);
 
 
 /* ### check for presence, according to the given mode (on how hard we
@@ -554,7 +723,7 @@ svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
                           int *refcount,
                           svn_wc__db_pdh_t *pdh,
-                          svn_checksum_t *checksum,
+                          const svn_checksum_t *checksum,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool);
 
@@ -566,15 +735,18 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
    ### then it will return SOME_ERROR. */
 svn_error_t *
 svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool);
 
+
+
+/* ### we may not need incref/decref. these are placeholders... */
 
 /* ### @a new_refcount may be NULL */
 svn_error_t *
 svn_wc__db_pristine_incref(int *new_refcount,
                            svn_wc__db_pdh_t *pdh,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool);
 
 
@@ -582,7 +754,7 @@ svn_wc__db_pristine_incref(int *new_refcount,
 svn_error_t *
 svn_wc__db_pristine_decref(int *new_refcount,
                            svn_wc__db_pdh_t *pdh,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool);
 
 /** @} */
@@ -595,8 +767,8 @@ svn_wc__db_pristine_decref(int *new_refcount,
 /* ### svn cp WCPATH WCPATH ... can copy mixed base/working around */
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
-                   const char *src_path,
-                   const char *dst_path,
+                   const char *src_abspath,
+                   const char *dst_abspath,
                    apr_pool_t *scratch_pool);
 
 
@@ -604,55 +776,46 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
    ### metadata is present. caller needs to "set" all information recursively.
    ### and caller definitely has to populate ACTUAL. */
 /* ### mark node as absent? adding children or props: auto-convert away
-   ### from absent? */
+   ### from absent? ... or not "absent" but an "incomplete" status? */
 svn_error_t *
 svn_wc__db_op_copy_url(svn_wc__db_t *db,
-                       const char *path,
-                       const char *copyfrom_repos_path,
+                       const char *local_abspath,
+                       const char *copyfrom_repos_relpath,
+                       const char *copyfrom_root_url,
+                       const char *copyfrom_uuid,
                        svn_revnum_t copyfrom_revision,
                        apr_pool_t *scratch_pool);
 
 
-/* ### props may be NULL. children must be known before calling.
- *
- * ### KFF: Okay, if children can be NULL here, then it should be
- * ### able to be NULL up in svn_wc__db_base_add_directory().
- */
+/* ### props and children must be known before calling. */
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
-                            const char *path,
+                            const char *local_abspath,
                             apr_hash_t *props,
                             const apr_array_header_t *children,
                             apr_pool_t *scratch_pool);
 
 
-/* ### props may be NULL */
+/* ### props must be specified */
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
-                       const char *path,
+                       const char *local_abspath,
                        apr_hash_t *props,
                        apr_pool_t *scratch_pool);
 
 
-/* ### props may be NULL */
+/* ### props must be specified */
 svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
-                          const char *path,
+                          const char *local_abspath,
                           apr_hash_t *props,
                           const char *target,
                           apr_pool_t *scratch_pool);
 
 
 svn_error_t *
-svn_wc__db_op_add_absent_node(svn_wc__db_t *db,
-                              const char *path,
-                              svn_wc__db_kind_t kind,
-                              apr_pool_t *scratch_pool);
-
-
-svn_error_t *
 svn_wc__db_op_set_prop(svn_wc__db_t *db,
-                       const char *path,
+                       const char *local_abspath,
                        const char *propname,
                        const svn_string_t *propval,
                        apr_pool_t *scratch_pool);
@@ -660,7 +823,7 @@ svn_wc__db_op_set_prop(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
-                        const char *path,
+                        const char *local_abspath,
                         apr_hash_t *props,
                         apr_pool_t *scratch_pool);
 
@@ -668,7 +831,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
-                     const char *path,
+                     const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
 
@@ -676,44 +839,45 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
  * ### and is a) a dir or b) a non-dir. */
 svn_error_t *
 svn_wc__db_op_move(svn_wc__db_t *db,
-                   const char *src_path,
-                   const char *dst_path,
+                   const char *src_abspath,
+                   const char *dst_abspath,
                    apr_pool_t *scratch_pool);
 
 
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */
 svn_error_t *
 svn_wc__db_op_modified(svn_wc__db_t *db,
-                       const char *path,
+                       const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
 
 /* ### use NULL to remove from changelist ("add to the <null> changelist") */
 svn_error_t *
 svn_wc__db_op_add_to_changelist(svn_wc__db_t *db,
-                                const char *path,
+                                const char *local_abspath,
                                 const char *changelist,
                                 apr_pool_t *scratch_pool);
 
 
 /* ### caller maintains ACTUAL. we're just recording state. */
+/* ### we probably need to record details of the conflict. how? */
 svn_error_t *
 svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
-                            const char *path,
+                            const char *local_abspath,
                             apr_pool_t *scratch_pool);
 
 
 /* ### caller maintains ACTUAL. we're just recording state. */
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
-                            const char *path,
+                            const char *local_abspath,
                             apr_pool_t *scratch_pool);
 
 
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
-                     const char *path,
-                     /* ### depth? */
+                     const char *local_abspath,
+                     svn_depth_t depth,
                      apr_pool_t *scratch_pool);
 
 
@@ -725,23 +889,37 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 /**
  * @defgroup svn_wc__db_read  Read operations on the BASE/WORKING tree
  * @{
+ *
+ * These functions query information about nodes in ACTUAL, and returns
+ * the requested information from the appropriate ACTUAL, WORKING, or
+ * BASE tree.
+ *
+ * For example, asking for the checksum of the pristine version will
+ * return the one recorded in WORKING, or if no WORKING node exists, then
+ * the checksum comes from BASE.
  */
 
 /* ### NULL may be given for OUT params.
 
    ### if the node has not been committed (after adding):
-   ###   repos_* will be NULL
    ###   revision will be SVN_INVALID_REVNUM
+   ###   repos_* will be NULL
+   ###   changed_rev will be SVN_INVALID_REVNUM
+   ###   changed_date will be 0
+   ###   changed_author will be NULLn
    ###   status will be svn_wc__db_status_added
    ###   text_mod will be TRUE
    ###   prop_mod will be TRUE if any props have been set
    ###   base_shadowed will be FALSE
 
+   ### if the node is not a copy, or a move destination:
+   ###   original_repos_path will be NULL
+   ###   original_root_url will be NULL
+   ###   original_uuid will be NULL
+   ###   original_revision will be SVN_INVALID_REVNUM
+
    ### put all these OUT params into a structure? but this interface allows
    ### us to query for one or all pieces of information (harder with a struct)
-
-   ### original_repos_path will be NULL if this node is not copied/moved
-   ### original_rev will be SVN_INVALID_REVNUM if this node is not copied/moved
 
    ### KFF: The position of 'db' in the parameter list is sort of
    ### floating around (e.g., compare this func with the next one).
@@ -754,29 +932,34 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### the BASE has been deleted to open the way for this node.
 */
 svn_error_t *
-svn_wc__db_read_info(svn_wc__db_kind_t *kind,
+svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
+                     svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
-                     const char **repos_path,
+                     const char **repos_relpath,
+                     const char **repos_root_url,
+                     const char **repos_uuid,
+                     svn_revnum_t *changed_rev,
+                     apr_time_t *changed_date,
+                     const char **changed_author,
+                     svn_depth_t *depth,  /* ### dirs only */
+                     const svn_checksum_t **checksum,
+                     svn_filesize_t *translated_size,
                      const char **changelist,
-                     svn_wc__db_status_t *status,
+
+                     /* ### the following fields if copied/moved (history) */
+                     const char **original_repos_relpath,
+                     const char **original_root_url,
+                     const char **original_uuid,
+                     svn_revnum_t *original_revision,
+
+                     /* ### the followed are derived fields */
                      svn_boolean_t *text_mod,  /* ### possibly modified */
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
 
-                     /* ### the following fields if copied/moved (history) */
-                     const char **original_repos_path,
-                     svn_revnum_t *original_rev,
-                     svn_checksum_t **checksum,
-                     svn_filesize_t *actual_size,
-                     svn_revnum_t *changed_rev,
-                     apr_time_t *changed_date,
-                     const char **changed_author,
-
-                     const char **repos_base_url,
-                     const char **repos_uuid,
                      svn_wc__db_t *db,
-                     const char *path,
+                     const char *local_abspath,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
@@ -784,7 +967,7 @@ svn_wc__db_read_info(svn_wc__db_kind_t *kind,
 svn_error_t *
 svn_wc__db_read_prop(const svn_string_t **propval,
                      svn_wc__db_t *db,
-                     const char *path,
+                     const char *local_abspath,
                      const char *propname,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
@@ -793,9 +976,17 @@ svn_wc__db_read_prop(const svn_string_t **propval,
 svn_error_t *
 svn_wc__db_read_props(apr_hash_t **props,
                       svn_wc__db_t *db,
-                      const char *path,
+                      const char *local_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_read_pristine_props(apr_hash_t **props,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 
 /* ### return some basic info for each child? e.g. kind.
@@ -810,7 +1001,7 @@ svn_wc__db_read_props(apr_hash_t **props,
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,
                          svn_wc__db_t *db,
-                         const char *path,
+                         const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
@@ -818,7 +1009,7 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 svn_error_t *
 svn_wc__db_read_symlink_target(const char **target,
                                svn_wc__db_t *db,
-                               const char *path,
+                               const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
@@ -837,12 +1028,25 @@ svn_wc__db_read_symlink_target(const char **target,
  * @{
  */
 
+/* ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
+   ### under this directory (depth=infinity) will be rewritten. */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
                            const char *from_url,
                            const char *to_url,
                            svn_depth_t depth,
                            apr_pool_t *scratch_pool);
+
+
+/* ### collapse changes (for this node) from the trees into a new BASE node. */
+svn_error_t *
+svn_wc__db_global_commit(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         svn_revnum_t new_revision,
+                         apr_time_t new_date,
+                         const char *new_author,
+                         apr_pool_t *scratch_pool);
 
 
 /* ### post-commit handling.
