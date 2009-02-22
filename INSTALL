@@ -86,6 +86,10 @@ I.    INTRODUCTION
          that allows Subversion clients and servers to run on
          different operating systems.
 
+      * SQLite  (REQUIRED for client and server)
+
+         Subversion uses SQLite to manage some internal databases.
+
       * libz  (REQUIRED for client and server)
 
          Subversion uses zlib for compressing binary differences.
@@ -137,6 +141,11 @@ I.    INTRODUCTION
          for other languages, you need to have those languages
          available at build time.
 
+      * KDELibs, GNOME Keyring  (OPTIONAL for client)
+
+         Subversion contains optional support for storing passwords in
+         KWallet (KDE 4) or GNOME Keyring.
+
 
   C. Dependencies in Detail
 
@@ -179,7 +188,7 @@ I.    INTRODUCTION
       commands described in section II.B before installing the following.
 
 
-      1.  Apache Portable Runtime 0.9.7 or 1.2.X  (REQUIRED)
+      1.  Apache Portable Runtime 0.9.7 or 1.X.X  (REQUIRED)
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
@@ -493,7 +502,7 @@ I.    INTRODUCTION
       version if MASM is not compatible with MSVC 6).
 
 
-      13. SQLite
+      13. SQLite  (REQUIRED)
 
       Subversion (starting with version 1.6) requires SQLite version
       3.4.0 or above, and you can meet this dependency several ways:
@@ -507,6 +516,51 @@ I.    INTRODUCTION
       dependencies distribution, or you can download it from SQLite:
 
           http://www.sqlite.org/download.html
+
+
+      14. pkg-config  (Unix only, OPTIONAL)
+
+      Subversion uses pkg-config to find appropriate options used
+      at build time.
+
+
+      15. D-Bus  (Unix only, OPTIONAL)
+
+      D-Bus is a message bus system. D-Bus is required for support for KWallet
+      and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
+
+
+      16. Qt 4  (Unix only, OPTIONAL)
+
+      Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
+      modules are required for support for KWallet. pkg-config is needed
+      to find Qt headers and libraries.
+
+
+      17. KDELibs 4  (Unix only, OPTIONAL)
+
+      Subversion contains optional support for storing passwords in KWallet.
+      KDELibs contains core KDE libraries. Subversion uses libkdecore and libkdeui
+      libraries when support for KWallet is enabled. kde4-config is used to get
+      some necessary options. pkg-config, D-Bus and Qt 4 are also required.
+      If you want to build support for KWallet, then pass the '--with-kwallet'
+      option to `configure`. If KDE is installed in a non-standard prefix, then
+      use:
+
+          --with-kwallet=/path/to/KDE/prefix
+
+      18. GLib 2  (Unix only, OPTIONAL)
+
+      GLib is a general-purpose utility library. GLib is required for support
+      for GNOME Keyring. pkg-config is needed to find GLib headers and library.
+
+
+      19. GNOME Keyring  (Unix only, OPTIONAL)
+
+      Subversion contains optional support for storing passwords in GNOME Keyring.
+      pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
+      GLib are also required. If you want to build support for GNOME Keyring,
+      then pass the '--with-gnome-keyring' option to `configure`.
 
 
   D. Documentation
