@@ -2410,7 +2410,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
-                             svn_wc_adm_access_t *adm_access,
                              int format,
                              apr_pool_t *pool)
 {
@@ -2521,7 +2520,7 @@ svn_wc_cleanup2(const char *path,
        svn_path_local_style(path, pool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, NULL, path, pool));
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, path, pool));
 
   /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
