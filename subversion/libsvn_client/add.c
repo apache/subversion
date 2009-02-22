@@ -473,7 +473,7 @@ add_parent_dirs(const char *path,
           return svn_error_create
             (SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
         }
-      else if (svn_wc_is_adm_dir(svn_dirent_basename(path, pool), pool))
+      else if (svn_wc_is_adm_dir(svn_path_basename(path, pool), pool))
         {
           return svn_error_createf
             (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
