@@ -476,7 +476,6 @@ test_dirent_entryname(const char **msg,
     { "/", "" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "X:/abc", "abc" },
-    { "X:", "" },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:", "" },
     { "X:/", "" },
