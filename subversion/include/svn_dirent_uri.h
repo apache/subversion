@@ -492,6 +492,47 @@ svn_boolean_t
 svn_uri_is_ancestor(const char *path1,
                     const char *path2);
 
+/** Find the common prefix of the canonicalized dirents in @a targets
+ * (an array of <tt>const char *</tt>'s), and remove redundant dirents if @a
+ * remove_redundancies is TRUE.
+ *
+ *   - Set @a *pcommon to the absolute dirent of the dirent common to
+ *     all of the targets.  If the targets have no common prefix (e.g. 
+ *     "C:/file" and "D:/file" on Windows), set @a *pcommon to the empty
+ *     string.
+ *
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
+ *     to an array of targets relative to @a *pcommon, and if
+ *     @a remove_redundancies is TRUE, omit any dirents that are
+ *     descendants of another dirent in @a targets.  If *pcommon
+ *     is empty, @a *pcondensed_targets will contain absolute dirents;
+ *     redundancies can still be removed.  If @a pcondensed_targets is NULL,
+ *     leave it alone.
+ *
+ * Else if there is exactly one target, then
+ *
+ *   - Set @a *pcommon to that target, and
+ *
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
+ *     to an array containing zero elements.  Else if
+ *     @a pcondensed_targets is NULL, leave it alone.
+ *
+ * If there are no items in @a targets, set @a *pcommon and (if
+ * applicable) @a *pcondensed_targets to @c NULL.
+ *
+ * Allocates @a *pcommon and @a *targets in @a result_pool. All
+ * intermediate allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_dirent_condense_targets(const char **pcommon,
+                            apr_array_header_t **pcondensed_targets,
+                            const apr_array_header_t *targets,
+                            svn_boolean_t remove_redundancies,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
