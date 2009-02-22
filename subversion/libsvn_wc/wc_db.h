@@ -488,18 +488,31 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  * return information in the provided OUT parameters. Each OUT parameter
  * may be NULL, indicating that specific item is not requested.
  *
- * The OUT parameters are: KIND, STATUS, REVISION, REPOS_RELPATH,
- * REPOS_ROOT_URL, REPOS_UUID, CHANGED_REV, CHANGED_DATE, CHANGED_AUTHOR,
- * DEPTH, CHECKSUM, TRANSLATED_SIZE, SWITCHED.
+ * If there is no information about this node, then SVN_ERR_WC_PATH_NOT_FOUND
+ * will be returned.
+ *
+ * The OUT parameters, and their "not available" values are:
+ *   KIND             n/a (always available)
+ *   STATUS           n/a (always available)
+ *   REVISION         SVN_INVALID_REVNUM
+ *   REPOS_RELPATH    NULL
+ *   REPOS_ROOT_URL   NULL
+ *   REPOS_UUID       NULL
+ *   CHANGED_REV      SVN_INVALID_REVNUM
+ *   CHANGED_DATE     0
+ *   CHANGED_AUTHOR   NULL
+ *   DEPTH            svn_depth_unknown
+ *   CHECKSUM         NULL
+ *   TRANSLATED_SIZE  SVN_INVALID_FILESIZE
  *
  * If DEPTH is requested, and the node is NOT a directory, then
- * the value will be set to svn_depth_empty.
+ * the value will be set to svn_depth_unknown.
  *
  * If CHECKSUM is requested, and the node is NOT a file, then it will
  * be set to NULL.
  *
  * If TRANSLATED_SIZE is requested, and the node is NOT a file, then
- * it will be set to 0.
+ * it will be set to SVN_INVALID_FILESIZE.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.

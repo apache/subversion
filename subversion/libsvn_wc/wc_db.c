@@ -28,6 +28,7 @@
 #include "wc.h"
 #include "wc_db.h"
 #include "adm_files.h"
+#include "wc-metadata.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
@@ -63,6 +64,12 @@
  * does *not*, then the implication is some other function needs to be
  * called to restore consistency. Subtle requirements like that are hard
  * to maintain over a long period of time, so this API will not allow it.
+ *
+ *
+ * STANDARD VARIABLE NAMES
+ *
+ * db     working copy database (this module)
+ * sdb    SQLite database (not to be confused with 'db')
  */
 
 
@@ -96,6 +103,67 @@ struct svn_wc__db_pdh_t {
    ### when we can aggregate pristine files across dirs/wcs, then we will
    ### need to undo the SKIP. */
 #define SVN__SKIP_SUBDIR
+
+/* ### duplicates entries.c */
+static const char * const upgrade_sql[] = { NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, WC_METADATA_SQL };
+
+/* These values map to the members of STATEMENTS below, and should be added
+   and removed at the same time. */
+enum statement_keys {
+  STMT_SELECT_BASE_NODE,
+  STMT_SELECT_REPOSITORY_BY_ID,
+  STMT_SELECT_WCROOT_NULL
+};
+
+static const char * const statements[] = {
+  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_id, "
+    "presence, kind, revnum, checksum, translated_size, "
+    "changed_rev, changed_date, changed_author, depth, last_mod_time, "
+    "properties, incomplete_children "
+  "from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select root, uuid from repository where id = ?1;",
+
+  "select id from wcroot where local_abspath is null;",
+
+  NULL
+};
+
+
+static svn_wc__db_kind_t
+word_to_kind(const char *kind)
+{
+  /* Let's be lazy and fast */
+  if (*kind == 'f')
+    return svn_wc__db_kind_file;
+  if (*kind == 'd')
+    return svn_wc__db_kind_dir;
+  if (*kind == 's')
+    return svn_wc__db_kind_symlink;
+  return svn_wc__db_kind_unknown;
+}
+
+
+static const char *
+kind_to_word(svn_wc__db_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_wc__db_kind_dir:
+      return "dir";
+    case svn_wc__db_kind_file:
+      return "file";
+    case svn_wc__db_kind_symlink:
+      return "symlink";
+    case svn_wc__db_kind_unknown:
+      return "unknown";
+    default:
+      /* ### what to do? */
+      return NULL;
+    }
+}
 
 
 static svn_error_t *
@@ -212,6 +280,175 @@ new_db_state(svn_wc__db_openmode_t mode,
   db->dir_data = apr_hash_make(result_pool);
 
   return db;
+}
+
+
+static svn_error_t *
+fetch_repos_info(const char **repos_root_url,
+                 const char **repos_uuid,
+                 svn_sqlite__db_t *sdb,
+                 apr_int64_t repos_id,
+                 apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_REPOSITORY_BY_ID));
+  SVN_ERR(svn_sqlite__bindf(stmt, "i", repos_id));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("No REPOSITORY table entry for id '%ld'"),
+                             (long int)repos_id);
+
+  if (repos_root_url)
+    *repos_root_url = svn_sqlite__column_text(stmt, 0, result_pool);
+  if (repos_uuid)
+    *repos_uuid = svn_sqlite__column_text(stmt, 1, result_pool);
+
+  return svn_sqlite__reset(stmt);
+}
+
+
+/* Scan from RELPATH upwards through parent nodes until we find a parent
+   that has values in the 'repos_id' and 'repos_relpath' columns.  Return
+   that information in REPOS_ID and REPOS_RELPATH (either may be NULL). */
+static svn_error_t *
+scan_upwards_for_repos(apr_int64_t *repos_id,
+                       const char **repos_relpath,
+                       apr_int64_t wc_id,
+                       const char *relpath,
+                       svn_sqlite__db_t *sdb,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  const char *relpath_suffix = "";
+  const char *current_relpath = relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(repos_id != NULL || repos_relpath != NULL);
+
+  /* ### is it faster to fetch fewer columns? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
+
+  while (1)
+    {
+      const char *basename;
+      svn_boolean_t have_row;
+
+      /* Strip a path segment off the end, and append it to the suffix
+         that we'll use when we finally find a base relpath. */
+      svn_dirent_split(current_relpath, &current_relpath, &basename,
+                       scratch_pool);
+      relpath_suffix = svn_dirent_join(relpath_suffix, basename, scratch_pool);
+
+      /* ### strictly speaking, moving to the parent could send us to a
+         ### different SDB, and (thus) we would need to fetch STMT again.
+         ### but we happen to know the parent is *always* in the same db. */
+
+      /* Rebind the statement to fetch parent information. */
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+          return svn_error_createf(
+            SVN_ERR_WC_CORRUPT, NULL,
+            _("Parent(s) of '%s' should have been present."),
+            svn_dirent_local_style(relpath, scratch_pool));
+
+      /* Did we find some non-NULL repository columns? */
+      if (!svn_sqlite__column_is_null(stmt, 3))
+        {
+          /* If one is non-NULL, then so should the other. */
+          SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 4));
+
+          if (repos_id)
+            *repos_id = svn_sqlite__column_int(stmt, 3);
+
+          /* Given the parent's relpath, append all the segments that
+             we stripped as we scanned upwards. */
+          if (repos_relpath)
+            *repos_relpath = svn_dirent_join(svn_sqlite__column_text(stmt, 4,
+                                                                     NULL),
+                                             relpath_suffix,
+                                             result_pool);
+          return svn_sqlite__reset(stmt);
+        }
+
+      if (*current_relpath == '\0')
+        {
+          /* We scanned all the way up, and did not find the information.
+             Something is corrupt in the database. */
+          return svn_error_createf(
+            SVN_ERR_WC_CORRUPT, NULL,
+            _("Parent(s) of '%s' should have repository information."),
+            svn_dirent_local_style(relpath, scratch_pool));
+        }
+
+      /* Loop to move further upwards. */
+    }
+}
+
+
+/* For a given LOCAL_ABSPATH, figure out what sqlite database (SDB) to use,
+   what WC_ID is implied, and the RELPATH within that wcroot.  If a sqlite
+   database needs to be opened, then use SMODE for it. */
+static svn_error_t *
+parse_local_abspath(svn_sqlite__db_t **sdb,
+                    apr_int64_t *wc_id,
+                    const char **relpath,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_sqlite__mode_t smode,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  const char *dirpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  /* ### we need much more sophisticated logic for finding the database,
+     ### tearing apart the abspath, etc. ... and then managing all of that
+     ### within DB.  for now: play quick & dirty. */
+
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+  if (kind == svn_node_dir)
+    {
+      /* ### cheat. we know the relpath will be "" for now. */
+      *relpath = "";
+
+      dirpath = local_abspath;
+    }
+  else
+    {
+      /* ### cheat. we know the relpath will be just the basename for now. */
+      *relpath = svn_dirent_basename(local_abspath, result_pool);
+
+      dirpath = svn_dirent_dirname(local_abspath, scratch_pool);
+    }
+
+  SVN_ERR(svn_sqlite__open(sdb,
+                           svn_wc__adm_child(dirpath, "wc.db", scratch_pool),
+                           smode, statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                           result_pool, scratch_pool));
+
+  /* ### cheat. we know there is just one WORKING_COPY row, and it has a
+     ### NULL value for local_abspath. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, *sdb, STMT_SELECT_WCROOT_NULL));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Missing a row in WCROOT for '%s'."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
+  *wc_id = svn_sqlite__column_int(stmt, 0);
+
+  return svn_sqlite__reset(stmt);
 }
 
 
@@ -483,9 +720,175 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *sdb;
+  apr_int64_t wc_id;
+  const char *relpath;
+  svn_boolean_t have_row;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t inherit_repos = FALSE;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&sdb, &wc_id, &relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      const char *kind_str = svn_sqlite__column_text(stmt, 7, NULL);
+      svn_wc__db_kind_t node_kind;
+
+      SVN_ERR_ASSERT(kind_str != NULL);
+      node_kind = word_to_kind(kind_str);
+
+      if (kind)
+        {
+          *kind = node_kind;
+        }
+      if (status)
+        {
+          const char *presence = svn_sqlite__column_text(stmt, 6, NULL);
+
+          SVN_ERR_ASSERT(presence != NULL);
+          if (strcmp(presence, "normal") == 0)
+            *status = svn_wc__db_status_normal;
+          else if (strcmp(presence, "absent") == 0)
+            *status = svn_wc__db_status_absent;
+          else if (strcmp(presence, "excluded") == 0)
+            *status = svn_wc__db_status_excluded;
+          else if (strcmp(presence, "not-present") == 0)
+            *status = svn_wc__db_status_not_present;
+          else if (strcmp(presence, "incomplete") == 0)
+            *status = svn_wc__db_status_incomplete;
+          else
+            SVN_ERR_MALFUNCTION();
+        }
+      if (revision)
+        {
+          *revision = svn_sqlite__column_revnum(stmt, 8);
+        }
+      if (repos_relpath)
+        {
+          if (svn_sqlite__column_is_null(stmt, 4))
+            inherit_repos = TRUE;
+          else
+            *repos_relpath = svn_sqlite__column_text(stmt, 4, result_pool);
+        }
+      if (repos_root_url || repos_uuid)
+        {
+          /* Fetch repository information via REPOS_ID. */
+          if (svn_sqlite__column_is_null(stmt, 3))
+            inherit_repos = TRUE;
+          else
+            err = fetch_repos_info(repos_root_url, repos_uuid, sdb,
+                                   svn_sqlite__column_int(stmt, 3),
+                                   result_pool);
+        }
+      if (changed_rev)
+        {
+          *changed_rev = svn_sqlite__column_revnum(stmt, 11);
+        }
+      if (changed_date)
+        {
+          *changed_date = svn_sqlite__column_int64(stmt, 12);
+        }
+      if (changed_author)
+        {
+          /* Result may be NULL. */
+          *changed_author = svn_sqlite__column_text(stmt, 13, result_pool);
+        }
+      if (depth)
+        {
+          if (node_kind != svn_wc__db_kind_dir)
+            *depth = svn_depth_unknown;
+          else
+            {
+              const char *depth_str = svn_sqlite__column_text(stmt, 14, NULL);
+
+              if (depth_str == NULL)
+                *depth = svn_depth_unknown;
+              else
+                *depth = svn_depth_from_word(depth_str);
+            }
+        }
+      if (checksum)
+        {
+          if (node_kind != svn_wc__db_kind_file)
+            *checksum = NULL;
+          else
+            {
+              const char *digest = svn_sqlite__column_text(stmt, 9, NULL);
+
+              if (digest == NULL)
+                *checksum = NULL;
+              else
+                {
+                  svn_checksum_kind_t ckind;
+                  svn_checksum_t *new_checksum;
+
+                  /* "$md5 $..." or "$sha1$..." */
+                  SVN_ERR_ASSERT(strlen(digest) > 6);
+
+                  ckind = (digest[1] == 'm'
+                           ? svn_checksum_md5
+                           : svn_checksum_sha1);
+                  err = svn_checksum_parse_hex(&new_checksum, ckind,
+                                               digest + 6, result_pool);
+                  if (err != NULL)
+                    err = svn_error_createf(
+                      err->apr_err, err,
+                      _("The node '%s' has a corrupt checksum value."),
+                      svn_dirent_local_style(local_abspath, scratch_pool));
+
+                  *checksum = new_checksum;
+                }
+            }
+        }
+      if (translated_size)
+        {
+          if (svn_sqlite__column_is_null(stmt, 10))
+            *translated_size = SVN_INVALID_FILESIZE;
+          else
+            *translated_size = svn_sqlite__column_int(stmt, 10);
+        }
+
+      /* ### should we modify the SQL statement since we don't actually
+         ### use id, parent_id, last_mod_time, properties, and
+         ### incomplete_children ?? */
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' was not found."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+
+  err = svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
+  if (err == NULL && inherit_repos)
+    {
+      apr_int64_t repos_id;
+
+      /* Fetch repository information from the parent in order to compute
+         this node's information.
+
+         Note: we delay this lookup until AFTER the statement used above
+         has been reset. We happen to use the same one for the scan.  */
+      SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath, wc_id, relpath,
+                                     sdb, result_pool, scratch_pool));
+
+      if (repos_root_url || repos_uuid)
+        err = fetch_repos_info(repos_root_url, repos_uuid, sdb, repos_id,
+                               result_pool);
+    }
+
+  return err;
 }
 
 
