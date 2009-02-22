@@ -1468,7 +1468,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const char *parent_dir, *name;
           svn_node_kind_t kind;
 
           svn_pool_clear(subpool);
@@ -1502,18 +1501,20 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
              Do nothing if target is already the base_dir. */
           if (strcmp(target, base_dir) != 0)
             {
-              svn_path_split(target, &parent_dir, &name, subpool);
-
+              const char *parent_dir = svn_dirent_dirname(target, subpool);
               target = parent_dir;
 
               while (strcmp(target, base_dir) != 0)
                 {
-                  SVN_ERR_ASSERT((target[0] != '\0') &&
-                                 !svn_dirent_is_root(target, strlen(target)));
-
                   APR_ARRAY_PUSH(dirs_to_lock,
                                  const char *) = apr_pstrdup(pool, target);
-                  target = svn_path_dirname(target, subpool);
+
+                  parent_dir = svn_dirent_dirname(target, subpool);
+
+                  if (strmcp(parent_dir, target) == 0)
+                    break; /* Reached root directory */
+                  else
+                    target = parent_dir;
                 }
             }
         }
