@@ -27,6 +27,8 @@
 #include "svn_error.h"
 #include "svn_wc.h"
 
+#include "wc_db.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -126,6 +128,12 @@ svn_error_t *svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
    lock is taken out.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
                                              apr_pool_t *pool);
+
+
+/* Return the working copy database associated with this access baton. */
+svn_error_t *
+svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
