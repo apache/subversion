@@ -350,9 +350,12 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
-  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
+  SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
+
+  /** @deprecated This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY. */
+#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
