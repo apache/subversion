@@ -1679,7 +1679,7 @@ test_dirent_condense_targets(const char **msg,
     { {"C:/dir/omega", "C:/dir/zeta", NULL}, "C:/dir", {"omega", "zeta" } },
 #else
     { { "/dir", "/dir/file", NULL }, "/dir", { "", "file" } },
-    { { "/dir1", "/dir2", NULL },    "",     { "/dir1", "/dir2" } },
+    { { "/dir1", "/dir2", NULL },    "/",     { "dir1", "dir2" } },
 #endif
   };
 
