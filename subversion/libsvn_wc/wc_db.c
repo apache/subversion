@@ -118,7 +118,8 @@ enum statement_keys {
   STMT_SELECT_REPOSITORY,
   STMT_INSERT_REPOSITORY,
   STMT_INSERT_BASE_NODE,
-  STMT_INSERT_BASE_NODE_INCOMPLETE
+  STMT_INSERT_BASE_NODE_INCOMPLETE,
+  STMT_SELECT_BASE_NODE_CHILDREN
 };
 
 static const char * const statements[] = {
@@ -146,6 +147,8 @@ static const char * const statements[] = {
   "insert or ignore into base_node ("
   "  wc_id, local_relpath, parent_relpath, presence, kind, revnum) "
   "values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);",
+
+  "select local_relpath from base_node where parent_relpath = ?1;",
 
   NULL
 };
@@ -862,7 +865,10 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
   ibb.scratch_pool = scratch_pool;
 
-  /* Insert the directory and all its children transactionally. */
+  /* Insert the directory and all its children transactionally.
+
+     Note: old children can stick around, even if they are no longer present
+     in this directory's revision.  */
   return svn_sqlite__with_transaction(sdb, insert_base_node, &ibb);
 }
 
@@ -924,6 +930,10 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 
   ibb.scratch_pool = scratch_pool;
 
+  /* ### hmm. if this used to be a directory, we should remove children.
+     ### or maybe let caller deal with that, if there is a possibility
+     ### of a node kind change (rather than eat an extra lookup here).  */
+
   return insert_base_node(&ibb, sdb);
 }
 
@@ -983,6 +993,10 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   ibb.scratch_pool = scratch_pool;
 
+  /* ### hmm. if this used to be a directory, we should remove children.
+     ### or maybe let caller deal with that, if there is a possibility
+     ### of a node kind change (rather than eat an extra lookup here).  */
+
   return insert_base_node(&ibb, sdb);
 }
 
@@ -1041,6 +1055,10 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   ibb.target = NULL;
 
   ibb.scratch_pool = scratch_pool;
+
+  /* ### hmm. if this used to be a directory, we should remove children.
+     ### or maybe let caller deal with that, if there is a possibility
+     ### of a node kind change (rather than eat an extra lookup here).  */
 
   return insert_base_node(&ibb, sdb);
 }
@@ -1278,6 +1296,9 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
   svn_sqlite__db_t *sdb;
   apr_int64_t wc_id;
   const char *relpath;
+  svn_sqlite__stmt_t *stmt;
+  apr_array_header_t *child_names;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1285,7 +1306,29 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
-  NOT_IMPLEMENTED();
+  /* ### should test the node to ensure it is a directory */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_BASE_NODE_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", relpath));
+
+  child_names = apr_array_make(result_pool, 20, sizeof(const char *));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *local_relpath = svn_sqlite__column_text(stmt, 0,
+                                                          scratch_pool);
+
+      APR_ARRAY_PUSH(child_names, const char *) =
+        svn_dirent_basename(local_relpath, result_pool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *children = child_names;
+
+  return svn_sqlite__reset(stmt);
 }
 
 
