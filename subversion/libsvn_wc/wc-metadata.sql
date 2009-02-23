@@ -17,7 +17,7 @@
  */
 
 /*
- * the KIND column in these tables has one of five values:
+ * the KIND column in these tables has one of four values:
  *   "file"
  *   "dir"
  *   "symlink"
