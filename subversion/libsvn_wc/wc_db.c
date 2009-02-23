@@ -1317,8 +1317,7 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      const char *local_relpath = svn_sqlite__column_text(stmt, 0,
-                                                          scratch_pool);
+      const char *local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
       APR_ARRAY_PUSH(child_names, const char *) =
         svn_dirent_basename(local_relpath, result_pool);
