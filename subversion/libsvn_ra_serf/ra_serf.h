@@ -205,6 +205,9 @@ struct svn_ra_serf__session_t {
   /* Repository UUID */
   const char *uuid;
 
+  /* Connection timeout value */
+  long timeout;
+
   /*** HTTP v2 protocol stuff. ***
    *
    * We assume that if mod_dav_svn sends one of the special v2 OPTIONs

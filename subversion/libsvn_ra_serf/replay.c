@@ -790,8 +790,15 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       /* Run the serf loop, send outgoing and process incoming requests.
          This request will block when there are no more requests to send or
          responses to receive, so we have to be careful on our bookkeeping. */
-      status = serf_context_run(session->context, SERF_DURATION_FOREVER,
+      status = serf_context_run(session->context, session->timeout,
                                 pool);
+
+      if (APR_STATUS_IS_TIMEUP(status))
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+                                  NULL,
+                                  _("Connection timed out"));
+        }
 
       /* Substract the number of completely handled responses from our
          total nr. of open requests', so we'll know when to stop this loop.
