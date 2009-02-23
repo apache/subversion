@@ -73,6 +73,7 @@ ra_serf_get_schemes(apr_pool_t *pool)
   return serf_ssl;
 }
 
+#define DEFAULT_HTTP_TIMEOUT 3600
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
@@ -82,6 +83,7 @@ load_config(svn_ra_serf__session_t *session,
   const char *server_group;
   const char *proxy_host = NULL;
   const char *port_str = NULL;
+  const char *timeout_str = NULL;
   unsigned int proxy_port;
 
   config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
@@ -92,6 +94,8 @@ load_config(svn_ra_serf__session_t *session,
   SVN_ERR(svn_config_get_bool(config, &session->using_compression,
                               SVN_CONFIG_SECTION_GLOBAL,
                               SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+  svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
   svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, config_client);
@@ -128,6 +132,9 @@ load_config(svn_ra_serf__session_t *session,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION,
                                   session->using_compression));
+      svn_config_get(config, &timeout_str, server_group,
+                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
+
       svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                              SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
@@ -149,6 +156,24 @@ load_config(svn_ra_serf__session_t *session,
       svn_config_get(config, &session->ssl_authorities, server_group,
                      SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
     }
+
+  /* Parse the connection timeout value, if any. */
+  if (timeout_str)
+    {
+      char *endstr;
+      const long int timeout = strtol(timeout_str, &endstr, 10);
+
+      if (*endstr)
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                _("Invalid config: illegal character in "
+                                  "timeout value"));
+      if (timeout < 0)
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                _("Invalid config: negative timeout value"));
+      session->timeout = apr_time_from_sec(timeout);
+    }
+  else
+    session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
 
   /* Convert the proxy port value, if any. */
   if (port_str)
@@ -188,6 +213,7 @@ load_config(svn_ra_serf__session_t *session,
 
   return SVN_NO_ERROR;
 }
+#undef DEFAULT_HTTP_TIMEOUT
 
 static void
 svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)

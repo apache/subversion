@@ -860,6 +860,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
 
+  /** @since New in 1.7 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+             SVN_ERR_RA_DAV_CATEGORY_START + 12,
+             "Connection timed out")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
