@@ -338,6 +338,7 @@ validate_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 test_inserting_nodes(const char **msg,
                      svn_boolean_t msg_only,
@@ -463,10 +464,49 @@ test_inserting_nodes(const char **msg,
 }
 
 
+static svn_error_t *
+test_base_children(const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+  const apr_array_header_t *children;
+  int i;
+
+  *msg = "getting the list of BASE children";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_fake_wc("test_base_children", pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  "fake-wc/test_base_children",
+                                  pool));
+
+  SVN_ERR(svn_wc__db_base_get_children(&children,
+                                       db, local_abspath,
+                                       pool, pool));
+  SVN_ERR_ASSERT(children->nelts == 7);
+  for (i = children->nelts; i--; )
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      SVN_ERR_ASSERT(strlen(name) == 1);
+      /* ### check the actual values */
+    }
+
+  /* ### insert some more children. replace some nodes. check values. */
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_getting_info),
     SVN_TEST_PASS(test_inserting_nodes),
+    SVN_TEST_PASS(test_base_children),
     SVN_TEST_NULL
   };
