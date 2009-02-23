@@ -210,8 +210,6 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
                               apr_pool_t *scratch_pool)
 {
   char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
-  svn_error_t *err;
-  svn_error_t *err2;
 
   /* Read and write chunks until we get a short read, indicating the
      end of the stream.  (We can't get a short write without an
@@ -230,16 +228,8 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
         break;
     }
 
-  err = svn_stream_close(from);
-  err2 = svn_stream_close(to);
-  if (err)
-    {
-      if (err2)
-        svn_error_compose(err, err2);
-      return err;
-    }
-
-  return err2;
+  return svn_error_compose_create(svn_stream_close(from),
+                                  svn_stream_close(to));
 }
 
 svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
