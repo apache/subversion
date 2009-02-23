@@ -611,8 +611,7 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   svn_filesize_t size1, size2;
   svn_checksum_t *checksum1, *checksum2;
   svn_stream_t *stream1, *stream2;
-  char *buf1, *buf2;
-  apr_size_t len1, len2;
+  svn_boolean_t same;
 
   /* If the filesystem claims the things haven't changed, then they
      haven't changed. */
@@ -652,21 +651,9 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   SVN_ERR(svn_fs_file_contents(&stream1, root1, path1, pool));
   SVN_ERR(svn_fs_file_contents(&stream2, root2, path2, pool));
 
-  buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  do
-    {
-      len1 = len2 = SVN__STREAM_CHUNK_SIZE;
-      SVN_ERR(svn_stream_read(stream1, buf1, &len1));
-      SVN_ERR(svn_stream_read(stream2, buf2, &len2));
+  SVN_ERR(svn_stream_contents_same(&same, stream1, stream2, pool));
 
-      if (len1 != len2 || memcmp(buf1, buf2, len1))
-        {
-          *changed_p = TRUE;
-          return SVN_NO_ERROR;
-        }
-    }
-  while (len1 > 0);
+  *changed_p = !same;
 
   return SVN_NO_ERROR;
 }
