@@ -17,13 +17,13 @@
  */
 
 /*
- * the KIND column in these tables has one of four values:
+ * the KIND column in these tables has one of the following values:
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
  *
- * the PRESENCE column in these tables has one of five values:
+ * the PRESENCE column in these tables has one of the following values:
  *   "normal"
  *   "absent" -- server has declared it "absent" (ie. authz failure)
  *   "excluded" -- administratively excluded
