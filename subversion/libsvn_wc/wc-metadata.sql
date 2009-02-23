@@ -65,11 +65,10 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 CREATE TABLE BASE_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* the WCROOT that we are part of. NULL if the metadata is stored in
-     {wcroot}/.svn/ */
-  wc_id  INTEGER,
-
-  /* relative path from wcroot. this will be "" for the wcroot. */
+  /* specifies the location of this node in the local filesystem. wc_id
+     implies an absolute path, and local_relpath is relative to that
+     location (meaning it will be "" for the wcroot). */
+  wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
 
   /* the repository this node is part of, and the relative path [to its
@@ -81,9 +80,10 @@ CREATE TABLE BASE_NODE (
   repos_id  INTEGER,
   repos_relpath  TEXT,
 
-  /* parent node. used to aggregate all child nodes of a given parent.
-     NULL if this is the wcroot node. */
-  parent_id  INTEGER,
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
 
   /* is this node "present" or has it been excluded for some reason? */
   presence  TEXT NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE BASE_NODE (
   );
 
 CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
-CREATE INDEX I_PARENT ON BASE_NODE (parent_id);
+CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -159,7 +159,7 @@ CREATE TABLE WORKING_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT, 
 
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER,
+  wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -246,7 +246,7 @@ CREATE TABLE ACTUAL_NODE (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER,
+  wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -275,6 +275,8 @@ CREATE TABLE ACTUAL_NODE (
   tree_conflict_data  TEXT
   );
 
+CREATE UNIQUE INDEX I_ACTUAL_PATH ON ACTUAL_NODE (wc_id, local_relpath);
+CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
 CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 

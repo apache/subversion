@@ -79,7 +79,8 @@ static const char * const statements[] = {
   "values (?1);",
 
   "insert or replace into base_node "
-    "(wc_id, local_relpath, repos_id, repos_relpath, parent_id, presence, "
+    "(wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
+     "presence, "
      "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
      "changed_author, depth, last_mod_time, properties, incomplete_children)"
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
@@ -107,7 +108,7 @@ static const char * const statements[] = {
 
   "select root, uuid from repository where id = ?1;",
 
-  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_id, "
+  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
     "presence, revnum, kind, checksum, translated_size, "
     "changed_rev, changed_date, changed_author, depth, last_mod_time, "
     "properties, incomplete_children "
@@ -151,7 +152,7 @@ typedef struct {
   const char *local_relpath;
   apr_int64_t repos_id;
   const char *repos_relpath;
-  apr_int64_t parent_id;
+  const char *parent_relpath;
   svn_wc__db_status_t presence;
   svn_revnum_t revision;
   svn_node_kind_t kind;  /* ### should switch to svn_wc__db_kind_t */
@@ -713,8 +714,8 @@ fetch_base_nodes(apr_hash_t **nodes,
                                                              result_pool);
         }
 
-      if (!svn_sqlite__column_is_null(stmt, 5))
-        base_node->parent_id = svn_sqlite__column_int(stmt, 5);
+      base_node->parent_relpath = svn_sqlite__column_text(stmt, 5,
+                                                          result_pool);
 
       /* ### presence */
 
@@ -1304,8 +1305,8 @@ insert_base_node(svn_sqlite__db_t *wc_db,
       SVN_ERR(svn_sqlite__bind_text(stmt, 4, base_node->repos_relpath));
     }
 
-  if (base_node->parent_id)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 5, base_node->parent_id));
+  if (base_node->parent_relpath)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, base_node->parent_relpath));
 
   SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal")); /* ### presence */
 

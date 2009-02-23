@@ -323,7 +323,10 @@ svn_wc__db_close(svn_wc__db_t *db,
  *
  * The directory's children are listed in CHILDREN, as an array of
  * const char *. The child nodes do NOT have to exist when this API
- * is called.
+ * is called. For each child node which does not exists, an "incomplete"
+ * node will be added. These child nodes will be added regardless of
+ * the DEPTH value. The caller must sort out which must be recorded,
+ * and which must be omitted.
  *
  * This subsystem does not use DEPTH, but it can be recorded here in
  * the BASE tree for higher-level code to use.
@@ -361,6 +364,10 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
  * The checksum of the file contents is given in CHECKSUM. An entry in
  * the pristine text base is NOT required when this API is called.
  *
+ * If the translated size of the file (its contents, translated as defined
+ * by its properties) is known, then pass it as TRANSLATED_SIZE. Otherwise,
+ * pass SVN_INVALID_FILESIZE.
+ *
  * All temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
@@ -375,6 +382,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          apr_time_t changed_date,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
+                         svn_filesize_t translated_size,
                          apr_pool_t *scratch_pool);
 
 
@@ -528,7 +536,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          apr_time_t *changed_date,
                          const char **changed_author,
                          svn_depth_t *depth,  /* ### for dirs only */
-                         const svn_checksum_t **checksum,  /* ### files only */
+                         svn_checksum_t **checksum,  /* ### files only */
                          svn_filesize_t *translated_size,
                          svn_wc__db_t *db,
                          const char *local_abspath,
@@ -955,7 +963,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      apr_time_t *changed_date,
                      const char **changed_author,
                      svn_depth_t *depth,  /* ### dirs only */
-                     const svn_checksum_t **checksum,
+                     svn_checksum_t **checksum,
                      svn_filesize_t *translated_size,
                      const char **changelist,
 
