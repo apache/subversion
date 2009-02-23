@@ -134,10 +134,9 @@ svn_dirent_join_many(apr_pool_t *pool,
                      const char *base,
                      ...);
 
-/** Get the basename of the specified canonicalized @a dirent.  The
- * basename is defined as the last component of the dirent.  If the @a dirent
- * is root ("/", "X:/", "//server/share/"), then that is returned.  Otherwise,
- * the returned value will have no slashes in it.
+/** Gets the name of the specified canonicalized @a dirent as it is known 
+ * within its parent directory. If the @a dirent is root, return "". The 
+ * returned value will not have slashes in it.
  *
  * Example: svn_dirent_basename("/foo/bar") -> "bar"
  *
@@ -145,24 +144,11 @@ svn_dirent_join_many(apr_pool_t *pool,
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_dirent_basename(const char *dirent,
                     apr_pool_t *pool);
-
-/** Gets the name of the specified canonicalized @a dirent as it is known 
- * within its parent directory. If the @a dirent is root, return "". The 
- * returned value will not have slashes in it.
- *
- * Where @a dirent doesn't specify a root, it's value is identical to that
- * returned by svn_dirent_basename()
- *
- * @since New in 1.7.
- */
-char *
-svn_dirent_entryname(const char *dirent,
-                     apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a dirent, defined as
  * the dirent with its basename removed.
@@ -192,39 +178,6 @@ svn_dirent_dirname(const char *dirent,
  * Examples:
  *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
  *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and "/"</pre>
- *             - <pre>"bar"           ==>  ""   and "bar"</pre>
- *             - <pre>""              ==>  ""   and ""</pre>
- *  Windows:   - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
- *             - <pre>"X:/foo"        ==>  "X:/" and "foo"</pre>
- *             - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
- *  Posix:     - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
- *
- * @since New in 1.6.
- */
-void
-svn_dirent_split(const char *dirent,
-                 const char **dirpath,
-                 const char **base_name,
-                 apr_pool_t *pool);
-
-/** Divide the canonicalized @a dirent into @a *dirpath and @a entry_name,
- *  allocated in @a pool.
- *
- * If @a dirpath or @a entry_name is NULL, then don't set that one.
- *
- * Either @a dirpath or @a entry_name may be @a dirent's own address, but they
- * may not both be the same address, or the results are undefined.
- *
- * @a entry_name is the name of @dirent as it is known in its parent directory
- * @a dirpath.  If @a dirent specifies a root directory @a entry_name is ""
- *
- * If @a dirent has two or more components, the separator between @a dirpath
- * and @a base_name is not included in either of the new names.
- *
- * Examples:
- *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
- *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
  *             - <pre>"/"             ==>  "/"  and ""</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
@@ -236,10 +189,11 @@ svn_dirent_split(const char *dirent,
  * @since New in 1.7.
  */
 void
-svn_dirent_splitentry(const char *dirent,
-                      const char **dirpath,
-                      const char **entry_name,
-                      apr_pool_t *pool);
+svn_dirent_split(const char *dirent,
+                 const char **dirpath,
+                 const char **base_name,
+                 apr_pool_t *pool);
+
 
 /** Divide the canonicalized @a uri into @a *dirpath and @a
  * *base_name, allocated in @a pool.
@@ -259,7 +213,7 @@ svn_dirent_splitentry(const char *dirent,
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 void
 svn_uri_split(const char *dirent,
@@ -278,7 +232,7 @@ svn_uri_split(const char *dirent,
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_basename(const char *uri,
