@@ -59,7 +59,11 @@
 
 static const char * const data_loading_sql[] = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  (WC_METADATA_SQL
+  (
+   /* Load the table and index definitions. */
+   WC_METADATA_SQL
+
+   /* Load our test data. */
    " "
    "insert into repository values (1, '" ROOT_ONE "', '" UUID_ONE "'); "
    "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
@@ -95,25 +99,38 @@ static const char * const data_loading_sql[] = {
    "insert into base_node values ("
    "  8, 1, 'G', 2, 'G-alt', 1, 'normal', 'file', "
    "  1, '$sha1$" SHA1_1 "', 15, "
-   "  5, " TIME_2s ", '" AUTHOR_2 "', null, null, null, '()', null); "
+   "  2, " TIME_2s ", '" AUTHOR_2 "', null, null, null, '()', null); "
    " "
    )
 };
 
 
 static svn_error_t *
-create_fake_wc(apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
 {
+  const char *dirpath = svn_dirent_join_many(scratch_pool,
+                                             "fake-wc", subdir, ".svn", NULL);
+  const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
   svn_sqlite__db_t *sdb;
 
-  SVN_ERR(svn_io_make_dir_recursively("fake-wc/.svn", scratch_pool));
-  svn_error_clear(svn_io_remove_file("fake-wc/.svn/wc.db", scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, "fake-wc/.svn/wc.db",
+  SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
+  svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
+  SVN_ERR(svn_sqlite__open(&sdb, dbpath,
                            svn_sqlite__mode_rwcreate, NULL,
                            SVN_WC__VERSION_EXPERIMENTAL, data_loading_sql,
                            scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+
+static void
+set_prop(apr_hash_t *props, const char *name, const char *value,
+         apr_pool_t *result_pool)
+{
+  const svn_string_t *propval = svn_string_create(value, result_pool);
+
+  apr_hash_set(props, name, APR_HASH_KEY_STRING, propval);
 }
 
 
@@ -134,7 +151,7 @@ test_getting_info(const char **msg,
   apr_time_t changed_date;
   const char *changed_author;
   svn_depth_t depth;
-  const svn_checksum_t *checksum;
+  svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
   svn_error_t *err;
@@ -143,8 +160,10 @@ test_getting_info(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(create_fake_wc(pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "fake-wc", pool));
+  SVN_ERR(create_fake_wc("test_getting_info", pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  "fake-wc/test_getting_info",
+                                  pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -256,7 +275,7 @@ test_getting_info(const char **msg,
   SVN_ERR_ASSERT(strcmp(repos_relpath, "G-alt") == 0);
   SVN_ERR_ASSERT(strcmp(repos_root_url, ROOT_TWO) == 0);
   SVN_ERR_ASSERT(strcmp(repos_uuid, UUID_TWO) == 0);
-  SVN_ERR_ASSERT(changed_rev == 5);
+  SVN_ERR_ASSERT(changed_rev == 2);
   SVN_ERR_ASSERT(changed_date == TIME_2a);
   SVN_ERR_ASSERT(strcmp(changed_author, AUTHOR_2) == 0);
 
@@ -275,9 +294,174 @@ test_getting_info(const char **msg,
 }
 
 
+static svn_error_t *
+validate_node(svn_wc__db_t *db,
+              const char *local_abspath,
+              const char *relpath,
+              svn_wc__db_kind_t expected_kind,
+              svn_wc__db_status_t expected_status,
+              apr_pool_t *scratch_pool)
+{
+  const char *path = svn_dirent_join(local_abspath, relpath, scratch_pool);
+  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
+#ifdef WHEN_GET_PROPS_WORKS
+  apr_hash_t *props;
+#endif
+
+  SVN_ERR(svn_wc__db_base_get_info(
+            &kind, &status, NULL,
+            NULL, NULL, NULL,
+            NULL, NULL, NULL,
+            NULL, NULL, NULL,
+            db, path,
+            scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(kind == expected_kind);
+  SVN_ERR_ASSERT(status == expected_status);
+
+#ifdef WHEN_GET_PROPS_WORKS
+  SVN_ERR(svn_wc__db_base_get_props(&props, db, path,
+                                    scratch_pool, scratch_pool));
+
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_ERR_ASSERT(value != NULL && strcmp(value, "v1") == 0);
+
+  value = apr_hash_get(props, "for-file", APR_HASH_KEY_STRING);
+  SVN_ERR_ASSERT(value != NULL && strcmp(value, relpath) == 0);
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_inserting_nodes(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_checksum_t *checksum;
+  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+  apr_hash_t *props;
+  const apr_array_header_t *children;
+
+  *msg = "insert different nodes into wc.db";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_fake_wc("test_inserting_nodes", pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  "fake-wc/test_inserting_nodes",
+                                  pool));
+
+  props = apr_hash_make(pool);
+  set_prop(props, "p1", "v1", pool);
+
+  children = svn_cstring_split("N-a N-b N-c", " ", FALSE, pool);
+
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, MD5_1, pool));
+
+  /* Create a new directory and several child nodes. */
+  set_prop(props, "for-file", "N", pool);
+  SVN_ERR(svn_wc__db_base_add_directory(
+            db, svn_dirent_join(local_abspath, "N", pool),
+            "N", ROOT_ONE, UUID_ONE, 3,
+            props,
+            1, TIME_1a, AUTHOR_1,
+            children, svn_depth_infinity,
+            pool));
+
+  /* Replace an incomplete node with a file node. */
+  set_prop(props, "for-file", "N/N-a", pool);
+  SVN_ERR(svn_wc__db_base_add_file(
+            db, svn_dirent_join(local_abspath, "N/N-a", pool),
+            "N/N-a", ROOT_ONE, UUID_ONE, 3,
+            props,
+            1, TIME_1a, AUTHOR_1,
+            checksum, 10,
+            pool));
+
+  /* Create a new symlink node. */
+  set_prop(props, "for-file", "O", pool);
+  SVN_ERR(svn_wc__db_base_add_symlink(
+            db, svn_dirent_join(local_abspath, "O", pool),
+            "O", ROOT_ONE, UUID_ONE, 3,
+            props,
+            1, TIME_1a, AUTHOR_1,
+            "O-target",
+            pool));
+
+  /* Replace an incomplete node with an absent file node. */
+  set_prop(props, "for-file", "N/N-b", pool);
+  SVN_ERR(svn_wc__db_base_add_absent_node(
+            db, svn_dirent_join(local_abspath, "N/N-b", pool),
+            "N/N-b", ROOT_ONE, UUID_ONE, 3,
+            svn_wc__db_kind_file, svn_wc__db_status_absent,
+            pool));
+
+  /* Create a new excluded directory node. */
+  set_prop(props, "for-file", "P", pool);
+  SVN_ERR(svn_wc__db_base_add_absent_node(
+            db, svn_dirent_join(local_abspath, "P", pool),
+            "P", ROOT_ONE, UUID_ONE, 3,
+            svn_wc__db_kind_dir, svn_wc__db_status_excluded,
+            pool));
+
+  /* Create a new not-present symlink node. */
+  set_prop(props, "for-file", "Q", pool);
+  SVN_ERR(svn_wc__db_base_add_absent_node(
+            db, svn_dirent_join(local_abspath, "Q", pool),
+            "Q", ROOT_ONE, UUID_ONE, 3,
+            svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
+            pool));
+
+  /* Create a new absent unknown-kind node. */
+  set_prop(props, "for-file", "R", pool);
+  SVN_ERR(svn_wc__db_base_add_absent_node(
+            db, svn_dirent_join(local_abspath, "R", pool),
+            "R", ROOT_ONE, UUID_ONE, 3,
+            svn_wc__db_kind_unknown, svn_wc__db_status_absent,
+            pool));
+
+
+  /* Are all the nodes where we expect them to be? */
+  SVN_ERR(validate_node(db, local_abspath, "N",
+                        svn_wc__db_kind_dir, svn_wc__db_status_normal,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "N/N-a",
+                        svn_wc__db_kind_file, svn_wc__db_status_normal,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "N/N-b",
+                        svn_wc__db_kind_file, svn_wc__db_status_absent,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "N/N-c",
+                        svn_wc__db_kind_unknown, svn_wc__db_status_incomplete,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "O",
+                        svn_wc__db_kind_symlink, svn_wc__db_status_normal,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "P",
+                        svn_wc__db_kind_dir, svn_wc__db_status_excluded,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "Q",
+                        svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
+                        pool));
+  SVN_ERR(validate_node(db, local_abspath, "R",
+                        svn_wc__db_kind_unknown, svn_wc__db_status_absent,
+                        pool));
+
+  /* ### do we need to test any attributes of the node? */
+
+  /* ### yes: test the repos inheritance stuff (at least) */
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_getting_info),
+    SVN_TEST_PASS(test_inserting_nodes),
     SVN_TEST_NULL
   };
