@@ -44,12 +44,12 @@ typedef enum svn_sqlite__mode_e {
 svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt);
 
-/* Steps the given statement; raises an SVN error (and finalizes the
+/* Steps the given statement; raises an SVN error (and resets the
    statement) if it doesn't return SQLITE_ROW. */
 svn_error_t *
 svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 
-/* Steps the given statement; raises an SVN error (and finalizes the
+/* Steps the given statement; raises an SVN error (and resets the
    statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets
    *GOT_ROW to true iff it got SQLITE_ROW.
 */
@@ -106,6 +106,13 @@ svn_error_t *
 svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                     const char *text, apr_pool_t *result_pool);
 
+
+/* ---------------------------------------------------------------------
+
+   BINDING VALUES
+
+*/
+
 /* Bind values to arguments in STMT, according to FMT.  FMT may contain:
 
    Spec  Argument type       Item type
@@ -143,37 +150,89 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       const void *val,
                       apr_size_t len);
 
-/* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. */
+/* Bind a set of properties to the given slot. If PROPS is NULL, then no
+   binding will occur. PROPS will be stored as a serialized skel. */
+svn_error_t *
+svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
+                            int slot,
+                            const apr_hash_t *props,
+                            apr_pool_t *scratch_pool);
+
+/* Bind a checksum's value to the given slot. If CHECKSUM is NULL, then no
+   binding will occur. */
+svn_error_t *
+svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
+                          int slot,
+                          const svn_checksum_t *checksum,
+                          apr_pool_t *scratch_pool);
+
+
+/* ---------------------------------------------------------------------
+
+   FETCHING VALUES
+
+*/
+
+/* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. The return
+   value will be NULL if the column is null. */
 const void *
 svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len);
 
-/* Wrapper around sqlite3_column_text.
-   If RESULT_POOL is not NULL, allocate the return value in it.  Otherwise, the
-   value will become invalid on the next invocation of svn_sqlite__column_* */
+/* Wrapper around sqlite3_column_text. If the column is null, then the
+   return value will be NULL. If RESULT_POOL is not NULL, allocate the
+   return value (if any) in it. Otherwise, the value will become invalid
+   on the next invocation of svn_sqlite__column_* */
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
                         apr_pool_t *result_pool);
 
-/* Wrapper around sqlite3_column_int64. */
+/* Wrapper around sqlite3_column_int64. If the column is null, then the
+   return value will be SVN_INVALID_REVNUM. */
 svn_revnum_t
 svn_sqlite__column_revnum(svn_sqlite__stmt_t *stmt, int column);
 
-/* Wrapper around sqlite3_column_int64. */
+/* Wrapper around sqlite3_column_int64. If the column is null, then the
+   return value will be FALSE. */
 svn_boolean_t
 svn_sqlite__column_boolean(svn_sqlite__stmt_t *stmt, int column);
 
-/* Wrapper around sqlite3_column_int. */
+/* Wrapper around sqlite3_column_int. If the column is null, then the
+   return value will be 0. */
 int
 svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column);
 
-/* Wrapper around sqlite3_column_int. */
+/* Wrapper around sqlite3_column_int64. If the column is null, then the
+   return value will be 0. */
 apr_int64_t
 svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column);
 
-/* Return TRUE if the result of selecting the column is NULL,
+/* Return the column as a hash of const char * => const svn_string_t *.
+   If the column is null, then NULL will be stored into *PROPS. The
+   results will be allocated in RESULT_POOL, and any temporary allocations
+   will be made in SCRATCH_POOL. */
+svn_error_t *
+svn_sqlite__column_properties(apr_hash_t **props,
+                              svn_sqlite__stmt_t *stmt,
+                              int column,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Return the column as a checksum. If the column is null, then NULL will
+   be stored into *CHECKSUM. The result will be allocated in RESULT_POOL. */
+svn_error_t *
+svn_sqlite__column_checksum(svn_checksum_t **checksum,
+                            svn_sqlite__stmt_t *stmt,
+                            int column,
+                            apr_pool_t *result_pool);
+
+/* Return TRUE if the result of selecting the column is null,
    FALSE otherwise */
 svn_boolean_t
 svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column);
+
+
+/* --------------------------------------------------------------------- */
+
 
 /* Error-handling wrapper around sqlite3_finalize. */
 svn_error_t *
@@ -182,6 +241,7 @@ svn_sqlite__finalize(svn_sqlite__stmt_t *stmt);
 /* Error-handling wrapper around sqlite3_reset. */
 svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
+
 
 /* Wrapper around sqlite transaction handling. */
 svn_error_t *
