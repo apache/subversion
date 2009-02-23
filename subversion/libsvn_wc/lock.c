@@ -1519,6 +1519,32 @@ svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
   adm_access->wc_format = format;
 }
 
+svn_error_t *
+svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *scratch_pool)
+{
+  adm_ensure_set(adm_access);
+
+  if (adm_access->shared->db == NULL)
+    {
+      const char *abspath;
+      svn_wc__db_openmode_t mode;
+
+      /* ### need to determine mode based on callers' needs. */
+      mode = svn_wc__db_openmode_default;
+
+      SVN_ERR(svn_dirent_get_absolute(&abspath, adm_access->path,
+                                      scratch_pool));
+      SVN_ERR(svn_wc__db_open(&adm_access->shared->db,
+                              mode,
+                              abspath,
+                              NULL /* ### need the config */,
+                              adm_access->pool, scratch_pool));
+    }
+
+  *db = adm_access->shared->db;
+  return SVN_NO_ERROR;
+}
 
 svn_boolean_t
 svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
