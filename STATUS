@@ -102,7 +102,7 @@ Candidate changes for 1.5.6:
      Enables using serf from behind Microsoft ISA proxy servers.
      See http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1191733
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
      
 Approved changes:
 =================
