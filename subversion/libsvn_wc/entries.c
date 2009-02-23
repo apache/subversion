@@ -108,20 +108,20 @@ static const char * const statements[] = {
 
   "select root, uuid from repository where id = ?1;",
 
-  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
+  "select wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
     "presence, revnum, kind, checksum, translated_size, "
     "changed_rev, changed_date, changed_author, depth, last_mod_time, "
     "properties, incomplete_children "
   "from base_node;",
 
-  "select id, wc_id, local_relpath, parent_relpath, presence, kind, "
+  "select wc_id, local_relpath, parent_relpath, presence, kind, "
     "copyfrom_repos_id, "
     "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
     "translated_size, changed_rev, changed_date, changed_author, depth, "
     "last_mod_time, properties "
   "from working_node;",
 
-  "select id, wc_id, local_relpath, parent_relpath, properties, conflict_old, "
+  "select wc_id, local_relpath, parent_relpath, properties, conflict_old, "
      "conflict_new, "
      "conflict_working, prop_reject, changelist, text_mod, "
      "tree_conflict_data "
@@ -147,7 +147,6 @@ static const char * const statements[] = {
 /* Temporary structures which mirror the tables in wc-metadata.sql.
    For detailed descriptions of each field, see that file. */
 typedef struct {
-  apr_int64_t id;
   apr_int64_t wc_id;
   const char *local_relpath;
   apr_int64_t repos_id;
@@ -168,7 +167,6 @@ typedef struct {
 } db_base_node_t;
 
 typedef struct {
-  apr_int64_t id;
   apr_int64_t wc_id;
   const char *local_relpath;
   const char *parent_relpath;
@@ -190,7 +188,6 @@ typedef struct {
 } db_working_node_t;
 
 typedef struct {
-  apr_int64_t id;
   apr_int64_t wc_id;
   const char *local_relpath;
   const char *parent_relpath;
@@ -704,56 +701,56 @@ fetch_base_nodes(apr_hash_t **nodes,
       db_base_node_t *base_node = apr_pcalloc(result_pool,
                                               sizeof(*base_node));
 
-      base_node->wc_id = svn_sqlite__column_int(stmt, 1);
-      base_node->local_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
+      base_node->wc_id = svn_sqlite__column_int(stmt, 0);
+      base_node->local_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
 
-      if (!svn_sqlite__column_is_null(stmt, 3))
+      if (!svn_sqlite__column_is_null(stmt, 2))
         {
-          base_node->repos_id = svn_sqlite__column_int(stmt, 3);
-          base_node->repos_relpath = svn_sqlite__column_text(stmt, 4,
+          base_node->repos_id = svn_sqlite__column_int(stmt, 2);
+          base_node->repos_relpath = svn_sqlite__column_text(stmt, 3,
                                                              result_pool);
         }
 
-      base_node->parent_relpath = svn_sqlite__column_text(stmt, 5,
+      base_node->parent_relpath = svn_sqlite__column_text(stmt, 4,
                                                           result_pool);
 
       /* ### presence */
 
-      base_node->revision = svn_sqlite__column_int(stmt, 7);
+      base_node->revision = svn_sqlite__column_int(stmt, 6);
 
       /* ### kind might be "symlink" or "unknown" */
       base_node->kind = svn_node_kind_from_word(
-                                    svn_sqlite__column_text(stmt, 8, NULL));
+                                    svn_sqlite__column_text(stmt, 7, NULL));
 
-      if (!svn_sqlite__column_is_null(stmt, 9))
+      if (!svn_sqlite__column_is_null(stmt, 8))
         {
-          const char *digest = svn_sqlite__column_text(stmt, 9, NULL);
+          const char *digest = svn_sqlite__column_text(stmt, 8, NULL);
           svn_checksum_kind_t kind = (digest[1] == 'm'
                                       ? svn_checksum_md5 : svn_checksum_sha1);
           SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, kind,
                                          digest + 6, result_pool));
         }
 
-      base_node->translated_size = svn_sqlite__column_int(stmt, 10);
+      base_node->translated_size = svn_sqlite__column_int(stmt, 9);
 
-      base_node->changed_rev = svn_sqlite__column_int(stmt, 11);
-      base_node->changed_date = svn_sqlite__column_int(stmt, 12);
-      base_node->changed_author = svn_sqlite__column_text(stmt, 13,
+      base_node->changed_rev = svn_sqlite__column_int(stmt, 10);
+      base_node->changed_date = svn_sqlite__column_int(stmt, 11);
+      base_node->changed_author = svn_sqlite__column_text(stmt, 12,
                                                           result_pool);
 
       base_node->depth = svn_depth_from_word(
-                                    svn_sqlite__column_text(stmt, 14, NULL));
-      base_node->last_mod_time = svn_sqlite__column_int(stmt, 15);
+                                    svn_sqlite__column_text(stmt, 13, NULL));
+      base_node->last_mod_time = svn_sqlite__column_int(stmt, 14);
 
-      if (!svn_sqlite__column_is_null(stmt, 16))
+      if (!svn_sqlite__column_is_null(stmt, 15))
         {
-          const void *val = svn_sqlite__column_blob(stmt, 16, &len);
+          const void *val = svn_sqlite__column_blob(stmt, 15, &len);
           SVN_ERR(svn_skel__parse_proplist(&base_node->properties,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
         }
 
-      base_node->incomplete_children = svn_sqlite__column_boolean(stmt, 17);
+      base_node->incomplete_children = svn_sqlite__column_boolean(stmt, 16);
 
       apr_hash_set(*nodes, base_node->local_relpath, APR_HASH_KEY_STRING,
                    base_node);
@@ -786,60 +783,60 @@ fetch_working_nodes(apr_hash_t **nodes,
                                                     sizeof(*working_node));
       const char *presence;
 
-      working_node->wc_id = svn_sqlite__column_int(stmt, 1);
-      working_node->local_relpath = svn_sqlite__column_text(stmt, 2,
+      working_node->wc_id = svn_sqlite__column_int(stmt, 0);
+      working_node->local_relpath = svn_sqlite__column_text(stmt, 1,
                                                             result_pool);
-      working_node->parent_relpath = svn_sqlite__column_text(stmt, 3,
+      working_node->parent_relpath = svn_sqlite__column_text(stmt, 2,
                                                              result_pool);
 
       /* ### only bother with a couple values for now */
-      presence = svn_sqlite__column_text(stmt, 4, NULL);
+      presence = svn_sqlite__column_text(stmt, 3, NULL);
       if (strcmp(presence, "not-present") == 0)
         working_node->presence = svn_wc__db_status_not_present;
       else
         working_node->presence = svn_wc__db_status_normal;
 
       working_node->kind = svn_node_kind_from_word(
-                                     svn_sqlite__column_text(stmt, 5, NULL));
+                                     svn_sqlite__column_text(stmt, 4, NULL));
 
-      if (!svn_sqlite__column_is_null(stmt, 6))
+      if (!svn_sqlite__column_is_null(stmt, 5))
         {
-          working_node->copyfrom_repos_id = svn_sqlite__column_int(stmt, 6);
-          working_node->copyfrom_repos_path = svn_sqlite__column_text(stmt, 7,
+          working_node->copyfrom_repos_id = svn_sqlite__column_int(stmt, 5);
+          working_node->copyfrom_repos_path = svn_sqlite__column_text(stmt, 6,
                                                                 result_pool);
-          working_node->copyfrom_revnum = svn_sqlite__column_revnum(stmt, 8);
+          working_node->copyfrom_revnum = svn_sqlite__column_revnum(stmt, 7);
         }
 
-      if (!svn_sqlite__column_is_null(stmt, 9))
-        working_node->moved_from = svn_sqlite__column_text(stmt, 9,
+      if (!svn_sqlite__column_is_null(stmt, 8))
+        working_node->moved_from = svn_sqlite__column_text(stmt, 8,
                                                            result_pool);
 
-      if (!svn_sqlite__column_is_null(stmt, 10))
-        working_node->moved_to = svn_sqlite__column_text(stmt, 10, result_pool);
+      if (!svn_sqlite__column_is_null(stmt, 9))
+        working_node->moved_to = svn_sqlite__column_text(stmt, 9, result_pool);
 
-      if (!svn_sqlite__column_is_null(stmt, 11))
+      if (!svn_sqlite__column_is_null(stmt, 10))
         {
-          const char *digest = svn_sqlite__column_text(stmt, 11, NULL);
+          const char *digest = svn_sqlite__column_text(stmt, 10, NULL);
           svn_checksum_kind_t kind = (digest[1] == 'm'
                                       ? svn_checksum_md5 : svn_checksum_sha1);
           SVN_ERR(svn_checksum_parse_hex(&working_node->checksum, kind,
                                          digest + 6, result_pool));
-          working_node->translated_size = svn_sqlite__column_int(stmt, 12);
+          working_node->translated_size = svn_sqlite__column_int(stmt, 11);
         }
 
-      if (!svn_sqlite__column_is_null(stmt, 13))
+      if (!svn_sqlite__column_is_null(stmt, 12))
         {
-          working_node->changed_rev = svn_sqlite__column_revnum(stmt, 13);
-          working_node->changed_date = svn_sqlite__column_int(stmt, 14);
-          working_node->changed_author = svn_sqlite__column_text(stmt, 15,
+          working_node->changed_rev = svn_sqlite__column_revnum(stmt, 12);
+          working_node->changed_date = svn_sqlite__column_int(stmt, 13);
+          working_node->changed_author = svn_sqlite__column_text(stmt, 14,
                                                                  result_pool);
         }
 
       working_node->depth = svn_depth_from_word(
-                                    svn_sqlite__column_text(stmt, 16, NULL));
-      working_node->last_mod_time = svn_sqlite__column_int(stmt, 17);
+                                    svn_sqlite__column_text(stmt, 15, NULL));
+      working_node->last_mod_time = svn_sqlite__column_int(stmt, 16);
 
-      val = svn_sqlite__column_blob(stmt, 18, &len);
+      val = svn_sqlite__column_blob(stmt, 17, &len);
       SVN_ERR(svn_skel__parse_proplist(&working_node->properties,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
@@ -872,46 +869,46 @@ fetch_actual_nodes(apr_hash_t **nodes,
       db_actual_node_t *actual_node = apr_pcalloc(result_pool,
                                                   sizeof(*actual_node));
 
-      actual_node->wc_id = svn_sqlite__column_int(stmt, 1);
-      actual_node->local_relpath = svn_sqlite__column_text(stmt, 2,
+      actual_node->wc_id = svn_sqlite__column_int(stmt, 0);
+      actual_node->local_relpath = svn_sqlite__column_text(stmt, 1,
                                                            result_pool);
-      actual_node->parent_relpath = svn_sqlite__column_text(stmt, 3,
+      actual_node->parent_relpath = svn_sqlite__column_text(stmt, 2,
                                                             result_pool);
 
-      if (!svn_sqlite__column_is_null(stmt, 4))
+      if (!svn_sqlite__column_is_null(stmt, 3))
         {
           apr_size_t len;
           const void *val;
 
-          val = svn_sqlite__column_blob(stmt, 4, &len);
+          val = svn_sqlite__column_blob(stmt, 3, &len);
           SVN_ERR(svn_skel__parse_proplist(&actual_node->properties,
                                            svn_skel__parse(val, len,
                                                            scratch_pool),
                                            result_pool));
         }
 
-      if (!svn_sqlite__column_is_null(stmt, 5))
+      if (!svn_sqlite__column_is_null(stmt, 4))
         {
-          actual_node->conflict_old = svn_sqlite__column_text(stmt, 5,
+          actual_node->conflict_old = svn_sqlite__column_text(stmt, 4,
                                                               result_pool);
-          actual_node->conflict_new = svn_sqlite__column_text(stmt, 6,
+          actual_node->conflict_new = svn_sqlite__column_text(stmt, 5,
                                                               result_pool);
-          actual_node->conflict_working = svn_sqlite__column_text(stmt, 7,
+          actual_node->conflict_working = svn_sqlite__column_text(stmt, 6,
                                                                   result_pool);
         }
 
-      if (!svn_sqlite__column_is_null(stmt, 8))
-        actual_node->prop_reject = svn_sqlite__column_text(stmt, 8,
+      if (!svn_sqlite__column_is_null(stmt, 7))
+        actual_node->prop_reject = svn_sqlite__column_text(stmt, 7,
                                                            result_pool);
 
-      if (!svn_sqlite__column_is_null(stmt, 9))
-        actual_node->changelist = svn_sqlite__column_text(stmt, 9,
+      if (!svn_sqlite__column_is_null(stmt, 8))
+        actual_node->changelist = svn_sqlite__column_text(stmt, 8,
                                                           result_pool);
 
-      /* ### column 10 is text_mod */
+      /* ### column 9 is text_mod */
 
-      if (!svn_sqlite__column_is_null(stmt, 11))
-        actual_node->tree_conflict_data = svn_sqlite__column_text(stmt, 11,
+      if (!svn_sqlite__column_is_null(stmt, 10))
+        actual_node->tree_conflict_data = svn_sqlite__column_text(stmt, 10,
                                                                   result_pool);
 
       apr_hash_set(*nodes, actual_node->local_relpath, APR_HASH_KEY_STRING,

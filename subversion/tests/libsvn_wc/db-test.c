@@ -62,42 +62,47 @@ static const char * const data_loading_sql[] = {
   (
    /* Load the table and index definitions. */
    WC_METADATA_SQL
-
-   /* Load our test data. */
    " "
+
+   /* Load our test data.
+
+      Note: do not use named-column insertions. This allows us to test
+      the column count in the schema matches our expectation here. */
+
    "insert into repository values (1, '" ROOT_ONE "', '" UUID_ONE "'); "
    "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
    "insert into wcroot values (1, null); "
+
    "insert into base_node values ("
-   "  1, 1, '', 1, '', null, 'normal', 'dir', "
+   "  1, '', 1, '', null, 'normal', 'dir', "
    "  1, null, null, "
    "  1, " TIME_1s ", '" AUTHOR_1 "', 'infinity', null, null, '()', 0); "
    "insert into base_node values ("
-   "  2, 1, 'A', null, null, 1, 'normal', 'file', "
+   "  1, 'A', null, null, '', 'normal', 'file', "
    "  1, '$md5 $" MD5_1 "', 10, "
    "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null); "
    "insert into base_node values ("
-   "  3, 1, 'B', null, null, 1, 'excluded', 'symlink', "
+   "  1, 'B', null, null, '', 'excluded', 'symlink', "
    "  null, null, null, "
    "  null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
-   "  4, 1, 'C', null, null, 1, 'absent', 'unknown', "
+   "  1, 'C', null, null, '', 'absent', 'unknown', "
    "  null, null, null, "
    "  null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
-   "  5, 1, 'D', null, null, 1, 'not-present', 'unknown', "
+   "  1, 'D', null, null, '', 'not-present', 'unknown', "
    "  null, null, null, "
    "  null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
-   "  6, 1, 'E', null, null, 1, 'incomplete', 'unknown', "
+   "  1, 'E', null, null, '', 'incomplete', 'unknown', "
    "  null, null, null, "
    "  null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
-   "  7, 1, 'F', null, null, 1, 'normal', 'file', "
+   "  1, 'F', null, null, '', 'normal', 'file', "
    "  1, '$sha1$" SHA1_1 "', 15, "
    "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null); "
    "insert into base_node values ("
-   "  8, 1, 'G', 2, 'G-alt', 1, 'normal', 'file', "
+   "  1, 'G', 2, 'G-alt', '', 'normal', 'file', "
    "  1, '$sha1$" SHA1_1 "', 15, "
    "  2, " TIME_2s ", '" AUTHOR_2 "', null, null, null, '()', null); "
    " "

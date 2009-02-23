@@ -122,10 +122,9 @@ enum statement_keys {
 };
 
 static const char * const statements[] = {
-  "select id, wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
+  "select wc_id, local_relpath, repos_id, repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
-  "  changed_rev, changed_date, changed_author, depth, last_mod_time, "
-  "  properties, incomplete_children "
+  "  changed_rev, changed_date, changed_author, depth "
   "from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -424,7 +423,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
   /* ### is it faster to fetch fewer columns? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
 
-  while (1)
+  while (TRUE)
     {
       const char *basename;
       svn_boolean_t have_row;
@@ -450,18 +449,18 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
             svn_dirent_local_style(relpath, scratch_pool));
 
       /* Did we find some non-NULL repository columns? */
-      if (!svn_sqlite__column_is_null(stmt, 3))
+      if (!svn_sqlite__column_is_null(stmt, 2))
         {
           /* If one is non-NULL, then so should the other. */
-          SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 4));
+          SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 3));
 
           if (repos_id)
-            *repos_id = svn_sqlite__column_int64(stmt, 3);
+            *repos_id = svn_sqlite__column_int64(stmt, 2);
 
           /* Given the parent's relpath, append all the segments that
              we stripped as we scanned upwards. */
           if (repos_relpath)
-            *repos_relpath = svn_dirent_join(svn_sqlite__column_text(stmt, 4,
+            *repos_relpath = svn_dirent_join(svn_sqlite__column_text(stmt, 3,
                                                                      NULL),
                                              relpath_suffix,
                                              result_pool);
@@ -604,7 +603,6 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb)
   const insert_base_baton_t *pibb = baton;
   apr_pool_t *scratch_pool = pibb->scratch_pool;
   svn_sqlite__stmt_t *stmt;
-  apr_int64_t node_id;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pibb->wc_id, pibb->local_relpath));
@@ -1105,7 +1103,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
 
   if (have_row)
     {
-      const char *kind_str = svn_sqlite__column_text(stmt, 7, NULL);
+      const char *kind_str = svn_sqlite__column_text(stmt, 5, NULL);
       svn_wc__db_kind_t node_kind;
 
       SVN_ERR_ASSERT(kind_str != NULL);
@@ -1117,44 +1115,44 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
         }
       if (status)
         {
-          const char *presence = svn_sqlite__column_text(stmt, 6, NULL);
+          const char *presence = svn_sqlite__column_text(stmt, 4, NULL);
 
           SVN_ERR_ASSERT(presence != NULL);
           *status = word_to_presence(presence);
         }
       if (revision)
         {
-          *revision = svn_sqlite__column_revnum(stmt, 8);
+          *revision = svn_sqlite__column_revnum(stmt, 6);
         }
       if (repos_relpath)
         {
-          if (svn_sqlite__column_is_null(stmt, 4))
+          if (svn_sqlite__column_is_null(stmt, 3))
             inherit_repos = TRUE;
           else
-            *repos_relpath = svn_sqlite__column_text(stmt, 4, result_pool);
+            *repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
         }
       if (repos_root_url || repos_uuid)
         {
           /* Fetch repository information via REPOS_ID. */
-          if (svn_sqlite__column_is_null(stmt, 3))
+          if (svn_sqlite__column_is_null(stmt, 2))
             inherit_repos = TRUE;
           else
             err = fetch_repos_info(repos_root_url, repos_uuid, sdb,
-                                   svn_sqlite__column_int64(stmt, 3),
+                                   svn_sqlite__column_int64(stmt, 2),
                                    result_pool);
         }
       if (changed_rev)
         {
-          *changed_rev = svn_sqlite__column_revnum(stmt, 11);
+          *changed_rev = svn_sqlite__column_revnum(stmt, 9);
         }
       if (changed_date)
         {
-          *changed_date = svn_sqlite__column_int64(stmt, 12);
+          *changed_date = svn_sqlite__column_int64(stmt, 10);
         }
       if (changed_author)
         {
           /* Result may be NULL. */
-          *changed_author = svn_sqlite__column_text(stmt, 13, result_pool);
+          *changed_author = svn_sqlite__column_text(stmt, 11, result_pool);
         }
       if (depth)
         {
@@ -1162,7 +1160,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
             *depth = svn_depth_unknown;
           else
             {
-              const char *depth_str = svn_sqlite__column_text(stmt, 14, NULL);
+              const char *depth_str = svn_sqlite__column_text(stmt, 12, NULL);
 
               if (depth_str == NULL)
                 *depth = svn_depth_unknown;
@@ -1176,7 +1174,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
             *checksum = NULL;
           else
             {
-              err = svn_sqlite__column_checksum(checksum, stmt, 9,
+              err = svn_sqlite__column_checksum(checksum, stmt, 7,
                                                 result_pool);
               if (err != NULL)
                 err = svn_error_createf(
@@ -1187,15 +1185,11 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
         }
       if (translated_size)
         {
-          if (svn_sqlite__column_is_null(stmt, 10))
+          if (svn_sqlite__column_is_null(stmt, 8))
             *translated_size = SVN_INVALID_FILESIZE;
           else
-            *translated_size = svn_sqlite__column_int64(stmt, 10);
+            *translated_size = svn_sqlite__column_int64(stmt, 8);
         }
-
-      /* ### should we modify the SQL statement since we don't actually
-         ### use id, parent_relpath, last_mod_time, properties, and
-         ### incomplete_children ?? */
     }
   else
     {

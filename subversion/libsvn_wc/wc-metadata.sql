@@ -54,7 +54,7 @@ CREATE TABLE WCROOT (
 
   /* absolute path in the local filesystem.  NULL if storing metadata in
      the wcroot itself. */
-  local_abspath  TEXT
+  local_abspath  TEXT UNIQUE
   );
 
 CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
@@ -63,8 +63,6 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE BASE_NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
   /* specifies the location of this node in the local filesystem. wc_id
      implies an absolute path, and local_relpath is relative to that
      location (meaning it will be "" for the wcroot). */
@@ -126,10 +124,11 @@ CREATE TABLE BASE_NODE (
      been created [for this revision number]. Note: boolean value. */
   /* ### this will probably disappear in favor of incomplete child
      ### nodes */
-  incomplete_children  INTEGER
+  incomplete_children  INTEGER,
+
+  PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
 CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
@@ -156,8 +155,6 @@ CREATE TABLE PRISTINE (
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE WORKING_NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT, 
-
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
@@ -233,18 +230,17 @@ CREATE TABLE WORKING_NODE (
 
   /* serialized skel of this node's properties. could be NULL if we
      have no information about the properties (a non-present node). */
-  properties  BLOB
+  properties  BLOB,
+
+  PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
 CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE ACTUAL_NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
@@ -272,10 +268,11 @@ CREATE TABLE ACTUAL_NODE (
   text_mod  TEXT,
 
   /* if a directory, serialized data for all of tree conflicts therein. */
-  tree_conflict_data  TEXT
+  tree_conflict_data  TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE UNIQUE INDEX I_ACTUAL_PATH ON ACTUAL_NODE (wc_id, local_relpath);
 CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
 CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
