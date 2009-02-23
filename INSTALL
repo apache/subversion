@@ -43,7 +43,7 @@ I.    INTRODUCTION
 
       This document is written for people who intend to build
       Subversion from source code.  Normally, the only people who do
-      this are Subversion developers and package maintainers.  
+      this are Subversion developers and package maintainers.
 
       If neither of these labels fits you, we recommend you find an
       appropriate binary package of Subversion and install that.
@@ -211,8 +211,8 @@ I.    INTRODUCTION
         |     then upgrade your libapr to 1.X without rebuilding       |
         |     Subversion, things will break and segfault.              |
         |                                                              |
-        |   - if your Subversion server libraries are linked to one    | 
-        |     version of APR, but your Apache server is linked to a    | 
+        |   - if your Subversion server libraries are linked to one    |
+        |     version of APR, but your Apache server is linked to a    |
         |     different version, things will break and segfault.       |
         |                                                              |
         | Subversion distribution dependencies:                        |
@@ -509,7 +509,7 @@ I.    INTRODUCTION
         * Use an SQLite amalgamation file.
         * Specify an SQLite installation to use.
         * Let Subversion find an installed SQLite.
-      
+
       To use an SQLite-provided amalgamation, just drop sqlite3.c into
       Subversion's sqlite-amalgamation/ directory, or point to it with the
       --with-sqlite configure option.  This file also ships with the Subversion
@@ -561,6 +561,18 @@ I.    INTRODUCTION
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
       GLib are also required. If you want to build support for GNOME Keyring,
       then pass the '--with-gnome-keyring' option to `configure`.
+
+
+      20. Ctypesgen  (OPTIONAL)
+
+      Ctypesgen is Python wrapper generator for ctypes. It is used to generate
+      a part of Subversion Ctypes Python bindings (CSVN). If you want to build
+      CSVN, then pass the '--with-ctypesgen' option to `configure`. If ctypesgen.py
+      is installed in a non-standard place, then use:
+
+          --with-ctypesgen=/path/to/ctypesgen.py
+
+      For more information on CSVN, see subversion/bindings/ctypes-python/README.
 
 
   D. Documentation
@@ -801,7 +813,7 @@ II.   INSTALLATION
         If you are using Visual Studio 6, you need the latest SDK which
         is compatible with VC6, which is the one from february 2003.
         You can get it from MSDN:
-        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm        
+        http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
       * Python 2.4 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
@@ -814,7 +826,7 @@ II.   INSTALLATION
         for building the client components.  Neon is included in the zip file
         distribution.  (0.25.0+ compiles, but does not properly support all
         HTTP auth types.)
-      * Apache apr, apr-util, and optionally apr-iconv libraries, version 
+      * Apache apr, apr-util, and optionally apr-iconv libraries, version
         0.9.12 or later. Included in both the Subversion dependencies ZIP file
         and the Apache 2 source zip.  If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3 libraries
@@ -887,7 +899,7 @@ II.   INSTALLATION
 
       * Install Visual Studio Environment. You either have to tell the
         installer to register environment variables or run VCVARS32.BAT
-        before building anything.  If you are using a newer Visual Studio, 
+        before building anything.  If you are using a newer Visual Studio,
         use the 'Visual Studio 200x Command Prompt' on the Start menu.
       * Install and register a recent Windows Core SDK if you are using
         Visual Studio 6. This is a quote from the Microsoft February 2003
@@ -1181,8 +1193,8 @@ III.  BUILDING A SUBVERSION SERVER
 
 
         ****************************************************************
-        **    IMPORTANT ISSUE ABOUT APACHE VERSIONS:  READ THIS.      **     
-        **                                                            ** 
+        **    IMPORTANT ISSUE ABOUT APACHE VERSIONS:  READ THIS.      **
+        **                                                            **
         ****************************************************************
         |                                                              |
         | First, be sure to read the APR version warning box, back in  |
@@ -1197,7 +1209,7 @@ III.  BUILDING A SUBVERSION SERVER
         | and Apache are using the same version of APR.  If you don't, |
         | things will segfault and break.                              |
         |______________________________________________________________|
-                                                                        
+
 
       If you have questions about the Apache httpd 2.0 build, please consult
       the httpd install documentation:
@@ -1471,8 +1483,8 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
 V.    PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
       ========================================================
-  
-      For Python, Perl and Ruby bindings, see the file     
+
+      For Python, Perl and Ruby bindings, see the file
 
           ./subversion/bindings/swig/INSTALL
 
