@@ -28,6 +28,29 @@ Candidate changes:
      +1: hwright, rhuijben
      +0: gstein (ie. only if a new tarball is constructed)
 
+ * r36027, r36035
+   Store 64-bit values pulled from the rep cache database.
+   Justification:
+     Possibly data corruption on repositories with shard reps in large rev
+     files.
+   Notes:
+     r36027 addes the proper API, and r36035 uses it.
+   Votes:
+     +1: hwright, rhuijben
+     +0: gstein (ie. only if a new tarball is constructed)
+     
+ * ^/branches/1.6.x-dirent-basename
+   Drop svn_dirent_basename, svn_dirent_split, svn_uri_basename, svn_uri_split
+   from the public api to allow redefining its behavior for 1.7. 
+   The branch updates the single caller of this new api to use the 1.5 api.   
+   Justification:
+     The current dirent_basename api design makes it very hard to resolve
+     issues like #2556 ('cd e:\; svn update e:\' fails).
+   Votes:
+     +1: rhuijben, gstein
+     
+Candidate if a new tarball is constructed (otherwise for 1.6.1):
+
  * r35985, r36017
    Resolve serf NULL dereference from an invalid switch operation. r36017
    makes sure switch_tests.py 10 still fails after this crash. (35985 doesn't
@@ -47,30 +70,17 @@ Candidate changes:
    Votes:
      +1: rhuijben
      +1: gstein (for 1.6.1)
-
- * r36027, r36035
-   Store 64-bit values pulled from the rep cache database.
-   Justification:
-     Possibly data corruption on repositories with shard reps in large rev
-     files.
-   Notes:
-     r36027 addes the proper API, and r36035 uses it.
-   Votes:
-     +1: hwright, rhuijben
-     +0: gstein (ie. only if a new tarball is constructed)
      
- * <needs-branch> (1.6.0 only)
-   I would like to pull svn_dirent_basename and svn_dirent_split from the
-   public api to allow redefining its behavior for 1.7. 
-   (Currently only subversion/libsvn_client/add.c uses one of these functions,
-    this caller can use svn_path_basename; or it can use this function as
-    internal function)
+ * r36049
+   Resolve the SVN_ERR_MALFUNCTION() reproducable on Windows with
+     svn ci "C:/Program FIles" C:/Windows
+   by handling parent directories correctly
    Justification:
-     The current dirent_basename api design makes it very hard to resolve
-     issues like #2556 ('cd e:\; svn update e:\' fails).
+     This malfunction makes update_tests.py 32 abort on Windows. Which in turn
+     delays the Windows automated testrun until a user confirms.
+     (This doesn't fix this testcase; it just handles this part of the problem)
    Votes:
-     +1: rhuijben, gstein
-
+     +1: rhuijben
 
 Status of 1.6.1:
 ================
