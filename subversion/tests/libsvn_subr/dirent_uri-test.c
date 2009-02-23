@@ -109,6 +109,13 @@ test_uri_is_root(const char **msg,
     { "X:/",           FALSE },
     { "X:foo",         FALSE },
     { "X:",            FALSE },
+    { "file://",       TRUE },
+    { "file://a",      FALSE },
+    { "file:///a",     FALSE },
+    { "file:///A:/",   FALSE },
+    { "http://server", TRUE },
+    { "http://server/file", FALSE },
+    { "http://",       TRUE },
   };
 
   *msg = "test svn_uri_is_root";
@@ -462,9 +469,14 @@ test_uri_basename(const char **msg,
     const char *path;
     const char *result;
   } tests[] = {
+    { "/", "" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://s/file", "file" },
     { "http://s/dir/file", "file" },
-    { "http://s", "s" }, /* ### Current behavior */
+    { "http://s", "" },
+    { "file://", "" },
+    { "file:///a", "a" },
+    { "file:///a/b", "b" },
   };
 
   *msg = "test svn_uri_basename";
@@ -558,9 +570,13 @@ test_uri_dirname(const char **msg,
     const char *path;
     const char *result;
   } tests[] = {
+    { "/", "/" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://server/dir", "http://server" },
     { "http://server/dir/file", "http://server/dir" },
-    { "http://server", "http:/" }, /* ### Current behavior */
+    { "http://server", "http://server" },
+    { "file:///a/b", "file:///a" },
+    { "file:///a", "file://" },
   };
 
   *msg = "test svn_dirent_dirname";
@@ -1029,7 +1045,11 @@ test_uri_split(const char **msg,
   static const char * const paths[][3] = {
     { "http://server/foo/bar", "http://server/foo", "bar" },
     { "http://server/dir/foo/bar", "http://server/dir/foo", "bar" },
+    { "http://server/foo", "http://server", "foo" },
+    { "http://server", "http://server", "" },
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
+    { "file://", "file://", "" },
+    { "file:///a", "file://", "a" }
   };
 
   *msg = "test test_uri_split";

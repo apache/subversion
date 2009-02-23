@@ -169,6 +169,38 @@ dirent_previous_segment(const char *dirent,
     return len;
 }
 
+/* Calculates the length occupied by the schema defined root of URI */
+static apr_size_t
+uri_schema_root_length(const char *uri, apr_size_t len)
+{
+  apr_size_t i;
+
+  for (i = 0; i < len; i++)
+    {
+      if (uri[i] == '/')
+        {
+          if (i > 0 && uri[i-1] == ':' && i < len-1 && uri[i+1] == '/')
+            {
+              /* We have an absolute uri */
+              if (i == 5 && strncmp("file", uri, 4) == 0)
+                return 7; /* file:// */
+              else
+                {
+                  for (i += 2; i < len; i++)
+                    if (uri[i] == '/')
+                      return i;
+
+                  return len; /* Only a hostname is found */
+                }
+            }
+          else
+            return 0;
+        }
+    }
+
+  return 0;
+}
+
 /* Return the length of substring necessary to encompass the entire
  * previous uri segment in URI, which should be a LEN byte string.
  *
@@ -180,19 +212,18 @@ static apr_size_t
 uri_previous_segment(const char *uri,
                      apr_size_t len)
 {
+  apr_size_t root_length;
   /* ### Still the old path segment code, should start checking scheme specific format */
   if (len == 0)
     return 0;
 
+  root_length = uri_schema_root_length(uri, len);
+
   --len;
-  while (len > 0 && uri[len] != '/')
+  while (len > root_length && uri[len] != '/')
     --len;
 
-  /* check if the remaining segment including trailing '/' is a root dirent */
-  if (svn_uri_is_root(uri, len + 1))
-    return len + 1;
-  else
-    return len;
+  return len;
 }
 
 /* Return the canonicalized version of PATH, allocated in POOL.
@@ -701,8 +732,10 @@ svn_uri_is_root(const char *uri, apr_size_t len)
   /* directory is root if it's equal to '/' */
   if (len == 1 && uri[0] == '/')
     return TRUE;
+  else if (len == 0)
+    return FALSE;
 
-  return FALSE;
+  return (len == uri_schema_root_length(uri, len));
 }
 
 char *svn_dirent_join(const char *base,
@@ -945,7 +978,7 @@ svn_uri_basename(const char *uri, apr_pool_t *pool)
   assert(svn_uri_is_canonical(uri, pool));
 
   if (svn_uri_is_root(uri, len))
-    start = 0;
+    return apr_pstrmemdup(pool, "", 0);
   else
     {
       start = len;
