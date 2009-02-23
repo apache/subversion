@@ -234,10 +234,11 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
   err2 = svn_stream_close(to);
   if (err)
     {
-      /* ### it would be nice to compose the two errors in some way */
-      svn_error_clear(err2);  /* note: might be NULL */
+      if (err2)
+        svn_error_compose(err, err2);
       return err;
     }
+
   return err2;
 }
 
