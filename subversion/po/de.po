@@ -79,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-02-23 10:00+0100\n"
-"PO-Revision-Date: 2009-02-23 10:06+0100\n"
+"PO-Revision-Date: 2009-02-23 22:22+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -451,15 +451,15 @@ msgstr "Kann externen Dateiverweis nicht verschieben"
 msgid "Something's amiss with the wc sqlite database"
 msgstr ""
 
-#| msgid "Working copy is corrupt"
 #: ../include/svn_error_codes.h:469
 #, fuzzy
+#| msgid "Working copy is corrupt"
 msgid "The working copy is missing"
 msgstr "Arbeitskopie ist beschädigt"
 
-#| msgid "The specified transaction is not mutable"
 #: ../include/svn_error_codes.h:474
 #, fuzzy
+#| msgid "The specified transaction is not mutable"
 msgid "The specified node is not a symlink"
 msgstr "Die spezifizierte Transaktion ist nicht veränderlich"
 
@@ -658,9 +658,9 @@ msgstr "Dateisystem hat keinen solchen Knotenursprungseintrag"
 msgid "Filesystem upgrade is not supported"
 msgstr "Dateisystemaktualisierung wird nicht unterstützt"
 
-#| msgid "Filesystem has no such representation"
 #: ../include/svn_error_codes.h:695
 #, fuzzy
+#| msgid "Filesystem has no such representation"
 msgid "Filesystem has no such checksum-representation index record"
 msgstr "Dateisystem hat keine solche Darstellung"
 
@@ -1316,9 +1316,9 @@ msgstr "Fehler beim Aufräumen nach der Übertragung (Details folgen):"
 msgid "Are all the targets part of the same working copy?"
 msgstr "Sind alle Ziele Teil derselben Arbeitskopie?"
 
-#| msgid "Cannot non-recursively commit a directory deletion"
 #: ../libsvn_client/commit.c:1290
 #, fuzzy
+#| msgid "Cannot non-recursively commit a directory deletion"
 msgid ""
 "Cannot non-recursively commit a directory deletion of a directory with child "
 "nodes"
@@ -1345,9 +1345,9 @@ msgstr "Datei »%s« ist veraltet"
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "Übertragung abgebrochen: »%s« bleibt im Konflikt"
 
-#| msgid "Aborting commit: '%s' remains in conflict"
 #: ../libsvn_client/commit_util.c:344
 #, fuzzy, c-format
+#| msgid "Aborting commit: '%s' remains in conflict"
 msgid "Aborting commit: '%s' remains in tree-conflict"
 msgstr "Übertragung abgebrochen: »%s« bleibt im Konflikt"
 
@@ -1436,9 +1436,9 @@ msgstr ""
 msgid "Path '%s' is not a directory"
 msgstr "Pfad »%s« ist kein Verzeichnis"
 
-#| msgid "'%s' already exists and is not a directory"
 #: ../libsvn_client/copy.c:590 ../libsvn_client/copy.c:630
 #, fuzzy, c-format
+#| msgid "'%s' already exists and is not a directory"
 msgid "Path '%s' already exists, but is not a directory"
 msgstr "»%s« existiert bereits und ist kein Verzeichnis"
 
@@ -2169,10 +2169,10 @@ msgstr "Fehler beim Zerlegen der Vergleichsoptionen"
 msgid "Invalid argument '%s' in diff options"
 msgstr "Ungültiges Argument »%s« in Vergleichsoptionen"
 
-#| msgid "%b %d %H:%M"
 #. Order of date components can be different in different languages
 #: ../libsvn_diff/diff_file.c:1139
 #, fuzzy
+#| msgid "%b %d %H:%M"
 msgid "%a %b %e %H:%M:%S %Y"
 msgstr "%d. %b %H:%M"
 
@@ -2294,21 +2294,21 @@ msgstr "Schließe Änderungscursor"
 msgid "Only SHA1 checksums can be used as keys in the checksum-reps table.\n"
 msgstr ""
 
-#| msgid "No token given for path '%s' in filesystem '%s'"
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:130
 #, fuzzy, c-format
+#| msgid "No token given for path '%s' in filesystem '%s'"
 msgid "Representation key for checksum '%s' exists in filesystem '%s'."
 msgstr "Keine Marke für Pfad »%s« in Dateisystem »%s« angegeben"
 
-#| msgid "storing copy record"
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:137
 #, fuzzy
+#| msgid "storing copy record"
 msgid "storing checksum-reps record"
 msgstr "Speichere Kopiedatensatz"
 
-#| msgid "allocating new representation (getting next-key)"
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:181
 #, fuzzy
+#| msgid "allocating new representation (getting next-key)"
 msgid "allocating new representation reuse ID (getting 'next-key')"
 msgstr "Allokiere neuen Darstellungsschlüssel (hole »next-key«)"
 
@@ -2633,9 +2633,9 @@ msgstr ""
 "Kein Datensatz in der »node-origins«-Tabelle für Knoten-ID »%s« im "
 "Dateisystem »%s«"
 
-#| msgid "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
 #: ../libsvn_fs_base/err.c:167
 #, fuzzy, c-format
+#| msgid "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
 msgid "No record in 'checksum-reps' table for checksum '%s' in filesystem '%s'"
 msgstr ""
 "Kein Datensatz in der »node-origins«-Tabelle für Knoten-ID »%s« im "
@@ -2781,12 +2781,12 @@ msgstr ""
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
+#: ../libsvn_fs_base/reps-strings.c:917
+#, fuzzy, c-format
 #| msgid ""
 #| "Checksum mismatch on rep '%s':\n"
 #| "   expected:  %s\n"
 #| "     actual:  %s\n"
-#: ../libsvn_fs_base/reps-strings.c:917
-#, fuzzy, c-format
 msgid ""
 "MD5 checksum mismatch on rep '%s':\n"
 "   expected:  %s\n"
@@ -2796,12 +2796,12 @@ msgstr ""
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
+#: ../libsvn_fs_base/reps-strings.c:930
+#, fuzzy, c-format
 #| msgid ""
 #| "Checksum mismatch on rep '%s':\n"
 #| "   expected:  %s\n"
 #| "     actual:  %s\n"
-#: ../libsvn_fs_base/reps-strings.c:930
-#, fuzzy, c-format
 msgid ""
 "SHA1 checksum mismatch on rep '%s':\n"
 "   expected:  %s\n"
@@ -3061,9 +3061,9 @@ msgstr "Modul zum Zugriff auf ein dateibasiertes (FSFS) Projektarchiv."
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Nicht unterstützte Dateisystem-Laderversion (%d) für fsfs"
 
-#| msgid "'%s' does not exist in revision %ld"
 #: ../libsvn_fs_fs/fs_fs.c:263
 #, fuzzy, c-format
+#| msgid "'%s' does not exist in revision %ld"
 msgid "Revision file '%s' does not exist, and r%ld is not packed"
 msgstr "»%s« existiert nicht in Revision %ld"
 
@@ -3394,9 +3394,9 @@ msgstr "Sperren schlug fehl: eine neuere Version von »%s« existiert"
 msgid "Only SHA1 checksums can be used as keys in the rep_cache table.\n"
 msgstr ""
 
-#| msgid "Node origin for '%s' exists in filesystem '%s' with a different value (%s) than what we were about to store (%s)"
 #: ../libsvn_fs_fs/rep-cache.c:150
 #, fuzzy, c-format
+#| msgid "Node origin for '%s' exists in filesystem '%s' with a different value (%s) than what we were about to store (%s)"
 msgid ""
 "Representation key for checksum '%%s' exists in filesystem '%%s', with "
 "different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store(%%ld,%"
@@ -3451,9 +3451,9 @@ msgstr "Pfad »%s« existiert nicht in Revision %ld"
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "»%s« in Revision %ld hat keinen Bezug zur Arbeitskopie"
 
-#| msgid "Invalid end revision %ld"
 #: ../libsvn_ra/compat.c:838 ../libsvn_ra/ra_loader.c:1059
 #, fuzzy, c-format
+#| msgid "Invalid end revision %ld"
 msgid "Invalid peg revision %ld"
 msgstr "Ungültige Endrevision %ld"
 
@@ -3463,9 +3463,9 @@ msgstr "Ungültige Endrevision %ld"
 msgid "Invalid end revision %ld"
 msgstr "Ungültige Endrevision %ld"
 
-#| msgid "Start revision must precede end revision"
 #: ../libsvn_ra/compat.c:844 ../libsvn_ra/ra_loader.c:1065
 #, fuzzy
+#| msgid "Start revision must precede end revision"
 msgid "Peg revision must precede end revision"
 msgstr "Startrevision muss vor der Endrevision liegen"
 
@@ -3753,10 +3753,10 @@ msgstr "Server unterstützt keine datumsbasierten Operationen"
 msgid "Invalid server response to dated-rev request"
 msgstr "Ungültige Antwort des Servers auf datierte Revisionsanfrage"
 
-#| msgid "'get-file-revs' REPORT not implemented"
 #: ../libsvn_ra_neon/get_deleted_rev.c:165
 #: ../libsvn_ra_serf/get_deleted_rev.c:233
 #, fuzzy
+#| msgid "'get-file-revs' REPORT not implemented"
 msgid "'get-deleted-rev' REPORT not implemented"
 msgstr "»get-file-revs« REPORT nicht implementiert"
 
@@ -3864,9 +3864,9 @@ msgstr "Eine MERGE-Antwort für »%s« ist kein Kind des Ziels (»%s«)"
 msgid "The MERGE property response had an error status"
 msgstr "Die MERGE-Eigenschaftsantwort hatte einen Fehlerstatus"
 
-#| msgid "The %s request returned invalid XML in the response: %s (%s)"
 #: ../libsvn_ra_neon/options.c:275
 #, fuzzy, c-format
+#| msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgid "The OPTIONS request returned invalid XML in the response: %s (%s)"
 msgstr "Die Anfrage %s gab in der Antwort ungültiges XML zurück: %s (%s)"
 
@@ -4151,9 +4151,9 @@ msgstr "Fehler beim Schreiben der aktualisierten Datei"
 msgid "%s of '%s': %d %s (%s://%s)"
 msgstr "%s von »%s«: %d %s (%s://%s)"
 
-#| msgid "Object is not a transaction root"
 #: ../libsvn_ra_serf/commit.c:1068
 #, fuzzy, c-format
+#| msgid "Object is not a transaction root"
 msgid "POST request did not return transaction information"
 msgstr "Objekt ist keine Transaktionsbasis"
 
@@ -4194,9 +4194,9 @@ msgstr "Fehlerhafte URL für Projektarchiv"
 msgid "Unlock request failed: %d %s"
 msgstr "Sperrfreigabe gescheitert: %d %s"
 
-#| msgid "The OPTIONS response did not include the requested version-name value"
 #: ../libsvn_ra_serf/property.c:997
 #, fuzzy
+#| msgid "The OPTIONS response did not include the requested version-name value"
 msgid "The OPTIONS response did not include the youngest revision"
 msgstr ""
 "Die OPTIONS-Antwort enthielt nicht den angeforderten Wert »version-name«"
@@ -4491,9 +4491,9 @@ msgstr "Server unterstützt das Kommando »replay-range« nicht"
 msgid "Expected 'revprops', found '%s'"
 msgstr "Erwartete »revprops«, fand »%s«"
 
-#| msgid "'get-file-revs' not implemented"
 #: ../libsvn_ra_svn/client.c:2285
 #, fuzzy
+#| msgid "'get-file-revs' not implemented"
 msgid "'get-deleted-rev' not implemented"
 msgstr "»get-file-revs« nicht implementiert"
 
@@ -4603,9 +4603,9 @@ msgstr "Kann nicht in Verbindung schreiben"
 msgid "Can't get socket timeout"
 msgstr "Kann Socket-Timeout nicht erhalten"
 
-#| msgid "File '%s' is out of date"
 #: ../libsvn_repos/commit.c:129
 #, fuzzy, c-format
+#| msgid "File '%s' is out of date"
 msgid "'%s' is out of date"
 msgstr "Datei »%s« ist veraltet"
 
@@ -4701,15 +4701,15 @@ msgstr ""
 "Das Speichern der speziellen Eigenschaft »%s« wird vom Projektarchiv "
 "verhindert und könnte auf einen Bug in Ihrem Client hindeuten"
 
-#| msgid "Cannot accept log message because it is not encoded in UTF-8"
 #: ../libsvn_repos/fs-wrap.c:181
 #, fuzzy, c-format
+#| msgid "Cannot accept log message because it is not encoded in UTF-8"
 msgid "Cannot accept '%s' property because it is not encoded in UTF-8"
 msgstr "Kann Logmeldung nicht akzeptieren, da sie nicht in UTF-8 kodiert ist"
 
-#| msgid "Cannot accept non-LF line endings in log message"
 #: ../libsvn_repos/fs-wrap.c:191
 #, fuzzy, c-format
+#| msgid "Cannot accept non-LF line endings in log message"
 msgid "Cannot accept non-LF line endings in '%s' property"
 msgstr ""
 "Kann nicht-»LF« (LF = Unix-artige) Zeilenumbrüche in Logmeldung nicht "
@@ -5001,9 +5001,9 @@ msgstr "Arbeitskopie Pfad »%s« existiert nicht im Projektarchiv"
 msgid "Not authorized to open root of edit operation"
 msgstr "Keine Berechtigung die Basis der Änderung zu öffnen"
 
-#| msgid "Target path does not exist"
 #: ../libsvn_repos/reporter.c:1170
 #, fuzzy, c-format
+#| msgid "Target path does not exist"
 msgid "Target path '%s' does not exist"
 msgstr "Zielpfad existiert nicht"
 
@@ -5327,9 +5327,9 @@ msgstr "In Datei »%s«, Zeile %d: Assert-Anweisung schlug fehl (%s)"
 msgid "In file '%s' line %d: internal malfunction"
 msgstr "In Datei »%s«, Zeile %d: interne Fehlfunktion"
 
-#| msgid "Error converting depth from locale to UTF8"
 #: ../libsvn_subr/io.c:160
 #, fuzzy, c-format
+#| msgid "Error converting depth from locale to UTF8"
 msgid "Error converting entry in directory '%s' to UTF-8"
 msgstr "Fehler beim Konvertieren der Tiefe aus Locale nach UTF-8"
 
@@ -5654,15 +5654,15 @@ msgstr "Kann nicht in Datei »%s« schreiben"
 msgid "Can't write to stream"
 msgstr "Kann nicht in Datenstrom schreiben"
 
-#| msgid "Can't read file '%s'"
 #: ../libsvn_subr/io.c:2812
 #, fuzzy, c-format
+#| msgid "Can't read file '%s'"
 msgid "Can't truncate file '%s'"
 msgstr "Kann Datei »%s« nicht lesen"
 
-#| msgid "Can't read stream"
 #: ../libsvn_subr/io.c:2813
 #, fuzzy, c-format
+#| msgid "Can't read stream"
 msgid "Can't truncate stream"
 msgstr "Kann nicht aus Datenstrom lesen"
 
@@ -5777,9 +5777,9 @@ msgstr "Einlesen der Bereichsliste endete vor dem Zeilenumbruch"
 msgid "Could not find end of line in range list line in '%s'"
 msgstr "Konnte Zeilenende in Bereichslistenzeile in »%s« nicht finden"
 
-#| msgid "Parsing of overlapping revision ranges '%s' and '%s' is not supported"
 #: ../libsvn_subr/mergeinfo.c:540
 #, fuzzy, c-format
+#| msgid "Parsing of overlapping revision ranges '%s' and '%s' is not supported"
 msgid ""
 "Unable to parse overlapping revision ranges '%s' and '%s' with different "
 "inheritance types"
@@ -5876,13 +5876,13 @@ msgstr ""
 "   übersetzt %s, %s\n"
 "\n"
 
+#: ../libsvn_subr/opt.c:962
+#, fuzzy
 #| msgid ""
 #| "Copyright (C) 2000-2008 CollabNet.\n"
 #| "Subversion is open source software, see http://subversion.tigris.org/\n"
 #| "This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
 #| "\n"
-#: ../libsvn_subr/opt.c:962
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2009 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -6082,9 +6082,9 @@ msgstr ""
 "entweder auf »ja« oder »nein« setzen.\n"
 "-----------------------------------------------------------------------\n"
 
-#| msgid "Password for '%s': "
 #: ../libsvn_subr/prompt.c:516
 #, fuzzy, c-format
+#| msgid "Password for '%s': "
 msgid "Password for '%s' GNOME keyring: "
 msgstr "Passwort für »%s«: "
 
@@ -6315,9 +6315,9 @@ msgstr ""
 "nicht\n"
 "finden"
 
-#| msgid "Can't find parent directory's entry while trying to add '%s'"
 #: ../libsvn_wc/adm_ops.c:1440
 #, fuzzy, c-format
+#| msgid "Can't find parent directory's entry while trying to add '%s'"
 msgid "Can't create an entry with a reserved name while trying to add '%s'"
 msgstr ""
 "Kann Eintrag des Elternverzeichnisses während des Hinzufügens von »%s« "
@@ -6360,9 +6360,9 @@ msgstr ""
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "Unbekannte oder unerwartete Art für Pfad »%s«"
 
-#| msgid "Unknown or unversionable type for '%s'"
 #: ../libsvn_wc/adm_ops.c:2212
 #, fuzzy, c-format
+#| msgid "Unknown or unversionable type for '%s'"
 msgid "Cannot revert unversioned item '%s'"
 msgstr "Unbekannter oder unerwarteter Typ für »%s«"
 
@@ -6440,22 +6440,22 @@ msgstr ""
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Kann nach »%s« kopieren, da es zum Löschen vorgesehen ist"
 
-#| msgid "Cannot reintegrate into a working copy with a switched subtree"
 #: ../libsvn_wc/crop.c:208
 #, fuzzy
+#| msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgid "Can only crop a working copy with a restrictive depth"
 msgstr ""
 "Kann nicht zurück in eine Arbeitskopie mit umgestelltem Unterbaum integrieren"
 
-#| msgid "Can't open directory '%s'"
 #: ../libsvn_wc/crop.c:215
 #, fuzzy
+#| msgid "Can't open directory '%s'"
 msgid "Can only crop directories"
 msgstr "Kann Verzeichnis »%s« nicht öffnen"
 
-#| msgid "Cannot copy or move '%s': it is not in the repository yet; try committing first"
 #: ../libsvn_wc/crop.c:221
 #, fuzzy, c-format
+#| msgid "Cannot copy or move '%s': it is not in the repository yet; try committing first"
 msgid ""
 "Cannot crop '%s': it is going to be removed from repository. Try commit "
 "instead"
@@ -6463,21 +6463,21 @@ msgstr ""
 "Kann »%s« nicht kopieren oder verschieben, da es sich noch nicht im\n"
 "Projektarchiv befindet, versuchen Sie es zuerst zu übertragen"
 
-#| msgid "Can't read directory"
 #: ../libsvn_wc/crop.c:236
 #, fuzzy, c-format
+#| msgid "Can't read directory"
 msgid "Cannot exclude current directory"
 msgstr "Kann Verzeichnis nicht lesen"
 
-#| msgid "Can't read directory"
 #: ../libsvn_wc/crop.c:241
 #, fuzzy, c-format
+#| msgid "Can't read directory"
 msgid "Cannot exclude root directory"
 msgstr "Kann Verzeichnis nicht lesen"
 
-#| msgid "Cannot copy to '%s' as it is scheduled for deletion"
 #: ../libsvn_wc/crop.c:271
 #, fuzzy, c-format
+#| msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgid "Cannot crop '%s': it is a switched path"
 msgstr "Kann nach »%s« kopieren, da es zum Löschen vorgesehen ist"
 
@@ -6556,9 +6556,9 @@ msgstr "Eintrag »%s« hat einen ungültigen Plan"
 msgid "No such entry: '%s'"
 msgstr "Kein Eintrag: »%s«"
 
-#| msgid "Expected SQLite database not found: %s"
 #: ../libsvn_wc/entries.c:2640
 #, fuzzy, c-format
+#| msgid "Expected SQLite database not found: %s"
 msgid "Existing sqlite database found at '%s'"
 msgstr "Erwartete SQLite-Datenbank wurde nicht gefunden: %s"
 
@@ -6755,9 +6755,9 @@ msgstr "Fehler beim Bearbeiten des Befehls »%s« in »%s«"
 msgid "Couldn't open log"
 msgstr "Kann Log-Datei nicht öffnen"
 
-#| msgid "Error restoring text for '%s'"
 #: ../libsvn_wc/log.c:1859
 #, fuzzy, c-format
+#| msgid "Error restoring text for '%s'"
 msgid "Error recording tree conflicts in '%s'"
 msgstr "Fehler beim Wiederherstellen des Textes für »%s«"
 
@@ -6816,9 +6816,9 @@ msgstr "Ein nicht geschütztes \\0 wurde im externen Dateiverweis »%s« gefunde
 msgid "Illegal file external revision kind %d for path '%s'"
 msgstr "Ungültiger Revisionstyp des externen Dateiverweises %d für Pfad »%s«"
 
-#| msgid "Entry '%s' has invalid node kind"
 #: ../libsvn_wc/old-and-busted.c:661
 #, fuzzy, c-format
+#| msgid "Entry '%s' has invalid node kind"
 msgid "Entry '%s' has invalid depth"
 msgstr "Eintrag »%s« hat einen ungültigen Knotentyp"
 
@@ -7077,27 +7077,27 @@ msgstr ""
 msgid "Relocate can only change the repository part of an URL"
 msgstr "Relocate kann nur den Projektarchivteil der URL ändern"
 
-#| msgid "Bad operation in tree conflict description"
 #: ../libsvn_wc/tree_conflicts.c:160
 #, fuzzy
+#| msgid "Bad operation in tree conflict description"
 msgid "Unknown enumeration value in tree conflict description"
 msgstr "Fehlerhafter Wert von »operation« in Baumkonfliktbeschreibung"
 
-#| msgid "Invalid 'reason' field in tree conflict description"
 #: ../libsvn_wc/tree_conflicts.c:184
 #, fuzzy
+#| msgid "Invalid 'reason' field in tree conflict description"
 msgid "Invalid version info in tree conflict description"
 msgstr "Ungültiges Feld »reason« in Baumkonfliktbeschreibung"
 
-#| msgid "Invalid 'action' field in tree conflict description"
 #: ../libsvn_wc/tree_conflicts.c:235
 #, fuzzy
+#| msgid "Invalid 'action' field in tree conflict description"
 msgid "Invalid conflict info in tree conflict description"
 msgstr "Ungültiges Feld »action« in Baumkonfliktbeschreibung«"
 
-#| msgid "Empty 'victim_path' in tree conflict description"
 #: ../libsvn_wc/tree_conflicts.c:244
 #, fuzzy
+#| msgid "Empty 'victim_path' in tree conflict description"
 msgid "Empty 'victim' field in tree conflict description"
 msgstr "»victim_path« in Baumkonfliktbeschreibung ist leer"
 
@@ -7105,9 +7105,9 @@ msgstr "»victim_path« in Baumkonfliktbeschreibung ist leer"
 msgid "Invalid 'node_kind' field in tree conflict description"
 msgstr "Ungültiges Feld »node_kind« in Baumkonfliktbeschreibung"
 
-#| msgid "Error parsing arguments"
 #: ../libsvn_wc/tree_conflicts.c:315
 #, fuzzy
+#| msgid "Error parsing arguments"
 msgid "Error parsing tree conflict skel"
 msgstr "Fehler beim Einlesen der Parameter"
 
@@ -7151,9 +7151,9 @@ msgid ""
 "repository"
 msgstr ""
 
-#| msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 #: ../libsvn_wc/update_editor.c:2338
 #, fuzzy, c-format
+#| msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
 msgstr "UUID des Projektarchivs »%s« entspricht nicht der erwarteten UUID »%s«"
 
@@ -7222,25 +7222,25 @@ msgstr ""
 "Konnte die Datei »%s« nicht hinzufügen: ein nicht-Dateiobjekt mit demselben\n"
 "Namen existiert bereits"
 
-#| msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
 #: ../libsvn_wc/update_editor.c:3456
 #, fuzzy, c-format
+#| msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
 msgid ""
 "Failed to add file '%s': an unversioned file of the same name already exists"
 msgstr ""
 "Verzeichnis »%s« konnte nicht hinzugefügt werden: ein nicht versioniertes "
 "Verzeichnis mit demselben Namen existiert bereits"
 
-#| msgid "Source url '%s' is from different repository"
 #: ../libsvn_wc/update_editor.c:3492
 #, fuzzy, c-format
+#| msgid "Source url '%s' is from different repository"
 msgid ""
 "UUID mismatch: existing file '%s' was checked out from a different repository"
 msgstr "Quell URL »%s« stammt aus einem fremden Projektarchiv"
 
-#| msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 #: ../libsvn_wc/update_editor.c:3500
 #, fuzzy, c-format
+#| msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
 msgstr "UUID des Projektarchivs »%s« entspricht nicht der erwarteten UUID »%s«"
 
@@ -7283,15 +7283,15 @@ msgstr "Kann keine URL für »%s« finden"
 msgid "Parent(s) of '%s' should have been present."
 msgstr ""
 
-#| msgid "'%s' has no ancestry information"
 #: ../libsvn_wc/wc_db.c:385
 #, fuzzy, c-format
+#| msgid "'%s' has no ancestry information"
 msgid "Parent(s) of '%s' should have repository information."
 msgstr "»%s« hat keine Informationen über seine Vorgänger"
 
-#| msgid "Missing 'revision' attribute for '%s'"
 #: ../libsvn_wc/wc_db.c:444
 #, fuzzy, c-format
+#| msgid "Missing 'revision' attribute for '%s'"
 msgid "Missing a row in WCROOT for '%s'."
 msgstr "Fehlendes Revisions Attribut für »%s«"
 
@@ -7300,9 +7300,9 @@ msgstr "Fehlendes Revisions Attribut für »%s«"
 msgid "The node '%s' has a corrupt checksum value."
 msgstr ""
 
-#| msgid "'%s' path not found"
 #: ../libsvn_wc/wc_db.c:867
 #, fuzzy, c-format
+#| msgid "'%s' path not found"
 msgid "The node '%s' was not found."
 msgstr "»%s« Pfad nicht gefunden"
 
@@ -7320,9 +7320,9 @@ msgstr "Option »incremental« ist nur im XML-Modus gültig"
 msgid "Skipping binary file: '%s'\n"
 msgstr "Überspringe Binärdatei: »%s«\n"
 
-#| msgid "Changelist doesn't match"
 #: ../svn/changelist-cmd.c:53 ../svn/main.c:1529
 #, fuzzy
+#| msgid "Changelist doesn't match"
 msgid "Changelist names must not be empty"
 msgstr "Änderungsliste passt nicht"
 
@@ -7868,11 +7868,11 @@ msgstr "Sperre erzeugt"
 msgid "Lock Expires"
 msgstr "Sperre läuft ab"
 
+#: ../svn/info-cmd.c:411
+#, fuzzy, c-format
 #| msgid ""
 #| "Lock Comment (%i line):\n"
 #| "%s\n"
-#: ../svn/info-cmd.c:411
-#, fuzzy, c-format
 msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
@@ -7891,11 +7891,11 @@ msgstr[1] ""
 msgid "Changelist: %s\n"
 msgstr "Änderungsliste: %s\n"
 
+#: ../svn/info-cmd.c:436
+#, fuzzy
 #| msgid ""
 #| "Tree conflict:\n"
 #| "%s"
-#: ../svn/info-cmd.c:436
-#, fuzzy
 msgid "Tree conflict"
 msgstr ""
 "Baumkonflikt:\n"
@@ -7984,9 +7984,9 @@ msgstr "Option »with-no-revprops« ist nur im XML-Modus gültig"
 msgid "'with-revprop' option only valid in XML mode"
 msgstr "Option »with-revprop« ist nur im XML-Modus gültig"
 
-#| msgid "--relocate and --depth are mutually exclusive"
 #: ../svn/log-cmd.c:476
 #, fuzzy
+#| msgid "--relocate and --depth are mutually exclusive"
 msgid "-c and -r are mutually exclusive"
 msgstr "--relocate und --depth schließen sich gegenseitig aus"
 
@@ -8160,11 +8160,11 @@ msgstr ""
 "begrenzt Operation durch Tiefe PAR (»empty«,\n"
 "                            »files«, »immediates« oder »infinity«)"
 
+#: ../svn/main.c:189
+#, fuzzy
 #| msgid ""
 #| "set new working copy depth to ARG ('empty',\n"
 #| "                            'files', 'immediates', or 'infinity')"
-#: ../svn/main.c:189
-#, fuzzy
 msgid ""
 "set new working copy depth to ARG ('empty',\n"
 "                            'exclude', 'files', 'immediates', or 'infinity')"
@@ -8828,6 +8828,8 @@ msgstr ""
 
 # FIXME: behaviour oder behavior?
 # www.example.com is a reserved URL, let's not translate it.
+#: ../svn/main.c:554
+#, fuzzy
 #| msgid ""
 #| "Show the log messages for a set of revision(s) and/or file(s).\n"
 #| "usage: 1. log [PATH]\n"
@@ -8856,8 +8858,6 @@ msgstr ""
 #| "    svn log foo.c\n"
 #| "    svn log http://www.example.com/repo/project/foo.c\n"
 #| "    svn log http://www.example.com/repo/project foo.c bar.c\n"
-#: ../svn/main.c:554
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -8931,6 +8931,8 @@ msgid "the change made in revision ARG"
 msgstr "die in Revision PAR durchgeführte Änderung"
 
 # FIXME: WCPATH oder WC_PATH?
+#: ../svn/main.c:591
+#, fuzzy
 #| msgid ""
 #| "Apply the differences between two sources to a working copy path.\n"
 #| "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -8966,8 +8968,6 @@ msgstr "die in Revision PAR durchgeführte Änderung"
 #| "  guaranteed to be the case when using the third form listed above.\n"
 #| "  The --ignore-ancestry option overrides this, forcing Subversion to\n"
 #| "  regard the sources as unrelated and not to track the merge.\n"
-#: ../svn/main.c:591
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -9233,6 +9233,8 @@ msgstr ""
 "     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
 
 # FIXME: propchange?
+#: ../svn/main.c:726
+#, fuzzy
 #| msgid ""
 #| "Set the value of a property on files, dirs, or revisions.\n"
 #| "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -9292,8 +9294,6 @@ msgstr ""
 #| "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
 #| "  attempt will fail, and a recursive attempt will set the property\n"
 #| "  only on the file children of the directory.\n"
-#: ../svn/main.c:726
-#, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -9497,6 +9497,8 @@ msgstr ""
 "wieder\n"
 "  herstellen.\n"
 
+#: ../svn/main.c:820
+#, fuzzy
 #| msgid ""
 #| "Print the status of working copy files and directories.\n"
 #| "usage: status [PATH...]\n"
@@ -9571,8 +9573,6 @@ msgstr ""
 #| "    A  +         965       687 joe          wc/qax.c\n"
 #| "                 965       687 joe          wc/zig.c\n"
 #| "    Status against revision:   981\n"
-#: ../svn/main.c:820
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -9930,9 +9930,9 @@ msgstr ""
 msgid "Caught signal"
 msgstr "Abbruchsignal empfangen"
 
-#| msgid "Invalid argument '%s' in diff options"
 #: ../svn/main.c:1078
 #, fuzzy
+#| msgid "Invalid argument '%s' in diff options"
 msgid "Invalid syntax of argument of --config-option"
 msgstr "Ungültiges Argument »%s« in Vergleichsoptionen"
 
@@ -9962,9 +9962,9 @@ msgstr "Es gibt keine Änderung 0"
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfehler in Revisionsparameter »%s«"
 
-#| msgid "Error converting depth from locale to UTF8"
 #: ../svn/main.c:1364 ../svn/main.c:1383
 #, fuzzy, c-format
+#| msgid "Error converting depth from locale to UTF8"
 msgid "Error converting depth from locale to UTF-8"
 msgstr "Fehler beim Konvertieren der Tiefe aus Locale nach UTF-8"
 
@@ -9976,9 +9976,9 @@ msgstr ""
 "»%s« ist keine gültige Tiefe; versuchen Sie »empty«, »files«, »immediates« "
 "oder »infinity«"
 
-#| msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 #: ../svn/main.c:1391
 #, fuzzy, c-format
+#| msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgid ""
 "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or "
 "'infinity'"
@@ -10163,9 +10163,9 @@ msgstr "Versuchen Sie »svn add« oder »svn add --non-recursive«."
 msgid "Try 'svn mkdir --parents' instead?"
 msgstr "Versuchen Sie »svn mkdir --parents« stattdessen?"
 
-#| msgid "Summary of conflicts:\n"
 #: ../svn/notify.c:77
 #, fuzzy
+#| msgid "Summary of conflicts:\n"
 msgid "Summary of conflicts in external item:\n"
 msgstr "Konfliktübersicht:\n"
 
@@ -10188,9 +10188,9 @@ msgstr "  Eigenschaftskonflikte: %u\n"
 msgid "  Tree conflicts: %u\n"
 msgstr "  Baumkonflikte: %u\n"
 
-#| msgid "   Skipped paths: %u\n"
 #: ../svn/notify.c:110
 #, fuzzy, c-format
+#| msgid "   Skipped paths: %u\n"
 msgid "  Skipped paths: %u\n"
 msgstr "  Übersprungene Pfade: %u\n"
 
@@ -10237,9 +10237,9 @@ msgstr ""
 "\n"
 "Hole externen Verweis nach »%s«\n"
 
-#| msgid "Error validating server certificate for '%s':\n"
 #: ../svn/notify.c:346
 #, fuzzy, c-format
+#| msgid "Error validating server certificate for '%s':\n"
 msgid "Error handling externals definition for '%s':"
 msgstr "Fehler bei der Validierung des Serverzertifikats für »%s«:\n"
 
@@ -10464,9 +10464,9 @@ msgstr ""
 "Zum Löschen der versionierten Eigenschaft »%s« darf keine Revision angegeben "
 "werden"
 
-#| msgid "Attempted to open non-existent child node '%s'"
 #: ../svn/propdel-cmd.c:145
 #, fuzzy, c-format
+#| msgid "Attempted to open non-existent child node '%s'"
 msgid "Attempting to delete nonexistent property '%s'"
 msgstr "Versuchte, nicht existierenden Unterknoten »%s« zu öffnen"
 
@@ -10612,15 +10612,15 @@ msgstr ""
 msgid "add"
 msgstr ""
 
-#| msgid "Deleted"
 #: ../svn/tree-conflicts.c:38 ../svn/tree-conflicts.c:54
 #, fuzzy
+#| msgid "Deleted"
 msgid "delete"
 msgstr "Gelöscht"
 
-#| msgid "No such transaction"
 #: ../svn/tree-conflicts.c:52
 #, fuzzy
+#| msgid "No such transaction"
 msgid "obstruction"
 msgstr "Keine solche Transaktion"
 
@@ -10628,9 +10628,9 @@ msgstr "Keine solche Transaktion"
 msgid "missing"
 msgstr ""
 
-#| msgid "'%s' is unversioned.\n"
 #: ../svn/tree-conflicts.c:60
 #, fuzzy
+#| msgid "'%s' is unversioned.\n"
 msgid "unversioned"
 msgstr "»%s« ist nicht versioniert.\n"
 
@@ -10766,9 +10766,9 @@ msgstr ""
 msgid "Use --force to override this restriction"
 msgstr "Benutzen Sie »--force«, um diese Einschränkung aufzuheben"
 
-#| msgid "no"
 #: ../svn/util.c:1023 ../svn/util.c:1056
 #, fuzzy
+#| msgid "no"
 msgid "none"
 msgstr "nein"
 
@@ -10780,15 +10780,15 @@ msgstr ""
 msgid "file"
 msgstr ""
 
-#| msgid "Bogus date"
 #: ../svn/util.c:1058
 #, fuzzy
+#| msgid "Bogus date"
 msgid "update"
 msgstr "Ungültiges Datum"
 
-#| msgid "Invalid switch"
 #: ../svn/util.c:1060
 #, fuzzy
+#| msgid "Invalid switch"
 msgid "switch"
 msgstr "Ungültiges Wechseln"
 
@@ -10796,9 +10796,9 @@ msgstr "Ungültiges Wechseln"
 msgid "merge"
 msgstr ""
 
-#| msgid "Unknown authorization method"
 #: ../svn/util.c:1064
 #, fuzzy
+#| msgid "Unknown authorization method"
 msgid "unknown operation"
 msgstr "Unbekannte Autorisierungsmethode"
 
@@ -10909,11 +10909,11 @@ msgid ""
 "                             earlier than 1.5"
 msgstr "Ein mit Subversion-Versionen vor 1.5 kompatibles Format verwenden"
 
+#: ../svnadmin/main.c:310
+#, fuzzy
 #| msgid ""
 #| "use format compatible with Subversion versions\n"
 #| "                             earlier than 1.4"
-#: ../svnadmin/main.c:310
-#, fuzzy
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.6"
@@ -10959,6 +10959,8 @@ msgstr ""
 "Revision gespeichert werden. Falls keine Revisionen angegeben wurden, wird\n"
 "nur die HEAD-Revision deltifiziert.\n"
 
+#: ../svnadmin/main.c:345
+#, fuzzy
 #| msgid ""
 #| "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 #| "\n"
@@ -10971,8 +10973,6 @@ msgstr ""
 #| "every path present in the repository as of that revision.  (In either\n"
 #| "case, the second and subsequent revisions, if any, describe only paths\n"
 #| "changed in those revisions.)\n"
-#: ../svnadmin/main.c:345
-#, fuzzy
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n"
 "\n"
@@ -11372,12 +11372,12 @@ msgstr "Erstellt: %s\n"
 msgid "Expires: %s\n"
 msgstr "Läuft ab: %s\n"
 
+#: ../svnadmin/main.c:1268
+#, fuzzy, c-format
 #| msgid ""
 #| "Comment (%i line):\n"
 #| "%s\n"
 #| "\n"
-#: ../svnadmin/main.c:1268
-#, fuzzy, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
@@ -11602,11 +11602,11 @@ msgstr "Präfixe einschließen (und leere Revisionen verwerfen):\n"
 msgid "Including prefixes:\n"
 msgstr "Präfixe einschließen:\n"
 
+#: ../svndumpfilter/main.c:1085
+#, fuzzy, c-format
 #| msgid ""
 #| "Dropped %d revision(s).\n"
 #| "\n"
-#: ../svndumpfilter/main.c:1085
-#, fuzzy, c-format
 msgid ""
 "Dropped %d revision.\n"
 "\n"
@@ -11629,9 +11629,9 @@ msgstr "Revisionen folgendermaßen neu nummeriert:\n"
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (verworfen)\n"
 
-#| msgid "Dropped %d node(s):\n"
 #: ../svndumpfilter/main.c:1135
 #, fuzzy, c-format
+#| msgid "Dropped %d node(s):\n"
 msgid "Dropped %d node:\n"
 msgid_plural "Dropped %d nodes:\n"
 msgstr[0] "%d Knoten verworfen:\n"
@@ -12055,11 +12055,11 @@ msgstr ""
 msgid "Missing path argument"
 msgstr "Fehlender Pfad Parameter"
 
+#: ../svnlook/main.c:1938
+#, fuzzy, c-format
 #| msgid ""
 #| "Comment (%i line):\n"
 #| "%s\n"
-#: ../svnlook/main.c:1938
-#, fuzzy, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
@@ -12091,9 +12091,9 @@ msgstr "Eigenschaftsname oder Pfad im Projektarchiv nicht angegeben"
 msgid "Invalid revision number supplied"
 msgstr "Ungültige Revisionsnummer angegeben"
 
-#| msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 #: ../svnlook/main.c:2244
 #, fuzzy
+#| msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgid ""
 "The '--transaction' (-t) and '--revision' (-r) arguments cannot co-exist"
 msgstr ""
@@ -12617,28 +12617,28 @@ msgstr "»%s« ist kein gültiger Revisionsbereich"
 msgid "Invalid revision number (%ld)"
 msgstr "Ungültige Revisionsnummer (%ld)"
 
-#| msgid "Repository access is needed for this operation"
 #: ../svnsync/main.c:1846
 #, fuzzy, c-format
+#| msgid "Repository access is needed for this operation"
 msgid "Repository '%s' is not initialized for synchronization"
 msgstr "Für diese Operation wird Zugang zum Projektarchiv benötigt"
 
-#| msgid "URL: %s\n"
 #. Print the info.
 #: ../svnsync/main.c:1855
 #, fuzzy, c-format
+#| msgid "URL: %s\n"
 msgid "Source URL: %s\n"
 msgstr "URL: %s\n"
 
-#| msgid "Repository UUID: %s\n"
 #: ../svnsync/main.c:1857
 #, fuzzy, c-format
+#| msgid "Repository UUID: %s\n"
 msgid "Source Repository UUID: %s\n"
 msgstr "UUID des Projektarchivs: %s\n"
 
-#| msgid "Last Changed Rev: %ld\n"
 #: ../svnsync/main.c:1860
 #, fuzzy, c-format
+#| msgid "Last Changed Rev: %ld\n"
 msgid "Last Merged Revision: %s\n"
 msgstr "Letzte geänderte Rev: %ld\n"
 
