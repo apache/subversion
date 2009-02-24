@@ -1655,8 +1655,8 @@ try_copy(svn_commit_info_t **commit_info_p,
          apr_pool_t *pool)
 {
   apr_array_header_t *copy_pairs = 
-                   apr_array_make(pool, sources->nelts,
-                                  sizeof(struct svn_client__copy_pair_t *));
+                        apr_array_make(pool, sources->nelts,
+                                       sizeof(svn_client__copy_pair_t *));
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
 
