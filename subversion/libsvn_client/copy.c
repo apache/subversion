@@ -767,7 +767,9 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
          array later in this function. */
 
       if (dir)
-        SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
+        SVN_ERR(find_absent_parents1(ra_session,
+                                     svn_path_uri_decode(dir, pool),
+                                     new_dirs, pool));
     }
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
