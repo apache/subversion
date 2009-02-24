@@ -84,16 +84,7 @@ Candidate changes for 1.5.6:
    Notes:
      A backport branch is available on ^/branches/1.5.x-r35566
    Votes:
-     +1: rhuijben
-     
- * r35733
-   Remove a gigantic performance penalty on using JavaHL on Windows compared
-   to all other operating systems.
-   Justification:
-     Calling Windows 10 times slower than unix because we implemented things
-     the wrong way is BAD.
-   Votes:
-     +1: rhuijben, pburba
+     +1: rhuijben, hwright
      
  * r35981
    libsvn_ra_serf: Following RFC2617, verify authentication header tokens
@@ -106,3 +97,12 @@ Candidate changes for 1.5.6:
      
 Approved changes:
 =================
+     
+ * r35733
+   Remove a gigantic performance penalty on using JavaHL on Windows compared
+   to all other operating systems.
+   Justification:
+     Calling Windows 10 times slower than unix because we implemented things
+     the wrong way is BAD.
+   Votes:
+     +1: rhuijben, pburba
