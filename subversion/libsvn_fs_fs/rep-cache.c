@@ -148,9 +148,9 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                  apr_psprintf(pool,
                               _("Representation key for checksum '%%s' exists "
-                                "in filesystem '%%s', with different value "
-                                "(%%ld,%%%s,%%%s,%%%s) than what we were about"
-                                " to store(%%ld,%%%s,%%%s,%%%s)"),
+                                "in filesystem '%%s' with a different value "
+                                "(%%ld,%%%s,%%%s,%%%s) than what we were about "
+                                "to store (%%ld,%%%s,%%%s,%%%s)"),
                               APR_OFF_T_FMT, SVN_FILESIZE_T_FMT,
                               SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
                               SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
