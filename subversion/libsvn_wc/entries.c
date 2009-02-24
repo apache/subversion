@@ -1112,6 +1112,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
       else
         entry->kind = svn_node_unknown;
 
+      if (status == svn_wc__db_status_not_present
+            && entry->kind == svn_node_unknown)
+        entry->deleted = TRUE;
+
       SVN_ERR(determine_incomplete(&entry->incomplete, wc_db,
                                    1 /* wc_id */, entry->name));
 
@@ -1284,7 +1288,11 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   if (base_node->parent_relpath)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, base_node->parent_relpath));
 
-  SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal")); /* ### presence */
+  /* ### presence */
+  if (base_node->presence == svn_wc__db_status_not_present)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "not-present"));
+  else
+    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal"));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
@@ -1505,9 +1513,6 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node->copyfrom_revnum = entry->copyfrom_rev;
     }
 
-  if (entry->deleted)
-    working_node = MAYBE_ALLOC(working_node, scratch_pool);
-
   if (entry->absent)
     {
       /* TODO: Adjust kinds to absent kinds. */
@@ -1556,9 +1561,16 @@ write_entry(svn_sqlite__db_t *wc_db,
         base_node->parent_relpath = NULL;
       else
         base_node->parent_relpath = "";
-      base_node->kind = entry->kind;
       base_node->revision = entry->revision;
       base_node->depth = entry->depth;
+
+      if (entry->deleted)
+        {
+          base_node->presence = svn_wc__db_status_not_present;
+          base_node->kind = svn_node_unknown;
+        }
+      else
+        base_node->kind = entry->kind;
 
       if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
