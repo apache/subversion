@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-19 10:36+0800\n"
-"PO-Revision-Date: 2009-02-19 10:22+0800\n"
+"POT-Creation-Date: 2009-02-24 21:08+0800\n"
+"PO-Revision-Date: 2009-02-24 21:16+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -325,6 +325,9 @@ msgstr "工作副本的 SQLite 数据库有错误"
 msgid "The working copy is missing"
 msgstr "工作副本丢失"
 
+msgid "The specified node is not a symlink"
+msgstr "指定的节点不是符号连接"
+
 msgid "General filesystem error"
 msgstr "普通文件系统错误"
 
@@ -564,6 +567,9 @@ msgstr "不能从响应的头信息中获取数据"
 
 msgid "Repository has been moved"
 msgstr "版本库已经移动"
+
+msgid "Connection timed out"
+msgstr "连接超时"
 
 msgid "Couldn't find a repository"
 msgstr "无法找到版本库"
@@ -2986,21 +2992,21 @@ msgstr "文件 “%s” 已经过时；请先更新"
 msgid "Failed writing updated file"
 msgstr "更新文件失败"
 
+#, c-format
+msgid "%s of '%s': %d %s (%s://%s)"
+msgstr "%s 于 '%s': %d %s (%s://%s)"
+
+#, c-format
+msgid "POST request did not return transaction information"
+msgstr "POST 请求没有返回事务的信息"
+
 msgid ""
 "The OPTIONS response did not include the requested activity-collection-set "
 "value"
 msgstr "OPTIONS 响应中没有包含请求的 activity-collection-set 值。"
 
-#, c-format
-msgid "%s of '%s': %d %s (%s://%s)"
-msgstr "%s 于 '%s': %d %s (%s://%s)"
-
 msgid "The OPTIONS response did not include the requested checked-in value"
 msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
-
-msgid ""
-"The OPTIONS response did not include the requested baseline-collection value"
-msgstr "OPTIONS 响应中没有包含请求的 baseline-collection 值。"
 
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
@@ -3020,6 +3026,13 @@ msgstr "版本库的 URL 非法"
 #, c-format
 msgid "Unlock request failed: %d %s"
 msgstr "解锁请求失败: %d %s"
+
+msgid "The OPTIONS response did not include the youngest revision"
+msgstr "OPTIONS 响应中没有包含最新的版本"
+
+msgid ""
+"The OPTIONS response did not include the requested baseline-collection value"
+msgstr "OPTIONS 响应中没有包含请求的 baseline-collection 值。"
 
 msgid "The OPTIONS response did not include the requested version-name value"
 msgstr "OPTIONS 响应中没有包含请求的 version-name 值。"
@@ -3068,11 +3081,6 @@ msgstr "不支持的 ra_serf RA 加载器版本(%d)"
 msgid "GET request failed: %d %s"
 msgstr "GET 请求失败: %d %s"
 
-msgid ""
-"The OPTIONS response did not include the requested version-controlled-"
-"configuration value"
-msgstr "OPTIONS 响应中没有包含请求的 version-controlled-configuration 值。"
-
 #, c-format
 msgid "Error retrieving REPORT (%d)"
 msgstr "获取报告出错(%d)"
@@ -3082,6 +3090,11 @@ msgstr "从服务器发现EOF太早"
 
 msgid "Unspecified error message"
 msgstr "未指明的错误信息"
+
+msgid ""
+"The OPTIONS response did not include the requested version-controlled-"
+"configuration value"
+msgstr "OPTIONS 响应中没有包含请求的 version-controlled-configuration 值。"
 
 #, c-format
 msgid "Unknown hostname '%s'"
@@ -4742,10 +4755,6 @@ msgid "No WC table entry"
 msgstr "没有 WC 表入口"
 
 #, c-format
-msgid "No REPOSITORY table entry for id '%ld'"
-msgstr "对于标识 '%ld' 没有 REPOSITORY 表入口"
-
-#, c-format
 msgid "No REPOSITORY table entry for uuid '%s'"
 msgstr "对于 uuid '%s' 没有 REPOSITORY 表入口"
 
@@ -5314,6 +5323,30 @@ msgstr "无法创建任何目录"
 #, c-format
 msgid "Cannot find a URL for '%s'"
 msgstr "不能为“%s”找到 URL"
+
+#, c-format
+msgid "No REPOSITORY table entry for id '%ld'"
+msgstr "对于标识 '%ld' 没有 REPOSITORY 表入口"
+
+#, c-format
+msgid "Parent(s) of '%s' should have been present."
+msgstr "'%s' 的父亲应该存在。"
+
+#,  c-format
+msgid "Parent(s) of '%s' should have repository information."
+msgstr "'%s' 的父亲应该包含版本库的信息。"
+
+#,  c-format
+msgid "Missing a row in WCROOT for '%s'."
+msgstr "WCROOT 中的 '%s' 丢失了一行。"
+
+#, c-format
+msgid "The node '%s' has a corrupt checksum value."
+msgstr "节点 '%s' 的校验和损坏。"
+
+#,  c-format
+msgid "The node '%s' was not found."
+msgstr "找不到节点 '%s'。"
 
 msgid "'verbose' option invalid in XML mode"
 msgstr "在XML模式中“verbose”选项无效"
