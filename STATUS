@@ -96,7 +96,7 @@ Candidate changes for 1.5.6:
      theirs-conflict on the merge and remove the 'config-file=' option
      from the my_getopt() call in win-tests.py. 
    Votes:
-     +1: pburba
+     +1: pburba, danielsh
      
 Approved changes:
 =================
