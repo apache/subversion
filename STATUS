@@ -100,13 +100,3 @@ Candidate changes for 1.5.6:
      
 Approved changes:
 =================
-
- * r35566
-   Improve performance of log operation to < 1.5 servers by only creating
-   a secondary ra session when it is really necessary.
-   Justification:
-     Makes "svn log" noticable faster over WAN connections to 1.4 servers.
-   Notes:
-     A backport branch is available on ^/branches/1.5.x-r35566
-   Votes:
-     +1: rhuijben, hwright, pburba
