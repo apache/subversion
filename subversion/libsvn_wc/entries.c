@@ -94,9 +94,9 @@ static const char * const statements[] = {
      "copyfrom_repos_id, "
      "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
      "translated_size, changed_rev, changed_date, changed_author, depth, "
-     "last_mod_time, properties) "
+     "last_mod_time, properties, keep_local) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16, ?17, ?18);",
+          "?15, ?16, ?17, ?18, ?19);",
 
   "insert or replace into actual_node "
     "(wc_id, local_relpath, parent_relpath, properties, conflict_old, "
@@ -121,7 +121,7 @@ static const char * const statements[] = {
     "copyfrom_repos_id, "
     "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
     "translated_size, changed_rev, changed_date, changed_author, depth, "
-    "last_mod_time, properties "
+    "last_mod_time, properties, keep_local "
   "from working_node;",
 
   "select wc_id, local_relpath, parent_relpath, properties, conflict_old, "
@@ -194,6 +194,7 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
+  svn_boolean_t keep_local;
 } db_working_node_t;
 
 typedef struct {
@@ -770,6 +771,8 @@ fetch_working_nodes(apr_hash_t **nodes,
                                        svn_skel__parse(val, len, scratch_pool),
                                        result_pool));
 
+      working_node->keep_local = svn_sqlite__column_boolean(stmt, 18);
+
       apr_hash_set(*nodes, working_node->local_relpath, APR_HASH_KEY_STRING,
                    working_node);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -1080,6 +1083,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (working_node && (working_node->copyfrom_repos_path != NULL))
         entry->copied = TRUE;
 
+      if (working_node && working_node->keep_local)
+        entry->keep_local = TRUE;
+
       if (checksum)
         entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
 
@@ -1139,6 +1145,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       if (working_node->copyfrom_repos_path != NULL)
         entry->copied = TRUE;
+
+      entry->keep_local = working_node->keep_local;
 
       if (working_node->checksum)
         entry->checksum = svn_checksum_to_cstring(working_node->checksum,
@@ -1407,6 +1415,8 @@ insert_working_node(svn_sqlite__db_t *wc_db,
   properties = svn_skel__unparse(skel, scratch_pool);
   SVN_ERR(svn_sqlite__bind_blob(stmt, 18, properties->data, properties->len));
 
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 19, working_node->keep_local));
+
   /* Execute and reset the insert clause. */
   return svn_sqlite__insert(NULL, stmt);
 }
@@ -1511,6 +1521,13 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node = MAYBE_ALLOC(working_node, scratch_pool);
       working_node->copyfrom_repos_path = entry->copyfrom_url;
       working_node->copyfrom_revnum = entry->copyfrom_rev;
+    }
+
+  if (entry->keep_local)
+    {
+      SVN_ERR_ASSERT(working_node != NULL);
+      SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
+      working_node->keep_local = TRUE;
     }
 
   if (entry->absent)
