@@ -98,5 +98,17 @@ Candidate changes for 1.5.6:
    Votes:
      +1: pburba, danielsh
      
+ * r36106
+   Resolves issue #3374, "svn cp --parents path URL encoding issues"
+   For
+     svn cp --parent ^/fö ^/dö/fö
+   The --parents code checked and might creat^/d%C3%B6, while the file was
+   copied to ^/dö as expected.
+   Justification:
+     Without this patch --parents is broken for utf8 characters in repos
+     to repos copy and move operations.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
