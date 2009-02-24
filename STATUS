@@ -99,16 +99,3 @@ Candidate changes for 1.5.6:
 
 Approved changes:
 =================
-
- * r31393
-   Follow-up to r25651, actually add the --server-minor-version option.
-   Justification:
-     Very minor change to the test suite that allows Windows devs to run the
-     test suite against pre-1.5 servers.
-   Notes:
-     There is a minor text conflict when merging this change, but it is
-     so minor there is no need for a backport branch, just --accept
-     theirs-conflict on the merge and remove the 'config-file=' option
-     from the my_getopt() call in win-tests.py. 
-   Votes:
-     +1: pburba, danielsh, rhuijben
