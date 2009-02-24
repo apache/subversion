@@ -27,6 +27,20 @@ http://svn.collab.net/repos/svn/tags/1.6.0
   - Bindings:
 
 
+Version 1.5.6
+(27 Feb 2009, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.6
+
+ User-visible changes:
+  * allow colons within mergeinfo path names (r35040)
+  * make is impossible to add .svn to wc via 'svn add --parents' (r35143, -5)
+  * copy properties of added but uncommitted files (r32448)
+  * speedup JavaHL bindings on Windows (r35733)
+
+ Developer-visible changes:
+  * fix error handling in mod_dav_svn (r35250, -86)
+
+
 Version 1.5.5
 (22 Dec 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.5
