@@ -97,12 +97,3 @@ Candidate changes for 1.5.6:
      
 Approved changes:
 =================
-     
- * r35733
-   Remove a gigantic performance penalty on using JavaHL on Windows compared
-   to all other operating systems.
-   Justification:
-     Calling Windows 10 times slower than unix because we implemented things
-     the wrong way is BAD.
-   Votes:
-     +1: rhuijben, pburba
