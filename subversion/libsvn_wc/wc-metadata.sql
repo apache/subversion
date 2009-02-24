@@ -232,6 +232,17 @@ CREATE TABLE WORKING_NODE (
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
+  /* should the node on disk be kept after a schedule delete?
+
+     ### Bert points out that this can disappear once we get centralized 
+     ### with our metadata.  The entire reason for this flag to exist is
+     ### so that the admin area can exist for the commit of a the delete,
+     ### and so the post-commit cleanup knows not to actually delete the dir
+     ### from disk (which is why the flag is only ever set on the this_dir
+     ### entry in WC-OLD.)  In the New World, we don't need to keep the old
+     ### admin area around, so this flag can disappear. */
+  keep_local  INTEGER,
+
   PRIMARY KEY (wc_id, local_relpath)
   );
 
