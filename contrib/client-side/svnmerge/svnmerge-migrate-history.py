@@ -256,6 +256,13 @@ class Migrator:
 
       # Manipulate the merge history.
       if new_mergeinfo_prop_val != mergeinfo_prop_val:
+        # Run the final version of the new svn:mergeinfo through the
+        # parser to ensure it is in canonical form, e.g. no overlapping
+        # or unordered rangelists, see
+        # http://subversion.tigris.org/issues/show_bug.cgi?id=3302.
+        mergeinfo = svn.core.svn_mergeinfo_parse(new_mergeinfo_prop_val)
+        new_mergeinfo_prop_val = mergeinfo2str(mergeinfo)
+        
         self.log("Queuing change of %s to '%s'"
                  % (svn.core.SVN_PROP_MERGEINFO,
                     self.flatten_prop(new_mergeinfo_prop_val)))

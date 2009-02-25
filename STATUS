@@ -44,16 +44,6 @@ Candidate changes for 1.5.6:
 Approved changes:
 =================
 
- * r35516
-   Prevent svnmerge-migrate-history.py from committing non-canonical
-   mergeinfo.
-   Justification:
-     Make dead certain svnmerge-migrate-history.py can't create mergeinfo
-     with overlapping or unordered rangelists.  Subversion <= 1.5.5 will
-     error out if it tries to parse this mergeinfo, see issue #3302.
-    Votes:
-     +1: pburba, rhuijben, gstein
-
  * r35297, r35367
    Allow svn_mergeinfo_parse() to tolerate unordered rangelists as input
    while still guaranteeing the mergeinfo it creates has sorted rangelists
