@@ -113,6 +113,8 @@ static const char * const upgrade_sql[] = { NULL, NULL, NULL, NULL, NULL,
    and removed at the same time. */
 enum statement_keys {
   STMT_SELECT_BASE_NODE,
+  STMT_SELECT_WORKING_NODE,
+  STMT_SELECT_ACTUAL_NODE,
   STMT_SELECT_REPOSITORY_BY_ID,
   STMT_SELECT_WCROOT_NULL,
   STMT_SELECT_REPOSITORY,
@@ -125,8 +127,19 @@ enum statement_keys {
 static const char * const statements[] = {
   "select wc_id, local_relpath, repos_id, repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
-  "  changed_rev, changed_date, changed_author, depth "
+  "  changed_rev, changed_date, changed_author, depth, symlink_target "
   "from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select presence, kind, checksum, translated_size, "
+  "  changed_rev, changed_date, changed_author, depth, symlink_target, "
+  "  copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum, "
+  "  moved_from, moved_to "
+  "from working_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select changelist "
+  "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select root, uuid from repository where id = ?1;",
@@ -198,6 +211,7 @@ word_to_kind(const char *kind)
     return svn_wc__db_kind_dir;
   if (*kind == 's')
     return svn_wc__db_kind_symlink;
+  /* ### MALFUNCTION if not "normal" ? */
   return svn_wc__db_kind_unknown;
 }
 
@@ -235,6 +249,7 @@ word_to_presence(const char *presence)
     return svn_wc__db_status_incomplete;
   if (strcmp(presence, "not-present") == 0)
     return svn_wc__db_status_not_present;
+  /* ### MALFUNCTION if not "normal" ? */
   return svn_wc__db_status_normal;
 }
 
@@ -257,6 +272,15 @@ presence_to_word(svn_wc__db_status_t presence)
     default:
       SVN_ERR_MALFUNCTION_NO_RETURN();
     }
+}
+
+
+static svn_filesize_t
+get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
+{
+  if (svn_sqlite__column_is_null(stmt, slot))
+    return SVN_INVALID_FILESIZE;
+  return svn_sqlite__column_int64(stmt, slot);
 }
 
 
@@ -1096,6 +1120,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_depth_t *depth,
                          svn_checksum_t **checksum,
                          svn_filesize_t *translated_size,
+                         const char **target,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -1203,10 +1228,14 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
         }
       if (translated_size)
         {
-          if (svn_sqlite__column_is_null(stmt, 8))
-            *translated_size = SVN_INVALID_FILESIZE;
+          *translated_size = get_translated_size(stmt, 8);
+        }
+      if (target)
+        {
+          if (node_kind != svn_wc__db_kind_symlink)
+            *target = NULL;
           else
-            *translated_size = svn_sqlite__column_int64(stmt, 8);
+            *target = svn_sqlite__column_text(stmt, 13, result_pool);
         }
     }
   else
@@ -1328,27 +1357,6 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
   *children = child_names;
 
   return svn_sqlite__reset(stmt);
-}
-
-
-svn_error_t *
-svn_wc__db_base_get_symlink_target(const char **target,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_sqlite__db_t *sdb;
-  apr_int64_t wc_id;
-  const char *relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&sdb, &wc_id, &relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  NOT_IMPLEMENTED();
 }
 
 
@@ -1482,6 +1490,7 @@ svn_wc__db_pristine_decref(int *new_refcount,
 {
   NOT_IMPLEMENTED();
 }
+
 
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
@@ -1677,6 +1686,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_depth_t *depth,
                      svn_checksum_t **checksum,
                      svn_filesize_t *translated_size,
+                     const char **target,
                      const char **changelist,
                      const char **original_repos_relpath,
                      const char **original_root_url,
@@ -1690,9 +1700,330 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
+  svn_sqlite__db_t *sdb;
+  apr_int64_t wc_id;
+  const char *relpath;
+  svn_sqlite__stmt_t *stmt_base;
+  svn_sqlite__stmt_t *stmt_work;
+  svn_sqlite__stmt_t *stmt_act;
+  svn_boolean_t have_base;
+  svn_boolean_t have_work;
+  svn_boolean_t have_act;
+  svn_boolean_t inherit_repos = FALSE;
+  svn_boolean_t added_repos = FALSE;
+  svn_error_t *err;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&sdb, &wc_id, &relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_base, sdb, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt_base, "is", wc_id, relpath));
+  SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_work, sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt_work, "is", wc_id, relpath));
+  SVN_ERR(svn_sqlite__step(&have_work, stmt_work));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_act, sdb, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt_act, "is", wc_id, relpath));
+  SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
+
+  if (have_base || have_work)
+    {
+      const char *kind_str;
+      svn_wc__db_kind_t node_kind;
+
+      if (have_work)
+        kind_str = svn_sqlite__column_text(stmt_work, 1, NULL);
+      else
+        kind_str = svn_sqlite__column_text(stmt_base, 5, NULL);
+
+      SVN_ERR_ASSERT(kind_str != NULL);
+      node_kind = word_to_kind(kind_str);
+
+      if (status)
+        {
+          const char *presence_str;
+
+          if (have_base)
+            {
+              presence_str = svn_sqlite__column_text(stmt_base, 4, NULL);
+              *status = word_to_presence(presence_str);
+
+              /* We have a presence that allows a WORKING_NODE override
+                 (normal or not-present), or we don't have an override.  */
+              SVN_ERR_ASSERT((*status != svn_wc__db_status_absent
+                              && *status != svn_wc__db_status_excluded
+                              && *status != svn_wc__db_status_incomplete)
+                             || !have_work);
+            }
+
+          if (have_work)
+            {
+              svn_wc__db_status_t work_status;
+
+              presence_str = svn_sqlite__column_text(stmt_work, 0, NULL);
+              work_status = word_to_presence(presence_str);
+              SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
+                             || work_status == svn_wc__db_status_not_present
+                             || work_status == svn_wc__db_status_incomplete);
+
+              /* ### detect status_changed? or toss that status? */
+
+              if (work_status == svn_wc__db_status_incomplete)
+                {
+                  *status = svn_wc__db_status_incomplete;
+                }
+              else
+                {
+                  /* ### should we scan upwards looking for copyfrom and
+                     ### moved_* info to figure out what is going on here,
+                     ### or let the caller figure that out? the caller
+                     ### might have already queried parent info.  */
+
+                  /* ### with the info, we could refine to: moved_src,
+                     ### moved_dst, copied.  */
+
+                  if (work_status == svn_wc__db_status_not_present)
+                    {
+                      *status = svn_wc__db_status_deleted;
+                    }
+                  else
+                    {
+                      *status = svn_wc__db_status_added;
+                    }
+                }
+            }
+        }
+      if (kind)
+        {
+          *kind = node_kind;
+        }
+      if (revision)
+        {
+          if (have_work)
+            *revision = SVN_INVALID_REVNUM;
+          else
+            *revision = svn_sqlite__column_revnum(stmt_base, 6);
+        }
+      if (have_work)
+        {
+          /* ### check presence first. */
+
+          /* If this node is added, then the repository information is
+             inherited from the first non-added parent. Note this node
+             has been added, and that we'll need to search for its
+             repository information.  */
+          added_repos = (repos_relpath != NULL
+                         || repos_root_url != NULL
+                         || repos_uuid != NULL);
+        }
+      else
+        {
+          if (repos_relpath)
+            {
+              if (svn_sqlite__column_is_null(stmt_base, 3))
+                inherit_repos = TRUE;
+              else
+                *repos_relpath = svn_sqlite__column_text(stmt_base, 3,
+                                                         result_pool);
+            }
+          if (repos_root_url || repos_uuid)
+            {
+              /* Fetch repository information via REPOS_ID. */
+              if (svn_sqlite__column_is_null(stmt_base, 2))
+                inherit_repos = TRUE;
+              else
+                err = fetch_repos_info(repos_root_url, repos_uuid, sdb,
+                                       svn_sqlite__column_int64(stmt_base, 2),
+                                       result_pool);
+            }
+        }
+      if (changed_rev)
+        {
+          if (have_work)
+            *changed_rev = svn_sqlite__column_revnum(stmt_work, 4);
+          else
+            *changed_rev = svn_sqlite__column_revnum(stmt_base, 9);
+        }
+      if (changed_date)
+        {
+          if (have_work)
+            *changed_date = svn_sqlite__column_int64(stmt_work, 5);
+          else
+            *changed_date = svn_sqlite__column_int64(stmt_base, 10);
+        }
+      if (changed_author)
+        {
+          if (have_work)
+            *changed_author = svn_sqlite__column_text(stmt_work, 6,
+                                                      result_pool);
+          else
+            *changed_author = svn_sqlite__column_text(stmt_base, 11,
+                                                      result_pool);
+        }
+      if (depth)
+        {
+          if (node_kind != svn_wc__db_kind_dir)
+            *depth = svn_depth_unknown;
+          else
+            {
+              const char *depth_str;
+
+              if (have_work)
+                depth_str = svn_sqlite__column_text(stmt_work, 7, NULL);
+              else
+                depth_str = svn_sqlite__column_text(stmt_base, 12, NULL);
+
+              if (depth_str == NULL)
+                *depth = svn_depth_unknown;
+              else
+                *depth = svn_depth_from_word(depth_str);
+            }
+        }
+      if (checksum)
+        {
+          if (node_kind != svn_wc__db_kind_file)
+            *checksum = NULL;
+          else
+            {
+              if (have_work)
+                err = svn_sqlite__column_checksum(checksum, stmt_work, 2,
+                                                  result_pool);
+              else
+                err = svn_sqlite__column_checksum(checksum, stmt_base, 7,
+                                                  result_pool);
+              if (err != NULL)
+                err = svn_error_createf(
+                        err->apr_err, err,
+                        _("The node '%s' has a corrupt checksum value."),
+                        svn_dirent_local_style(local_abspath, scratch_pool));
+            }
+        }
+      if (translated_size)
+        {
+          if (have_work)
+            *translated_size = get_translated_size(stmt_work, 3);
+          else
+            *translated_size = get_translated_size(stmt_base, 8);
+        }
+      if (target)
+        {
+          if (node_kind != svn_wc__db_kind_symlink)
+            *target = NULL;
+          else if (have_work)
+            *target = svn_sqlite__column_text(stmt_work, 8, result_pool);
+          else
+            *target = svn_sqlite__column_text(stmt_base, 13, result_pool);
+        }
+      if (changelist)
+        {
+          if (have_act)
+            *changelist = svn_sqlite__column_text(stmt_act, 0, result_pool);
+          else
+            *changelist = NULL;
+        }
+      if (original_repos_relpath)
+        {
+          if (have_work)
+            *original_repos_relpath = svn_sqlite__column_text(stmt_work, 10,
+                                                              result_pool);
+          else
+            *original_repos_relpath = NULL;
+        }
+      if (!have_work || svn_sqlite__column_is_null(stmt_work, 9))
+        {
+          if (original_root_url)
+            *original_root_url = NULL;
+          if (original_uuid)
+            *original_uuid = NULL;
+        }
+      else if (original_root_url || original_uuid)
+        {
+          /* Fetch repository information via COPYFROM_REPOS_ID. */
+          err = fetch_repos_info(original_root_url, original_uuid, sdb,
+                                 svn_sqlite__column_int64(stmt_work, 9),
+                                 result_pool);
+        }
+      if (original_revision)
+        {
+          if (have_work)
+            *original_revision = svn_sqlite__column_revnum(stmt_work, 11);
+          else
+            *original_revision = SVN_INVALID_REVNUM;
+        }
+      if (text_mod)
+        {
+          /* ### fix this */
+          *text_mod = FALSE;
+        }
+      if (props_mod)
+        {
+          /* ### fix this */
+          *props_mod = FALSE;
+        }
+      if (base_shadowed)
+        {
+          *base_shadowed = have_base && have_work;
+        }
+    }
+  else if (have_act)
+    {
+      /* A row in ACTUAL_NODE should never exist without a corresponding
+         node in BASE_NODE and/or WORKING_NODE.  */
+      err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                              _("Corrupt data for '%s'"),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' was not found."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+
+  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_base));
+  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_work));
+  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
+
+  if (err == NULL && added_repos)
+    {
+      /* ### fix this. scan upwards for non-work node. that defines the
+         ### repository information. then this node is relative to that.
+         ### watch out for presence changes? */
+
+      if (repos_relpath)
+        *repos_relpath = NULL;
+      if (repos_root_url)
+        *repos_root_url = NULL;
+      if (repos_uuid)
+        *repos_uuid = NULL;
+    }
+
+  if (err == NULL && inherit_repos)
+    {
+      apr_int64_t repos_id;
+
+      /* Fetch repository information from the parent in order to compute
+         this node's information.
+
+         Note: we delay this lookup until AFTER the statement used above
+         has been reset. We happen to use the same one for the scan.  */
+      SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath, wc_id, relpath,
+                                     sdb, result_pool, scratch_pool));
+
+      if (repos_root_url || repos_uuid)
+        err = fetch_repos_info(repos_root_url, repos_uuid, sdb, repos_id,
+                               result_pool);
+    }
+
+  return err;
 }
 
 
@@ -1742,19 +2073,6 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
-svn_wc__db_read_symlink_target(const char **target,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 

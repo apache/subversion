@@ -60,8 +60,6 @@ enum statement_keys {
   STMT_INSERT_ACTUAL_NODE,
   STMT_SELECT_REPOSITORY,
   STMT_SELECT_WCROOT_NULL,
-  STMT_SELECT_REPOSITORY_BY_ID,
-  STMT_SELECT_BASE_NODE,
   STMT_SELECT_WORKING_NODE,
   STMT_SELECT_ACTUAL_NODE,
   STMT_DELETE_BASE_NODE,
@@ -108,14 +106,6 @@ static const char * const statements[] = {
   "select id, root from repository where uuid = ?1;",
 
   "select id from wcroot where local_abspath is null;",
-
-  "select root, uuid from repository where id = ?1;",
-
-  "select wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
-    "presence, revnum, kind, checksum, translated_size, "
-    "changed_rev, changed_date, changed_author, depth, last_mod_time, "
-    "properties, incomplete_children "
-  "from base_node;",
 
   "select wc_id, local_relpath, parent_relpath, presence, kind, "
     "copyfrom_repos_id, "
@@ -1044,6 +1034,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 &entry->depth,
                 &checksum,
                 &translated_size,
+                NULL,
                 db,
                 svn_dirent_join(local_abspath, entry->name, scratch_pool),
                 result_pool,
@@ -1724,6 +1715,7 @@ entries_write_body(void *baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_BASE));
   SVN_ERR(svn_sqlite__step_done(stmt));
+  /* ### what about all ACTUAL nodes? */
 
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));

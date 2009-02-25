@@ -105,6 +105,19 @@ static const char * const data_loading_sql[] = {
    "  1, 'G', 2, 'G-alt', '', 'normal', 'file', "
    "  1, '$sha1$" SHA1_1 "', 15, "
    "  2, " TIME_2s ", '" AUTHOR_2 "', null, null, null, '()', null); "
+   "insert into base_node values ("
+   "  1, 'H', null, null, '', 'normal', 'symlink', "
+   "  1, null, null, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, 'H-target', null, '()', null); "
+   " "
+   "insert into working_node values ("
+   "  1, '', '', 'normal', 'dir', "
+   "  null, null, "
+   "  2, " TIME_2s ", '" AUTHOR_2 "', 'immediates', null, "
+   "  2, 'some/dir', 2, null, null, null, '()', 0); "
+   " "
+   "insert into actual_node values ("
+   "  1, '', '', null, null, null, null, null, 'changelist', null, null); "
    " "
    )
 };
@@ -158,6 +171,7 @@ test_getting_info(const char **msg,
   svn_depth_t depth;
   svn_checksum_t *checksum;
   svn_filesize_t translated_size;
+  const char *target;
   svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
   svn_error_t *err;
 
@@ -175,7 +189,7 @@ test_getting_info(const char **msg,
             &kind, &status, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,
-            &depth, &checksum, &translated_size,
+            &depth, &checksum, &translated_size, &target,
             db, local_abspath,
             pool, pool));
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_dir);
@@ -190,13 +204,14 @@ test_getting_info(const char **msg,
   SVN_ERR_ASSERT(depth == svn_depth_infinity);
   SVN_ERR_ASSERT(checksum == NULL);
   SVN_ERR_ASSERT(translated_size == SVN_INVALID_FILESIZE);
+  SVN_ERR_ASSERT(target == NULL);
 
   /* Test: NULL params, file-specific values, inherit repos info. */
   SVN_ERR(svn_wc__db_base_get_info(
             &kind, NULL, NULL,
             &repos_relpath, &repos_root_url, &repos_uuid,
             NULL, NULL, NULL,
-            NULL, &checksum, &translated_size,
+            NULL, &checksum, &translated_size, NULL,
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
@@ -211,7 +226,7 @@ test_getting_info(const char **msg,
             &kind, &status, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,
-            &depth, &checksum, &translated_size,
+            &depth, &checksum, &translated_size, &target,
             db, svn_dirent_join(local_abspath, "B", pool),
             pool, pool));
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_symlink);
@@ -226,13 +241,14 @@ test_getting_info(const char **msg,
   SVN_ERR_ASSERT(depth == svn_depth_unknown);
   SVN_ERR_ASSERT(checksum == NULL);
   SVN_ERR_ASSERT(translated_size == SVN_INVALID_FILESIZE);
+  SVN_ERR_ASSERT(target == NULL);
 
   /* Test: unknown kind, absent presence. */
   SVN_ERR(svn_wc__db_base_get_info(
             &kind, &status, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "C", pool),
             pool, pool));
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_unknown);
@@ -243,7 +259,7 @@ test_getting_info(const char **msg,
             NULL, &status, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "D", pool),
             pool, pool));
   SVN_ERR_ASSERT(status == svn_wc__db_status_not_present);
@@ -253,7 +269,7 @@ test_getting_info(const char **msg,
             NULL, &status, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "E", pool),
             pool, pool));
   SVN_ERR_ASSERT(status == svn_wc__db_status_incomplete);
@@ -263,7 +279,7 @@ test_getting_info(const char **msg,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL, &checksum, &translated_size,
+            NULL, &checksum, &translated_size, NULL,
             db, svn_dirent_join(local_abspath, "F", pool),
             pool, pool));
   SVN_ERR_ASSERT(strcmp(SHA1_1, svn_checksum_to_cstring(checksum, pool)) == 0);
@@ -274,7 +290,7 @@ test_getting_info(const char **msg,
             NULL, NULL, NULL,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "G", pool),
             pool, pool));
   SVN_ERR_ASSERT(strcmp(repos_relpath, "G-alt") == 0);
@@ -284,12 +300,24 @@ test_getting_info(const char **msg,
   SVN_ERR_ASSERT(changed_date == TIME_2a);
   SVN_ERR_ASSERT(strcmp(changed_author, AUTHOR_2) == 0);
 
+  /* Test: symlink target. */
+  SVN_ERR(svn_wc__db_base_get_info(
+            NULL, NULL, NULL,
+            NULL, NULL, NULL,
+            NULL, NULL, NULL,
+            NULL, &checksum, &translated_size, &target,
+            db, svn_dirent_join(local_abspath, "H", pool),
+            pool, pool));
+  SVN_ERR_ASSERT(checksum == NULL);
+  SVN_ERR_ASSERT(translated_size == SVN_INVALID_FILESIZE);
+  SVN_ERR_ASSERT(strcmp(target, "H-target") == 0);
+
   /* Test: missing node. */
   err = svn_wc__db_base_get_info(
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "missing-file", pool),
             pool, pool);
   SVN_ERR_ASSERT(err != NULL && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND);
@@ -318,7 +346,7 @@ validate_node(svn_wc__db_t *db,
             &kind, &status, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             db, path,
             scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(kind == expected_kind);
@@ -487,7 +515,7 @@ test_base_children(const char **msg,
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
                                        pool, pool));
-  SVN_ERR_ASSERT(children->nelts == 7);
+  SVN_ERR_ASSERT(children->nelts == 8);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -502,11 +530,96 @@ test_base_children(const char **msg,
 }
 
 
+static svn_error_t *
+test_working_info(const char **msg,
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
+  svn_revnum_t revision;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  svn_depth_t depth;
+  svn_checksum_t *checksum;
+  svn_filesize_t translated_size;
+  const char *target;
+  const char *changelist;
+  const char *original_repos_relpath;
+  const char *original_root_url;
+  const char *original_uuid;
+  svn_revnum_t original_revnum;
+  svn_boolean_t text_mod;
+  svn_boolean_t props_mod;
+  svn_boolean_t base_shadowed;
+  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+
+  *msg = "reading information about the WORKING tree";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_fake_wc("test_working_info", pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  "fake-wc/test_working_info",
+                                  pool));
+
+  /* Test: basic fetching of data. */
+  SVN_ERR(svn_wc__db_read_info(
+            &status, &kind, &revision,
+            &repos_relpath, &repos_root_url, &repos_uuid,
+            &changed_rev, &changed_date, &changed_author,
+            &depth, &checksum, &translated_size, &target,
+            &changelist, &original_repos_relpath, &original_root_url,
+            &original_uuid, &original_revnum,
+            &text_mod, &props_mod, &base_shadowed,
+            db, local_abspath,
+            pool, pool));
+  SVN_ERR_ASSERT(status == svn_wc__db_status_added);
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_dir);
+  SVN_ERR_ASSERT(revision == SVN_INVALID_REVNUM);
+#if 0
+  /* ### not working yet */
+  SVN_ERR_ASSERT(strcmp(repos_relpath, "") == 0);
+  SVN_ERR_ASSERT(strcmp(repos_root_url, ROOT_ONE) == 0);
+  SVN_ERR_ASSERT(strcmp(repos_uuid, UUID_ONE) == 0);
+#endif
+  SVN_ERR_ASSERT(changed_rev == 2);
+  SVN_ERR_ASSERT(changed_date == TIME_2a);
+  SVN_ERR_ASSERT(strcmp(changed_author, AUTHOR_2) == 0);
+  SVN_ERR_ASSERT(depth == svn_depth_immediates);
+  SVN_ERR_ASSERT(checksum == NULL);
+  SVN_ERR_ASSERT(translated_size == SVN_INVALID_FILESIZE);
+  SVN_ERR_ASSERT(target == NULL);
+  SVN_ERR_ASSERT(strcmp(changelist, "changelist") == 0);
+  SVN_ERR_ASSERT(strcmp(original_repos_relpath, "some/dir") == 0);
+  SVN_ERR_ASSERT(strcmp(original_root_url, ROOT_TWO) == 0);
+  SVN_ERR_ASSERT(strcmp(original_uuid, UUID_TWO) == 0);
+  SVN_ERR_ASSERT(original_revnum == 2);
+  SVN_ERR_ASSERT(text_mod == FALSE);
+  SVN_ERR_ASSERT(props_mod == FALSE);
+  SVN_ERR_ASSERT(base_shadowed == TRUE);
+
+
+  /* ### we need a hojillion more tests in here. I just want to get this
+     ### round checked in, so I'm skipping more tests at this point.  */
+
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_getting_info),
     SVN_TEST_PASS(test_inserting_nodes),
     SVN_TEST_PASS(test_base_children),
+    SVN_TEST_PASS(test_working_info),
     SVN_TEST_NULL
   };
