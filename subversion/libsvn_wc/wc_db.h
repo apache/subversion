@@ -530,8 +530,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
-                         svn_wc__db_status_t *status,
+svn_wc__db_base_get_info(svn_wc__db_status_t *status,
+                         svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,
