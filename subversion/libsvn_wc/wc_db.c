@@ -757,39 +757,38 @@ svn_wc__db_version(int *version,
                                        svn_wc__adm_child(path, "wc.db",
                                                          scratch_pool),
                                        scratch_pool);
-  if (err
-      && err->apr_err != SVN_ERR_SQLITE_ERROR
+  if (err == NULL)
+    return SVN_NO_ERROR;
+  if (err->apr_err != SVN_ERR_SQLITE_ERROR
       && !APR_STATUS_IS_ENOENT(err->apr_err))
     return err;
-  else if (!err)
-    return SVN_NO_ERROR;
+  svn_error_clear(err);
 
   /* Hmm, that didn't work.  Now try reading the format number from the
      entries file. */
-  svn_error_clear(err);
   format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, scratch_pool);
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
-  if (err && err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT)
+  if (err == NULL)
+    return SVN_NO_ERROR;
+  if (err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT)
     return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
                              svn_dirent_local_style(path, scratch_pool));
-  else if (!err)
-    return SVN_NO_ERROR;
+  svn_error_clear(err);
 
   /* Wow, another error; this must be a really old working copy!  Fall back
      to reading the format file. */
-  svn_error_clear(err);
   /* Note that the format file might not exist in newer working copies
      (format 7 and higher), but in that case, the entries file should
      have contained the format number. */
   format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, scratch_pool);
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
-
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+  if (err == NULL)
+    return SVN_NO_ERROR;
+  if (APR_STATUS_IS_ENOENT(err->apr_err)
+      || APR_STATUS_IS_ENOTDIR(err->apr_err))
     return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
                              svn_dirent_local_style(path, scratch_pool));
-  else if (!err)
-    return SVN_NO_ERROR;
+  svn_error_clear(err);
 
   /* If we've gotten this far, all of the above checks have failed, so just
      bail. */
