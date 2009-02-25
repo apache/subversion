@@ -512,6 +512,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  *   DEPTH            svn_depth_unknown
  *   CHECKSUM         NULL
  *   TRANSLATED_SIZE  SVN_INVALID_FILESIZE
+ *   TARGET           NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
@@ -521,6 +522,9 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  *
  * If TRANSLATED_SIZE is requested, and the node is NOT a file, then
  * it will be set to SVN_INVALID_FILESIZE.
+ *
+ * If TARGET is requested, and the node is NOT a symlink, then it will
+ * be set to NULL.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.
@@ -538,6 +542,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_depth_t *depth,  /* ### for dirs only */
                          svn_checksum_t **checksum,  /* ### files only */
                          svn_filesize_t *translated_size,
+                         const char **target,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -597,25 +602,6 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
-
-
-/** Return the target of the symlink at the give BASE tree node.
- *
- * For the node indicated by LOCAL_ABSPATH, the symlink's target will
- * be returned in TARGET.
- *
- * If the node is not a symlink, then SVN_ERR_WC_NOT_SYMLINK will
- * be returned.
- *
- * All returned data will be allocated in RESULT_POOL. All temporary
- * allocations will be made in SCRATCH_POOL.
- */
-svn_error_t *
-svn_wc__db_base_get_symlink_target(const char **target,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
 
 
 /* ### how to handle depth? empty != absent. thus, record depth on each
@@ -920,7 +906,68 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * the checksum comes from BASE.
  */
 
-/* ### NULL may be given for OUT params.
+/** Retrieve information about a node.
+ *
+ * For the node implied by LOCAL_ABSPATH from the local filesystem, return
+ * information in the provided OUT parameters. Each OUT parameter may be
+ * NULL, indicating that specific item is not requested.
+ *
+ * The information returned comes from the BASE tree, as possibly modified
+ * by the WORKING and ACTUAL trees.
+ *
+ * If there is no information about the node, then SVN_ERR_WC_PATH_NOT_FOUND
+ * will be returned.
+ *
+ * The OUT parameters, and their "not available" values are:
+ *   STATUS                  n/a (always available)
+ *   KIND                    n/a (always available)
+ *   REVISION                SVN_INVALID_REVNUM
+ *   REPOS_RELPATH           NULL
+ *   REPOS_ROOT_URL          NULL
+ *   REPOS_UUID              NULL
+ *   CHANGED_REV             SVN_INVALID_REVNUM
+ *   CHANGED_DATE            0
+ *   CHANGED_AUTHOR          NULL
+ *   DEPTH                   svn_depth_unknown
+ *   CHECKSUM                NULL
+ *   TRANSLATED_SIZE         SVN_INVALID_FILESIZE
+ *   TARGET                  NULL
+ *   CHANGELIST              NULL
+ *   ORIGINAL_REPOS_RELPATH  NULL
+ *   ORIGINAL_ROOT_URL       NULL
+ *   ORIGINAL_UUID           NULL
+ *   ORIGINAL_REVISION       SVN_INVALID_REVNUM
+ *   TEXT_MOD                n/a (always available)
+ *   PROPS_MOD               n/a (always available)
+ *   BASE_SHADOWED           n/a (always available)
+ *
+ * If DEPTH is requested, and the node is NOT a directory, then
+ * the value will be set to svn_depth_unknown.
+ *
+ * If CHECKSUM is requested, and the node is NOT a file, then it will
+ * be set to NULL.
+ *
+ * If TRANSLATED_SIZE is requested, and the node is NOT a file, then
+ * it will be set to SVN_INVALID_FILESIZE.
+ *
+ * If TARGET is requested, and the node is NOT a symlink, then it will
+ * be set to NULL.
+ *
+ * ### add some documentation about OUT parameter values based on STATUS ??
+ *
+ * ### the TEXT_MOD may become an enumerated value at some point to
+ * ### indicate different states of knowledge about text modifications.
+ * ### for example, an "svn edit" command in the future might set a
+ * ### flag indicating adminstratively-defined modification. and/or we
+ * ### might have a status indicating that we saw it was modified while
+ * ### performing a filesystem traversal.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
+/* ### old docco. needs to be incorporated as appropriate. there is
+   ### some pending, potential changes to the definition of this API,
+   ### so not worrying about it just yet.
 
    ### if the node has not been committed (after adding):
    ###   revision will be SVN_INVALID_REVNUM
@@ -938,9 +985,6 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ###   original_root_url will be NULL
    ###   original_uuid will be NULL
    ###   original_revision will be SVN_INVALID_REVNUM
-
-   ### put all these OUT params into a structure? but this interface allows
-   ### us to query for one or all pieces of information (harder with a struct)
 
    ### KFF: The position of 'db' in the parameter list is sort of
    ### floating around (e.g., compare this func with the next one).
@@ -965,6 +1009,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_depth_t *depth,  /* ### dirs only */
                      svn_checksum_t **checksum,
                      svn_filesize_t *translated_size,
+                     const char **target,
                      const char **changelist,
 
                      /* ### the following fields if copied/moved (history) */
@@ -1025,14 +1070,6 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_read_symlink_target(const char **target,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
 
 
 /* ### changelists. return an array, or an iterator interface? how big
