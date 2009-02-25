@@ -2799,7 +2799,8 @@ prudent to make a new release candidate when they are fixed so that
 those language bindings may be tested.</p>
 
 <p>At the beginning of the final week of the stabilization period, a
-new release candidate tarball should be made if there are any changes
+new release candidate tarball should be made if there are any
+showstopper changes
 pending since the last one.  The final week of the stabilization
 period is reserved for critical bugfixes; fixes for minor bugs should
 be deferred to the A.B.1 release.  A critical bug is a non-edge-case
@@ -2952,6 +2953,28 @@ haven't reviewed the patch carefully.  Neither of these votes counts
 toward the total, but they can be useful for tracking down people who
 are following the change and might be willing to spend more time on
 it.</p>
+
+<p>When votes are listed in the STATUS file, they are placed into a
+section for a given release. Some developers may want to vote the
+change into a <b>later</b> release, if (for example) they believe it
+requires further review or testing. Simply add a comment along with
+your vote:</p>
+
+<pre>
+  * r12345
+    Fiddle with the hoobey-gidget to clean the garblesnarf.
+    Justification:
+      All hell breaks loose if the jobbywonk gets out.
+    Votes:
+      +1: brane
+      +1: gstein (for 1.7.2)
+</pre>
+
+<p>Since votes are tied to specific releases (specified by the section
+they fall under), be very careful when moving change candidates among
+the sections. Existing votes were for the <b>original</b> version, not
+where the candidate has been moved it. Annotate existing votes as
+being cast only for the original version.</p>
 
 <p>There is a somewhat looser voting system for areas that are not
 core code, and that may have fewer experts available to review changes
