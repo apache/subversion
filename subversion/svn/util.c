@@ -200,7 +200,6 @@ svn_cl__merge_file_externally(const char *base_path,
                               const char *their_path,
                               const char *my_path,
                               const char *merged_path,
-                              const char *wc_name,
                               apr_hash_t *config,
                               apr_pool_t *pool)
 {
@@ -240,26 +239,15 @@ svn_cl__merge_file_externally(const char *base_path,
 
   {
     const char *arguments[] = { merge_tool, base_path, their_path,
-                                my_path, merged_path, wc_name, NULL};
+                                my_path, merged_path, NULL};
     char *cwd;
-    int exitcode;
-
     apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
     if (status != 0)
       return svn_error_wrap_apr(status, NULL);
-    SVN_ERR(svn_io_run_cmd(svn_path_internal_style(cwd, pool), merge_tool,
-                           arguments, &exitcode, NULL, TRUE, NULL, NULL, NULL,
-                           pool));
-    /* Exit code 0 means the merge was successful.
-     * Exit code 1 means the file was left in conflict but it
-     * is OK to continue with the merge.
-     * Any other exit code means we should abort the merge. */
-    if (exitcode != 0 && exitcode != 1)
-      return svn_error_createf
-        (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-         _("The external merge tool exited with exit code %d"), exitcode);
+    return svn_io_run_cmd(svn_path_internal_style(cwd, pool), merge_tool,
+                          arguments, NULL, NULL, TRUE, NULL, NULL, NULL,
+                          pool);
   }
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *

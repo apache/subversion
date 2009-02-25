@@ -216,7 +216,7 @@ launch_resolver(svn_boolean_t *performed_edit,
 
   err = svn_cl__merge_file_externally(desc->base_file, desc->their_file,
                                       desc->my_file, desc->merged_file,
-                                      desc->path, b->config, pool);
+                                      b->config, pool);
   if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
@@ -333,7 +333,6 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                               desc->their_file,
                                               desc->my_file,
                                               desc->merged_file,
-                                              desc->path,
                                               b->config,
                                               pool);
           if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)

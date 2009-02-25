@@ -484,7 +484,6 @@ svn_cl__edit_file_externally(const char *path,
 
 /* Search for a merge tool command in environment variables,
    and use it to perform the merge of the four given files.
-   WC_NAME is the name of the file that is in conflict.
    Use POOL for all allocations.
 
    CONFIG is a hash of svn_config_t * items keyed on a configuration
@@ -495,7 +494,6 @@ svn_cl__merge_file_externally(const char *base_path,
                               const char *their_path,
                               const char *my_path,
                               const char *merged_path,
-                              const char *wc_name,
                               apr_hash_t *config,
                               apr_pool_t *pool);
 
