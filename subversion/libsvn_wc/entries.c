@@ -1022,8 +1022,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
       entry->name = APR_ARRAY_IDX(children, i, const char *);
 
       SVN_ERR(svn_wc__db_base_get_info(
-                &kind,
                 &status,
+                &kind,
                 &entry->revision,
                 &repos_relpath,
                 &entry->repos,

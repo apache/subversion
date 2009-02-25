@@ -186,7 +186,7 @@ test_getting_info(const char **msg,
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
-            &kind, &status, &revision,
+            &status, &kind, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,
             &depth, &checksum, &translated_size, &target,
@@ -208,7 +208,7 @@ test_getting_info(const char **msg,
 
   /* Test: NULL params, file-specific values, inherit repos info. */
   SVN_ERR(svn_wc__db_base_get_info(
-            &kind, NULL, NULL,
+            NULL, &kind, NULL,
             &repos_relpath, &repos_root_url, &repos_uuid,
             NULL, NULL, NULL,
             NULL, &checksum, &translated_size, NULL,
@@ -223,7 +223,7 @@ test_getting_info(const char **msg,
 
   /* Test: symlink kind, excluded presence, default values for columns. */
   SVN_ERR(svn_wc__db_base_get_info(
-            &kind, &status, &revision,
+            &status, &kind, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,
             &depth, &checksum, &translated_size, &target,
@@ -245,7 +245,7 @@ test_getting_info(const char **msg,
 
   /* Test: unknown kind, absent presence. */
   SVN_ERR(svn_wc__db_base_get_info(
-            &kind, &status, NULL,
+            &status, &kind, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
@@ -256,7 +256,7 @@ test_getting_info(const char **msg,
 
   /* Test: not-present presence. */
   SVN_ERR(svn_wc__db_base_get_info(
-            NULL, &status, NULL,
+            &status, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
@@ -266,7 +266,7 @@ test_getting_info(const char **msg,
 
   /* Test: incomplete presence. */
   SVN_ERR(svn_wc__db_base_get_info(
-            NULL, &status, NULL,
+            &status, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
@@ -343,7 +343,7 @@ validate_node(svn_wc__db_t *db,
 #endif
 
   SVN_ERR(svn_wc__db_base_get_info(
-            &kind, &status, NULL,
+            &status, &kind, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
