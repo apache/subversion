@@ -1501,11 +1501,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
              Do nothing if target is already the base_dir. */
           if (strcmp(target, base_dir) != 0)
             {
-              const char *parent_dir = svn_dirent_dirname(target, subpool);
-              target = parent_dir;
+              target = svn_dirent_dirname(target, subpool);
 
               while (strcmp(target, base_dir) != 0)
                 {
+                  const char *parent_dir;
+
                   APR_ARRAY_PUSH(dirs_to_lock,
                                  const char *) = apr_pstrdup(pool, target);
 
@@ -1513,8 +1514,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
                   if (strcmp(parent_dir, target) == 0)
                     break; /* Reached root directory */
-                  else
-                    target = parent_dir;
+                  
+                  target = parent_dir;
                 }
             }
         }
