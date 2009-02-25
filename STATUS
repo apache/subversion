@@ -97,5 +97,14 @@ Candidate changes for 1.5.6:
    Votes:
      +1: rhuijben
 
+ * r36111
+   On Windows don't retry deleting a file 100 times when this file is really
+   not a file but just a directory.
+   Justification:
+     Makes removing unversioned directories much faster.
+     (You can see the delay with: svn rm --force <unversioned-empty-directory>)
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
