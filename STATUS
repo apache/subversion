@@ -44,17 +44,6 @@ Candidate changes for 1.5.6:
 Approved changes:
 =================
 
- * r34875
-   Fix depth_tests.py 23 issues that sometimes occurs on Windows when a BDB
-   repository is not unlocked fast enough to delete it in the testcycle.
-   (Reported multiple times by Mark Phippard, Jens Peters and me as failure
-   when testing subversion 1.5.x before release)
-   Justification:
-     Tests that often fail for the wrong reason, might hide real issues
-     with our releases.
-   Votes:
-     +1: rhuijben, pburba, gstein
-
  * r34919, r34924
    Make svn client to use the 'LFS' capability of 'neon' to allow commits 
    of new file(post-compression) beyond > 2GB in size.
