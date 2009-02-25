@@ -44,6 +44,7 @@
 #include "private/svn_skel.h"
 
 #include "wc-metadata.h"
+#include "wc-checks.h"
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
@@ -2657,6 +2658,12 @@ svn_wc__entries_init(const char *path,
                            statements,
                            SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
                            scratch_pool, scratch_pool));
+
+#ifdef SVN_DEBUG
+  {
+    SVN_ERR(svn_sqlite__exec(wc_db, WC_CHECKS_SQL));
+  }
+#endif
 
   /* Do the body of the work within an sqlite transaction. */
   itb.uuid = uuid;
