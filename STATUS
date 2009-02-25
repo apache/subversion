@@ -44,20 +44,6 @@ Candidate changes for 1.5.6:
 Approved changes:
 =================
 
- * r35297, r35367
-   Allow svn_mergeinfo_parse() to tolerate unordered rangelists as input
-   while still guaranteeing the mergeinfo it creates has sorted rangelists
-   as required by all our rangelist manipulating APIs.
-   Justification:
-     Versions of svnmerge-migrate-history.py and
-     svnmerge-migrate-history-remotely.py prior to r35358 could create
-     mergeinfo in the repos with rangelists sorted in reverse order.
-     Prior to r35297 this broke any subcommand which encountered this
-     mergeinfo because svn_mergeinfo_parse returned a parsing error.
-   Votes:
-     +1: pburba, rhuijben
-     +1: gstein (as long as r35713 does not get vetoed out of the release)
-
  * r35466, r35712, r35713
    Allow svn_mergeinfo_parse() to tolerate overlapping rangelists as input
    while still guaranteeing the mergeinfo it creates has no overlapping

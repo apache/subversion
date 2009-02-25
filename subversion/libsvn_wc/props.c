@@ -2666,7 +2666,11 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
   else if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
     {
       apr_hash_t *mergeinfo;
+      svn_string_t *new_value_str;
+
       SVN_ERR(svn_mergeinfo_parse(&mergeinfo, propval->data, pool));
+      SVN_ERR(svn_mergeinfo_to_string(&new_value_str, mergeinfo, pool));
+      new_value = svn_stringbuf_create_from_string(new_value_str, pool);
     }
 
   if (new_value)

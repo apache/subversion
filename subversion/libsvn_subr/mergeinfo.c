@@ -358,77 +358,6 @@ range_to_string(svn_string_t **result, svn_merge_range_t *range,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_mergeinfo_parse() via parse_revlist().
-
-  Similar to combine_with_lastrange() but enforces the some of the
-  restrictions noted in svn_mergeinfo_parse() on otherwise grammatically
-  correct rangelists, specifically the prohibitions on:
-
-    1) Overlapping revision ranges
-
-    2) Unordered revision ranges
-
-  Returns an SVN_ERR_MERGEINFO_PARSE_ERROR error if any of these rules
-  are violated.  The restriction on revision ranges with a start revision
-  greater than or equal to its end revision is handled in parse_revlist().
-
-  Unlike combine_with_lastrange() this function *always* considers
-  inheritance, so only adjacent revision ranges with the same
-  inheritability are ever combined. */
-static svn_error_t *
-combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
-                                svn_merge_range_t *mrange,
-                                svn_boolean_t dup_mrange,
-                                apr_array_header_t *revlist,
-                                apr_pool_t *pool)
-{
-  svn_merge_range_t *pushed_mrange = mrange;
-
-  if (*lastrange)
-    {
-      svn_string_t *r1, *r2;
-
-      if ((*lastrange)->start <= mrange->end
-          && mrange->start <= (*lastrange)->end)
-        {
-          /* The ranges intersect. */
-          SVN_ERR(range_to_string(&r1, *lastrange, pool));
-          SVN_ERR(range_to_string(&r2, mrange, pool));
-
-          /* svn_mergeinfo_parse promises to combine adjacent
-             ranges, but not overlapping ranges. */
-          if (mrange->start < (*lastrange)->end)
-            {
-              return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                                       _("Parsing of overlapping revision "
-                                         "ranges '%s' and '%s' is not "
-                                         "supported"), r1->data, r2->data);
-            }
-          else if ((*lastrange)->inheritable == mrange->inheritable)
-            {
-              /* Combine adjacent ranges with the same inheritability. */
-              (*lastrange)->end = mrange->end;
-              return SVN_NO_ERROR;
-            }
-        }
-      else if ((*lastrange)->start > mrange->start)
-        {
-          SVN_ERR(range_to_string(&r1, *lastrange, pool));
-          SVN_ERR(range_to_string(&r2, mrange, pool));
-          return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                                   _("Unable to parse unordered revision "
-                                     "ranges '%s' and '%s'"),
-                                     r1->data, r2->data);
-        }
-    }
-
-  if (dup_mrange)
-    pushed_mrange = svn_merge_range_dup(mrange, pool);
-  APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = pushed_mrange;
-  *lastrange = pushed_mrange;
-  return SVN_NO_ERROR;
-}
-
 /* Helper for svn_mergeinfo_parse()
 
    revisionlist -> (revisionelement)(COMMA revisionelement)*
@@ -444,7 +373,6 @@ parse_revlist(const char **input, const char *end,
               apr_pool_t *pool)
 {
   const char *curr = *input;
-  svn_merge_range_t *lastrange = NULL;
 
   /* Eat any leading horizontal white-space before the rangelist. */
   while (curr < end && *curr != '\n' && isspace(*curr))
@@ -496,15 +424,13 @@ parse_revlist(const char **input, const char *end,
 
       if (*curr == '\n' || curr == end)
         {
-          SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange, FALSE,
-                                                  revlist, pool));
+          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
           *input = curr;
           return SVN_NO_ERROR;
         }
       else if (*curr == ',')
         {
-          SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange, FALSE,
-                                                  revlist, pool));
+          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
           curr++;
         }
       else if (*curr == '*')
@@ -513,8 +439,7 @@ parse_revlist(const char **input, const char *end,
           curr++;
           if (*curr == ',' || *curr == '\n' || curr == end)
             {
-              SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange,
-                                                      FALSE, revlist, pool));
+              APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
               if (*curr == ',')
                 {
                   curr++;
@@ -575,8 +500,53 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
   if (*input != end)
     *input = *input + 1;
 
-  qsort(revlist->elts, revlist->nelts, revlist->elt_size,
+  /* Sort the rangelist, combine adjacent ranges into single ranges,
+     and make sure there are no overlapping ranges. */
+  if (revlist->nelts > 1)
+    {
+      int i;
+      svn_merge_range_t *range, *lastrange;
+
+      qsort(revlist->elts, revlist->nelts, revlist->elt_size,
         svn_sort_compare_ranges);
+      lastrange = APR_ARRAY_IDX(revlist, 0, svn_merge_range_t *);
+
+      for (i = 1; i < revlist->nelts; i++)
+        {
+          range = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
+          if (lastrange->start <= range->end
+              && range->start <= lastrange->end)
+            {
+              /* The ranges intersect. */
+
+              /* svn_mergeinfo_parse promises to combine adjacent
+                 ranges, but not overlapping ranges. */
+              if (range->start < lastrange->end)
+                {
+                  svn_string_t *r1, *r2;
+
+                  SVN_ERR(range_to_string(&r1, lastrange, pool));
+                  SVN_ERR(range_to_string(&r2, range, pool));
+                  return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                                           _("Parsing of overlapping revision "
+                                             "ranges '%s' and '%s' is not "
+                                             "supported"), r1->data, r2->data);
+                }
+              else if (lastrange->inheritable == range->inheritable)
+                {
+                  /* Combine adjacent ranges with the same inheritability. */
+                  lastrange->end = range->end;
+                  if (i + 1 < revlist->nelts)
+                    memmove(revlist->elts + (revlist->elt_size * i),
+                            revlist->elts + (revlist->elt_size * (i + 1)),
+                            revlist->elt_size * (revlist->nelts - i));
+                  revlist->nelts--;
+                  i--;
+                }
+            }
+          lastrange = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
+        }
+    }
   apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, revlist);
 
   return SVN_NO_ERROR;

@@ -690,13 +690,6 @@ def inappropriate_props(sbox):
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/branch:3,3', path)
 
-  # ...contain unordered revision ranges
-  svntest.actions.run_and_verify_svn('unordered ranges', None,
-                                     "svn: Unable to parse unordered "
-                                      "revision ranges '5' and '2-3'\n",
-                                     'propset', SVN_PROP_MERGEINFO,
-                                     '/featureX:5,2-3,9', path)
-
   # ...contain revision ranges with start revisions greater than or
   #    equal to end revisions.
   svntest.actions.run_and_verify_svn('range start >= range end', None,
