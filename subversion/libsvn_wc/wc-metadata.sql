@@ -198,6 +198,7 @@ CREATE TABLE WORKING_NODE (
   /* ### depth on WORKING? seems this is a BASE-only concept. how do
      ### you do "files" on an added-directory? can't really ignore
      ### the subdirs! */
+  /* ### maybe a WC-to-WC copy can retain a depth?  */
   depth  TEXT,
 
   /* for kind==symlink, this specifies the target. */
@@ -210,17 +211,17 @@ CREATE TABLE WORKING_NODE (
   copyfrom_revnum  INTEGER,
 
   /* If this node was moved (rather than just copied), this specifies
-     the local_relpath of the source of the move. */
+     the local_relpath of the source of the move. This is set only on
+     the root of a move, and implied for all children.  */
   moved_from  TEXT,
 
-  /* If this node was moved (rather than just deleted), this specifies
-     where the BASE node was moved to.
+  /* If the underlying node was moved (rather than just deleted), this
+     specifies where the BASE node was moved to. This is set only on the
+     root of a move, and implied for all children.
 
-     ### uh oh. what if the BASE is moved, then a directory is copied
-     ### here, then a child is moved? does "moved_to" apply to the BASE,
-     ### to to the replacing nodes?
-     ### answer: only use moved_to for the *root* of a moved tree. thus,
-     ### any moves below that point *must* apply to the replacing nodes. */
+     Note that moved_to never refers to *this* node. It always refers
+     to the "underlying" node, whether that is BASE or a child node
+     implied from a parent's move/copy.  */
   moved_to  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
