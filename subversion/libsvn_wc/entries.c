@@ -1516,6 +1516,7 @@ write_entry(svn_sqlite__db_t *wc_db,
   if (entry->copied)
     {
       working_node = MAYBE_ALLOC(working_node, scratch_pool);
+      working_node->copyfrom_repos_id = repos_id;
       working_node->copyfrom_repos_path = entry->copyfrom_url;
       working_node->copyfrom_revnum = entry->copyfrom_rev;
     }
