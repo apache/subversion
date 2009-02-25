@@ -4,7 +4,7 @@ http://svn.collab.net/repos/svn/tags/1.5.6
 
  User-visible changes:
   * allow colons within mergeinfo path names (r35040)
-  * make is impossible to add .svn to wc via 'svn add --parents' (r35143, -5)
+  * make it impossible to add .svn to wc via 'svn add --parents' (r35143, -5)
   * copy properties of added but uncommitted files (r32448)
   * speedup JavaHL bindings on Windows (r35733)
   * improve performance of log operation on < 1.5 servers (r35566)
