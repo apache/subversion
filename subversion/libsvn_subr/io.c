@@ -1765,8 +1765,24 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
 
   apr_err = apr_file_remove(path_apr, pool);
-  WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, pool));
+#ifdef WIN32
+  if (apr_err)
+    {
+      /* Check to make sure we aren't trying to delete a directory */
+      if (APR_TO_OS_ERROR(apr_err) == ERROR_ACCESS_DENIED)
+        {
+          apr_finfo_t finfo;
 
+          if (apr_stat(&finfo, path_apr, APR_FINFO_TYPE, pool) == APR_SUCCESS 
+              && finfo.filetype == APR_REG)
+            {
+              WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, pool));
+            }		  
+        }
+
+      /* Just return the delete error */
+    }
+#endif
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
                               svn_path_local_style(path, pool));
