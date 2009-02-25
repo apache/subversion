@@ -200,6 +200,7 @@ svn_cl__merge_file_externally(const char *base_path,
                               const char *their_path,
                               const char *my_path,
                               const char *merged_path,
+                              const char *wc_name,
                               apr_hash_t *config,
                               apr_pool_t *pool)
 {
@@ -239,7 +240,7 @@ svn_cl__merge_file_externally(const char *base_path,
 
   {
     const char *arguments[] = { merge_tool, base_path, their_path,
-                                my_path, merged_path, NULL};
+                                my_path, merged_path, wc_name, NULL};
     char *cwd;
     apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
     if (status != 0)
