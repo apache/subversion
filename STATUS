@@ -72,17 +72,18 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      +1: rhuijben
      +1: gstein (for 1.6.1)
      
- * r36049
+ * r36049-r36051, r36131
    Resolve the SVN_ERR_MALFUNCTION() reproducable on Windows with
      svn ci "C:/Program FIles" C:/Windows
-   by handling parent directories correctly
+   by handling parent directories correctly.
+   (r36050 and r36050 are typo fixes; r36131 some extra cleanup)
    Justification:
      This malfunction makes update_tests.py 32 abort on Windows. Which in turn
      delays the Windows automated testrun until a user confirms.
      (This doesn't fix this testcase; it just handles this part of the problem)
    Votes:
      +1: rhuijben
-     -0: gstein (replied with feedback on this rev)
+     -0: gstein (replied with feedback on this rev.) (r36049 only) 
 
  * r36106
    Resolves issue #3374, "svn cp --parents path URL encoding issues"
