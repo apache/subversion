@@ -951,6 +951,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   svn_wc__db_t *db;
   const char *local_abspath;
   const apr_array_header_t *children;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   
   if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
@@ -1021,6 +1022,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       entry->name = APR_ARRAY_IDX(children, i, const char *);
 
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_wc__db_base_get_info(
                 &status,
                 &kind,
@@ -1036,9 +1039,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 &translated_size,
                 NULL,
                 db,
-                svn_dirent_join(local_abspath, entry->name, scratch_pool),
+                svn_dirent_join(local_abspath, entry->name, iterpool),
                 result_pool,
-                scratch_pool));
+                iterpool));
 
       /* ### most of the higher levels seem to want "infinity" for files.
          ### without this, it seems a report with depth=unknown was sent
@@ -1127,6 +1130,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
       const char *rel_path;
       svn_wc_entry_t *entry = alloc_entry(result_pool);
 
+      svn_pool_clear(iterpool);
       apr_hash_this(hi, (const void **) &rel_path, NULL,
                     (void **) &working_node);
       entry->name = apr_pstrdup(result_pool, working_node->local_relpath);
@@ -1146,14 +1150,14 @@ read_entries(svn_wc_adm_access_t *adm_access,
       SVN_ERR(find_working_add_entry_url_stuffs(
                         entry->name[0] == 0
                             ? svn_path_dirname(svn_wc_adm_access_path(
-                                            adm_access), scratch_pool)
+                                            adm_access), iterpool)
                             : svn_wc_adm_access_path(adm_access),
                         entry,
                         entry->name[0] == 0
                             ? svn_path_basename(svn_wc_adm_access_path(
-                                                   adm_access), scratch_pool)
+                                                   adm_access), iterpool)
                             : entry->name,
-                        result_pool, scratch_pool));
+                        result_pool, iterpool));
       entry->kind = working_node->kind;
       entry->revision = 0;
 
@@ -1164,6 +1168,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_wc__resolve_to_defaults(entries, result_pool));
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -1758,6 +1763,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   svn_sqlite__db_t *wc_db;
   const svn_wc_entry_t *this_dir;
   struct entries_write_txn_baton ewtb;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
     return svn_wc__entries_write_old(entries, adm_access, pool);
@@ -1781,17 +1787,18 @@ svn_wc__entries_write(apr_hash_t *entries,
                            svn_sqlite__mode_readwrite,
                            statements,
                            SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                           pool, pool));
+                           scratch_pool, scratch_pool));
 
   /* Do the work in a transaction. */
   ewtb.entries = entries;
   ewtb.this_dir = this_dir;
-  ewtb.scratch_pool = pool;
+  ewtb.scratch_pool = scratch_pool;
   SVN_ERR(svn_sqlite__with_transaction(wc_db, entries_write_body, &ewtb));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
 
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -2061,6 +2068,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
 {
   svn_sqlite__db_t *wc_db;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
@@ -2069,7 +2077,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
   err = svn_sqlite__open(&wc_db, db_path(parent_dir, scratch_pool),
                          svn_sqlite__mode_readwrite, statements,
                          SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                         scratch_pool, scratch_pool);
+                         subpool, subpool);
   if (err == NULL)
     {
       /* Do the work in a transaction, for consistency. */
@@ -2092,6 +2100,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
   else
     return err;
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -2622,7 +2631,8 @@ svn_wc__entries_init(const char *path,
 {
   svn_node_kind_t kind;
   svn_sqlite__db_t *wc_db;
-  const char *wc_db_path = db_path(path, pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  const char *wc_db_path = db_path(path, scratch_pool);
   struct init_txn_baton itb;
 
   if (!should_create_next_gen())
@@ -2636,7 +2646,7 @@ svn_wc__entries_init(const char *path,
                  || depth == svn_depth_infinity);
 
   /* Check that the entries sqlite database does not yet exist. */
-  SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
+  SVN_ERR(svn_io_check_path(wc_db_path, &kind, scratch_pool));
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                              _("Existing sqlite database found at '%s'"),
@@ -2646,7 +2656,7 @@ svn_wc__entries_init(const char *path,
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
                            statements,
                            SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                           pool, pool));
+                           scratch_pool, scratch_pool));
 
   /* Do the body of the work within an sqlite transaction. */
   itb.uuid = uuid;
@@ -2655,7 +2665,10 @@ svn_wc__entries_init(const char *path,
   itb.initial_rev = initial_rev;
   itb.depth = depth;
   itb.scratch_pool = pool;
-  return svn_sqlite__with_transaction(wc_db, init_body, &itb);
+  SVN_ERR(svn_sqlite__with_transaction(wc_db, init_body, &itb));
+
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 
