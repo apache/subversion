@@ -95,7 +95,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      Without this patch --parents is broken for utf8 characters in repos
      to repos copy and move operations.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
      +0: gstein (for 1.6.1)
 
  * r36111
