@@ -79,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-02-23 10:00+0100\n"
-"PO-Revision-Date: 2009-02-23 22:22+0100\n"
+"PO-Revision-Date: 2009-02-25 12:00+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1936,6 +1936,10 @@ msgid ""
 "merged from %s to the reintegrate source, but this is not the case:\n"
 "%s"
 msgstr ""
+"Reintegration kann nur genutzt werden, falls die Revisionen %ld bis %ld vorher "
+"von %s in die zurück integrierende Quelle zusammengeführt wurden, aber dies "
+"ist nicht der Fall:\n"
+"%s"
 
 #: ../libsvn_client/prop_commands.c:74
 #, c-format
@@ -5794,19 +5798,19 @@ msgstr "Konnte Zusammenführungsinformationszeichenkette »%s« nicht einlesen"
 
 #: ../libsvn_subr/mergeinfo.c:1553
 msgid "NULL mergeinfo catalog\n"
-msgstr ""
+msgstr "Zusammenführungsinformationskatalog ist NULL\n"
 
 #: ../libsvn_subr/mergeinfo.c:1558
 msgid "empty mergeinfo catalog\n"
-msgstr ""
+msgstr "Zusammenführungsinformationskatalog ist leer\n"
 
 #: ../libsvn_subr/mergeinfo.c:1591
 msgid "NULL mergeinfo\n"
-msgstr ""
+msgstr "Zusammenführungsinformationen sind NULL\n"
 
 #: ../libsvn_subr/mergeinfo.c:1596
 msgid "empty mergeinfo\n"
-msgstr ""
+msgstr "Zusammenführungsinformationen sind leer\n"
 
 #: ../libsvn_subr/nls.c:85
 #, c-format
@@ -7321,10 +7325,8 @@ msgid "Skipping binary file: '%s'\n"
 msgstr "Überspringe Binärdatei: »%s«\n"
 
 #: ../svn/changelist-cmd.c:53 ../svn/main.c:1529
-#, fuzzy
-#| msgid "Changelist doesn't match"
 msgid "Changelist names must not be empty"
-msgstr "Änderungsliste passt nicht"
+msgstr "Namen von Änderungslisten dürfen nicht leer sein"
 
 #: ../svn/checkout-cmd.c:130 ../svn/switch-cmd.c:138
 #, c-format
