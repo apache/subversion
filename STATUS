@@ -37,7 +37,7 @@ Candidate changes:
      r36027 addes the proper API, and r36035 uses it.
    Votes:
      +1: hwright, rhuijben
-     +0: gstein (ie. only if a new tarball is constructed)
+     +0: gstein (ie. only if a new *code* tarball is constructed)
      
  * ^/branches/1.6.x-dirent-basename
    Drop svn_dirent_basename, svn_dirent_split, svn_uri_basename, svn_uri_split
@@ -48,6 +48,7 @@ Candidate changes:
      issues like #2556 ('cd e:\; svn update e:\' fails).
    Votes:
      +1: rhuijben, gstein
+
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
@@ -81,6 +82,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      (This doesn't fix this testcase; it just handles this part of the problem)
    Votes:
      +1: rhuijben
+     -0: gstein (replied with feedback on this rev)
 
  * r36106
    Resolves issue #3374, "svn cp --parents path URL encoding issues"
@@ -93,6 +95,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      to repos copy and move operations.
    Votes:
      +1: rhuijben
+     +0: gstein (for 1.6.1)
 
  * r36111
    On Windows don't retry deleting a file 100 times when this file is really
@@ -102,6 +105,8 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      (You can see the delay with: svn rm --force <unversioned-empty-dir>)
    Votes:
      +1: rhuijben
+     +1: gstein (for 1.6.1)
+
 
 Status of 1.6.1:
 ================
