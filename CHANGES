@@ -36,9 +36,17 @@ http://svn.collab.net/repos/svn/tags/1.5.6
   * make it impossible to add .svn to wc via 'svn add --parents' (r35143, -5)
   * copy properties of added but uncommitted files (r32448)
   * speedup JavaHL bindings on Windows (r35733)
+  * improve performance of log operation on < 1.5 servers (r35566)
+  * allow commits over Neon of files >2GB (POSIX only) (r34919, -24)
+  * allow serf from behind MS ISA proxy servers (r35981)
+  * prevent svnmerge-migrate-history.py from committing bogus mergeinfo (r35516)
 
  Developer-visible changes:
   * fix error handling in mod_dav_svn (r35250, -86)
+  * support --server-minor-version in windows testsuite (r31393)
+  * fix depth_tests.py 23 on Windows with a BDB repo (r34875)
+  * allow svn_mergeinfo_parse() to tolerate unordered mergeinfo (r35297, -367)
+  * allow overlapping rangelists into svn_mergeinfo_parse() (r35466, -712, -713)
 
 
 Version 1.5.5
