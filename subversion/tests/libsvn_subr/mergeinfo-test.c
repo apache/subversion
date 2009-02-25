@@ -110,7 +110,7 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2;
 
-#define NBR_MERGEINFO_VALS 13
+#define NBR_MERGEINFO_VALS 20
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -120,14 +120,26 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/trunk: 5,7-9,10,11,13,14",
     "/trunk: 3-10,11*,13,14",
     "/branch: 1,2-18*,33*",
+    /* Path names containing ':'s */
     "patch-common::netasq-bpf.c:25381",
     "patch-common_netasq-bpf.c::25381",
     ":patch:common:netasq:bpf.c:25381",
+    /* Unordered rangelists */
     "/trunk:3-6,15,18,9,22",
     "/trunk:5,3",
     "/trunk:3-6*,15*,18*,9,22*",
     "/trunk:5,3*",
-    "/trunk:100,3-7,50,99,1-2"
+    "/trunk:100,3-7,50,99,1-2",
+    /* Overlapping rangelists */
+    "/gunther_branch:5-10,7-12",
+    "/gunther_branch:5-10*,7-12*",
+    "/branches/branch1:43832-45742,49990-53669,43832-49987",
+    /* Unordered and overlapping rangelists */
+    "/gunther_branch:7-12,1,5-10",
+    "/gunther_branch:7-12*,1,5-10*",
+    /* Adjacent rangelists of differing inheritability. */
+    "/b5:5-53,1-4,54-90*",
+    "/c0:1-77,12-44"
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -144,7 +156,14 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/trunk",
     "/trunk",
     "/trunk",
-    "/trunk"
+    "/trunk",
+    "/gunther_branch",
+    "/gunther_branch",
+    "/branches/branch1",
+    "/gunther_branch",
+    "/gunther_branch",
+    "/b5",
+    "/c0"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -163,7 +182,14 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {2, 6, FALSE}, {8, 9, TRUE}, {14, 15, FALSE}, {17, 18, FALSE},
       {21, 22, FALSE} },
     { {2, 3, FALSE}, {4, 5, TRUE} },
-    { {0, 7, TRUE}, {49, 50, TRUE}, {98, 100, TRUE} }
+    { {0, 7, TRUE}, {49, 50, TRUE}, {98, 100, TRUE} },
+    { {4, 12, TRUE} },
+    { {4, 12, FALSE} },
+    { {43831, 49987, TRUE}, {49989, 53669, TRUE} },
+    { {0, 1, TRUE}, {4, 12, TRUE} },
+    { {0, 1, TRUE}, {4, 12, FALSE} },
+    { {0, 53, TRUE}, {53, 90, FALSE} },
+    { {0, 77, TRUE} },
   };
 
 static svn_error_t *
@@ -273,7 +299,7 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 35
+#define NBR_BROKEN_MERGEINFO_VALS 27
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -291,15 +317,6 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:4*,4",
     "/trunk:3-7*,4-23",
     "/trunk:3-7,4-23*",
-    /* Overlapping revs same inheritability */
-    "/trunk:5-9*,9*",
-    "/trunk:5*,5-9*", 
-    "/trunk:5-9,9",
-    "/trunk:5,5-9",
-    "/trunk:4,4",
-    "/trunk:4*,4*",
-    "/trunk:3-7,4-23",
-    "/trunk:3-7*,4-23*",
     /* Reversed revision ranges */
     "/trunk:22-20",
     "/trunk:22-20*",

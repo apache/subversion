@@ -517,25 +517,29 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
           if (lastrange->start <= range->end
               && range->start <= lastrange->end)
             {
-              /* The ranges intersect. */
+              /* The ranges are adjacent or intersect. */
 
-              /* svn_mergeinfo_parse promises to combine adjacent
-                 ranges, but not overlapping ranges. */
-              if (range->start < lastrange->end)
+              /* svn_mergeinfo_parse promises to combine overlapping
+                 ranges as long as their inheritability is the same. */
+              if (range->start < lastrange->end
+                  && range->inheritable != lastrange->inheritable)
                 {
                   svn_string_t *r1, *r2;
 
                   SVN_ERR(range_to_string(&r1, lastrange, pool));
                   SVN_ERR(range_to_string(&r2, range, pool));
                   return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                                           _("Parsing of overlapping revision "
-                                             "ranges '%s' and '%s' is not "
-                                             "supported"), r1->data, r2->data);
+                                           _("Unable to parse overlapping "
+                                             "revision ranges '%s' and '%s' "
+                                             "with different inheritance "
+                                             "types"), r1->data, r2->data);
                 }
-              else if (lastrange->inheritable == range->inheritable)
+
+              /* Combine overlapping or adjacent ranges with the
+                 same inheritability. */              
+              if (lastrange->inheritable == range->inheritable)
                 {
-                  /* Combine adjacent ranges with the same inheritability. */
-                  lastrange->end = range->end;
+                  lastrange->end = MAX(range->end, lastrange->end);
                   if (i + 1 < revlist->nelts)
                     memmove(revlist->elts + (revlist->elt_size * i),
                             revlist->elts + (revlist->elt_size * (i + 1)),
