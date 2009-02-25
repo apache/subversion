@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-24 21:08+0800\n"
-"PO-Revision-Date: 2009-02-24 21:16+0800\n"
+"POT-Creation-Date: 2009-02-25 21:05+0800\n"
+"PO-Revision-Date: 2009-02-25 21:05+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2455,9 +2455,9 @@ msgstr "在表 rep_cache 中，只有 SHA1 校验和才能用作键。\n"
 
 #, c-format
 msgid ""
-"Representation key for checksum '%%s' exists in filesystem '%%s', with "
-"different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store(%%ld,%%"
-"%s,%%%s,%%%s)"
+"Representation key for checksum '%%s' exists in filesystem '%%s' with a "
+"different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store (%%ld,%"
+"%%s,%%%s,%%%s)"
 msgstr ""
 "校验和 “%%s” 的展现键已经存在于文件系统 “%%s” 中，取值(%%ld,%%%s,%%%s,%%%s)与"
 "我们要存储的值(%%ld,%%%s,%%%s,%%%s)不同"
@@ -5332,11 +5332,11 @@ msgstr "对于标识 '%ld' 没有 REPOSITORY 表入口"
 msgid "Parent(s) of '%s' should have been present."
 msgstr "'%s' 的父亲应该存在。"
 
-#,  c-format
+#, c-format
 msgid "Parent(s) of '%s' should have repository information."
 msgstr "'%s' 的父亲应该包含版本库的信息。"
 
-#,  c-format
+#, c-format
 msgid "Missing a row in WCROOT for '%s'."
 msgstr "WCROOT 中的 '%s' 丢失了一行。"
 
@@ -5344,7 +5344,7 @@ msgstr "WCROOT 中的 '%s' 丢失了一行。"
 msgid "The node '%s' has a corrupt checksum value."
 msgstr "节点 '%s' 的校验和损坏。"
 
-#,  c-format
+#, c-format
 msgid "The node '%s' was not found."
 msgstr "找不到节点 '%s'。"
 
