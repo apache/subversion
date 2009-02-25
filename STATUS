@@ -44,17 +44,6 @@ Candidate changes for 1.5.6:
 Approved changes:
 =================
 
- * r34919, r34924
-   Make svn client to use the 'LFS' capability of 'neon' to allow commits 
-   of new file(post-compression) beyond > 2GB in size.
-   Note that Neon currently doesn't support > 2GB on Windows, so this only
-   fixes this issue on Linux, *BSD and probably MacOS.
-   Justification:
-     A simple cast limits our maximum upload file size on systems where neon 
-     supports larger uploads.
-   Votes:
-     +1: rhuijben, kameshj, gstein
-
  * r35981
    libsvn_ra_serf: Following RFC2617, verify authentication header tokens
    case insensitive.
