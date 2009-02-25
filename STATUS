@@ -14,6 +14,36 @@ delay a release, etc.
 Candidate changes for 1.5.6:
 ============================
 
+ * r36106
+   Resolves issue #3374, "svn cp --parents path URL encoding issues"
+   For
+     svn cp --parent ^/fö ^/dö/fö
+   The --parents code checked and might creat^/d%C3%B6, while the file was
+   copied to ^/dö as expected.
+   Justification:
+     Without this patch --parents is broken for utf8 characters in repos
+     to repos copy and move operations.
+   Votes:
+     +1: rhuijben
+     -0: gstein (encoding issues are tricky; I'd rather tell people to
+                 upgrade to 1.6.0, rather than 1.5.6)
+
+ * r36111
+   On Windows don't retry deleting a file 100 times when this file is really
+   not a file but just a directory.
+   Justification:
+     Makes removing unversioned directories much faster.
+     (You can see the delay with: svn rm --force <unversioned-empty-directory>)
+   Votes:
+     +1: rhuijben
+     -0: gstein (edge case performance fixes shouldn't be backported; if
+                 the user wants the fix, they can upgrade to 1.6.0 rather
+                 than 1.5.6)
+
+
+Approved changes:
+=================
+
  * r34875
    Fix depth_tests.py 23 issues that sometimes occurs on Windows when a BDB
    repository is not unlocked fast enough to delete it in the testcycle.
@@ -23,7 +53,7 @@ Candidate changes for 1.5.6:
      Tests that often fail for the wrong reason, might hide real issues
      with our releases.
    Votes:
-     +1: rhuijben, pburba
+     +1: rhuijben, pburba, gstein
 
  * r34919, r34924
    Make svn client to use the 'LFS' capability of 'neon' to allow commits 
@@ -34,7 +64,26 @@ Candidate changes for 1.5.6:
      A simple cast limits our maximum upload file size on systems where neon 
      supports larger uploads.
    Votes:
-     +1: rhuijben, kameshj
+     +1: rhuijben, kameshj, gstein
+
+ * r35981
+   libsvn_ra_serf: Following RFC2617, verify authentication header tokens
+   case insensitive.
+   Justification:
+     Enables using serf from behind Microsoft ISA proxy servers.
+     See http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1191733
+   Votes:
+     +1: rhuijben, pburba, gstein
+
+ * r35516
+   Prevent svnmerge-migrate-history.py from committing non-canonical
+   mergeinfo.
+   Justification:
+     Make dead certain svnmerge-migrate-history.py can't create mergeinfo
+     with overlapping or unordered rangelists.  Subversion <= 1.5.5 will
+     error out if it tries to parse this mergeinfo, see issue #3302.
+    Votes:
+     +1: pburba, rhuijben, gstein
 
  * r35297, r35367
    Allow svn_mergeinfo_parse() to tolerate unordered rangelists as input
@@ -48,6 +97,7 @@ Candidate changes for 1.5.6:
      mergeinfo because svn_mergeinfo_parse returned a parsing error.
    Votes:
      +1: pburba, rhuijben
+     +1: gstein (as long as r35713 does not get vetoed out of the release)
 
  * r35466, r35712, r35713
    Allow svn_mergeinfo_parse() to tolerate overlapping rangelists as input
@@ -64,47 +114,4 @@ Candidate changes for 1.5.6:
     r35297 is already merged, accept theirs-conflict on
     subversion\tests\libsvn_subr\mergeinfo-test.c to avoid a minor conflict.
     Votes:
-     +1: rhuijben, pburba
-
- * r35516
-   Prevent svnmerge-migrate-history.py from committing non-canonical
-   mergeinfo.
-   Justification:
-     Make dead certain svnmerge-migrate-history.py can't create mergeinfo
-     with overlapping or unordered rangelists.  Subversion <= 1.5.5 will
-     error out if it tries to parse this mergeinfo, see issue #3302.
-    Votes:
-     +1: pburba, rhuijben
-
- * r35981
-   libsvn_ra_serf: Following RFC2617, verify authentication header tokens
-   case insensitive.
-   Justification:
-     Enables using serf from behind Microsoft ISA proxy servers.
-     See http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1191733
-   Votes:
-     +1: rhuijben, pburba
-     
- * r36106
-   Resolves issue #3374, "svn cp --parents path URL encoding issues"
-   For
-     svn cp --parent ^/fö ^/dö/fö
-   The --parents code checked and might creat^/d%C3%B6, while the file was
-   copied to ^/dö as expected.
-   Justification:
-     Without this patch --parents is broken for utf8 characters in repos
-     to repos copy and move operations.
-   Votes:
-     +1: rhuijben
-
- * r36111
-   On Windows don't retry deleting a file 100 times when this file is really
-   not a file but just a directory.
-   Justification:
-     Makes removing unversioned directories much faster.
-     (You can see the delay with: svn rm --force <unversioned-empty-directory>)
-   Votes:
-     +1: rhuijben
-
-Approved changes:
-=================
+     +1: rhuijben, pburba, gstein
