@@ -209,28 +209,6 @@ svn_wc__db_open(svn_wc__db_t **db,
                 apr_pool_t *scratch_pool);
 
 
-/**
- * In most cases, svn operations will deal with multiple targets. Each
- * target may have a different administrative database, and others will
- * be sharing a database. This function will open all relevant databases
- * for the paths identified in @a paths. One handle is returned which
- * will handle the interaction with all the relevant databases.
- *
- * The @a config will be used to identify how to locate the database
- * for each target listed in @a paths.
- *
- * Results will be alloated in @a result_pool, and temporary allocations
- * will be made in @a scratch_pool.
- */
-svn_error_t *
-svn_wc__db_open_many(svn_wc__db_t **db,
-                     svn_wc__db_openmode_t mode,
-                     const apr_array_header_t *paths,
-                     svn_config_t *config,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
-
 /* This function answers at simple question: what format version of the wc
    exists at PATH.  The reason it takes a PATH instead of an existing db
    handle is because it may need to use legacy, pre-wc-ng methods to determine
