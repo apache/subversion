@@ -45,7 +45,7 @@ Candidate changes for 1.5.7:
    Justification:
      The mode 'rw+' is invalid with Python 2.5+ on Windows.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
 Approved changes:
 =================
