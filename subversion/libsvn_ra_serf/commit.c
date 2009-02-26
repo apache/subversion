@@ -103,6 +103,9 @@ typedef struct {
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
 
+  /* In HTTP v2, this is the file/directory version we think we're changing. */
+  svn_revnum_t base_revision;
+
   svn_ra_serf__simple_request_context_t progress;
 } proppatch_context_t;
 
@@ -643,6 +646,13 @@ setup_proppatch_headers(serf_bucket_t *headers,
 {
   proppatch_context_t *proppatch = baton;
 
+  if (SVN_IS_VALID_REVNUM(proppatch->base_revision))
+    {
+      serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
+                              apr_psprintf(pool, "%ld", 
+                                           proppatch->base_revision));
+    }
+
   if (proppatch->name && proppatch->commit->lock_tokens)
     {
       const char *token;
@@ -792,6 +802,12 @@ setup_put_headers(serf_bucket_t *headers,
                   apr_pool_t *pool)
 {
   file_context_t *ctx = baton;
+
+  if (SVN_IS_VALID_REVNUM(ctx->base_revision))
+    {
+      serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
+                              apr_psprintf(pool, "%ld", ctx->base_revision));
+    }
 
   if (ctx->base_checksum)
     {
@@ -1203,6 +1219,7 @@ open_root(void *edit_baton,
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
   for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
        hi = apr_hash_next(hi))
@@ -1548,6 +1565,7 @@ close_directory(void *dir_baton,
       proppatch_ctx->name = dir->name;
       proppatch_ctx->changed_props = dir->changed_props;
       proppatch_ctx->removed_props = dir->removed_props;
+      proppatch_ctx->base_revision = dir->base_revision;
 
       if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
         {
@@ -1916,6 +1934,7 @@ close_file(void *file_baton,
       proppatch->commit = ctx->commit;
       proppatch->changed_props = ctx->changed_props;
       proppatch->removed_props = ctx->removed_props;
+      proppatch->base_revision = ctx->base_revision;
 
       SVN_ERR(proppatch_resource(proppatch, ctx->commit, ctx->pool));
     }
@@ -2173,6 +2192,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
   if (value)
     {

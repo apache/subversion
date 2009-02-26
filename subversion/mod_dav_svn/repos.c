@@ -1702,6 +1702,45 @@ querystring_to_table(const char *query, apr_pool_t *pool)
 }
 
 
+/* Helper for get_resource(), called after COMB is fully parsed and prepped. */
+static dav_error *
+do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
+{
+  svn_revnum_t created_rev;
+  svn_error_t *serr;
+
+  /* Do we have an X-SVN-Version-Name header? */
+  if (! SVN_IS_VALID_REVNUM(comb->priv.version_name))
+    return NULL;
+
+  /* Note: LOCK and DELETE handlers already notice the header and do
+     their own out-of-dateness checks.  MKCOL, COPY, MOVE don't supply
+     the header at all, nor do MKACTIVITY, POST, or MERGE. */
+  if (! ((r->method_number == M_PUT)
+         || (r->method_number == M_PROPPATCH)))
+    return NULL;
+  
+  /* Do an out-of-dateness check. */
+  if ((serr = svn_fs_node_created_rev(&created_rev, comb->priv.root.root,
+                                      comb->priv.repos_path, r->pool)))
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not get created rev of "
+                                "resource", r->pool);
+  
+  if (comb->priv.version_name < created_rev)
+    {
+      serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
+                               "Item '%s' is out of date",
+                               comb->priv.repos_path);
+      return dav_svn__convert_err(serr, HTTP_CONFLICT,
+                                  "Attempting to modify out-of-date resource.",
+                                  r->pool);
+    }
+
+  return NULL;
+}
+
+
 /* Helper for get_resource().
  *
  * Given a fully fleshed out COMB object which has already been parsed
@@ -2183,6 +2222,16 @@ get_resource(request_rec *r,
                            "trailing slash on the URI.");
     }
 
+  /* HTTPv2: for write-requests, out-of-dateness checks happen via
+     Base-Version header rather via CHECKOUT requests.  
+
+     If a Base-Version header is present on a write request, we need
+     to do the out-of-dateness check *here*, rather than in other
+     dav-provider vtable funcs.  That's because a number of mod_dav
+     methods annoyingly trap and genericize our error messages.  */
+  if ((err = do_out_of_date_check(comb, r)) != NULL)
+    return err;
+  
   *resource = &comb->res;
   return NULL;
 
