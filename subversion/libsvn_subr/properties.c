@@ -269,3 +269,20 @@ svn_prop_name_is_valid(const char *prop_name)
     }
   return TRUE;
 }
+
+const char *
+svn_prop_get_value(apr_hash_t *props,
+                   apr_hash_t *prop_name)
+{
+  svn_string_t *str;
+
+  if (!props)
+    return NULL;
+
+  str = apr_hash_get(props, prop_name, APR_HASH_KEY_STRING);
+
+  if (str)
+    return str->data;
+
+  return NULL;
+}

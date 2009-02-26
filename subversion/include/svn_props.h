@@ -102,6 +102,15 @@ svn_prop_hash_dup(apr_hash_t *hash,
                   apr_pool_t *pool);
 
 /**
+ * Return the value of property @a prop_name as it is in @a properties,
+ * with values <tt>const svn_string_t</tt>. If @a prop_name is not 
+ * in @a properties or @ properties is NULL, return NULL.
+ */
+const char *
+svn_prop_get_value(apr_hash_t *properties,
+                   const char *prop_name);
+
+/**
  * Subversion distinguishes among several kinds of properties,
  * particularly on the client-side.  There is no "unknown" kind; if
  * there's nothing special about a property name, the default category
