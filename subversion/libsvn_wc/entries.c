@@ -1087,7 +1087,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
           entry->schedule = svn_wc_schedule_normal;
         }
 
-      entry->url = svn_path_join(entry->repos, repos_relpath, result_pool);
+      entry->url = svn_path_join(
+                    entry->repos,
+                    svn_path_uri_encode(repos_relpath, iterpool),
+                    result_pool);
 
       if (working_node && (working_node->copyfrom_repos_path != NULL))
         entry->copied = TRUE;
