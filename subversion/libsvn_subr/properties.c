@@ -272,7 +272,7 @@ svn_prop_name_is_valid(const char *prop_name)
 
 const char *
 svn_prop_get_value(apr_hash_t *props,
-                   apr_hash_t *prop_name)
+                   const char *prop_name)
 {
   svn_string_t *str;
 
