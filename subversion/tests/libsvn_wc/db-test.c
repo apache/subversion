@@ -172,7 +172,7 @@ test_getting_info(const char **msg,
   svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
-  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+  svn_wc__db_t *db;
   svn_error_t *err;
 
   *msg = "get information from wc.db";
@@ -183,6 +183,9 @@ test_getting_info(const char **msg,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_getting_info",
                                   pool));
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          local_abspath, NULL, pool, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -384,7 +387,7 @@ test_inserting_nodes(const char **msg,
 {
   const char *local_abspath;
   svn_checksum_t *checksum;
-  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+  svn_wc__db_t *db;
   apr_hash_t *props;
   const apr_array_header_t *children;
 
@@ -396,6 +399,9 @@ test_inserting_nodes(const char **msg,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_inserting_nodes",
                                   pool));
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          local_abspath, NULL, pool, pool));
 
   props = apr_hash_make(pool);
   set_prop(props, "p1", "v1", pool);
@@ -508,7 +514,7 @@ test_base_children(const char **msg,
                    apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+  svn_wc__db_t *db;
   const apr_array_header_t *children;
   int i;
 
@@ -520,6 +526,9 @@ test_base_children(const char **msg,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_base_children",
                                   pool));
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          local_abspath, NULL, pool, pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
@@ -567,7 +576,7 @@ test_working_info(const char **msg,
   svn_boolean_t text_mod;
   svn_boolean_t props_mod;
   svn_boolean_t base_shadowed;
-  svn_wc__db_t *db = NULL;  /* ### for now, it doesn't look at this param */
+  svn_wc__db_t *db;
 
   *msg = "reading information about the WORKING tree";
   if (msg_only)
@@ -577,6 +586,9 @@ test_working_info(const char **msg,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_working_info",
                                   pool));
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          local_abspath, NULL, pool, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_read_info(

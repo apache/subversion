@@ -635,6 +635,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                     apr_pool_t *scratch_pool)
 {
   const char *original_abspath = local_abspath;
+  svn_node_kind_t kind;
+  svn_boolean_t special;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   const char *local_relpath;
@@ -643,7 +645,51 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
      ### outside of the wcroot) and then managing all of that within DB.
      ### for now: play quick & dirty. */
 
-  /* ### eventually, this'll come from the hash stored in DB. */
+  *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
+  if (*pdh != NULL)
+    {
+      /* We got lucky. Just return the thing BEFORE performing any I/O.  */
+      /* ### validate SMODE against how we opened pdh->sdb? and against
+         ### DB->mode? (will we record per-dir mode?)  */
+      /* ### what if the whole structure is not (yet) filled in? */
+      return SVN_NO_ERROR;
+    }
+
+  /* ### at some point in the future, we may need to find a way to get
+     ### rid of this stat() call. it is going to happen for EVERY call
+     ### into wc_db which references a file. calls for directories could
+     ### get an early-exit in the hash lookup just above.  */
+  SVN_ERR(svn_io_check_special_path(local_abspath, &kind,
+                                    &special /* unused */, scratch_pool));
+  if (kind != svn_node_dir)
+    {
+      /* If the node specified by the path is NOT present, then it cannot
+         possibly be a directory containing ".svn/wc.db".
+
+         If it is a file, then it cannot contain ".svn/wc.db".
+
+         For both of these cases, strip the basename off of the path and
+         move up one level. Keep record of what we strip, though, since
+         we'll need it later to construct local_relpath.  */
+      svn_dirent_split(local_abspath, &local_abspath, &local_relpath,
+                       scratch_pool);
+
+      /* Is this directory in our hash?  */
+      *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
+      if (*pdh != NULL)
+        return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* Start the local_relpath empty. If *this* directory contains the
+         wc.db, then relpath will be the empty string.  */
+      local_relpath = "";
+    }
+
+  /* The PDH corresponding to the directory LOCAL_ABSPATH is what we need
+     to return. At this point, we've determined that it is NOT in the DB's
+     hash table of wcdirs. Let's create it, and begin to populate it.  */
+     
   *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
   (*pdh)->db = db;
   (*pdh)->local_abspath = local_abspath;
@@ -652,7 +698,6 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
      database in the right place. If we find it... great! If not, then
      peel off some components, and try again. */
 
-  local_relpath = "";
   while (TRUE)
     {
       svn_error_t *err;
@@ -833,7 +878,14 @@ svn_wc__db_open(svn_wc__db_t **db,
 {
   *db = new_db_state(mode, config, result_pool);
 
+  /* ### open_one_directory() doesn't fill in SDB and other data. for now,
+     ### we want that in all structures, so we don't have to do on-demand
+     ### searching/opening when we already have a PDH.  */
+#if 0
   return open_one_directory(*db, local_abspath, scratch_pool);
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 
