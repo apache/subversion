@@ -26,6 +26,7 @@
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
@@ -387,7 +388,7 @@ check_mimetype(apr_array_header_t *prop_diffs, const char *target,
         return svn_error_createf
           (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
            _("Cannot calculate blame information for binary file '%s'"),
-           svn_path_local_style(target, pool));
+           svn_dirent_local_style(target, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -599,11 +600,6 @@ svn_client_blame5(const char *target,
       || end->kind == svn_opt_revision_unspecified)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
-  else if (start->kind == svn_opt_revision_working
-           || end->kind == svn_opt_revision_working)
-    return svn_error_create
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("blame of the WORKING revision is not supported"));
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
@@ -641,7 +637,7 @@ svn_client_blame5(const char *target,
     }
 
   SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
-  frb.tmp_path = svn_path_join(frb.tmp_path, "tmp", pool),
+  frb.tmp_path = svn_dirent_join(frb.tmp_path, "tmp", pool),
 
   frb.mainpool = pool;
   /* The callback will flip the following two pools, because it needs
@@ -663,6 +659,58 @@ svn_client_blame5(const char *target,
                                 start_revnum - (start_revnum > 0 ? 1 : 0),
                                 end_revnum, include_merged_revisions,
                                 file_rev_handler, &frb, pool));
+
+  if (end->kind == svn_opt_revision_working)
+    {
+      /* If the local file is modified we have to call the handler on the
+         working copy file with keywords unexpanded */
+      svn_wc_adm_access_t *adm_access;
+      svn_wc_status2_t *status;
+
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
+                               svn_dirent_dirname(target, pool), FALSE,
+                               0, ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+
+      SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
+
+      if (status->text_status != svn_wc_status_normal)
+        {
+          apr_hash_t *props;
+          svn_stream_t *wcfile;
+          svn_string_t *keywords;
+          svn_stream_t *tmpfile;
+          const char *tmppath;
+          apr_hash_t *kw = NULL;
+
+          SVN_ERR(svn_wc_prop_list(&props, target, adm_access, pool));
+          SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
+          
+          keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+
+          if (keywords)
+            {
+              apr_hash_t *kw = NULL;
+
+              SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data,
+                                                NULL, NULL, 0, NULL, pool));
+            }
+
+          wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE, pool);
+
+          SVN_ERR(svn_stream_open_unique(&tmpfile, &tmppath, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         pool, pool));
+
+          SVN_ERR(svn_stream_copy3(wcfile, tmpfile, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
+
+          SVN_ERR(add_file_blame(frb.last_filename, tmppath, frb.chain, NULL,
+                                 frb.diff_options, pool));
+
+          frb.last_filename = tmppath;
+        }
+    }
 
   /* Report the blame to the caller. */
 
@@ -727,10 +775,17 @@ svn_client_blame5(const char *target,
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
-            SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
-                             walk->rev->rev_props, merged_rev,
-                             merged_rev_props, merged_path,
-                             sb->data, FALSE, iterpool));
+            {
+              if(walk->rev)
+                SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
+                                 walk->rev->rev_props, merged_rev,
+                                 merged_rev_props, merged_path,
+                                 sb->data, FALSE, iterpool));
+              else
+                SVN_ERR(receiver(receiver_baton, line_no, SVN_INVALID_REVNUM,
+                                 NULL, SVN_INVALID_REVNUM, NULL, NULL,
+                                 sb->data, TRUE, iterpool));
+            }
           if (eof) break;
         }
 
