@@ -33,69 +33,6 @@ done
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
-# Handle some libtool helper files
-#
-# ### eventually, we can/should toss this in favor of simply using
-# ### APR's libtool. deferring to a second round of change...
-#
-
-libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
-lt_major_version=`$libtoolize --version 2>/dev/null | sed -e 's/^[^0-9]*//' -e 's/\..*//' -e '/^$/d' -e 1q`
-
-if [ "x$libtoolize" = "x" ]; then
-    echo "libtoolize not found in path"
-    exit 1
-fi
-
-rm -f build/config.guess build/config.sub
-$libtoolize --copy --automake --force
-
-ltpath="`dirname $libtoolize`"
-ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/libtool.m4}
-
-if [ ! -f $ltfile ]; then
-    echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
-    exit 1
-fi
-
-echo "Copying libtool helper: $ltfile"
-# An ancient helper might already be present from previous builds,
-# and it might be write-protected (e.g. mode 444, seen on FreeBSD).
-# This would cause cp to fail and print an error message, but leave
-# behind a potentially outdated libtool helper.  So, remove before
-# copying:
-rm -f build/libtool.m4
-cp $ltfile build/libtool.m4
-
-for file in ltoptions.m4 ltsugar.m4 ltversion.m4 lt~obsolete.m4; do
-    rm -f build/$file
-
-    if [ $lt_major_version -ge 2 ]; then
-        ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/$file}
-
-        if [ ! -f $ltfile ]; then
-            echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
-            exit 1
-        fi
-
-        echo "Copying libtool helper: $ltfile"
-        cp $ltfile build/$file
-    fi
-done
-
-if [ $lt_major_version -ge 2 ]; then
-    for file in config.guess config.sub; do
-        configfile=${LIBTOOL_CONFIG-`cd $ltpath/../share/libtool/config ; pwd`/$file}
-
-        if [ ! -f $configfile ]; then
-            echo "$configfile not found (try setting the LIBTOOL_CONFIG environment variable)"
-            exit 1
-        fi
-
-	cp $configfile build/$file
-    done
-fi
-
 # Create the file detailing all of the build outputs for SVN.
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
