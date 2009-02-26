@@ -1044,6 +1044,20 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 result_pool,
                 iterpool));
 
+      /* Grab inherited repository information, if necessary. */
+      if (repos_relpath == NULL)
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                             &entry->repos,
+                                             &entry->uuid,
+                                             db,
+                                             svn_dirent_join(local_abspath,
+                                                             entry->name,
+                                                             iterpool),
+                                             result_pool,
+                                             iterpool));
+        }
+
       /* ### most of the higher levels seem to want "infinity" for files.
          ### without this, it seems a report with depth=unknown was sent
          ### to the server, which then choked.  */

@@ -493,6 +493,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                                              result_pool);
           return svn_sqlite__reset(stmt);
         }
+      SVN_ERR(svn_sqlite__reset(stmt));
 
       if (*current_relpath == '\0')
         {
@@ -507,6 +508,92 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
       /* Loop to move further upwards. */
     }
 }
+
+
+#ifdef NEEDS_WORK
+/* ### waiting for sdb caching/lookup. */
+
+/* Scan from RELPATH upwards through parent nodes until we find a parent
+   that is NOT an added node in the WORKING tree. That (BASE) node defines
+   the parent of the added tree containing RELPATH. Return the repository
+   information in REPOS_ID and REPOS_RELPATH (either may be NULL). */
+static svn_error_t *
+scan_upwards_for_non_work(apr_int64_t *repos_id,
+                          const char **repos_relpath,
+                          apr_int64_t wc_id,
+                          const char *relpath,
+                          svn_sqlite__db_t *sdb,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  const char *relpath_suffix = "";
+  const char *current_relpath = relpath;
+
+  SVN_ERR_ASSERT(repos_id != NULL || repos_relpath != NULL);
+
+  while (TRUE)
+    {
+      svn_sqlite__stmt_t *stmt;
+      const char *basename;
+      svn_boolean_t have_row;
+
+      /* Strip a path segment off the end, and append it to the suffix
+         that we'll use when we finally find a base relpath. */
+      svn_dirent_split(current_relpath, &current_relpath, &basename,
+                       scratch_pool);
+      relpath_suffix = svn_dirent_join(relpath_suffix, basename, scratch_pool);
+
+      /* ### strictly speaking, moving to the parent could send us to a
+         ### different SDB, and (thus) we would need to fetch STMT again.
+         ### but we happen to know the parent is *always* in the same db. */
+
+      /* ### is it faster to fetch fewer columns? */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
+
+      /* Rebind the statement to fetch parent information. */
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+          return svn_error_createf(
+            SVN_ERR_WC_CORRUPT, NULL,
+            _("Parent(s) of '%s' should have been present."),
+            svn_dirent_local_style(relpath, scratch_pool));
+
+      /* Did we find some non-NULL repository columns? */
+      if (!svn_sqlite__column_is_null(stmt, 2))
+        {
+          /* If one is non-NULL, then so should the other. */
+          SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 3));
+
+          if (repos_id)
+            *repos_id = svn_sqlite__column_int64(stmt, 2);
+
+          /* Given the parent's relpath, append all the segments that
+             we stripped as we scanned upwards. */
+          if (repos_relpath)
+            *repos_relpath = svn_dirent_join(svn_sqlite__column_text(stmt, 3,
+                                                                     NULL),
+                                             relpath_suffix,
+                                             result_pool);
+          return svn_sqlite__reset(stmt);
+        }
+
+      if (*current_relpath == '\0')
+        {
+          /* We scanned all the way up, and did not find the information.
+             Something is corrupt in the database. */
+          return svn_error_createf(
+            SVN_ERR_WC_CORRUPT, NULL,
+            _("Parent(s) of '%s' should have repository information."),
+            svn_dirent_local_style(relpath, scratch_pool));
+        }
+
+      /* Loop to move further upwards. */
+    }
+}
+
+#endif /* NEEDS_WORK */
 
 
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (SDB) to use,
@@ -1131,7 +1218,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   const char *relpath;
   svn_boolean_t have_row;
   svn_error_t *err = SVN_NO_ERROR;
-  svn_boolean_t inherit_repos = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1168,16 +1254,18 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         }
       if (repos_relpath)
         {
-          if (svn_sqlite__column_is_null(stmt, 3))
-            inherit_repos = TRUE;
-          else
-            *repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
+          *repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
         }
       if (repos_root_url || repos_uuid)
         {
           /* Fetch repository information via REPOS_ID. */
           if (svn_sqlite__column_is_null(stmt, 2))
-            inherit_repos = TRUE;
+            {
+              if (repos_root_url)
+                *repos_root_url = NULL;
+              if (repos_uuid)
+                *repos_uuid = NULL;
+            }
           else
             err = fetch_repos_info(repos_root_url, repos_uuid, sdb,
                                    svn_sqlite__column_int64(stmt, 2),
@@ -1245,26 +1333,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                                                      scratch_pool));
     }
 
-  err = svn_error_compose_create(err, svn_sqlite__reset(stmt));
-
-  if (err == NULL && inherit_repos)
-    {
-      apr_int64_t repos_id;
-
-      /* Fetch repository information from the parent in order to compute
-         this node's information.
-
-         Note: we delay this lookup until AFTER the statement used above
-         has been reset. We happen to use the same one for the scan.  */
-      SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath, wc_id, relpath,
-                                     sdb, result_pool, scratch_pool));
-
-      if (repos_root_url || repos_uuid)
-        err = fetch_repos_info(repos_root_url, repos_uuid, sdb, repos_id,
-                               result_pool);
-    }
-
-  return err;
+  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 }
 
 
@@ -1708,8 +1777,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   svn_boolean_t have_base;
   svn_boolean_t have_work;
   svn_boolean_t have_act;
-  svn_boolean_t inherit_repos = FALSE;
-  svn_boolean_t added_repos = FALSE;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1777,24 +1844,21 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                 {
                   *status = svn_wc__db_status_incomplete;
                 }
+              else if (work_status == svn_wc__db_status_not_present)
+                {
+                  /* The caller should scan upwards to detect whether this
+                     deletion has occurred because this node has been moved
+                     away, or it is a regular deletion. Also note that the
+                     deletion could be of the BASE tree, or a child of
+                     something that has been copied/moved here.  */
+                  *status = svn_wc__db_status_deleted;
+                }
               else
                 {
-                  /* ### should we scan upwards looking for copyfrom and
-                     ### moved_* info to figure out what is going on here,
-                     ### or let the caller figure that out? the caller
-                     ### might have already queried parent info.  */
-
-                  /* ### with the info, we could refine to: moved_src,
-                     ### moved_dst, copied.  */
-
-                  if (work_status == svn_wc__db_status_not_present)
-                    {
-                      *status = svn_wc__db_status_deleted;
-                    }
-                  else
-                    {
-                      *status = svn_wc__db_status_added;
-                    }
+                  /* The caller should scan upwards to detect whether this
+                     addition has occurred because of a simple addition,
+                     a copy, or is the destination of a move.  */
+                  *status = svn_wc__db_status_added;
                 }
             }
         }
@@ -1809,38 +1873,36 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *revision = svn_sqlite__column_revnum(stmt_base, 6);
         }
-      if (have_work)
+      if (repos_relpath)
         {
-          /* ### check presence first. */
-
-          /* If this node is added, then the repository information is
-             inherited from the first non-added parent. Note this node
-             has been added, and that we'll need to search for its
-             repository information.  */
-          added_repos = (repos_relpath != NULL
-                         || repos_root_url != NULL
-                         || repos_uuid != NULL);
+          if (have_work)
+            {
+              /* Our path is implied by our parent somewhere up the tree.
+                 With the NULL value and status, the caller will know to
+                 search up the tree for the base of our path.  */
+              *repos_relpath = NULL;
+            }
+          else
+            *repos_relpath = svn_sqlite__column_text(stmt_base, 3,
+                                                     result_pool);
         }
-      else
+      if (repos_root_url || repos_uuid)
         {
-          if (repos_relpath)
+          /* Fetch repository information via REPOS_ID. If we have a
+             WORKING_NODE (and have been added), then the repository
+             we're being added to will be dependent upon a parent. The
+             caller can scan upwards to locate the repository.  */
+          if (have_work || svn_sqlite__column_is_null(stmt_base, 2))
             {
-              if (svn_sqlite__column_is_null(stmt_base, 3))
-                inherit_repos = TRUE;
-              else
-                *repos_relpath = svn_sqlite__column_text(stmt_base, 3,
-                                                         result_pool);
+              if (repos_root_url)
+                *repos_root_url = NULL;
+              if (repos_uuid)
+                *repos_uuid = NULL;
             }
-          if (repos_root_url || repos_uuid)
-            {
-              /* Fetch repository information via REPOS_ID. */
-              if (svn_sqlite__column_is_null(stmt_base, 2))
-                inherit_repos = TRUE;
-              else
-                err = fetch_repos_info(repos_root_url, repos_uuid, sdb,
-                                       svn_sqlite__column_int64(stmt_base, 2),
-                                       result_pool);
-            }
+          else
+            err = fetch_repos_info(repos_root_url, repos_uuid, sdb,
+                                   svn_sqlite__column_int64(stmt_base, 2),
+                                   result_pool);
         }
       if (changed_rev)
         {
@@ -1989,40 +2051,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
   err = svn_error_compose_create(err, svn_sqlite__reset(stmt_base));
   err = svn_error_compose_create(err, svn_sqlite__reset(stmt_work));
-  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
-
-  if (err == NULL && added_repos)
-    {
-      /* ### fix this. scan upwards for non-work node. that defines the
-         ### repository information. then this node is relative to that.
-         ### watch out for presence changes? */
-
-      if (repos_relpath)
-        *repos_relpath = NULL;
-      if (repos_root_url)
-        *repos_root_url = NULL;
-      if (repos_uuid)
-        *repos_uuid = NULL;
-    }
-
-  if (err == NULL && inherit_repos)
-    {
-      apr_int64_t repos_id;
-
-      /* Fetch repository information from the parent in order to compute
-         this node's information.
-
-         Note: we delay this lookup until AFTER the statement used above
-         has been reset. We happen to use the same one for the scan.  */
-      SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath, wc_id, relpath,
-                                     sdb, result_pool, scratch_pool));
-
-      if (repos_root_url || repos_uuid)
-        err = fetch_repos_info(repos_root_url, repos_uuid, sdb, repos_id,
-                               result_pool);
-    }
-
-  return err;
+  return svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
 }
 
 
@@ -2105,6 +2134,60 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
   SVN_ERR_ASSERT(new_date > 0);
   SVN_ERR_ASSERT(new_author != NULL);
+
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_scan_base_repos(const char **repos_relpath,
+                           const char **repos_root_url,
+                           const char **repos_uuid,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t *sdb;
+  apr_int64_t wc_id;
+  const char *relpath;
+  apr_int64_t repos_id;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&sdb, &wc_id, &relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath, wc_id, relpath,
+                                 sdb, result_pool, scratch_pool));
+
+  if (repos_root_url || repos_uuid)
+    return fetch_repos_info(repos_root_url, repos_uuid, sdb, repos_id,
+                            result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_scan_added_repos(const char **repos_relpath,
+                            const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t *sdb;
+  apr_int64_t wc_id;
+  const char *relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&sdb, &wc_id, &relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
 
   NOT_IMPLEMENTED();
 }
