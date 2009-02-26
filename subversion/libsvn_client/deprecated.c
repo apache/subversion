@@ -31,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_compat.h"
+#include "svn_props.h"
 #include "svn_utf.h"
 
 #include "client.h"
@@ -104,6 +105,74 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
 }
 
 /*** From blame.c ***/
+
+struct blame_receiver_wrapper_baton2 {
+  void *baton;
+  svn_client_blame_receiver2_t receiver;
+};
+
+static svn_error_t *
+blame_wrapper_receiver2(void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   apr_hash_t *rev_props,
+   svn_revnum_t merged_revision,
+   apr_hash_t *merged_rev_props,
+   const char *merged_path,
+   const char *line,
+   svn_boolean_t local_change,
+   apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton2 *brwb = baton;
+  const char *author = NULL;
+  const char *date = NULL;
+  const char *merged_author = NULL;
+  const char *merged_date = NULL;
+
+  if (rev_props != NULL)
+    {
+      author = svn_prop_get_value(rev_props, SVN_PROP_REVISION_AUTHOR);
+      date = svn_prop_get_value(rev_props, SVN_PROP_REVISION_DATE);
+    }
+  if (merged_rev_props != NULL)
+    {
+      merged_author = svn_prop_get_value(merged_rev_props,
+                                         SVN_PROP_REVISION_AUTHOR);
+      merged_date = svn_prop_get_value(merged_rev_props,
+                                       SVN_PROP_REVISION_DATE);
+    }
+
+  if (brwb->receiver)
+    return brwb->receiver(brwb->baton, line_no, revision, author, date,
+                          merged_revision, merged_author, merged_date,
+                          merged_path, line, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_blame4(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver2_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton2 baton;
+  
+  baton.receiver = receiver;
+  baton.baton = receiver_baton;
+
+  return svn_client_blame5(target, peg_revision, start, end, diff_options,
+                           ignore_mime_type, include_merged_revisions,
+                           blame_wrapper_receiver2, &baton, ctx, pool);
+}
+
 
 /* Baton for use with wrap_blame_receiver */
 struct blame_receiver_wrapper_baton {
