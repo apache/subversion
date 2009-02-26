@@ -47,5 +47,13 @@ Candidate changes for 1.5.7:
    Votes:
      +1: rhuijben, pburba
 
+ * r36159
+   Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
+   Justification:
+     With the fix, each slave server tries to field the lock/unlock, resulting
+     in competing ideas of what is and isn't locked.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
