@@ -15,40 +15,6 @@ Status of 1.6.0:
 
 Candidate changes:
  
- * r36009
-   Bump recommended and shipped SQLite version.
-   Justification:
-     I normally wouldn't care to nominate this, but since we are still in RC
-     stage, we should go ahead and use the latest version of SQLite, if
-     possible.
-   Note:
-     We can still ship the newer version without this change, but it makes
-     sense to be recommending it in configure.
-   Votes:
-     +1: hwright, rhuijben
-     +0: gstein (ie. only if a new tarball is constructed)
-
- * r36027, r36035
-   Store 64-bit values pulled from the rep cache database.
-   Justification:
-     Possibly data corruption on repositories with shard reps in large rev
-     files.
-   Notes:
-     r36027 addes the proper API, and r36035 uses it.
-   Votes:
-     +1: hwright, rhuijben
-     +0: gstein (ie. only if a new *code* tarball is constructed)
-     
- * ^/branches/1.6.x-dirent-basename
-   Drop svn_dirent_basename, svn_dirent_split, svn_uri_basename, svn_uri_split
-   from the public api to allow redefining its behavior for 1.7. 
-   The branch updates the single caller of this new api to use the 1.5 api.   
-   Justification:
-     The current dirent_basename api design makes it very hard to resolve
-     issues like #2556 ('cd e:\; svn update e:\' fails).
-   Votes:
-     +1: rhuijben, gstein
-
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
@@ -60,7 +26,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      Null dereferences in a library are bad. (And crashes that delay the
      testrun until a user accepts the failure just delay our releases).
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
      +1: gstein (for 1.6.1)
 
  * r35982
@@ -69,7 +35,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
    Justification:
      Allows a server to crash the library.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
      +1: gstein (for 1.6.1)
      
  * r36049-r36051, r36131
@@ -85,19 +51,6 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      +1: rhuijben
      -0: gstein (replied with feedback on this rev.) (r36049 only) 
 
- * r36106
-   Resolves issue #3374, "svn cp --parents path URL encoding issues"
-   For
-     svn cp --parent ^/fö ^/dö/fö
-   The --parents code checked and might create ^/d%C3%B6, while the file was
-   copied to ^/dö as expected.
-   Justification:
-     Without this patch --parents is broken for utf8 characters in repos
-     to repos copy and move operations.
-   Votes:
-     +1: rhuijben, steveking
-     +0: gstein (for 1.6.1)
-
  * r36111
    On Windows don't retry deleting a file 100 times when this file is really
    not a file but just a directory.
@@ -105,9 +58,16 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      Makes removing unversioned directories much faster.
      (You can see the delay with: svn rm --force <unversioned-empty-dir>)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
      +1: gstein (for 1.6.1)
 
+ * r36159
+   Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
+   Justification:
+     With the fix, each slave server tries to field the lock/unlock, resulting
+     in competing ideas of what is and isn't locked.
+   Votes:
+     +1: cmpilato
 
 Status of 1.6.1:
 ================
@@ -118,3 +78,50 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r36009
+   Bump recommended and shipped SQLite version.
+   Justification:
+     I normally wouldn't care to nominate this, but since we are still in RC
+     stage, we should go ahead and use the latest version of SQLite, if
+     possible.
+   Note:
+     We can still ship the newer version without this change, but it makes
+     sense to be recommending it in configure.
+   Votes:
+     +1: hwright, rhuijben, cmpilato
+     +0: gstein (ie. only if a new tarball is constructed)
+
+ * r36027, r36035
+   Store 64-bit values pulled from the rep cache database.
+   Justification:
+     Possibly data corruption on repositories with shard reps in large rev
+     files.
+   Notes:
+     r36027 addes the proper API, and r36035 uses it.
+   Votes:
+     +1: hwright, rhuijben, cmpilato
+     +0: gstein (ie. only if a new *code* tarball is constructed)
+     
+ * ^/branches/1.6.x-dirent-basename
+   Drop svn_dirent_basename, svn_dirent_split, svn_uri_basename, svn_uri_split
+   from the public api to allow redefining its behavior for 1.7. 
+   The branch updates the single caller of this new api to use the 1.5 api.   
+   Justification:
+     The current dirent_basename api design makes it very hard to resolve
+     issues like #2556 ('cd e:\; svn update e:\' fails).
+   Votes:
+     +1: rhuijben, gstein, cmpilato
+
+ * r36106
+   Resolves issue #3374, "svn cp --parents path URL encoding issues"
+   For
+     svn cp --parent ^/fö ^/dö/fö
+   The --parents code checked and might create ^/d%C3%B6, while the file was
+   copied to ^/dö as expected.
+   Justification:
+     Without this patch --parents is broken for utf8 characters in repos
+     to repos copy and move operations.
+   Votes:
+     +1: rhuijben, steveking, cmpilato
+     +0: gstein (for 1.6.1)
