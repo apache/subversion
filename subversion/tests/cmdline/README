@@ -134,6 +134,17 @@ Note [1]: It would be quite too much to expect those password entries
           ----------------------------
 
 
+[If you want to test with serf instead of neon:
+
+  $ ./basic_tests.py --url=http://localhost --http-library=serf
+
+  or
+
+  $ make check BASE_URL=http://localhost HTTP_LIBRARY=serf
+]
+
+
+
 Running over ra_svn
 -------------------
 
