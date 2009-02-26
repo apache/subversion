@@ -215,11 +215,20 @@ test_getting_info(const char **msg,
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
+  SVN_ERR_ASSERT(repos_relpath == NULL);
+  SVN_ERR_ASSERT(repos_root_url == NULL);
+  SVN_ERR_ASSERT(repos_uuid == NULL);
+  SVN_ERR_ASSERT(strcmp(MD5_1, svn_checksum_to_cstring(checksum, pool)) == 0);
+  SVN_ERR_ASSERT(translated_size == 10);
+
+  /* Grab the inherited info. */
+  SVN_ERR(svn_wc__db_scan_base_repos(
+            &repos_relpath, &repos_root_url, &repos_uuid,
+            db, svn_dirent_join(local_abspath, "A", pool),
+            pool, pool));
   SVN_ERR_ASSERT(strcmp(repos_relpath, "A") == 0);
   SVN_ERR_ASSERT(strcmp(repos_root_url, ROOT_ONE) == 0);
   SVN_ERR_ASSERT(strcmp(repos_uuid, UUID_ONE) == 0);
-  SVN_ERR_ASSERT(strcmp(MD5_1, svn_checksum_to_cstring(checksum, pool)) == 0);
-  SVN_ERR_ASSERT(translated_size == 10);
 
   /* Test: symlink kind, excluded presence, default values for columns. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -232,9 +241,9 @@ test_getting_info(const char **msg,
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_symlink);
   SVN_ERR_ASSERT(status == svn_wc__db_status_excluded);
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
-  SVN_ERR_ASSERT(strcmp(repos_relpath, "B") == 0);
-  SVN_ERR_ASSERT(strcmp(repos_root_url, ROOT_ONE) == 0);
-  SVN_ERR_ASSERT(strcmp(repos_uuid, UUID_ONE) == 0);
+  SVN_ERR_ASSERT(repos_relpath == NULL);
+  SVN_ERR_ASSERT(repos_root_url == NULL);
+  SVN_ERR_ASSERT(repos_uuid == NULL);
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(changed_rev));
   SVN_ERR_ASSERT(changed_date == 0);
   SVN_ERR_ASSERT(changed_author == NULL);

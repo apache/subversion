@@ -500,12 +500,12 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  * will be returned.
  *
  * The OUT parameters, and their "not available" values are:
- *   KIND             n/a (always available)
  *   STATUS           n/a (always available)
+ *   KIND             n/a (always available)
  *   REVISION         SVN_INVALID_REVNUM
- *   REPOS_RELPATH    NULL
- *   REPOS_ROOT_URL   NULL
- *   REPOS_UUID       NULL
+ *   REPOS_RELPATH    NULL (caller should scan up)
+ *   REPOS_ROOT_URL   NULL (caller should scan up)
+ *   REPOS_UUID       NULL (caller should scan up)
  *   CHANGED_REV      SVN_INVALID_REVNUM
  *   CHANGED_DATE     0
  *   CHANGED_AUTHOR   NULL
@@ -513,6 +513,10 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  *   CHECKSUM         NULL
  *   TRANSLATED_SIZE  SVN_INVALID_FILESIZE
  *   TARGET           NULL
+ *
+ * If the STATUS is normal, and the REPOS_* values are NULL, then the
+ * caller should use svn_wc__db_scan_base_repos() to scan up the BASE
+ * tree for the repository information.
  *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
@@ -953,6 +957,9 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * If TARGET is requested, and the node is NOT a symlink, then it will
  * be set to NULL.
  *
+ * ### add information about the need to scan upwards to get a complete
+ * ### picture of the state of this node.
+ *
  * ### add some documentation about OUT parameter values based on STATUS ??
  *
  * ### the TEXT_MOD may become an enumerated value at some point to
@@ -1115,6 +1122,66 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
  * ### 4) post-commit, integrate changelist into BASE
  */
 
+
+/** @} */
+
+
+/**
+ * @defgroup svn_wc__db_scan  Functions to scan up a tree for further data.
+ * @{
+ */
+
+/** Scan for a BASE node's repository information.
+ *
+ * In the typical case, a BASE node has unspecified repository information,
+ * meaning that it is implied by its parent's information. When the info is
+ * needed, this function can be used to scan up the BASE tree to find
+ * the data.
+ *
+ * For the BASE node implied by LOCAL_ABSPATH, its location in the repository
+ * returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned in
+ * *REPOS_RELPATH. Any of three OUT parameters may be NULL, indicating no
+ * interest in that piece of information.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__db_scan_base_repos(const char **repos_relpath,
+                           const char **repos_root_url,
+                           const char **repos_uuid,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+
+/** Scan for an added WORKING node's repository information.
+ *
+ * Nodes in the WORKING tree do not have a location in a repository until
+ * they are committed. Their eventual repository and location within that
+ * repository are implied by their parent node(s). This function will scan
+ * up the WORKING tree until it finds the root of the addition (whether
+ * that is an add with or without history, or the destination of a move).
+ * Once it finds the root, then it scans up the BASE tree (if necessary)
+ * to find the repository information (see svn_wc__db_scan_base_repos).
+ *
+ * For the WORKING node implied by LOCAL_ABSPATH, its location in the
+ * repository returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned
+ * in *REPOS_RELPATH. Any of three OUT parameters may be NULL, indicating
+ * no interest in that piece of information.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__db_scan_added_repos(const char **repos_relpath,
+                            const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /** @} */
 
