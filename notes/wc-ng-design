@@ -876,19 +876,24 @@ Near-Term Plan
 
 3. convert props.c to use wc_db. migrate props to db simultaneously.
 
-4. incremental shift of pristines from N files into pristine db.
+4. implement 'svn cleanup' as an upgrade path from old-style working
+   copies to wc-ng
+
+5. incremental shift of pristines from N files into pristine db.
    note: we could continue to leave .revert-base while we migrate the
          primary base into the pristine dataset.
 
-5. shift libsvn_wc from using entries.h to using wc_db.h.
+6. shift libsvn_wc from using entries.h to using wc_db.h.
    note: since entries.h is "merely" a wrapper for wc_db.h, this will
          allow the libsvn_wc to start using the new wc_db APIs
          wherever it is easy/possible.
    goal: all libsvn_wc code uses wc_db.h, and entries.h exists solely
          to support old backwards-compat code.
 
-6. centralize the metadata and pristines
+7. centralize the metadata and pristines
    note: this will also involve merging datastores
+
+8. replace loggy with sqlite-based work journal
 
 
 Other sections
