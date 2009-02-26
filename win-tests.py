@@ -524,7 +524,7 @@ class Httpd:
     try:
       import win32process
       import win32con
-      args = ' '.join([self._quote(x) for x in self.httpd_args)])
+      args = ' '.join([self._quote(x) for x in self.httpd_args])
       self.proc_handle = (
         win32process.CreateProcess(self._quote(self.path), args,
                                    None, None, 0,
