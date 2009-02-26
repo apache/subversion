@@ -635,6 +635,47 @@ test_working_info(const char **msg,
 }
 
 
+static svn_error_t *
+test_pdh(const char **msg,
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
+         apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc__db_t *db;
+
+  *msg = "creation of per-directory handles";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_fake_wc("test_pdh", pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  "fake-wc/test_pdh",
+                                  pool));
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          local_abspath, NULL, pool, pool));
+
+  /* NOTE: this test doesn't do anything apparent -- it simply exercises
+     some internal functionality of wc_db.  This is a handy driver for
+     debugging wc_db to ensure it manages per-directory handles properly.  */
+
+  SVN_ERR(svn_wc__db_base_add_absent_node(
+            db, svn_dirent_join(local_abspath, "sub/A/B", pool),
+            "sub/A/B", ROOT_ONE, UUID_ONE, 1,
+            svn_wc__db_kind_file, svn_wc__db_status_absent,
+            pool));
+
+  SVN_ERR(svn_wc__db_base_add_absent_node(
+            db, svn_dirent_join(local_abspath, "sub/A/B/C/D", pool),
+            "sub/A/B/C/D", ROOT_ONE, UUID_ONE, 1,
+            svn_wc__db_kind_file, svn_wc__db_status_absent,
+            pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -642,5 +683,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_inserting_nodes),
     SVN_TEST_PASS(test_base_children),
     SVN_TEST_PASS(test_working_info),
+    SVN_TEST_PASS(test_pdh),
     SVN_TEST_NULL
   };
