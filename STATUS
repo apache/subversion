@@ -28,7 +28,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      delays the Windows automated testrun until a user confirms.
      (This doesn't fix this testcase; it just handles this part of the problem)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
      -0: gstein (replied with feedback on this rev.) (r36049 only) 
 
  * r36159
