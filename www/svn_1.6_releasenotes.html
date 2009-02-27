@@ -526,6 +526,35 @@ consider important, but please see the 1.6.0 section in the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 for a complete list.</p>
 
+<div class="h4" id="log-multiple-args" title="log-multiple-args">
+<h4>log can take multiple revisions</h4>
+
+<p>The <code>svn log</code> command can now take multiple revision arguments
+in one invocation.  Both the -c and -r arguments are supported.</p>
+
+<pre>
+   $ svn -r36169 -r36171 http://svn.collab.net/repos/svn/
+   ------------------------------------------------------------------------
+   r36169 | sussman | 2009-02-26 14:46:44 -0800 (Thu, 26 Feb 2009) | 1 line
+
+   ...log message omitted...
+   ------------------------------------------------------------------------
+   r36171 | joeswatosh | 2009-02-26 22:05:28 -0800 (Thu, 26 Feb 2009) | 20 lines
+
+   ...log message omitted...
+   $ svn -c36169,36171 http://svn.collab.net/repos/svn/
+   ------------------------------------------------------------------------
+   r36169 | sussman | 2009-02-26 14:46:44 -0800 (Thu, 26 Feb 2009) | 1 line
+
+   ...log message omitted...
+   ------------------------------------------------------------------------
+   r36171 | joeswatosh | 2009-02-26 22:05:28 -0800 (Thu, 26 Feb 2009) | 20 lines
+
+   ...log message omitted...
+</pre>
+
+</div>  <!-- log-multiple-args  -->
+
 <div class="h4" id="trust-server-cert" title="trust-server-cert">
 <h4>--trust-server-cert option</h4>
 
