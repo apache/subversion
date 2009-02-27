@@ -37,14 +37,16 @@
 CREATE TABLE REPOSITORY (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* the root URL of the repository */
+  /* The root URL of the repository. This value is URI-encoded.  */
   root  TEXT UNIQUE NOT NULL,
 
   /* the UUID of the repository */
-  uuid  TEXT UNIQUE NOT NULL
+  uuid  TEXT NOT NULL
   );
 
-CREATE UNIQUE INDEX I_UUID ON REPOSITORY (uuid);
+/* Note: a repository (identified by its UUID) may appear at multiple URLs.
+   For example, http://example.com/repos/ and https://example.com/repos/.  */
+CREATE INDEX I_UUID ON REPOSITORY (uuid);
 
 
 /* ------------------------------------------------------------------------- */
@@ -216,8 +218,8 @@ CREATE TABLE WORKING_NODE (
   moved_from  TEXT,
 
   /* If the underlying node was moved (rather than just deleted), this
-     specifies where the BASE node was moved to. This is set only on the
-     root of a move, and implied for all children.
+     specifies the local_relpath of where the BASE node was moved to.
+     This is set only on the root of a move, and implied for all children.
 
      Note that moved_to never refers to *this* node. It always refers
      to the "underlying" node, whether that is BASE or a child node
