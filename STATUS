@@ -74,6 +74,17 @@ Status of 1.6.1:
 
 Candidate changes:
 
+ * r36178
+   External merge-tool improvements.
+   Justification:
+     Makes automated merging easier, and also fixes a bug where a file
+     which should be marked conflicted was consired sucessfully merged
+     because the tool's exit status was not properly evaluated.
+   Notes:
+     The bug is only triggered when using an external merge tool with the
+     --accept=launch option. I don't think we need to hold 1.6.0 on this.
+   Votes:
+     +1: stsp
 
 
 Approved changes:
