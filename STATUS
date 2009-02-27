@@ -69,6 +69,11 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
    Votes:
      +1: cmpilato
 
+ * 36182
+   Fix 'svnadmin hotcopy' of packed repositories.
+   Votes:
+     +1: danielsh
+
 Status of 1.6.1:
 ================
 
