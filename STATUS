@@ -81,10 +81,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * 36182
-   Fix 'svnadmin hotcopy' of packed repositories.
-   Justification:
-     Breakage is bad.
-   Votes:
-     +1: danielsh, hwright, gstein, rhuijben
