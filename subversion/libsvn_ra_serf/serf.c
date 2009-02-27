@@ -498,7 +498,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
   /* If we have a relative path, append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component(path, rel_path, pool);
+      path = svn_path_url_add_component2(path, rel_path, pool);
     }
 
   props = apr_hash_make(pool);
@@ -527,7 +527,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
        * the revision's baseline-collection.
        */
       prop_ctx = NULL;
-      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
+      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
       svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
                                  path, revision, "0",
@@ -777,7 +777,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we have a relative path, URI encode and append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component(path, rel_path, pool);
+      path = svn_path_url_add_component2(path, rel_path, pool);
     }
 
   props = apr_hash_make(pool);
@@ -793,7 +793,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                              session, NULL, path, revision,
                                              fetched_rev, pool));
 
-      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
+      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
     }
 

@@ -297,7 +297,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_ctx->hash = apr_hash_make(pool);
   lock_ctx->done = FALSE;
 
-  req_url = svn_path_url_add_component(session->repos_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
