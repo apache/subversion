@@ -1451,7 +1451,8 @@ svn_fs_fs__hotcopy(const char *src_path,
       const char *packed_shard = apr_psprintf(iterpool, "%ld.pack",
                                               rev / max_files_per_dir);
       const char *src_subdir_packed_shard;
-      src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard, pool);
+      src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard,
+                                              iterpool);
 
       SVN_ERR(svn_io_copy_dir_recursively(src_subdir_packed_shard,
                                           dst_subdir, packed_shard,
@@ -1462,7 +1463,7 @@ svn_fs_fs__hotcopy(const char *src_path,
     }
 
   /* Then, copy non-packed shards. */
-  assert(rev == min_unpacked_rev);
+  SVN_ERR_ASSERT(rev == min_unpacked_rev);
   for (; rev <= youngest; rev++)
     {
       const char *src_subdir_shard = src_subdir,
