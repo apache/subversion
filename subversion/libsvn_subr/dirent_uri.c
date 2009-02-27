@@ -885,45 +885,6 @@ svn_dirent_dirname(const char *dirent, apr_pool_t *pool)
 }
 
 char *
-svn_dirent_basename(const char *dirent, apr_pool_t *pool)
-{
-  apr_size_t len = strlen(dirent);
-  apr_size_t start;
-
-  assert(svn_dirent_is_canonical(dirent, pool));
-
-  if (svn_dirent_is_root(dirent, len))
-    start = 0;
-  else
-    {
-      start = len;
-      while (start > 0 && dirent[start - 1] != '/'
-#if defined(WIN32) || defined(__CYGWIN__)
-             && dirent[start - 1] != ':'
-#endif /* WIN32 or Cygwin */
-            )
-        --start;
-    }
-
-  return apr_pstrmemdup(pool, dirent + start, len - start);
-}
-
-void
-svn_dirent_split(const char *dirent,
-                 const char **dirpath,
-                 const char **base_name,
-                 apr_pool_t *pool)
-{
-  assert(dirpath != base_name);
-
-  if (dirpath)
-    *dirpath = svn_dirent_dirname(dirent, pool);
-
-  if (base_name)
-    *base_name = svn_dirent_basename(dirent, pool);
-}
-
-char *
 svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
@@ -934,41 +895,6 @@ svn_uri_dirname(const char *uri, apr_pool_t *pool)
     return apr_pstrmemdup(pool, uri, len);
   else
     return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
-}
-
-char *
-svn_uri_basename(const char *uri, apr_pool_t *pool)
-{
-  apr_size_t len = strlen(uri);
-  apr_size_t start;
-
-  assert(svn_uri_is_canonical(uri, pool));
-
-  if (svn_uri_is_root(uri, len))
-    start = 0;
-  else
-    {
-      start = len;
-      while (start > 0 && uri[start - 1] != '/')
-        --start;
-    }
-
-  return apr_pstrmemdup(pool, uri + start, len - start);
-}
-
-void
-svn_uri_split(const char *uri,
-              const char **dirpath,
-              const char **base_name,
-              apr_pool_t *pool)
-{
-  assert(dirpath != base_name);
-
-  if (dirpath)
-    *dirpath = svn_uri_dirname(uri, pool);
-
-  if (base_name)
-    *base_name = svn_uri_basename(uri, pool);
 }
 
 char *

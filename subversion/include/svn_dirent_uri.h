@@ -134,24 +134,6 @@ svn_dirent_join_many(apr_pool_t *pool,
                      const char *base,
                      ...);
 
-/** Get the basename of the specified canonicalized @a dirent.  The
- * basename is defined as the last component of the dirent.  If the @a dirent
- * is root ("/", "X:/", "//server/share/"), then that is returned.  Otherwise,
- * the returned value will have no slashes in it.
- *
- * Example: svn_dirent_basename("/foo/bar") -> "bar"
- *
- * The returned basename will be allocated in @a pool.
- *
- * @note If an empty string is passed, then an empty string will be returned.
- *
- * @since New in 1.6.
- */
-char *
-svn_dirent_basename(const char *dirent,
-                    apr_pool_t *pool);
-
-
 /** Get the dirname of the specified canonicalized @a dirent, defined as
  * the dirent with its basename removed.
  *
@@ -165,79 +147,6 @@ svn_dirent_basename(const char *dirent,
 char *
 svn_dirent_dirname(const char *dirent,
                    apr_pool_t *pool);
-
-/** Divide the canonicalized @a dirent into @a *dirpath and @a
- * *base_name, allocated in @a pool.
- *
- * If @a dirpath or @a base_name is NULL, then don't set that one.
- *
- * Either @a dirpath or @a base_name may be @a dirent's own address, but they
- * may not both be the same address, or the results are undefined.
- *
- * If @a dirent has two or more components, the separator between @a dirpath
- * and @a base_name is not included in either of the new names.
- *
- *   examples:
- *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
- *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and "/"</pre>
- *             - <pre>"bar"           ==>  ""   and "bar"</pre>
- *             - <pre>""              ==>  ""   and ""</pre>
- *             - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
- *             - <pre>"X:/foo"        ==>  "X:/" and "foo"</pre>
- *  posix:     - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
- *  windows:   - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
- *
- * @since New in 1.6.
- */
-void
-svn_dirent_split(const char *dirent,
-                 const char **dirpath,
-                 const char **base_name,
-                 apr_pool_t *pool);
-
-/** Divide the canonicalized @a uri into @a *dirpath and @a
- * *base_name, allocated in @a pool.
- *
- * If @a dirpath or @a base_name is NULL, then don't set that one.
- *
- * Either @a dirpath or @a base_name may be @a dirent's own address, but they
- * may not both be the same address, or the results are undefined.
- *
- * If @a dirent has two or more components, the separator between @a dirpath
- * and @a base_name is not included in either of the new names.
- *
- *   examples:
- *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
- *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and "/"</pre>
- *             - <pre>"bar"           ==>  ""   and "bar"</pre>
- *             - <pre>""              ==>  ""   and ""</pre>
- *
- * @since New in 1.6.
- */
-void
-svn_uri_split(const char *dirent,
-              const char **dirpath,
-              const char **base_name,
-              apr_pool_t *pool);
-
-/** Get the basename of the specified canonicalized @a uri.  The
- * basename is defined as the last component of the uri.  If the @a dirent
- * is root then that is returned. Otherwise, the returned value will have no
- * slashes in it.
- *
- * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
- *
- * The returned basename will be allocated in @a pool.
- *
- * @note If an empty string is passed, then an empty string will be returned.
- *
- * @since New in 1.6.
- */
-char *
-svn_uri_basename(const char *uri,
-                 apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a uri, defined as
  * the dirent with its basename removed.

@@ -81,16 +81,6 @@ Candidate changes:
 
 Approved changes:
 =================
-     
- * ^/branches/1.6.x-dirent-basename
-   Drop svn_dirent_basename, svn_dirent_split, svn_uri_basename, svn_uri_split
-   from the public api to allow redefining its behavior for 1.7. 
-   The branch updates the single caller of this new api to use the 1.5 api.   
-   Justification:
-     The current dirent_basename api design makes it very hard to resolve
-     issues like #2556 ('cd e:\; svn update e:\' fails).
-   Votes:
-     +1: rhuijben, gstein, cmpilato
 
  * r36106
    Resolves issue #3374, "svn cp --parents path URL encoding issues"
