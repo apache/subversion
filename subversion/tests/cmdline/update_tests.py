@@ -3699,19 +3699,23 @@ def update_accept_conflicts(sbox):
                                      beta_path_backup)
 
   # pi: --accept=edit
-  # Run editor and accept the edited file.
-  svntest.actions.run_and_verify_svn(None,
-                                     ['G    %s\n' % (pi_path_backup,),
-                                      'Updated to revision 2.\n'],
-                                     [],
-                                     'update', '--accept=edit',
-                                     pi_path_backup)
+  # Run editor and accept the edited file. The merge tool will leave
+  # conflicts in place, so expect a message on stderr, but expect
+  # svn to exit with an exit code of 0.
+  svntest.actions.run_and_verify_svn2(None,
+                                      ['G    %s\n' % (pi_path_backup,),
+                                       'Updated to revision 2.\n'],
+                                      "system(.*) returned.*", 0,
+                                      'update', '--accept=edit',
+                                      pi_path_backup)
 
   # rho: --accept=launch
-  # Run SVN_MERGE and accept the merged file.
+  # Run the external merge tool, it should leave conflict markers in place.
   svntest.actions.run_and_verify_svn(None,
-                                     ['G    %s\n' % (rho_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                     ['C    %s\n' % (rho_path_backup,),
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n'],
                                      [],
                                      'update', '--accept=launch',
                                      rho_path_backup)
@@ -3753,7 +3757,8 @@ def update_accept_conflicts(sbox):
 
   # Set the expected extra files for the test
   extra_files = ['iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine',
-                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine']
+                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
+                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine']
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -3766,7 +3771,7 @@ def update_accept_conflicts(sbox):
   expected_status.tweak('A/B/E/alpha', status='M ')
   expected_status.tweak('A/B/E/beta', status='  ')
   expected_status.tweak('A/D/G/pi', status='M ')
-  expected_status.tweak('A/D/G/rho', status='M ')
+  expected_status.tweak('A/D/G/rho', status='C ')
 
   # Set the expected output for the test
   expected_output = wc.State(wc_backup, {})
