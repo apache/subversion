@@ -643,9 +643,13 @@ def file_dir_file(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', dir_url, file_path)
-
+  if not os.path.isdir(file_path):
+    raise svntest.Failure
+  
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', file_url, file_path)
+  if not os.path.isfile(file_path):
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Issue 1751: "svn switch --non-recursive" does not switch existing files,
