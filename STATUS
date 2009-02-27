@@ -58,13 +58,8 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      in competing ideas of what is and isn't locked.
    Votes:
      +1: cmpilato
+     +1: gstein (for 1.6.1)
 
- * 36182
-   Fix 'svnadmin hotcopy' of packed repositories.
-   Justification:
-     Breakage is bad.
-   Votes:
-     +1: danielsh, hwright
 
 Status of 1.6.1:
 ================
@@ -143,3 +138,10 @@ Approved changes:
    Votes:
      +1: rhuijben, cmpilato, hwright
      +1: gstein (for 1.6.1)
+
+ * 36182
+   Fix 'svnadmin hotcopy' of packed repositories.
+   Justification:
+     Breakage is bad.
+   Votes:
+     +1: danielsh, hwright, gstein
