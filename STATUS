@@ -57,9 +57,8 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      With the fix, each slave server tries to field the lock/unlock, resulting
      in competing ideas of what is and isn't locked.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
      +1: gstein (for 1.6.1)
-
 
 Status of 1.6.1:
 ================
@@ -77,6 +76,7 @@ Candidate changes:
      --accept=launch option. I don't think we need to hold 1.6.0 on this.
    Votes:
      +1: stsp
+     -0: rhuijben (Looks like a feature enhancement for a patch release)
 
 
 Approved changes:
@@ -144,4 +144,4 @@ Approved changes:
    Justification:
      Breakage is bad.
    Votes:
-     +1: danielsh, hwright, gstein
+     +1: danielsh, hwright, gstein, rhuijben
