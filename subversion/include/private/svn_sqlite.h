@@ -123,6 +123,10 @@ svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
 
 /* Error-handling wrapper around sqlite3_bind_int64. */
 svn_error_t *
+svn_sqlite__bind_int(svn_sqlite__stmt_t *stmt, int slot, int val);
+
+/* Error-handling wrapper around sqlite3_bind_int64. */
+svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt, int slot,
                        apr_int64_t val);
 
@@ -161,6 +165,10 @@ svn_sqlite__column_boolean(svn_sqlite__stmt_t *stmt, int column);
 /* Wrapper around sqlite3_column_int. */
 int
 svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column);
+
+/* Wrapper around sqlite3_column_int. */
+apr_int64_t
+svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column);
 
 /* Return TRUE if the result of selecting the column is NULL,
    FALSE otherwise */

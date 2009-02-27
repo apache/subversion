@@ -81,17 +81,6 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r36027, r36035
-   Store 64-bit values pulled from the rep cache database.
-   Justification:
-     Possibly data corruption on repositories with shard reps in large rev
-     files.
-   Notes:
-     r36027 addes the proper API, and r36035 uses it.
-   Votes:
-     +1: hwright, rhuijben, cmpilato
-     +0: gstein (ie. only if a new *code* tarball is constructed)
      
  * ^/branches/1.6.x-dirent-basename
    Drop svn_dirent_basename, svn_dirent_split, svn_uri_basename, svn_uri_split
