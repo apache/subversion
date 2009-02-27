@@ -20,12 +20,16 @@ import sys
 import os
 
 def main():
-    if len(sys.argv) not in [2, 5]:
+    if len(sys.argv) not in [2, 6]:
         print("usage: svneditor.py file")
-        print("       svneditor.py base theirs mine merged")
+        print("       svneditor.py base theirs mine merged wc_path")
+        print("arguments passed were: %s" % sys.argv)
         sys.exit(1)
 
-    filename = sys.argv[-1]
+    if len(sys.argv) == 2:
+      filename = sys.argv[1]
+    elif len(sys.argv) == 6:
+      filename = sys.argv[4]
 
     # Read in the input file.
     f = open(filename)
@@ -42,6 +46,16 @@ def main():
     f = open(filename, 'w')
     f.write(contents)
     f.close()
+    return check_conflicts(contents)
+
+def check_conflicts(contents):
+    markers = ['<<<<<<<', '=======', '>>>>>>>']
+    found = 0
+    for line in contents.split('\n'):
+      for marker in markers:
+        if line.startswith(marker):
+          found = found + 1
+    return found >= 3
 
 def foo_to_bar(m):
     return m.replace('foo', 'bar')
@@ -52,5 +66,5 @@ def append_foo(m):
 def identity(m):
     return m
 
-main()
-sys.exit(0)
+exitcode = main()
+sys.exit(exitcode)
