@@ -1448,7 +1448,8 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* First, copy packed shards. */
   for (rev = 0; rev < min_unpacked_rev; rev += max_files_per_dir)
     {
-      const char *packed_shard = apr_psprintf(iterpool, "%ld.pack", rev);
+      const char *packed_shard = apr_psprintf(iterpool, "%ld.pack",
+                                              rev / max_files_per_dir);
       const char *src_subdir_packed_shard;
       src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard, pool);
 
