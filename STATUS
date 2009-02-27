@@ -61,12 +61,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r35982
-   Resolve possible uninitialized pointer references on receiving an invalid
-   authentication header.
-   Justification:
-     Allows a server to crash the library.
-   Votes:
-     +1: rhuijben, cmpilato, pburba
-     +1: gstein (for 1.6.1)
