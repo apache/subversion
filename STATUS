@@ -82,16 +82,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36111
-   On Windows don't retry deleting a file 100 times when this file is really
-   not a file but just a directory.
-   Justification:
-     Makes removing unversioned directories much faster.
-     (You can see the delay with: svn rm --force <unversioned-empty-dir>)
-   Votes:
-     +1: rhuijben, cmpilato, hwright
-     +1: gstein (for 1.6.1)
-
  * 36182
    Fix 'svnadmin hotcopy' of packed repositories.
    Justification:
