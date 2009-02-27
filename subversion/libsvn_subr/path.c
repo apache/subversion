@@ -943,9 +943,10 @@ svn_path_url_add_component2(const char *url,
                             const char *component,
                             apr_pool_t *pool)
 {
-  assert(svn_path_is_canonical(url, pool));
+  /* = svn_path_uri_encode() but without always copying */
+  component = uri_escape(component, uri_char_validity, pool);
 
-  return svn_path_join(url, svn_path_uri_encode(component, pool), pool);
+  return svn_path_join(url, component, pool);
 }
 
 svn_error_t *
