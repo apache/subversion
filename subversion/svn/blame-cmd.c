@@ -312,7 +312,7 @@ svn_cl__blame(apr_getopt_t *os,
           else if (svn_path_is_url(target))
             opt_state->end_revision.kind = svn_opt_revision_head;
           else
-            opt_state->end_revision.kind = svn_opt_revision_base;
+            opt_state->end_revision.kind = svn_opt_revision_working;
         }
 
       if (opt_state->xml)
