@@ -2591,7 +2591,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* Fetch properties. */
   fetch_props = apr_hash_make(pool);
 
-  fetch_url = svn_path_url_add_component(session->repos_url.path, path, pool);
+  fetch_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
 
   /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
    *
@@ -2605,7 +2605,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
                                              session, conn, fetch_url,
                                              revision, NULL, pool));
-      fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
+      fetch_url = svn_path_url_add_component2(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }
 

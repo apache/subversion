@@ -496,7 +496,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   svn_error_t *err;
   int status_code;
 
-  req_url = svn_path_url_add_component(session->repos_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
 
@@ -596,8 +596,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->lock->comment = comment;
 
       lock_ctx->force = force;
-      req_url = svn_path_url_add_component(session->repos_url.path,
-                                           lock_ctx->path, subpool);
+      req_url = svn_path_url_add_component2(session->repos_url.path,
+                                            lock_ctx->path, subpool);
 
       handler = apr_pcalloc(subpool, sizeof(*handler));
 
@@ -746,8 +746,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       unlock_ctx.force = force;
       unlock_ctx.token = apr_pstrcat(subpool, "<", token, ">", NULL);
 
-      req_url = svn_path_url_add_component(session->repos_url.path, path,
-                                           subpool);
+      req_url = svn_path_url_add_component2(session->repos_url.path, path,
+                                            subpool);
 
       handler = apr_pcalloc(subpool, sizeof(*handler));
 
