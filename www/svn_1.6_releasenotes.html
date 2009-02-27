@@ -533,7 +533,7 @@ for a complete list.</p>
 in one invocation.  Both the -c and -r arguments are supported.</p>
 
 <pre>
-   $ svn -r36169 -r36171 http://svn.collab.net/repos/svn/
+   $ svn log -r36169 -r36171 http://svn.collab.net/repos/svn/
    ------------------------------------------------------------------------
    r36169 | sussman | 2009-02-26 14:46:44 -0800 (Thu, 26 Feb 2009) | 1 line
 
@@ -542,7 +542,7 @@ in one invocation.  Both the -c and -r arguments are supported.</p>
    r36171 | joeswatosh | 2009-02-26 22:05:28 -0800 (Thu, 26 Feb 2009) | 20 lines
 
    ...log message omitted...
-   $ svn -c36169,36171 http://svn.collab.net/repos/svn/
+   $ svn log -c36169,36171 http://svn.collab.net/repos/svn/
    ------------------------------------------------------------------------
    r36169 | sussman | 2009-02-26 14:46:44 -0800 (Thu, 26 Feb 2009) | 1 line
 
