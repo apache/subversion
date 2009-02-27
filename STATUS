@@ -18,15 +18,6 @@ Candidate changes:
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
- * r35982
-   Resolve possible uninitialized pointer references on receiving an invalid
-   authentication header.
-   Justification:
-     Allows a server to crash the library.
-   Votes:
-     +1: rhuijben, cmpilato
-     +1: gstein (for 1.6.1)
-     
  * r36049-r36051, r36131
    Resolve the SVN_ERR_MALFUNCTION() reproducable on Windows with
      svn ci "C:/Program FIles" C:/Windows
@@ -70,3 +61,12 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r35982
+   Resolve possible uninitialized pointer references on receiving an invalid
+   authentication header.
+   Justification:
+     Allows a server to crash the library.
+   Votes:
+     +1: rhuijben, cmpilato, pburba
+     +1: gstein (for 1.6.1)
