@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-25 21:05+0800\n"
-"PO-Revision-Date: 2009-02-25 21:05+0800\n"
+"POT-Creation-Date: 2009-02-27 15:03+0800\n"
+"PO-Revision-Date: 2009-02-27 15:05+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -871,9 +871,6 @@ msgstr "“%s”以保留名称结束"
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "无法为二进制文件 “%s” 计算追溯信息"
-
-msgid "blame of the WORKING revision is not supported"
-msgstr "工作版本不支持追溯"
 
 msgid "Start revision must precede end revision"
 msgstr "起始版本必须小于结束版本"
@@ -5347,6 +5344,10 @@ msgstr "节点 '%s' 的校验和损坏。"
 #, c-format
 msgid "The node '%s' was not found."
 msgstr "找不到节点 '%s'。"
+
+#, c-format
+msgid "Corrupt data for '%s'"
+msgstr "'%s' 的数据损坏"
 
 msgid "'verbose' option invalid in XML mode"
 msgstr "在XML模式中“verbose”选项无效"
