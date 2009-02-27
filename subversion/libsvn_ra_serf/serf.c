@@ -86,10 +86,18 @@ load_config(svn_ra_serf__session_t *session,
   const char *timeout_str = NULL;
   unsigned int proxy_port;
 
-  config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
-                        APR_HASH_KEY_STRING);
-  config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                               APR_HASH_KEY_STRING);
+  if (config_hash)
+    {
+      config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
+                            APR_HASH_KEY_STRING);
+      config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                                   APR_HASH_KEY_STRING);
+    }
+  else
+    {
+      config = NULL;
+      config_client = NULL;
+    }
 
   SVN_ERR(svn_config_get_bool(config, &session->using_compression,
                               SVN_CONFIG_SECTION_GLOBAL,
@@ -97,10 +105,21 @@ load_config(svn_ra_serf__session_t *session,
   svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
-  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, config_client);
-  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, config);
+  if (session->wc_callbacks->auth_baton)
+    {
+      if (config_client)
+        {
+          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
+                                 config_client);
+        }
+      if (config)
+        {
+          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
+                                 config);
+        }
+    }
 
   /* Load the global proxy server settings, if set. */
   svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
