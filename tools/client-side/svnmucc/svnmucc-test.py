@@ -22,7 +22,7 @@ else:
 
 # where lives svnmucc?
 svnmucc_binary = \
-   os.path.abspath('%s/contrib/client-side/svnmucc/svnmucc' % (build_top))
+   os.path.abspath('%s/tools/client-side/svnmucc/svnmucc' % (build_top))
 
 # override some svntest binary locations
 svntest.main.svn_binary = \
@@ -34,7 +34,7 @@ svntest.main.svnadmin_binary = \
 
 # where lives the test repository?
 repos_path = \
-   os.path.abspath(('%s/contrib/client-side/svnmucc/svnmucc-test-repos'
+   os.path.abspath(('%s/tools/client-side/svnmucc/svnmucc-test-repos'
                     % (build_top)))
 
 if (len(sys.argv) > 2):
