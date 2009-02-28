@@ -243,7 +243,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
   if (SVN_PATH_IS_EMPTY(path))
-    return path;
+    return "";
 
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
