@@ -91,7 +91,7 @@ static const char * const statements[] = {
   "insert or replace into working_node "
     "(wc_id, local_relpath, parent_relpath, presence, kind, "
      "copyfrom_repos_id, "
-     "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
+     "copyfrom_repos_path, copyfrom_revnum, moved_here, moved_to, checksum, "
      "translated_size, changed_rev, changed_date, changed_author, depth, "
      "last_mod_time, properties, keep_local) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
@@ -110,7 +110,7 @@ static const char * const statements[] = {
 
   "select wc_id, local_relpath, parent_relpath, presence, kind, "
     "copyfrom_repos_id, "
-    "copyfrom_repos_path, copyfrom_revnum, moved_from, moved_to, checksum, "
+    "copyfrom_repos_path, copyfrom_revnum, moved_here, moved_to, checksum, "
     "translated_size, changed_rev, changed_date, changed_author, depth, "
     "last_mod_time, properties, keep_local "
   "from working_node;",
@@ -175,7 +175,7 @@ typedef struct {
   apr_int64_t copyfrom_repos_id;
   const char *copyfrom_repos_path;
   svn_revnum_t copyfrom_revnum;
-  const char *moved_from;
+  svn_boolean_t moved_here;
   const char *moved_to;
   svn_checksum_t *checksum;
   apr_size_t translated_size;
@@ -729,8 +729,7 @@ fetch_working_nodes(apr_hash_t **nodes,
         }
 
       if (!svn_sqlite__column_is_null(stmt, 8))
-        working_node->moved_from = svn_sqlite__column_text(stmt, 8,
-                                                           result_pool);
+        working_node->moved_here = svn_sqlite__column_boolean(stmt, 8);
 
       if (!svn_sqlite__column_is_null(stmt, 9))
         working_node->moved_to = svn_sqlite__column_text(stmt, 9, result_pool);
@@ -1392,8 +1391,8 @@ insert_working_node(svn_sqlite__db_t *wc_db,
       SVN_ERR(svn_sqlite__bind_int64(stmt, 8, working_node->copyfrom_revnum));
     }
 
-  if (working_node->moved_from)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 9, working_node->moved_from));
+  if (working_node->moved_here)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 9, working_node->moved_here));
 
   if (working_node->moved_to)
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, working_node->moved_to));

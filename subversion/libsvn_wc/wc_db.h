@@ -1134,32 +1134,85 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
                            apr_pool_t *scratch_pool);
 
 
-/** Scan for an added WORKING node's repository information.
+/** Scan upwards for additional information about a WORKING node.
  *
- * Nodes in the WORKING tree do not have a location in a repository until
- * they are committed. Their eventual repository and location within that
- * repository are implied by their parent node(s). This function will scan
- * up the WORKING tree until it finds the root of the addition (whether
- * that is an add with or without history, or the destination of a move).
- * Once it finds the root, then it scans up the BASE tree (if necessary)
- * to find the repository information (see svn_wc__db_scan_base_repos).
+ * A WORKING node's status, as returned from svn_wc__db_read_info() can be
+ * one of three states:
+ *   svn_wc__db_status_added
+ *   svn_wc__db_status_deleted
+ *   svn_wc__db_status_incomplete
  *
- * For the WORKING node implied by LOCAL_ABSPATH, its location in the
- * repository returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned
- * in *REPOS_RELPATH. Any of three OUT parameters may be NULL, indicating
- * no interest in that piece of information.
+ * (the "normal" and absent statuses only refer to unshadowed BASE nodes)
+ *
+ * If the node is in the "added" state, then this function can refine that
+ * status into one of three possible states:
+ *
+ *   svn_wc__db_status_added -- this NODE is a simple add without history.
+ *     OP_ROOT_ABSPATH will be set to the topmost node in the added subtree
+ *     (implying its parent will be an unshadowed BASE node). The REPOS_*
+ *     values will be implied by that ancestor BASE node and this node's
+ *     position in the added subtree. ORIGINAL_* will be set to their
+ *     NULL values (and SVN_INVALID_REVNUM for ORIGINAL_REVISION). The
+ *     MOVED_TO_ABSPATH will be set to NULL.
+ *
+ *   svn_wc__db_status_copied -- this NODE is the root or child of a copy.
+ *     The root of the copy will be stored in OP_ROOT_ABSPATH. Note that
+ *     the parent of the operation root could be another WORKING node (from
+ *     an add, copy, or move). The REPOS_* values will be implied by the
+ *     ancestor unshadowed BASE node. ORIGINAL_* will indicate the source
+ *     of the copy, and MOVED_TO_ABSPATH will be set to NULL.
+ *
+ *   svn_wc__db_status_move_dst -- this NODE arrived as a result of a move.
+ *     The root of the moved nodes will be stored in OP_ROOT_ABSPATH.
+ *     Similar to the copied state, its parent may be a WORKING node or a
+ *     BASE node. And again, the REPOS_* values are implied by this node's
+ *     position in the subtree under the ancestor unshadowed BASE node.
+ *     ORIGINAL_* will indicate the source of the move, and MOVED_TO_ABSPATH
+ *     will be set to NULL.
+ *
+ * If the node is in the "deleted" state, then this function can refine
+ * the status into one of two possible states:
+ *
+ *   svn_wc__db_status_deleted -- this NODE is part of a normal delete.
+ *     OP_ROOT_ABSPATH will be set to the topmost node in the deleted
+ *     subtree. That node's parent may be another WORKING node, or a BASE
+ *     node. The REPOS_*, ORIGINAL_*, and MOVED_TO_ABSPATH (OUT) parameters
+ *     will be set to NULL.
+ *
+ *   svn_wc__db_status_move_src -- this NODE was moved elsewhere. The root
+ *     of the moved tree will be set in OP_ROOT_ABSPATH. That node's parent
+ *     may be a WORKING or a BASE node. MOVED_TO_ABSPATH will be set to
+ *     the destination of the move (note that further operations may have
+ *     been performed on it at its new location; it is not a given that the
+ *     node is still present in that location). The REPOS_* and ORIGINAL_*
+ *     parameters will be set to NULL.
+ *
+ * All OUT parameters may be set to NULL to indicate a lack of interest in
+ * that piece of information.
+ *
+ * ORIGINAL_REPOS_RELPATH will refer to the *root* of the operation. It
+ * does *not* correspond to the node given by LOCAL_RELPATH. The caller
+ * can use the suffix on LOCAL_ABSPATH (relative to OP_ROOT_ABSPATH) in
+ * order to compute the corresponding source node.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_scan_added_repos(const char **repos_relpath,
-                            const char **repos_root_url,
-                            const char **repos_uuid,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__db_scan_working(svn_wc__db_status_t *status,
+                        const char **op_root_abspath,
+                        const char **repos_relpath,
+                        const char **repos_root_url,
+                        const char **repos_uuid,
+                        const char **original_repos_relpath,
+                        const char **original_root_url,
+                        const char **original_uuid,
+                        svn_revnum_t *original_revision,
+                        const char **moved_to_abspath,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /** @} */
 
