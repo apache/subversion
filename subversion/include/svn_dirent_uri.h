@@ -297,10 +297,10 @@ svn_uri_is_root(const char *uri,
  * separator characters, and possibly other semantically inoperative
  * transformations.
  *
- * Convert the server name of UNC paths lowercase on Windows.
+ * Convert the server name of UNC paths lowercase and drive letters to
+ * upper case on Windows.
  *
- * The returned dirent may be statically allocated, equal to @a dirent, or
- * allocated from @a pool.
+ * The returned dirent may be statically allocated or allocated from @a pool.
  *
  * @since New in 1.6.
  */
@@ -319,8 +319,7 @@ svn_dirent_canonicalize(const char *dirent,
  *
  * This functions supports URLs.
  *
- * The returned uri may be statically allocated, equal to @a uri, or
- * allocated from @a pool.
+ * The returned uri may be statically allocated or allocated from @a pool.
  *
  * @since New in 1.6.
  */
