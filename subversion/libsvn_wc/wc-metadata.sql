@@ -206,16 +206,15 @@ CREATE TABLE WORKING_NODE (
   /* for kind==symlink, this specifies the target. */
   symlink_target  TEXT,
 
-  /* Where this node was copied from. Set only on the root of the copy,
-     and implied for all children. */
+  /* Where this node was copied/moved from. Set only on the root of the
+     operation, and implied for all children. */
   copyfrom_repos_id  INTEGER,
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
-  /* If this node was moved (rather than just copied), this specifies
-     the local_relpath of the source of the move. This is set only on
-     the root of a move, and implied for all children.  */
-  moved_from  TEXT,
+  /* Boolean value, specifying if this node was moved here (rather than just
+     copied). The source of the move is specified in copyfrom_*.  */
+  moved_here  INTEGER,
 
   /* If the underlying node was moved (rather than just deleted), this
      specifies the local_relpath of where the BASE node was moved to.
