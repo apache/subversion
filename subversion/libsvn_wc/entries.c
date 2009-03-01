@@ -1626,7 +1626,7 @@ write_entry(svn_sqlite__db_t *wc_db,
                                                         this_dir->url,
                                                         scratch_pool);
               if (base_path == NULL)
-                base_path = repos_root;
+                base_path = "";
 
               base_node->repos_relpath = svn_path_join(base_path, entry->name,
                                                        scratch_pool);
