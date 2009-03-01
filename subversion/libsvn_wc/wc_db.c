@@ -144,7 +144,8 @@ enum statement_keys {
   STMT_INSERT_REPOSITORY,
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_BASE_NODE_INCOMPLETE,
-  STMT_SELECT_BASE_NODE_CHILDREN
+  STMT_SELECT_BASE_NODE_CHILDREN,
+  STMT_SELECT_WORKING_CHILDREN
 };
 
 static const char * const statements[] = {
@@ -184,7 +185,14 @@ static const char * const statements[] = {
   "  wc_id, local_relpath, parent_relpath, presence, kind, revnum) "
   "values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);",
 
-  "select local_relpath from base_node where parent_relpath = ?1;",
+  "select local_relpath from base_node "
+  "where wc_id = ?1 and parent_relpath = ?2;",
+
+  "select local_relpath from base_node "
+  "where wc_id = ?1 and parent_relpath = ?2 "
+  "union "
+  "select local_relpath from working_node "
+  "where wc_id = ?1 and parent_relpath = ?2;",
 
   NULL
 };
@@ -920,6 +928,50 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb)
 }
 
 
+static svn_error_t *
+gather_children(const apr_array_header_t **children,
+                enum statement_keys key,
+                svn_wc__db_t *db,
+                const char *local_abspath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  apr_array_header_t *child_names;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* ### should test the node to ensure it is a directory */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, key));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+
+  child_names = apr_array_make(result_pool, 20, sizeof(const char *));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+
+      APR_ARRAY_PUSH(child_names, const char *) =
+        svn_dirent_basename(child_relpath, result_pool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *children = child_names;
+
+  return svn_sqlite__reset(stmt);
+}
+
+
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
@@ -1495,40 +1547,8 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  apr_array_header_t *child_names;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  /* ### should test the node to ensure it is a directory */
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_SELECT_BASE_NODE_CHILDREN));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
-
-  child_names = apr_array_make(result_pool, 20, sizeof(const char *));
-
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-
-      APR_ARRAY_PUSH(child_names, const char *) =
-        svn_dirent_basename(child_relpath, result_pool);
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  *children = child_names;
-
-  return svn_sqlite__reset(stmt);
+  return gather_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
+                         db, local_abspath, result_pool, scratch_pool);
 }
 
 
@@ -2206,9 +2226,8 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  NOT_IMPLEMENTED();
+  return gather_children(children, STMT_SELECT_WORKING_CHILDREN,
+                         db, local_abspath, result_pool, scratch_pool);
 }
 
 
