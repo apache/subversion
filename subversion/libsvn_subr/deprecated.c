@@ -21,7 +21,7 @@
 
 
 
-/*** Includes. ***/
+#include <assert.h>
 
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
@@ -753,6 +753,9 @@ svn_auth_get_ssl_client_cert_pw_file_provider
 }
 
 /*** From path.c ***/
+
+#define SVN_EMPTY_PATH ""
+
 const char *
 svn_path_url_add_component(const char *url,
                            const char *component,
@@ -762,4 +765,55 @@ svn_path_url_add_component(const char *url,
   url = svn_path_canonicalize(url, pool);
 
   return svn_path_url_add_component2(url, component, pool);
+}
+
+void
+svn_path_split(const char *path,
+               const char **dirpath,
+               const char **base_name,
+               apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_path_dirname(path, pool);
+
+  if (base_name)
+    *base_name = svn_path_basename(path, pool);
+}
+
+
+svn_error_t *
+svn_path_split_if_file(const char *path,
+                       const char **pdirectory,
+                       const char **pfile,
+                       apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
+
+  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
+    return err;
+
+  if (err || finfo.filetype == APR_REG)
+    {
+      svn_error_clear(err);
+      svn_path_split(path, pdirectory, pfile, pool);
+    }
+  else if (finfo.filetype == APR_DIR)
+    {
+      *pdirectory = path;
+      *pfile = SVN_EMPTY_PATH;
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                               _("'%s' is neither a file nor a directory name"),
+                               svn_path_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
 }

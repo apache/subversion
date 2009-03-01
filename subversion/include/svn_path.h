@@ -298,7 +298,10 @@ svn_path_get_absolute(const char **pabsolute,
  * directory, set @a *pdirectory to @a path, and @a *pfile to the
  * empty string.  If @a path does not exist it is treated as if it is
  * a file, since directories do not normally vanish.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_path_split_if_file(const char *path,
                        const char **pdirectory,

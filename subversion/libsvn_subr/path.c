@@ -382,23 +382,6 @@ svn_path_basename(const char *path, apr_pool_t *pool)
   return apr_pstrmemdup(pool, path + start, len - start);
 }
 
-
-void
-svn_path_split(const char *path,
-               const char **dirpath,
-               const char **base_name,
-               apr_pool_t *pool)
-{
-  assert(dirpath != base_name);
-
-  if (dirpath)
-    *dirpath = svn_path_dirname(path, pool);
-
-  if (base_name)
-    *base_name = svn_path_basename(path, pool);
-}
-
-
 int
 svn_path_is_empty(const char *path)
 {
@@ -962,43 +945,6 @@ svn_path_get_absolute(const char **pabsolute,
 
   return svn_dirent_get_absolute(pabsolute, relative, pool);
 }
-
-
-svn_error_t *
-svn_path_split_if_file(const char *path,
-                       const char **pdirectory,
-                       const char **pfile,
-                       apr_pool_t *pool)
-{
-  apr_finfo_t finfo;
-  svn_error_t *err;
-
-  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
-
-  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
-  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-    return err;
-
-  if (err || finfo.filetype == APR_REG)
-    {
-      svn_error_clear(err);
-      svn_path_split(path, pdirectory, pfile, pool);
-    }
-  else if (finfo.filetype == APR_DIR)
-    {
-      *pdirectory = path;
-      *pfile = SVN_EMPTY_PATH;
-    }
-  else
-    {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               _("'%s' is neither a file nor a directory name"),
-                               svn_path_local_style(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool)
