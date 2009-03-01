@@ -1971,8 +1971,8 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
   const svn_wc_entry_t *entry;
   apr_hash_t *all_wcprops;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
-  const char *path = svn_path_join(svn_wc_adm_access_path(adm_access),
-                                   entryname, pool);
+  const char *path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                     entryname, pool);
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (! entry)

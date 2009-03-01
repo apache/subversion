@@ -21,6 +21,7 @@
 #include "svn_wc.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "wc.h"
@@ -165,7 +166,7 @@ svn_wc_relocate3(const char *path,
           && (entry->depth != svn_depth_exclude))
         {
           svn_wc_adm_access_t *subdir_access;
-          const char *subdir = svn_path_join(path, key, subpool);
+          const char *subdir = svn_dirent_join(path, key, subpool);
           if (svn_wc__adm_missing(adm_access, subdir))
             continue;
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,

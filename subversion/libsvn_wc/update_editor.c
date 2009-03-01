@@ -528,8 +528,8 @@ make_dir_baton(struct dir_baton **d_p,
   d->path = apr_pstrdup(pool, eb->anchor);
   if (path)
     {
-      d->path = svn_path_join(d->path, path, pool);
-      d->name = svn_uri_basename(path, pool);
+      d->path = svn_dirent_join(d->path, path, pool);
+      d->name = svn_dirent_basename(path, pool);
     }
   else
     {
@@ -663,7 +663,7 @@ complete_directory(struct edit_baton *eb,
               /* There is a small chance that the target is gone in the
                  repository.  If so, we should get rid of the entry
                  (and thus get rid of the exclude flag) now. */
-              full_target = svn_path_join(eb->anchor, eb->target, pool);
+              full_target = svn_dirent_join(eb->anchor, eb->target, pool);
               SVN_ERR(svn_wc__adm_retrieve_internal
                       (&target_access, eb->adm_access, full_target, pool));
               if (!target_access && entry->kind == svn_node_dir)
@@ -703,7 +703,7 @@ complete_directory(struct edit_baton *eb,
      upgrading to something else only changes the target. */
   if (eb->depth_is_sticky &&
       (eb->requested_depth == svn_depth_infinity
-       || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
+       || (strcmp(path, svn_dirent_join(eb->anchor, eb->target, pool)) == 0
            && eb->requested_depth > entry->depth)))
     entry->depth = eb->requested_depth;
 
@@ -754,7 +754,7 @@ complete_directory(struct edit_baton *eb,
         }
       else if (current_entry->kind == svn_node_dir)
         {
-          const char *child_path = svn_path_join(path, name, subpool);
+          const char *child_path = svn_dirent_join(path, name, subpool);
 
           if (current_entry->depth == svn_depth_exclude)
             {
@@ -930,8 +930,8 @@ make_file_baton(struct file_baton **f_p,
   SVN_ERR_ASSERT(path);
 
   /* Make the file's on-disk name. */
-  f->path = svn_path_join(pb->edit_baton->anchor, path, pool);
-  f->name = svn_uri_basename(path, pool);
+  f->path = svn_dirent_join(pb->edit_baton->anchor, path, pool);
+  f->name = svn_dirent_basename(path, pool);
 
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
@@ -1202,7 +1202,7 @@ check_path_under_root(const char *base_path,
             undefined, since apr_filepath_merge() returned error.
             (Pity we can't pass NULL for &full_path in the first place,
             but the APR docs don't bless that.) */
-         svn_path_local_style(svn_path_join(base_path, add_path, pool), pool));
+         svn_path_local_style(svn_dirent_join(base_path, add_path, pool), pool));
     }
 
   return SVN_NO_ERROR;
@@ -1948,7 +1948,7 @@ do_entry_deletion(struct edit_baton *eb,
 {
   svn_wc_adm_access_t *parent_adm_access;
   const svn_wc_entry_t *entry;
-  const char *full_path = svn_path_join(eb->anchor, path, pool);
+  const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   char *victim_path;
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description_t *tree_conflict;
@@ -2180,7 +2180,7 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db;
   svn_node_kind_t kind;
-  const char *full_path = svn_path_join(eb->anchor, path, pool);
+  const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   char *victim_path;
   svn_boolean_t locally_deleted = in_deleted_tree(eb, full_path, TRUE, pool);
 
@@ -2560,7 +2560,7 @@ open_directory(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_wc_adm_access_t *parent_adm_access;
   char *victim_path = NULL;
-  const char *full_path = svn_path_join(eb->anchor, path, pool);
+  const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   svn_wc_conflict_description_t *tree_conflict;
   svn_boolean_t prop_conflicted;
 
@@ -2930,7 +2930,7 @@ absent_file_or_dir(const char *path,
                    void *parent_baton,
                    apr_pool_t *pool)
 {
-  const char *name = svn_uri_basename(path, pool);
+  const char *name = svn_dirent_basename(path, pool);
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access;
@@ -3377,7 +3377,7 @@ add_file(const char *path,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   apr_pool_t *subpool;
-  const char *full_path = svn_path_join(eb->anchor, path, pool);
+  const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   char *victim_path;
   svn_boolean_t locally_deleted = in_deleted_tree(eb, full_path, TRUE, pool);
 
@@ -3569,7 +3569,7 @@ open_file(const char *path,
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
   svn_boolean_t locally_deleted;
-  const char *full_path = svn_path_join(eb->anchor, path, pool);
+  const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   char *victim_path;
   svn_wc_conflict_description_t *tree_conflict;
 
@@ -4531,7 +4531,7 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  const char *target_path = svn_path_join(eb->anchor, eb->target, pool);
+  const char *target_path = svn_dirent_join(eb->anchor, eb->target, pool);
   int log_number = 0;
 
   /* If there is a target and that target is missing, then it

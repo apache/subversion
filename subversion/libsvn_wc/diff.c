@@ -343,8 +343,8 @@ make_file_baton(const char *path,
       while (wc_dir_baton->added)
         wc_dir_baton = wc_dir_baton->dir_baton;
 
-      file_baton->wc_path = svn_path_join(wc_dir_baton->path, "unimportant",
-                                          file_baton->pool);
+      file_baton->wc_path = svn_dirent_join(wc_dir_baton->path, "unimportant",
+                                            file_baton->pool);
     }
   else
     {
@@ -762,7 +762,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
           && strcmp(dir_baton->edit_baton->target, name))
         continue;
 
-      path = svn_path_join(dir_baton->path, name, subpool);
+      path = svn_dirent_join(dir_baton->path, name, subpool);
 
       /* Skip entry if it is in the list of entries already diff'd. */
       if (apr_hash_get(dir_baton->compared, path, APR_HASH_KEY_STRING))
@@ -975,7 +975,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
       if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
         continue;
 
-      path = svn_path_join(dir_baton->path, name, subpool);
+      path = svn_dirent_join(dir_baton->path, name, subpool);
 
       switch (entry->kind)
         {
@@ -1052,8 +1052,8 @@ delete_entry(const char *path,
   const svn_wc_entry_t *entry;
   struct dir_baton *b;
   const char *empty_file;
-  const char *full_path = svn_path_join(pb->edit_baton->anchor_path, path,
-                                        pb->pool);
+  const char *full_path = svn_dirent_join(pb->edit_baton->anchor_path, path,
+                                          pb->pool);
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, pb->edit_baton->anchor,
@@ -1148,7 +1148,7 @@ add_directory(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, dir_pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, dir_pool);
   b = make_dir_baton(full_path, pb, pb->edit_baton, TRUE,
                      subdir_depth, dir_pool);
   *child_baton = b;
@@ -1172,7 +1172,7 @@ open_directory(const char *path,
 
   /* Allocate path from the parent pool since the memory is used in the
      parent's compared hash */
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, pb->pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, pb->pool);
   b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE,
                      subdir_depth, dir_pool);
   *child_baton = b;
@@ -1280,7 +1280,7 @@ add_file(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, file_pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, file_pool);
   b = make_file_baton(full_path, TRUE, pb, file_pool);
   *file_baton = b;
 
@@ -1304,7 +1304,7 @@ open_file(const char *path,
   struct file_baton *b;
   const char *full_path;
 
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, file_pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, file_pool);
   b = make_file_baton(full_path, FALSE, pb, file_pool);
   *file_baton = b;
 
@@ -1679,8 +1679,8 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
                             depth, ignore_ancestry, FALSE, FALSE,
                             changelists, pool));
 
-  target_path = svn_path_join(svn_wc_adm_access_path(anchor), target,
-                              eb->pool);
+  target_path = svn_dirent_join(svn_wc_adm_access_path(anchor), target,
+                                eb->pool);
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, anchor, target_path,
                                     eb->pool));

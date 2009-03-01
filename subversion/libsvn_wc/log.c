@@ -267,13 +267,13 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   const char *full_from_path, *full_dest_path, *full_versioned_path;
 
-  full_from_path = svn_path_join(svn_wc_adm_access_path(adm_access), name,
-                                 pool);
-  full_dest_path = svn_path_join(svn_wc_adm_access_path(adm_access), dest,
-                                 pool);
+  full_from_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), name,
+                                   pool);
+  full_dest_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), dest,
+                                   pool);
   if (versioned)
-    full_versioned_path = svn_path_join(svn_wc_adm_access_path(adm_access),
-                                        versioned, pool);
+    full_versioned_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                          versioned, pool);
   else
     full_versioned_path = NULL; /* Silence GCC uninitialised warning */
 
@@ -402,7 +402,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
 
-  filepath = svn_path_join(svn_wc_adm_access_path(adm_access), name, pool);
+  filepath = svn_dirent_join(svn_wc_adm_access_path(adm_access), name, pool);
 
   /* In the commit, newlines and keywords may have been
    * canonicalized and/or contracted... Or they may not have
@@ -563,12 +563,12 @@ log_do_merge(struct log_runner *loggy,
   target_label = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_5, atts);
 
   /* Convert the 3 basenames into full paths. */
-  left = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), left,
-                       loggy->pool);
-  right = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), right,
-                        loggy->pool);
-  name = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                       loggy->pool);
+  left = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), left,
+                         loggy->pool);
+  right = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), right,
+                          loggy->pool);
+  name = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                         loggy->pool);
 
   /* Now do the merge with our full paths. */
   /* ### TODO: Fill in the left_version and right_version args. */
@@ -635,8 +635,8 @@ log_do_file_readonly(struct log_runner *loggy,
 {
   svn_error_t *err;
   const char *full_path
-    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                    loggy->pool);
+    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                      loggy->pool);
 
   err = svn_io_set_file_read_only(full_path, FALSE, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -654,8 +654,8 @@ log_do_file_maybe_executable(struct log_runner *loggy,
                              const char *name)
 {
   const char *full_path
-    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                    loggy->pool);
+    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                      loggy->pool);
 
   return svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
                                      loggy->pool);
@@ -667,8 +667,8 @@ log_do_file_maybe_readonly(struct log_runner *loggy,
                            const char *name)
 {
   const char *full_path
-    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                    loggy->pool);
+    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                      loggy->pool);
 
   return svn_wc__maybe_set_read_only(NULL, full_path, loggy->adm_access,
                                      loggy->pool);
@@ -683,8 +683,8 @@ log_do_file_timestamp(struct log_runner *loggy,
   apr_time_t timestamp;
   svn_node_kind_t kind;
   const char *full_path
-    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                    loggy->pool);
+    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                      loggy->pool);
 
   const char *timestamp_string
     = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_TIMESTAMP, atts);
@@ -719,8 +719,8 @@ static svn_error_t *
 log_do_rm(struct log_runner *loggy, const char *name)
 {
   const char *full_path
-    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
-                    name, loggy->pool);
+    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                      name, loggy->pool);
 
   svn_error_t *err =
     svn_io_remove_file(full_path, loggy->pool);
@@ -755,8 +755,8 @@ log_do_modify_entry(struct log_runner *loggy,
          which case we don't want to reincarnate it.  */
       const svn_wc_entry_t *existing;
       const char *path
-        = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                        loggy->pool);
+        = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                          loggy->pool);
       SVN_ERR(svn_wc_entry(&existing, path, loggy->adm_access, TRUE,
                            loggy->pool));
       if (! existing)
@@ -767,9 +767,9 @@ log_do_modify_entry(struct log_runner *loggy,
   SVN_ERR(svn_wc__atts_to_entry(&entry, &modify_flags, ah, loggy->pool));
 
   /* Make TFILE the path of the thing being modified.  */
-  tfile = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
-                        strcmp(name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
-                        loggy->pool);
+  tfile = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                          strcmp(name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
+                          loggy->pool);
 
   /* svn_wc__atts_to_entry will no-op if the TEXT_TIME timestamp is
      SVN_WC__TIMESTAMP_WC, so look for that case and fill in the proper
@@ -906,8 +906,8 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
   const svn_wc_entry_t *entry;
   svn_error_t *err = SVN_NO_ERROR;
   const char *full_path
-    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                    loggy->pool);
+    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                      loggy->pool);
 
   /* Figure out if 'name' is a dir or a file */
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, loggy->adm_access, full_path,
@@ -1018,8 +1018,8 @@ remove_deleted_entry(void *baton, const void *key,
     }
   else if (cur_entry->kind == svn_node_dir)
     {
-      pdir = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
-                           key, pool);
+      pdir = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                             key, pool);
       base_name = SVN_WC_ENTRY_THIS_DIR;
       SVN_ERR(svn_wc_adm_retrieve(&entry_access, loggy->adm_access,
                                   pdir, pool));
@@ -1060,8 +1060,8 @@ log_do_committed(struct log_runner *loggy,
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
-    full_path = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
-                              name, pool);
+    full_path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                                name, pool);
   else
     full_path = apr_pstrdup(pool, svn_wc_adm_access_path(loggy->adm_access));
 
@@ -1438,8 +1438,8 @@ log_do_modify_wcprop(struct log_runner *loggy,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
     path = svn_wc_adm_access_path(loggy->adm_access);
   else
-    path = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
-                         name, loggy->pool);
+    path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                           name, loggy->pool);
 
   propname = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPNAME, atts);
   propval = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPVAL, atts);
@@ -1936,8 +1936,8 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                          apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *full_src = svn_path_join(svn_wc_adm_access_path(adm_access),
-                                       src_path, pool);
+  const char *full_src = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                         src_path, pool);
 
   SVN_ERR(svn_io_check_path(full_src, &kind, pool));
 
@@ -2537,7 +2537,7 @@ svn_wc_cleanup2(const char *path,
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
-      entry_path = svn_path_join(path, key, subpool);
+      entry_path = svn_dirent_join(path, key, subpool);
 
       if (entry->kind == svn_node_dir
           && strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0)

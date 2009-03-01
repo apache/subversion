@@ -20,6 +20,7 @@
 
 #include "svn_delta.h"
 #include "svn_wc.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "wc.h"
 
@@ -130,7 +131,7 @@ make_dir_baton(struct dir_baton **d_p,
 
   d->path = apr_pstrdup(pool, eb->anchor);
   if (path)
-    d->path = svn_path_join(d->path, path, pool);
+    d->path = svn_dirent_join(d->path, path, pool);
 
   /* The svn_depth_unknown means that: 1) pb is the anchor; 2) there
      is an non-null target, for which we are preparing the baton.
@@ -200,7 +201,7 @@ make_file_baton(struct file_baton **f_p,
       const svn_wc_entry_t *entry;
 
       SVN_ERR(svn_wc_entry(&entry,
-                           svn_path_join(pb->edit_baton->anchor, path, pool),
+                           svn_dirent_join(pb->edit_baton->anchor, path, pool),
                            pb->edit_baton->adm_access, FALSE, pool));
       if (! entry)
         {
@@ -280,8 +281,8 @@ delete_entry(const char *path,
          It's probably an old server that doesn't understand
          depths. */
       const svn_wc_entry_t *entry;
-      const char *full_path = svn_path_join(eb->anchor, path,
-                                            pool);
+      const char *full_path = svn_dirent_join(eb->anchor, path,
+                                              pool);
 
       SVN_ERR(svn_wc_entry(&entry, full_path,
                            eb->adm_access, FALSE, pool));
