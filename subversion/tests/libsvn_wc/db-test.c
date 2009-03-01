@@ -160,12 +160,12 @@ static const char * const data_loading_sql[] = {
    "  2, " TIME_2s ", '" AUTHOR_2 "', null, null, "
    "  2, 'moved/file', 2, 1, null, null, '()', 0); "
    "insert into working_node values ("
-   "  1, 'J/J-e', '', 'not-present', 'dir', "
+   "  1, 'J/J-e', 'J', 'not-present', 'dir', "
    "  null, null, "
    "  null, null, null, null, null, "
    "  null, null, null, 0, 'other/place', null, '()', 0); "
    "insert into working_node values ("
-   "  1, 'J/J-e/J-e-a', '', 'not-present', 'file', "
+   "  1, 'J/J-e/J-e-a', 'J/J-e', 'not-present', 'file', "
    "  null, null, "
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
@@ -593,6 +593,18 @@ test_base_children(const char **msg,
                                        db, local_abspath,
                                        pool, pool));
   SVN_ERR_ASSERT(children->nelts == 9);
+  for (i = children->nelts; i--; )
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      SVN_ERR_ASSERT(strlen(name) == 1);
+      /* ### check the actual values */
+    }
+
+  SVN_ERR(svn_wc__db_read_children(&children,
+                                   db, local_abspath,
+                                   pool, pool));
+  SVN_ERR_ASSERT(children->nelts == 11);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
