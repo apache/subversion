@@ -35,6 +35,7 @@
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 
@@ -682,7 +683,7 @@ path_dirent_walker(void *baton,
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
-      base_name = svn_path_uri_decode(svn_path_basename(path, pool), pool);
+      base_name = svn_path_uri_decode(svn_uri_basename(path, pool), pool);
 
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }

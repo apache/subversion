@@ -28,6 +28,7 @@
 #include <serf.h>
 #include <serf_bucket_types.h>
 
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "svn_xml.h"
@@ -1407,9 +1408,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off. */
-              present_path = svn_path_join(svn_path_basename(path, pool),
+              present_path = svn_path_join(svn_uri_basename(path, pool),
                                            present_path, pool);
-              path = svn_path_dirname(path, pool);
+              path = svn_uri_dirname(path, pool);
             }
         }
     }
