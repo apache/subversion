@@ -1899,7 +1899,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   svn_boolean_t have_base;
   svn_boolean_t have_work;
   svn_boolean_t have_act;
-  svn_error_t *err;
+  svn_error_t *err = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
