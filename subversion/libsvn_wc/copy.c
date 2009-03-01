@@ -102,8 +102,8 @@ copy_added_file_administratively(const char *src_path,
                                  apr_pool_t *pool)
 {
   const char *dst_path
-    = svn_path_join(svn_wc_adm_access_path(dst_parent_access),
-                    dst_basename, pool);
+    = svn_dirent_join(svn_wc_adm_access_path(dst_parent_access),
+                      dst_basename, pool);
 
   /* Copy this file and possibly put it under version control. */
   SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, pool));
@@ -177,7 +177,7 @@ copy_added_dir_administratively(const char *src_path,
       apr_pool_t *subpool;
       apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
       /* The 'dst_path' is simply dst_parent/dst_basename */
-      const char *dst_path = svn_path_join(dst_parent, dst_basename, pool);
+      const char *dst_path = svn_dirent_join(dst_parent, dst_basename, pool);
 
       /* Check cancellation; note that this catches recursive calls too. */
       if (cancel_func)
@@ -262,7 +262,7 @@ copy_added_dir_administratively(const char *src_path,
             continue;
 
           /* Construct the full path of the entry. */
-          src_fullpath = svn_path_join(src_path, this_entry.name, subpool);
+          src_fullpath = svn_dirent_join(src_path, this_entry.name, subpool);
 
           SVN_ERR(svn_wc_entry(&entry, src_fullpath, src_child_dir_access,
                                TRUE, subpool));
@@ -358,16 +358,16 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 
       if (entry->copyfrom_url)
         {
-          *copyfrom_url = svn_path_join(entry->copyfrom_url, rest,
-                                        pool);
+          *copyfrom_url = svn_dirent_join(entry->copyfrom_url, rest,
+                                          pool);
           *copyfrom_rev = entry->copyfrom_rev;
         }
       else
         {
           const char *last_parent_path = parent_path;
 
-          rest = svn_path_join(svn_dirent_basename(parent_path, pool),
-                               rest, pool);
+          rest = svn_dirent_join(svn_dirent_basename(parent_path, pool),
+                                 rest, pool);
           parent_path = svn_dirent_dirname(parent_path, pool);
 
           if (strcmp(parent_path, last_parent_path) == 0)
@@ -463,7 +463,7 @@ copy_file_administratively(const char *src_path,
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
-    = svn_path_join(svn_wc_adm_access_path(dst_parent), dst_basename, pool);
+    = svn_dirent_join(svn_wc_adm_access_path(dst_parent), dst_basename, pool);
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR(svn_io_check_path(dst_path, &dst_kind, pool));
@@ -733,7 +733,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
         {
           svn_wc_adm_access_t *child_access;
           const char *child_path;
-          child_path = svn_path_join
+          child_path = svn_dirent_join
             (svn_wc_adm_access_path(adm_access), key, subpool);
           SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
                                       child_path, subpool));
@@ -774,8 +774,8 @@ copy_dir_administratively(const char *src_path,
   svn_wc_adm_access_t *adm_access;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
-  const char *dst_path = svn_path_join(svn_wc_adm_access_path(dst_parent),
-                                       dst_basename, pool);
+  const char *dst_path = svn_dirent_join(svn_wc_adm_access_path(dst_parent),
+                                         dst_basename, pool);
 
   /* Sanity check 1: You cannot make a copy of something that's not
      under version control. */
@@ -906,7 +906,7 @@ svn_wc_copy2(const char *src_path,
   /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
      disk, before actually doing the file copy. */
-  target_path = svn_path_join(dst_path, dst_basename, pool);
+  target_path = svn_dirent_join(dst_path, dst_basename, pool);
   SVN_ERR(svn_wc_entry(&target_entry, target_path, dst_parent, TRUE, pool));
   if (target_entry
       && ((target_entry->depth == svn_depth_exclude)

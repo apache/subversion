@@ -267,7 +267,7 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                                                      svn_node_none,
                                                      result_pool);
   *conflict = svn_wc_conflict_description_create_tree(
-    svn_path_join(dir_path, victim_basename, result_pool),
+    svn_dirent_join(dir_path, victim_basename, result_pool),
     NULL, node_kind, operation, src_left_version, src_right_version,
     result_pool);
 

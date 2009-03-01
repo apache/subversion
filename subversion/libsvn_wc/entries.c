@@ -1628,8 +1628,8 @@ write_entry(svn_sqlite__db_t *wc_db,
               if (base_path == NULL)
                 base_path = "";
 
-              base_node->repos_relpath = svn_path_join(base_path, entry->name,
-                                                       scratch_pool);
+              base_node->repos_relpath = svn_dirent_join(base_path, entry->name,
+                                                         scratch_pool);
             }
         }
 
@@ -2775,7 +2775,7 @@ walker_helper(const char *dirpath,
       if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      entrypath = svn_path_join(dirpath, key, subpool);
+      entrypath = svn_dirent_join(dirpath, key, subpool);
 
       /* Call the "found entry" callback for this entry. (For a directory,
        * this is the first visit: as a child.) */

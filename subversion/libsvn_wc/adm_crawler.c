@@ -231,8 +231,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
      notice that we're picking up hidden entries too. */
-  full_path = svn_path_join(svn_wc_adm_access_path(adm_access),
-                            dir_path, subpool);
+  full_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                              dir_path, subpool);
   SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, full_path, subpool));
   SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, subpool));
   SVN_ERR(svn_io_get_dir_filenames(&dirents, full_path, subpool));
@@ -292,8 +292,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
       /* Compute the paths and URLs we need. */
       this_url = svn_path_url_add_component2(dot_entry->url, key, iterpool);
-      this_path = svn_path_join(dir_path, key, iterpool);
-      this_full_path = svn_path_join(full_path, key, iterpool);
+      this_path = svn_dirent_join(dir_path, key, iterpool);
+      this_full_path = svn_dirent_join(full_path, key, iterpool);
 
       /*** The Big Tests: ***/
 

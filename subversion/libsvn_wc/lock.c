@@ -157,7 +157,7 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
 
       svn_pool_clear(subpool);
 
-      entrypath = svn_path_join(adm_access->path, entry->name, subpool);
+      entrypath = svn_dirent_join(adm_access->path, entry->name, subpool);
       SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, adm_access,
                                  entrypath, subpool));
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
@@ -199,7 +199,7 @@ convert_wcprops(svn_stringbuf_t *log_accum,
       apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
 
-      full_path = svn_path_join(adm_access->path, entry->name, pool);
+      full_path = svn_dirent_join(adm_access->path, entry->name, pool);
 
       if (entry->kind != svn_node_file
           && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -625,7 +625,7 @@ do_open(svn_wc_adm_access_t **adm_access,
           if (entry->depth == svn_depth_exclude)
             continue;
 
-          entry_path = svn_path_join(path, entry->name, subpool);
+          entry_path = svn_dirent_join(path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */
           err = do_open(&entry_access, entry_path, write_lock,
