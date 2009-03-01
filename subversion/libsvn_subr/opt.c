@@ -943,7 +943,7 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
 
   /* convert back to UTF-8. */
   SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));
-  *path_out = svn_path_canonicalize(*path_out, pool);
+  *path_out = svn_dirent_canonicalize(*path_out, pool);
 
   return SVN_NO_ERROR;
 }
