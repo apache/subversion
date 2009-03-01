@@ -18,6 +18,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_hash.h"
@@ -153,8 +154,8 @@ write_digest_file(apr_hash_t *children,
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR,
                                                      pool), fs, pool));
-  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_dirname(digest_path, pool), fs,
-                                       pool));
+  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_dirname(digest_path, pool),
+                                       fs, pool));
 
   if (lock)
     {
@@ -194,7 +195,7 @@ write_digest_file(apr_hash_t *children,
     }
 
   SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_path_dirname(digest_path, pool),
+                                 svn_dirent_dirname(digest_path, pool),
                                  svn_io_file_del_none, pool, pool));
   if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
@@ -331,16 +332,16 @@ set_lock(svn_fs_t *fs,
   subpool = svn_pool_create(pool);
   while (1729)
     {
-      const char *digest_path, *parent_dir, *digest_file;
+      const char *digest_path, *digest_file;
       apr_hash_t *this_children;
       svn_lock_t *this_lock;
 
       svn_pool_clear(subpool);
 
       /* Calculate the DIGEST_PATH for the currently FS path, and then
-         split it into a PARENT_DIR and DIGEST_FILE basename. */
+         get its DIGEST_FILE basename. */
       digest_path = digest_path_from_path(fs, this_path->data, subpool);
-      svn_path_split(digest_path, &parent_dir, &digest_file, subpool);
+      digest_file = svn_dirent_basename(digest_path, subpool);
 
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
                                digest_path, subpool));
@@ -365,10 +366,10 @@ set_lock(svn_fs_t *fs,
                                 digest_path, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if ((this_path->len == 1) && (this_path->data[0] == '/'))
+      if (svn_dirent_is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_path_dirname(this_path->data, subpool));
+                        svn_dirent_dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -392,16 +393,16 @@ delete_lock(svn_fs_t *fs,
   subpool = svn_pool_create(pool);
   while (1729)
     {
-      const char *digest_path, *parent_dir, *digest_file;
+      const char *digest_path, *digest_file;
       apr_hash_t *this_children;
       svn_lock_t *this_lock;
 
       svn_pool_clear(subpool);
 
       /* Calculate the DIGEST_PATH for the currently FS path, and then
-         split it into a PARENT_DIR and DIGEST_FILE basename. */
+         get its DIGEST_FILE basename. */
       digest_path = digest_path_from_path(fs, this_path->data, subpool);
-      svn_path_split(digest_path, &parent_dir, &digest_file, subpool);
+      digest_file = svn_dirent_basename(digest_path, subpool);
 
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
                                digest_path, subpool));
@@ -424,7 +425,7 @@ delete_lock(svn_fs_t *fs,
           /* Special case:  no goodz, no file.  And remember to nix
              the entry for it in its parent. */
           svn_stringbuf_set(child_to_kill,
-                            svn_path_basename(digest_path, subpool));
+                            svn_dirent_basename(digest_path, subpool));
           SVN_ERR(svn_io_remove_file(digest_path, subpool));
         }
       else
@@ -435,10 +436,10 @@ delete_lock(svn_fs_t *fs,
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if ((this_path->len == 1) && (this_path->data[0] == '/'))
+      if (svn_dirent_is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_path_dirname(this_path->data, subpool));
+                        svn_dirent_dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
