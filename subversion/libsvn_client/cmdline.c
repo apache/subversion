@@ -22,6 +22,7 @@
 /*** Includes. ***/
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
@@ -240,7 +241,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
               /* If the target has the same name as a Subversion
                  working copy administrative dir, skip it. */
-              base_name = svn_path_basename(true_target, pool);
+              base_name = svn_dirent_basename(true_target, pool);
 
               if (svn_wc_is_adm_dir(base_name, pool))
                 {
