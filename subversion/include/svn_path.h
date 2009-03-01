@@ -119,8 +119,14 @@ svn_path_join_many(apr_pool_t *pool, const char *base, ...);
  * The returned basename will be allocated in @a pool.
  *
  * @note If an empty string is passed, then an empty string will be returned.
+ *
+ * New code should use either svn_dirent_basename() (for local paths) or
+ * svn_uri_basename() (for urls and repository paths).
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED char *
+SVN_DEPRECATED
+char *
 svn_path_basename(const char *path, apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a path, defined as
@@ -128,8 +134,14 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  * returned unchanged.
  *
  * The returned dirname will be allocated in @a pool.
+ *
+ * New code should use either svn_dirent_dirname() (for local paths) or 
+ * svn_uri_dirname() (for urls and repository paths).
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED char *
+SVN_DEPRECATED
+char *
 svn_path_dirname(const char *path, apr_pool_t *pool);
 
 /** Split @a path into a root portion and an extension such that
@@ -195,8 +207,14 @@ svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
  *             - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
+ *
+ * New code should use either svn_dirent_split() (for local paths) or
+ * svn_uri_split() (for urls and repository paths).
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED void
+SVN_DEPRECATED
+void
 svn_path_split(const char *path,
                const char **dirpath,
                const char **base_name,
