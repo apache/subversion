@@ -327,8 +327,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 
   SVN_ERR(svn_path_get_absolute(&abs_src_path, src_path, pool));
 
-  parent_path = svn_path_dirname(abs_src_path, pool);
-  rest = svn_path_basename(abs_src_path, pool);
+  svn_dirent_split(abs_src_path, &parent_path, &rest, pool);
 
   *copyfrom_url = NULL;
 
@@ -367,9 +366,9 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
         {
           const char *last_parent_path = parent_path;
 
-          rest = svn_path_join(svn_path_basename(parent_path, pool),
+          rest = svn_path_join(svn_dirent_basename(parent_path, pool),
                                rest, pool);
-          parent_path = svn_path_dirname(parent_path, pool);
+          parent_path = svn_dirent_dirname(parent_path, pool);
 
           if (strcmp(parent_path, last_parent_path) == 0)
             {

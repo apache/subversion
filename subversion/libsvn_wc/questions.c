@@ -27,6 +27,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_io.h"
@@ -457,7 +458,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
       tmp.working_size = finfo.size;
       tmp.text_time = finfo.mtime;
       SVN_ERR(svn_wc__entry_modify(adm_access,
-                                   svn_path_basename(filename, pool),
+                                   svn_dirent_basename(filename, pool),
                                    &tmp,
                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
@@ -492,7 +493,7 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 {
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  const char* dir_path = svn_path_dirname(path, pool);
+  const char* dir_path = svn_dirent_dirname(path, pool);
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 

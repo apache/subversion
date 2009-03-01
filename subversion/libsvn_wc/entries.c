@@ -1208,7 +1208,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
   if (! dir_access)
     {
       const char *dir_path, *base_name;
-      svn_path_split(path, &dir_path, &base_name, pool);
+      svn_dirent_split(path, &dir_path, &base_name, pool);
       SVN_ERR(svn_wc__adm_retrieve_internal(&dir_access, adm_access, dir_path,
                                             pool));
       entry_name = base_name;
@@ -2988,7 +2988,7 @@ visit_tc_too_error_handler(const char *path,
     {
       svn_wc_adm_access_t *adm_access;
       svn_wc_conflict_description_t *conflict;
-      char *parent_path = svn_path_dirname(path, pool);
+      char *parent_path = svn_dirent_dirname(path, pool);
 
       /* See if there is any tree conflict on this path. */
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, parent_path,
@@ -3111,7 +3111,7 @@ svn_wc_mark_missing_deleted(const char *path,
       newent.deleted = TRUE;
       newent.schedule = svn_wc_schedule_normal;
 
-      svn_path_split(path, &parent_path, &bname, pool);
+      svn_dirent_split(path, &parent_path, &bname, pool);
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent, parent_path, pool));
       return svn_wc__entry_modify(adm_access, bname, &newent,

@@ -16,6 +16,7 @@
  * ====================================================================
  */
 
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -442,7 +443,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
                                 pool));
 
       /* Victim path (escaping separator chars). */
-      path = svn_path_basename(conflict->path, pool);
+      path = svn_dirent_basename(conflict->path, pool);
       SVN_ERR_ASSERT(strlen(path) > 0);
       svn_skel__prepend(svn_skel__str_atom(path, pool), c_skel);
 
@@ -474,7 +475,7 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
     {
       conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
-      if (strcmp(svn_path_basename(conflict->path, pool), victim_basename) == 0)
+      if (strcmp(svn_dirent_basename(conflict->path, pool), victim_basename) == 0)
         return TRUE;
     }
 
@@ -555,7 +556,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
   const svn_wc_entry_t *entry;
   apr_array_header_t *conflicts;
   svn_wc_entry_t tmp_entry;
-  const char *victim_basename = svn_path_basename(victim_path, pool);
+  const char *victim_basename = svn_dirent_basename(victim_path, pool);
 
   /* Make sure the node is a directory.
    * Otherwise we should not have been called. */
@@ -565,7 +566,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
   /* Make sure that VICTIM_PATH is a child node of DIR_PATH.
    * Anything else is a bug. */
-  SVN_ERR_ASSERT(strcmp(dir_path, svn_path_dirname(victim_path, pool)) == 0);
+  SVN_ERR_ASSERT(strcmp(dir_path, svn_dirent_dirname(victim_path, pool)) == 0);
 
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
                                       dir_path, pool));
@@ -582,8 +583,8 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
           const svn_wc_conflict_description_t *conflict
             = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
-          if (strcmp(svn_path_basename(conflict->path, pool), victim_basename)
-              == 0)
+          if (strcmp(svn_dirent_basename(conflict->path, pool),
+                     victim_basename) == 0)
             {
               array_remove_unordered(conflicts, i);
 
@@ -611,7 +612,7 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                           svn_wc_adm_access_t *adm_access,
                           apr_pool_t *pool)
 {
-  const char *parent_path = svn_path_dirname(victim_path, pool);
+  const char *parent_path = svn_dirent_dirname(victim_path, pool);
   svn_wc_adm_access_t *parent_adm_access;
   svn_boolean_t parent_adm_access_is_temporary = FALSE;
   svn_error_t *err;
@@ -657,8 +658,8 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
       conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
-      if (strcmp(svn_path_basename(conflict->path, pool),
-                 svn_path_basename(victim_path, pool)) == 0)
+      if (strcmp(svn_dirent_basename(conflict->path, pool),
+                 svn_dirent_basename(victim_path, pool)) == 0)
         {
           *tree_conflict = conflict;
           break;

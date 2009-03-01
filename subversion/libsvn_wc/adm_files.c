@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 
@@ -278,7 +279,7 @@ svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
   const char *tmp_path;
   const char *base_path;
 
-  svn_path_split(path, &parent_path, &base_name, pool);
+  svn_dirent_split(path, &parent_path, &base_name, pool);
 
   /* Extend tmp name. */
   tmp_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, TRUE, pool,
@@ -300,7 +301,7 @@ svn_wc__text_base_path(const char *path,
 {
   const char *newpath, *base_name;
 
-  svn_path_split(path, &newpath, &base_name, pool);
+  svn_dirent_split(path, &newpath, &base_name, pool);
   return extend_with_adm_name(newpath,
                               SVN_WC__BASE_EXT,
                               tmp,
@@ -316,7 +317,7 @@ svn_wc__text_revert_path(const char *path,
 {
   const char *newpath, *base_name;
 
-  svn_path_split(path, &newpath, &base_name, pool);
+  svn_dirent_split(path, &newpath, &base_name, pool);
   return extend_with_adm_name(newpath,
                               SVN_WC__REVERT_EXT,
                               FALSE,
@@ -388,7 +389,7 @@ svn_wc__prop_path(const char **prop_path,
 
       const char *base_name;
 
-      svn_path_split(path, prop_path, &base_name, pool);
+      svn_dirent_split(path, prop_path, &base_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
          extensions[props_kind],
@@ -555,7 +556,7 @@ svn_wc__open_writable_base(svn_stream_t **stream,
   const char *parent_path;
   const char *base_name;
 
-  svn_path_split(path, &parent_path, &base_name, scratch_pool);
+  svn_dirent_split(path, &parent_path, &base_name, scratch_pool);
 
   return open_adm_file(stream, temp_base_path,
                        parent_path,
@@ -588,7 +589,7 @@ svn_wc__write_old_wcprops(const char *path,
   if (kind == svn_node_dir)
     parent_dir = path;
   else
-    svn_path_split(path, &parent_dir, &base_name, pool);
+    svn_dirent_split(path, &parent_dir, &base_name, pool);
 
   /* At this point, we know we need to open a file in the admin area
      of parent_dir.  First check that parent_dir is a working copy: */
