@@ -231,3 +231,20 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_checkout3(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_externals,
+                     svn_boolean_t allow_unver_obstructions,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
+                                       revision, NULL, depth, ignore_externals,
+                                       allow_unver_obstructions, NULL, ctx,
+                                       pool);
+}
