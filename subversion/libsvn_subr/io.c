@@ -43,6 +43,7 @@
 #include <apr_md5.h>
 
 #include "svn_types.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -711,7 +712,7 @@ svn_io_copy_file(const char *src,
      file over the real destination. */
 
   SVN_ERR(svn_io_open_unique_file3(&to_file, &dst_tmp,
-                                   svn_path_dirname(dst, pool),
+                                   svn_dirent_dirname(dst, pool),
                                    svn_io_file_del_none, pool, pool));
   SVN_ERR(cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
@@ -2944,7 +2945,7 @@ svn_io_file_move(const char *from_path, const char *to_path,
       svn_error_clear(err);
 
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_to_path,
-                                       svn_path_dirname(to_path, pool),
+                                       svn_dirent_dirname(to_path, pool),
                                        svn_io_file_del_none,
                                        pool, pool));
 
@@ -3156,7 +3157,7 @@ svn_io_dir_walk(const char *dirname,
      documented to provide it, so we have to do a bit extra. */
   SVN_ERR(svn_io_stat(&finfo, dirname, wanted & ~APR_FINFO_NAME, pool));
   SVN_ERR(cstring_from_utf8(&finfo.name,
-                            svn_path_basename(dirname, pool),
+                            svn_dirent_basename(dirname, pool),
                             pool));
   finfo.valid |= APR_FINFO_NAME;
   SVN_ERR((*walk_func)(walk_baton, dirname, &finfo, pool));
@@ -3330,7 +3331,7 @@ svn_io_write_version_file(const char *path,
   SVN_ERR_ASSERT(version >= 0);
 
   SVN_ERR(svn_io_write_unique(&path_tmp,
-                              svn_path_dirname(path, pool),
+                              svn_dirent_dirname(path, pool),
                               format_contents, strlen(format_contents),
                               svn_io_file_del_none, pool));
 

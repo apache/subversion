@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -168,7 +169,7 @@ keyword_printf(const char *fmt,
           if (url)
             {
               const char *base_name
-                = svn_path_uri_decode(svn_path_basename(url, pool), pool);
+                = svn_path_uri_decode(svn_uri_basename(url, pool), pool);
               svn_stringbuf_appendcstr(value, base_name);
             }
           break;
@@ -1258,7 +1259,7 @@ detranslate_special_file(const char *src, const char *dst,
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
   SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
-                                 svn_path_dirname(dst, scratch_pool),
+                                 svn_dirent_dirname(dst, scratch_pool),
                                  svn_io_file_del_none,
                                  scratch_pool, scratch_pool));
   SVN_ERR(svn_subst_read_specialfile(&src_stream, src,
@@ -1335,7 +1336,7 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
      ### this only writes the first line!
   */
   if (create_using_internal_representation)
-    SVN_ERR(svn_io_write_unique(&dst_tmp, svn_path_dirname(dst, pool),
+    SVN_ERR(svn_io_write_unique(&dst_tmp, svn_dirent_dirname(dst, pool),
                                 contents->data, contents->len,
                                 svn_io_file_del_none, pool));
 
@@ -1403,7 +1404,7 @@ svn_subst_copy_and_translate3(const char *src,
   /* For atomicity, we translate to a tmp file and then rename the tmp file
      over the real destination. */
   SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
-                                 svn_path_dirname(dst, pool),
+                                 svn_dirent_dirname(dst, pool),
                                  svn_io_file_del_none, pool, pool));
 
   dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
