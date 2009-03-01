@@ -353,7 +353,7 @@ checkout_dir(dir_context_t *dir)
           dir->checkout->activity_url_len = dir->commit->activity_url_len;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
-                                        svn_path_basename(dir->name, dir->pool),
+                                        svn_uri_basename(dir->name, dir->pool),
                                         dir->pool);
 
           apr_hash_set(dir->commit->copied_entries,
@@ -882,7 +882,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   uri = dir->commit->session->repos_url;
   uri.path =
       (char*)svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
-                                         svn_path_basename(dir->name, pool),
+                                         svn_uri_basename(dir->name, pool),
                                          pool);
 
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
@@ -1283,7 +1283,7 @@ delete_entry(const char *path,
       /* Ensure our directory has been checked out */
       SVN_ERR(checkout_dir(dir));
       delete_target = svn_path_url_add_component2(dir->checkout->resource_url,
-                                                  svn_path_basename(path, pool),
+                                                  svn_uri_basename(path, pool),
                                                   pool);
     }
 
@@ -1390,10 +1390,10 @@ add_directory(const char *path,
 
       dir->url = svn_path_url_add_component2(parent->commit->checked_in_url,
                                              path, dir->pool);
-      mkcol_target = svn_path_url_add_component2(parent->checkout->resource_url,
-                                                 svn_path_basename(path,
-                                                                  dir->pool),
-                                                dir->pool);
+      mkcol_target = svn_path_url_add_component2(
+                               parent->checkout->resource_url,
+                               svn_uri_basename(path, dir->pool),
+                               dir->pool);
     }
 
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
@@ -1649,8 +1649,8 @@ add_file(const char *path,
 
       new_file->url =
         svn_path_url_add_component2(dir->checkout->resource_url,
-                                    svn_path_basename(path, new_file->pool),
-                                       new_file->pool);
+                                    svn_uri_basename(path, new_file->pool),
+                                    new_file->pool);
 
       while (deleted_parent && deleted_parent[0] != '\0')
         {
@@ -1659,7 +1659,7 @@ add_file(const char *path,
             {
               break;
             }
-          deleted_parent = svn_path_dirname(deleted_parent, file_pool);
+          deleted_parent = svn_uri_dirname(deleted_parent, file_pool);
         };
 
       if (! ((dir->added && !dir->copy_path) ||
