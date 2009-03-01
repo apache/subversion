@@ -43,6 +43,7 @@
 #include <apr_hash.h>
 
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 
@@ -1342,7 +1343,7 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(svn_wc_entry(&entry, b->wc_path, eb->anchor, FALSE, b->pool));
 
-  svn_path_split(b->wc_path, &parent, &base_name, b->pool);
+  svn_dirent_split(b->wc_path, &parent, &base_name, b->pool);
 
   /* Check to see if there is a schedule-add with history entry in
      the current working copy.  If so, then this is not actually

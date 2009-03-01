@@ -273,14 +273,14 @@ in_deleted_tree(struct edit_baton *eb,
                 apr_pool_t *scratch_pool)
 {
   if (!include_root)
-    path = svn_path_dirname(path, scratch_pool);
+    path = svn_dirent_dirname(path, scratch_pool);
 
-  while (! svn_path_is_empty(path) && strcmp(path, "/") != 0)
+  while (!svn_path_is_empty(path) && !svn_dirent_is_root(path, strlen(path)))
     {
       if (apr_hash_get(eb->deleted_trees, path, APR_HASH_KEY_STRING))
         return TRUE;
 
-      path = svn_path_dirname(path, scratch_pool);
+      path = svn_dirent_dirname(path, scratch_pool);
     }
 
   return FALSE;
@@ -293,12 +293,12 @@ in_skipped_tree(struct edit_baton *eb,
                 const char *path,
                 apr_pool_t *scratch_pool)
 {
-  while (! svn_path_is_empty(path) && strcmp(path, "/") != 0)
+    while (!svn_path_is_empty(path) && !svn_dirent_is_root(path, strlen(path)))
     {
       if (apr_hash_get(eb->skipped_trees, path, APR_HASH_KEY_STRING))
         return TRUE;
 
-      path = svn_path_dirname(path, scratch_pool);
+      path = svn_dirent_dirname(path, scratch_pool);
     }
 
   return FALSE;
@@ -529,7 +529,7 @@ make_dir_baton(struct dir_baton **d_p,
   if (path)
     {
       d->path = svn_path_join(d->path, path, pool);
-      d->name = svn_path_basename(path, pool);
+      d->name = svn_uri_basename(path, pool);
     }
   else
     {
@@ -549,7 +549,7 @@ make_dir_baton(struct dir_baton **d_p,
           if (! *eb->target) /* anchor is also target */
             d->new_URL = apr_pstrdup(pool, eb->switch_url);
           else
-            d->new_URL = svn_path_dirname(eb->switch_url, pool);
+            d->new_URL = svn_uri_dirname(eb->switch_url, pool);
         }
       /* Else this directory is *not* the root (has a parent).  If it
          is the target (there is a target, and this directory has no
@@ -931,7 +931,7 @@ make_file_baton(struct file_baton **f_p,
 
   /* Make the file's on-disk name. */
   f->path = svn_path_join(pb->edit_baton->anchor, path, pool);
-  f->name = svn_path_basename(path, pool);
+  f->name = svn_uri_basename(path, pool);
 
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
@@ -1714,7 +1714,7 @@ already_in_a_tree_conflict(char **victim_path,
   if (entry != NULL)
     APR_ARRAY_PUSH(ancestors, char *) = ancestor;
 
-  ancestor = svn_path_dirname(ancestor, pool);
+  ancestor = svn_dirent_dirname(ancestor, pool);
 
   /* Append to the list all ancestor-dirs in the working copy.  Ignore
      the root because it can't be tree-conflicted. */
@@ -1734,7 +1734,7 @@ already_in_a_tree_conflict(char **victim_path,
       else
         APR_ARRAY_PUSH(ancestors, char *) = ancestor;
 
-      ancestor = svn_path_dirname(ancestor, pool);
+      ancestor = svn_dirent_dirname(ancestor, pool);
     }
 
   /* From the root end, check the conflict status of each ancestor. */
@@ -1796,7 +1796,7 @@ set_copied_callback(const char *path,
         {
           /* It's an entry in its parent dir */
           SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
-                                      svn_path_dirname(path, pool), pool));
+                                      svn_dirent_dirname(path, pool), pool));
         }
 
       /* We don't want to mark a deleted PATH as copied.  If PATH
@@ -1854,7 +1854,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   const char *their_url,
                                   apr_pool_t *pool)
 {
-  const char *base_name = svn_path_basename(path, pool);
+  const char *base_name = svn_dirent_basename(path, pool);
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
   svn_wc_adm_access_t *entry_adm_access;
@@ -1963,7 +1963,7 @@ do_entry_deletion(struct edit_baton *eb,
   if (entry->depth == svn_depth_exclude)
     {
       apr_hash_t *entries;
-      const char *base_name = svn_path_basename(full_path, pool);
+      const char *base_name = svn_dirent_basename(full_path, pool);
       SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, TRUE, pool));
       SVN_ERR(svn_wc__entry_remove(
                         entries, svn_wc_adm_access_path(parent_adm_access),
@@ -2157,7 +2157,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *path_basename = svn_path_basename(path, pool);
+  const char *path_basename = svn_uri_basename(path, pool);
   const char *their_url = svn_path_url_add_component2(pb->new_URL,
                                                       path_basename, pool);
 
@@ -2386,7 +2386,7 @@ add_directory(const char *path,
     }
 
   /* It may not be named the same as the administrative directory. */
-  if (svn_wc_is_adm_dir(svn_path_basename(path, pool), pool))
+  if (svn_wc_is_adm_dir(svn_dirent_basename(path, pool), pool))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': object of the same name as the "
@@ -2930,7 +2930,7 @@ absent_file_or_dir(const char *path,
                    void *parent_baton,
                    apr_pool_t *pool)
 {
-  const char *name = svn_path_basename(path, pool);
+  const char *name = svn_uri_basename(path, pool);
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access;
@@ -3040,7 +3040,7 @@ locate_copyfrom(const char *copyfrom_path,
                             _("Destination directory of add-with-history "
                               "is missing a URL"));
 
-  svn_path_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
+  svn_dirent_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
   SVN_ERR(svn_path_get_absolute(&abs_dest_dir, dest_dir, pool));
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
@@ -3698,7 +3698,7 @@ choose_base_paths(const char **old_text_base,
   svn_boolean_t replaced;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, root_access,
-                              svn_path_dirname(path, scratch_pool),
+                              svn_dirent_dirname(path, scratch_pool),
                               scratch_pool));
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, scratch_pool));
 
@@ -4087,7 +4087,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
-  svn_path_split(fb->path, &parent_dir, NULL, pool);
+  svn_dirent_split(fb->path, &parent_dir, NULL, pool);
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_dir, pool));
 
@@ -5106,7 +5106,7 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
   p_entry = NULL;
-  svn_path_split(path, &parent, &base_name, pool);
+  svn_dirent_split(path, &parent, &base_name, pool);
   SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, adm_access, parent,
                                         pool));
   err = SVN_NO_ERROR;
@@ -5231,7 +5231,7 @@ svn_wc_get_actual_target(const char *path,
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))
     {
-      svn_path_split(path, anchor, target, pool);
+      svn_dirent_split(path, anchor, target, pool);
     }
   else
     {
@@ -5325,7 +5325,7 @@ svn_wc_add_repos_file3(const char *dst_path,
   svn_stringbuf_t *log_accum;
   const char *dir_name, *base_name;
 
-  svn_path_split(dst_path, &dir_name, &base_name, pool);
+  svn_dirent_split(dst_path, &dir_name, &base_name, pool);
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */

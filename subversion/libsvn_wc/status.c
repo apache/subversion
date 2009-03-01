@@ -28,6 +28,7 @@
 #include "svn_delta.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_config.h"
@@ -281,7 +282,7 @@ assemble_status(svn_wc_status2_t **status,
         abs_path = entry->url + strlen(repos_root);
       else if (parent_entry && parent_entry->url)
         abs_path = svn_path_join(parent_entry->url + strlen(repos_root),
-                                 svn_path_basename(path, pool), pool);
+                                 svn_dirent_basename(path, pool), pool);
       else
         abs_path = NULL;
 
@@ -376,7 +377,7 @@ assemble_status(svn_wc_status2_t **status,
 
       switched_p = (strcmp(
                      svn_path_join(parent_entry->url,
-                          svn_path_uri_encode(svn_path_basename(path, pool),
+                          svn_path_uri_encode(svn_uri_basename(path, pool),
                           pool), pool), entry->url) != 0);
     }
 
@@ -1043,7 +1044,7 @@ get_dir_status(struct edit_baton *eb,
                                svn_wc_conflict_description_t *);
 
       /* Skip versioned and non-versioned things. */
-      tree_basename = svn_path_basename(conflict->path, iterpool);
+      tree_basename = svn_dirent_basename(conflict->path, iterpool);
       if (apr_hash_get(entries, tree_basename, APR_HASH_KEY_STRING)
           || apr_hash_get(dirents, tree_basename, APR_HASH_KEY_STRING))
         continue;
@@ -1229,7 +1230,7 @@ tweak_statushash(void *baton,
                  so we must construct PATH's real statstruct->url. */
               statstruct->url =
                 svn_path_url_add_component2(b->url,
-                                            svn_path_basename(path, pool),
+                                            svn_dirent_basename(path, pool),
                                             pool);
             }
           else
@@ -1332,7 +1333,7 @@ make_dir_baton(void **dir_baton,
 
   /* Finish populating the baton members. */
   d->path = full_path;
-  d->name = path ? (svn_path_basename(path, pool)) : NULL;
+  d->name = path ? svn_dirent_basename(path, pool) : NULL;
   d->edit_baton = edit_baton;
   d->parent_baton = parent_baton;
   d->pool = pool;
@@ -1431,12 +1432,12 @@ make_file_baton(struct dir_baton *parent_dir_baton,
 
   /* Finish populating the baton members. */
   f->path = full_path;
-  f->name = svn_path_basename(path, pool);
+  f->name = svn_dirent_basename(path, pool);
   f->pool = pool;
   f->dir_baton = pb;
   f->edit_baton = eb;
   f->url = svn_path_url_add_component2(find_dir_url(pb, pool),
-                                       svn_path_basename(full_path, pool),
+                                       svn_dirent_basename(full_path, pool),
                                        pool);
   f->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   f->ood_last_cmt_date = 0;
@@ -1639,7 +1640,7 @@ delete_entry(const char *path,
   struct dir_baton *db = parent_baton;
   struct edit_baton *eb = db->edit_baton;
   apr_hash_t *entries;
-  const char *name = svn_path_basename(path, pool);
+  const char *name = svn_dirent_basename(path, pool);
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   const char *dir_path;
   svn_node_kind_t kind;
@@ -1666,7 +1667,7 @@ delete_entry(const char *path,
     }
   else
     {
-      dir_path = svn_path_dirname(full_path, pool);
+      dir_path = svn_dirent_dirname(full_path, pool);
       hash_key = name;
     }
 
@@ -2296,7 +2297,7 @@ svn_wc_status2(svn_wc_status2_t **status,
 
   if (entry && ! svn_path_is_empty(path))
     {
-      const char *parent_path = svn_path_dirname(path, pool);
+      const char *parent_path = svn_dirent_dirname(path, pool);
       svn_wc_adm_access_t *parent_access;
       SVN_ERR(svn_wc__adm_retrieve_internal(&parent_access, adm_access,
                                             parent_path, pool));

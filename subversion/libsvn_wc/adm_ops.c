@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -271,7 +272,7 @@ svn_wc__do_update_cleanup(const char *path,
       svn_boolean_t write_required = FALSE;
       if (apr_hash_get(exclude_paths, path, APR_HASH_KEY_STRING))
         return SVN_NO_ERROR;
-      svn_path_split(path, &parent, &base_name, pool);
+      svn_dirent_split(path, &parent, &base_name, pool);
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, parent, pool));
       SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
       SVN_ERR(svn_wc__tweak_entry(entries, base_name,
@@ -322,7 +323,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
     {
       const char *parent;
 
-      svn_path_split(path, &parent, &base_name, pool);
+      svn_dirent_split(path, &parent, &base_name, pool);
       SVN_ERR(svn_wc__adm_retrieve_internal(&dir_access, adm_access,
                                             parent, pool));
     }
@@ -1195,7 +1196,7 @@ svn_wc_delete3(const char *path,
       apr_hash_t *entries;
       const svn_wc_entry_t *entry_in_parent;
 
-      svn_path_split(path, &parent, &base_name, pool);
+      svn_dirent_split(path, &parent, &base_name, pool);
 
       /* The deleted state is only available in the entry in parent's
          entries file */
@@ -1426,7 +1427,7 @@ svn_wc_add3(const char *path,
     }
 
   /* Split off the base_name from the parent directory. */
-  svn_path_split(path, &parent_dir, &base_name, pool);
+  svn_dirent_split(path, &parent_dir, &base_name, pool);
   SVN_ERR(svn_wc_entry(&parent_entry, parent_dir, parent_access, FALSE,
                        pool));
   if (! parent_entry)
@@ -2021,7 +2022,7 @@ revert_entry(svn_depth_t *depth,
      basename.  For files, we always do this split.  */
   if (kind == svn_node_dir)
     SVN_ERR(svn_wc_is_wc_root(&is_wc_root, path, dir_access, pool));
-  bname = is_wc_root ? NULL : svn_path_basename(path, pool);
+  bname = is_wc_root ? NULL : svn_dirent_basename(path, pool);
 
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
@@ -2033,7 +2034,7 @@ revert_entry(svn_depth_t *depth,
       svn_boolean_t was_deleted = FALSE;
       const char *parent, *basey;
 
-      svn_path_split(path, &parent, &basey, pool);
+      svn_dirent_split(path, &parent, &basey, pool);
       if (entry->kind == svn_node_file)
         {
           was_deleted = entry->deleted;
@@ -2341,7 +2342,8 @@ revert_internal(const char *path,
               = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
             /* If this victim is not in this dir's entries ... */
-            if (apr_hash_get(entries, svn_path_basename(conflict->path, pool),
+            if (apr_hash_get(entries,
+                             svn_dirent_basename(conflict->path, pool),
                              APR_HASH_KEY_STRING) == NULL)
               {
                 /* Found an unversioned tree conflict victim */
@@ -2619,7 +2621,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
             apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
-            svn_path_split(full_path, &parent_dir, &base_name, pool);
+            svn_dirent_split(full_path, &parent_dir, &base_name, pool);
 
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access,
                                         parent_dir, pool));
@@ -2949,7 +2951,7 @@ resolve_found_entry_callback(const char *path,
 
       /* For tree-conflicts, we want the *parent* directory's adm_access,
        * even for directories. */
-      conflict_dir = svn_path_dirname(path, pool);
+      conflict_dir = svn_dirent_dirname(path, pool);
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
@@ -2974,7 +2976,7 @@ resolve_found_entry_callback(const char *path,
   /* If this is a versioned entry, resolve its other conflicts, if any. */
   if (entry && (baton->resolve_text || baton->resolve_props))
     {
-      const char *base_name = svn_path_basename(path, pool);
+      const char *base_name = svn_dirent_basename(path, pool);
       svn_wc_adm_access_t *adm_access;
       svn_boolean_t did_resolve = FALSE;
 

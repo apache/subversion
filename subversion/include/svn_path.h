@@ -120,7 +120,7 @@ svn_path_join_many(apr_pool_t *pool, const char *base, ...);
  *
  * @note If an empty string is passed, then an empty string will be returned.
  */
-char *
+SVN_DEPRECATED char *
 svn_path_basename(const char *path, apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a path, defined as
@@ -129,7 +129,7 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  *
  * The returned dirname will be allocated in @a pool.
  */
-char *
+SVN_DEPRECATED char *
 svn_path_dirname(const char *path, apr_pool_t *pool);
 
 /** Split @a path into a root portion and an extension such that
@@ -196,7 +196,7 @@ svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  */
-void
+SVN_DEPRECATED void
 svn_path_split(const char *path,
                const char **dirpath,
                const char **base_name,

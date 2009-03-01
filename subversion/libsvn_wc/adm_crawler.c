@@ -31,6 +31,7 @@
 #include "svn_io.h"
 #include "svn_base64.h"
 #include "svn_delta.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "private/svn_wc_private.h"
@@ -147,7 +148,7 @@ restore_file(const char *file_path,
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
-  return svn_wc__entry_modify(adm_access, svn_path_basename(file_path, pool),
+  return svn_wc__entry_modify(adm_access, svn_dirent_basename(file_path, pool),
                               &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                               TRUE /* do_sync now */, pool);
 }
@@ -584,7 +585,7 @@ svn_wc_crawl_revisions4(const char *path,
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
       SVN_ERR(svn_wc__entry_versioned(&parent_entry,
-                                      svn_path_dirname(path, pool),
+                                      svn_dirent_dirname(path, pool),
                                       adm_access, FALSE, pool));
 
       base_rev = parent_entry->revision;
@@ -617,7 +618,7 @@ svn_wc_crawl_revisions4(const char *path,
 
   if (base_rev == SVN_INVALID_REVNUM)
     {
-      const char *dirname = svn_path_dirname(path, pool);
+      const char *dirname = svn_dirent_dirname(path, pool);
       SVN_ERR(svn_wc__entry_versioned(&parent_entry, dirname, adm_access,
                                       FALSE, pool));
       base_rev = parent_entry->revision;
@@ -695,7 +696,7 @@ svn_wc_crawl_revisions4(const char *path,
         }
 
       /* Split PATH into parent PDIR and basename BNAME. */
-      svn_path_split(path, &pdir, &bname, pool);
+      svn_dirent_split(path, &pdir, &bname, pool);
       if (! parent_entry)
         {
           err = svn_wc_entry(&parent_entry, pdir, adm_access, FALSE, pool);

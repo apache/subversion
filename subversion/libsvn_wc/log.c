@@ -29,6 +29,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_iter.h"
@@ -1390,8 +1391,8 @@ log_do_committed(struct log_runner *loggy,
     svn_wc_adm_access_t *paccess;
     svn_boolean_t unassociated = FALSE;
 
-    svn_path_split(svn_wc_adm_access_path(loggy->adm_access), &pdir,
-                   &base_name, pool);
+    svn_dirent_split(svn_wc_adm_access_path(loggy->adm_access), &pdir,
+                     &base_name, pool);
 
     err = svn_wc_adm_retrieve(&paccess, loggy->adm_access, pdir, pool);
     if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
@@ -1503,7 +1504,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   /* Ignore any attempt to re-add an existing tree conflict, as loggy
      operations are idempotent. */
   if (! svn_wc__tree_conflict_exists(loggy->tree_conflicts,
-                                     svn_path_basename(new_conflict->path,
+                                     svn_dirent_basename(new_conflict->path,
                                                        loggy->pool),
                                      loggy->pool))
     {
@@ -1667,7 +1668,8 @@ handle_killme(svn_wc_adm_access_t *adm_access,
     const char *parent, *bname;
     svn_wc_adm_access_t *parent_access;
 
-    svn_path_split(svn_wc_adm_access_path(adm_access), &parent, &bname, pool);
+    svn_dirent_split(svn_wc_adm_access_path(adm_access), &parent, &bname,
+                     pool);
     SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent, pool));
     SVN_ERR(svn_wc_entry(&parent_entry, parent, parent_access, FALSE, pool));
 

@@ -74,7 +74,7 @@ svn_wc__ensure_directory(const char *path,
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          const char *shorter = svn_path_dirname(path, pool);
+          const char *shorter = svn_dirent_dirname(path, pool);
 
           /* Clear the error. */
           svn_error_clear(err);
@@ -267,7 +267,7 @@ svn_wc__path_switched(const char *wc_path,
       return SVN_NO_ERROR;
     }
 
-  wc_parent_path = svn_path_dirname(wc_path, pool);
+  wc_parent_path = svn_dirent_dirname(wc_path, pool);
   err = svn_wc_adm_open3(&parent_adm_access, NULL, wc_parent_path, FALSE, 0,
                          NULL, NULL, pool);
 
@@ -299,7 +299,7 @@ svn_wc__path_switched(const char *wc_path,
 
   parent_child_url
     = svn_path_url_add_component2(parent_entry->url,
-                                  svn_path_basename(wc_path, pool), pool);
+                                  svn_dirent_basename(wc_path, pool), pool);
   *switched = strcmp(parent_child_url, entry->url) != 0;
 
   return SVN_NO_ERROR;

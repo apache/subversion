@@ -490,7 +490,7 @@ probe(const char **dir,
          return an error, so we have to insert the protection in this
          caller, as making the larger API change would be very
          destabilizing right now (just before 1.0).  See issue #1617. */
-      const char *base_name = svn_path_basename(path, pool);
+      const char *base_name = svn_dirent_basename(path, pool);
       if ((strcmp(base_name, "..") == 0)
           || (strcmp(base_name, ".") == 0))
         {
@@ -501,7 +501,7 @@ probe(const char **dir,
              svn_path_local_style(path, pool), base_name);
         }
 
-      *dir = svn_path_dirname(path, pool);
+      *dir = svn_dirent_dirname(path, pool);
     }
   else
     *dir = path;
@@ -938,7 +938,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
     /* Not a versioned item, probe it */
     SVN_ERR(probe(&dir, path, &wc_format, pool));
   else if (entry->kind != svn_node_dir)
-    dir = svn_path_dirname(path, pool);
+    dir = svn_dirent_dirname(path, pool);
   else
     dir = path;
 
@@ -1052,7 +1052,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        void *cancel_baton,
                        apr_pool_t *pool)
 {
-  const char *base_name = svn_path_basename(path, pool);
+  const char *base_name = svn_dirent_basename(path, pool);
 
   if (svn_path_is_empty(path)
       || svn_dirent_is_root(path, strlen(path))
@@ -1067,7 +1067,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
     {
       svn_error_t *err;
       svn_wc_adm_access_t *p_access, *t_access;
-      const char *parent = svn_path_dirname(path, pool);
+      const char *parent = svn_dirent_dirname(path, pool);
       svn_error_t *p_access_err = SVN_NO_ERROR;
 
       /* Try to open parent of PATH to setup P_ACCESS */
@@ -1140,9 +1140,9 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (! t_entry_in_p
               ||
               (p_entry->url && t_entry->url
-               && (strcmp(svn_path_dirname(t_entry->url, pool), p_entry->url)
+               && (strcmp(svn_uri_dirname(t_entry->url, pool), p_entry->url)
                    || strcmp(svn_path_uri_encode(base_name, pool),
-                             svn_path_basename(t_entry->url, pool)))))
+                             svn_uri_basename(t_entry->url, pool)))))
             {
               /* Switched or disjoint, so drop P_ACCESS */
               err = svn_wc_adm_close2(p_access, pool);

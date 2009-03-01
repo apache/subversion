@@ -24,6 +24,7 @@
 #include "svn_error.h"
 #include "svn_client.h"
 #include "svn_error_codes.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "entries.h"
 
@@ -244,7 +245,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
         {
           const char *bname, *pname;
           svn_error_t *err = NULL;
-          svn_path_split(full_path, &pname, &bname, pool);
+          svn_dirent_split(full_path, &pname, &bname, pool);
           SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, anchor, pname,
                                                 pool));
           if (! p_access)
@@ -290,7 +291,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                                       FALSE, pool));
 
           target_entry = apr_hash_get(parent_entries,
-                                      svn_path_basename(full_path, pool),
+                                      svn_dirent_basename(full_path, pool),
                                       APR_HASH_KEY_STRING);
 
           target_entry->depth = svn_depth_exclude;
