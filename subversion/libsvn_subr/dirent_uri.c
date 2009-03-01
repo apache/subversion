@@ -905,6 +905,55 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
 }
 
 char *
+svn_uri_join(const char *base, const char *component, apr_pool_t *pool)
+{
+  apr_size_t blen = strlen(base);
+  apr_size_t clen = strlen(component);
+  char *path;
+
+  assert(svn_uri_is_canonical(base, pool));
+  assert(svn_uri_is_canonical(component, pool));
+
+  /* If either is empty return the other */
+  if (SVN_PATH_IS_EMPTY(base))
+    return apr_pmemdup(pool, component, clen + 1);
+  if (SVN_PATH_IS_EMPTY(component))
+    return apr_pmemdup(pool, base, blen + 1);
+
+  /* If the component is absolute, then return it.  */
+  if (svn_uri_is_absolute(component))
+    {
+      if (*component != '/')
+        return apr_pmemdup(pool, component, clen + 1);
+      else
+        {
+          /* The uri is not absolute enough; use only the root from base */
+          int n = uri_schema_root_length(base, blen);
+
+          path = apr_palloc(pool, n + clen + 1);
+
+          if (n > 0)
+            memcpy(path, base, n);
+
+          memcpy(path + n, component, clen + 1); /* Include '\0' */
+
+          return path;
+        }
+    }
+
+  if (blen == 1 && base[0] == '/')
+    blen = 0; /* Ignore base, just return separator + component */
+
+  /* Construct the new, combined path. */
+  path = apr_palloc(pool, blen + 1 + clen + 1);
+  memcpy(path, base, blen);
+  path[blen] = '/';
+  memcpy(path + blen + 1, component, clen + 1);
+
+  return path;
+}
+
+char *
 svn_dirent_dirname(const char *dirent, apr_pool_t *pool)
 {
   apr_size_t len = strlen(dirent);

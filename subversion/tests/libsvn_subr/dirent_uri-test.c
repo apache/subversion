@@ -397,6 +397,66 @@ test_dirent_join(const char **msg,
 }
 
 static svn_error_t *
+test_uri_join(const char **msg,
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  int i;
+  char *result;
+
+  static const char * const joins[][3] = {
+    { "abc", "def", "abc/def" },
+    { "a", "def", "a/def" },
+    { "a", "d", "a/d" },
+    { "/", "d", "/d" },
+    { "/abc", "d", "/abc/d" },
+    { "/abc", "def", "/abc/def" },
+    { "/abc", "/def", "/def" },
+    { "/abc", "/d", "/d" },
+    { "/abc", "/", "/" },
+    { SVN_EMPTY_PATH, "/", "/" },
+    { "/", SVN_EMPTY_PATH, "/" },
+    { SVN_EMPTY_PATH, "abc", "abc" },
+    { "abc", SVN_EMPTY_PATH, "abc" },
+    { SVN_EMPTY_PATH, "/abc", "/abc" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+    { "http://server/dir", "file", "http://server/dir/file" },
+    { "svn+ssh://user@host", "abc", "svn+ssh://user@host/abc" },
+    { "http://server/dir", "/file", "http://server/file" },
+    { "http://server/dir", "svn://server2", "svn://server2" },
+    { "file:///etc/rc.d", "/shr", "file:///shr" },
+  };
+
+  *msg = "test svn_uri_join";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = sizeof(joins) / sizeof(joins[0]); i--; )
+    {
+      const char *base = joins[i][0];
+      const char *comp = joins[i][1];
+      const char *expect = joins[i][2];
+
+      result = svn_uri_join(base, comp, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_join(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);
+
+      /*result = svn_uri_join_many(pool, base, comp, NULL);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_join_many(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);*/
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_dirent_basename(const char **msg,
                      svn_boolean_t msg_only,
                      svn_test_opts_t *opts,
@@ -1764,6 +1824,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_dirent_is_absolute),
     SVN_TEST_PASS(test_uri_is_absolute),
     SVN_TEST_PASS(test_dirent_join),
+    SVN_TEST_PASS(test_uri_join),
     SVN_TEST_PASS(test_dirent_basename),
     SVN_TEST_PASS(test_uri_basename),
     SVN_TEST_PASS(test_dirent_dirname),
