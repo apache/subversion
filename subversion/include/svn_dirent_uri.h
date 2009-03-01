@@ -134,6 +134,30 @@ svn_dirent_join_many(apr_pool_t *pool,
                      const char *base,
                      ...);
 
+/** Join a base uri (@a base) with a component (@a component), allocating
+ * the result in @a pool. @a component need not be a single component: it
+ * can be any uri, absolute or relative to @a base.
+ *
+ * If either @a base or @a component is the empty path, then the other
+ * argument will be copied and returned.  If both are the empty path the
+ * empty path is returned.
+ *
+ * If the @a component is an absolute uri, then it is copied and returned.
+ *
+ * It @a component starts with a '/' and @a base contains a scheme, the
+ * scheme defined joining rules are applied.
+ *
+ * Exactly one slash character ('/') is used to join the components,
+ * accounting for any trailing slash in @a base.
+ *
+ * @since New in 1.7.
+ */
+char *
+svn_uri_join(const char *base,
+             const char *component,
+             apr_pool_t *pool);
+
+
 /** Gets the name of the specified canonicalized @a dirent as it is known 
  * within its parent directory. If the @a dirent is root, return "". The 
  * returned value will not have slashes in it.
@@ -267,7 +291,7 @@ svn_dirent_is_absolute(const char *dirent);
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_uri_is_absolute(const char *dirent);
+svn_uri_is_absolute(const char *uri);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
  * at hand, amongst which '/' on all platforms or 'X:/', '//server/share'
