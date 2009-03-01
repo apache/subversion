@@ -1373,7 +1373,7 @@ insert_working_node(svn_sqlite__db_t *wc_db,
   SVN_ERR(svn_sqlite__bind_text(stmt, 5,
                                 svn_node_kind_to_word(working_node->kind)));
 
-  if (working_node->copyfrom_repos_id > 0)
+  if (working_node->copyfrom_repos_path)
     {
       SVN_ERR(svn_sqlite__bind_int64(stmt, 6,
                                      working_node->copyfrom_repos_id));
@@ -1522,10 +1522,18 @@ write_entry(svn_sqlite__db_t *wc_db,
 
   if (entry->copied)
     {
+      /* Make sure we get a WORKING_NODE inserted. The copyfrom information
+         will occur here or on a parent, as appropriate.  */
       working_node = MAYBE_ALLOC(working_node, scratch_pool);
-      working_node->copyfrom_repos_id = repos_id;
-      working_node->copyfrom_repos_path = entry->copyfrom_url;
-      working_node->copyfrom_revnum = entry->copyfrom_rev;
+      if (entry->copyfrom_url)
+        {
+          working_node->copyfrom_repos_id = repos_id;
+          working_node->copyfrom_repos_path =
+            svn_uri_is_child(repos_root, entry->copyfrom_url, NULL);
+          if (working_node->copyfrom_repos_path == NULL)
+            working_node->copyfrom_repos_path = "";
+          working_node->copyfrom_revnum = entry->copyfrom_rev;
+        }
     }
 
   if (entry->keep_local)
