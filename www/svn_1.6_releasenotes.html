@@ -35,7 +35,7 @@ describes what is planned for the release.</p>
   <li><a href="#file-externals"
       >Support for files in <tt>svn:externals</tt></a></li>
   <li><a href="#tree-conflicts"
-      >Improved handling of tree conflicts</a></li>
+      >Detection of tree conflicts</a></li>
   <li><a href="#filesystem-improvements"
       >Filesystem storage improvements</a></li>
   <li><a href="#ctypes-python-bindings"
@@ -376,9 +376,31 @@ href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
 </div>  <!-- file-externals -->
 
 <div class="h3" id="tree-conflicts" title="tree-conflicts">
-<h3>Improved handling of tree conflicts (<em>client</em>)</h3>
+<h3>Detection of tree conflicts (<em>client</em>)</h3>
 
-<p>Improved handling of tree conflicts.</p>
+<p>Subversion 1.6 recognizes a new kind of conflict, known as a
+&quot;tree conflict&quot;. Such conflicts manifest at the level
+of directory structure, rather than file content.</p>
+
+<p>Situations now flagged as conflicts include deletions of locally
+modified files, and incoming edits to locally deleted files. Files
+and directories which are victims of a tree conflict cannot be
+committed before the conflict is marked resolved.</p>
+
+<p>Note that Subversion is still treating renames as a &quot;copy+delete&quot;
+operation, so file renames causing tree conflicts can only be detected
+in terms of file additions and deletions. Because of this, false positives
+during tree conflict detection are possible.</p>
+
+<p>To facilitate tree conflict detection, attempting to commit the
+deletion of a file which has already been deleted in the HEAD revision
+now causes an error. In Subversion 1.5, this was treated as a no-op,
+potentially resulting in &quot;empty&quot; revisions which contained
+no changes.</p>
+
+<p>See the <a
+href="http://svnbook.red-bean.com/nightly/en/svn.tour.treeconflicts.html"
+>tree conflicts</a> section of the Subversion Book for details.</p>
 
 </div>  <!-- tree-conflicts -->
 
