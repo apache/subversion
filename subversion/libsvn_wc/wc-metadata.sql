@@ -22,10 +22,10 @@
  *   "dir"
  *   "symlink"
  *   "unknown"
+ *   "subdir"
  *
  * the PRESENCE column in these tables has one of the following values:
  *   "normal"
- *   "subdir" -- placeholder row; actual data is stored elesewhere
  *   "absent" -- server has declared it "absent" (ie. authz failure)
  *   "excluded" -- administratively excluded
  *   "not-present" -- node not present at this REV

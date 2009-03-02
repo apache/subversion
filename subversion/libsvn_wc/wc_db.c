@@ -257,8 +257,8 @@ word_to_kind(const char *kind)
   if (*kind == 'd')
     return svn_wc__db_kind_dir;
   if (*kind == 's')
-    return svn_wc__db_kind_symlink;
-  /* ### MALFUNCTION if not "normal" ? */
+    return kind[1] == 'y' ? svn_wc__db_kind_symlink : svn_wc__db_kind_subdir;
+  /* ### MALFUNCTION if not "unknown" ? */
   return svn_wc__db_kind_unknown;
 }
 
@@ -276,6 +276,8 @@ kind_to_word(svn_wc__db_kind_t kind)
       return "symlink";
     case svn_wc__db_kind_unknown:
       return "unknown";
+    case svn_wc__db_kind_subdir:
+      return "subdir";
     default:
       SVN_ERR_MALFUNCTION_NO_RETURN();
     }
@@ -288,8 +290,6 @@ static svn_wc__db_status_t
 word_to_presence(const char *presence)
 {
   /* Be lazy and fast. */
-  if (*presence == 's')
-    return svn_wc__db_status_subdir;
   if (*presence == 'a')
     return svn_wc__db_status_absent;
   if (*presence == 'e')
@@ -310,8 +310,6 @@ presence_to_word(svn_wc__db_status_t presence)
     {
     case svn_wc__db_status_normal:
       return "normal";
-    case svn_wc__db_status_subdir:
-      return "subdir";
     case svn_wc__db_status_absent:
       return "absent";
     case svn_wc__db_status_excluded:
@@ -1535,7 +1533,10 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
       if (kind)
         {
-          *kind = node_kind;
+          if (node_kind == svn_wc__db_kind_subdir)
+            *kind = svn_wc__db_kind_dir;
+          else
+            *kind = node_kind;
         }
       if (status)
         {
@@ -1544,16 +1545,12 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
           SVN_ERR_ASSERT(presence != NULL);
           *status = word_to_presence(presence);
 
-          if (node_kind == svn_wc__db_kind_dir && *local_relpath != '\0')
+          if (node_kind == svn_wc__db_kind_subdir)
             {
-              /* Whoops. We were unable to open the SDB in the subdirectory
-                 for this information. We're looking at the data in the
-                 *parent* directory right now. Inform the caller.
-
-                 ### we might need to return obstructed+others
-                 ### (e.g. not_present). more research needed...
-
-                 ### note this only happens for per-dir .svn subdirs.  */
+              /* We're looking at the subdir record in the *parent* directory,
+                 which implies per-dir .svn subdirs. We should be looking
+                 at the subdir itself; therefore, it is missing or obstructed
+                 in some way. Inform the caller.  */
               *status = svn_wc__db_status_obstructed;
             }
         }
@@ -2086,19 +2083,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       SVN_ERR_ASSERT(kind_str != NULL);
       node_kind = word_to_kind(kind_str);
 
-      if (status && node_kind == svn_wc__db_kind_dir && *local_relpath != '\0')
-        {
-          /* Whoops. We were unable to open the SDB in the subdirectory
-             for this information. We're looking at the data in the
-             *parent* directory right now. Inform the caller.
-
-             ### we might need to return obstructed+others
-             ### (e.g. not_present). more research needed...
-
-             ### note this only happens for per-dir .svn subdirs.  */
-          *status = svn_wc__db_status_obstructed;
-        }
-      else if (status)
+      if (status)
         {
           const char *presence_str;
 
@@ -2113,6 +2098,16 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               && *status != svn_wc__db_status_excluded
                               && *status != svn_wc__db_status_incomplete)
                              || !have_work);
+
+              if (node_kind == svn_wc__db_kind_subdir)
+                {
+                  /* We should have read a row from the subdir wc.db. It
+                     must be obstructed in some way.
+
+                     It is also possible that a WORKING node will override
+                     this value with a proper status.  */
+                  *status = svn_wc__db_status_obstructed;
+                }
             }
 
           if (have_work)
@@ -2135,21 +2130,38 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      deletion has occurred because this node has been moved
                      away, or it is a regular deletion. Also note that the
                      deletion could be of the BASE tree, or a child of
-                     something that has been copied/moved here.  */
-                  *status = svn_wc__db_status_deleted;
+                     something that has been copied/moved here.
+
+                     If we're looking at the data in the parent, then
+                     something has obstructed the child data. Inform
+                     the caller.  */
+                  if (node_kind == svn_wc__db_kind_subdir)
+                    *status = svn_wc__db_status_obstructed_delete;
+                  else
+                    *status = svn_wc__db_status_deleted;
                 }
-              else
+              else /* normal */
                 {
                   /* The caller should scan upwards to detect whether this
                      addition has occurred because of a simple addition,
-                     a copy, or is the destination of a move.  */
-                  *status = svn_wc__db_status_added;
+                     a copy, or is the destination of a move.
+
+                     If we're looking at the data in the parent, then
+                     something has obstructed the child data. Inform
+                     the caller.  */
+                  if (node_kind == svn_wc__db_kind_subdir)
+                    *status = svn_wc__db_status_obstructed_add;
+                  else
+                    *status = svn_wc__db_status_added;
                 }
             }
         }
       if (kind)
         {
-          *kind = node_kind;
+          if (node_kind == svn_wc__db_kind_subdir)
+            *kind = svn_wc__db_kind_dir;
+          else
+            *kind = node_kind;
         }
       if (revision)
         {
