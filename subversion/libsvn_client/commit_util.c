@@ -731,8 +731,13 @@ harvest_committables(apr_hash_t *committables,
 
           /* We'll use the entry's URL if it has one and if we aren't
              in copy_mode, else, we'll just extend the parent's URL
-             with the entry's basename.  */
-          if ((! this_entry->url) || (copy_mode))
+             with the entry's basename.
+
+             TODO: Do we even need this conditional with WC-NG?  Aren't we
+             always returning the URL in the entry struct? */
+          if (this_entry->url && !copy_mode)
+            used_url = entry->url;
+          else
             used_url = svn_path_join(url, name_uri, iterpool);
 
           /* Recurse. */
