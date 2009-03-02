@@ -1057,9 +1057,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
       else if (status == svn_wc__db_status_obstructed)
         {
           /* ### set some values that should (hopefully) let this directory
-             ### be usable. specifically: resolve_to_defaults does not like
-             ### SVN_INVALID_REVNUM here.  */
-          entry->revision = 0;
+             ### be usable.  */
+          entry->revision = SVN_INVALID_REVNUM;
         }
       else
         {
@@ -1134,7 +1133,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
         entry->kind = svn_node_unknown;
 
       SVN_ERR_ASSERT(repos_relpath != NULL
-                     || entry->schedule == svn_wc_schedule_delete);
+                     || entry->schedule == svn_wc_schedule_delete
+                     || status == svn_wc__db_status_obstructed);
       if (repos_relpath)
         entry->url = svn_path_url_add_component2(entry->repos,
                                                  repos_relpath,
