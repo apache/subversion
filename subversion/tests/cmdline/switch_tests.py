@@ -1131,6 +1131,34 @@ def relocate_and_propset(sbox):
   # Make a propchange on A/D
   svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
 
+  # This test is failing over Neon, which differs in the approach it
+  # takes versus Serf.  Here's a Neon trace:
+  #
+  #   "MKACTIVITY /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 201 267
+  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 762
+  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/!svn/vcc/default HTTP/1.1" 207 478
+  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/bln/2 HTTP/1.1" 201 281
+  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wbl/ACTIVITYID/2 HTTP/1.1" 207 500
+  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 470
+  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/ver/2/A/D HTTP/1.1" 201 283
+  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wrk/ACTIVITYID/A/D HTTP/1.1" 207 502
+  #   "MERGE /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 200 858
+  #   "DELETE /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 204 -
+  #
+  # Notice the PROPPATCH that succeeds instead of failing.
+  #
+  # Here's the same in Serf:
+  #
+  #   "MKACTIVITY /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 201 267
+  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 762
+  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/!svn/vcc/default HTTP/1.1" 207 478
+  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 470
+  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/bln/2 HTTP/1.1" 201 281
+  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wbl/ACTIVITYID/2 HTTP/1.1" 207 500
+  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/ver/2/A/D HTTP/1.1" 201 283
+  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wrk/ACTIVITYID/A/D HTTP/1.1" 409 222
+  #   "DELETE /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 204 -
+
   # Commit and *expect* a repository Merge failure:
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
@@ -2542,7 +2570,8 @@ test_list = [ None,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
               switch_change_repos_root,
-              XFail(relocate_and_propset, svntest.main.is_ra_type_dav),
+              XFail(relocate_and_propset,
+                    svntest.main.is_ra_type_dav and svntest.main.is_not_serf),
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,

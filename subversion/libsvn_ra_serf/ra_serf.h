@@ -351,12 +351,20 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data);
 
-/* Helper function to provide SSL client certificates. */
+/* Helper function to provide SSL client certificates.
+ *
+ * NOTE: This function sets the session's 'pending_error' member when
+ *       returning an non-success status.
+ */
 apr_status_t
 svn_ra_serf__handle_client_cert(void *data,
                                 const char **cert_path);
 
-/* Helper function to provide SSL client certificate passwords. */
+/* Helper function to provide SSL client certificate passwords.
+ *
+ * NOTE: This function sets the session's 'pending_error' member when
+ *       returning an non-success status.
+ */
 apr_status_t
 svn_ra_serf__handle_client_cert_pw(void *data,
                                    const char *cert_path,

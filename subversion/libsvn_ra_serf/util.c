@@ -524,7 +524,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 {
   apr_status_t status;
 
-  sess->pending_error = SVN_NO_ERROR;
+  assert(sess->pending_error == SVN_NO_ERROR);
 
   while (!*done)
     {
@@ -543,7 +543,9 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
         }
       if (sess->pending_error)
         {
-          return sess->pending_error;
+          svn_error_t *err = sess->pending_error;
+          sess->pending_error = SVN_NO_ERROR;
+          return err;
         }
       if (status)
         {
@@ -1142,6 +1144,7 @@ handle_response(serf_request_t *request,
        */
       if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
         {
+          assert(ctx->session->pending_error == SVN_NO_ERROR);
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
@@ -1168,6 +1171,7 @@ handle_response(serf_request_t *request,
                                      request, response, pool);
       if (err)
         {
+          assert(ctx->session->pending_error == SVN_NO_ERROR);
           ctx->session->pending_error = err;
           svn_ra_serf__handle_discard_body(request, response, NULL, pool);
           status = ctx->session->pending_error->apr_err;
@@ -1191,6 +1195,7 @@ handle_response(serf_request_t *request,
     {
       /* 409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
+      assert(ctx->session->pending_error == SVN_NO_ERROR);
       ctx->session->pending_error =
           svn_ra_serf__handle_server_error(request, response, pool);
       if (!ctx->session->pending_error)
@@ -1473,7 +1478,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
 
       /* This should only happen if we haven't detected HTTP v2
          support from the server.  */
-      assert (! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+      assert(! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
       /* We don't actually care about the VCC_URL, but this API
          promises to populate the session's root-url cache, and that's

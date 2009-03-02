@@ -812,7 +812,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
             {
               svn_error_clear(session->pending_error);
               session->pending_error = SVN_NO_ERROR;
-              SVN_ERR(parser_ctx->error);
+              return parser_ctx->error;
             }
 
           done_list = done_list->next;
