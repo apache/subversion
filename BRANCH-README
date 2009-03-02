@@ -1,6 +1,6 @@
 Remaining TODO's on the ra_serf-digest-authn branch:
 
-* Fix Authorization header parsing in auth.c
+* Fix Authorization header parsing in auth.c [DONE]
 * Implement algorithm=MD5-sess
 * Implement qop=auth-int
 * Implement qop=none [DONE]
