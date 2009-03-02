@@ -7926,7 +7926,7 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
   apr_pool_t *sesspool;
-  svn_boolean_t use_sleep;
+  svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
 
