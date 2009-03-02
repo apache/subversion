@@ -49,6 +49,13 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Votes:
        +1: dws
 
+  * r36252-36253 (on branch 1.6.x-r36252)
+    Fix valgrind UMRs.
+    Justification:
+      UMRs are undefined behaviour
+    Votes:
+      +1: philip
+
 Status of 1.6.1:
 ================
 
