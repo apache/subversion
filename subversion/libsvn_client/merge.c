@@ -4579,10 +4579,10 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
 /* Helper for do_directory_merge()
 
-   Perform a depth first walk of the working copy tree rooted at
-   MERGE_CMD_BATON->TARGET (with the corresponding ENTRY).  Create an
-   svn_client__merge_path_t * for any path which meets one or more of the
-   following criteria:
+   If HONOR_MERGEINFO is TRUE, then perform a depth first walk of the working
+   copy tree rooted at MERGE_CMD_BATON->TARGET (with the corresponding ENTRY).
+   Create an svn_client__merge_path_t * for any path which meets one or more
+   of the following criteria:
 
      1) Path has working svn:mergeinfo from corresponding merge source or
         has empty mergeinfo.
@@ -4603,6 +4603,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         DEPTH is svn_depth_immediates.
      9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
         DEPTH is svn_depth_files.
+
+   If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
+   for MERGE_CMD_BATON->TARGET (i.e. only criteria 7 is applied).
 
    Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
    depth-first order based on the svn_client__merge_path_t *s path member as
@@ -4635,6 +4638,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     const char *url2,
                     svn_revnum_t revision1,
                     svn_revnum_t revision2,
+                    svn_boolean_t honor_mergeinfo,
                     svn_ra_session_t *ra_session,
                     svn_wc_adm_access_t *adm_access,
                     svn_depth_t depth,
@@ -4654,7 +4658,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
      have mergeinfo and/or are switched or are absent from disk or is the
      target of the merge. */
   SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
-                               &walk_callbacks, &wb, depth, TRUE,
+                               &walk_callbacks, &wb,
+                               /* If we are not honoring mergeinfo just
+                                  do a depth empty walk so all we put in
+                                  *CHILDREN_WITH_MERGEINFO is
+                                  MERGE_CMD_BATON->TARGET. */
+                               honor_mergeinfo ? depth : svn_depth_empty,
+                               TRUE,
                                merge_cmd_baton->ctx->cancel_func,
                                merge_cmd_baton->ctx->cancel_baton,
                                pool));
@@ -5931,7 +5941,7 @@ do_directory_merge(const char *url1,
   SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
                               mergeinfo_path, target_entry, source_root_url,
                               url1, url2, revision1, revision2,
-                              ra_session, adm_access,
+                              honor_mergeinfo, ra_session, adm_access,
                               depth, pool));
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
