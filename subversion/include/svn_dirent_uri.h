@@ -147,9 +147,6 @@ svn_dirent_join_many(apr_pool_t *pool,
  * It @a component starts with a '/' and @a base contains a scheme, the
  * scheme defined joining rules are applied.
  *
- * Exactly one slash character ('/') is used to join the components,
- * accounting for any trailing slash in @a base.
- *
  * @since New in 1.7.
  */
 char *
