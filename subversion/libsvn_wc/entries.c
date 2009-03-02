@@ -999,7 +999,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
           SVN_ERR(determine_incomplete(&entry->incomplete, wc_db,
                                        1 /* wc_id */, entry->name));
         }
-      else if (status == svn_wc__db_status_deleted)
+      else if (status == svn_wc__db_status_deleted
+               || status == svn_wc__db_status_obstructed_delete)
         {
           const db_working_node_t *working_node;
 
@@ -1012,7 +1013,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
           if (working_node && working_node->keep_local)
             entry->keep_local = TRUE;
         }
-      else if (status == svn_wc__db_status_added)
+      else if (status == svn_wc__db_status_added
+               || status == svn_wc__db_status_obstructed_add)
         {
           svn_wc__db_status_t work_status;
 
@@ -1128,7 +1130,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       SVN_ERR_ASSERT(repos_relpath != NULL
                      || entry->schedule == svn_wc_schedule_delete
-                     || status == svn_wc__db_status_obstructed);
+                     || status == svn_wc__db_status_obstructed
+                     || status == svn_wc__db_status_obstructed_delete
+                     );
       if (repos_relpath)
         entry->url = svn_path_url_add_component2(entry->repos,
                                                  repos_relpath,
@@ -1173,8 +1177,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  /* Fill in any implied fields. */
-  SVN_ERR(svn_wc__resolve_to_defaults(entries, result_pool));
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
   svn_pool_destroy(iterpool);
@@ -1301,17 +1303,22 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   if (base_node->parent_relpath)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, base_node->parent_relpath));
 
-  /* ### presence */
   if (base_node->presence == svn_wc__db_status_not_present)
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "not-present"));
-  else
+  else if (base_node->presence == svn_wc__db_status_normal)
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal"));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
+  /* ### in per-subdir operation, if we're about to write a directory and
+     ### it is *not* "this dir", then we're writing a row in the parent
+     ### directory about the child. note that in the kind.  */
   /* ### kind might be "symlink" or "unknown" */
-  SVN_ERR(svn_sqlite__bind_text(stmt, 8,
-                                svn_node_kind_to_word(base_node->kind)));
+  if (base_node->kind == svn_node_dir && *base_node->local_relpath != '\0')
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "subdir"));
+  else
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8,
+                                  svn_node_kind_to_word(base_node->kind)));
 
   if (base_node->checksum)
     {
@@ -1375,8 +1382,15 @@ insert_working_node(svn_sqlite__db_t *wc_db,
   else if (working_node->presence == svn_wc__db_status_not_present)
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "not-present"));
 
-  SVN_ERR(svn_sqlite__bind_text(stmt, 5,
-                                svn_node_kind_to_word(working_node->kind)));
+  /* ### in per-subdir operation, if we're about to write a directory and
+     ### it is *not* "this dir", then we're writing a row in the parent
+     ### directory about the child. note that in the kind.  */
+  if (working_node->kind == svn_node_dir
+      && *working_node->local_relpath != '\0')
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "subdir"));
+  else
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5,
+                                  svn_node_kind_to_word(working_node->kind)));
 
   if (working_node->copyfrom_repos_path)
     {
@@ -1403,7 +1417,7 @@ insert_working_node(svn_sqlite__db_t *wc_db,
       SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->translated_size));
     }
 
-  if (working_node->changed_rev != SVN_INVALID_REVNUM)
+  if (SVN_IS_VALID_REVNUM(working_node->changed_rev))
     SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_rev));
   if (working_node->changed_date)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 14, working_node->changed_date));
@@ -1658,6 +1672,7 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node->local_relpath = name;
       working_node->parent_relpath = "";
       working_node->depth = entry->depth;
+      working_node->changed_rev = SVN_INVALID_REVNUM;
 
       if (entry->kind == svn_node_dir)
         working_node->checksum = NULL;

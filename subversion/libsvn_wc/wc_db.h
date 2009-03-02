@@ -88,7 +88,16 @@ typedef enum {
 
     /* The type of the node is not known, due to its absence, exclusion,
        deletion, or incomplete status. */
-    svn_wc__db_kind_unknown
+    svn_wc__db_kind_unknown,
+
+    /* This directory node is a placeholder; the actual information is
+       held within the subdirectory.
+
+       Note: users of this API shouldn't see this kind. It will be
+       handled internally to wc_db.
+
+       ### only used with per-dir .svn subdirectories.  */
+    svn_wc__db_kind_subdir
 
 } svn_wc__db_kind_t;
 
@@ -120,20 +129,27 @@ typedef enum {
        will be present. */
     svn_wc__db_status_deleted,
 
-    /* This directory node is a placeholder; the actual information is
-       held within the subdirectory.
-
-       Note: users of this API shouldn't see this status. It will be
-       handled internally to wc_db.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_subdir,
-
     /* The information for this directory node is obstructed by something
        in the local filesystem. Full details are not available.
 
        ### only used with per-dir .svn subdirectories.  */
     svn_wc__db_status_obstructed,
+
+    /* The information for this directory node is obstructed by something
+       in the local filesystem. Full details are not available.
+
+       The directory has been marked for deletion.
+
+       ### only used with per-dir .svn subdirectories.  */
+    svn_wc__db_status_obstructed_delete,
+
+    /* The information for this directory node is obstructed by something
+       in the local filesystem. Full details are not available.
+
+       The directory has been marked for addition.
+
+       ### only used with per-dir .svn subdirectories.  */
+    svn_wc__db_status_obstructed_add,
 
     /* This node was named by the server, but no information was provided. */
     svn_wc__db_status_absent,
