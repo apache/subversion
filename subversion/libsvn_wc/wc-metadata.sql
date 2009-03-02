@@ -102,8 +102,11 @@ CREATE TABLE BASE_NODE (
   checksum  TEXT,
   translated_size  INTEGER,
 
-  /* Information about the last change to this node. these could be
-     NULL for non-present nodes, when we have no info. */
+  /* Information about the last change to this node. changed_rev must be
+     not-null if this node has presence=="normal". changed_date and
+     changed_author may be null if the corresponding revprops are missing.
+
+     All three values may be null for non-present nodes.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
@@ -191,8 +194,11 @@ CREATE TABLE WORKING_NODE (
   checksum  TEXT,
   translated_size  INTEGER,
 
-  /* if this node was added-with-history, then the following fields will
-     be NOT NULL */
+  /* If this node was added-with-history, then the following fields may
+     have information about their source node. See BASE_NODE.changed_* for
+     more information.
+
+     For added or not-present nodes, these may be null.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,

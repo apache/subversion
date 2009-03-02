@@ -1111,12 +1111,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
             }
         }
 
-      /* ### our writing code (currently, erroneously) puts a 0 into the
-         ### changed_rev column. compensate for now, rather than tweaking
-         ### the writing.  */
-      if (entry->cmt_rev == 0)
-        entry->cmt_rev = SVN_INVALID_REVNUM;
-
       /* ### most of the higher levels seem to want "infinity" for files.
          ### without this, it seems a report with depth=unknown was sent
          ### to the server, which then choked.  */
@@ -1330,9 +1324,13 @@ insert_base_node(svn_sqlite__db_t *wc_db,
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_rev));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 12, base_node->changed_date));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 13, base_node->changed_author));
+  /* ### strictly speaking, changed_rev should be valid for present nodes. */
+  if (SVN_IS_VALID_REVNUM(base_node->changed_rev))
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_rev));
+  if (base_node->changed_date)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 12, base_node->changed_date));
+  if (base_node->changed_author)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 13, base_node->changed_author));
 
   SVN_ERR(svn_sqlite__bind_text(stmt, 14, svn_depth_to_word(base_node->depth)));
 
@@ -1406,11 +1404,11 @@ insert_working_node(svn_sqlite__db_t *wc_db,
     }
 
   if (working_node->changed_rev != SVN_INVALID_REVNUM)
-    {
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_rev));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 14, working_node->changed_date));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 15, working_node->changed_author));
-    }
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_rev));
+  if (working_node->changed_date)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 14, working_node->changed_date));
+  if (working_node->changed_author)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 15, working_node->changed_author));
 
   SVN_ERR(svn_sqlite__bind_text(stmt, 16,
                                 svn_depth_to_word(working_node->depth)));
@@ -1642,12 +1640,13 @@ write_entry(svn_sqlite__db_t *wc_db,
 
       /* TODO: These values should always be present, if they are missing
          during an upgrade, set a flag, and then ask the user to talk to the
-         server. */
+         server.
+
+         Note: cmt_rev is the distinguishing value. The others may be 0 or
+         NULL if the corresponding revprop has been deleted.  */
       base_node->changed_rev = entry->cmt_rev;
       base_node->changed_date = entry->cmt_date;
-      base_node->changed_author = entry->cmt_author == NULL
-                                        ? "<unknown.author>"
-                                        : entry->cmt_author;
+      base_node->changed_author = entry->cmt_author;
 
       SVN_ERR(insert_base_node(wc_db, base_node, scratch_pool));
     }
