@@ -40,6 +40,15 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      +1: cmpilato, rhuijben
      +1: gstein (for 1.6.1)
 
+  * r36238
+    Fix build of RHEL5 RPM packages.
+    Justification:
+      Won't build properly without these changes.  Not a release blocker for
+      1.6.0 but would be nice if the train is still in the station.  Otherwise
+      please feel free to move to 1.6.1.
+    Votes:
+       +1: dws
+
 Status of 1.6.1:
 ================
 
