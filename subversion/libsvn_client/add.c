@@ -157,7 +157,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
 
   /* initialisation */
   autoprops.properties = apr_hash_make(pool);
-  autoprops.filename = svn_path_basename(path, pool);
+  autoprops.filename = svn_dirent_basename(path, pool);
   autoprops.pool = pool;
   autoprops.mimetype = NULL;
   autoprops.have_executable = FALSE;
@@ -343,7 +343,7 @@ add_dir_recursive(const char *dirname,
               if (apr_err)
                 return svn_error_wrap_apr
                   (apr_err, _("Can't close directory '%s'"),
-                   svn_path_local_style(dirname, subpool));
+                   svn_dirent_local_style(dirname, subpool));
               break;
             }
           else
@@ -351,7 +351,7 @@ add_dir_recursive(const char *dirname,
               return svn_error_createf
                 (err->apr_err, err,
                  _("Error during add of '%s'"),
-                 svn_path_local_style(dirname, subpool));
+                 svn_dirent_local_style(dirname, subpool));
             }
         }
 
@@ -375,7 +375,7 @@ add_dir_recursive(const char *dirname,
         continue;
 
       /* Construct the full path of the entry. */
-      fullpath = svn_path_join(dirname, this_entry.name, subpool);
+      fullpath = svn_dirent_join(dirname, this_entry.name, subpool);
 
       /* Recurse on directories; add files; ignore the rest. */
       if (this_entry.filetype == APR_DIR && depth >= svn_depth_immediates)
@@ -478,11 +478,11 @@ add_parent_dirs(const char *path,
           return svn_error_createf
             (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
              _("'%s' ends in a reserved name"),
-             svn_path_local_style(path, pool));
+             svn_dirent_local_style(path, pool));
         }
       else
         {
-          const char *parent_path = svn_path_dirname(path, pool);
+          const char *parent_path = svn_dirent_dirname(path, pool);
 
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
@@ -523,8 +523,8 @@ svn_client_add4(const char *path,
     {
       apr_pool_t *subpool;
 
-      SVN_ERR(svn_path_get_absolute(&path, path, pool));
-      parent_dir = svn_path_dirname(path, pool);
+      SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
+      parent_dir = svn_dirent_dirname(path, pool);
 
       subpool = svn_pool_create(pool);
       SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
@@ -533,7 +533,7 @@ svn_client_add4(const char *path,
     }
   else
     {
-      parent_dir = svn_path_dirname(path, pool);
+      parent_dir = svn_dirent_dirname(path, pool);
     }
 
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
@@ -579,9 +579,8 @@ add_url_parents(svn_ra_session_t *ra_session,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *parent_url;
+  const char *parent_url = svn_uri_dirname(url, pool);
 
-  svn_path_split(url, &parent_url, NULL, pool);
 
   SVN_ERR(svn_ra_reparent(ra_session, parent_url, temppool));
   SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -648,7 +647,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_path_split(common, &common, &bname, pool);
+      svn_uri_split(common, &common, &bname, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
   else
@@ -670,11 +669,11 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
       if (resplit)
         {
           const char *bname;
-          svn_path_split(common, &common, &bname, pool);
+          svn_uri_split(common, &common, &bname, pool);
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
-              path = svn_path_join(bname, path, pool);
+              path = svn_uri_join(bname, path, pool);
               APR_ARRAY_IDX(targets, i, const char *) = path;
             }
         }
@@ -695,7 +694,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_join(common, path, pool);
+          item->url = svn_uri_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
