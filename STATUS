@@ -55,5 +55,17 @@ Candidate changes for 1.5.7:
    Votes:
      +1: cmpilato
 
+ * r36256
+   Fix potentially awful performance of --ignore-ancestry merges.
+   Justification:
+     A very simple change which avoids an unneeded walk of the entire merge
+     target.  For large WCs the performance improvment can be dramatic.
+     See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
+   Notes:
+     There is a minor conflict while merging, so use backport branch
+     at http://svn.collab.net/repos/svn/branches/1.5.x-r36256.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
