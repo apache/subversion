@@ -58,7 +58,7 @@
 #define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
 static const char * const data_loading_sql[] = {
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   (
    /* Load the table and index definitions. */
    WC_METADATA_SQL

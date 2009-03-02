@@ -48,8 +48,12 @@
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
-static const char * const upgrade_sql[] = { NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, WC_METADATA_SQL };
+static const char * const upgrade_sql[] = {
+  NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL,
+  WC_METADATA_SQL
+};
 
 /* This values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */

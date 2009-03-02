@@ -137,8 +137,12 @@ struct svn_wc__db_pdh_t {
 #define SVN__SKIP_SUBDIR
 
 /* ### duplicates entries.c */
-static const char * const upgrade_sql[] = { NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, WC_METADATA_SQL };
+static const char * const upgrade_sql[] = {
+  NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL,
+  WC_METADATA_SQL
+};
 
 /* These values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */

@@ -70,19 +70,24 @@ extern "C" {
  * and sticky depth (for selective/sparse checkouts).
  *
  * The change from 9 to 10 was the addition of tree-conflicts, file
- * externals and a different canonicalization of urls.
+ * externals and a different canonicalization of urls. Shipped in 1.6.
  *
- * The change from 10 to 11 was a complete rewrite of the wc datastore,
+ * The change from 10 to 11 was clearing the has_props, has_prop_mods,
+ * cachable_props, and present_props values in the entries file. Older
+ * client expect proper values for these fields. Note: this change
+ * occurred during 1.7 development, and is not expected to be released.
+ *
+ * The change from 11 to 12 was a complete rewrite of the wc datastore,
  * which resulted in centralization and migration of data to an sqlite
- * datebase.
+ * datebase. Shipped in 1.7.
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 10
+#define SVN_WC__VERSION 11
 
 /* ### only used by devs temporarily during 1.7 development. */
-#define SVN_WC__VERSION_EXPERIMENTAL 11
+#define SVN_WC__VERSION_EXPERIMENTAL 12
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -99,7 +104,7 @@ extern "C" {
 #define SVN_WC__CHANGED_CANONICAL_URLS 10
 
 /* A version < this is pre-wc-ng. */
-#define SVN_WC__WC_NG_VERSION 11
+#define SVN_WC__WC_NG_VERSION 12
 
 /*** Update traversals. ***/
 
