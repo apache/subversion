@@ -427,8 +427,9 @@ get_entry_url(svn_wc_adm_access_t *associated_access,
   if (! err)
     {
       /* Note that `name' itself may be NULL. */
-      err = svn_wc_entry(&entry, svn_dirent_join(dir, name, pool),
-                         adm_access, FALSE, pool);
+      name = name ? svn_dirent_join(dir, name, pool) : dir;
+
+      err = svn_wc_entry(&entry, name, adm_access, FALSE, pool);
     }
   if (err || (! entry) || (! entry->url))
     {
