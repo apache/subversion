@@ -98,9 +98,6 @@ typedef enum {
     /* The node is present and has no known modifications applied to it. */
     svn_wc__db_status_normal,
 
-    /* The node is present and has known text or property modifications. */
-    svn_wc__db_status_changed,
-
     /* The node has been added (potentially obscuring a delete or move of
        the BASE node; see BASE_SHADOWED param). The text will be marked as
        modified, and if properties exist, they will be marked as modified. */
@@ -122,6 +119,21 @@ typedef enum {
     /* This node has been deleted. No text or property modifications
        will be present. */
     svn_wc__db_status_deleted,
+
+    /* This directory node is a placeholder; the actual information is
+       held within the subdirectory.
+
+       Note: users of this API shouldn't see this status. It will be
+       handled internally to wc_db.
+
+       ### only used with per-dir .svn subdirectories.  */
+    svn_wc__db_status_subdir,
+
+    /* The information for this directory node is obstructed by something
+       in the local filesystem. Full details are not available.
+
+       ### only used with per-dir .svn subdirectories.  */
+    svn_wc__db_status_obstructed,
 
     /* This node was named by the server, but no information was provided. */
     svn_wc__db_status_absent,

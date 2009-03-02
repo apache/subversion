@@ -288,6 +288,8 @@ static svn_wc__db_status_t
 word_to_presence(const char *presence)
 {
   /* Be lazy and fast. */
+  if (*presence == 's')
+    return svn_wc__db_status_subdir;
   if (*presence == 'a')
     return svn_wc__db_status_absent;
   if (*presence == 'e')
@@ -308,6 +310,8 @@ presence_to_word(svn_wc__db_status_t presence)
     {
     case svn_wc__db_status_normal:
       return "normal";
+    case svn_wc__db_status_subdir:
+      return "subdir";
     case svn_wc__db_status_absent:
       return "absent";
     case svn_wc__db_status_excluded:
@@ -1539,6 +1543,19 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
           SVN_ERR_ASSERT(presence != NULL);
           *status = word_to_presence(presence);
+
+          if (node_kind == svn_wc__db_kind_dir && *local_relpath != '\0')
+            {
+              /* Whoops. We were unable to open the SDB in the subdirectory
+                 for this information. We're looking at the data in the
+                 *parent* directory right now. Inform the caller.
+
+                 ### we might need to return obstructed+others
+                 ### (e.g. not_present). more research needed...
+
+                 ### note this only happens for per-dir .svn subdirs.  */
+              *status = svn_wc__db_status_obstructed;
+            }
         }
       if (revision)
         {
@@ -2069,7 +2086,19 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       SVN_ERR_ASSERT(kind_str != NULL);
       node_kind = word_to_kind(kind_str);
 
-      if (status)
+      if (status && node_kind == svn_wc__db_kind_dir && *local_relpath != '\0')
+        {
+          /* Whoops. We were unable to open the SDB in the subdirectory
+             for this information. We're looking at the data in the
+             *parent* directory right now. Inform the caller.
+
+             ### we might need to return obstructed+others
+             ### (e.g. not_present). more research needed...
+
+             ### note this only happens for per-dir .svn subdirs.  */
+          *status = svn_wc__db_status_obstructed;
+        }
+      else if (status)
         {
           const char *presence_str;
 
@@ -2095,8 +2124,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
               SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
                              || work_status == svn_wc__db_status_not_present
                              || work_status == svn_wc__db_status_incomplete);
-
-              /* ### detect status_changed? or toss that status? */
 
               if (work_status == svn_wc__db_status_incomplete)
                 {
