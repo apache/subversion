@@ -1014,9 +1014,25 @@ read_entries(svn_wc_adm_access_t *adm_access,
           svn_wc__db_status_t work_status;
 
           if (base_shadowed)
-            entry->schedule = svn_wc_schedule_replace;
+            {
+              entry->schedule = svn_wc_schedule_replace;
+
+              /* ### mystery: make the rev same as BASE. */
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL,
+                                               &entry->revision,
+                                               NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               db, entry_abspath,
+                                               iterpool, iterpool));
+            }
           else
-            entry->schedule = svn_wc_schedule_add;
+            {
+              entry->schedule = svn_wc_schedule_add;
+
+              /* ### dunny why: added nodes are supposed to be rev==0.  */
+              entry->revision = 0;
+            }
 
           SVN_ERR(svn_wc__db_scan_working(&work_status,
                                           NULL,
@@ -1042,9 +1058,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                             original_repos_relpath,
                                             result_pool);
             }
-
-          /* ### for some reason, added nodes are supposed to be rev==0.  */
-          entry->revision = 0;
         }
       else if (status == svn_wc__db_status_not_present)
         {
