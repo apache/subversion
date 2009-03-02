@@ -967,10 +967,6 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
      revision (if needed) with an OPTIONS request.  */
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      const char *decoded_url = svn_path_uri_decode(url, pool);
-      const char *decoded_root = 
-        svn_path_uri_decode(session->repos_root.path, pool);
-
       basecoll_url = apr_psprintf(pool, "%s/%ld",
                                   session->rev_root_stub, revision);
 
