@@ -281,7 +281,7 @@ assemble_status(svn_wc_status2_t **status,
       if (entry && entry->url)
         abs_path = entry->url + strlen(repos_root);
       else if (parent_entry && parent_entry->url)
-        abs_path = svn_path_join(parent_entry->url + strlen(repos_root),
+        abs_path = svn_uri_join(parent_entry->url + strlen(repos_root),
                                 svn_dirent_basename(path, pool), pool);
       else
         abs_path = NULL;
