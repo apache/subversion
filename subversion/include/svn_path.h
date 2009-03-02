@@ -229,8 +229,8 @@ int
 svn_path_is_empty(const char *path);
 
 #ifndef SVN_DIRENT_URI_H
-/* This declaration has been moved to svn_dirent_uri.h, remains here only for
-   compatiblity reasons. */
+/* This declaration has been moved to svn_dirent_uri.h, and remains
+   here only for compatibility reasons. */
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
 #endif /* SVN_DIRENT_URI_H */
