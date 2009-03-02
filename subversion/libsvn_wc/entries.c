@@ -66,11 +66,9 @@ enum statement_keys {
   STMT_DELETE_BASE_NODE,
   STMT_DELETE_WORKING_NODE,
   STMT_DELETE_ACTUAL_NODE,
-  STMT_SELECT_BASE_NODE_BY_RELPATH,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
-  STMT_SELECT_INCOMPLETE_FLAG,
-  STMT_SELECT_BASE_NODE_DIR_PRESENT
+  STMT_SELECT_INCOMPLETE_FLAG
 };
 
 static const char * const statements[] = {
@@ -127,19 +125,12 @@ static const char * const statements[] = {
 
   "delete from actual_node where wc_id = ?1 and local_relpath = ?2;",
 
-  "select repos_relpath, root, uuid "
-  "from base_node, repository "
-  "where local_relpath = ?1 and repository.id = base_node.repos_id;",
-
   "delete from working_node;",
 
   "delete from base_node;",
 
   "select incomplete_children from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* ### won't work for aggregate database. but won't need it by then. */
-  "select 1 from base_node where local_relpath = '';",
 
   NULL
   };
