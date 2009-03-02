@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-
+#include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 
@@ -98,6 +98,14 @@ struct svn_wc__db_pdh_t {
   /* This per-dir state is associated with this global state. */
   svn_wc__db_t *db;
 
+  /* This (versioned) working copy directory is obstructing what *should*
+     be a file in the parent directory (according to its metadata).
+
+     Note: this PDH should probably be ignored (or not created).
+
+     ### obstruction is only possible with per-dir wc.db databases.  */
+  svn_boolean_t obstructed_file;
+
   /* The absolute path to this working copy directory. */
   const char *local_abspath;
 
@@ -145,7 +153,9 @@ enum statement_keys {
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_BASE_NODE_INCOMPLETE,
   STMT_SELECT_BASE_NODE_CHILDREN,
-  STMT_SELECT_WORKING_CHILDREN
+  STMT_SELECT_WORKING_CHILDREN,
+  STMT_SELECT_WORKING_IS_FILE,
+  STMT_SELECT_BASE_IS_FILE
 };
 
 static const char * const statements[] = {
@@ -193,6 +203,12 @@ static const char * const statements[] = {
   "union "
   "select local_relpath from working_node "
   "where wc_id = ?1 and parent_relpath = ?2;",
+
+  "select kind == 'file' from working_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select kind == 'file' from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
 };
@@ -567,6 +583,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   const char *pdh_relpath;
   svn_wc__db_pdh_t *found_pdh = NULL;
   svn_wc__db_pdh_t *child_pdh;
+  svn_boolean_t obstruction_possible = FALSE;
 
   /* ### we need more logic for finding the database (if it is located
      ### outside of the wcroot) and then managing all of that within DB.
@@ -619,6 +636,14 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* Start the local_relpath empty. If *this* directory contains the
          wc.db, then relpath will be the empty string.  */
       build_relpath = "";
+
+      /* It is possible that LOCAL_ABSPATH was *intended* to be a file,
+         but we just found a directory in its place. After we build
+         the PDH, then we'll examine the parent to see how it describes
+         this particular path.
+
+         ### this is only possible with per-dir wc.db databases.  */
+      obstruction_possible = TRUE;
     }
 
   /* The local_relpath that we put into the PDH starts empty. */
@@ -669,6 +694,16 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       build_relpath = svn_dirent_join(base, build_relpath, scratch_pool);
       pdh_relpath = svn_dirent_join(base, pdh_relpath, scratch_pool);
       local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+      /* An obstruction is no longer possible.
+
+         Example: we were given "/some/file" and "file" turned out to be
+         a directory. We did not find an SDB at "/some/file/.svn/wc.db",
+         so we are now going to look at "/some/.svn/wc.db". That SDB will
+         contain the correct information for "file".
+
+         ### obstruction is only possible with per-dir wc.db databases.  */
+      obstruction_possible = FALSE;
 
       /* Is the parent directory recorded in our hash?  */
       found_pdh = apr_hash_get(db->dir_data,
@@ -722,10 +757,109 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
       (*pdh)->wc_id = svn_sqlite__column_int64(stmt, 0);
 
-      /* ### WCROOT.local_abspath will be NULL. but we know the abspath.  */
-      (*pdh)->wcroot_abspath = (*pdh)->local_abspath;
+      /* WCROOT.local_abspath may be NULL when the database is stored
+         inside the wcroot, but we know the abspath is this directory
+         (ie. where we found it).  */
+      (*pdh)->wcroot_abspath = apr_pstrdup(db->state_pool, local_abspath);
 
       SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
+  /* Check to see if this (versioned) directory is obstructing what should
+     be a file in the parent directory.
+     
+     ### obstruction is only possible with per-dir wc.db databases.  */
+  if (obstruction_possible)
+    {
+      const char *parent_dir;
+      svn_wc__db_pdh_t *parent_pdh;
+
+      assert(strcmp((*pdh)->local_abspath, local_abspath) == 0);
+      assert(original_abspath == local_abspath);
+
+      parent_dir = svn_dirent_dirname(local_abspath, scratch_pool);
+      parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
+      if (parent_pdh == NULL)
+        {
+          svn_sqlite__db_t *sdb;
+          svn_error_t *err = svn_sqlite__open(&sdb,
+                                              svn_wc__adm_child(parent_dir,
+                                                                "wc.db",
+                                                                scratch_pool),
+                                              smode, statements,
+                                              SVN_WC__VERSION_EXPERIMENTAL,
+                                              upgrade_sql,
+                                              db->state_pool, scratch_pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_SQLITE_ERROR
+                  && !APR_STATUS_IS_ENOENT(err->apr_err))
+                return err;
+              svn_error_clear(err);
+
+              /* No parent, so we're at a wcroot apparently. An obstruction
+                 is (therefore) not possible.  */
+            }
+          else
+            {
+              /* ### construct this according to per-dir semantics.  */
+              parent_pdh = apr_pcalloc(db->state_pool, sizeof(*parent_pdh));
+              parent_pdh->db = db;
+              parent_pdh->local_abspath = apr_pstrdup(db->state_pool,
+                                                      parent_dir);
+              parent_pdh->local_relpath = "";
+              parent_pdh->sdb = sdb;
+              parent_pdh->wc_id = 1;  /* ### we know sqlite assigns 1.  */
+              parent_pdh->wcroot_abspath = parent_pdh->local_abspath;
+
+              apr_hash_set(db->dir_data,
+                           parent_pdh->local_abspath, APR_HASH_KEY_STRING,
+                           parent_pdh);
+
+              (*pdh)->parent = parent_pdh;
+            }
+        }
+
+      if (parent_pdh)
+        {
+          const char *lookfor_relpath = svn_dirent_basename(local_abspath,
+                                                            scratch_pool);
+          svn_sqlite__stmt_t *stmt;
+          svn_boolean_t have_row;
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, parent_pdh->sdb,
+                                            STMT_SELECT_WORKING_IS_FILE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    parent_pdh->wc_id, lookfor_relpath));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          if (have_row)
+            {
+              (*pdh)->obstructed_file = svn_sqlite__column_boolean(stmt, 0);
+            }
+          else
+            {
+              SVN_ERR(svn_sqlite__reset(stmt));
+
+              SVN_ERR(svn_sqlite__get_statement(&stmt, parent_pdh->sdb,
+                                                STMT_SELECT_BASE_IS_FILE));
+              SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                        parent_pdh->wc_id, lookfor_relpath));
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+              if (have_row)
+                (*pdh)->obstructed_file = svn_sqlite__column_boolean(stmt, 0);
+            }
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          /* If we determined that a file was supposed to be at the
+             LOCAL_ABSPATH requested, then return the PDH and LOCAL_RELPATH
+             which describes that file.  */
+          if ((*pdh)->obstructed_file)
+            {
+              *pdh = parent_pdh;
+              *local_relpath = apr_pstrdup(result_pool, lookfor_relpath);
+              return SVN_NO_ERROR;
+            }
+        }
     }
 
   /* The PDH is complete. Stash it into DB.  */
