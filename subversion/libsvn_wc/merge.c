@@ -996,7 +996,7 @@ merge_binary_file(const char *left,
   /* ### when making the binary-file backups, should we be honoring
      keywords and eol stuff?   */
   const char *left_copy, *right_copy;
-  const char *parent, *left_base, *right_base;
+  const char *left_base, *right_base;
   svn_wc_entry_t tmp_entry;
 
   /* Give the conflict resolution callback a chance to clean
