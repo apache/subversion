@@ -1054,6 +1054,13 @@ read_entries(svn_wc_adm_access_t *adm_access,
           entry->schedule = svn_wc_schedule_delete;
           entry->deleted = TRUE;
         }
+      else if (status == svn_wc__db_status_obstructed)
+        {
+          /* ### set some values that should (hopefully) let this directory
+             ### be usable. specifically: resolve_to_defaults does not like
+             ### SVN_INVALID_REVNUM here.  */
+          entry->revision = 0;
+        }
       else
         {
           /* One of the not-present varieties. Skip this node.  */
