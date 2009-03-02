@@ -358,8 +358,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 
       if (entry->copyfrom_url)
         {
-          *copyfrom_url = svn_dirent_join(entry->copyfrom_url, rest,
-                                          pool);
+          *copyfrom_url = svn_uri_join(entry->copyfrom_url, rest, pool);
           *copyfrom_rev = entry->copyfrom_rev;
         }
       else
