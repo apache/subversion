@@ -2187,9 +2187,11 @@ finish_report(void *report_baton,
       if (status)
         {
           if (parser_ctx->error)
-            svn_error_clear(sess->pending_error);
-
-          SVN_ERR(parser_ctx->error);
+            {
+              svn_error_clear(sess->pending_error);
+              sess->pending_error = SVN_NO_ERROR;
+              return parser_ctx->error;
+            }
           SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
