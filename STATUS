@@ -74,6 +74,14 @@ Candidate changes:
      +1: stsp
      -0: rhuijben (Looks like a feature enhancement for a patch release)
 
+ * r36256
+   Fix potentially awful performance of --ignore-ancestry merges.
+   Justification:
+     A very simple change which avoids an unneeded walk of the entire merge
+     target.  For large WCs the performance improvment can be dramatic.
+     See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
+   Votes:
+     +1: pburba
 
 Approved changes:
 =================
