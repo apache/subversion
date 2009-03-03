@@ -694,8 +694,6 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
         return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
       }
   }
-
-  /* ### need to close handle if an error occurs */
 #endif
 
   /* Retry until timeout when database is busy. */
