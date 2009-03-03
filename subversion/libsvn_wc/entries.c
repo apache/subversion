@@ -1012,6 +1012,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                || status == svn_wc__db_status_obstructed_add)
         {
           svn_wc__db_status_t work_status;
+          svn_revnum_t original_revision;
 
           if (base_shadowed)
             {
@@ -1039,7 +1040,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                           &repos_relpath,
                                           &entry->repos,
                                           &entry->uuid,
-                                          NULL, NULL, NULL, NULL,
+                                          NULL, NULL, NULL, &original_revision,
                                           NULL,
                                           db,
                                           entry_abspath,
@@ -1049,7 +1050,16 @@ read_entries(svn_wc_adm_access_t *adm_access,
           if (work_status == svn_wc__db_status_copied)
             {
               entry->copied = TRUE;
-              /* ### do children need to be schedule_normal?  */
+
+              /* If this is a child, then it should be schedule_normal.  */
+              if (original_repos_relpath == NULL)
+                {
+                  entry->schedule = svn_wc_schedule_normal;
+                  /* ### what if there is a BASE node under there? */
+                }
+
+              /* ### copied nodes need to mirror their copyfrom_rev */
+              entry->revision = original_revision;
             }
           if (original_repos_relpath != NULL)
             {
@@ -1512,7 +1522,6 @@ write_entry(svn_sqlite__db_t *wc_db,
             const svn_wc_entry_t *this_dir,
             apr_pool_t *pool)
 {
-  svn_sqlite__stmt_t *stmt;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
@@ -1521,23 +1530,14 @@ write_entry(svn_sqlite__db_t *wc_db,
   switch (entry->schedule)
     {
       case svn_wc_schedule_normal:
-        base_node = MAYBE_ALLOC(base_node, scratch_pool);
-
-        /* We also need to chuck any existing working node. */
-        SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
-                                          STMT_DELETE_WORKING_NODE));
-        SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, name));
-        SVN_ERR(svn_sqlite__step_done(stmt));
+        if (entry->copied)
+          working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        else
+          base_node = MAYBE_ALLOC(base_node, scratch_pool);
         break;
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
-
-        /* We also need to chuck any existing base node. */
-        SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
-                                          STMT_DELETE_BASE_NODE));
-        SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, name));
-        SVN_ERR(svn_sqlite__step_done(stmt));
         break;
 
       case svn_wc_schedule_delete:
