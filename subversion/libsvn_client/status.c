@@ -27,7 +27,7 @@
 #include "svn_pools.h"
 #include "client.h"
 
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -128,10 +128,10 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
   const char *ancestor;
   apr_size_t len;
 
-  ancestor = svn_path_get_longest_ancestor(url, rb->ancestor, pool);
+  ancestor = svn_dirent_get_longest_ancestor(url, rb->ancestor, pool);
 
   /* If we got a shorter ancestor, truncate our current ancestor.
-     Note that svn_path_get_longest_ancestor will allocate its return
+     Note that svn_dirent_get_longest_ancestor will allocate its return
      value even if it identical to one of its arguments. */
   len = strlen(ancestor);
   if (len < strlen(rb->ancestor))
@@ -294,7 +294,7 @@ svn_client_status4(svn_revnum_t *result_rev,
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
            _("Entry '%s' has no URL"),
-           svn_path_local_style(anchor, pool));
+           svn_dirent_local_style(anchor, pool));
       URL = apr_pstrdup(pool, entry->url);
 
       /* Open a repository session to the URL. */

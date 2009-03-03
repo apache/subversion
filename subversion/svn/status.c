@@ -23,7 +23,7 @@
 /*** Includes. ***/
 #include "svn_cmdline.h"
 #include "svn_wc.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "cl.h"
@@ -244,7 +244,7 @@ svn_cl__print_status_xml(const char *path,
     return SVN_NO_ERROR;
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_path_local_style(path, pool), NULL);
+                        "path", svn_dirent_local_style(path, pool), NULL);
 
   att_hash = apr_hash_make(pool);
   apr_hash_set(att_hash, "item", APR_HASH_KEY_STRING,
@@ -290,7 +290,7 @@ svn_cl__print_status_xml(const char *path,
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("'%s' has lock token, but no lock owner"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
 
       svn_cl__xml_tagged_cdata(&sb, pool, "comment",
                                status->entry->lock_comment);
@@ -366,7 +366,7 @@ svn_cl__print_status(const char *path,
           && status->repos_text_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
-  return print_status(svn_path_local_style(path, pool),
+  return print_status(svn_dirent_local_style(path, pool),
                       detailed, show_last_committed, repos_locks, status,
                       pool);
 }
