@@ -1549,7 +1549,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
           SVN_ERR_ASSERT(presence != NULL);
           *status = word_to_presence(presence);
 
-          if (node_kind == svn_wc__db_kind_subdir)
+          if (node_kind == svn_wc__db_kind_subdir
+              && *status == svn_wc__db_status_normal)
             {
               /* We're looking at the subdir record in the *parent* directory,
                  which implies per-dir .svn subdirs. We should be looking
@@ -2103,7 +2104,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               && *status != svn_wc__db_status_incomplete)
                              || !have_work);
 
-              if (node_kind == svn_wc__db_kind_subdir)
+              if (node_kind == svn_wc__db_kind_subdir
+                  && *status == svn_wc__db_status_normal)
                 {
                   /* We should have read a row from the subdir wc.db. It
                      must be obstructed in some way.
