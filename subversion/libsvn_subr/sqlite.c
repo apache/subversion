@@ -678,8 +678,22 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
     }
   else
     SVN_ERR_MALFUNCTION();
+  {
+    /* We'd like to use SQLITE_ERR_MSG here, but we can't since it would
+       just return an error and leave the database open.  So, we need to
+       do this manually. */
+    int err_code = sqlite3_open(path, db3);
+    if (err_code != SQLITE_OK)
+      {
+        char *msg = apr_pstrdup(scratch_pool, sqlite3_errmsg(*db3));
 
-  SQLITE_ERR_MSG(sqlite3_open(path, db3), sqlite3_errmsg(*db3));
+        /* We don't catch the error here, since we care more about the open
+           error than the close error at this point. */
+        sqlite3_close(*db3);
+
+        return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
+      }
+  }
 
   /* ### need to close handle if an error occurs */
 #endif
