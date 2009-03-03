@@ -18,7 +18,7 @@
 
 
 
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_io.h"
 
@@ -47,7 +47,7 @@ auth_file_path(const char **path,
                                           SVN_CONFIG__AUTH_SUBDIR, pool));
   if (authdir_path)
     {
-      authdir_path = svn_path_join(authdir_path, cred_kind, pool);
+      authdir_path = svn_dirent_join(authdir_path, cred_kind, pool);
 
       /* Construct the basename of the creds file.  It's just the
          realmstring converted into an md5 hex string.  */
@@ -55,7 +55,7 @@ auth_file_path(const char **path,
                            strlen(realmstring), pool));
       hexname = svn_checksum_to_cstring(checksum, pool);
 
-      *path = svn_path_join(authdir_path, hexname, pool);
+      *path = svn_dirent_join(authdir_path, hexname, pool);
     }
   else
     *path = NULL;
@@ -93,7 +93,7 @@ svn_config_read_auth_data(apr_hash_t **hash,
 
       SVN_ERR_W(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool),
                 apr_psprintf(pool, _("Error parsing '%s'"),
-                             svn_path_local_style(auth_path, pool)));
+                             svn_dirent_local_style(auth_path, pool)));
 
       SVN_ERR(svn_stream_close(stream));
     }
@@ -133,7 +133,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
   stream = svn_stream_from_aprfile2(authfile, FALSE, pool);
   SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Error writing hash to '%s'"),
-                         svn_path_local_style(auth_path, pool)));
+                         svn_dirent_local_style(auth_path, pool)));
 
   SVN_ERR(svn_stream_close(stream));
 

@@ -23,7 +23,7 @@
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_auth.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
@@ -250,7 +250,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                               "%s:%d: Option must end with ':' or '='",
-                              svn_path_local_style(ctx->file, pool),
+                              svn_dirent_local_style(ctx->file, pool),
                               ctx->line);
     }
   else
@@ -293,7 +293,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                               "%s:%d: Section header must end with ']'",
-                              svn_path_local_style(ctx->file, pool),
+                              svn_dirent_local_style(ctx->file, pool),
                               ctx->line);
     }
   else
@@ -325,8 +325,8 @@ svn_config__sys_config_path(const char **path_p,
   {
     const char *folder;
     SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
-    *path_p = svn_path_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+    *path_p = svn_dirent_join_many(pool, folder,
+                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
 #else  /* ! WIN32 */
@@ -384,7 +384,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Section header"
                                      " must start in the first column",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           break;
 
@@ -398,7 +398,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Comment"
                                      " must start in the first column",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           break;
 
@@ -413,12 +413,12 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
           if (svn_stringbuf_isempty(ctx.section))
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Section header expected",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           else if (count != 0)
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Option expected",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           else
             SVN_ERR(parse_option(&ch, &ctx, pool));
@@ -444,7 +444,7 @@ ensure_auth_subdir(const char *auth_dir,
   const char *subdir_full_path;
   svn_node_kind_t kind;
 
-  subdir_full_path = svn_path_join_many(pool, auth_dir, subdir, NULL);
+  subdir_full_path = svn_dirent_join_many(pool, auth_dir, subdir, NULL);
   err = svn_io_check_path(subdir_full_path, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -466,7 +466,7 @@ ensure_auth_dirs(const char *path,
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
-  auth_dir = svn_path_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  auth_dir = svn_dirent_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
   err = svn_io_check_path(auth_dir, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -1107,7 +1107,7 @@ svn_config_get_user_config_path(const char **path,
 
   if (config_dir)
     {
-      *path = svn_path_join_many(pool, config_dir, fname, NULL);
+      *path = svn_dirent_join_many(pool, config_dir, fname, NULL);
       return SVN_NO_ERROR;
     }
 
@@ -1115,8 +1115,8 @@ svn_config_get_user_config_path(const char **path,
   {
     const char *folder;
     SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
-    *path = svn_path_join_many(pool, folder,
-                               SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+    *path = svn_dirent_join_many(pool, folder,
+                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
 #else  /* ! WIN32 */
