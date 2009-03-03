@@ -679,8 +679,8 @@ svn_client_blame5(const char *target,
           apr_hash_t *props;
           svn_stream_t *wcfile;
           svn_string_t *keywords;
-          svn_stream_t *tmpfile;
-          const char *tmppath;
+          svn_stream_t *tempfile;
+          const char *temppath;
           apr_hash_t *kw = NULL;
 
           SVN_ERR(svn_wc_prop_list(&props, target, adm_access, pool));
@@ -689,26 +689,22 @@ svn_client_blame5(const char *target,
           keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
 
           if (keywords)
-            {
-              apr_hash_t *kw = NULL;
-
-              SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data,
-                                                NULL, NULL, 0, NULL, pool));
-            }
-
+            SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
+                                              0, NULL, pool));
+  
           wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE, pool);
 
-          SVN_ERR(svn_stream_open_unique(&tmpfile, &tmppath, NULL,
+          SVN_ERR(svn_stream_open_unique(&tempfile, &temppath, NULL,
                                          svn_io_file_del_on_pool_cleanup,
                                          pool, pool));
 
-          SVN_ERR(svn_stream_copy3(wcfile, tmpfile, ctx->cancel_func,
+          SVN_ERR(svn_stream_copy3(wcfile, tempfile, ctx->cancel_func,
                                    ctx->cancel_baton, pool));
 
-          SVN_ERR(add_file_blame(frb.last_filename, tmppath, frb.chain, NULL,
+          SVN_ERR(add_file_blame(frb.last_filename, temppath, frb.chain, NULL,
                                  frb.diff_options, pool));
 
-          frb.last_filename = tmppath;
+          frb.last_filename = temppath;
         }
     }
 
