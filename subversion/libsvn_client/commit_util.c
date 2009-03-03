@@ -26,6 +26,7 @@
 #include <apr_md5.h>
 
 #include "client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -881,7 +882,7 @@ validate_dangler(void *baton,
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 svn_wc_adm_access_t *parent_dir,
+                                 svn_wc_adm_access_t *parent_adm,
                                  apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
@@ -937,18 +938,19 @@ svn_client__harvest_committables(apr_hash_t **committables,
       svn_error_t *err;
 
       svn_pool_clear(subpool);
+
       /* Add the relative portion of our full path (if there are no
-         relative paths, TARGET will just be PARENT_DIR for a single
-         iteration. */
-      target = svn_path_join_many(subpool,
-                                  svn_wc_adm_access_path(parent_dir),
-                                  targets->nelts
-                                  ? APR_ARRAY_IDX(targets, i, const char *)
-                                  : NULL,
-                                  NULL);
+         relative paths, TARGET will just be PARENT_ADM for a single
+         iteration). */
+      if (targets->nelts)
+        target = svn_dirent_join(svn_wc_adm_access_path(parent_adm),
+                                 APR_ARRAY_IDX(targets, i, const char *),
+                                 subpool);
+      else
+        target = svn_wc_adm_access_path(parent_adm);
 
       /* No entry?  This TARGET isn't even under version control! */
-      SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
+      SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm,
                                         target, subpool));
 
       err = svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
@@ -981,12 +983,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
       if ((entry->schedule == svn_wc_schedule_add)
           || (entry->schedule == svn_wc_schedule_replace))
         {
-          const char *parent, *base_name;
+          const char *parent = svn_dirent_dirname(target, subpool);
           svn_wc_adm_access_t *parent_access;
           const svn_wc_entry_t *p_entry = NULL;
 
-          svn_path_split(target, &parent, &base_name, subpool);
-          err = svn_wc_adm_retrieve(&parent_access, parent_dir,
+          err = svn_wc_adm_retrieve(&parent_access, parent_adm,
                                     parent, subpool);
           if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
@@ -1031,7 +1032,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
            svn_path_local_style(target, pool));
 
       /* Handle our TARGET. */
-      SVN_ERR(svn_wc_adm_retrieve(&dir_access, parent_dir,
+      SVN_ERR(svn_wc_adm_retrieve(&dir_access, parent_adm,
                                   (entry->kind == svn_node_dir
                                    ? target
                                    : svn_path_dirname(target, subpool)),
