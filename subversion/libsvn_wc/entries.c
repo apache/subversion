@@ -1575,13 +1575,22 @@ write_entry(svn_sqlite__db_t *wc_db,
       /* Make sure we get a WORKING_NODE inserted. The copyfrom information
          will occur here or on a parent, as appropriate.  */
       working_node = MAYBE_ALLOC(working_node, scratch_pool);
+
       if (entry->copyfrom_url)
         {
+          const char *relative_url;
+
           working_node->copyfrom_repos_id = repos_id;
-          working_node->copyfrom_repos_path =
-            svn_uri_is_child(repos_root, entry->copyfrom_url, NULL);
-          if (working_node->copyfrom_repos_path == NULL)
+          relative_url = svn_uri_is_child(repos_root, entry->copyfrom_url,
+                                          NULL);
+          if (relative_url == NULL)
             working_node->copyfrom_repos_path = "";
+          else
+            {
+              /* copyfrom_repos_path is NOT a URI. decode into repos path.  */
+              working_node->copyfrom_repos_path =
+                svn_path_uri_decode(relative_url, scratch_pool);
+            }
           working_node->copyfrom_revnum = entry->copyfrom_rev;
         }
     }
@@ -1662,14 +1671,19 @@ write_entry(svn_sqlite__db_t *wc_db,
       if (repos_root)
         {
           base_node->repos_id = repos_id;
+
+          /* repos_relpath is NOT a URI. decode as appropriate.  */
           if (entry->url != NULL)
             {
-              base_node->repos_relpath = svn_path_is_child(repos_root,
+              const char *relative_url = svn_path_is_child(repos_root,
                                                            entry->url,
                                                            scratch_pool);
 
-              if (base_node->repos_relpath == NULL)
+              if (relative_url == NULL)
                 base_node->repos_relpath = "";
+              else
+                base_node->repos_relpath = svn_path_uri_decode(relative_url,
+                                                               scratch_pool);
             }
           else
             {
@@ -1677,10 +1691,12 @@ write_entry(svn_sqlite__db_t *wc_db,
                                                         this_dir->url,
                                                         scratch_pool);
               if (base_path == NULL)
-                base_path = "";
-
-              base_node->repos_relpath = svn_dirent_join(base_path, entry->name,
-                                                         scratch_pool);
+                base_node->repos_relpath = entry->name;
+              else
+                base_node->repos_relpath =
+                  svn_dirent_join(svn_path_uri_decode(base_path, scratch_pool),
+                                  entry->name,
+                                  scratch_pool);
             }
         }
 
