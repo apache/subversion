@@ -1541,6 +1541,13 @@ write_entry(svn_sqlite__db_t *wc_db,
         break;
 
       case svn_wc_schedule_delete:
+        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        if (!this_dir->copied)
+          base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        /* ### what about a deleted BASE tree, with a copy over the top,
+           ### followed by a delete? there should be a base node then...  */
+        break;
+
       case svn_wc_schedule_replace:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
         base_node = MAYBE_ALLOC(base_node, scratch_pool);
@@ -1624,7 +1631,8 @@ write_entry(svn_sqlite__db_t *wc_db,
       if (entry->deleted)
         {
           base_node->presence = svn_wc__db_status_not_present;
-          base_node->kind = svn_node_unknown;
+          /* ### should be svn_node_unknown, but let's store what we have. */
+          base_node->kind = entry->kind;
         }
       else
         base_node->kind = entry->kind;
@@ -1690,7 +1698,12 @@ write_entry(svn_sqlite__db_t *wc_db,
                                        entry->checksum, scratch_pool));
 
       if (entry->schedule == svn_wc_schedule_delete)
-        working_node->presence = svn_wc__db_status_not_present;
+        {
+          working_node->presence = svn_wc__db_status_not_present;
+
+          /* ### should be svn_node_unknown, but let's store what we have. */
+          working_node->kind = entry->kind;
+        }
       else
         {
           working_node->presence = svn_wc__db_status_normal;
