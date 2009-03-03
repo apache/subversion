@@ -93,6 +93,10 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
+/* Explicity close the connection in DB. */
+svn_error_t *
+svn_sqlite__close(svn_sqlite__db_t *db);
+
 /* Returns the statement in *STMT which has been prepared from the
    STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
    pool as the DB, and will be cleaned up with DB is closed. */

@@ -797,6 +797,14 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 }
 
 svn_error_t *
+svn_sqlite__close(svn_sqlite__db_t *db)
+{
+  apr_pool_cleanup_run(db->result_pool, db, close_apr);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
                              void *cb_baton)
