@@ -29,7 +29,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 
-#include "svn_private_uri.h"
+#include "private_uri.h"
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
