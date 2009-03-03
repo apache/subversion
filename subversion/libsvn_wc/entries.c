@@ -16,8 +16,8 @@
  * ====================================================================
  */
 
-
 #include <string.h>
+#include <assert.h>
 
 #include <apr_strings.h>
 
@@ -927,6 +927,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
   APR_ARRAY_PUSH((apr_array_header_t *)children, const char *) = "";
 
+  /* Note that this loop order causes "this dir" to be processed first.
+     This is necessary because we may need to access the directory's
+     entry during processing of "added" nodes.  */
   for (i = children->nelts; i--; )
     {
       svn_wc__db_kind_t kind;
@@ -1014,6 +1017,17 @@ read_entries(svn_wc_adm_access_t *adm_access,
           svn_wc__db_status_t work_status;
           svn_revnum_t original_revision;
 
+          /* For child nodes, pick up the parent's revision.  */
+          if (*entry->name != '\0')
+            {
+              const svn_wc_entry_t *parent_entry;
+
+              assert(entry->revision == SVN_INVALID_REVNUM);
+
+              parent_entry = apr_hash_get(entries, "", 0);
+              entry->revision = parent_entry->revision;
+            }
+
           if (base_shadowed)
             {
               entry->schedule = svn_wc_schedule_replace;
@@ -1031,8 +1045,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
             {
               entry->schedule = svn_wc_schedule_add;
 
-              /* ### dunny why: added nodes are supposed to be rev==0.  */
-              entry->revision = 0;
+              /* ### if this looks like a plain old add, then rev=0.  */
+              if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
+                  && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
+                entry->revision = 0;
             }
 
           SVN_ERR(svn_wc__db_scan_working(&work_status,
@@ -1709,6 +1725,16 @@ write_entry(svn_sqlite__db_t *wc_db,
           working_node->presence = svn_wc__db_status_normal;
           working_node->kind = entry->kind;
         }
+
+      /* These should generally be unset for added and deleted files,
+         and contain whatever information we have for copied files. Let's
+         just store whatever we have.
+
+         Note: cmt_rev is the distinguishing value. The others may be 0 or
+         NULL if the corresponding revprop has been deleted.  */
+      working_node->changed_rev = entry->cmt_rev;
+      working_node->changed_date = entry->cmt_date;
+      working_node->changed_author = entry->cmt_author;
 
       SVN_ERR(insert_working_node(wc_db, working_node, scratch_pool));
     }
