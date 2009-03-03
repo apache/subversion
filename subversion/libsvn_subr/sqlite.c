@@ -635,11 +635,23 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */
-    SQLITE_ERR_MSG(sqlite3_open_v2(path, db3, flags, NULL),
-                   sqlite3_errmsg(*db3));
+    {
+      /* We'd like to use SQLITE_ERR_MSG here, but we can't since it would
+         just return an error and leave the database open.  So, we need to
+         do this manually. */
+      /* ### SQLITE_CANTOPEN */
+      int err_code = sqlite3_open_v2(path, db3, flags, NULL);
+      if (err_code != SQLITE_OK)
+        {
+          char *msg = apr_pstrdup(scratch_pool, sqlite3_errmsg(*db3));
 
-    /* ### SQLITE_CANTOPEN */
-    /* ### need to close handle if an error occurs */
+          /* We don't catch the error here, since we care more about the open
+             error than the close error at this point. */
+          sqlite3_close(*db3);
+
+          return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
+        }
+    }
   }
 #else
   /* Older versions of SQLite (pre-3.5.x) will always create the database
