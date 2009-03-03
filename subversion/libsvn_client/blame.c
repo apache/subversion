@@ -686,13 +686,15 @@ svn_client_blame5(const char *target,
           SVN_ERR(svn_wc_prop_list(&props, target, adm_access, pool));
           SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
           
-          keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+          keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
+                                  APR_HASH_KEY_STRING);
 
           if (keywords)
             SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
                                               0, NULL, pool));
   
-          wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE, pool);
+          wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE,
+                                               pool);
 
           SVN_ERR(svn_stream_open_unique(&tempfile, &temppath, NULL,
                                          svn_io_file_del_on_pool_cleanup,
@@ -772,7 +774,7 @@ svn_client_blame5(const char *target,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
             {
-              if(walk->rev)
+              if (walk->rev)
                 SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,
                                  merged_rev_props, merged_path,
