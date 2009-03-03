@@ -512,14 +512,15 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 
   while (TRUE)
     {
-      const char *basename;
+      const char *current_basename;
       svn_boolean_t have_row;
 
       /* Strip a path segment off the end, and append it to the suffix
          that we'll use when we finally find a base relpath. */
-      svn_dirent_split(current_relpath, &current_relpath, &basename,
+      svn_dirent_split(current_relpath, &current_relpath, &current_basename,
                        scratch_pool);
-      relpath_suffix = svn_dirent_join(relpath_suffix, basename, scratch_pool);
+      relpath_suffix = svn_dirent_join(relpath_suffix, current_basename,
+                                       scratch_pool);
 
       /* ### strictly speaking, moving to the parent could send us to a
          ### different SDB, and (thus) we would need to fetch STMT again.
