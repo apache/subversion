@@ -1213,7 +1213,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
 
+  SVN_ERR(svn_sqlite__close(wc_db));
   svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -1304,13 +1306,11 @@ svn_wc_entries_read(apr_hash_t **entries,
   new_entries = svn_wc__adm_access_entries(adm_access, show_hidden, pool);
   if (! new_entries)
     {
-      apr_pool_t *scratch_pool = svn_pool_create(pool);
       /* Ask for the deleted entries because most operations request them
          at some stage, getting them now avoids a second file parse. */
-      SVN_ERR(read_entries(adm_access, scratch_pool));
+      SVN_ERR(read_entries(adm_access, pool));
 
       new_entries = svn_wc__adm_access_entries(adm_access, show_hidden, pool);
-      svn_pool_destroy(scratch_pool);
     }
 
   *entries = new_entries;
@@ -2171,7 +2171,6 @@ svn_wc__entry_remove(apr_hash_t *entries,
 {
   svn_sqlite__db_t *wc_db;
   svn_error_t *err;
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
@@ -2180,7 +2179,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
   err = svn_sqlite__open(&wc_db, db_path(parent_dir, scratch_pool),
                          svn_sqlite__mode_readwrite, statements,
                          SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                         subpool, subpool);
+                         scratch_pool, scratch_pool);
   if (err == NULL)
     {
       /* Do the work in a transaction, for consistency. */
@@ -2203,8 +2202,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
   else
     return err;
 
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
+  return svn_sqlite__close(wc_db);
 }
 
 
