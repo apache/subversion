@@ -54,7 +54,17 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Justification:
       UMRs are undefined behaviour
     Votes:
-      +1: philip
+      +1: philip, rhuijben
+
+  * <needs-branch>
+    Remove all svn_uri_*() functions in svn_dirent_uri.h from our public 1.6,
+    api to allow redefining and renaming these functions for 1.7.
+    Justification:
+      See discussion starting in http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1255935
+      For 1.6 these functions are only used by the testset.
+      (Issue #2028 is in progress for 1.7)
+    Votes:
+      +1: rhuijben
 
 Status of 1.6.1:
 ================
@@ -81,7 +91,7 @@ Candidate changes:
      target.  For large WCs the performance improvment can be dramatic.
      See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
 Approved changes:
 =================
