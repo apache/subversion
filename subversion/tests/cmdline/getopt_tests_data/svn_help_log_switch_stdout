@@ -113,8 +113,8 @@ Valid options:
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                             'immediates', or 'infinity')
-  --set-depth ARG          : set new working copy depth to ARG ('empty',
-                            'exclude', 'files', 'immediates', or 'infinity')
+  --set-depth ARG          : set new working copy depth to ARG ('exclude',
+                            'empty', 'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
