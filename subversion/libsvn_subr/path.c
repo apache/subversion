@@ -33,6 +33,7 @@
 #include "svn_io.h"                     /* for svn_io_stat() */
 #include "svn_ctype.h"
 
+#include "private_uri.h"
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
