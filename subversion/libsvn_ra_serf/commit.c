@@ -282,9 +282,6 @@ handle_checkout(serf_request_t *request,
       apr_uri_parse(pool, location, &uri);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
-
-      if (ctx->resource_url == uri.path)
-        ctx->resource_url = apr_pstrdup(ctx->pool, ctx->resource_url);
     }
 
   return status;
