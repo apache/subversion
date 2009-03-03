@@ -2190,6 +2190,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
     {
       /* ### fine for now. old-style working copy. */
       svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
   else if (err->apr_err == SVN_ERR_SQLITE_ERROR)
     {
@@ -2198,6 +2199,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
          ### means that the database wasn't found. and that is just fine...
          ### it means an old-style working copy. */
       svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
   else
     return err;
