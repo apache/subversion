@@ -944,6 +944,14 @@ def is_not_serf():
 def is_ra_type_dav():
   _check_command_line_parsed()
   return test_area_url.startswith('http')
+  
+def is_ra_type_dav_neon():
+  _check_command_line_parsed()
+  return test_area_url.startswith('http') and not(http_library == "serf")
+  
+def is_ra_type_dav_serf():
+  _check_command_line_parsed()
+  return test_area_url.startswith('http') and (http_library == "serf")
 
 def is_ra_type_svn():
   _check_command_line_parsed()
