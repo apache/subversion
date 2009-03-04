@@ -78,7 +78,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     have .svn/format, and some don't. The *intent* is to remove the file if
     present, so make the code match.
     Votes:
-      +1: rhuijben
+      +1: rhuijben, stsp
 
 Status of 1.6.1:
 ================
