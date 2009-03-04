@@ -65,6 +65,15 @@ setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
 			       const char *uri,
                                serf_bucket_t *hdrs_bkt);
 
+static svn_error_t *
+default_auth_response_handler(svn_ra_serf__handler_t *ctx,
+			      serf_request_t *request,
+			      serf_bucket_t *response,
+			      apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /*** Global variables. ***/
 static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
@@ -73,6 +82,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_basic_connection,
     handle_basic_auth,
     setup_request_basic_auth,
+    default_auth_response_handler,
   },
   {
     407,
@@ -80,6 +90,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_proxy_basic_connection,
     handle_proxy_basic_auth,
     setup_request_proxy_basic_auth,
+    default_auth_response_handler,
   },
 #ifdef SVN_RA_SERF_SSPI_ENABLED
   {
@@ -88,6 +99,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_sspi_connection,
     handle_sspi_auth,
     setup_request_sspi_auth,
+    default_auth_response_handler,
   },
   {
     407,
@@ -95,6 +107,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_proxy_sspi_connection,
     handle_proxy_sspi_auth,
     setup_request_proxy_sspi_auth,
+    default_auth_response_handler,
   },
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
   {
@@ -103,6 +116,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_digest_connection,
     handle_digest_auth,
     setup_request_digest_auth,
+    validate_response_digest_auth,
   },
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */

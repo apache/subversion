@@ -1280,6 +1280,17 @@ typedef svn_error_t *
 				  serf_bucket_t *hdrs_bkt);
 
 /**
+ * This function will be called when a response is received, so that the 
+ * protocol handler can validate the Authentication related response headers
+ * (if needed).
+ */
+typedef svn_error_t *
+(*svn_serf__validate_response_func_t)(svn_ra_serf__handler_t *ctx,
+				      serf_request_t *request,
+				      serf_bucket_t *response,
+				      apr_pool_t *pool);
+
+/**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
  *
  */
@@ -1301,6 +1312,9 @@ struct svn_ra_serf__auth_protocol_t {
 
   /* Function to set up the authentication header of a request */
   svn_serf__setup_request_func_t setup_request_func;
+
+  /* Function to validate the authentication header of a response */
+  svn_serf__validate_response_func_t validate_response_func;
 };
 
 /**

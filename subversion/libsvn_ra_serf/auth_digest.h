@@ -66,4 +66,10 @@ setup_request_digest_auth(svn_ra_serf__connection_t *conn,
 			  const char *uri,
                           serf_bucket_t *hdrs_bkt);
 
+svn_error_t *
+validate_response_digest_auth(svn_ra_serf__handler_t *ctx,
+			      serf_request_t *request,
+			      serf_bucket_t *response,
+			      apr_pool_t *pool);
+
 #endif /* SVN_LIBSVN_RA_SERF_AUTH_DIGEST_H */
