@@ -1191,35 +1191,10 @@ svn_wc__db_version(int *version,
 
 
 svn_error_t *
-svn_wc__db_txn_begin(svn_wc__db_t *db,
-                     apr_pool_t *scratch_pool)
-{
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
-svn_wc__db_txn_rollback(svn_wc__db_t *db,
-                        apr_pool_t *scratch_pool)
-{
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
-svn_wc__db_txn_commit(svn_wc__db_t *db,
-                      apr_pool_t *scratch_pool)
-{
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__db_txn_rollback(db, scratch_pool));
-  return SVN_NO_ERROR;
+  NOT_IMPLEMENTED();
 }
 
 
