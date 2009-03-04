@@ -716,6 +716,10 @@ svn_utf_cstring_to_utf8(const char **dest,
                         const char *src,
                         apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(DARWIN)
+  /* Apr internal charset is always UTF-8 */
+  *dest = apr_pstrdup(pool, src);
+#else
   xlate_handle_node_t *node;
   svn_error_t *err;
 
@@ -723,6 +727,7 @@ svn_utf_cstring_to_utf8(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
   SVN_ERR(err);
+#endif
   return check_cstring_utf8(*dest, pool);
 }
 
@@ -825,6 +830,11 @@ svn_utf_cstring_from_utf8(const char **dest,
                           const char *src,
                           apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(DARWIN)
+  /* Apr internal charset is always UTF-8 */
+  *dest = apr_pstrdup(pool, src);
+  return SVN_NO_ERROR;
+#else
   xlate_handle_node_t *node;
   svn_error_t *err;
 
@@ -835,6 +845,7 @@ svn_utf_cstring_from_utf8(const char **dest,
   put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
 
   return err;
+#endif
 }
 
 
