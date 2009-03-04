@@ -66,6 +66,13 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Votes:
       +1: rhuijben
 
+  * r36300
+    'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail.
+    Justification:
+      Fixes build error seen on Solaris.
+    Votes:
+      +1: stsp
+
 Status of 1.6.1:
 ================
 
