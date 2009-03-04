@@ -59,7 +59,7 @@ random_cnonce(apr_pool_t *pool)
   apr_uuid_get(&uuid);
   apr_uuid_format(buf, &uuid);
 
-  return hex_encode(buf, pool);
+  return hex_encode((unsigned char*)buf, pool);
 }
 
 static char *
@@ -122,15 +122,6 @@ build_auth_header(serf_digest_context_t *context,
   char *hdr, *tmp, *response_hdr_hex, *ha2, *nc_str;
 
   ha2 = build_digest_ha2(uri, method, context->qop, pool);
-
-#if 0
-  printf("HA1: %s\n", context->ha1);
-  printf("HA2: %s\n", ha2);
-  printf("Nonce: %s\n", context->nonce);
-  printf("Cnonce: %s\n", context->cnonce);
-  printf("Qop: %s\n", context->qop);
-  printf("DNC: %08x\n", context->digest_nc);
-#endif
 
   hdr = apr_psprintf(pool,
 		     "Digest realm=\"%s\","
@@ -349,7 +340,7 @@ handle_digest_auth(svn_ra_serf__handler_t *ctx,
   context->pool = session->pool;
   context->qop = qop;
   context->nonce = nonce;
-  /*  context->cnonce = NULL;*/
+  context->cnonce = NULL;
   context->opaque = opaque;
   context->algorithm = algorithm;
   context->realm = apr_pstrdup(context->pool, realm_name);
@@ -398,6 +389,103 @@ setup_request_digest_auth(svn_ra_serf__connection_t *conn,
 
       serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
       context->digest_nc++;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+validate_response_digest_auth(svn_ra_serf__handler_t *ctx,
+			      serf_request_t *request,
+			      serf_bucket_t *response,
+			      apr_pool_t *pool)
+{
+  svn_ra_serf__connection_t *conn = ctx->conn;
+  serf_digest_context_t *context = (serf_digest_context_t *)conn->auth_context;
+  char *kv, *key, *val;
+  char *auth_attr, *nextkv, *rspauth = NULL, *qop = NULL, *nc_str = NULL;
+  serf_bucket_t *hdrs;
+
+  hdrs = serf_bucket_response_get_headers(response);
+  auth_attr = (char*)serf_bucket_headers_get(hdrs, "Authentication-Info");
+
+  /* We're expecting a list of key=value pairs, separated by a comma. 
+     Ex. rspauth="8a4b8451084b082be6b105e2b7975087", 
+         cnonce="346531653132652d303033392d3435", nc=00000007,
+         qop=auth */
+  while ((kv = apr_strtok(auth_attr, ",", &nextkv)))
+    {
+      key = apr_strtok(kv, "=", &val);
+      /* skip leading spaces */
+      while (*key && *key == ' ') key++;
+      
+      if (strcmp(key, "rspauth") == 0)
+	{
+	  rspauth = apr_strtok(NULL, "=", &val);
+	  if (rspauth[0] == '\"')
+	    {
+	      apr_size_t str_len;
+              
+	      str_len = strlen(rspauth);
+	      if (rspauth[str_len - 1] == '\"')
+		{
+		  rspauth[str_len - 1] = '\0';
+		  rspauth++;
+		}
+	    }
+	}
+      if (strcmp(key, "qop") == 0)
+	{
+	  qop = apr_pstrdup(pool, val);
+	  if (qop[0] == '\"')
+	    {
+	      apr_size_t qop_len;
+              
+	      qop_len = strlen(qop);
+	      if (qop[qop_len - 1] == '\"')
+		{
+		  qop[qop_len - 1] = '\0';
+		  qop++;
+		}
+	    }
+	}
+      if (strcmp(key, "nc") == 0)
+	{
+	  nc_str = apr_pstrdup(pool, val);
+	  if (nc_str[0] == '\"')
+	    {
+	      apr_size_t nc_len;
+              
+	      nc_len = strlen(nc_str);
+	      if (nc_str[nc_len - 1] == '\"')
+		{
+		  nc_str[nc_len - 1] = '\0';
+		  nc_str++;
+		}
+	    }
+	}
+
+      auth_attr = NULL;
+    }
+
+  if (rspauth) 
+    {
+      char *ha2, *tmp, *resp_hdr_hex;
+      unsigned char resp_hdr[APR_MD5_DIGESTSIZE];
+
+      ha2 = build_digest_ha2(ctx->path, "", qop, pool);
+      tmp = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
+			 context->ha1, context->nonce, nc_str,
+			 context->cnonce, context->qop, ha2);
+      apr_md5(resp_hdr, tmp, strlen(tmp));
+      resp_hdr_hex =  hex_encode(resp_hdr, pool);
+
+      if (strcmp(rspauth, resp_hdr_hex) != 0)
+	{
+	  return svn_error_create
+	    (SVN_ERR_AUTHN_FAILED, NULL,
+	     _("Incorrect response-digest in Authentication-Info header."));
+	}
     }
 
   return SVN_NO_ERROR;
