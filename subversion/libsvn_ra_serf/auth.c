@@ -21,14 +21,14 @@
 #include <apr_base64.h>
 
 #include "ra_serf.h"
+#include "auth_digest.h"
 #include "win32_auth_sspi.h"
 #include "svn_private_config.h"
 
 /*** Forward declarations. ***/
 
 static svn_error_t *
-handle_basic_auth(svn_ra_serf__session_t *session,
-                  svn_ra_serf__connection_t *conn,
+handle_basic_auth(svn_ra_serf__handler_t *ctx,
                   serf_request_t *request,
                   serf_bucket_t *response,
                   char *auth_hdr,
@@ -42,11 +42,12 @@ init_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
+			 const char *method,
+			 const char *uri,
                          serf_bucket_t *hdrs_bkt);
 
 static svn_error_t *
-handle_proxy_basic_auth(svn_ra_serf__session_t *session,
-                        svn_ra_serf__connection_t *conn,
+handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
                         serf_bucket_t *response,
                         char *auth_hdr,
@@ -60,7 +61,18 @@ init_proxy_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
+			       const char *method,
+			       const char *uri,
                                serf_bucket_t *hdrs_bkt);
+
+static svn_error_t *
+default_auth_response_handler(svn_ra_serf__handler_t *ctx,
+			      serf_request_t *request,
+			      serf_bucket_t *response,
+			      apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
 
 /*** Global variables. ***/
 static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
@@ -70,6 +82,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_basic_connection,
     handle_basic_auth,
     setup_request_basic_auth,
+    default_auth_response_handler,
   },
   {
     407,
@@ -77,6 +90,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_proxy_basic_connection,
     handle_proxy_basic_auth,
     setup_request_proxy_basic_auth,
+    default_auth_response_handler,
   },
 #ifdef SVN_RA_SERF_SSPI_ENABLED
   {
@@ -85,6 +99,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_sspi_connection,
     handle_sspi_auth,
     setup_request_sspi_auth,
+    default_auth_response_handler,
   },
   {
     407,
@@ -92,8 +107,17 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     init_proxy_sspi_connection,
     handle_proxy_sspi_auth,
     setup_request_proxy_sspi_auth,
+    default_auth_response_handler,
   },
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
+  {
+    401,
+    "Digest",
+    init_digest_connection,
+    handle_digest_auth,
+    setup_request_digest_auth,
+    validate_response_digest_auth,
+  },
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 
@@ -129,28 +153,143 @@ svn_ra_serf__encode_auth_header(const char * protocol, char **header,
   apr_base64_encode(ptr, data, data_len);
 }
 
+/**
+ * Baton passed to the response header callback function
+ */
+typedef struct {
+  int code;
+  const char *header;
+  svn_ra_serf__handler_t *ctx;
+  serf_request_t *request;
+  serf_bucket_t *response;
+  svn_error_t *err;
+  apr_pool_t *pool;
+  const svn_ra_serf__auth_protocol_t *prot;
+  char *last_prot_name;
+} auth_baton_t;
+
+/**
+ * handle_auth_header is called for each header in the response. It filters
+ * out the Authenticate headers (WWW or Proxy depending on what's needed) and
+ * tries to find a matching protocol handler.
+ *
+ * Returns a non-0 value of a matching handler was found.
+ */
+static int
+handle_auth_header(void *baton,
+		   const char *key,
+		   const char *header)
+{
+  auth_baton_t *ab = (auth_baton_t *)baton;
+  svn_ra_serf__session_t *session = ab->ctx->session;
+  svn_ra_serf__connection_t *conn = ab->ctx->conn;
+  svn_boolean_t proto_found = FALSE;
+  char *auth_name = NULL, *auth_attr = NULL;
+  const char *auth_hdr = NULL;
+  const svn_ra_serf__auth_protocol_t *prot = NULL;
+
+  /* We're only interested in xxxx-Authenticate headers. */
+  if (ab->code == 401)
+    auth_hdr = "WWW-Authenticate";
+  else if (ab->code == 407)
+    auth_hdr = "Proxy-Authenticate";
+
+  if (strcmp(key, auth_hdr) != 0)
+    return 0;
+
+  auth_name = apr_strtok(header, " ", &auth_attr);
+  ab->last_prot_name = auth_name;
+
+  /* Find the matching authentication handler.
+     Note that we don't reuse the auth protocol stored in the session,
+     as that may have changed. (ex. fallback from ntlm to basic.) */
+  for (prot = serf_auth_protocols; prot->code != 0; ++prot)
+    {
+      if (ab->code == prot->code && strcasecmp(auth_name, prot->auth_name) == 0)
+	{
+	  svn_serf__auth_handler_func_t handler = prot->handle_func;
+	  svn_error_t *err = NULL;
+
+	  /* If this is the first time we use this protocol in this session,
+	     make sure to initialize the authentication part of the session
+	     first. */
+	  if (ab->code == 401 && session->auth_protocol != prot)
+	    {
+	      err = prot->init_conn_func(session, conn, session->pool);
+	      if (err == SVN_NO_ERROR)
+		session->auth_protocol = prot;
+	      else
+		session->auth_protocol = NULL;
+	    }
+	  else if (ab->code == 407 && session->proxy_auth_protocol != prot)
+	    {
+	      err = prot->init_conn_func(session, conn, session->pool);
+	      if (err == SVN_NO_ERROR)
+		session->proxy_auth_protocol = prot;
+	      else
+		session->proxy_auth_protocol = NULL;
+	    }
+
+	  if (err == SVN_NO_ERROR)
+	    {
+	      proto_found = TRUE;
+	      ab->prot = prot;
+	      err = handler(ab->ctx, ab->request, ab->response,
+			    header, auth_attr, session->pool);
+	    }
+	  if (err)
+	    {
+	      /* If authentication fails, cache the error for now. Try the
+		 next available scheme. If there's none raise the error. */
+	      proto_found = FALSE;
+	      prot = NULL;
+	      if (ab->err)
+		svn_error_clear(ab->err);
+	      ab->err = err;
+	    }
+
+	  break;
+	}
+    }
+
+  /* If a matching protocol handler was found, we can stop iterating 
+     over the response headers - so return a non-0 value. */
+  return proto_found;
+}
+
 
 /* Dispatch authentication handling based on server <-> proxy authentication
    and the list of allowed authentication schemes as passed back from the
    server or proxy in the Authentication headers. */
 svn_error_t *
 svn_ra_serf__handle_auth(int code,
-                         svn_ra_serf__session_t *session,
-                         svn_ra_serf__connection_t *conn,
+                         svn_ra_serf__handler_t *ctx,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool)
 {
+  svn_ra_serf__session_t *session = ctx->session;
   serf_bucket_t *hdrs;
-  const svn_ra_serf__auth_protocol_t *prot = NULL;
-  char *auth_name = NULL, *auth_attr, *auth_hdr=NULL, *header, *header_attr;
-  svn_error_t *cached_err = SVN_NO_ERROR;
+  auth_baton_t *ab;
+  char *auth_hdr = NULL;
+
+  ab = apr_pcalloc(pool, sizeof(*ab));
+  ab->code = code;
+  ab->request = request;
+  ab->response = response;
+  ab->ctx = ctx;
+  ab->err = SVN_NO_ERROR;
+  ab->pool = pool;
 
   hdrs = serf_bucket_response_get_headers(response);
+
   if (code == 401)
-    auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
+    ab->header = "WWW-Authenticate";
   else if (code == 407)
-    auth_hdr = (char*)serf_bucket_headers_get(hdrs, "Proxy-Authenticate");
+    ab->header = "Proxy-Authenticate";
+
+  /* Before iterating over all authn headers, check if there are any. */
+  auth_hdr = (char*)serf_bucket_headers_get(hdrs, ab->header);
 
   if (!auth_hdr)
     {
@@ -162,11 +301,14 @@ svn_ra_serf__handle_auth(int code,
         return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
     }
 
-  /* If multiple *-Authenticate headers are found, serf will combine them into
-     one header, with the values separated by a comma. */
-  header = apr_strtok(auth_hdr, ",", &header_attr);
+  /* Iterate over all headers. Try to find a matching authentication protocol
+     handler. */
+  serf_bucket_headers_do(hdrs,
+			 handle_auth_header,
+			 ab);                         
+  SVN_ERR(ab->err);
 
-  while (header)
+  if (!ab->prot || ab->prot->auth_name == NULL)
     {
       svn_boolean_t proto_found = FALSE;
       auth_name = apr_strtok(header, " ", &auth_attr);
@@ -237,15 +379,14 @@ svn_ra_serf__handle_auth(int code,
       /* Support more authentication mechanisms. */
       return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
                                "%s authentication not supported.\n"
-                               "Authentication failed", auth_name);
+                               "Authentication failed", ab->last_prot_name);
     }
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-handle_basic_auth(svn_ra_serf__session_t *session,
-                  svn_ra_serf__connection_t *conn,
+handle_basic_auth(svn_ra_serf__handler_t *ctx,
                   serf_request_t *request,
                   serf_bucket_t *response,
                   char *auth_hdr,
@@ -259,6 +400,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
   apr_size_t tmp_len;
   apr_port_t port;
   int i;
+  svn_ra_serf__session_t *session = ctx->session;
 
   if (!session->realm)
     {
@@ -372,6 +514,8 @@ init_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
+			 const char *method,
+			 const char *uri,
                          serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
@@ -384,8 +528,7 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
 }
 
 static svn_error_t *
-handle_proxy_basic_auth(svn_ra_serf__session_t *session,
-                        svn_ra_serf__connection_t *conn,
+handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
                         serf_bucket_t *response,
                         char *auth_hdr,
@@ -395,6 +538,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
   int i;
+  svn_ra_serf__session_t *session = ctx->session;
 
   tmp = apr_pstrcat(session->pool,
                     session->proxy_username, ":",
@@ -438,6 +582,8 @@ init_proxy_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
+			       const char *method,
+			       const char *uri,
                                serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */

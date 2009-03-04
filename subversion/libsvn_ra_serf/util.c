@@ -478,11 +478,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   /* Setup server authorization headers */
   if (conn->session->auth_protocol)
-    conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
+    conn->session->auth_protocol->setup_request_func(conn, method, url, 
+						     hdrs_bkt);
 
   /* Setup proxy authorization headers */
   if (conn->session->proxy_auth_protocol)
-    conn->session->proxy_auth_protocol->setup_request_func(conn, hdrs_bkt);
+    conn->session->proxy_auth_protocol->setup_request_func(conn, method, 
+							   url, hdrs_bkt);
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)
@@ -1156,6 +1158,32 @@ handle_response(serf_request_t *request,
         }
     }
 
+  /* Validate this response message. */
+  if (ctx->session->auth_protocol ||
+      ctx->session->proxy_auth_protocol)
+    {
+      svn_error_t *err;
+
+      if (ctx->session->auth_protocol)
+	{
+	  err = ctx->session->auth_protocol->validate_response_func(ctx, 
+		   request, response, pool);
+	}
+      else
+	{
+	  err = ctx->session->proxy_auth_protocol->validate_response_func(ctx, 
+		   request, response, pool);
+	}
+
+      if (err)
+	{
+	  svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+	  ctx->session->pending_error = err;
+	  status = ctx->session->pending_error->apr_err;
+	  goto cleanup;
+	}
+    }
+
   if (ctx->conn->last_status_code == 401 && sl.code < 400)
     {
       svn_auth_save_credentials(ctx->session->auth_state, ctx->session->pool);
@@ -1171,7 +1199,7 @@ handle_response(serf_request_t *request,
       /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
 
-      err = svn_ra_serf__handle_auth(sl.code, ctx->session, ctx->conn,
+      err = svn_ra_serf__handle_auth(sl.code, ctx,
                                      request, response, pool);
       if (err)
         {

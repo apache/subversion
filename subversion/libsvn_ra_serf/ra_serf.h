@@ -49,17 +49,10 @@
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
-#ifdef WIN32
-#define SVN_RA_SERF_SSPI_ENABLED
-#endif
-
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
-#ifdef SVN_RA_SERF_SSPI_ENABLED
-typedef struct serf_sspi_context_t serf_sspi_context_t;
-#endif
 
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
@@ -97,13 +90,11 @@ typedef struct {
 
   svn_ra_serf__session_t *session;
 
-#ifdef SVN_RA_SERF_SSPI_ENABLED
-  /* Optional SSPI context for this connection. */
-  serf_sspi_context_t *sspi_context;
+  /* Baton used to store connection specific authn/authz data */
+  void *auth_context;
 
-  /* Optional SSPI context for the proxy on this connection. */
-  serf_sspi_context_t *proxy_sspi_context;
-#endif
+  /* Baton used to store proxy specific authn/authz data */
+  void *proxy_auth_context;
 
   /* Current authorization header used for the proxy server; may be NULL */
   const char *proxy_auth_header;
@@ -1352,8 +1343,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
  * authentication challenge is received in a session.
  */
 typedef svn_error_t *
-(*svn_serf__auth_handler_func_t)(svn_ra_serf__session_t *session,
-                                 svn_ra_serf__connection_t *conn,
+(*svn_serf__auth_handler_func_t)(svn_ra_serf__handler_t *ctx,
                                  serf_request_t *request,
                                  serf_bucket_t *response,
                                  char *auth_hdr,
@@ -1378,7 +1368,20 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
-                                  serf_bucket_t *hdrs_bkt);
+				  const char *method,
+				  const char *uri,
+				  serf_bucket_t *hdrs_bkt);
+
+/**
+ * This function will be called when a response is received, so that the 
+ * protocol handler can validate the Authentication related response headers
+ * (if needed).
+ */
+typedef svn_error_t *
+(*svn_serf__validate_response_func_t)(svn_ra_serf__handler_t *ctx,
+				      serf_request_t *request,
+				      serf_bucket_t *response,
+				      apr_pool_t *pool);
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
@@ -1402,6 +1405,9 @@ struct svn_ra_serf__auth_protocol_t {
 
   /* Function to set up the authentication header of a request */
   svn_serf__setup_request_func_t setup_request_func;
+
+  /* Function to validate the authentication header of a response */
+  svn_serf__validate_response_func_t validate_response_func;
 };
 
 /**
@@ -1411,8 +1417,7 @@ struct svn_ra_serf__auth_protocol_t {
  */
 svn_error_t *
 svn_ra_serf__handle_auth(int code,
-                         svn_ra_serf__session_t *session,
-                         svn_ra_serf__connection_t *conn,
+                         svn_ra_serf__handler_t *ctx,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool);
