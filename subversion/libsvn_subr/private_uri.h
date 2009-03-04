@@ -15,7 +15,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_private_uri.h
+ * @file private_uri.h
  * @brief Header file for currently internal svn_uri_*() API
  *
  * ### These Functions will be added to the public API in 1.7
@@ -23,8 +23,8 @@
  *     this api has been removed from 1.6 to allow future redesign.
  */
 
-#ifndef SVN_PRIVATE_URI_H
-#define SVN_PRIVATE_URI_H
+#ifndef SVN_LIBSVN_SUBR_PRIVATE_URI_H
+#define SVN_LIBSVN_SUBR_PRIVATE_URI_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -146,4 +146,4 @@ svn_uri_is_ancestor(const char *path1,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_PRIVATE_URI_H */
+#endif /* SVN_LIBSVN_SUBR_PRIVATE_URI_H */
