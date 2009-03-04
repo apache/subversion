@@ -10,7 +10,8 @@ APR_UTIL=apr-util-1.3.4
 NEON=neon-0.28.3
 SERF=serf-0.3.0
 ZLIB=zlib-1.2.3
-SQLITE=sqlite-amalgamation-3.6.11
+SQLITE_VERSION=3.6.11
+SQLITE=sqlite-amalgamation-$SQLITE_VERSION
 
 HTTPD=httpd-2.2.11
 HTTPD_OOPS=
@@ -123,7 +124,7 @@ create_deps() {
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
-    mv $SQLITE sqlite-amalgamation
+    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
     tar jxvf $TEMPDIR/$APR.tar.bz2
     tar jxvf $TEMPDIR/$APR_UTIL.tar.bz2
     mv $APR apr
@@ -139,7 +140,7 @@ create_deps() {
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
-    mv $SQLITE sqlite-amalgamation
+    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
     if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
       unzip $TEMPDIR/$HTTPD-win32-src$HTTPD_OOPS.zip
       for i in apr apr-util apr-iconv; do
