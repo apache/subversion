@@ -319,7 +319,7 @@ svn_config__sys_config_path(const char **path_p,
 
   *path_p = NULL;
 
-  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+  /* Note that even if fname is null, svn_dirent_join_many will DTRT. */
 
 #ifdef WIN32
   {
@@ -331,7 +331,7 @@ svn_config__sys_config_path(const char **path_p,
 
 #else  /* ! WIN32 */
 
-  *path_p = svn_path_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+  *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
 #endif /* WIN32 */
 
@@ -1103,7 +1103,7 @@ svn_config_get_user_config_path(const char **path,
 {
   *path= NULL;
 
-  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+  /* Note that even if fname is null, svn_dirent_join_many will DTRT. */
 
   if (config_dir)
     {
@@ -1124,8 +1124,8 @@ svn_config_get_user_config_path(const char **path,
     const char *homedir = svn_user_get_homedir(pool);
     if (! homedir)
       return SVN_NO_ERROR;
-    *path = svn_path_join_many(pool,
-                               svn_path_canonicalize(homedir, pool),
+    *path = svn_dirent_join_many(pool,
+                               svn_dirent_canonicalize(homedir, pool),
                                SVN_CONFIG__USR_DIRECTORY, fname, NULL);
   }
 #endif /* WIN32 */
