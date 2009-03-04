@@ -1194,7 +1194,42 @@ svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
-  NOT_IMPLEMENTED();
+  apr_hash_t *sdbs = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
+
+  /* We may have sdbs shared between pdhs, so put them all in a hash to
+     collapse them, validating along the way. */
+  for (hi = apr_hash_first(scratch_pool, db->dir_data); hi;
+        hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_wc__db_pdh_t *pdh;
+      svn_wc__db_pdh_t *existing_pdh;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      pdh = val;
+
+      existing_pdh = apr_hash_get(sdbs, pdh->wcroot_abspath,
+                                  APR_HASH_KEY_STRING);
+      if (existing_pdh)
+        SVN_ERR_ASSERT(existing_pdh->sdb == pdh->sdb);
+
+      apr_hash_set(sdbs, pdh->wcroot_abspath, APR_HASH_KEY_STRING, pdh->sdb);
+    }
+
+  /* Now close all of the non-duplicate databases. */
+  for (hi = apr_hash_first(scratch_pool, sdbs); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_sqlite__db_t *sdb;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      sdb = val;
+
+      SVN_ERR(svn_sqlite__close(sdb));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

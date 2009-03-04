@@ -1297,6 +1297,14 @@ do_close(svn_wc_adm_access_t *adm_access,
                      || apr_hash_count(adm_access->shared->set) == 0);
     }
 
+  /* Close the underlying wc_db. */
+  if (adm_access->set_owner)
+    {
+      SVN_ERR_ASSERT(apr_hash_count(adm_access->shared->set) == 0);
+      if (adm_access->shared->db)
+        SVN_ERR(svn_wc__db_close(adm_access->shared->db, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
