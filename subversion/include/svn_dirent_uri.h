@@ -289,7 +289,13 @@ svn_boolean_t
 svn_uri_is_absolute(const char *uri);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
- * at hand. E.g. '/' on Posix or 'X:/', '//server/share' on Windows.
+ * at hand. 
+ * E.g.:
+ *  On Posix:   '/' 
+ *  On Windows: '/', 'X:/', '//server/share', 'X:'
+ *
+ * Note that on Windows '/' and 'X:' are roots, but paths starting with this
+ * root are not absolute.
  *
  * @since New in 1.5.
  */

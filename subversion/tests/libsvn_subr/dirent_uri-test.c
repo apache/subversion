@@ -51,15 +51,15 @@ test_dirent_is_root(const char **msg,
     const char *path;
     svn_boolean_t result;
   } tests[] = {
+    { "/",             TRUE  },
     { "/foo/bar",      FALSE },
     { "/foo",          FALSE },
     { "",              FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "/",             FALSE }, /* Is current drive relative */
     { "X:/foo",        FALSE },
     { "X:/",           TRUE },
     { "X:foo",         FALSE }, /* Based on non absolute root */
-    { "X:",            FALSE },
+    { "X:",            TRUE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", FALSE },
 #else /* WIN32 or Cygwin */
@@ -266,6 +266,7 @@ test_dirent_join(const char **msg,
     { "/abc", "/def", "/def" },
     { "/abc", "/d", "/d" },
     { "/abc", "/", "/" },
+    { "abc", "/def", "/def" },
     { SVN_EMPTY_PATH, "/", "/" },
     { "/", SVN_EMPTY_PATH, "/" },
     { SVN_EMPTY_PATH, "abc", "abc" },
@@ -291,6 +292,10 @@ test_dirent_join(const char **msg,
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
     { "//srv/shr/fld", "subfld",  "//srv/shr/fld/subfld" },
     { "//srv/shr/fld", "//srv/shr", "//srv/shr" },
+    { "aa", "/dir", "/dir"} ,
+    { "aa", "A:", "A:" },
+    { "aa", "A:file", "A:file"},
+    { "A:", "/", "A:/" },
 #else /* WIN32 or Cygwin */
     { "X:abc", "X:/def", "X:abc/X:/def" },
     { "X:","abc", "X:/abc" },
@@ -387,6 +392,10 @@ test_dirent_join(const char **msg,
   TEST_MANY((pool, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+
+  TEST_MANY((pool, "abcd", "/dir", "A:", "file", NULL), "A:file");
+  TEST_MANY((pool, "abcd", "A:", "/dir", "file", NULL), "A:/dir/file");
+  
 #else /* WIN32 or Cygwin */
   TEST_MANY((pool, "X:", "def", "ghi", NULL), "X:/def/ghi");
   TEST_MANY((pool, "X:", SVN_EMPTY_PATH, "ghi", NULL), "X:/ghi");
