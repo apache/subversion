@@ -1473,7 +1473,7 @@ log_do_upgrade_format(struct log_runner *loggy,
                             _("Invalid 'format' attribute"));
 
   /* Remove the .svn/format file, if it exists. */
-  SVN_ERR(svn_io_remove_file(path, loggy->pool));
+  svn_error_clear(svn_io_remove_file(path, loggy->pool));
 
   /* The nice thing is that, just by setting this flag, the entries file will
      be rewritten in the desired format. */
