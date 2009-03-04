@@ -877,11 +877,18 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 
   /* The Dest URI must be absolute.  Bummer. */
   uri = dir->commit->session->repos_url;
-  uri.path =
-      (char*)svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
-                                         svn_uri_basename(dir->name, pool),
-                                         pool);
 
+  if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
+    {
+      uri.path = dir->url;
+    }
+  else
+    {
+      uri.path = (char *)svn_path_url_add_component2(
+        dir->parent_dir->checkout->resource_url,
+        svn_uri_basename(dir->name, pool),
+        pool);
+    }
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
