@@ -1604,7 +1604,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
        * For switch, only the path in repository will differ, because
        * a cross-repository switch is not possible. */
       repos_url = entry->repos;
-      path_in_repos = svn_path_is_child(repos_url, entry->url, pool);
+      path_in_repos = svn_uri_is_child(repos_url, entry->url, pool);
       if (path_in_repos == NULL)
         path_in_repos = "/";
 
@@ -1624,7 +1624,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       if (eb->switch_url != NULL)
         {
           if (their_url != NULL)
-            path_in_repos = svn_path_is_child(repos_url, their_url, pool);
+            path_in_repos = svn_uri_is_child(repos_url, their_url, pool);
           else
             {
               /* The complete source-right URL is not available, but it
@@ -1633,8 +1633,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
                * ### TODO: Construct a proper THEIR_URL in some of the
                * delete cases that still pass NULL for THEIR_URL when
                * calling this function. Do that on the caller's side. */
-              path_in_repos = svn_path_is_child(repos_url, eb->switch_url,
-                                                pool);
+              path_in_repos = svn_uri_is_child(repos_url, eb->switch_url,
+                                               pool);
               path_in_repos = apr_pstrcat(
                                 pool, path_in_repos,
                                 "_THIS_IS_INCOMPLETE",
@@ -3046,7 +3046,7 @@ locate_copyfrom(const char *copyfrom_path,
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
      the absolute FS path represented by dest_dir. */
-  dest_fs_path = svn_path_is_child(dest_entry->repos, dest_entry->url, pool);
+  dest_fs_path = svn_uri_is_child(dest_entry->repos, dest_entry->url, pool);
   if (! dest_fs_path)
     {
       if (strcmp(dest_entry->repos, dest_entry->url) == 0)

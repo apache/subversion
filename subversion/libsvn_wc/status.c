@@ -656,7 +656,7 @@ is_external_path(apr_hash_t *externals,
     {
       const void *key;
       apr_hash_this(hi, &key, NULL, NULL);
-      if (svn_path_is_child(path, key, pool))
+      if (svn_dirent_is_child(path, key, NULL))
         return TRUE;
     }
 

@@ -1970,7 +1970,7 @@ loggy_path(const char *path,
            svn_wc_adm_access_t *adm_access)
 {
   const char *adm_path = svn_wc_adm_access_path(adm_access);
-  const char *local_path = svn_path_is_child(adm_path, path, NULL);
+  const char *local_path = svn_dirent_is_child(adm_path, path, NULL);
 
   if (! local_path && strcmp(path, adm_path) == 0)
     local_path = SVN_WC_ENTRY_THIS_DIR;

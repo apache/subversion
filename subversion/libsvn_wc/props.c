@@ -330,7 +330,7 @@ install_props_file(svn_stringbuf_t **log_accum,
   const char *propfile_path;
   const char *propfile_tmp_path;
 
-  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     node_kind = svn_node_dir;
   else
     node_kind = svn_node_file;
@@ -366,7 +366,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   apr_array_header_t *prop_diffs;
   svn_node_kind_t kind;
 
-  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     kind = svn_node_dir;
   else
     kind = svn_node_file;
@@ -722,8 +722,8 @@ svn_wc__props_delete(const char *path,
 
       /* If PATH is a directory, then FILENAME will be NULL.
          If PATH is a file, then FILENAME will be the BASE_NAME of PATH. */
-      filename = svn_path_is_child(svn_wc_adm_access_path(path_access),
-                                   path, NULL);
+      filename = svn_dirent_is_child(svn_wc_adm_access_path(path_access),
+                                     path, NULL);
       if (! filename)
         {
           /* There is no point in reading the props just to determine if we
@@ -1763,7 +1763,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
 
-  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     is_dir = TRUE;
   else
     is_dir = FALSE;
@@ -1922,8 +1922,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       {
         svn_wc_entry_t entry;
 
-        entry.prejfile = svn_path_is_child(svn_wc_adm_access_path(adm_access),
-                                           reject_path, NULL);
+        entry.prejfile = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
+                                             reject_path, NULL);
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
                                            adm_access,
                                            path,

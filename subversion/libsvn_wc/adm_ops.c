@@ -719,7 +719,7 @@ have_recursive_parent(apr_array_header_t *queue,
         continue;
 
       qi = APR_ARRAY_IDX(queue, i, committed_queue_item_t *);
-      if (qi->recurse && svn_path_is_child(qi->path, path, pool))
+      if (qi->recurse && svn_dirent_is_child(qi->path, path, NULL))
         return TRUE;
     }
 
