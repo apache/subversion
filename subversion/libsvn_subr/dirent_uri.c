@@ -754,7 +754,8 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
 #if defined(WIN32) || defined(__CYGWIN__)
   /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)
      are also root directories */
-  if ((len == 3) && (dirent[1] == ':') && (dirent[2] == '/') &&
+  if ((len == 2 || ((len == 3) && (dirent[2] == '/'))) && 
+      (dirent[1] == ':') &&
       ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
        (dirent[0] >= 'a' && dirent[0] <= 'z')))
     return TRUE;
@@ -781,11 +782,11 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
       return (segments == 1); /* //drive is invalid on plain Windows */
 #endif
     }
-#else
+#endif
+
   /* directory is root if it's equal to '/' */
   if (len == 1 && dirent[0] == '/')
     return TRUE;
-#endif /* WIN32 or Cygwin */
 
   return FALSE;
 }
@@ -850,6 +851,8 @@ char *svn_dirent_join(const char *base,
       else
         return apr_pmemdup(pool, component, clen + 1);
     }
+  else if (dirent_is_rooted(component))
+    return apr_pmemdup(pool, component, clen + 1);
 #endif
 
   /* if last character of base is already a separator, don't add a '/' */
@@ -923,7 +926,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
           base_arg = nargs;
 
 #if defined(WIN32) || defined(__CYGWIN__)
-          if (!svn_dirent_is_root(s, len)) /* Handle non absolute roots */
+          if (!svn_dirent_is_absolute(s)) /* Handle non absolute roots */
             {
               /* Set new base and skip the current argument */
               base = s = svn_dirent_join(base, s, pool);
