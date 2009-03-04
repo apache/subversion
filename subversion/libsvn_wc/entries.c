@@ -1030,20 +1030,37 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
           if (base_shadowed)
             {
-              entry->schedule = svn_wc_schedule_replace;
+              svn_wc__db_status_t base_status;
 
               /* ### mystery: make the rev same as BASE. */
-              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL,
+              SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
                                                &entry->revision,
                                                NULL, NULL, NULL,
                                                NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
                                                db, entry_abspath,
                                                iterpool, iterpool));
+
+              if (base_status == svn_wc__db_status_not_present)
+                {
+                  /* ### the underlying node is DELETED in this revision.  */
+                  entry->deleted = TRUE;
+
+                  /* This is an add since there isn't a node to replace.  */
+                  entry->schedule = svn_wc_schedule_add;
+                }
+              else
+                entry->schedule = svn_wc_schedule_replace;
             }
           else
             {
-              entry->schedule = svn_wc_schedule_add;
+              /* ### when we're reading a directory that is not present,
+                 ### then it must be "normal" rather than "add".  */
+              if (*entry->name == '\0'
+                  && status == svn_wc__db_status_obstructed_add)
+                entry->schedule = svn_wc_schedule_normal;
+              else
+                entry->schedule = svn_wc_schedule_add;
 
               /* ### if this looks like a plain old add, then rev=0.  */
               if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
@@ -1087,7 +1104,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
         }
       else if (status == svn_wc__db_status_not_present)
         {
-          entry->schedule = svn_wc_schedule_delete;
+          /* ### buh. 'deleted' nodes are actually supposed to be
+             ### schedule "normal" since we aren't going to actually *do*
+             ### anything to this node at commit time.  */
+          entry->schedule = svn_wc_schedule_normal;
           entry->deleted = TRUE;
         }
       else if (status == svn_wc__db_status_obstructed)
@@ -1570,6 +1590,13 @@ write_entry(svn_sqlite__db_t *wc_db,
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
         base_node = MAYBE_ALLOC(base_node, scratch_pool);
         break;
+    }
+
+  /* Something deleted in this revision means there should always be a
+     BASE node to indicate the not-present node.  */
+  if (entry->deleted)
+    {
+      base_node = MAYBE_ALLOC(base_node, scratch_pool);
     }
 
   if (entry->copied)
