@@ -249,43 +249,8 @@ svn_wc__db_version(int *version,
                    apr_pool_t *scratch_pool);
                    
 
-/* ### the transaction stuff is not final. gstein thinks, "toss" */
-
 /**
- * Start a transaction for the database(s) which are part of @a db.
- *
- * Temporary allocations will be made in SCRATCH_POOL.
- */
-svn_error_t *
-svn_wc__db_txn_begin(svn_wc__db_t *db,
-                     apr_pool_t *scratch_pool);
-
-
-/**
- * Rollback any changes to @a db which have happened since the last
- * call to svn_wc__db_txn_begin().  If a transaction is not currently in
- * progress, nothing occurs.
- *
- * Temporary allocations will be made in SCRATCH_POOL.
- */
-svn_error_t *
-svn_wc__db_txn_rollback(svn_wc__db_t *db,
-                        apr_pool_t *scratch_pool);
-
-
-/**
- * Commit the currently active transaction for @a db.  If a transaction is not
- * currently in progress, nothing occurs.
- *
- * Temporary allocations will be made in SCRATCH_POOL.
- */
-svn_error_t *
-svn_wc__db_txn_commit(svn_wc__db_t *db,
-                      apr_pool_t *scratch_pool);
-
-
-/**
- * Close @a db, and rollback any pending transaction associated with it.
+ * Close @a db.
  *
  * Temporary allocations will be made in SCRATCH_POOL.
  */
