@@ -233,8 +233,8 @@ PHASE 1 IN DETAIL
        working resources (!svn/wrk).
 
      - When modifying transaction resources, clients should send
-       'If-match:' headers (whose value carries the base revision) to
-       facilitate server-side out-of-dateness checks.
+       'X-SVN-Version-Name:' headers (whose value carries the base
+       revision) to facilitate server-side out-of-dateness checks.
 
 
 TODO
@@ -265,15 +265,17 @@ TODO
    returning a transaction URI stub and transaction prop URI stub for
    further use in the commit.  [DONE]
 
- * Teach mod_dav_svn to notice and use 'If-match' headers in write
-   requests aimed at transaction root resources.
+ * Teach mod_dav_svn to notice and use X-SVN-Version-Name headers in
+   write requests aimed at transaction root resources for
+   out-of-dateness checks.  This maps conceptually to the
+   'base_revision' svn_delta_editor_t concept.  (Note that some write
+   requests, such as COPY and MOVE, map to editor functionality that
+   doesn't carry a base_revision concept.)
 
-      PROPPATCH
-      DELETE
-      PUT
+      PROPPATCH  [DONE]
+      DELETE     [DONE]
+      PUT        [DONE]
       MKCOL
-      COPY
-      MOVE
       ...
       
  * Teach ra_serf operations to not do the multi-PROPFIND dance any
@@ -317,11 +319,12 @@ TODO
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
 
-    - use POST to 'me' resource to get txn name          [DONE]
-    - set revprops using PROPPATCH on the txn resource   [DONE]
-    - abort edit with DELETE against the txn resource    [DONE]
-    - send write requests against txn and txn root URLs  [STARTED]
-    - enable pipelined PUTs                              [OUT-OF-SCOPE]
+    - use POST to 'me' resource to get txn name           [DONE]
+    - set revprops using PROPPATCH on the txn resource    [DONE]
+    - abort edit with DELETE against the txn resource     [BUG: dav_validate_request() is preventing call to delete_resource()]
+    - send write requests against txn and txn root URLs   [STARTED]
+    - send X-SVN-Version-Name for out-of-dateness checks  [STARTED]
+    - enable pipelined PUTs                               [OUT-OF-SCOPE]
 
  * Optional:  Do some of this stuff for ra_neon, too:
 
