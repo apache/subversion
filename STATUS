@@ -77,6 +77,13 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Fix a small problem in the loggy upgrade process. Some v10 working copies
     have .svn/format, and some don't. The *intent* is to remove the file if
     present, so make the code match.
+    Justification:
+     If change-svn-wc-format.py is used to downgrade a working copy
+     from 1.6 to 1.5 format, the script does not add the format file,
+     rendering 1.6 clients unable to update the working copy again:
+     "svn: Can't remove file '.svn/format': No such file or directory"
+     Since the presence of that file has been deprecated for ages,
+     let's just apply this easy fix to 1.6 instead of tweaking the script.
     Votes:
       +1: rhuijben, stsp
 
