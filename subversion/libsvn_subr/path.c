@@ -86,10 +86,14 @@ is_canonical(const char *path,
   return (! SVN_PATH_IS_PLATFORM_EMPTY(path, len)
           && strstr(path, "/./") == NULL
           && (len == 0
-              || svn_dirent_is_root(path, len)
+              || (len == 1 && path[0] == '/')
               /* The len > 0 check is redundant, but here to make
                * sure we never ever end up indexing with -1. */
-              || (len > 0 && path[len-1] != '/')));
+              || (len > 0 && path[len-1] != '/')
+#if defined(WIN32) || defined(__CYGWIN__)
+              || svn_dirent_is_root(path, len)
+#endif
+              ));
 }
 #endif
 
