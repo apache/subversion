@@ -1465,8 +1465,11 @@ test_dirent_is_child(const char **msg,
 #endif /* Win32 and Cygwin */
     };
 
+  /* Maximum number of path[] items for all platforms */
+#define MAX_PATHS 32
+
   static const char * const
-    remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
+    remainders[COUNT_OF(paths)][MAX_PATHS] = {
     { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
