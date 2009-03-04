@@ -22,6 +22,18 @@ Candidate changes:
       See discussion starting in http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1255935
       For 1.6 these functions are only used by the testset.
       (Issue #2028 is in progress for 1.7)
+    Notes:
+      stsp: I looked at this, and it seems fine, and I'm inclined to vote
+            +1 on this, but there seems to be some inconsistency WRT the
+            name of the private header file "libsvn_subr/private_uri.h"
+            the svn_uri_* functions have been moved to.
+            The file itself mentions "svn_private_uri", e.g.
+            it contains this line:
+              * @file svn_private_uri.h
+            Its circular-inclusion-prevention #define is also called
+            "SVN_PRIVATE_URI_H". So either that file should be moved
+            to "subversion/include/private/svn_private_uri.h",
+            or the "svn_" prefixes inside the file should be dropped.
     Votes:
       +1: rhuijben, gstein
  
@@ -66,7 +78,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Justification:
       UMRs are undefined behaviour
     Votes:
-      +1: philip, rhuijben
+      +1: philip, rhuijben, stsp
       +1: gstein (for a new CODE tarball, not a doc tarball)
       
   * r36302
@@ -111,8 +123,10 @@ Candidate changes:
      The bug is only triggered when using an external merge tool with the
      --accept=launch option. I don't think we need to hold 1.6.0 on this.
    Votes:
-     +1: stsp
      -0: rhuijben (Looks like a feature enhancement for a patch release)
+     +1: stsp (I'd say it's a fix for a feature we already support (merge
+               under control of external non-interactive tool), albeit
+               the feature is currently so buggy that you can't use it.)
 
  * r36256
    Fix potentially awful performance of --ignore-ancestry merges.
