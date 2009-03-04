@@ -86,6 +86,15 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
                   uses a script which I conceptually disagree with)
       +1: gstein (for 1.6.1)
 
+  * r36213
+    Trivial help output fix.
+    Justification:
+      Errors in documentation are bad, obvious fix.
+    Notes:
+      Already merged to 1.6.x by Arfrever in r36214, but reverted
+      in 36322 because it was not formally voted on.
+    Votes:
+      +1: stsp
 
 Status of 1.6.1:
 ================
