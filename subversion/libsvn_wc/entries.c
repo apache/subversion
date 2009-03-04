@@ -1704,9 +1704,9 @@ write_entry(svn_sqlite__db_t *wc_db,
           /* repos_relpath is NOT a URI. decode as appropriate.  */
           if (entry->url != NULL)
             {
-              const char *relative_url = svn_path_is_child(repos_root,
-                                                           entry->url,
-                                                           scratch_pool);
+              const char *relative_url = svn_uri_is_child(repos_root,
+                                                          entry->url,
+                                                          scratch_pool);
 
               if (relative_url == NULL)
                 base_node->repos_relpath = "";
@@ -1716,9 +1716,9 @@ write_entry(svn_sqlite__db_t *wc_db,
             }
           else
             {
-              const char *base_path = svn_path_is_child(repos_root,
-                                                        this_dir->url,
-                                                        scratch_pool);
+              const char *base_path = svn_uri_is_child(repos_root,
+                                                       this_dir->url,
+                                                       scratch_pool);
               if (base_path == NULL)
                 base_node->repos_relpath = entry->name;
               else

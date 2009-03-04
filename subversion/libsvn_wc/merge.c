@@ -630,7 +630,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
      relative to the adm_access path they are executed in.
 
      Make our LEFT and RIGHT files 'local' if they aren't... */
-  if (! svn_path_is_child(adm_path, left, pool))
+  if (! svn_dirent_is_child(adm_path, left, NULL))
     {
       SVN_ERR(svn_wc_create_tmp_file2
               (NULL, &tmp_left,
@@ -640,7 +640,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   else
     tmp_left = left;
 
-  if (! svn_path_is_child(adm_path, right, pool))
+  if (! svn_dirent_is_child(adm_path, right, NULL))
     {
       SVN_ERR(svn_wc_create_tmp_file2
               (NULL, &tmp_right,
@@ -688,9 +688,9 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
            target_copy, detranslated_target_copy, merge_target, pool));
 
   tmp_entry.conflict_old
-    = svn_path_is_child(adm_path, left_copy, pool);
+    = svn_dirent_is_child(adm_path, left_copy, pool);
   tmp_entry.conflict_new
-    = svn_path_is_child(adm_path, right_copy, pool);
+    = svn_dirent_is_child(adm_path, right_copy, pool);
   tmp_entry.conflict_wrk = target_base;
 
   /* Mark merge_target's entry as "Conflicted", and start tracking
@@ -1124,8 +1124,8 @@ merge_binary_file(const char *left,
                                  detranslated_target,
                                  mine_copy,
                                  pool));
-      mine_copy = svn_path_is_child(svn_wc_adm_access_path(adm_access),
-                                    mine_copy, pool);
+      mine_copy = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
+                                      mine_copy, pool);
       tmp_entry.conflict_wrk = mine_copy;
     }
   else
