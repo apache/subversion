@@ -56,7 +56,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Votes:
       +1: philip, rhuijben
 
-  * <needs-branch>
+  * ^/branches/1.6.x-no-svn_uri
     Remove all svn_uri_*() functions in svn_dirent_uri.h from our public 1.6,
     api to allow redefining and renaming these functions for 1.7.
     Justification:
@@ -71,7 +71,14 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Justification:
       Fixes build error seen on Solaris.
     Votes:
-      +1: stsp
+      +1: stsp, rhuijben
+      
+  * 36302
+    Fix a small problem in the loggy upgrade process. Some v10 working copies
+    have .svn/format, and some don't. The *intent* is to remove the file if
+    present, so make the code match.
+    Votes:
+      +1: rhuijben
 
 Status of 1.6.1:
 ================
