@@ -729,7 +729,9 @@ close_apr(void *data)
   int result;
   int i;
 
-  SVN_ERR_ASSERT_NO_RETURN(db->db3 != NULL);
+  /* Check to see if we've already closed this database. */
+  if (db->db3 == NULL)
+    return APR_SUCCESS;
 
   /* Finalize any existing prepared statements. */
   for (i = 0; i < db->nbr_statements; i++)
