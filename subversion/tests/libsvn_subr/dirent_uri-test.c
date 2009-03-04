@@ -55,13 +55,15 @@ test_dirent_is_root(const char **msg,
     { "/foo",          FALSE },
     { "",              FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
+    { "/",             FALSE }, /* Is current drive relative */
     { "X:/foo",        FALSE },
     { "X:/",           TRUE },
-    { "X:foo",         FALSE },
-    { "X:",            TRUE },
+    { "X:foo",         FALSE }, /* Based on non absolute root */
+    { "X:",            FALSE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", FALSE },
 #else /* WIN32 or Cygwin */
+    { "/",             TRUE },
     { "/X:foo",        FALSE },
     { "/X:",           FALSE },
 #endif /* non-WIN32 */
@@ -151,25 +153,28 @@ test_dirent_is_absolute(const char **msg,
   struct {
     const char *path;
     svn_boolean_t result;
-  } tests[] = {
-    { "/foo/bar",      TRUE },
-    { "/foo",          TRUE },
-    { "/",             TRUE },
+  } tests[] = {    
     { "foo/bar",       FALSE },
     { "foo",           FALSE },
     { "",              FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
+    { "/foo/bar",      FALSE },
+    { "/foo",          FALSE },
+    { "/",             FALSE },
     { "X:/foo",        TRUE },
     { "X:/",           TRUE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", TRUE },
 #else/* WIN32 or Cygwin */
+    { "/foo/bar",      TRUE },
+    { "/foo",          TRUE },
+    { "/",             TRUE },
     { "X:/foo",        FALSE },
     { "X:/",           FALSE },
-    { "X:foo",         FALSE },
+#endif /* non-WIN32 */
+    { "X:foo",         FALSE }, /* Not special on Posix, relative on Windows */
     { "X:foo/bar",     FALSE },
     { "X:",            FALSE },
-#endif /* non-WIN32 */
   };
 
   *msg = "test svn_dirent_is_absolute";
@@ -267,19 +272,20 @@ test_dirent_join(const char **msg,
     { "abc", SVN_EMPTY_PATH, "abc" },
     { SVN_EMPTY_PATH, "/abc", "/abc" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+    { "/", "/", "/" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "X:/",SVN_EMPTY_PATH, "X:/" },
-    { "X:/","abc", "X:/abc" },
-    { "X:/", "/def", "/def" },
-    { "X:/abc", "/d", "/d" },
-    { "X:/abc", "/", "/" },
+    { "X:/", SVN_EMPTY_PATH, "X:/" },
+    { "X:/", "abc", "X:/abc" },
+    { "X:/", "/def", "X:/def" },
+    { "X:/abc", "/d", "X:/d" },
+    { "X:/abc", "/", "X:/" },
     { "X:/abc", "X:/", "X:/" },
     { "X:/abc", "X:/def", "X:/def" },
-    { "X:",SVN_EMPTY_PATH, "X:" },
-    { "X:","abc", "X:abc" },
-    { "X:", "/def", "/def" },
-    { "X:abc", "/d", "/d" },
-    { "X:abc", "/", "/" },
+    { "X:", SVN_EMPTY_PATH, "X:" },
+    { "X:", "abc", "X:abc" },
+    { "X:", "/def", "X:/def" },
+    { "X:abc", "/d", "X:/d" },
+    { "X:abc", "/", "X:/" },
     { "X:abc", "X:/", "X:/" },
     { "X:abc", "X:/def", "X:/def" },
     { "//srv/shr",     "fld",     "//srv/shr/fld" },

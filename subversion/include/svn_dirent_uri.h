@@ -102,9 +102,7 @@ svn_uri_local_style(const char *uri,
  * empty string is returned.
  *
  * If the @a component is an absolute dirent, then it is copied and returned.
- * Exactly one slash character ('/') is used to join the components,
- * accounting for any trailing slash in @a base, except on Windows when
- * @a base is "X:".
+ * The platform specific rules for joining paths are used to join the components.
  *
  * This function is NOT appropriate for native (local) file
  * dirents. Only for "internal" canonicalized dirents, since it uses '/'
@@ -174,7 +172,7 @@ svn_dirent_basename(const char *dirent,
 /** Get the dirname of the specified canonicalized @a dirent, defined as
  * the dirent with its basename removed.
  *
- * If @a dirent is root  ("/", "X:/", "//server/share/"), it is returned
+ * If @a dirent is root  ("/", "X:/", "//server/share/") or "", it is returned
  * unchanged.
  *
  * The returned dirname will be allocated in @a pool.
@@ -275,8 +273,8 @@ svn_uri_dirname(const char *dirent,
 
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
- * hand, amongst which '/foo' on all platforms or 'X:/foo',
- * '//server/share/foo' on Windows.
+ * hand. E.g. '/foo' on Posix platforms or 'X:/foo', '//server/share/foo'
+ * on Windows.
  *
  * @since New in 1.6.
  */
@@ -291,8 +289,7 @@ svn_boolean_t
 svn_uri_is_absolute(const char *uri);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '//server/share'
- * on Windows.
+ * at hand. E.g. '/' on Posix or 'X:/', '//server/share' on Windows.
  *
  * @since New in 1.5.
  */

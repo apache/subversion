@@ -140,6 +140,44 @@ canonicalize_to_upper(char c)
 }
 #endif
 
+/* Calculates the length of the dirent absolute or non absolute root in 
+   DIRENT, return 0 if dirent is not rooted  */
+static apr_size_t
+dirent_root_length(const char *dirent, apr_size_t len)
+{
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (len >= 2 && dirent[1] == ':' &&
+      ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
+       (dirent[0] >= 'a' && dirent[0] <= 'z')))
+    {
+      return (len > 2 && dirent[2] == '/') ? 3 : 2;
+    }
+
+  if (len > 2 && dirent[0] == '/' && dirent[1] == '/')
+    {
+      apr_size_t i = 2;
+
+      while (i < len && dirent[i] != '/')
+        i++;
+
+      if (i == len)
+        return len; /* Cygwin drive alias, invalid path on WIN32 */
+
+      i++; /* Skip '/' */
+
+      while (i < len && dirent[i] != '/')
+        i++;
+
+      return i;
+    }
+#endif
+  if (len >= 1 && dirent[0] == '/')
+    return 1;
+  
+  return 0;
+}
+
+
 /* Return the length of substring necessary to encompass the entire
  * previous dirent segment in DIRENT, which should be a LEN byte string.
  *
@@ -163,7 +201,7 @@ dirent_previous_segment(const char *dirent,
     --len;
 
   /* check if the remaining segment including trailing '/' is a root dirent */
-  if (svn_dirent_is_root(dirent, len + 1))
+  if (dirent_root_length(dirent, len+1) == len + 1)
     return len + 1;
   else
     return len;
@@ -199,6 +237,30 @@ uri_schema_root_length(const char *uri, apr_size_t len)
     }
 
   return 0;
+}
+
+/* Returns TRUE if svn_dirent_is_absolute(dirent) or when dirent has
+   a non absolute root. (E.g. '/' or 'F:' on Windows) */
+static svn_boolean_t
+dirent_is_rooted(const char *dirent)
+{
+  if (! dirent)
+    return FALSE;
+
+  /* Root on all systems */
+  if (dirent[0] == '/')
+    return TRUE;
+
+  /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/'
+     where 'H' is any letter. */
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
+       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
+      (dirent[1] == ':'))
+     return TRUE;
+#endif /* WIN32 or Cygwin */
+
+  return FALSE;
 }
 
 /* Return the length of substring necessary to encompass the entire
@@ -557,7 +619,7 @@ is_child(path_type_t type, const char *path1, const char *path2,
 
       /* check if this is an absolute path */
       if ((type == type_uri && svn_uri_is_absolute(path2)) ||
-          (type == type_dirent && svn_dirent_is_absolute(path2)))
+          (type == type_dirent && dirent_is_rooted(path2)))
         return NULL;
       else
         /* everything else is child */
@@ -637,7 +699,7 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
   if (SVN_PATH_IS_EMPTY(path1))
     {
       return type == type_uri ? ! svn_uri_is_absolute(path2)
-                              : ! svn_dirent_is_absolute(path2);
+                              : ! dirent_is_rooted(path2);
     }
 
   /* If path1 is a prefix of path2, then:
@@ -689,22 +751,16 @@ svn_uri_local_style(const char *uri, apr_pool_t *pool)
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len)
 {
-  /* directory is root if it's equal to '/' */
-  if (len == 1 && dirent[0] == '/')
-    return TRUE;
-
 #if defined(WIN32) || defined(__CYGWIN__)
   /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)
      are also root directories */
-  if ((len == 2 || len == 3) &&
-      (dirent[1] == ':') &&
+  if ((len == 3) && (dirent[1] == ':') && (dirent[2] == '/') &&
       ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
-       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
-      (len == 2 || (dirent[2] == '/' && len == 3)))
+       (dirent[0] >= 'a' && dirent[0] <= 'z')))
     return TRUE;
 
-  /* On Windows and Cygwin, both //drive and //server/share are root
-     directories */
+  /* On Windows and Cygwin //server/share is a root directory,
+     and on Cygwin //drive is a drive alias */
   if (len >= 2 && dirent[0] == '/' && dirent[1] == '/'
       && dirent[len - 1] != '/')
     {
@@ -719,8 +775,16 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
                 return FALSE;
             }
         }
+#ifdef __CYGWIN__
       return (segments <= 1);
+#else
+      return (segments == 1); /* //drive is invalid on plain Windows */
+#endif
     }
+#else
+  /* directory is root if it's equal to '/' */
+  if (len == 1 && dirent[0] == '/')
+    return TRUE;
 #endif /* WIN32 or Cygwin */
 
   return FALSE;
@@ -759,6 +823,34 @@ char *svn_dirent_join(const char *base,
     return apr_pmemdup(pool, component, clen + 1);
   if (SVN_PATH_IS_EMPTY(component))
     return apr_pmemdup(pool, base, blen + 1);
+
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (component[0] == '/')
+    {
+      /* '/' is drive relative on Windows, not absolute like on Posix */
+      if (dirent_is_rooted(base))
+        {
+          /* Join component without '/' to root-of(base) */
+          blen = dirent_root_length(base, blen);
+          component++;
+          clen--;
+
+          if (blen == 2 && base[1] == ':') /* "C:" case */
+            {
+              char *root = apr_pmemdup(pool, base, 3);
+              root[2] = '/'; /* We don't need the final '\0' */
+
+              base = root;
+              blen = 3;
+            }
+
+          if (clen == 0)
+            return apr_pstrndup(pool, base, blen);
+        }
+      else
+        return apr_pmemdup(pool, component, clen + 1);
+    }
+#endif
 
   /* if last character of base is already a separator, don't add a '/' */
   add_separator = 1;
@@ -825,21 +917,35 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (svn_dirent_is_absolute(s))
+      if (dirent_is_rooted(s))
         {
-          /* an absolute dirent. skip all components to this point and reset
-             the total length. */
           total_len = len;
           base_arg = nargs;
+
+#if defined(WIN32) || defined(__CYGWIN__)
+          if (!svn_dirent_is_root(s, len)) /* Handle non absolute roots */
+            {
+              /* Set new base and skip the current argument */
+              base = s = svn_dirent_join(base, s, pool);
+              base_arg++;
+              saved_lengths[0] = total_len = len = strlen(s);
+            }
+          else
+#endif
+            {
+              base = ""; /* Don't add base */
+              saved_lengths[0] = 0;
+            }  
+
           add_separator = 1;
           if (s[len - 1] == '/'
-        #if defined(WIN32) || defined(__CYGWIN__)
-               || s[len - 1] == ':'
-        #endif /* WIN32 or Cygwin */
-                )
-                  add_separator = 0;
+#if defined(WIN32) || defined(__CYGWIN__)
+             || s[len - 1] == ':'
+#endif /* WIN32 or Cygwin */
+              )
+             add_separator = 0;
         }
-      else if (nargs == base_arg + 1)
+      else if (nargs <= base_arg + 1)
         {
           total_len += add_separator + len;
         }
@@ -860,12 +966,9 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
   /* if we aren't supposed to skip forward to an absolute component, and if
      this is not an empty base that we are skipping, then copy the base
      into the output. */
-  if (base_arg == 0 && ! (SVN_PATH_IS_EMPTY(base)))
+  if (! SVN_PATH_IS_EMPTY(base))
     {
-      if (SVN_PATH_IS_EMPTY(base))
-        memcpy(p, SVN_EMPTY_PATH, len = saved_lengths[0]);
-      else
-        memcpy(p, base, len = saved_lengths[0]);
+      memcpy(p, base, len = saved_lengths[0]);
       p += len;
     }
 
@@ -889,7 +992,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
          if the prior character is a slash (occurs when prior component
          is "/"). */
       if (p != dirent &&
-          ( ! (nargs - 1 == base_arg) || add_separator))
+          ( ! (nargs - 1 <= base_arg) || add_separator))
         *p++ = '/';
 
       /* copy the new component and advance the pointer */
@@ -960,7 +1063,7 @@ svn_dirent_dirname(const char *dirent, apr_pool_t *pool)
 
   assert(svn_dirent_is_canonical(dirent, pool));
 
-  if (svn_dirent_is_root(dirent, len))
+  if (len == dirent_root_length(dirent, len))
     return apr_pstrmemdup(pool, dirent, len);
   else
     return apr_pstrmemdup(pool, dirent, dirent_previous_segment(dirent, len));
@@ -1155,7 +1258,11 @@ svn_dirent_is_absolute(const char *dirent)
     return FALSE;
 
   /* dirent is absolute if it starts with '/' */
-  if (dirent[0] == '/')
+  if (dirent[0] == '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+      && dirent[1] == '/' /* Single '/' depends on current drive */
+#endif
+      )
     return TRUE;
 
   /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/'
@@ -1163,7 +1270,7 @@ svn_dirent_is_absolute(const char *dirent)
 #if defined(WIN32) || defined(__CYGWIN__)
   if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
        (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
-      (dirent[1] == ':'))
+      (dirent[1] == ':') && (dirent[2] == '/'))
      return TRUE;
 #endif /* WIN32 or Cygwin */
 
