@@ -14,6 +14,16 @@ Status of 1.6.0:
 ================
 
 Candidate changes:
+
+  * ^/branches/1.6.x-no-svn_uri
+    Remove all svn_uri_*() functions in svn_dirent_uri.h from our public 1.6,
+    api to allow redefining and renaming these functions for 1.7.
+    Justification:
+      See discussion starting in http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1255935
+      For 1.6 these functions are only used by the testset.
+      (Issue #2028 is in progress for 1.7)
+    Votes:
+      +1: rhuijben, gstein
  
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
@@ -29,7 +39,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      (This doesn't fix this testcase; it just handles this part of the problem)
    Votes:
      +1: rhuijben, pburba
-     -0: gstein (replied with feedback on this rev.) (r36049 only) 
+     +1: gstein (for a new CODE tarball, not a doc tarball)
 
  * r36159
    Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
@@ -48,6 +58,8 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       please feel free to move to 1.6.1.
     Votes:
        +1: dws
+       +0: gstein (for 1.6.0)
+       +1: gstein (for 1.6.1)
 
   * r36252-36253 (on branch 1.6.x-r36252)
     Fix valgrind UMRs.
@@ -55,25 +67,18 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       UMRs are undefined behaviour
     Votes:
       +1: philip, rhuijben
-
-  * ^/branches/1.6.x-no-svn_uri
-    Remove all svn_uri_*() functions in svn_dirent_uri.h from our public 1.6,
-    api to allow redefining and renaming these functions for 1.7.
-    Justification:
-      See discussion starting in http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1255935
-      For 1.6 these functions are only used by the testset.
-      (Issue #2028 is in progress for 1.7)
-    Votes:
-      +1: rhuijben
+      +1: gstein (for a new CODE tarball, not a doc tarball)
 
   * r36300
     'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail.
     Justification:
       Fixes build error seen on Solaris.
     Votes:
-      +1: stsp, rhuijben
+      +1: stsp, rhuijben, gstein
+      NOTE: this doesn't move to "accepted" unless the RM chooses to
+            include it into a new tarball.
       
-  * 36302
+  * r36302
     Fix a small problem in the loggy upgrade process. Some v10 working copies
     have .svn/format, and some don't. The *intent* is to remove the file if
     present, so make the code match.
@@ -86,6 +91,10 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      let's just apply this easy fix to 1.6 instead of tweaking the script.
     Votes:
       +1: rhuijben, stsp
+      -0: gstein (for 1.6.0 since it isn't "needed" except for when somebody
+                  uses a script which I conceptually disagree with)
+      +1: gstein (for 1.6.1)
+
 
 Status of 1.6.1:
 ================
@@ -112,7 +121,8 @@ Candidate changes:
      target.  For large WCs the performance improvment can be dramatic.
      See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
    Votes:
-     +1: pburba, rhuijben
+     +1: pburba, rhuijben, gstein
+
 
 Approved changes:
 =================
