@@ -1359,6 +1359,7 @@ svn_repos_find_root_path(const char *path,
 
   while (1)
     {
+      char *parent;
       /* Try to decode the path, so we don't fail if it contains characters
          that aren't supported by the OS filesystem.  The subversion fs
          isn't restricted by the OS filesystem character set. */
@@ -1367,11 +1368,12 @@ svn_repos_find_root_path(const char *path,
         break;
       svn_error_clear(err);
 
-      if (candidate[0] == '\0' ||
-          svn_dirent_is_root(candidate, strlen(candidate)))
+      parent = svn_dirent_dirname(candidate, pool);
+
+      if (strcmp(parent, candidate) == 0)
         return NULL;
 
-      candidate = svn_path_dirname(candidate, pool);
+      candidate = parent;
     }
 
   return candidate;
