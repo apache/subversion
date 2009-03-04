@@ -729,6 +729,8 @@ close_apr(void *data)
   int result;
   int i;
 
+  SVN_ERR_ASSERT_NO_RETURN(db->db3 != NULL);
+
   /* Finalize any existing prepared statements. */
   for (i = 0; i < db->nbr_statements; i++)
     {
@@ -749,6 +751,8 @@ close_apr(void *data)
 
   if (result != SQLITE_OK)
     return SQLITE_ERROR_CODE(result);
+
+  db->db3 = NULL;
 
   return APR_SUCCESS;
 }
