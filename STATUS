@@ -68,15 +68,6 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Votes:
       +1: philip, rhuijben
       +1: gstein (for a new CODE tarball, not a doc tarball)
-
-  * r36300
-    'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail.
-    Justification:
-      Fixes build error seen on Solaris.
-    Votes:
-      +1: stsp, rhuijben, gstein
-      NOTE: this doesn't move to "accepted" unless the RM chooses to
-            include it into a new tarball.
       
   * r36302
     Fix a small problem in the loggy upgrade process. Some v10 working copies
@@ -126,3 +117,12 @@ Candidate changes:
 
 Approved changes:
 =================
+
+  * r36300
+    'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail.
+    Justification:
+      Fixes build error seen on Solaris.
+    Votes:
+      +1: stsp, rhuijben, gstein
+      NOTE: this doesn't move to "accepted" unless the RM chooses to
+            include it into a new tarball.
