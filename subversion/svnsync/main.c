@@ -24,6 +24,7 @@
 #include "svn_auth.h"
 #include "svn_opt.h"
 #include "svn_ra.h"
+#include "svn_utf.h"
 
 #include "private/svn_opt_private.h"
 
@@ -1952,6 +1953,7 @@ main(int argc, const char *argv[])
   for (;;)
     {
       const char *opt_arg;
+      svn_error_t* opt_err = NULL;
 
       apr_err = apr_getopt_long(os, svnsync_options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
@@ -1980,31 +1982,37 @@ main(int argc, const char *argv[])
             break;
 
           case svnsync_opt_auth_username:
-            username = opt_arg;
+            opt_err = svn_utf_cstring_to_utf8(&username, opt_arg, pool);
             break;
 
           case svnsync_opt_auth_password:
-            password = opt_arg;
+            opt_err = svn_utf_cstring_to_utf8(&password, opt_arg, pool);
             break;
 
           case svnsync_opt_source_username:
-            source_username = opt_arg;
+            opt_err = svn_utf_cstring_to_utf8(&source_username, opt_arg, pool);
             break;
 
           case svnsync_opt_source_password:
-            source_password = opt_arg;
+            opt_err = svn_utf_cstring_to_utf8(&source_password, opt_arg, pool);
             break;
 
           case svnsync_opt_sync_username:
-            sync_username = opt_arg;
+            opt_err = svn_utf_cstring_to_utf8(&sync_username, opt_arg, pool);
             break;
 
           case svnsync_opt_sync_password:
-            sync_password = opt_arg;
+            opt_err = svn_utf_cstring_to_utf8(&sync_password, opt_arg, pool);
             break;
 
           case svnsync_opt_config_dir:
-            opt_baton.config_dir = opt_arg;
+            {
+              const char *path_utf8;
+              opt_err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+
+              if (!opt_err)
+                opt_baton.config_dir = svn_dirent_internal_style(path_utf8, pool);
+            }
             break;
 
           case svnsync_opt_version:
@@ -2027,6 +2035,9 @@ main(int argc, const char *argv[])
               return EXIT_FAILURE;
             }
         }
+
+      if(opt_err)
+        return svn_cmdline_handle_exit_error(opt_err, pool, "svnsync: ");
     }
 
   if (opt_baton.help)
@@ -2069,10 +2080,6 @@ main(int argc, const char *argv[])
                                "--non-interactive"));
       return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
-
-  if (opt_baton.config_dir)
-    opt_baton.config_dir =
-             svn_dirent_internal_style(opt_baton.config_dir, pool);
 
   err = svn_config_ensure(opt_baton.config_dir, pool);
   if (err)
