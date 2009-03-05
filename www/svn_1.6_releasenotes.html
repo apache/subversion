@@ -94,7 +94,7 @@ cannot necessarily compile or run against older libraries.</p>
 <table border="1">
   <tr>
     <th>New Feature</th>
-    <th>Minimum Client</th>
+    <th>Minimum Client<sup>1</sup></th>
     <th>Minimum Server</th>
     <th>Minimum Repository</th>
     <th>Notes</th></tr>
@@ -111,12 +111,22 @@ cannot necessarily compile or run against older libraries.</p>
     <td>any</td>
     <td></td></tr>
   <tr>
-    <td><a href="#tree-conflicts">tree-conflicts</a></td>
+    <td><a href="#fsfs-packing">FSFS Packing</a></td>
+    <td>any</td>
+    <td>any</td>
+    <td>1.6</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#tree-conflicts">Tree Conflicts</a></td>
     <td>1.6</td>
     <td>1.6</td>
     <td>any</td>
     <td>Using servers older than 1.6 is possible, but some kinds
       of conflicts will not be detected.</td></tr>
+   <tr>
+     <td colspan="5"><sup>1</sup>Reminder: when using the <code>file://</code>
+       repository access method, the Subversion program is both the client
+       <em>and</em> the server.</td></tr>
 </table>
 
 </div>  <!-- new-feature-compatibility-table -->
