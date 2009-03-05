@@ -62,7 +62,7 @@ svn_repos_conf_dir(svn_repos_t *repos, apr_pool_t *pool)
 const char *
 svn_repos_svnserve_conf(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->conf_path, SVN_REPOS__CONF_SVNSERVE_CONF, pool);
+  return svn_dirent_join(repos->conf_path, SVN_REPOS__CONF_SVNSERVE_CONF, pool);
 }
 
 
@@ -76,14 +76,14 @@ svn_repos_lock_dir(svn_repos_t *repos, apr_pool_t *pool)
 const char *
 svn_repos_db_lockfile(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->lock_path, SVN_REPOS__DB_LOCKFILE, pool);
+  return svn_dirent_join(repos->lock_path, SVN_REPOS__DB_LOCKFILE, pool);
 }
 
 
 const char *
 svn_repos_db_logs_lockfile(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->lock_path, SVN_REPOS__DB_LOGS_LOCKFILE, pool);
+  return svn_dirent_join(repos->lock_path, SVN_REPOS__DB_LOGS_LOCKFILE, pool);
 }
 
 const char *
@@ -96,55 +96,55 @@ svn_repos_hook_dir(svn_repos_t *repos, apr_pool_t *pool)
 const char *
 svn_repos_start_commit_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_START_COMMIT, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_START_COMMIT, pool);
 }
 
 
 const char *
 svn_repos_pre_commit_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_PRE_COMMIT, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_COMMIT, pool);
 }
 
 
 const char *
 svn_repos_pre_lock_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_PRE_LOCK, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_LOCK, pool);
 }
 
 
 const char *
 svn_repos_pre_unlock_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_PRE_UNLOCK, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_UNLOCK, pool);
 }
 
 const char *
 svn_repos_post_lock_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_POST_LOCK, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_LOCK, pool);
 }
 
 
 const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_POST_UNLOCK, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_UNLOCK, pool);
 }
 
 
 const char *
 svn_repos_post_commit_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_POST_COMMIT, pool);
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_COMMIT, pool);
 }
 
 
 const char *
 svn_repos_pre_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE,
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE,
                        pool);
 }
 
@@ -152,7 +152,7 @@ svn_repos_pre_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 const char *
 svn_repos_post_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
-  return svn_path_join(repos->hook_path, SVN_REPOS__HOOK_POST_REVPROP_CHANGE,
+  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_REVPROP_CHANGE,
                        pool);
 }
 
@@ -176,7 +176,7 @@ create_repos_dir(const char *path, apr_pool_t *pool)
       else
         err = svn_error_createf(SVN_ERR_DIR_NOT_EMPTY, 0,
                                 _("'%s' exists and is non-empty"),
-                                svn_path_local_style(path, pool));
+                                svn_dirent_local_style(path, pool));
     }
 
   return err;
@@ -1013,9 +1013,9 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# harry = harryssecret"                                                     NL
 "# sally = sallyssecret"                                                     NL;
 
-    SVN_ERR_W(svn_io_file_create(svn_path_join(repos->conf_path,
-                                               SVN_REPOS__CONF_PASSWD,
-                                               pool),
+    SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
+                                                 SVN_REPOS__CONF_PASSWD,
+                                                 pool),
                                  passwd_contents, pool),
               _("Creating passwd file"));
   }
@@ -1055,9 +1055,9 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# @harry_and_sally = rw"                                                    NL
 "# * = r"                                                                    NL;
 
-    SVN_ERR_W(svn_io_file_create(svn_path_join(repos->conf_path,
-                                               SVN_REPOS__CONF_AUTHZ,
-                                               pool),
+    SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
+                                                 SVN_REPOS__CONF_AUTHZ,
+                                                 pool),
                                  authz_contents, pool),
               _("Creating authz file"));
   }
@@ -1076,10 +1076,10 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
   svn_repos_t *repos = apr_pcalloc(pool, sizeof(*repos));
 
   repos->path = apr_pstrdup(pool, path);
-  repos->db_path = svn_path_join(path, SVN_REPOS__DB_DIR, pool);
-  repos->conf_path = svn_path_join(path, SVN_REPOS__CONF_DIR, pool);
-  repos->hook_path = svn_path_join(path, SVN_REPOS__HOOK_DIR, pool);
-  repos->lock_path = svn_path_join(path, SVN_REPOS__LOCK_DIR, pool);
+  repos->db_path = svn_dirent_join(path, SVN_REPOS__DB_DIR, pool);
+  repos->conf_path = svn_dirent_join(path, SVN_REPOS__CONF_DIR, pool);
+  repos->hook_path = svn_dirent_join(path, SVN_REPOS__HOOK_DIR, pool);
+  repos->lock_path = svn_dirent_join(path, SVN_REPOS__LOCK_DIR, pool);
   repos->repository_capabilities = apr_hash_make(pool);
 
   return repos;
@@ -1103,8 +1103,8 @@ create_repos_structure(svn_repos_t *repos,
           || apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
                           APR_HASH_KEY_STRING)))
     {
-      const char *dav_path = svn_path_join(repos->path,
-                                           SVN_REPOS__DAV_DIR, pool);
+      const char *dav_path = svn_dirent_join(repos->path,
+                                             SVN_REPOS__DAV_DIR, pool);
       SVN_ERR_W(create_repos_dir(dav_path, pool),
                 _("Creating DAV sandbox dir"));
     }
@@ -1136,7 +1136,7 @@ create_repos_structure(svn_repos_t *repos,
     apr_size_t written;
 
     SVN_ERR(svn_io_file_open(&f,
-                             svn_path_join(path, SVN_REPOS__README, pool),
+                             svn_dirent_join(path, SVN_REPOS__README, pool),
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT, pool));
 
@@ -1238,7 +1238,7 @@ svn_repos_create(svn_repos_t **repos_p,
 
   /* This repository is ready.  Stamp it with a format number. */
   SVN_ERR(svn_io_write_version_file
-          (svn_path_join(path, SVN_REPOS__FORMAT, pool),
+          (svn_dirent_join(path, SVN_REPOS__FORMAT, pool),
            repos->format, pool));
 
   *repos_p = repos;
@@ -1258,7 +1258,7 @@ check_repos_path(const char *path,
   svn_node_kind_t kind;
   svn_error_t *err;
 
-  err = svn_io_check_path(svn_path_join(path, SVN_REPOS__FORMAT, pool),
+  err = svn_io_check_path(svn_dirent_join(path, SVN_REPOS__FORMAT, pool),
                           &kind, pool);
   if (err)
     {
@@ -1271,7 +1271,7 @@ check_repos_path(const char *path,
   /* Check the db/ subdir, but allow it to be a symlink (Subversion
      works just fine if it's a symlink). */
   err = svn_io_check_resolved_path
-    (svn_path_join(path, SVN_REPOS__DB_DIR, pool), &kind, pool);
+    (svn_dirent_join(path, SVN_REPOS__DB_DIR, pool), &kind, pool);
   if (err)
     {
       svn_error_clear(err);
@@ -1293,7 +1293,7 @@ check_repos_format(svn_repos_t *repos,
   int format;
   const char *format_path;
 
-  format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, pool);
+  format_path = svn_dirent_join(repos->path, SVN_REPOS__FORMAT, pool);
   SVN_ERR(svn_io_read_version_file(&format, format_path, pool));
 
   if (format != SVN_REPOS__FORMAT_NUMBER &&
@@ -1416,7 +1416,7 @@ svn_repos_upgrade(const char *path,
      verify that we can, because we don't want to actually bump the
      format of the repository until our underlying filesystem claims
      to have been upgraded correctly. */
-  format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, subpool);
+  format_path = svn_dirent_join(repos->path, SVN_REPOS__FORMAT, subpool);
   SVN_ERR(svn_io_read_version_file(&format, format_path, subpool));
   SVN_ERR(svn_io_write_version_file(format_path, format, subpool));
 
@@ -1438,7 +1438,7 @@ svn_error_t *
 svn_repos_delete(const char *path,
                  apr_pool_t *pool)
 {
-  const char *db_path = svn_path_join(path, SVN_REPOS__DB_DIR, pool);
+  const char *db_path = svn_dirent_join(path, SVN_REPOS__DB_DIR, pool);
 
   /* Delete the filesystem environment... */
   SVN_ERR(svn_fs_delete_fs(db_path, pool));
@@ -1612,7 +1612,7 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
   for (i = 0; i < (*logfiles)->nelts; i++)
     {
       const char ** log_file = &(APR_ARRAY_IDX(*logfiles, i, const char *));
-      *log_file = svn_path_join(SVN_REPOS__DB_DIR, *log_file, pool);
+      *log_file = svn_dirent_join(SVN_REPOS__DB_DIR, *log_file, pool);
     }
 
   return SVN_NO_ERROR;
@@ -1653,22 +1653,23 @@ static svn_error_t *hotcopy_structure(void *baton,
 
       /* Check if we are inside db directory and if so skip it */
       if (svn_path_compare_paths
-          (svn_path_get_longest_ancestor(SVN_REPOS__DB_DIR, sub_path, pool),
+          (svn_dirent_get_longest_ancestor(SVN_REPOS__DB_DIR, sub_path, pool),
            SVN_REPOS__DB_DIR) == 0)
         return SVN_NO_ERROR;
 
       if (svn_path_compare_paths
-          (svn_path_get_longest_ancestor(SVN_REPOS__LOCK_DIR, sub_path, pool),
+          (svn_dirent_get_longest_ancestor(SVN_REPOS__LOCK_DIR, sub_path,
+                                           pool),
            SVN_REPOS__LOCK_DIR) == 0)
         return SVN_NO_ERROR;
 
       if (svn_path_compare_paths
-          (svn_path_get_longest_ancestor(SVN_REPOS__FORMAT, sub_path, pool),
+          (svn_dirent_get_longest_ancestor(SVN_REPOS__FORMAT, sub_path, pool),
            SVN_REPOS__FORMAT) == 0)
         return SVN_NO_ERROR;
     }
 
-  target = svn_path_join(ctx->dest, sub_path, pool);
+  target = svn_dirent_join(ctx->dest, sub_path, pool);
 
   if (finfo->filetype == APR_DIR)
     return create_repos_dir(target, pool);
@@ -1752,7 +1753,7 @@ svn_repos_hotcopy(const char *src_path,
 
   /* Destination repository is ready.  Stamp it with a format number. */
   return svn_io_write_version_file
-          (svn_path_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
+          (svn_dirent_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
            dst_repos->format, pool);
 }
 
