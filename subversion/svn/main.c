@@ -36,6 +36,7 @@
 #include "svn_client.h"
 #include "svn_config.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_diff.h"
@@ -1480,16 +1481,16 @@ main(int argc, const char *argv[])
         break;
       case opt_config_dir:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
-        opt_state.config_dir = svn_path_canonicalize(path_utf8, pool);
+        if (err)
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        opt_state.config_dir = svn_dirent_internal_style(path_utf8, pool);
         break;
       case opt_config_options:
-        {
+        err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
+        if (!err)
           err = parse_config_option(&opt_state.config_options, opt_arg, pool);
-          if (err)
-            {
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-        }
+        if (err)
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
       case opt_autoprops:
         opt_state.autoprops = TRUE;
