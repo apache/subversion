@@ -1616,7 +1616,6 @@ add_file(const char *path,
   dir_context_t *dir = parent_baton;
   file_context_t *new_file;
   const char *deleted_parent = path;
-  const char *head_target_url = NULL;
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
@@ -1640,13 +1639,7 @@ add_file(const char *path,
     {
       new_file->url = svn_path_url_add_component2(dir->commit->txn_root_url,
                                                   path, new_file->pool);
-      head_target_url = new_file->url;
     }
-  /* Otherwise, we'll look at the public HEAD URL, but only if we
-     haven't deleted it in this commit already - directly, or
-     indirectly through its parent directories - or if the parent
-     directory was also added (without history) in this commit.
-   */
   else
     {
       /* Ensure our parent directory has been checked out */
@@ -1656,28 +1649,20 @@ add_file(const char *path,
         svn_path_url_add_component2(dir->checkout->resource_url,
                                     svn_uri_basename(path, new_file->pool),
                                     new_file->pool);
-
-      while (deleted_parent && deleted_parent[0] != '\0')
-        {
-          if (apr_hash_get(dir->commit->deleted_entries,
-                           deleted_parent, APR_HASH_KEY_STRING))
-            {
-              break;
-            }
-          deleted_parent = svn_uri_dirname(deleted_parent, file_pool);
-        };
-
-      if (! ((dir->added && !dir->copy_path) ||
-             (deleted_parent && deleted_parent[0] != '\0')))
-        {
-          head_target_url = 
-            svn_path_url_add_component2(dir->commit->session->repos_url.path,
-                                        path, new_file->pool);
-        }
     }
 
-  /* If we calculated a URL to run a HEAD existence check against, do so. */
-  if (head_target_url)
+  while (deleted_parent && deleted_parent[0] != '\0')
+    {
+      if (apr_hash_get(dir->commit->deleted_entries, 
+                       deleted_parent, APR_HASH_KEY_STRING))
+        {
+          break;
+        }
+      deleted_parent = svn_uri_dirname(deleted_parent, file_pool);
+    }
+
+  if (! ((dir->added && !dir->copy_path) ||
+         (deleted_parent && deleted_parent[0] != '\0')))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;
@@ -1688,7 +1673,9 @@ add_file(const char *path,
       handler->session = new_file->commit->session;
       handler->conn = new_file->commit->conn;
       handler->method = "HEAD";
-      handler->path = head_target_url;
+      handler->path = svn_path_url_add_component2(
+        dir->commit->session->repos_url.path,
+        path, new_file->pool);
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = head_ctx;
       svn_ra_serf__request_create(handler);
