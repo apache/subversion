@@ -1204,29 +1204,38 @@ svn_wc__db_close(svn_wc__db_t *db,
     {
       void *val;
       svn_wc__db_pdh_t *pdh;
-      svn_wc__db_pdh_t *existing_pdh;
 
       apr_hash_this(hi, NULL, NULL, &val);
       pdh = val;
 
-      existing_pdh = apr_hash_get(sdbs, pdh->wcroot_abspath,
-                                  APR_HASH_KEY_STRING);
-      if (existing_pdh)
-        SVN_ERR_ASSERT(existing_pdh->sdb == pdh->sdb);
+#ifdef SVN_DEBUG
+      /* If two PDH records have the same wcroot_abspath, then they should
+         be using the same SDB handle.  */
+      {
+        svn_sqlite__db_t *existing_sdb = apr_hash_get(sdbs,
+                                                      pdh->wcroot_abspath,
+                                                      APR_HASH_KEY_STRING);
+        if (existing_sdb)
+          SVN_ERR_ASSERT(existing_sdb == pdh->sdb);
+      }
+#endif
 
       apr_hash_set(sdbs, pdh->wcroot_abspath, APR_HASH_KEY_STRING, pdh->sdb);
     }
+
+  /* ### it would also be nice to assert that two different wcroot_abspath
+     ### values are not sharing the same SDB. If they *do*, then we will
+     ### double-close below. That won't cause problems, but it does
+     ### represent an internal consistency error.  */
 
   /* Now close all of the non-duplicate databases. */
   for (hi = apr_hash_first(scratch_pool, sdbs); hi; hi = apr_hash_next(hi))
     {
       void *val;
-      svn_sqlite__db_t *sdb;
 
       apr_hash_this(hi, NULL, NULL, &val);
-      sdb = val;
 
-      SVN_ERR(svn_sqlite__close(sdb));
+      SVN_ERR(svn_sqlite__close(val));
     }
 
   return SVN_NO_ERROR;
