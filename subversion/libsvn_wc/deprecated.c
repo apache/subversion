@@ -1488,3 +1488,85 @@ svn_wc_translated_file(const char **xlated_p,
                                     SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
                                  pool);
 }
+
+/*** From relocate.c ***/
+
+/* Compatibility baton and wrapper. */
+struct compat2_baton {
+  svn_wc_relocation_validator2_t validator;
+  void *baton;
+};
+
+/* Compatibility baton and wrapper. */
+struct compat_baton {
+  svn_wc_relocation_validator_t validator;
+  void *baton;
+};
+
+/* This implements svn_wc_relocate_validator3_t. */
+static svn_error_t *
+compat2_validator(void *baton,
+                  const char *uuid,
+                  const char *url,
+                  const char *root_url,
+                  apr_pool_t *pool)
+{
+  struct compat2_baton *cb = baton;
+  /* The old callback type doesn't set root_url. */
+  return cb->validator(cb->baton, uuid,
+                       (root_url ? root_url : url), (root_url != NULL),
+                       pool);
+}
+
+/* This implements svn_wc_relocate_validator3_t. */
+static svn_error_t *
+compat_validator(void *baton,
+                 const char *uuid,
+                 const char *url,
+                 const char *root_url,
+                 apr_pool_t *pool)
+{
+  struct compat_baton *cb = baton;
+  /* The old callback type doesn't allow uuid to be NULL. */
+  if (uuid)
+    return cb->validator(cb->baton, uuid, url);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_relocate2(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator2_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool)
+{
+  struct compat2_baton cb;
+
+  cb.validator = validator;
+  cb.baton = validator_baton;
+
+  return svn_wc_relocate3(path, adm_access, from, to, recurse,
+                          compat2_validator, &cb, pool);
+}
+
+svn_error_t *
+svn_wc_relocate(const char *path,
+                svn_wc_adm_access_t *adm_access,
+                const char *from,
+                const char *to,
+                svn_boolean_t recurse,
+                svn_wc_relocation_validator_t validator,
+                void *validator_baton,
+                apr_pool_t *pool)
+{
+  struct compat_baton cb;
+
+  cb.validator = validator;
+  cb.baton = validator_baton;
+
+  return svn_wc_relocate3(path, adm_access, from, to, recurse,
+                          compat_validator, &cb, pool);
+}
