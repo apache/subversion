@@ -127,13 +127,3 @@ Approved changes:
       +1: stsp, rhuijben, gstein
       NOTE: this doesn't move to "accepted" unless the RM chooses to
             include it into a new tarball.
-
-  * ^/branches/1.6.x-no-svn_uri
-    Remove all svn_uri_*() functions in svn_dirent_uri.h from our public 1.6,
-    api to allow redefining and renaming these functions for 1.7.
-    Justification:
-      See discussion starting in http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=1255935
-      For 1.6 these functions are only used by the testset.
-      (Issue #2028 is in progress for 1.7)
-    Votes:
-      +1: rhuijben, gstein, stsp

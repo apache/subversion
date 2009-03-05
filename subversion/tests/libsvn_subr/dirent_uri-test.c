@@ -33,6 +33,7 @@
 #include "svn_dirent_uri.h"
 
 #include "../svn_test.h"
+#include "../../libsvn_subr/private_uri.h"
 
 #define SVN_EMPTY_PATH ""
 
