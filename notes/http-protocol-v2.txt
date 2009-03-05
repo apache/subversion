@@ -237,8 +237,20 @@ PHASE 1 IN DETAIL
        revision) to facilitate server-side out-of-dateness checks.
 
 
-TODO
-====
+STATUS
+======
+
+ * SUMMARY:  Most of the work slated for Subversion 1.7 is complete.
+   All but three of the regression tests are passing, and those are
+   failing for either of two reasons:
+
+      dav_svn__method_post() is dropping important error information,
+      leaving clients without such useful information as "Start-hook
+      commit failed..."
+
+      dav_validate_request() is preventing call to delete_resource(),
+      which means that aborted commits are leaving transactions
+      sitting in the repository.
 
  * Teach mod_dav_svn to answer the OPTIONS request with these
    additional pieces of information:
@@ -269,14 +281,12 @@ TODO
    write requests aimed at transaction root resources for
    out-of-dateness checks.  This maps conceptually to the
    'base_revision' svn_delta_editor_t concept.  (Note that some write
-   requests, such as COPY and MOVE, map to editor functionality that
-   doesn't carry a base_revision concept.)
+   requests -- such as MKCOL, COPY and MOVE -- map to editor
+   functionality that doesn't carry a base_revision concept.)
 
       PROPPATCH  [DONE]
       DELETE     [DONE]
       PUT        [DONE]
-      MKCOL
-      ...
       
  * Teach ra_serf operations to not do the multi-PROPFIND dance any
    more, but to fetch the information they seek from mod_dav_svn using
@@ -313,15 +323,15 @@ TODO
  * Teach ra_serf to do update-style REPORTs a little differently:
 
     - REPORT against the new "me resource" instead of VCC URI  [DONE]
+    - use new URIs to avoid unnecessary PROPFIND discovery     [DONE]
     - eliminate now-unnecessary wcprops cache
-    - use pegrev URI stubs to avoid unnecessary PROPFIND discovery
 
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
 
     - use POST to 'me' resource to get txn name           [DONE]
     - set revprops using PROPPATCH on the txn resource    [DONE]
-    - abort edit with DELETE against the txn resource     [BUG: dav_validate_request() is preventing call to delete_resource()]
+    - abort edit with DELETE against the txn resource     [DONE]
     - send write requests against txn and txn root URLs   [STARTED]
     - send X-SVN-Version-Name for out-of-dateness checks  [STARTED]
     - enable pipelined PUTs                               [OUT-OF-SCOPE]
