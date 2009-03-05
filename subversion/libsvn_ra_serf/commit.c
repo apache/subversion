@@ -880,7 +880,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
-      uri.path = dir->url;
+      uri.path = (char *)dir->url;
     }
   else
     {
