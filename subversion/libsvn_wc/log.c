@@ -833,7 +833,7 @@ log_do_modify_entry(struct log_runner *loggy,
 
   /* Now write the new entry out */
   err = svn_wc__entry_modify(loggy->adm_access, name,
-                             entry, modify_flags, FALSE, loggy->pool);
+                             entry, modify_flags, loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error modifying entry for '%s'"), name);
@@ -859,7 +859,7 @@ log_do_delete_lock(struct log_runner *loggy,
                              | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                              | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
                              | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                             FALSE, loggy->pool);
+                             loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing lock from entry for '%s'"),
@@ -882,7 +882,7 @@ log_do_delete_changelist(struct log_runner *loggy,
   err = svn_wc__entry_modify(loggy->adm_access, name,
                              &entry,
                              SVN_WC__ENTRY_MODIFY_CHANGELIST,
-                             FALSE, loggy->pool);
+                             loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing changelist from entry '%s'"),
@@ -1125,7 +1125,7 @@ log_do_committed(struct log_runner *loggy,
           SVN_ERR(svn_wc__entry_modify
                   (loggy->adm_access, NULL, &tmpentry,
                    SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_KIND,
-                   FALSE, pool));
+                   pool));
           loggy->entries_modified = TRUE;
 
           /* Drop the 'killme' file. */
@@ -1177,7 +1177,7 @@ log_do_committed(struct log_runner *loggy,
                        SVN_WC__ENTRY_MODIFY_REVISION
                        | SVN_WC__ENTRY_MODIFY_KIND
                        | SVN_WC__ENTRY_MODIFY_DELETED,
-                       FALSE, pool));
+                       pool));
               loggy->entries_modified = TRUE;
             }
 
@@ -1363,7 +1363,7 @@ log_do_committed(struct log_runner *loggy,
                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
-                                  FALSE, pool)))
+                                  pool)))
     return svn_error_createf
       (pick_error_code(loggy), err,
        _("Error modifying entry of '%s'"), name);
@@ -1413,7 +1413,7 @@ log_do_committed(struct log_runner *loggy,
                                          | SVN_WC__ENTRY_MODIFY_COPIED
                                          | SVN_WC__ENTRY_MODIFY_DELETED
                                          | SVN_WC__ENTRY_MODIFY_FORCE),
-                                        TRUE, pool)))
+                                        pool)))
           return svn_error_createf(pick_error_code(loggy), err,
                                    _("Error modifying entry of '%s'"), name);
       }
@@ -1682,7 +1682,7 @@ handle_killme(svn_wc_adm_access_t *adm_access,
                                      SVN_WC__ENTRY_MODIFY_REVISION
                                      | SVN_WC__ENTRY_MODIFY_KIND
                                      | SVN_WC__ENTRY_MODIFY_DELETED,
-                                     TRUE, pool));
+                                     pool));
       }
   }
   return SVN_NO_ERROR;
@@ -1855,7 +1855,7 @@ run_log(svn_wc_adm_access_t *adm_access,
       err = svn_wc__entry_modify(adm_access, SVN_WC_ENTRY_THIS_DIR,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-                                 FALSE, pool);
+                                 pool);
       if (err)
         return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error recording tree conflicts in '%s'"),
