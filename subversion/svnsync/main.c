@@ -18,6 +18,7 @@
 #include "svn_config.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_auth.h"
@@ -2068,6 +2069,10 @@ main(int argc, const char *argv[])
                                "--non-interactive"));
       return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
+
+  if (opt_baton.config_dir)
+    opt_baton.config_dir =
+             svn_dirent_internal_style(opt_baton.config_dir, pool);
 
   err = svn_config_ensure(opt_baton.config_dir, pool);
   if (err)
