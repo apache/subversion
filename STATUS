@@ -118,12 +118,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
-  * r36300
-    'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail.
-    Justification:
-      Fixes build error seen on Solaris.
-    Votes:
-      +1: stsp, rhuijben, gstein
-      NOTE: this doesn't move to "accepted" unless the RM chooses to
-            include it into a new tarball.
