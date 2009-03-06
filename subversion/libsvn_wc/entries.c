@@ -1177,10 +1177,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
             }
         }
 
-      /* ### most of the higher levels seem to want "infinity" for files.
-         ### without this, it seems a report with depth=unknown was sent
-         ### to the server, which then choked.  */
-      if (kind == svn_wc__db_kind_file)
+      /* ### default to the infinite depth if we don't know it. */
+      if (entry->depth == svn_depth_unknown)
         entry->depth = svn_depth_infinity;
 
       if (kind == svn_wc__db_kind_dir)
