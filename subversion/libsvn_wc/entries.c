@@ -1080,7 +1080,16 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                           result_pool,
                                           iterpool));
 
-          if (work_status == svn_wc__db_status_copied)
+          if (!SVN_IS_VALID_REVNUM(entry->cmt_rev))
+            {
+              /* There is NOT a last-changed revision (last-changed date and
+                 author may be unknown, but we can always check the rev).
+                 The absence of a revision implies this node was added WITHOUT
+                 any history. Avoid the COPIED checks in the else block.  */
+              /* ### scan_working may need to be updated to avoid returning
+                 ### status_copied in this case.  */
+            }
+          else if (work_status == svn_wc__db_status_copied)
             {
               entry->copied = TRUE;
 
@@ -1094,6 +1103,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
               /* ### copied nodes need to mirror their copyfrom_rev */
               entry->revision = original_revision;
             }
+
           if (original_repos_relpath != NULL)
             {
               entry->copyfrom_url =
