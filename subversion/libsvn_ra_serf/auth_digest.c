@@ -29,15 +29,15 @@
 #include "auth_digest.h"
 
 /** Digest authentication, implements RFC 2671. **/
-static
-char int_to_hex(int v)
+static char
+int_to_hex(int v)
 {
   return (v < 10) ? '0' + v : 'a' + (v - 10);
 }
 
-static
-char* hex_encode(const unsigned char *hashval,
-		 apr_pool_t *pool)
+static const char *
+hex_encode(const unsigned char *hashval,
+           apr_pool_t *pool)
 {
   int i;
   char *hexval = apr_palloc(pool, (APR_MD5_DIGESTSIZE * 2) + 1);
@@ -50,7 +50,7 @@ char* hex_encode(const unsigned char *hashval,
   return hexval;
 }
 
-static char *
+static const char *
 random_cnonce(apr_pool_t *pool)
 {
   apr_uuid_t uuid;
@@ -62,12 +62,12 @@ random_cnonce(apr_pool_t *pool)
   return hex_encode((unsigned char*)buf, pool);
 }
 
-static char *
+static const char *
 build_digest_ha1(svn_auth_cred_simple_t *simple_creds,
 		 const char *realm_name,
 		 apr_pool_t *pool)
 {
-  char *tmp;
+  const char *tmp;
   unsigned char ha1[APR_MD5_DIGESTSIZE];
   apr_status_t status;
 
@@ -82,18 +82,18 @@ build_digest_ha1(svn_auth_cred_simple_t *simple_creds,
   return hex_encode(ha1, pool);
 }
 
-static char *
+static const char *
 build_digest_ha2(const char *uri,
 		 const char *method,
 		 const char *qop,
 		 apr_pool_t *pool)
 {
-  char *tmp;
-  unsigned char ha2[APR_MD5_DIGESTSIZE];
-  apr_status_t status;
-
   if (!qop || strcmp(qop, "auth") == 0)
     {
+      const char *tmp;
+      unsigned char ha2[APR_MD5_DIGESTSIZE];
+      apr_status_t status;
+
       /* calculate ha2:
 	 MD5 hash of the combined method and URI */
       tmp = apr_psprintf(pool, "%s:%s",
@@ -111,167 +111,152 @@ build_digest_ha2(const char *uri,
   return NULL;
 }
 
-static char *
+static const char *
 build_auth_header(serf_digest_context_t *context,
 		  const char *uri,
 		  const char *method,
 		  apr_pool_t *pool)
 {
+  svn_stringbuf_t *hdr;
+  const char *ha2;
+  const char *response;
   unsigned char response_hdr[APR_MD5_DIGESTSIZE]; 
+  const char *response_hdr_hex;
   apr_status_t status;
-  char *hdr, *tmp, *response_hdr_hex, *ha2, *nc_str;
 
   ha2 = build_digest_ha2(uri, method, context->qop, pool);
 
-  hdr = apr_psprintf(pool,
-		     "Digest realm=\"%s\","
-                     " username=\"%s\","
- 		     " nonce=\"%s\","
-		     " uri=\"%s\",",
-		     context->realm, context->username, context->nonce,
-		     uri);
+  hdr = svn_stringbuf_createf(pool,
+                              "Digest realm=\"%s\","
+                              " username=\"%s\","
+                              " nonce=\"%s\","
+                              " uri=\"%s\",",
+                              context->realm, context->username, context->nonce,
+                              uri);
 
   if (context->qop)
     {
-      /* calculate the response header:
-	 MD5 hash of the combined HA1 result, server nonce (nonce),
-         request counter (nc), client nonce (cnonce),
-	 quality of protection code (qop) and HA2 result. */
+      const char *nc_str;
+
       if (! context->cnonce)
 	context->cnonce = random_cnonce(context->pool);
       nc_str = apr_psprintf(pool, "%08x", context->digest_nc);
 
-      tmp = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
-			 context->ha1, context->nonce, nc_str,
-			 context->cnonce, context->qop, ha2);
-      status = apr_md5(response_hdr, tmp, strlen(tmp));
-      response_hdr_hex =  hex_encode(response_hdr, pool);
+      svn_stringbuf_appendcstr(hdr, ", nc=");
+      svn_stringbuf_appendcstr(hdr, nc_str);
+      svn_stringbuf_appendcstr(hdr, ", cnonce=\"");
+      svn_stringbuf_appendcstr(hdr, context->cnonce);
+      svn_stringbuf_appendcstr(hdr, "\", qop=\"");
+      svn_stringbuf_appendcstr(hdr, context->qop);
+      svn_stringbuf_appendcstr(hdr, "\"");
 
-      hdr = apr_pstrcat(pool,
-			hdr,
-			", nc=", nc_str,
-			", cnonce=\"",context->cnonce, "\"",
-			", qop=\"", context->qop, "\"",
-			", response=\"", response_hdr_hex, "\"",
-			NULL);
+      /* calculate the response header:
+	 MD5 hash of the combined HA1 result, server nonce (nonce),
+         request counter (nc), client nonce (cnonce),
+	 quality of protection code (qop) and HA2 result. */
+      response = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
+                              context->ha1, context->nonce, nc_str,
+                              context->cnonce, context->qop, ha2);
     }
   else
     {
       /* calculate the response header:
 	 MD5 hash of the combined HA1 result, server nonce (nonce)
 	 and HA2 result. */
-      tmp = apr_psprintf(pool, "%s:%s:%s",
-			 context->ha1, context->nonce, ha2);
-      status = apr_md5(response_hdr, tmp, strlen(tmp));
-      response_hdr_hex =  hex_encode(response_hdr, pool);
-
-      hdr = apr_pstrcat(pool,
-			hdr,
-			", response=\"", response_hdr_hex, "\"",
-			NULL);
+      response = apr_psprintf(pool, "%s:%s:%s",
+                              context->ha1, context->nonce, ha2);
     }
-  if (context->opaque) {
-    hdr = apr_pstrcat(pool,
-                      hdr,
-                      ", opaque=\"", context->opaque, "\"",
-                      NULL);
-  }
-  if (context->algorithm) {
-    hdr = apr_pstrcat(pool,
-                      hdr,
-                      ", algorithm=", context->algorithm, "",
-                      NULL);
-  }
+
+  status = apr_md5(response_hdr, response, strlen(response));
+  response_hdr_hex = hex_encode(response_hdr, pool);
+
+  svn_stringbuf_appendcstr(hdr, ", response=\"");
+  svn_stringbuf_appendcstr(hdr, response_hdr_hex);
+  svn_stringbuf_appendcstr(hdr, "\"");
+
+  if (context->opaque)
+    {
+      svn_stringbuf_appendcstr(hdr, ", opaque=\"");
+      svn_stringbuf_appendcstr(hdr, context->opaque);
+      svn_stringbuf_appendcstr(hdr, "\"");
+    }
+  if (context->algorithm)
+    {
+      svn_stringbuf_appendcstr(hdr, ", algorithm=\"");
+      svn_stringbuf_appendcstr(hdr, context->algorithm);
+      svn_stringbuf_appendcstr(hdr, "\"");
+    }
   
-  return hdr;
+  return hdr->data;
 }
 
 svn_error_t *
-handle_digest_auth(svn_ra_serf__handler_t *ctx,
-                   serf_request_t *request,
-                   serf_bucket_t *response,
-                   char *auth_hdr,
-                   char *auth_attr,
-                   apr_pool_t *pool)
+svn_ra_serf__handle_digest_auth(svn_ra_serf__handler_t *ctx,
+                                serf_request_t *request,
+                                serf_bucket_t *response,
+                                const char *auth_hdr,
+                                const char *auth_attr,
+                                apr_pool_t *pool)
 {
+  char *attrs;
   void *creds;
-  char *nextkv, *realm_name = NULL, *nonce = NULL, *algorithm = NULL;
-  char *qop = NULL, *opaque = NULL;
+  char *nextkv;
+  const char *realm_name = NULL;
+  const char *nonce = NULL;
+  const char *algorithm = NULL;
+  const char *qop = NULL;
+  const char *opaque = NULL;
   svn_auth_cred_simple_t *simple_creds;
   apr_port_t port;
   svn_ra_serf__session_t *session = ctx->session;
   svn_ra_serf__connection_t *conn = ctx->conn;
-  serf_digest_context_t *context = (serf_digest_context_t *)conn->auth_context;
-  char *kv, *key, *val;
+  serf_digest_context_t *context = conn->auth_context;
+  const char *key;
+
+  /* Need a copy cuz we're going to write NUL characters into the string.  */
+  attrs = apr_pstrdup(pool, auth_attr);
 
   /* We're expecting a list of key=value pairs, separated by a comma. 
      Ex. realm="SVN Digest",
          nonce="f+zTl/leBAA=e371bd3070adfb47b21f5fc64ad8cc21adc371a5", 
          algorithm=MD5, qop="auth" */
-  while ((kv = apr_strtok(auth_attr, ",", &nextkv)))
+  for ( ; (key = apr_strtok(attrs, ",", &nextkv)) != NULL; attrs = NULL)
     {
-      key = apr_strtok(kv, "=", &val);
+      char *val;
+
+      val = strchr(key, '=');
+      if (val == NULL)
+        continue;
+      *val++ = '\0';
+
       /* skip leading spaces */
-      while (*key && *key == ' ') key++;
+      while (*key && *key == ' ')
+        key++;
+
+      /* If the value is quoted, then remove the quotes.  */
+      if (*val == '"')
+        {
+          apr_size_t last = strlen(val) - 1;
+
+          if (val[last] == '"')
+            {
+              val[last] = '\0';
+              val++;
+            }
+        }
       
       if (strcasecmp(key, "realm") == 0)
-	{
-	  realm_name = apr_strtok(NULL, "=", &val);
-	  if (realm_name[0] == '\"')
-	    {
-	      apr_size_t realm_len;
-              
-	      realm_len = strlen(realm_name);
-	      if (realm_name[realm_len - 1] == '\"')
-		{
-		  realm_name[realm_len - 1] = '\0';
-		  realm_name++;
-		}
-	    }
-	}
-      if (strcmp(key, "nonce") == 0)
-	{
-	  nonce = apr_pstrdup(session->pool, val);
-	  if (nonce[0] == '\"')
-	    {
-	      apr_size_t nonce_len;
-              
-	      nonce_len = strlen(nonce);
-	      if (nonce[nonce_len - 1] == '\"')
-		{
-		  nonce[nonce_len - 1] = '\0';
-		  nonce++;
-		}
-	    }
-	}
-      if (strcmp(key, "algorithm") == 0)
-	{
-	  algorithm = apr_pstrdup(session->pool, val);
-	}
-      if (strcmp(key, "qop") == 0)
-	{
-	  qop = apr_pstrdup(session->pool, val);
-	  if (qop[0] == '\"')
-	    {
-	      apr_size_t qop_len;
-              
-	      qop_len = strlen(qop);
-	      if (qop[qop_len - 1] == '\"')
-		{
-		  qop[qop_len - 1] = '\0';
-		  qop++;
-		}
-	    }
-	  
-	}
-      if (strcmp(key, "opaque") == 0)
-	{
-	  opaque = apr_pstrdup(session->pool, val);
-	}
+        realm_name = val;
+      else if (strcmp(key, "nonce") == 0)
+        nonce = val;
+      else if (strcmp(key, "algorithm") == 0)
+        algorithm = val;
+      else if (strcmp(key, "qop") == 0)
+        qop = val;
+      else if (strcmp(key, "opaque") == 0)
+        opaque = val;
       
       /* Ignore all unsupported attributes. */
-      
-      auth_attr = NULL;
     }
   if (!realm_name)
     {
@@ -333,16 +318,14 @@ handle_digest_auth(svn_ra_serf__handler_t *ctx,
   if (conn->auth_context)
     context = conn->auth_context;
   else
-    context = 
-      (serf_digest_context_t *)apr_pcalloc(session->pool, 
-					   sizeof(serf_digest_context_t));
+    context = apr_pcalloc(session->pool, sizeof(*context));
 
   context->pool = session->pool;
-  context->qop = qop;
-  context->nonce = nonce;
+  context->qop = apr_pstrdup(context->pool, qop);
+  context->nonce = apr_pstrdup(context->pool, nonce);
   context->cnonce = NULL;
-  context->opaque = opaque;
-  context->algorithm = algorithm;
+  context->opaque = apr_pstrdup(context->pool, opaque);
+  context->algorithm = apr_pstrdup(context->pool, algorithm);
   context->realm = apr_pstrdup(context->pool, realm_name);
   context->username = apr_pstrdup(context->pool, simple_creds->username);
   context->digest_nc++;
@@ -360,9 +343,9 @@ handle_digest_auth(svn_ra_serf__handler_t *ctx,
 }
 
 svn_error_t *
-init_digest_connection(svn_ra_serf__session_t *session,
-                       svn_ra_serf__connection_t *conn,
-                       apr_pool_t *pool)
+svn_ra_serf__init_digest_connection(svn_ra_serf__session_t *session,
+                                    svn_ra_serf__connection_t *conn,
+                                    apr_pool_t *pool)
 {
   /* Make serf send the initial requests one by one */
   serf_connection_set_max_outstanding_requests(conn->conn, 1);
@@ -373,12 +356,12 @@ init_digest_connection(svn_ra_serf__session_t *session,
 }
 
 svn_error_t *
-setup_request_digest_auth(svn_ra_serf__connection_t *conn,
-                          const char *method,
-			  const char *uri,
-                          serf_bucket_t *hdrs_bkt)
+svn_ra_serf__setup_request_digest_auth(svn_ra_serf__connection_t *conn,
+                                       const char *method,
+                                       const char *uri,
+                                       serf_bucket_t *hdrs_bkt)
 {
-  serf_digest_context_t *context = (serf_digest_context_t *)conn->auth_context;
+  serf_digest_context_t *context = conn->auth_context;
 
   if (context)
     {
@@ -395,82 +378,68 @@ setup_request_digest_auth(svn_ra_serf__connection_t *conn,
 }
 
 svn_error_t *
-validate_response_digest_auth(svn_ra_serf__handler_t *ctx,
-			      serf_request_t *request,
-			      serf_bucket_t *response,
-			      apr_pool_t *pool)
+svn_ra_serf__validate_response_digest_auth(svn_ra_serf__handler_t *ctx,
+                                           serf_request_t *request,
+                                           serf_bucket_t *response,
+                                           apr_pool_t *pool)
 {
   svn_ra_serf__connection_t *conn = ctx->conn;
-  serf_digest_context_t *context = (serf_digest_context_t *)conn->auth_context;
-  char *kv, *key, *val;
-  char *auth_attr, *nextkv, *rspauth = NULL, *qop = NULL, *nc_str = NULL;
+  serf_digest_context_t *context = conn->auth_context;
+  const char *key;
+  char *auth_attr;
+  char *nextkv;
+  const char *rspauth = NULL;
+  const char *qop = NULL;
+  const char *nc_str = NULL;
   serf_bucket_t *hdrs;
 
   hdrs = serf_bucket_response_get_headers(response);
-  auth_attr = (char*)serf_bucket_headers_get(hdrs, "Authentication-Info");
+
+  /* Need a copy cuz we're going to write NUL characters into the string.  */
+  auth_attr = apr_pstrdup(pool,
+                          serf_bucket_headers_get(hdrs,
+                                                  "Authentication-Info"));
 
   /* We're expecting a list of key=value pairs, separated by a comma. 
      Ex. rspauth="8a4b8451084b082be6b105e2b7975087", 
          cnonce="346531653132652d303033392d3435", nc=00000007,
          qop=auth */
-  while ((kv = apr_strtok(auth_attr, ",", &nextkv)))
+  for ( ; (key = apr_strtok(auth_attr, ",", &nextkv)) != NULL; auth_attr = NULL)
     {
-      key = apr_strtok(kv, "=", &val);
+      char *val;
+
+      val = strchr(key, '=');
+      if (val == NULL)
+        continue;
+      *val++ = '\0';
+
       /* skip leading spaces */
-      while (*key && *key == ' ') key++;
+      while (*key && *key == ' ')
+        key++;
+
+      /* If the value is quoted, then remove the quotes.  */
+      if (*val == '"')
+        {
+          apr_size_t last = strlen(val) - 1;
+
+          if (val[last] == '"')
+            {
+              val[last] = '\0';
+              val++;
+            }
+        }
       
       if (strcmp(key, "rspauth") == 0)
-	{
-	  rspauth = apr_strtok(NULL, "=", &val);
-	  if (rspauth[0] == '\"')
-	    {
-	      apr_size_t str_len;
-              
-	      str_len = strlen(rspauth);
-	      if (rspauth[str_len - 1] == '\"')
-		{
-		  rspauth[str_len - 1] = '\0';
-		  rspauth++;
-		}
-	    }
-	}
-      if (strcmp(key, "qop") == 0)
-	{
-	  qop = apr_pstrdup(pool, val);
-	  if (qop[0] == '\"')
-	    {
-	      apr_size_t qop_len;
-              
-	      qop_len = strlen(qop);
-	      if (qop[qop_len - 1] == '\"')
-		{
-		  qop[qop_len - 1] = '\0';
-		  qop++;
-		}
-	    }
-	}
-      if (strcmp(key, "nc") == 0)
-	{
-	  nc_str = apr_pstrdup(pool, val);
-	  if (nc_str[0] == '\"')
-	    {
-	      apr_size_t nc_len;
-              
-	      nc_len = strlen(nc_str);
-	      if (nc_str[nc_len - 1] == '\"')
-		{
-		  nc_str[nc_len - 1] = '\0';
-		  nc_str++;
-		}
-	    }
-	}
-
-      auth_attr = NULL;
+        rspauth = val;
+      else if (strcmp(key, "qop") == 0)
+        qop = val;
+      else if (strcmp(key, "nc") == 0)
+        nc_str = val;
     }
 
   if (rspauth) 
     {
-      char *ha2, *tmp, *resp_hdr_hex;
+      const char *ha2, *tmp, *resp_hdr_hex;
       unsigned char resp_hdr[APR_MD5_DIGESTSIZE];
 
       ha2 = build_digest_ha2(ctx->path, "", qop, pool);

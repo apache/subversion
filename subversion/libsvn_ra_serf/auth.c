@@ -31,8 +31,8 @@ static svn_error_t *
 handle_basic_auth(svn_ra_serf__handler_t *ctx,
                   serf_request_t *request,
                   serf_bucket_t *response,
-                  char *auth_hdr,
-                  char *auth_attr,
+                  const char *auth_hdr,
+                  const char *auth_attr,
                   apr_pool_t *pool);
 
 static svn_error_t *
@@ -50,8 +50,8 @@ static svn_error_t *
 handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
                         serf_bucket_t *response,
-                        char *auth_hdr,
-                        char *auth_attr,
+                        const char *auth_hdr,
+                        const char *auth_attr,
                         apr_pool_t *pool);
 
 static svn_error_t *
@@ -96,27 +96,27 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     401,
     "NTLM",
-    init_sspi_connection,
-    handle_sspi_auth,
-    setup_request_sspi_auth,
+    svn_ra_serf__init_sspi_connection,
+    svn_ra_serf__handle_sspi_auth,
+    svn_ra_serf__setup_request_sspi_auth,
     default_auth_response_handler,
   },
   {
     407,
     "NTLM",
-    init_proxy_sspi_connection,
-    handle_proxy_sspi_auth,
-    setup_request_proxy_sspi_auth,
+    svn_ra_serf__init_proxy_sspi_connection,
+    svn_ra_serf__handle_proxy_sspi_auth,
+    svn_ra_serf__setup_request_proxy_sspi_auth,
     default_auth_response_handler,
   },
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
   {
     401,
     "Digest",
-    init_digest_connection,
-    handle_digest_auth,
-    setup_request_digest_auth,
-    validate_response_digest_auth,
+    svn_ra_serf__init_digest_connection,
+    svn_ra_serf__handle_digest_auth,
+    svn_ra_serf__setup_request_digest_auth,
+    svn_ra_serf__validate_response_digest_auth,
   },
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
@@ -133,18 +133,18 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
 void
-svn_ra_serf__encode_auth_header(const char * protocol, char **header,
-                                const char * data, apr_size_t data_len,
+svn_ra_serf__encode_auth_header(const char *protocol, const char **header,
+                                const char *data, apr_size_t data_len,
                                 apr_pool_t *pool)
 {
   apr_size_t encoded_len, proto_len;
-  char * ptr;
+  char *ptr;
 
   encoded_len = apr_base64_encode_len(data_len);
   proto_len = strlen(protocol);
 
-  *header = apr_palloc(pool, encoded_len + proto_len + 1);
-  ptr = *header;
+  ptr = apr_palloc(pool, encoded_len + proto_len + 1);
+  *header = ptr;
 
   apr_cpystrn(ptr, protocol, proto_len + 1);
   ptr += proto_len;
@@ -165,7 +165,7 @@ typedef struct {
   svn_error_t *err;
   apr_pool_t *pool;
   const svn_ra_serf__auth_protocol_t *prot;
-  char *last_prot_name;
+  const char *last_prot_name;
 } auth_baton_t;
 
 /**
@@ -184,20 +184,25 @@ handle_auth_header(void *baton,
   svn_ra_serf__session_t *session = ab->ctx->session;
   svn_ra_serf__connection_t *conn = ab->ctx->conn;
   svn_boolean_t proto_found = FALSE;
-  char *auth_name = NULL, *auth_attr = NULL;
-  const char *auth_hdr = NULL;
+  const char *auth_name;
+  const char *auth_attr;
   const svn_ra_serf__auth_protocol_t *prot = NULL;
 
   /* We're only interested in xxxx-Authenticate headers. */
-  if (ab->code == 401)
-    auth_hdr = "WWW-Authenticate";
-  else if (ab->code == 407)
-    auth_hdr = "Proxy-Authenticate";
-
-  if (strcmp(key, auth_hdr) != 0)
+  if (strcmp(key, ab->header) != 0)
     return 0;
 
-  auth_name = apr_strtok(apr_pstrdup(ab->pool, header), " ", &auth_attr);
+  auth_attr = strchr(header, ' ');
+  if (auth_attr)
+    {
+      /* Extract the authentication protocol name, and set up the pointer
+         to the attributes.  */
+      auth_name = apr_pstrmemdup(ab->pool, header, auth_attr - header);
+      ++auth_attr;
+    }
+  else
+    auth_name = NULL;
+
   ab->last_prot_name = auth_name;
 
   /* Find the matching authentication handler.
@@ -235,8 +240,7 @@ handle_auth_header(void *baton,
 	      proto_found = TRUE;
 	      ab->prot = prot;
 	      err = handler(ab->ctx, ab->request, ab->response,
-			    apr_pstrdup(ab->pool, header), auth_attr,
-                            session->pool);
+			    header, auth_attr, session->pool);
 	    }
 	  if (err)
 	    {
@@ -271,27 +275,25 @@ svn_ra_serf__handle_auth(int code,
 {
   svn_ra_serf__session_t *session = ctx->session;
   serf_bucket_t *hdrs;
-  auth_baton_t *ab;
-  char *auth_hdr = NULL;
+  auth_baton_t ab = { 0 };
+  const char *auth_hdr;
 
-  ab = apr_pcalloc(pool, sizeof(*ab));
-  ab->code = code;
-  ab->request = request;
-  ab->response = response;
-  ab->ctx = ctx;
-  ab->err = SVN_NO_ERROR;
-  ab->pool = pool;
+  ab.code = code;
+  ab.request = request;
+  ab.response = response;
+  ab.ctx = ctx;
+  ab.err = SVN_NO_ERROR;
+  ab.pool = pool;
 
   hdrs = serf_bucket_response_get_headers(response);
 
   if (code == 401)
-    ab->header = "WWW-Authenticate";
+    ab.header = "WWW-Authenticate";
   else if (code == 407)
-    ab->header = "Proxy-Authenticate";
+    ab.header = "Proxy-Authenticate";
 
   /* Before iterating over all authn headers, check if there are any. */
-  auth_hdr = (char*)serf_bucket_headers_get(hdrs, ab->header);
-
+  auth_hdr = serf_bucket_headers_get(hdrs, ab.header);
   if (!auth_hdr)
     {
       if (session->auth_protocol)
@@ -304,17 +306,25 @@ svn_ra_serf__handle_auth(int code,
 
   /* Iterate over all headers. Try to find a matching authentication protocol
      handler. */
+  /* ### no need for this. we have the header name and value already.
+     ### just do it.  this should get cleaned up. maybe fold the function
+     ### contents into here. any remaining need for the iteration?
   serf_bucket_headers_do(hdrs,
 			 handle_auth_header,
-			 ab);                         
-  SVN_ERR(ab->err);
+			 &ab);
+  */
+  (void)handle_auth_header(&ab, ab.header, auth_hdr);
+  SVN_ERR(ab.err);
 
-  if (!ab->prot || ab->prot->auth_name == NULL)
+  if (!ab.prot || ab.prot->auth_name == NULL)
     {
       /* Support more authentication mechanisms. */
       return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
                                "%s authentication not supported.\n"
-                               "Authentication failed", ab->last_prot_name);
+                               "Authentication failed",
+                               ab.last_prot_name
+                                 ? ab.last_prot_name
+                                 : "Unknown");
     }
 
   return SVN_NO_ERROR;
@@ -324,12 +334,11 @@ static svn_error_t *
 handle_basic_auth(svn_ra_serf__handler_t *ctx,
                   serf_request_t *request,
                   serf_bucket_t *response,
-                  char *auth_hdr,
-                  char *auth_attr,
+                  const char *auth_hdr,
+                  const char *auth_attr,
                   apr_pool_t *pool)
 {
   void *creds;
-  char *last, *realm_name;
   svn_auth_cred_simple_t *simple_creds;
   const char *tmp;
   apr_size_t tmp_len;
@@ -339,12 +348,12 @@ handle_basic_auth(svn_ra_serf__handler_t *ctx,
 
   if (!session->realm)
     {
-      char *attr;
+      char *realm_name;
+      const char *eq = strchr(auth_attr, '=');
 
-      attr = apr_strtok(auth_attr, "=", &last);
-      if (strcasecmp(attr, "realm") == 0)
+      if (eq && strncasecmp(auth_attr, "realm", 5) == 0)
         {
-          realm_name = apr_strtok(NULL, "=", &last);
+          realm_name = apr_pstrdup(pool, eq + 1);
           if (realm_name[0] == '\"')
             {
               apr_size_t realm_len;
@@ -466,8 +475,8 @@ static svn_error_t *
 handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
                         serf_bucket_t *response,
-                        char *auth_hdr,
-                        char *auth_attr,
+                        const char *auth_hdr,
+                        const char *auth_attr,
                         apr_pool_t *pool)
 {
   const char *tmp;
