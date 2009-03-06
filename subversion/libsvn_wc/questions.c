@@ -463,7 +463,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                    &tmp,
                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                   TRUE, pool));
+                                   pool));
     }
 
   return SVN_NO_ERROR;
