@@ -197,7 +197,7 @@ handle_auth_header(void *baton,
   if (strcmp(key, auth_hdr) != 0)
     return 0;
 
-  auth_name = apr_strtok(header, " ", &auth_attr);
+  auth_name = apr_strtok(apr_pstrdup(ab->pool, header), " ", &auth_attr);
   ab->last_prot_name = auth_name;
 
   /* Find the matching authentication handler.
@@ -235,7 +235,8 @@ handle_auth_header(void *baton,
 	      proto_found = TRUE;
 	      ab->prot = prot;
 	      err = handler(ab->ctx, ab->request, ab->response,
-			    header, auth_attr, session->pool);
+			    apr_pstrdup(ab->pool, header), auth_attr,
+                            session->pool);
 	    }
 	  if (err)
 	    {
