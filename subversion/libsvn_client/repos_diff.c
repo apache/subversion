@@ -1248,7 +1248,7 @@ close_file(void *file_baton,
                  0,
                  b->edit_baton->target_revision,
                  mimetype1, mimetype2,
-                 NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.6 API */
+                 NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.7 API */
                  b->propchanges, b->pristine_props,
                  b->edit_baton->diff_cmd_baton));
       else
