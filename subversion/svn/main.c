@@ -48,6 +48,8 @@
 #include "svn_hash.h"
 #include "cl.h"
 
+#include "private/svn_cmdline_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -1035,50 +1037,6 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
-typedef struct config_option_t
-{
-  const char *file;
-  const char *section;
-  const char *option;
-  const char *value;
-} config_option_t;
-
-/* Parse argument of '--config-option'. */
-static svn_error_t *
-parse_config_option(apr_array_header_t **config_options,
-                    const char *opt_arg,
-                    apr_pool_t *pool)
-{
-  config_option_t *config_option;
-  const char *first_colon, *second_colon, *equals_sign;
-  apr_size_t len = strlen(opt_arg);
-  if ((first_colon = strchr(opt_arg, ':')) && (first_colon != opt_arg))
-    {
-      if ((second_colon = strchr(first_colon + 1, ':')) && (second_colon != first_colon + 1))
-        {
-          if ((equals_sign = strchr(second_colon + 1, '=')) && (equals_sign != second_colon + 1))
-            {
-              config_option = apr_pcalloc(pool, sizeof(config_option_t));
-              config_option->file = apr_pstrndup(pool, opt_arg, first_colon - opt_arg);
-              config_option->section = apr_pstrndup(pool, first_colon + 1, second_colon - first_colon - 1);
-              config_option->option = apr_pstrndup(pool, second_colon + 1, equals_sign - second_colon - 1);
-              if (! (strchr(config_option->option, ':')))
-                {
-                  config_option->value = apr_pstrndup(pool, equals_sign + 1, opt_arg + len - equals_sign - 1);
-                  if (! *config_options)
-                    {
-                      *config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
-                    }
-                  APR_ARRAY_PUSH(*config_options, config_option_t *) = config_option;
-                  return SVN_NO_ERROR;
-                }
-            }
-        }
-    }
-  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          _("Invalid syntax of argument of --config-option"));
-}
-
 
 /*** Main. ***/
 
@@ -1100,7 +1058,7 @@ main(int argc, const char *argv[])
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
-  svn_config_t *cfg_config, *cfg_servers;
+  svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
   apr_hash_t *changelists;
@@ -1486,9 +1444,14 @@ main(int argc, const char *argv[])
         opt_state.config_dir = svn_dirent_internal_style(path_utf8, pool);
         break;
       case opt_config_options:
+        if (!opt_state.config_options)
+          opt_state.config_options = 
+                   apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
+
         err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
         if (!err)
-          err = parse_config_option(&opt_state.config_options, opt_arg, pool);
+          err = svn_cmdline__parse_config_option(opt_state.config_options,
+                                                 opt_arg, pool);
         if (err)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
@@ -1912,34 +1875,13 @@ main(int argc, const char *argv[])
 
   cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
-  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
 
   /* Update the options in the config */
   if (opt_state.config_options)
     {
-      for (i = 0; i < opt_state.config_options->nelts; i++)
-        {
-          config_option_t *config_option = APR_ARRAY_IDX(opt_state.config_options,
-                                                         i, config_option_t *);
-          if (strcmp(config_option->file, "config") == 0)
-            {
-              svn_config_set(cfg_config, config_option->section,
-                             config_option->option, config_option->value);
-            }
-          else if (strcmp(config_option->file, "servers") == 0)
-            {
-              svn_config_set(cfg_servers, config_option->section,
-                             config_option->option, config_option->value);
-            }
-          else
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Unrecognized file in argument of --config-option"));
-              svn_handle_warning2(stderr, err, "svn: ");
-              svn_error_clear(err);
-            }
-        }
+      svn_error_clear(
+          svn_cmdline__apply_config_options(ctx->config, opt_state.config_options,
+                                            "svn: ", "--config-option"));
     }
 
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
