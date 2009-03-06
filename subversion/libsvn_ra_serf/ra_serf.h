@@ -34,6 +34,10 @@
 
 #include "private/svn_dav_protocol.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 
 /* Enforce the minimum version of serf. */
 #if !SERF_VERSION_AT_LEAST(0, 3, 0)
@@ -81,7 +85,7 @@ typedef struct {
   const char *auth_header;
 
   /* Current authorization value used for this connection; may be NULL */
-  char *auth_value;
+  const char *auth_value;
 
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
@@ -100,7 +104,7 @@ typedef struct {
   const char *proxy_auth_header;
 
   /* Current authorization value used for the proxy server; may be NULL */
-  char *proxy_auth_value;
+  const char *proxy_auth_value;
 
   /* user agent string */
   const char *useragent;
@@ -150,7 +154,7 @@ struct svn_ra_serf__session_t {
   /* Authentication related properties. */
   const char *realm;
   const char *auth_header;
-  char *auth_value;
+  const char *auth_value;
   svn_auth_iterstate_t *auth_state;
   int auth_attempts;
 
@@ -182,7 +186,7 @@ struct svn_ra_serf__session_t {
 
   /* Proxy Authentication related properties */
   const char *proxy_auth_header;
-  char *proxy_auth_value;
+  const char *proxy_auth_value;
   const svn_ra_serf__auth_protocol_t *proxy_auth_protocol;
 
   const char *proxy_username;
@@ -1346,8 +1350,8 @@ typedef svn_error_t *
 (*svn_serf__auth_handler_func_t)(svn_ra_serf__handler_t *ctx,
                                  serf_request_t *request,
                                  serf_bucket_t *response,
-                                 char *auth_hdr,
-                                 char *auth_attr,
+                                 const char *auth_hdr,
+                                 const char *auth_attr,
                                  apr_pool_t *pool);
 
 /**
@@ -1428,9 +1432,9 @@ svn_ra_serf__handle_auth(int code,
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
 void
-svn_ra_serf__encode_auth_header(const char * protocol,
-                                char **header,
-                                const char * data,
+svn_ra_serf__encode_auth_header(const char *protocol,
+                                const char **header,
+                                const char *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
 
@@ -1444,5 +1448,9 @@ svn_ra_serf__encode_auth_header(const char * protocol,
 svn_error_t *
 svn_ra_serf__error_on_status(int status_code, const char *path);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */
