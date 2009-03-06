@@ -48,6 +48,7 @@ CREATE TABLE REPOSITORY (
 /* Note: a repository (identified by its UUID) may appear at multiple URLs.
    For example, http://example.com/repos/ and https://example.com/repos/.  */
 CREATE INDEX I_UUID ON REPOSITORY (uuid);
+CREATE INDEX I_ROOT ON REPOSITORY (root);
 
 
 /* ------------------------------------------------------------------------- */
