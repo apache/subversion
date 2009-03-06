@@ -1005,9 +1005,9 @@ def run_and_verify_patch(dir, patch_path,
     try:
       tree.compare_trees("disk", post_disk, pre_disk)
     except tree.SVNTreeError:
-      print "============================================================="
-      print "'svn patch --dry-run' altered working copy"
-      print "============================================================="
+      print("=============================================================")
+      print("'svn patch --dry-run' altered working copy")
+      print("=============================================================")
       raise
 
   # Update and make a tree of the output.
@@ -1028,24 +1028,26 @@ def run_and_verify_patch(dir, patch_path,
     raise Failure(err)
 
   if dry_run and out != out_dry:
-    print "============================================================="
-    print "Outputs differ"
-    print "'svn patch --dry-run' output:"
-    map(sys.stdout.write, out_dry)
-    print "'svn patch' output:"
-    map(sys.stdout.write, out)
-    print "============================================================="
+    print("=============================================================")
+    print("Outputs differ")
+    print("'svn patch --dry-run' output:")
+    for x in out_dry:
+      sys.stdout.write(x)
+    print("'svn patch' output:")
+    for x in out:
+      sys.stdout.write(x)
+    print("=============================================================")
     raise main.SVNUnmatchedError
 
   def missing_skip(a, b):
-    print "============================================================="
-    print "'svn patch' failed to skip: " + a.path
-    print "============================================================="
+    print("=============================================================")
+    print("'svn patch' failed to skip: " + a.path)
+    print("=============================================================")
     raise Failure
   def extra_skip(a, b):
-    print "============================================================="
-    print "'svn patch' unexpectedly skipped: " + a.path
-    print "============================================================="
+    print("=============================================================")
+    print("'svn patch' unexpectedly skipped: " + a.path)
+    print("=============================================================")
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
