@@ -305,15 +305,17 @@ svn_ra_serf__handle_auth(int code,
     }
 
   /* Iterate over all headers. Try to find a matching authentication protocol
-     handler. */
-  /* ### no need for this. we have the header name and value already.
-     ### just do it.  this should get cleaned up. maybe fold the function
-     ### contents into here. any remaining need for the iteration?
+     handler.
+
+     Note: it is possible to have multiple Authentication: headers. We do
+     not want to combine them (per normal header combination rules) as that
+     would make it hard to parse. Instead, we want to individually parse
+     and handle each header in the response, looking for one that we can
+     work with.
+  */
   serf_bucket_headers_do(hdrs,
 			 handle_auth_header,
 			 &ab);
-  */
-  (void)handle_auth_header(&ab, ab.header, auth_hdr);
   SVN_ERR(ab.err);
 
   if (!ab.prot || ab.prot->auth_name == NULL)
