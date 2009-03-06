@@ -1230,7 +1230,7 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
 
-  /** @since New in 1.6. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
              SVN_ERR_MISC_CATEGORY_START + 33,
              "External program is missing")
