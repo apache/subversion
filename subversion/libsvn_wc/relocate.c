@@ -45,6 +45,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
                const char *to,
                svn_wc_relocation_validator3_t validator,
                void *validator_baton,
+               svn_boolean_t do_sync,
                apr_pool_t *pool)
 {
   svn_wc_entry_t entry2;
@@ -105,7 +106,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
 
   if (flags)
     SVN_ERR(svn_wc__entry_modify(adm_access, entry->name,
-                                 &entry2, flags, pool));
+                                 &entry2, flags, do_sync, pool));
   return SVN_NO_ERROR;
 }
 
@@ -131,7 +132,8 @@ svn_wc_relocate3(const char *path,
   if (entry->kind == svn_node_file
       || entry->depth == svn_depth_exclude)
     return relocate_entry(adm_access, entry, from, to,
-                          validator, validator_baton, pool);
+                          validator, validator_baton, TRUE /* sync */,
+                          pool);
 
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
      of all of the other entries.  This is technically cheating because
@@ -141,7 +143,7 @@ svn_wc_relocate3(const char *path,
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
   entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   SVN_ERR(relocate_entry(adm_access, entry, from, to,
-                         validator, validator_baton, pool));
+                         validator, validator_baton, FALSE, pool));
 
   subpool = svn_pool_create(pool);
 
@@ -174,7 +176,7 @@ svn_wc_relocate3(const char *path,
                                    validator_baton, subpool));
         }
       SVN_ERR(relocate_entry(adm_access, entry, from, to,
-                             validator, validator_baton, subpool));
+                             validator, validator_baton, FALSE, subpool));
     }
 
   svn_pool_destroy(subpool);

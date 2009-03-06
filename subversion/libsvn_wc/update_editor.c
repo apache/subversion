@@ -738,7 +738,7 @@ complete_directory(struct edit_baton *eb,
               SVN_ERR(svn_wc__entry_modify(adm_access, current_entry->name,
                                            &tmpentry,
                                            SVN_WC__ENTRY_MODIFY_DELETED,
-                                           subpool));
+                                           FALSE, subpool));
             }
         }
       /* An absent entry might have been reconfirmed as absent, and the way
@@ -1277,6 +1277,7 @@ open_root(void *edit_baton,
                                   d->path, pool));
       SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
                                    &tmp_entry, flags,
+                                   TRUE /* immediate write */,
                                    pool));
     }
 
@@ -1810,7 +1811,8 @@ set_copied_callback(const char *path,
           tmp_entry.copied = TRUE;
           flags |= SVN_WC__ENTRY_MODIFY_COPIED;
           SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
-                                       &tmp_entry, flags, pool));
+                                       &tmp_entry, flags, TRUE /* do_sync */,
+                                       pool));
         }
     }
   return SVN_NO_ERROR;
@@ -1887,7 +1889,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   SVN_ERR(svn_wc__entry_modify(entry_adm_access,
                                (entry->kind == svn_node_dir)
                                ? SVN_WC_ENTRY_THIS_DIR : base_name,
-                               &tmp_entry, flags, pool));
+                               &tmp_entry, flags, TRUE /* do_sync */, pool));
 
   /* If it's a directory, set the 'copied' flag recursively. The rest of the
    * directory tree's state can stay exactly as it was before being
@@ -1917,7 +1919,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
       SVN_ERR(svn_wc__entry_versioned(&parent_entry, parent_path,
                                       parent_adm_access, TRUE, pool));
       SVN_ERR(svn_wc__entry_modify(parent_adm_access, base_name,
-                                   &tmp_entry, flags, pool));
+                                   &tmp_entry, flags, TRUE, pool));
 
       /* ### Need to do something more, such as change 'base' into 'revert-base'? */
     }
@@ -2458,7 +2460,8 @@ add_directory(const char *path,
         }
 
       SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   modify_flags, pool));
+                                   modify_flags,
+                                   TRUE /* immediate write */, pool));
 
       if (db->add_existed)
         {
@@ -2482,7 +2485,8 @@ add_directory(const char *path,
             }
 
           SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry,
-                                       modify_flags, pool));
+                                       modify_flags,
+                                       TRUE /* immediate write */, pool));
         }
     }
 
@@ -2508,13 +2512,15 @@ add_directory(const char *path,
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                                   pb->path, db->pool));
       SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   modify_flags, pool));
+                                   modify_flags,
+                                   TRUE /* immediate write */, pool));
 
       /* Mark PATH's 'this dir' entry as scheduled for deletion. */
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                                   db->path, db->pool));
       SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* This Dir entry */,
-                                   &tmp_entry, modify_flags, pool));
+                                   &tmp_entry, modify_flags,
+                                   TRUE /* immediate write */, pool));
     }
 
   /* If this add was obstructed by dir scheduled for addition without
@@ -2665,7 +2671,9 @@ open_directory(const char *path,
   tmp_entry.incomplete = TRUE;
 
   return svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
-                              &tmp_entry, flags, pool);
+                              &tmp_entry, flags,
+                              TRUE /* immediate write */,
+                              pool);
 }
 
 
@@ -2967,7 +2975,7 @@ absent_file_or_dir(const char *path,
                                SVN_WC__ENTRY_MODIFY_REVISION |
                                SVN_WC__ENTRY_MODIFY_DELETED |
                                SVN_WC__ENTRY_MODIFY_ABSENT),
-                              pool);
+                              TRUE /* immediate write */, pool);
 }
 
 
