@@ -106,7 +106,7 @@ static const char * const statements[] = {
      "tree_conflict_data) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
 
-  "select id, root from repository where uuid = ?1;",
+  "select id, root from repository where root = ?1;",
 
   "select id from wcroot where local_abspath is null;",
 
@@ -1836,16 +1836,34 @@ entries_write_body(void *baton,
   if (ewtb->this_dir->uuid != NULL)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
-      SVN_ERR(svn_sqlite__bindf(stmt, "s", ewtb->this_dir->uuid));
+      SVN_ERR(svn_sqlite__bindf(stmt, "s", ewtb->this_dir->repos));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-      if (!have_row)
-        return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                                 _("No REPOSITORY table entry for uuid '%s'"),
-                                 ewtb->this_dir->uuid);
+      if (have_row)
+        {
+          repos_id = svn_sqlite__column_int(stmt, 0);
+          repos_root = svn_sqlite__column_text(stmt, 1, ewtb->scratch_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_sqlite__reset(stmt));
 
-      repos_id = svn_sqlite__column_int(stmt, 0);
-      repos_root = svn_sqlite__column_text(stmt, 1, ewtb->scratch_pool);
+          /* Insert a new row in the REPOSITORY table for using this new,
+             and currently unknown, repository.
+
+             ### does this need to be done on a per-entry basis instead of
+             ### the per-directory way we do it now?  me thinks yes...
+             ###
+             ### when do we harvest repository entries which no longer have
+             ### any members?  */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                            STMT_INSERT_REPOSITORY));
+          SVN_ERR(svn_sqlite__bindf(stmt, "ss", ewtb->this_dir->repos,
+                                    ewtb->this_dir->uuid));
+          SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
+          repos_root = ewtb->this_dir->repos;
+        }
+
       SVN_ERR(svn_sqlite__reset(stmt));
     }
   else
