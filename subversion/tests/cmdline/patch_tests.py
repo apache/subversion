@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -36,15 +36,8 @@ Item = svntest.wc.StateItem
 ########################################################################
 #Tools
 
-def append_newline(s): return s + "\n"
-
 def svnpatch_encode(l):
-  return map(append_newline,
-             textwrap.wrap(
-              base64.encodestring(
-               zlib.compress(
-                "".join(l))),
-              76))
+  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
 gnupatch_garbage_re =\
  re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
