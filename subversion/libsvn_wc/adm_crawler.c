@@ -149,8 +149,7 @@ restore_file(const char *file_path,
 
   /* Modify our entry's text-timestamp to match the working file. */
   return svn_wc__entry_modify(adm_access, svn_dirent_basename(file_path, pool),
-                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                              TRUE /* do_sync now */, pool);
+                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool);
 }
 
 
