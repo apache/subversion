@@ -669,7 +669,7 @@ file_diff(struct dir_baton *dir_baton,
                0, entry->revision,
                NULL,
                working_mimetype,
-               NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.6 API */
+               NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.7 API */
                propchanges, baseprops,
                dir_baton->edit_baton->callback_baton));
 
@@ -775,7 +775,7 @@ dir_diff(struct dir_baton *dir_baton,
                  NULL,
                  path,
                  entry->revision,
-                 NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.6 API */
+                 NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.7 API */
                  eb->callback_baton));
 
         dir_to_diff = TRUE;
@@ -1130,7 +1130,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
            empty_file, translated_file,
            0, entry->revision,
            NULL, mimetype,
-           NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.6 API */
+           NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.7 API */
            propchanges, emptyprops,
            eb->callback_baton));
 
@@ -2346,7 +2346,7 @@ close_file(void *file_baton,
                    eb->revnum,
                    NULL,
                    repos_mimetype,
-                   NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.6 API */
+                   NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.7 API */
                    b->propchanges,
                    apr_hash_make(pool),
                    b->edit_baton->callback_baton);

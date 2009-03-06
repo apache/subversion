@@ -568,8 +568,8 @@ copy_file_administratively(const char *src_path,
                   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
                     return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
                                             err, NULL);
-                    }
                 }
+            }
 
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))

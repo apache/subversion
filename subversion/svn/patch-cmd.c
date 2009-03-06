@@ -2,7 +2,7 @@
  * patch-cmd.c -- Apply changes to a working copy.
  *
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -60,9 +60,8 @@ svn_cl__patch(apr_getopt_t *os,
                                   pool));
     SVN_ERR(svn_io_check_path(patch_path, &patch_path_kind, pool));
     if (patch_path_kind == svn_node_none)
-      return svn_error_createf
-              (APR_ENOENT, NULL, _("'%s' does not exist"),
-              svn_path_local_style(patch_path, pool));
+      return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
+                               svn_path_local_style(patch_path, pool));
   }
 
   /* Against the WCPATH argument */
