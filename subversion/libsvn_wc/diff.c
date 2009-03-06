@@ -3,7 +3,7 @@
  *           repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -137,7 +137,7 @@ struct edit_baton {
 
   /* The callbacks and callback argument that implement the file comparison
      functions */
-  const svn_wc_diff_callbacks3_t *callbacks;
+  const svn_wc_diff_callbacks4_t *callbacks;
   void *callback_baton;
 
   /* How does this diff descend? */
@@ -269,7 +269,7 @@ static svn_error_t *
 make_editor_baton(struct edit_baton **edit_baton,
                   svn_wc_adm_access_t *anchor,
                   const char *target,
-                  const svn_wc_diff_callbacks3_t *callbacks,
+                  const svn_wc_diff_callbacks4_t *callbacks,
                   void *callback_baton,
                   svn_depth_t depth,
                   svn_boolean_t ignore_ancestry,
@@ -1531,7 +1531,7 @@ svnpatch_close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* Create an editor, close to what svn_wc_get_diff_editor4() does for
+/* Create an editor, close to what svn_wc_get_diff_editor6() does for
  * rep/wc diff.  As svnpatch is revisionless, no need for @c
  * set_target_revision callback.  No cancel facility here as this is
  * wc/wc diff. */
@@ -2534,9 +2534,9 @@ close_edit(void *edit_baton,
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
+svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
                         const char *target,
-                        const svn_wc_diff_callbacks3_t *callbacks,
+                        const svn_wc_diff_callbacks4_t *callbacks,
                         void *callback_baton,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
@@ -2605,9 +2605,9 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
 
 /* Compare working copy against the text-base. */
 svn_error_t *
-svn_wc_diff5(svn_wc_adm_access_t *anchor,
+svn_wc_diff6(svn_wc_adm_access_t *anchor,
              const char *target,
-             const svn_wc_diff_callbacks3_t *callbacks,
+             const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,

@@ -2,7 +2,7 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -49,7 +49,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  const svn_wc_diff_callbacks3_t *diff_callbacks;
+  const svn_wc_diff_callbacks4_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
@@ -1600,7 +1600,7 @@ get_svnpatch_diff_editor(svn_delta_editor_t **editor,
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks3_t *diff_callbacks,
+                            const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,

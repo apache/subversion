@@ -330,7 +330,7 @@ struct diff_cmd_baton {
 
   /* These are the numeric representations of the revisions passed to
      svn_client_diff5, either may be SVN_INVALID_REVNUM.  We need these
-     because some of the svn_wc_diff_callbacks3_t don't get revision
+     because some of the svn_wc_diff_callbacks4_t don't get revision
      arguments.
 
      ### Perhaps we should change the callback signatures and eliminate
@@ -433,7 +433,7 @@ diff_label(const char *path,
   return label;
 }
 
-/* An svn_wc_diff_callbacks3_t function.  Used for both file and directory
+/* An svn_wc_diff_callbacks4_t function.  Used for both file and directory
    property diffs. */
 static svn_error_t *
 diff_props_changed(svn_wc_adm_access_t *adm_access,
@@ -666,7 +666,7 @@ diff_content_changed(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_file_changed(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *content_state,
@@ -704,7 +704,7 @@ diff_file_changed(svn_wc_adm_access_t *adm_access,
    each of these next two functions, they can be dumb wrappers around
    the main workhorse routine. */
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_file_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *content_state,
@@ -744,7 +744,7 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
@@ -769,7 +769,7 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
                            apr_hash_make(diff_cmd_baton->pool), diff_baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
                           svn_wc_notify_state_t *state,
@@ -796,7 +796,7 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
            path, equal_string);
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_dir_added(svn_wc_adm_access_t *adm_access,
                svn_wc_notify_state_t *state,
@@ -817,7 +817,7 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_dir_deleted(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *state,
@@ -835,7 +835,7 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_dir_opened(svn_wc_adm_access_t *adm_access,
                 svn_boolean_t *tree_conflicted,
@@ -851,7 +851,7 @@ diff_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_dir_closed(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *contentstate,
@@ -1206,7 +1206,7 @@ diff_wc_wc(const char *path1,
            svn_depth_t depth,
            svn_boolean_t ignore_ancestry,
            const apr_array_header_t *changelists,
-           const svn_wc_diff_callbacks3_t *callbacks,
+           const svn_wc_diff_callbacks4_t *callbacks,
            struct diff_cmd_baton *callback_baton,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
@@ -1239,7 +1239,7 @@ diff_wc_wc(const char *path1,
           (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
-  SVN_ERR(svn_wc_diff5(adm_access, target, callbacks, callback_baton,
+  SVN_ERR(svn_wc_diff6(adm_access, target, callbacks, callback_baton,
                        depth, ignore_ancestry, changelists,
                        callback_baton->svnpatch_file, pool));
   return svn_wc_adm_close2(adm_access, pool);
@@ -1257,7 +1257,7 @@ diff_wc_wc(const char *path1,
    All other options are the same as those passed to svn_client_diff5(). */
 static svn_error_t *
 diff_repos_repos(const struct diff_parameters *diff_param,
-                 const svn_wc_diff_callbacks3_t *callbacks,
+                 const svn_wc_diff_callbacks4_t *callbacks,
                  struct diff_cmd_baton *callback_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
@@ -1336,7 +1336,7 @@ diff_repos_wc(const char *path1,
               svn_depth_t depth,
               svn_boolean_t ignore_ancestry,
               const apr_array_header_t *changelists,
-              const svn_wc_diff_callbacks3_t *callbacks,
+              const svn_wc_diff_callbacks4_t *callbacks,
               struct diff_cmd_baton *callback_baton,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
@@ -1407,7 +1407,7 @@ diff_repos_wc(const char *path1,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  SVN_ERR(svn_wc_get_diff_editor5(adm_access, target,
+  SVN_ERR(svn_wc_get_diff_editor6(adm_access, target,
                                   callbacks, callback_baton,
                                   depth,
                                   ignore_ancestry,
@@ -1457,7 +1457,7 @@ diff_repos_wc(const char *path1,
 /* This is basically just the guts of svn_client_diff[_peg]5(). */
 static svn_error_t *
 do_diff(const struct diff_parameters *diff_param,
-        const svn_wc_diff_callbacks3_t *callbacks,
+        const svn_wc_diff_callbacks4_t *callbacks,
         struct diff_cmd_baton *callback_baton,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
@@ -1691,7 +1691,7 @@ svn_client_diff5(const apr_array_header_t *options,
   struct diff_parameters diff_params;
 
   struct diff_cmd_baton diff_cmd_baton;
-  svn_wc_diff_callbacks3_t diff_callbacks;
+  svn_wc_diff_callbacks4_t diff_callbacks;
 
   const char *tempdir;
 
@@ -1772,7 +1772,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   struct diff_parameters diff_params;
 
   struct diff_cmd_baton diff_cmd_baton;
-  svn_wc_diff_callbacks3_t diff_callbacks;
+  svn_wc_diff_callbacks4_t diff_callbacks;
 
   const char *tempdir;
 
