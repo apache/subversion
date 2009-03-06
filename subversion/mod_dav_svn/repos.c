@@ -4169,7 +4169,7 @@ int dav_svn__method_post(request_rec *r)
   /* Create a Subversion repository transaction based on HEAD. */
   derr = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
   if (derr)
-    return derr->status;
+    return dav_svn__error_response_tag(r, derr);
 
   /* Build a "201 Created" response with header that tells the client
      our new transaction's name. */
