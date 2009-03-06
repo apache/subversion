@@ -614,7 +614,40 @@ in one invocation.  Both the -c and -r arguments are supported.</p>
 <div class="h4" id="trust-server-cert" title="trust-server-cert">
 <h4>--trust-server-cert option</h4>
 
-<p>XXX</p>
+<p>Option added to <code>svn</code> and <code>svnsync</code>, so that
+non-interactive operations can work with self-signed certificates not
+backed by a known trust authority.</p>
+
+with this option:
+<pre>
+   $ svn log -r36364 https://svn.collab.net/repos/svn/trunk --trust-server-cert --non-interactive
+   ------------------------------------------------------------------------
+   r36364 | stylesen | 2009-03-06 13:11:20 +0530 (Fri, 06 Mar 2009) | 3 lines
+   
+   ...log message omitted...
+   ------------------------------------------------------------------------
+</pre>
+
+without this option:
+<pre>
+   $ svn log -r36364 https://svn.collab.net/repos/svn/trunk 
+   Error validating server certificate for 'https://svn.collab.net':
+    - The certificate is not issued by a trusted authority. Use the
+      fingerprint to validate the certificate manually!
+   Certificate information:
+    - Hostname: svn.collab.net
+    - Valid: from Sep 24 22:01:07 2007 GMT until Sep 23 22:01:07 2011 GMT
+    - Issuer: sv, CollabNet, Brisbane, California, US
+   (hostname@collab.net)
+    - Fingerprint:
+   AA:5B:74:B1:E2:7F:38:B3:2B:C2:B1:60:6E:01:BB:F5:7C:37:98:46
+   (R)eject, accept (t)emporarily or accept (p)ermanently? t
+   ------------------------------------------------------------------------
+   r36364 | stylesen | 2009-03-06 13:11:20 +0530 (Fri, 06 Mar 2009) | 3 lines
+
+   ...log message omitted...
+   ------------------------------------------------------------------------
+</pre>
 
 </div>  <!-- trust-server-cert -->
 
