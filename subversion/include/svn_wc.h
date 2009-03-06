@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -55,8 +55,8 @@
 #include "svn_delta.h"     /* for svn_stream_t */
 #include "svn_opt.h"
 #include "svn_ra.h"        /* for svn_ra_reporter_t type */
+#include "svn_ra_svn.h"    /* for svn_ra_svn_item_t type */
 #include "svn_version.h"
-#include "svn_ra_svn.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1612,9 +1612,9 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
  * state, this is only useful with merge, not diff; diff callbacks
  * should set this to false.)
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
-typedef struct svn_wc_diff_callbacks3_t
+typedef struct svn_wc_diff_callbacks4_t
 {
   /**
    * A file @a path has changed.  If @a tmpfile2 is non-NULL, the
@@ -1773,14 +1773,109 @@ typedef struct svn_wc_diff_callbacks3_t
                              const char *path,
                              void *diff_baton);
 
+} svn_wc_diff_callbacks4_t;
+
+
+/**
+ * Similar to @c svn_wc_diff_callbacks4_t, but without @a copyfrom_path and
+ * @a copyfrom_revision arguments to @c file_added and @c dir_added functions.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+typedef struct svn_wc_diff_callbacks3_t
+{
+  /** The same as @c file_changed in @c svn_wc_diff_callbacks4_t. */
+  svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *contentstate,
+                               svn_wc_notify_state_t *propstate,
+                               svn_boolean_t *tree_conflicted,
+                               const char *path,
+                               const char *tmpfile1,
+                               const char *tmpfile2,
+                               svn_revnum_t rev1,
+                               svn_revnum_t rev2,
+                               const char *mimetype1,
+                               const char *mimetype2,
+                               const apr_array_header_t *propchanges,
+                               apr_hash_t *originalprops,
+                               void *diff_baton);
+
+  /** Similar to @c svn_wc_diff_callbacks4_t's @c file_added but without
+   * @a copyfrom_path and @a copyfrom_revision arguments. */
+  svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *contentstate,
+                             svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
+                             const char *path,
+                             const char *tmpfile1,
+                             const char *tmpfile2,
+                             svn_revnum_t rev1,
+                             svn_revnum_t rev2,
+                             const char *mimetype1,
+                             const char *mimetype2,
+                             const apr_array_header_t *propchanges,
+                             apr_hash_t *originalprops,
+                             void *diff_baton);
+
+  /** The same as @c file_deleted in @c svn_wc_diff_callbacks4_t. */
+  svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *state,
+                               svn_boolean_t *tree_conflicted,
+                               const char *path,
+                               const char *tmpfile1,
+                               const char *tmpfile2,
+                               const char *mimetype1,
+                               const char *mimetype2,
+                               apr_hash_t *originalprops,
+                               void *diff_baton);
+
+  /** Similar to @c svn_wc_diff_callbacks4_t's @c dir_added but without
+   * @a copyfrom_path and @a copyfrom_revision arguments. */
+  svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
+                            svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
+                            const char *path,
+                            svn_revnum_t rev,
+                            void *diff_baton);
+
+  /** The same as @c dir_deleted in @c svn_wc_diff_callbacks4_t. */
+  svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *state,
+                              svn_boolean_t *tree_conflicted,
+                              const char *path,
+                              void *diff_baton);
+
+  /** The same as @c dir_props_changed in @c svn_wc_diff_callbacks4_t. */
+  svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
+                                    svn_wc_notify_state_t *propstate,
+                                    svn_boolean_t *tree_conflicted,
+                                    const char *path,
+                                    const apr_array_header_t *propchanges,
+                                    apr_hash_t *original_props,
+                                    void *diff_baton);
+
+  /** The same as @c dir_opened in @c svn_wc_diff_callbacks4_t. */
+  svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t *tree_conflicted,
+                             const char *path,
+                             svn_revnum_t rev,
+                             void *diff_baton);
+
+  /** The same as @c dir_closed in @c svn_wc_diff_callbacks4_t. */
+  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *contentstate,
+                             svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
+                             const char *path,
+                             void *diff_baton);
+
 } svn_wc_diff_callbacks3_t;
 
 /**
- * Similar to @c svn_wc_diff_callbacks3_t, but without:
- *  - @a copyfrom_path and @a copyfrom_rev args for both @c file_added and @c
- *    dir_added functions.
- *  - @c dir_opened or @c dir_closed functions.
- *  - @c tree_conflicted argument to the functions.
+ * Similar to @c svn_wc_diff_callbacks3_t, but without the @c dir_opened
+ * and @c dir_closed functions, and without the @a tree_conflicted argument
+ * to the functions.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -1801,8 +1896,7 @@ typedef struct svn_wc_diff_callbacks2_t
                                apr_hash_t *originalprops,
                                void *diff_baton);
 
-  /** Similar to @c svn_wc_diff_callbacks3_t's @c file_added but without
-   * @a copyfrom_path and @a copyfrom_rev arguments. */
+  /** The same as @c file_added in @c svn_wc_diff_callbacks3_t. */
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
@@ -1828,8 +1922,7 @@ typedef struct svn_wc_diff_callbacks2_t
                                apr_hash_t *originalprops,
                                void *diff_baton);
 
-  /** Similar to @c svn_wc_diff_callbacks3_t's @c dir_added but without
-   * @a copyfrom_path and @a copyfrom_rev arguments. */
+  /** The same as @c dir_added in @c svn_wc_diff_callbacks3_t. */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
                             const char *path,
@@ -4535,8 +4628,35 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const apr_array_header_t *changelists,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_file_t *svnpatch_file,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_get_diff_editor6(), but with an
+ * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t,
+ * and @a svnpatch_file set to @c NULL.
+ *
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -4551,7 +4671,6 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                         const apr_array_header_t *changelists,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
-                        apr_file_t *svnpatch_file,
                         apr_pool_t *pool);
 
 /**
@@ -4681,12 +4800,12 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_diff5(svn_wc_adm_access_t *anchor,
+svn_wc_diff6(svn_wc_adm_access_t *anchor,
              const char *target,
-             const svn_wc_diff_callbacks3_t *callbacks,
+             const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
@@ -4695,10 +4814,29 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
              apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_diff5(), but with a @c svn_wc_diff_callbacks2_t argument
- * instead of @c svn_wc_diff_callbacks3_t.
+ * Similar to svn_wc_diff6(), but with a @c svn_wc_diff_callbacks3_t argument
+ * instead of @c svn_wc_diff_callbacks4_t.
  *
  * @a svnpatch_file is always set to @c NULL.
+ *
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_wc_diff5(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks3_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
+             apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_diff5(), but with a @c svn_wc_diff_callbacks2_t argument
+ * instead of @c svn_wc_diff_callbacks3_t.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */

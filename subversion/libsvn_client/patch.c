@@ -94,7 +94,7 @@ dry_run_deleted_p(struct patch_cmd_baton *patch_b, const char *wcpath)
 }
 
 
-/* A svn_wc_diff_callbacks3_t function.  Used for both file and directory
+/* A svn_wc_diff_callbacks4_t function.  Used for both file and directory
    property merges. */
 static svn_error_t *
 merge_props_changed(svn_wc_adm_access_t *adm_access,
@@ -149,7 +149,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks3_t function. */
+/* A svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_file_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *content_state,
@@ -285,7 +285,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks3_t function. */
+/* A svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
@@ -493,7 +493,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks3_t function. */
+/* A svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
@@ -572,7 +572,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks3_t function. */
+/* A svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *state,
@@ -734,7 +734,7 @@ merge_delete_notify_func(void *baton,
     (*mdb->ctx->notify_func2)(mdb->ctx->notify_baton2, notify, pool);
 }
 
-/* A svn_wc_diff_callbacks3_t function. */
+/* A svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -812,7 +812,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
  * names as (a) they are pretty much merge operations (b) even if
  * tweaked them to meet 'svn patch' needs, they do pretty much what
  * their real sibblings do. */
-static const svn_wc_diff_callbacks3_t
+static const svn_wc_diff_callbacks4_t
 patch_callbacks =
   {
     merge_file_changed,
@@ -842,7 +842,7 @@ struct edit_baton {
   const char *empty_file;
 
   /* The merge callbacks array and its baton. */
-  const svn_wc_diff_callbacks3_t *diff_callbacks;
+  const svn_wc_diff_callbacks4_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* If the func is non-null, send notifications of actions. */
@@ -1579,7 +1579,7 @@ static struct edit_baton *
 make_editor_baton(const char *target,
                   svn_wc_adm_access_t *adm_access,
                   svn_boolean_t dry_run,
-                  const svn_wc_diff_callbacks3_t *callbacks,
+                  const svn_wc_diff_callbacks4_t *callbacks,
                   void *patch_cmd_baton,
                   svn_wc_notify_func2_t notify_func,
                   void *notify_baton,
