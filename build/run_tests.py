@@ -74,6 +74,7 @@ class TestHarness:
     self._open_log('r')
     log_lines = self.log.readlines()
     # Print summaries from least interesting to most interesting.
+    passed = [x for x in log_lines if x[:6] == 'PASS: ']
     skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
@@ -96,6 +97,8 @@ class TestHarness:
         sys.stdout.write(x)
     if skipped or xfailed or failed_list or xpassed:
       print('Summary of test results:')
+      if passed:
+        print('  %d test%s PASSED' % (len(passed), 's'*min(len(passed), 1)))
       if skipped:
         print('  %d test%s SKIPPED' % (len(skipped), 's'*min(len(skipped), 1)))
       if xfailed:

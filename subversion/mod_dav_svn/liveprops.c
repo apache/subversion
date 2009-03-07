@@ -315,7 +315,8 @@ insert_prop(const dav_resource *resource,
 
         /* ### for now, our global VCC has no such property. */
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
-            && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+            && (resource->info->restype == DAV_SVN_RESTYPE_VCC
+                || resource->info->restype == DAV_SVN_RESTYPE_ME))
           {
             return DAV_PROP_INSERT_NOTSUPP;
           }
@@ -348,7 +349,8 @@ insert_prop(const dav_resource *resource,
 
         /* ### for now, our global VCC has no such property. */
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
-            && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+            && (resource->info->restype == DAV_SVN_RESTYPE_VCC
+                || resource->info->restype == DAV_SVN_RESTYPE_ME))
           {
             return DAV_PROP_INSERT_NOTSUPP;
           }
@@ -438,7 +440,8 @@ insert_prop(const dav_resource *resource,
           return DAV_PROP_INSERT_NOTSUPP;
 
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
-            && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+            && (resource->info->restype == DAV_SVN_RESTYPE_VCC
+                || resource->info->restype == DAV_SVN_RESTYPE_ME))
           {
             return DAV_PROP_INSERT_NOTSUPP;
           }
@@ -485,7 +488,8 @@ insert_prop(const dav_resource *resource,
 
     case DAV_PROPID_getetag:
       if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
-          && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+          && (resource->info->restype == DAV_SVN_RESTYPE_VCC
+              || resource->info->restype == DAV_SVN_RESTYPE_ME))
         {
           return DAV_PROP_INSERT_NOTSUPP;
         }
@@ -517,7 +521,8 @@ insert_prop(const dav_resource *resource,
       /* only defined for VCRs (in the public space and in a BC space) */
       /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
       if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
-          && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+          && (resource->info->restype == DAV_SVN_RESTYPE_VCC
+              || resource->info->restype == DAV_SVN_RESTYPE_ME))
         {
           svn_revnum_t revnum;
 
@@ -574,7 +579,8 @@ insert_prop(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
 
       if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
-          && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+          && (resource->info->restype == DAV_SVN_RESTYPE_VCC
+              || resource->info->restype == DAV_SVN_RESTYPE_ME))
         {
           return DAV_PROP_INSERT_NOTSUPP;
         }

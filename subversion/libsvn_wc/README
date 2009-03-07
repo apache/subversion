@@ -107,6 +107,8 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
             props/              /* tmp area for props */
        empty-file               /* Obsolete, no longer used, not present in
                                    post-1.3 working copies */
+       wc.db                    /* A SQLite database which contains *all* the
+                                   administrative information for a wc-ng. */
 
 `format':
    Says what version of the working copy adm format this is (so future

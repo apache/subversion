@@ -639,6 +639,7 @@ svn_client_log5(const apr_array_header_t *targets,
             }
         }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

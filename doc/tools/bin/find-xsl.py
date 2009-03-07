@@ -26,7 +26,7 @@ tools_bin_dir = os.path.dirname(sys.argv[0])
 xsl_dir = os.path.join(tools_bin_dir, '..', 'xsl')
 
 if os.path.exists(xsl_dir):
-  print "XSL directory %s already exists" % (xsl_dir,)
+  print("XSL directory %s already exists" % xsl_dir)
   sys.exit(0)
 
 for i in candidate_xsldirs:
@@ -36,7 +36,7 @@ for i in candidate_xsldirs:
   for j in globs:
     if os.path.exists(os.path.join(j, 'html', 'docbook.xsl')):
       os.symlink(j, xsl_dir)
-      print "Found and linked %s" % (j,)
+      print("Found and linked %s" % j)
       sys.exit(0)
 
 sys.stderr.write('ERROR: Failed to find a DocBook XSL directory\n')

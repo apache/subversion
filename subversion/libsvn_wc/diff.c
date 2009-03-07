@@ -45,6 +45,7 @@
 
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_md5.h"
 #include "svn_hash.h"
@@ -383,8 +384,8 @@ make_file_baton(const char *path,
       while (wc_dir_baton->added)
         wc_dir_baton = wc_dir_baton->dir_baton;
 
-      file_baton->wc_path = svn_path_join(wc_dir_baton->path, "unimportant",
-                                          file_baton->pool);
+      file_baton->wc_path = svn_dirent_join(wc_dir_baton->path, "unimportant",
+                                            file_baton->pool);
     }
   else
     {
@@ -910,7 +911,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
           && strcmp(dir_baton->edit_baton->target, name))
         continue;
 
-      path = svn_path_join(dir_baton->path, name, subpool);
+      path = svn_dirent_join(dir_baton->path, name, subpool);
 
       /* Skip entry if it is in the list of entries already diff'd. */
       if (apr_hash_get(dir_baton->compared, path, APR_HASH_KEY_STRING))
@@ -1256,7 +1257,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
       if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
         continue;
 
-      path = svn_path_join(dir_baton->path, name, subpool);
+      path = svn_dirent_join(dir_baton->path, name, subpool);
 
       switch (entry->kind)
         {
@@ -1776,8 +1777,8 @@ delete_entry(const char *path,
   const svn_wc_entry_t *entry;
   struct dir_baton *b;
   const char *empty_file;
-  const char *full_path = svn_path_join(pb->edit_baton->anchor_path, path,
-                                        pb->pool);
+  const char *full_path = svn_dirent_join(pb->edit_baton->anchor_path, path,
+                                          pb->pool);
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, pb->edit_baton->anchor,
@@ -1905,7 +1906,7 @@ add_directory(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, dir_pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, dir_pool);
   b = make_dir_baton(full_path, pb, pb->edit_baton, TRUE,
                      token, subdir_depth, dir_pool);
   *child_baton = b;
@@ -1937,7 +1938,7 @@ open_directory(const char *path,
 
   /* Allocate path from the parent pool since the memory is used in the
      parent's compared hash */
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, pb->pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, pb->pool);
   b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE,
                      token, subdir_depth, dir_pool);
   *child_baton = b;
@@ -2134,7 +2135,7 @@ add_file(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, file_pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, file_pool);
   b = make_file_baton(full_path, TRUE, pb, token, file_pool);
   *file_baton = b;
 
@@ -2165,7 +2166,7 @@ open_file(const char *path,
   const char *full_path;
   const char *token = make_token('c', eb, file_pool);
 
-  full_path = svn_path_join(pb->edit_baton->anchor_path, path, file_pool);
+  full_path = svn_dirent_join(pb->edit_baton->anchor_path, path, file_pool);
   b = make_file_baton(full_path, FALSE, pb, token, file_pool);
   *file_baton = b;
 
@@ -2209,7 +2210,7 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(svn_wc_entry(&entry, b->wc_path, eb->anchor, FALSE, b->pool));
 
-  svn_path_split(b->wc_path, &parent, &base_name, b->pool);
+  svn_dirent_split(b->wc_path, &parent, &base_name, b->pool);
 
   /* Check to see if there is a schedule-add with history entry in
      the current working copy.  If so, then this is not actually
@@ -2636,8 +2637,8 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
         svn_stream_from_aprfile2(svnpatch_file,
                                  FALSE, eb->pool);
 
-  target_path = svn_path_join(svn_wc_adm_access_path(anchor), target,
-                              eb->pool);
+  target_path = svn_dirent_join(svn_wc_adm_access_path(anchor), target,
+                                eb->pool);
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, anchor, target_path,
                                     eb->pool));

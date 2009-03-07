@@ -18,6 +18,7 @@
 
 #include "svn_wc.h"
 #include "svn_diff.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 
@@ -285,7 +286,7 @@ create_name_preserving_tmp_file(apr_file_t **fp,
 {
   const char *temp_dir;
   apr_file_t *file;
-  const char *base_name = svn_path_basename(template_path, pool);
+  const char *base_name = svn_dirent_basename(template_path, pool);
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR_ASSERT(fp || new_name);
@@ -621,7 +622,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
 
-  svn_path_split(target_copy, &parent, &target_base, pool);
+  svn_dirent_split(target_copy, &parent, &target_base, pool);
   SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent,
                               pool));
 
@@ -629,7 +630,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
      relative to the adm_access path they are executed in.
 
      Make our LEFT and RIGHT files 'local' if they aren't... */
-  if (! svn_path_is_child(adm_path, left, pool))
+  if (! svn_dirent_is_child(adm_path, left, NULL))
     {
       SVN_ERR(svn_wc_create_tmp_file2
               (NULL, &tmp_left,
@@ -639,7 +640,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   else
     tmp_left = left;
 
-  if (! svn_path_is_child(adm_path, right, pool))
+  if (! svn_dirent_is_child(adm_path, right, NULL))
     {
       SVN_ERR(svn_wc_create_tmp_file2
               (NULL, &tmp_right,
@@ -687,9 +688,9 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
            target_copy, detranslated_target_copy, merge_target, pool));
 
   tmp_entry.conflict_old
-    = svn_path_is_child(adm_path, left_copy, pool);
+    = svn_dirent_is_child(adm_path, left_copy, pool);
   tmp_entry.conflict_new
-    = svn_path_is_child(adm_path, right_copy, pool);
+    = svn_dirent_is_child(adm_path, right_copy, pool);
   tmp_entry.conflict_wrk = target_base;
 
   /* Mark merge_target's entry as "Conflicted", and start tracking
@@ -995,7 +996,7 @@ merge_binary_file(const char *left,
   /* ### when making the binary-file backups, should we be honoring
      keywords and eol stuff?   */
   const char *left_copy, *right_copy;
-  const char *parent, *left_base, *right_base;
+  const char *left_base, *right_base;
   svn_wc_entry_t tmp_entry;
 
   /* Give the conflict resolution callback a chance to clean
@@ -1123,16 +1124,16 @@ merge_binary_file(const char *left,
                                  detranslated_target,
                                  mine_copy,
                                  pool));
-      mine_copy = svn_path_is_child(svn_wc_adm_access_path(adm_access),
-                                    mine_copy, pool);
+      mine_copy = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
+                                      mine_copy, pool);
       tmp_entry.conflict_wrk = mine_copy;
     }
   else
     tmp_entry.conflict_wrk = NULL;
 
   /* Derive the basenames of the backup files. */
-  svn_path_split(left_copy, &parent, &left_base, pool);
-  svn_path_split(right_copy, &parent, &right_base, pool);
+  left_base = svn_dirent_basename(left_copy, pool);
+  right_base = svn_dirent_basename(right_copy, pool);
 
   /* Mark merge_target's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
@@ -1191,7 +1192,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       return SVN_NO_ERROR;
     }
 
-  svn_path_split(merge_target, &merge_dirpath, &merge_filename, pool);
+  svn_dirent_split(merge_target, &merge_dirpath, &merge_filename, pool);
 
   /* Decide if the merge target is a text or binary file. */
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))

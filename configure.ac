@@ -40,6 +40,9 @@ AC_PROG_CXX
 # Look for a C pre-processor
 AC_PROG_CPP
 
+# Look for a good sed
+AC_PROG_SED
+
 # Grab target_cpu, so we can use it in the Solaris pkginfo file
 AC_CANONICAL_TARGET
 
@@ -80,7 +83,7 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
-NEON_RECOMMENDED_VER=0.28.3
+NEON_RECOMMENDED_VER=0.28.4
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -121,7 +124,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.10"
+SQLITE_RECOMMENDED_VER="3.6.11"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -168,25 +171,59 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
-echo "configuring libtool now"
-AC_ARG_ENABLE(experimental-libtool,
-  AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
-  [experimental_libtool=$enableval],[experimental_libtool=no])
-
-if test "$experimental_libtool" = "yes"; then
-  echo "using APR's libtool"
-  sh_libtool="`$apr_config --apr-libtool`"
-  LIBTOOL="$sh_libtool"
-  SVN_LIBTOOL="$sh_libtool"
-else
-  sh_libtool="$abs_builddir/libtool"
-  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
-  dnl libtoolize requires that the following line not be indented
-ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
-fi
+AC_ARG_WITH(custom-libtool,
+AS_HELP_STRING([--with-custom-libtool=PATH],
+               [Specify the command to run libtool]),
+               [ AC_MSG_NOTICE([using $withval as libtool])
+                 sh_libtool="$withval" ],
+               [ AC_MSG_NOTICE([using APR's libtool])
+                 sh_libtool="`$apr_config --apr-libtool`" ])
+LIBTOOL="$sh_libtool"
+SVN_LIBTOOL="$sh_libtool"
 AC_SUBST(SVN_LIBTOOL)
 
-dnl Before configuring libtool check for --enable-all-static option
+dnl Determine the libtool version
+changequote(, )dnl
+lt_pversion=`$LIBTOOL --version 2>/dev/null|$SED -e 's/([^)]*)//g;s/^[^0-9]*//;s/[- ].*//g;q'`
+lt_version=`echo $lt_pversion|$SED -e 's/\([a-z]*\)$/.\1/'`
+lt_major_version=`echo $lt_version | cut -d'.' -f 1`
+changequote([, ])dnl
+
+dnl set the default parameters
+svn_enable_static=yes
+svn_enable_shared=yes
+
+dnl check for --enable-static option
+AC_ARG_ENABLE(static,
+  AS_HELP_STRING([--enable-static],
+                 [Build static libraries]),
+  [svn_enable_static="$enableval"], [svn_enable_static="yes"])
+
+dnl check for --enable-shared option
+AC_ARG_ENABLE(shared,
+  AS_HELP_STRING([--enable-shared],
+                 [Build shared libraries]),
+  [svn_enable_shared="$enableval"], [svn_enable_shared="yes"])
+
+if test "$svn_enable_static" = "yes" && test "$svn_enable_shared" = "yes" ; then
+  AC_MSG_NOTICE([building both shared and static libraries])
+elif test "$svn_enable_static" = "yes" ; then
+  AC_MSG_NOTICE([building static libraries only])
+  LT_CFLAGS="-static $LT_CFLAGS"
+  LT_LDFLAGS="-static $LT_LDFLAGS"
+elif test "$svn_enable_shared" = "yes" ; then
+  AC_MSG_NOTICE([building shared libraries only])
+  if test "$lt_major_version" = "1" ; then
+    LT_CFLAGS="-prefer-pic $LT_CFLAGS"
+  elif test "$lt_major_version" = "2" ; then
+    LT_CFLAGS="-shared $LT_CFLAGS"
+  fi
+  LT_LDFLAGS="-shared $LT_LDFLAGS"
+else
+  AC_MSG_ERROR([can not disable both shared and static libraries])
+fi
+
+dnl Check for --enable-all-static option
 AC_ARG_ENABLE(all-static,
   AS_HELP_STRING([--enable-all-static],
                  [Build completely static (standalone) binaries.]),
@@ -196,6 +233,7 @@ AC_ARG_ENABLE(all-static,
     fi
 ])
 
+AC_SUBST(LT_CFLAGS)
 AC_SUBST(LT_LDFLAGS)
 
 dnl Check if -no-undefined is needed for the platform.
@@ -385,7 +423,7 @@ AC_ARG_WITH(gnome_keyring,
 AC_MSG_CHECKING([whether to look for GNOME Keyring])
 if test "$with_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
-  if test "$enable_shared" = "yes"; then
+  if test "$svn_enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test -n "$PKG_CONFIG"; then
         if test "$HAVE_DBUS" = "yes"; then
@@ -619,6 +657,13 @@ AS_HELP_STRING([--enable-debug],
 ])
 
 
+dnl Add -Werror=implicit-function-declaration to CFLAGS
+CFLAGS_KEEP="$CFLAGS"
+CFLAGS="$CFLAGS_KEEP -Werror=implicit-function-declaration"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+CFLAGS="$CFLAGS_KEEP"
+
+
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
                [Turn on debugging and very strict compile-time warnings]),
@@ -726,7 +771,7 @@ AS_HELP_STRING([--enable-gprof],
       dnl Probably other compilers support -pg or something similar;
       dnl feel free to extend this to include them.
       if test "$GCC" = "yes"; then
-        if test "$enable_shared" = "yes" ; then
+        if test "$svn_enable_shared" = "yes" ; then
           AC_MSG_ERROR(Can't have --enable-gprof without --disable-shared (we
                   recommend also using --enable-all-static).)
         fi
@@ -803,7 +848,7 @@ AS_HELP_STRING([--enable-runtime-module-search],
 [
     if test "$enableval" = "yes"; then
       use_dso=yes
-      if test "$enable_shared" = "no"; then
+      if test "$svn_enable_shared" = "no"; then
         AC_MSG_ERROR([--enable-runtime-module-search conflicts with --disable-shared])
       fi
       AC_DEFINE(SVN_USE_DSO, 1,
@@ -811,7 +856,7 @@ AS_HELP_STRING([--enable-runtime-module-search],
     fi
 ])
 
-if test "$enable_shared" = "no" || test "$use_dso" != "yes"; then
+if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   ### We want ra_local first to handle the following scenario:
   ### user has neon and db3 in /usr/local, and db4 in
   ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 
