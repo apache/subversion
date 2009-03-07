@@ -51,6 +51,14 @@ typedef struct svn_test_opts_t
 } svn_test_opts_t;
 
 /* Prototype for test driver functions. */
+typedef svn_error_t* (*svn_test_driver2_t)(apr_pool_t *pool);
+
+/* Prototype for test driver functions which need options. */
+typedef svn_error_t* (*svn_test_driver_opts_t)(const svn_test_opts_t *opts,
+                                               apr_pool_t *pool);
+
+/* Prototype for test driver functions.
+   @deprecated Use svn_test_driver2_t instead.  */
 typedef svn_error_t* (*svn_test_driver_t)(const char **msg,
                                           svn_boolean_t msg_only,
                                           svn_test_opts_t *opts,
@@ -69,11 +77,20 @@ enum svn_test_mode_t
  */
 struct svn_test_descriptor_t
 {
-  /* A pointer to the test driver function. */
+  /* Obsolete. A pointer to an old-style test driver function. */
   svn_test_driver_t func;
 
   /* Is the test marked XFAIL? */
   enum svn_test_mode_t mode;
+
+  /* A pointer to the test driver function. */
+  svn_test_driver2_t func2;
+
+  /* A pointer to the test driver function. */
+  svn_test_driver_opts_t func_opts;
+
+  /* A descriptive message for this test. */
+  const char *msg;
 };
 
 /* All Subversion test programs include an array of svn_test_descriptor_t's
@@ -82,19 +99,35 @@ struct svn_test_descriptor_t
 extern struct svn_test_descriptor_t test_funcs[];
 
 /* A null initializer for the test descriptor. */
-#define SVN_TEST_NULL  {NULL, 0}
+#define SVN_TEST_NULL  {0}
 
 /* Initializer for PASS tests */
-#define SVN_TEST_PASS(func)  {func, svn_test_pass}
+#define SVN_TEST_PASS2(func, msg)  {NULL , svn_test_pass, func, NULL, msg}
 
 /* Initializer for XFAIL tests */
-#define SVN_TEST_XFAIL(func) {func, svn_test_xfail}
+#define SVN_TEST_XFAIL2(func, msg) {NULL, svn_test_xfail, func, NULL, msg}
 
 /* Initializer for conditional XFAIL tests */
-#define SVN_TEST_XFAIL_COND(func, p)\
-                                {func, (p) ? svn_test_xfail : svn_test_pass}
+#define SVN_TEST_XFAIL_COND2(func, p, msg) \
+  {NULL, (p) ? svn_test_xfail : svn_test_pass, func, NULL, msg}
 
 /* Initializer for SKIP tests */
+#define SVN_TEST_SKIP2(func, p, msg) \
+  {NULL, (p) ? svn_test_skip : svn_test_pass, func, NULL, msg}
+
+/* Similar macros, but for tests needing options.  */
+#define SVN_TEST_OPTS_PASS(func, msg)  {NULL, svn_test_pass, NULL, func, msg}
+#define SVN_TEST_OPTS_XFAIL(func, msg) {NULL, svn_test_xfail, NULL, func, msg}
+#define SVN_TEST_OPTS_XFAIL_COND(func, p, msg) \
+  {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
+#define SVN_TEST_OPTS_SKIP(func, p, msg) \
+  {NULL, (p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
+
+/* Obsolete initializer macros.  */
+#define SVN_TEST_PASS(func)  {func, svn_test_pass}
+#define SVN_TEST_XFAIL(func) {func, svn_test_xfail}
+#define SVN_TEST_XFAIL_COND(func, p) \
+                                {func, (p) ? svn_test_xfail : svn_test_pass}
 #define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
 
 
@@ -109,92 +142,6 @@ apr_uint32_t svn_test_rand(apr_uint32_t *seed);
 /* Add PATH to the test cleanup list.  */
 void svn_test_add_dir_cleanup(const char *path);
 
-
-
-/* Set *EDITOR and *EDIT_BATON to an editor that prints its
- * arguments to OUT_STREAM.  The edit starts at PATH, that is,
- * PATH will be prepended to the appropriate paths in the output.
- * Allocate the editor in POOL.
- *
- * EDITOR_NAME is a name for the editor, a string that will be
- * prepended to the editor output as shown below.  EDITOR_NAME may
- * be the empty string (but it may not be null).
- *
- * VERBOSE is a flag for specifying whether or not your want all the
- * nitty gritty details displayed.  When VERBOSE is FALSE, each
- * editor function will print only a one-line summary.
- *
- * INDENTATION is the number of spaces to indent by at each level; use
- * 0 for no indentation.  The indent level is always the same for a
- * given call (i.e, stack frame).
- *
- * SOME EXAMPLES
- *
- * With an indentation of 3, editor name of "COMMIT-TEST" and with
- * VERBOSE = TRUE
- *
- * [COMMIT-TEST] open_root (wc)
- * base_revision: 1
- *    [COMMIT-TEST] open_directory (wc/A)
- *    parent: wc
- *    base_revision: 1
- *       [COMMIT-TEST] delete_entry (wc/A/B)
- *       [COMMIT-TEST] open_file (wc/A/mu)
- *       parent: wc/A
- *       base_revision: 1
- *          [COMMIT-TEST] change_file_prop (wc/A/mu)
- *          name: foo
- *          value: bar
- *       [COMMIT-TEST] close_file (wc/A/mu)
- *    [COMMIT-TEST] close_directory (wc/A)
- *    [COMMIT-TEST] add_file (wc/zeta)
- *    parent: wc
- *    copyfrom_path:
- *    copyfrom_revision: 0
- *    [COMMIT-TEST] open_file (wc/iota)
- *    parent: wc
- *    base_revision: 1
- * [COMMIT-TEST] close_directory (wc)
- *       [COMMIT-TEST] apply_textdelta (wc/iota)
- *          [COMMIT-TEST] window_handler (2 ops)
- *          (1) new text: length 11
- *          (2) source text: offset 0, length 0
- *          [COMMIT-TEST] window_handler (EOT)
- *    [COMMIT-TEST] close_file (wc/iota)
- *       [COMMIT-TEST] apply_textdelta (wc/zeta)
- *          [COMMIT-TEST] window_handler (1 ops)
- *          (1) new text: length 11
- *          [COMMIT-TEST] window_handler (EOT)
- *    [COMMIT-TEST] close_file (wc/zeta)
- * [COMMIT-TEST] close_edit
- *
- * The same example as above, but with verbose = FALSE
- *
- * [COMMIT-TEST] open_root (wc)
- *    [COMMIT-TEST] open_directory (wc/A)
- *       [COMMIT-TEST] delete_entry (wc/A/B)
- *       [COMMIT-TEST] open_file (wc/A/mu)
- *          [COMMIT-TEST] change_file_prop (wc/A/mu)
- *       [COMMIT-TEST] close_file (wc/A/mu)
- *    [COMMIT-TEST] close_directory (wc/A)
- *    [COMMIT-TEST] add_file (wc/zeta)
- *    [COMMIT-TEST] open_file (wc/iota)
- * [COMMIT-TEST] close_directory (wc)
- *       [COMMIT-TEST] apply_textdelta (wc/iota)
- *    [COMMIT-TEST] close_file (wc/iota)
- *       [COMMIT-TEST] apply_textdelta (wc/zeta)
- *    [COMMIT-TEST] close_file (wc/zeta)
- * [COMMIT-TEST] close_edit
- *
- */
-svn_error_t *svn_test_get_editor(const svn_delta_editor_t **editor,
-                                 void **edit_baton,
-                                 const char *editor_name,
-                                 svn_stream_t *out_stream,
-                                 int indentation,
-                                 svn_boolean_t verbose,
-                                 const char *path,
-                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
