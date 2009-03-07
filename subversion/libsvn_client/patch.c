@@ -41,8 +41,13 @@
 
 /*** Code. ***/
 
-static const char equal_string[] = 
-  "=========================";
+#ifdef SVN_DEBUG
+#define SVNPATCH_DELETE_WHEN svn_io_file_del_none
+#else
+#define SVNPATCH_DELETE_WHEN svn_io_file_del_on_close
+#endif
+
+static const char equal_string[] = "=========================";
 
 /*-----------------------------------------------------------------------*/
 
@@ -1626,6 +1631,7 @@ make_editor_baton(const char *target,
 static svn_error_t *
 extract_svnpatch(const char *original_patch_path,
                  apr_file_t **patch_file,
+                 svn_wc_adm_access_t *adm_access,
                  apr_pool_t *pool)
 {
   apr_file_t *original_patch_file; /* gzip-base64'ed */
@@ -1633,7 +1639,6 @@ extract_svnpatch(const char *original_patch_path,
   apr_file_t *compressed_file; /* base64-decoded, gzip-compressed */
   svn_stream_t *compressed_stream;
   svn_stream_t *svnpatch_stream; /* clear-text, attached to @a patch_file */
-  const char *tempdir;
   svn_string_t *svnpatch_header;
   svn_stringbuf_t *patch_line;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1677,11 +1682,9 @@ extract_svnpatch(const char *original_patch_path,
    * gzip-base64'ed.  So create the temp file that will carry clear-text
    * Editor commands for later work, decode the svnpatch chunk we have
    * in hand, and write to it. */
-  SVN_ERR(svn_io_temp_dir(&tempdir, pool));
-  SVN_ERR(svn_io_open_unique_file2
-          (patch_file, NULL,
-           svn_path_join(tempdir, "patch", pool),
-           "", svn_io_file_del_none, pool));
+  SVN_ERR(svn_wc_create_tmp_file2(patch_file, NULL,
+                                  svn_wc_adm_access_path(adm_access),
+                                  SVNPATCH_DELETE_WHEN, pool));
   svnpatch_stream = svn_stream_from_aprfile(*patch_file, pool);
 
   /* Oh, and we can't gzip-base64 decode in one step since
@@ -1692,10 +1695,9 @@ extract_svnpatch(const char *original_patch_path,
    * handler to svn_base64_decode or have a new svn_stream_decompressed
    * (as opposed to svn_stream_compressed) to skip this
    * {time,IO}-consuming workaround. */
-  SVN_ERR(svn_io_open_unique_file2
-          (&compressed_file, NULL,
-           svn_path_join(tempdir, "compressedpatch", pool),
-           "", svn_io_file_del_on_close, pool));
+  SVN_ERR(svn_wc_create_tmp_file2(&compressed_file, NULL,
+                                  svn_wc_adm_access_path(adm_access),
+                                  SVNPATCH_DELETE_WHEN, pool));
   compressed_stream = svn_base64_decode
                       (svn_stream_from_aprfile2
                        (compressed_file, FALSE, pool), pool);
@@ -1742,8 +1744,11 @@ svn_client_patch(const char *patch_path,
   struct edit_baton *eb;
   svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
 
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path,
+                           TRUE, -1, NULL, NULL, pool));
+
   /* Pull out the svnpatch block. */
-  SVN_ERR(extract_svnpatch(patch_path, &decoded_patch_file, pool));
+  SVN_ERR(extract_svnpatch(patch_path, &decoded_patch_file, adm_access, pool));
 
   if (decoded_patch_file)
     {
@@ -1757,8 +1762,6 @@ svn_client_patch(const char *patch_path,
                                             : NULL);
       patch_cmd_baton.pool = pool;
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path,
-                               TRUE, -1, NULL, NULL, pool));
       eb = make_editor_baton(wc_path, adm_access, dry_run,
                              &patch_callbacks, &patch_cmd_baton,
                              ctx->notify_func2, ctx->notify_baton2,
