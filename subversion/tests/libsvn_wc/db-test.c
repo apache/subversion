@@ -212,10 +212,7 @@ set_prop(apr_hash_t *props, const char *name, const char *value,
 
 
 static svn_error_t *
-test_getting_info(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_getting_info(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_kind_t kind;
@@ -233,10 +230,6 @@ test_getting_info(const char **msg,
   const char *target;
   svn_wc__db_t *db;
   svn_error_t *err;
-
-  *msg = "get information from wc.db";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_fake_wc("test_getting_info", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -439,20 +432,13 @@ validate_node(svn_wc__db_t *db,
 
 
 static svn_error_t *
-test_inserting_nodes(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+test_inserting_nodes(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_checksum_t *checksum;
   svn_wc__db_t *db;
   apr_hash_t *props;
   const apr_array_header_t *children;
-
-  *msg = "insert different nodes into wc.db";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_fake_wc("test_inserting_nodes", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -567,19 +553,12 @@ test_inserting_nodes(const char **msg,
 
 
 static svn_error_t *
-test_base_children(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_base_children(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
   const apr_array_header_t *children;
   int i;
-
-  *msg = "getting the list of BASE children";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_fake_wc("test_base_children", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -620,10 +599,7 @@ test_base_children(const char **msg,
 
 
 static svn_error_t *
-test_working_info(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_working_info(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_kind_t kind;
@@ -648,10 +624,6 @@ test_working_info(const char **msg,
   svn_boolean_t props_mod;
   svn_boolean_t base_shadowed;
   svn_wc__db_t *db;
-
-  *msg = "reading information about the WORKING tree";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_fake_wc("test_working_info", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -704,17 +676,10 @@ test_working_info(const char **msg,
 
 
 static svn_error_t *
-test_pdh(const char **msg,
-         svn_boolean_t msg_only,
-         svn_test_opts_t *opts,
-         apr_pool_t *pool)
+test_pdh(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
-
-  *msg = "creation of per-directory handles";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_fake_wc("test_pdh", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -745,10 +710,7 @@ test_pdh(const char **msg,
 
 
 static svn_error_t *
-test_scan_working(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_scan_working(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
@@ -762,10 +724,6 @@ test_scan_working(const char **msg,
   const char *original_uuid;
   svn_revnum_t original_revision;
   const char *moved_to_abspath;
-
-  *msg = "scanning working nodes";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_fake_wc("test_scan_working", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -1006,11 +964,17 @@ test_scan_working(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_getting_info),
-    SVN_TEST_PASS(test_inserting_nodes),
-    SVN_TEST_PASS(test_base_children),
-    SVN_TEST_PASS(test_working_info),
-    SVN_TEST_PASS(test_pdh),
-    SVN_TEST_PASS(test_scan_working),
+    SVN_TEST_PASS2(test_getting_info,
+                   "get information from wc.db"),
+    SVN_TEST_PASS2(test_inserting_nodes,
+                   "insert different nodes into wc.db"),
+    SVN_TEST_PASS2(test_base_children,
+                   "getting the list of BASE children"),
+    SVN_TEST_PASS2(test_working_info,
+                   "reading information about the WORKING tree"),
+    SVN_TEST_PASS2(test_pdh,
+                   "creation of per-directory handles"),
+    SVN_TEST_PASS2(test_scan_working,
+                   "scanning working nodes"),
     SVN_TEST_NULL
   };

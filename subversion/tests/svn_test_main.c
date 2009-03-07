@@ -43,13 +43,13 @@ const char **test_argv;
 
 
 /* Test option: Print more output */
-static int verbose_mode = 0;
+static svn_boolean_t verbose_mode = FALSE;
 
 /* Test option: Print only unexpected results */
-static int quiet_mode = 0;
+static svn_boolean_t quiet_mode = FALSE;
 
 /* Test option: Remove test directories after success */
-static int cleanup_mode = 0;
+static svn_boolean_t cleanup_mode = FALSE;
 
 /* Option parsing enums and structures */
 enum {
@@ -86,10 +86,10 @@ static const apr_getopt_option_t cl_options[] =
 /* Stuff for cleanup processing */
 
 /* When non-zero, don't remove test directories */
-static int skip_cleanup = 0;
+static svn_boolean_t skip_cleanup = FALSE;
 
 /* All cleanup actions are registered as cleanups on this pool. */
-static apr_pool_t *cleanup_pool = 0;
+static apr_pool_t *cleanup_pool = NULL;
 
 static apr_status_t
 cleanup_rmtree(void *data)
@@ -150,7 +150,7 @@ get_array_size(void)
 {
   int i;
 
-  for (i = 1; test_funcs[i].func; i++)
+  for (i = 1; test_funcs[i].msg || test_funcs[i].func; i++)
     {
     }
 
@@ -161,35 +161,44 @@ get_array_size(void)
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code. */
-static int
+static svn_boolean_t
 do_test_num(const char *progname,
             int test_num,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
-  svn_test_driver_t func;
   svn_boolean_t skip, xfail;
-  svn_error_t *err;
-  int array_size = get_array_size();
-  int test_failed = 0;
-  const char *msg = 0;  /* the message this individual test prints out */
+  svn_error_t *err = NULL;
+  svn_boolean_t test_failed;
+  const char *msg = NULL;  /* the message this individual test prints out */
+  const struct svn_test_descriptor_t *desc;
 
   /* Check our array bounds! */
-  if ((test_num > array_size) || (test_num <= 0))
+  if ((test_num > get_array_size()) || (test_num <= 0))
     {
       printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
-      return (skip_cleanup = 1);  /* BAIL, this test number doesn't exist. */
-    }
-  else
-    {
-      func = test_funcs[test_num].func;
-      skip = (test_funcs[test_num].mode == svn_test_skip);
-      xfail = (test_funcs[test_num].mode == svn_test_xfail);
+      skip_cleanup = TRUE;
+      return TRUE;  /* BAIL, this test number doesn't exist. */
     }
 
+  desc = &test_funcs[test_num];
+  skip = desc->mode == svn_test_skip;
+  xfail = desc->mode == svn_test_xfail;
+
   /* Do test */
-  err = func(&msg, msg_only || skip, opts, pool);
+  if (desc->func)
+    err = (*desc->func)(&msg, msg_only || skip, opts, pool);
+  else
+    {
+      msg = desc->msg;
+      if (msg_only || skip)
+        ; /* pass */
+      else if (desc->func2)
+        err = (*desc->func2)(pool);
+      else
+        err = (*desc->func_opts)(opts, pool);
+    }
 
   if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
     {
@@ -236,6 +245,8 @@ do_test_num(const char *progname,
       if (apr_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
+  if (desc->func == NULL && desc->msg == NULL)
+    printf("WARNING: New-style test descriptor is missing a docstring.\n");
 
   skip_cleanup = test_failed;
 
@@ -250,10 +261,10 @@ main(int argc, const char *argv[])
   const char *prog_name;
   int test_num;
   int i;
-  int got_error = 0;
+  svn_boolean_t got_error = FALSE;
   apr_pool_t *pool, *test_pool;
-  int ran_a_test = 0;
-  int list_mode = 0;
+  svn_boolean_t ran_a_test = FALSE;
+  svn_boolean_t list_mode = FALSE;
   int opt_id;
   apr_status_t apr_err;
   apr_getopt_t *os;
@@ -317,7 +328,7 @@ main(int argc, const char *argv[])
 
       switch (opt_id) {
         case cleanup_opt:
-          cleanup_mode = 1;
+          cleanup_mode = TRUE;
           break;
         case config_opt:
           opts.config_file = apr_pstrdup(pool, opt_arg);
@@ -326,13 +337,13 @@ main(int argc, const char *argv[])
           opts.fs_type = apr_pstrdup(pool, opt_arg);
           break;
         case list_opt:
-          list_mode = 1;
+          list_mode = TRUE;
           break;
         case verbose_opt:
-          verbose_mode = 1;
+          verbose_mode = TRUE;
           break;
         case quiet_opt:
-          quiet_mode = 1;
+          quiet_mode = TRUE;
           break;
         case server_minor_version_opt:
           {
@@ -368,7 +379,7 @@ main(int argc, const char *argv[])
     {
       if (! strcmp(argv[1], "list") || list_mode)
         {
-          ran_a_test = 1;
+          ran_a_test = TRUE;
 
           /* run all tests with MSG_ONLY set to TRUE */
 
@@ -377,7 +388,7 @@ main(int argc, const char *argv[])
           for (i = 1; i <= array_size; i++)
             {
               if (do_test_num(prog_name, i, TRUE, &opts, test_pool))
-                got_error = 1;
+                got_error = TRUE;
 
               /* Clear the per-function pool */
               svn_pool_clear(test_pool);
@@ -390,10 +401,10 @@ main(int argc, const char *argv[])
             {
               if (apr_isdigit(argv[i][0]))
                 {
-                  ran_a_test = 1;
+                  ran_a_test = TRUE;
                   test_num = atoi(argv[i]);
                   if (do_test_num(prog_name, test_num, FALSE, &opts, test_pool))
-                    got_error = 1;
+                    got_error = TRUE;
 
                   /* Clear the per-function pool */
                   svn_pool_clear(test_pool);
@@ -409,7 +420,7 @@ main(int argc, const char *argv[])
       for (i = 1; i <= array_size; i++)
         {
           if (do_test_num(prog_name, i, FALSE, &opts, test_pool))
-            got_error = 1;
+            got_error = TRUE;
 
           /* Clear the per-function pool */
           svn_pool_clear(test_pool);

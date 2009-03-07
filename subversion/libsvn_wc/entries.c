@@ -1080,7 +1080,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                           result_pool,
                                           iterpool));
 
-          if (!SVN_IS_VALID_REVNUM(entry->cmt_rev))
+          if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
+              && original_repos_relpath == NULL)
             {
               /* There is NOT a last-changed revision (last-changed date and
                  author may be unknown, but we can always check the rev).
