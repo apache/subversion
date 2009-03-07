@@ -3,7 +3,7 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -504,7 +504,7 @@ struct callbacks_wrapper_baton {
   void *baton;
 };
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 file_changed(svn_wc_adm_access_t *adm_access,
              svn_wc_notify_state_t *contentstate,
@@ -572,7 +572,7 @@ file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 file_deleted(svn_wc_adm_access_t *adm_access,
              svn_wc_notify_state_t *state,
@@ -614,7 +614,7 @@ dir_added(svn_wc_adm_access_t *adm_access,
   return b->callbacks->dir_added(adm_access, state, path, rev, b->baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 dir_deleted(svn_wc_adm_access_t *adm_access,
             svn_wc_notify_state_t *state,
@@ -630,7 +630,7 @@ dir_deleted(svn_wc_adm_access_t *adm_access,
   return b->callbacks->dir_deleted(adm_access, state, path, b->baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 dir_props_changed(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -649,8 +649,8 @@ dir_props_changed(svn_wc_adm_access_t *adm_access,
                                      originalprops, b->baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
-   and svn_wc_diff_callbacks2_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t,
+   svn_wc_diff_callbacks2_t and svn_wc_diff_callbacks3_t. */
 static svn_error_t *
 dir_opened(svn_wc_adm_access_t *adm_access,
            svn_boolean_t *tree_conflicted,
@@ -664,8 +664,8 @@ dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
-   and svn_wc_diff_callbacks2_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t,
+   svn_wc_diff_callbacks2_t and svn_wc_diff_callbacks3_t. */
 static svn_error_t *
 dir_closed(svn_wc_adm_access_t *adm_access,
            svn_wc_notify_state_t *propstate,
@@ -854,6 +854,106 @@ static struct svn_wc_diff_callbacks3_t callbacks2_wrapper = {
 };
 
 
+
+/* Used to wrap svn_wc_diff_callbacks3_t. */
+struct callbacks3_wrapper_baton {
+  const svn_wc_diff_callbacks3_t *callbacks3;
+  void *baton;
+};
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+file_added3(svn_wc_adm_access_t *adm_access,
+            svn_wc_notify_state_t *contentstate,
+            svn_wc_notify_state_t *propstate,
+            svn_boolean_t *tree_conflicted,
+            const char *path,
+            const char *tmpfile1,
+            const char *tmpfile2,
+            svn_revnum_t rev1,
+            svn_revnum_t rev2,
+            const char *mimetype1,
+            const char *mimetype2,
+            const char *copyfrom_path,
+            svn_revnum_t copyfrom_revision,
+            const apr_array_header_t *propchanges,
+            apr_hash_t *originalprops,
+            void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->file_added(adm_access, contentstate, propstate,
+                                   tree_conflicted, path, tmpfile1, tmpfile2,
+                                   rev1, rev2, mimetype1, mimetype2,
+                                   propchanges, originalprops, b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+dir_added3(svn_wc_adm_access_t *adm_access,
+           svn_wc_notify_state_t *state,
+           svn_boolean_t *tree_conflicted,
+           const char *path,
+           svn_revnum_t rev,
+           const char *copyfrom_path,
+           svn_revnum_t copyfrom_revision,
+           void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->dir_added(adm_access, state, tree_conflicted, path, rev, b->baton);
+}
+
+/* Used to wrap svn_diff_callbacks3_t as an svn_wc_diff_callbacks4_t. */
+static struct svn_wc_diff_callbacks4_t callbacks3_wrapper = {
+  file_changed2,
+  file_added3,
+  file_deleted2,
+  dir_added3,
+  dir_deleted2,
+  dir_props_changed2,
+  dir_opened,
+  dir_closed
+};
+
+svn_error_t *
+svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks3_t *callbacks,
+                        void *callback_baton,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const apr_array_header_t *changelists,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool)
+{
+  struct callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
+  b->callbacks3 = callbacks;
+  b->baton = callback_baton;
+  return svn_wc_get_diff_editor6(anchor,
+                                 target,
+                                 &callbacks3_wrapper,
+                                 b,
+                                 depth,
+                                 ignore_ancestry,
+                                 use_text_base,
+                                 reverse_order,
+                                 cancel_func,
+                                 cancel_baton,
+                                 changelists,
+                                 editor,
+                                 edit_baton,
+                                 NULL,
+                                 pool);
+}
+
 svn_error_t *
 svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -963,6 +1063,24 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
                                  recurse, FALSE, use_text_base, reverse_order,
                                  cancel_func, cancel_baton,
                                  editor, edit_baton, pool);
+}
+
+svn_error_t *
+svn_wc_diff5(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks3_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
+             apr_pool_t *pool)
+{
+  struct callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
+  b->callbacks3 = callbacks;
+  b->baton = callback_baton;
+
+  return svn_wc_diff6(anchor, target, &callbacks3_wrapper, b,
+                      depth, ignore_ancestry, changelists, NULL, pool);
 }
 
 svn_error_t *

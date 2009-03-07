@@ -2,7 +2,7 @@
  * copy.c:  wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -441,7 +441,8 @@ determine_copyfrom_info(const char **copyfrom_url, svn_revnum_t *copyfrom_rev,
 
    ASSUMPTIONS:
 
-     - src_path points to a file under version control
+     - src_path is under version control; the working file doesn't
+                  necessarily exist (its text-base does).
      - dst_parent points to a dir under version control, in the same
                   working copy.
      - dst_basename will be the 'new' name of the copied file in dst_parent
@@ -545,13 +546,28 @@ copy_file_administratively(const char *src_path,
           svn_subst_eol_style_t eol_style;
           const char *eol_str;
           apr_hash_t *keywords;
+          svn_error_t *err = SVN_NO_ERROR;
 
           SVN_ERR(svn_wc__get_keywords(&keywords, src_path, src_access, NULL,
                                        pool));
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
                                         src_access, pool));
 
-          SVN_ERR(svn_stream_open_readonly(&contents, src_path, pool, pool));
+          /* Try with the working file and fallback on its text-base. */
+          err = svn_stream_open_readonly(&contents, src_path, pool, pool);
+          if (err)
+            {
+              if (APR_STATUS_IS_ENOENT(err->apr_err))
+                {
+                  svn_error_clear(err);
+                  err = svn_stream_open_readonly(&contents,
+                    svn_wc__text_base_path(src_path, FALSE, pool),
+                    pool, pool);
+                  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+                    return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+                                            err, NULL);
+                }
+            }
 
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
@@ -919,7 +935,8 @@ svn_wc_copy2(const char *src_path,
 
   SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));
 
-  if (src_kind == svn_node_file)
+  if (src_kind == svn_node_file ||
+      (src_entry->kind == svn_node_file && src_kind == svn_node_none))
     {
       /* Check if we are copying a file scheduled for addition,
          these require special handling. */

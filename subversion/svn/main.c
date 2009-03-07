@@ -105,6 +105,9 @@ typedef enum {
   opt_with_no_revprops,
   opt_parents,
   opt_accept,
+  opt_svnpatch_format,
+  opt_patch_cmd,
+  opt_from_source,
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert
@@ -210,6 +213,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("try operation but make no changes")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files")},
+  {"svnpatch",      opt_svnpatch_format, 0,
+                    N_("output in svnpatch format, implies the\n"
+                       "                             "
+                       "--no-diff-deleted option")},
   {"notice-ancestry", opt_notice_ancestry, 0,
                     N_("notice ancestry when calculating differences")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
@@ -219,6 +226,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
+  {"patch-cmd",     opt_patch_cmd, 1,
+                    N_("use ARG as external patch command")},
   {"record-only",   opt_record_only, 0,
                     N_("mark revisions as merged (use with -r)")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
@@ -468,7 +477,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
      opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml} },
+     opt_force, opt_xml, opt_svnpatch_format} },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -671,6 +680,21 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    URL -> URL:  complete server-side rename.\n"
      "  All the SRCs must be of the same type.\n"),
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+
+  { "patch", svn_cl__patch, {0}, N_
+    ("Apply a patch to a working copy path.\n"
+     "usage: patch PATCHFILE [WCPATH]\n"
+     "\n"
+     "  PATCHFILE is an input file which, when applied, turns the working\n"
+     "  copy WCPATH into a modified tree that reflects all the changes the\n"
+     "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
+     "\n"
+     "  The format of bytes embedded in the patch can be of two types: Unified\n"
+     "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "\n"
+     "  This command allows some amount of fuzzing as Unidiff is contextual\n"
+     "  and svnpatch revisionless.\n"),
+    {'q', opt_force, opt_patch_cmd, opt_config_dir} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1424,6 +1448,9 @@ main(int argc, const char *argv[])
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
+      case opt_patch_cmd:
+        opt_state.patch_cmd = apr_pstrdup(pool, opt_arg);
+        break;
       case opt_old_cmd:
         if (opt_state.used_change_arg)
           {
@@ -1481,6 +1508,9 @@ main(int argc, const char *argv[])
         break;
       case opt_summarize:
         opt_state.summarize = TRUE;
+        break;
+      case opt_svnpatch_format:
+        opt_state.svnpatch = TRUE;
         break;
       case opt_remove:
         opt_state.remove = TRUE;
@@ -1892,6 +1922,9 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+  if (opt_state.patch_cmd)
+    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_PATCH_CMD, opt_state.patch_cmd);
 
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
   if (opt_state.autoprops && opt_state.no_autoprops)
