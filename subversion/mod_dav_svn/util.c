@@ -22,6 +22,7 @@
 #include <apr_buckets.h>
 
 #include <mod_dav.h>
+#include <http_protocol.h>
 
 #include "svn_error.h"
 #include "svn_fs.h"
