@@ -18,11 +18,22 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "svn_pools.h"
-#include "svn_path.h"
 #include <apr_general.h>
 
+#include "svn_pools.h"
+
 #include "../svn_test.h"
+
+/* Make sure SVN_DEPRECATED is defined as empty before including svn_path.h.
+   We don't want to trigger deprecation warnings by the tests of those
+   funtions.  */
+#ifdef SVN_DEPRECATED
+#undef SVN_DEPRECATED
+#endif
+#define SVN_DEPRECATED
+
+#include "svn_path.h"
+
 
 /* Using a symbol, because I tried experimenting with different
    representations */
@@ -1549,7 +1560,7 @@ test_path_local_style(const char **msg,
     { "//server/share/dir",  "\\\\server\\share\\dir" },
 #else
     { "a:/",                 "a:" },
-    { "a:/file",             "a:/file" }
+    { "a:/file",             "a:/file" },
     { "dir/file",            "dir/file" },
     { "/",                   "/" },
     { "//server/share/dir",  "/server/share/dir" },
@@ -1601,7 +1612,7 @@ test_path_internal_style(const char **msg,
     { "\\\\server/share/dir",  "//server/share/dir" },
 #else
     { "a:/",                 "a:" },
-    { "a:/file",             "a:/file" }
+    { "a:/file",             "a:/file" },
     { "dir/file",            "dir/file" },
     { "/",                   "/" },
     { "//server/share/dir",  "/server/share/dir" },
