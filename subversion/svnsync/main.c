@@ -27,6 +27,7 @@
 #include "svn_utf.h"
 
 #include "private/svn_opt_private.h"
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -40,7 +41,7 @@ static svn_opt_subcommand_t initialize_cmd,
                             info_cmd,
                             help_cmd;
 
-enum {
+enum svnsync__opt {
   svnsync_opt_non_interactive = SVN_OPT_FIRST_LONGOPT_ID,
   svnsync_opt_no_auth_cache,
   svnsync_opt_auth_username,
@@ -50,6 +51,7 @@ enum {
   svnsync_opt_sync_username,
   svnsync_opt_sync_password,
   svnsync_opt_config_dir,
+  svnsync_opt_config_options,
   svnsync_opt_version,
   svnsync_opt_trust_server_cert
 };
@@ -63,7 +65,8 @@ enum {
                              svnsync_opt_source_password, \
                              svnsync_opt_sync_username, \
                              svnsync_opt_sync_password, \
-                             svnsync_opt_config_dir
+                             svnsync_opt_config_dir, \
+                             svnsync_opt_config_options
 
 static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
   {
@@ -151,6 +154,14 @@ static const apr_getopt_option_t svnsync_options[] =
                        N_("connect to sync repository with password ARG") },
     {"config-dir",     svnsync_opt_config_dir, 1,
                        N_("read user configuration files from directory ARG")},
+    {"config-option",  svnsync_opt_config_options, 1,
+                       N_("set user configuration option in the format:\n"
+                          "                             "
+                          "    FILE:SECTION:OPTION=[VALUE]\n"
+                          "                             "
+                          "For example:\n"
+                          "                             "
+                          "    servers:global:http-library=serf\n")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
@@ -639,7 +650,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* If we're doing a partial replay, we have to check first if the server
      supports this. */
-  if (svn_path_is_child(root_url, baton->from_url, pool))
+  if (svn_uri_is_child(root_url, baton->from_url, pool))
     {
       svn_boolean_t server_supports_partial_replay;
       svn_error_t *err = svn_ra_has_capability(from_session,
@@ -1917,6 +1928,7 @@ main(int argc, const char *argv[])
   int opt_id, i;
   const char *username = NULL, *source_username = NULL, *sync_username = NULL;
   const char *password = NULL, *source_password = NULL, *sync_password = NULL;
+  apr_array_header_t *config_options = NULL;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
     {
@@ -2014,7 +2026,19 @@ main(int argc, const char *argv[])
                 opt_baton.config_dir = svn_dirent_internal_style(path_utf8, pool);
             }
             break;
+          case svnsync_opt_config_options:
+            if (!config_options)
+              config_options = 
+                    apr_array_make(pool, 1,
+                                   sizeof(svn_cmdline__config_argument_t*));
 
+            err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
+            if (!err)
+              err = svn_cmdline__parse_config_option(config_options,
+                                                     opt_arg, pool);
+            if (err)
+              return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+            break;
           case svnsync_opt_version:
             opt_baton.version = TRUE;
             break;
@@ -2153,6 +2177,14 @@ main(int argc, const char *argv[])
   err = svn_config_get_config(&opt_baton.config, opt_baton.config_dir, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+
+  /* Update the options in the config */
+  if (config_options)
+    {
+      svn_error_clear(
+          svn_cmdline__apply_config_options(opt_baton.config, config_options,
+                                            "svnsync: ", "--config-option"));
+    }
 
   config = apr_hash_get(opt_baton.config, SVN_CONFIG_CATEGORY_CONFIG,
                         APR_HASH_KEY_STRING);
