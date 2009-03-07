@@ -923,6 +923,7 @@ test_dirent_is_canonical(const char **msg,
   for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t canonical;
+      const char* canonicalized;
 
       canonical = svn_dirent_is_canonical(tests[i].path, pool);
       if (tests[i].canonical != canonical)
@@ -932,6 +933,15 @@ test_dirent_is_canonical(const char **msg,
                                  tests[i].path,
                                  canonical ? "TRUE" : "FALSE",
                                  tests[i].canonical ? "TRUE" : "FALSE");
+
+      canonicalized = svn_dirent_canonicalize(tests[i].path, pool);
+
+      if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_canonicalize(\"%s\") returned \"%s\" "
+                                 "while svn_dirent_is_canonical returned TRUE",
+                                 tests[i].path,
+                                 canonicalized);
     }
 
   return SVN_NO_ERROR;
@@ -1007,6 +1017,9 @@ test_uri_is_canonical(const char **msg,
     { "file://srv/SHARE/repos", TRUE },
     { "file://srv/share/repos", TRUE },
     { "file://srv/share/repos/", FALSE },
+    { "//server/share",         FALSE }, /* Only valid as dirent */
+    { "//server",               FALSE },
+    { "//",                     FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
@@ -1026,6 +1039,7 @@ test_uri_is_canonical(const char **msg,
   for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t canonical;
+      const char* canonicalized;
 
       canonical = svn_uri_is_canonical(tests[i].path, pool);
       if (tests[i].canonical != canonical)
@@ -1035,6 +1049,16 @@ test_uri_is_canonical(const char **msg,
                                  tests[i].path,
                                  canonical ? "TRUE" : "FALSE",
                                  tests[i].canonical ? "TRUE" : "FALSE");
+
+      canonicalized = svn_uri_canonicalize(tests[i].path, pool);
+
+      if (canonical != (strcmp(tests[i].path, canonicalized) == 0))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_canonicalize(\"%s\") returned \"%s\" "
+                                 "while svn_uri_is_canonical returned %s",
+                                 tests[i].path,
+                                 canonicalized,
+                                 canonical ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
