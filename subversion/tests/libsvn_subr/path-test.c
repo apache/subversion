@@ -1528,6 +1528,109 @@ test_path_is_canonical(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_path_local_style(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "",                     "." },
+    { ".",                    "." },
+    { "http://host/dir",      "http://host/dir" }, /* Not with local separator */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "a:/",                 "a:" }, /* Wrong for dirent, but expected for svn_path_*() */
+    { "a:/file",             "a:\\file" },
+    { "dir/file",            "dir\\file" },
+    { "/",                   "\\" },
+    { "//server/share/dir",  "\\\\server\\share\\dir" },
+#else
+    { "a:/",                 "a:" },
+    { "a:/file",             "a:/file" }
+    { "dir/file",            "dir/file" },
+    { "/",                   "/" },
+    { "//server/share/dir",  "/server/share/dir" },
+#endif
+    { NULL, NULL }
+  };
+  int i;
+
+  *msg = "test svn_path_local_style";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  i = 0;
+  while (tests[i].path)
+    {
+      const char *local = svn_path_local_style(tests[i].path, pool);
+
+      if (strcmp(local, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_local_style(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path, local, tests[i].result);
+      ++i;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_path_internal_style(const char **msg,
+                         svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "",                     "" },
+    { ".",                    "" },
+    { "http://host/dir",      "http://host/dir" },
+    { "/",                    "/" },
+    { "a:/",                  "a:" },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "a:\\",                 "a:" }, /* Wrong for dirent, but expected for svn_path_*() */
+    { "a:\\file",             "a:/file" },
+    { "dir\\file",            "dir/file" },
+    { "\\",                   "/" },
+    { "\\\\server/share/dir",  "//server/share/dir" },
+#else
+    { "a:/",                 "a:" },
+    { "a:/file",             "a:/file" }
+    { "dir/file",            "dir/file" },
+    { "/",                   "/" },
+    { "//server/share/dir",  "/server/share/dir" },
+#endif
+    { NULL, NULL }
+  };
+  int i;
+
+  *msg = "test svn_path_internal_style";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  i = 0;
+  while (tests[i].path)
+    {
+      const char *local = svn_path_internal_style(tests[i].path, pool);
+
+      if (strcmp(local, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_internal_style(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path, local, tests[i].result);
+      ++i;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* local define to support XFail-ing tests on Windows/Cygwin only */
 #if defined(WIN32) || defined(__CYGWIN__)
 #define WINDOWS_OR_CYGWIN TRUE
@@ -1563,5 +1666,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_path_splitext),
     SVN_TEST_PASS(test_path_compose),
     SVN_TEST_PASS(test_path_is_canonical),
+    SVN_TEST_PASS(test_path_local_style),
+    SVN_TEST_PASS(test_path_internal_style),
     SVN_TEST_NULL
   };

@@ -51,6 +51,10 @@
 const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if ((path[0] == '/' || path[0] == '\\') && path[1] == path[0])
+    return svn_dirent_internal_style(path, pool);
+#endif
   return svn_uri_internal_style(path, pool);
 }
 
@@ -58,6 +62,10 @@ svn_path_internal_style(const char *path, apr_pool_t *pool)
 const char *
 svn_path_local_style(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_local_style(path, pool);
+#endif
   return svn_uri_local_style(path, pool);
 }
 
