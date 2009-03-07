@@ -105,6 +105,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Mar 01 2009 David Summers <david@summersoft.fay.ar.us> r36231
+- [RHEL5] Changes to build 1.7 trunk, backported to 1.6.
+
 * Tue Dec 23 2008 David Summers <david@summersoft.fay.ar.us> r34901
 - [RHEL3] SPEC file change to build RPM 1.5.x on RHEL3.
 

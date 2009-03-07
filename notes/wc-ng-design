@@ -128,6 +128,12 @@ repository-normal format by default and can be converted to working-copy
 format. A WORKING or ACTUAL tree presents itself in working-copy format by
 default and can be converted to repository-normal format.
 
+##BHB: For tree, text and property conflicts it would be nice to handle
+MINE, THEIRS (and OLDER?) as semi-trees too. See this mail thread
+http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=984982
+This would provide a clean way to access all information about the conflict
+origins: $ svn info file@THEIRS
+
 
 Requirements
 ============
@@ -268,7 +274,12 @@ Problems in wc-1.0
  * No strict separation between public and internal APIs: many public
    APIs also used internally, growing arguments which *should* only
    matter for internal use
-
+ * The lock strategy requires writing a file in every directory of a working,
+   which severely reduces our performance in several environments. (Windows, 
+   NFS). Testing showed that in some cases we used more than 50 seconds on
+   writing 8000 lockfiles before we even started looking what to update. A new
+   lock strategy should reduce the number of writes necessary for locking with
+   depth infinity.
 
 Possible solutions
 ==================
@@ -865,19 +876,24 @@ Near-Term Plan
 
 3. convert props.c to use wc_db. migrate props to db simultaneously.
 
-4. incremental shift of pristines from N files into pristine db.
+4. implement 'svn cleanup' as an upgrade path from old-style working
+   copies to wc-ng
+
+5. incremental shift of pristines from N files into pristine db.
    note: we could continue to leave .revert-base while we migrate the
          primary base into the pristine dataset.
 
-5. shift libsvn_wc from using entries.h to using wc_db.h.
+6. shift libsvn_wc from using entries.h to using wc_db.h.
    note: since entries.h is "merely" a wrapper for wc_db.h, this will
          allow the libsvn_wc to start using the new wc_db APIs
          wherever it is easy/possible.
    goal: all libsvn_wc code uses wc_db.h, and entries.h exists solely
          to support old backwards-compat code.
 
-6. centralize the metadata and pristines
+7. centralize the metadata and pristines
    note: this will also involve merging datastores
+
+8. replace loggy with sqlite-based work journal
 
 
 Other sections

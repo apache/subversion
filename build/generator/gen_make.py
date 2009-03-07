@@ -24,7 +24,7 @@ class Generator(gen_base.GeneratorBase):
 
   _extension_map = {
     ('exe', 'target'): '$(EXEEXT)',
-    ('exe', 'object'): '.o',
+    ('exe', 'object'): '.lo',
     ('lib', 'target'): '.la',
     ('lib', 'object'): '.lo',
     }

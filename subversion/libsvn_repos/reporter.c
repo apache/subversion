@@ -149,10 +149,16 @@ read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+#ifndef APR_SIZE_MAX
+/* APR 0.9 doesn't define APR_SIZE_MAX */
+#define APR_SIZE_MAX    (~((apr_size_t)0))
+#endif
+
 static svn_error_t *
 read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
 {
   apr_uint64_t len;
+  apr_size_t size;
   char *buf;
 
   SVN_ERR(read_number(&len, temp, pool));
@@ -161,7 +167,7 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
      len + 1 wraps around and we end up passing 0 to apr_palloc(),
      thus getting a pointer to no storage?  Probably not (16 exabyte
      string, anyone?) but let's be future-proof anyway. */
-  if (len + 1 < len)
+  if (len + 1 < len || len + 1 > APR_SIZE_MAX)
     {
       /* xgettext doesn't expand preprocessor definitions, so we must
          pass translatable string to apr_psprintf() function to create
@@ -174,8 +180,9 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
                                len);
     }
 
-  buf = apr_palloc(pool, len + 1);
-  SVN_ERR(svn_io_file_read_full(temp, buf, len, NULL, pool));
+  size = (apr_size_t)len;
+  buf = apr_palloc(pool, size+1);
+  SVN_ERR(svn_io_file_read_full(temp, buf, size, NULL, pool));
   buf[len] = 0;
   *str = buf;
   return SVN_NO_ERROR;

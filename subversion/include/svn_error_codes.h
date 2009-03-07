@@ -350,9 +350,12 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
-  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
+  SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
+
+  /** @deprecated This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY. */
+#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
@@ -457,6 +460,21 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
              SVN_ERR_WC_CATEGORY_START + 31,
              "Cannot move a file external")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_DB_ERROR,
+             SVN_ERR_WC_CATEGORY_START + 32,
+             "Something's amiss with the wc sqlite database")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_MISSING,
+             SVN_ERR_WC_CATEGORY_START + 33,
+             "The working copy is missing")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_NOT_SYMLINK,
+             SVN_ERR_WC_CATEGORY_START + 34,
+             "The specified node is not a symlink")
 
   /* fs errors */
 
@@ -841,6 +859,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_DAV_RELOCATED,
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
+
+  /** @since New in 1.7 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+             SVN_ERR_RA_DAV_CATEGORY_START + 12,
+             "Connection timed out")
 
   /* ra_local errors */
 

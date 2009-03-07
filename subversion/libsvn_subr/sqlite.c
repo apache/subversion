@@ -22,11 +22,13 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_checksum.h"
 
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_atomic.h"
+#include "private/svn_skel.h"
 
 
 #ifdef SVN_SQLITE_INLINE
@@ -171,7 +173,8 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
 svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt)
 {
-  return step_with_expectation(stmt, FALSE);
+  SVN_ERR(step_with_expectation(stmt, FALSE));
+  return svn_sqlite__reset(stmt);
 }
 
 svn_error_t *
@@ -261,6 +264,15 @@ svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...)
 }
 
 svn_error_t *
+svn_sqlite__bind_int(svn_sqlite__stmt_t *stmt,
+                     int slot,
+                     int val)
+{
+  SQLITE_ERR(sqlite3_bind_int(stmt->s3stmt, slot, val), stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_sqlite__bind_int64(svn_sqlite__stmt_t *stmt,
                        int slot,
                        apr_int64_t val)
@@ -290,6 +302,47 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
+                            int slot,
+                            const apr_hash_t *props,
+                            apr_pool_t *scratch_pool)
+{
+  svn_skel_t *skel;
+  svn_stringbuf_t *properties;
+
+  if (props == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
+                                     scratch_pool));
+  properties = svn_skel__unparse(skel, scratch_pool);
+  return svn_sqlite__bind_blob(stmt, slot,
+                               properties->data, properties->len);
+}
+
+svn_error_t *
+svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
+                          int slot,
+                          const svn_checksum_t *checksum,
+                          apr_pool_t *scratch_pool)
+{
+  const char *ckind_str;
+  const char *csum_str;
+
+  if (checksum == NULL)
+    return SVN_NO_ERROR;
+
+  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
+  csum_str = apr_pstrcat(scratch_pool,
+                         ckind_str,
+                         svn_checksum_to_cstring(checksum, scratch_pool),
+                         NULL);
+
+  return svn_sqlite__bind_text(stmt, slot, csum_str);
+}
+
+
 const void *
 svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len)
 {
@@ -304,7 +357,7 @@ svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
 {
   const char *result = (const char *) sqlite3_column_text(stmt->s3stmt, column);
 
-  if (result_pool)
+  if (result_pool && result != NULL)
     result = apr_pstrdup(result_pool, result);
 
   return result;
@@ -313,13 +366,15 @@ svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
 svn_revnum_t
 svn_sqlite__column_revnum(svn_sqlite__stmt_t *stmt, int column)
 {
+  if (svn_sqlite__column_is_null(stmt, column))
+    return SVN_INVALID_REVNUM;
   return (svn_revnum_t) sqlite3_column_int64(stmt->s3stmt, column);
 }
 
 svn_boolean_t
 svn_sqlite__column_boolean(svn_sqlite__stmt_t *stmt, int column)
 {
-  return (sqlite3_column_int64(stmt->s3stmt, column) != 0);
+  return sqlite3_column_int64(stmt->s3stmt, column) != 0;
 }
 
 int
@@ -328,11 +383,64 @@ svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column)
   return sqlite3_column_int(stmt->s3stmt, column);
 }
 
+apr_int64_t
+svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column)
+{
+  return sqlite3_column_int64(stmt->s3stmt, column);
+}
+
+svn_error_t *
+svn_sqlite__column_properties(apr_hash_t **props,
+                              svn_sqlite__stmt_t *stmt,
+                              int column,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  apr_size_t len;
+  const void *val;
+
+  val = svn_sqlite__column_blob(stmt, column, &len);
+  if (val == NULL)
+    {
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_skel__parse_proplist(props,
+                                  svn_skel__parse(val, len, scratch_pool),
+                                  result_pool);
+}
+
+svn_error_t *
+svn_sqlite__column_checksum(svn_checksum_t **checksum,
+                            svn_sqlite__stmt_t *stmt, int column,
+                            apr_pool_t *result_pool)
+{
+  const char *digest = svn_sqlite__column_text(stmt, column, NULL);
+
+  if (digest == NULL)
+    *checksum = NULL;
+  else
+    {
+      svn_checksum_kind_t ckind;
+
+      /* "$md5 $..." or "$sha1$..." */
+      SVN_ERR_ASSERT(strlen(digest) > 6);
+
+      ckind = (digest[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
+      SVN_ERR(svn_checksum_parse_hex(checksum, ckind,
+                                     digest + 6, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_boolean_t
 svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column)
 {
   return sqlite3_column_type(stmt->s3stmt, column) == SQLITE_NULL;
 }
+
 
 svn_error_t *
 svn_sqlite__finalize(svn_sqlite__stmt_t *stmt)
@@ -345,6 +453,7 @@ svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
 {
   SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
+  SQLITE_ERR(sqlite3_clear_bindings(stmt->s3stmt), stmt->db);
   return SVN_NO_ERROR;
 }
 
@@ -496,65 +605,10 @@ init_sqlite(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_sqlite__get_schema_version(int *version,
-                               const char *path,
-                               apr_pool_t *scratch_pool)
+static svn_error_t *
+internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
+              apr_pool_t *scratch_pool)
 {
-  svn_sqlite__db_t db;
-
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
-  SQLITE_ERR(sqlite3_open(path, &db.db3), &db);
-  SVN_ERR(get_schema(version, &db, scratch_pool));
-  SQLITE_ERR(sqlite3_close(db.db3), &db);
-
-  return SVN_NO_ERROR;
-}
-
-/* APR cleanup function used to close the database when its pool is destoryed.
-   DATA should be the svn_sqlite__db_t handle for the database. */
-static apr_status_t
-close_apr(void *data)
-{
-  svn_sqlite__db_t *db = data;
-  svn_error_t *err = SVN_NO_ERROR;
-  int result;
-  int i;
-
-  /* Finalize any existing prepared statements. */
-  for (i = 0; i < db->nbr_statements; i++)
-    {
-      if (db->prepared_stmts[i])
-        err = svn_error_compose_create(
-                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
-    }
-
-  result = sqlite3_close(db->db3);
-
-  /* If there's a pre-existing error, return it. */
-  if (err)
-    {
-      result = err->apr_err;
-      svn_error_clear(err);
-      return result;
-    }
-
-  if (result != SQLITE_OK)
-    return SQLITE_ERROR_CODE(result);
-
-  return APR_SUCCESS;
-}
-
-svn_error_t *
-svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
-                 svn_sqlite__mode_t mode, const char * const statements[],
-                 int latest_schema, const char * const *upgrade_sql,
-                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
-
-  *db = apr_palloc(result_pool, sizeof(**db));
-
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
   {
     int flags;
@@ -581,7 +635,23 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */
-    SQLITE_ERR(sqlite3_open_v2(path, &(*db)->db3, flags, NULL), *db);
+    {
+      /* We'd like to use SQLITE_ERR_MSG here, but we can't since it would
+         just return an error and leave the database open.  So, we need to
+         do this manually. */
+      /* ### SQLITE_CANTOPEN */
+      int err_code = sqlite3_open_v2(path, db3, flags, NULL);
+      if (err_code != SQLITE_OK)
+        {
+          char *msg = apr_pstrdup(scratch_pool, sqlite3_errmsg(*db3));
+
+          /* We don't catch the error here, since we care more about the open
+             error than the close error at this point. */
+          sqlite3_close(*db3);
+
+          return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
+        }
+    }
   }
 #else
   /* Older versions of SQLite (pre-3.5.x) will always create the database
@@ -594,9 +664,10 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   if (mode == svn_sqlite__mode_readonly || mode == svn_sqlite__mode_readwrite)
     {
       svn_node_kind_t kind;
+
       SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
       if (kind != svn_node_file) {
-          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+          return svn_error_createf(APR_ENOENT, NULL,
                                    _("Expected SQLite database not found: %s"),
                                    svn_path_local_style(path, scratch_pool));
       }
@@ -607,12 +678,99 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
     }
   else
     SVN_ERR_MALFUNCTION();
+  {
+    /* We'd like to use SQLITE_ERR_MSG here, but we can't since it would
+       just return an error and leave the database open.  So, we need to
+       do this manually. */
+    int err_code = sqlite3_open(path, db3);
+    if (err_code != SQLITE_OK)
+      {
+        char *msg = apr_pstrdup(scratch_pool, sqlite3_errmsg(*db3));
 
-  SQLITE_ERR(sqlite3_open(path, &(*db)->db3), *db);
+        /* We don't catch the error here, since we care more about the open
+           error than the close error at this point. */
+        sqlite3_close(*db3);
+
+        return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
+      }
+  }
 #endif
 
   /* Retry until timeout when database is busy. */
-  SQLITE_ERR(sqlite3_busy_timeout((*db)->db3, BUSY_TIMEOUT), *db);
+  SQLITE_ERR_MSG(sqlite3_busy_timeout(*db3, BUSY_TIMEOUT),
+                 sqlite3_errmsg(*db3));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__get_schema_version(int *version,
+                               const char *path,
+                               apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t db;
+
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+  SVN_ERR(internal_open(&db.db3, path, svn_sqlite__mode_readonly,
+                        scratch_pool));
+  SVN_ERR(get_schema(version, &db, scratch_pool));
+  SQLITE_ERR(sqlite3_close(db.db3), &db);
+
+  return SVN_NO_ERROR;
+}
+
+/* APR cleanup function used to close the database when its pool is destoryed.
+   DATA should be the svn_sqlite__db_t handle for the database. */
+static apr_status_t
+close_apr(void *data)
+{
+  svn_sqlite__db_t *db = data;
+  svn_error_t *err = SVN_NO_ERROR;
+  int result;
+  int i;
+
+  /* Check to see if we've already closed this database. */
+  if (db->db3 == NULL)
+    return APR_SUCCESS;
+
+  /* Finalize any existing prepared statements. */
+  for (i = 0; i < db->nbr_statements; i++)
+    {
+      if (db->prepared_stmts[i])
+        err = svn_error_compose_create(
+                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
+    }
+
+  result = sqlite3_close(db->db3);
+
+  /* If there's a pre-existing error, return it. */
+  if (err)
+    {
+      result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
+
+  if (result != SQLITE_OK)
+    return SQLITE_ERROR_CODE(result);
+
+  db->db3 = NULL;
+
+  return APR_SUCCESS;
+}
+
+svn_error_t *
+svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
+                 svn_sqlite__mode_t mode, const char * const statements[],
+                 int latest_schema, const char * const *upgrade_sql,
+                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+
+  *db = apr_palloc(result_pool, sizeof(**db));
+
+  SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
+
 #ifdef SQLITE3_DEBUG
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
@@ -640,6 +798,14 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   (*db)->result_pool = result_pool;
   apr_pool_cleanup_register(result_pool, *db, close_apr, apr_pool_cleanup_null);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__close(svn_sqlite__db_t *db)
+{
+  apr_pool_cleanup_run(db->result_pool, db, close_apr);
 
   return SVN_NO_ERROR;
 }

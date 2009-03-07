@@ -18,6 +18,8 @@
 
 
 
+#include <assert.h>
+
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
@@ -26,6 +28,7 @@
 #include <serf.h>
 #include <serf_bucket_types.h>
 
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "svn_xml.h"
@@ -475,11 +478,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   /* Setup server authorization headers */
   if (conn->session->auth_protocol)
-    conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
+    conn->session->auth_protocol->setup_request_func(conn, method, url, 
+						     hdrs_bkt);
 
   /* Setup proxy authorization headers */
   if (conn->session->proxy_auth_protocol)
-    conn->session->proxy_auth_protocol->setup_request_func(conn, hdrs_bkt);
+    conn->session->proxy_auth_protocol->setup_request_func(conn, method, 
+							   url, hdrs_bkt);
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)
@@ -521,7 +526,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 {
   apr_status_t status;
 
-  sess->pending_error = SVN_NO_ERROR;
+  assert(sess->pending_error == SVN_NO_ERROR);
 
   while (!*done)
     {
@@ -531,14 +536,18 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
           sess->wc_callbacks->cancel_func)
         SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
 
-      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
+      status = serf_context_run(sess->context, sess->timeout, pool);
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          continue;
+          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+                                  NULL,
+                                  _("Connection timed out"));
         }
       if (sess->pending_error)
         {
-          return sess->pending_error;
+          svn_error_t *err = sess->pending_error;
+          sess->pending_error = SVN_NO_ERROR;
+          return err;
         }
       if (status)
         {
@@ -1137,11 +1146,42 @@ handle_response(serf_request_t *request,
        */
       if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
         {
+          assert(ctx->session->pending_error == SVN_NO_ERROR);
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
+          /* This discard may be no-op, but let's preserve the algorithm
+             used elsewhere in this function for clarity's sake. */
+          svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+          status = ctx->session->pending_error->apr_err;
           goto cleanup;
         }
+    }
+
+  /* Validate this response message. */
+  if (ctx->session->auth_protocol ||
+      ctx->session->proxy_auth_protocol)
+    {
+      svn_error_t *err;
+
+      if (ctx->session->auth_protocol)
+	{
+	  err = ctx->session->auth_protocol->validate_response_func(ctx, 
+		   request, response, pool);
+	}
+      else
+	{
+	  err = ctx->session->proxy_auth_protocol->validate_response_func(ctx, 
+		   request, response, pool);
+	}
+
+      if (err)
+	{
+	  svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+	  ctx->session->pending_error = err;
+	  status = ctx->session->pending_error->apr_err;
+	  goto cleanup;
+	}
     }
 
   if (ctx->conn->last_status_code == 401 && sl.code < 400)
@@ -1159,10 +1199,11 @@ handle_response(serf_request_t *request,
       /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
 
-      err = svn_ra_serf__handle_auth(sl.code, ctx->session, ctx->conn,
+      err = svn_ra_serf__handle_auth(sl.code, ctx,
                                      request, response, pool);
       if (err)
         {
+          assert(ctx->session->pending_error == SVN_NO_ERROR);
           ctx->session->pending_error = err;
           svn_ra_serf__handle_discard_body(request, response, NULL, pool);
           status = ctx->session->pending_error->apr_err;
@@ -1186,6 +1227,7 @@ handle_response(serf_request_t *request,
     {
       /* 409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
+      assert(ctx->session->pending_error == SVN_NO_ERROR);
       ctx->session->pending_error =
           svn_ra_serf__handle_server_error(request, response, pool);
       if (!ctx->session->pending_error)
@@ -1341,25 +1383,29 @@ svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
 }
 
 svn_error_t *
-svn_ra_serf__discover_root(const char **vcc_url,
-                           const char **rel_path,
-                           svn_ra_serf__session_t *session,
-                           svn_ra_serf__connection_t *conn,
-                           const char *orig_path,
-                           apr_pool_t *pool)
+svn_ra_serf__discover_vcc(const char **vcc_url,
+                          svn_ra_serf__session_t *session,
+                          svn_ra_serf__connection_t *conn,
+                          apr_pool_t *pool)
 {
   apr_hash_t *props;
   const char *path, *relative_path, *present_path = "", *uuid;
 
-  /* If we're only interested in our VCC, just return it. */
-  if (session->vcc_url && !rel_path)
+  /* If we've already got the information our caller seeks, just return it.  */
+  if (session->vcc_url && session->repos_root_str)
     {
       *vcc_url = session->vcc_url;
       return SVN_NO_ERROR;
     }
 
+  /* If no connection is provided, use the default one. */
+  if (! conn)
+    {
+      conn = session->conns[0];
+    }
+
   props = apr_hash_make(pool);
-  path = orig_path;
+  path = session->repos_url.path;
   *vcc_url = NULL;
   uuid = NULL;
 
@@ -1399,9 +1445,9 @@ svn_ra_serf__discover_root(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off. */
-              present_path = svn_path_join(svn_path_basename(path, pool),
+              present_path = svn_path_join(svn_uri_basename(path, pool),
                                            present_path, pool);
-              path = svn_path_dirname(path, pool);
+              path = svn_uri_dirname(path, pool);
             }
         }
     }
@@ -1446,21 +1492,62 @@ svn_ra_serf__discover_root(const char **vcc_url,
       session->uuid = apr_pstrdup(session->pool, uuid);
     }
 
-  if (rel_path)
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__get_relative_path(const char **rel_path,
+                               const char *orig_path,
+                               svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
+                               apr_pool_t *pool)
+{
+  const char *decoded_root, *decoded_orig;
+    
+  if (! session->repos_root.path)
     {
-      if (present_path[0] != '\0')
-        {
-          /* The relative path is supposed to be URI decoded, so decode
-             present_path before joining both together. */
-          *rel_path = svn_path_join(relative_path,
-                                    svn_path_uri_decode(present_path, pool),
-                                    pool);
-        }
-      else
-        {
-          *rel_path = relative_path;
-        }
+      const char *vcc_url;
+
+      /* This should only happen if we haven't detected HTTP v2
+         support from the server.  */
+      assert(! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+
+      /* We don't actually care about the VCC_URL, but this API
+         promises to populate the session's root-url cache, and that's
+         what we really want. */
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, 
+                                        conn ? conn : session->conns[0], 
+                                        pool));
     }
+
+  decoded_root = svn_path_uri_decode(session->repos_root.path, pool);
+  decoded_orig = svn_path_uri_decode(orig_path, pool);
+  if (strcmp(decoded_root, decoded_orig) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_path_is_child(decoded_root, decoded_orig, pool);
+      SVN_ERR_ASSERT(*rel_path != NULL);
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__report_resource(const char **report_target,
+                             svn_ra_serf__session_t *session,
+                             svn_ra_serf__connection_t *conn,
+                             apr_pool_t *pool)
+{
+  /* If we have HTTP v2 support, we want to report against the 'me'
+     resource. */
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+    *report_target = apr_pstrdup(pool, session->me_resource);
+
+  /* Otherwise, we'll use the default VCC. */
+  else
+    SVN_ERR(svn_ra_serf__discover_vcc(report_target, session, conn, pool));
 
   return SVN_NO_ERROR;
 }

@@ -36,6 +36,8 @@
 
 #define SVN_EMPTY_PATH ""
 
+#define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
+
 static svn_error_t *
 test_dirent_is_root(const char **msg,
                     svn_boolean_t msg_only,
@@ -49,19 +51,19 @@ test_dirent_is_root(const char **msg,
     const char *path;
     svn_boolean_t result;
   } tests[] = {
+    { "/",             TRUE  },
     { "/foo/bar",      FALSE },
     { "/foo",          FALSE },
-    { "/",             TRUE },
     { "",              FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/foo",        FALSE },
     { "X:/",           TRUE },
-    { "X:foo",         FALSE },
+    { "X:foo",         FALSE }, /* Based on non absolute root */
     { "X:",            TRUE },
     { "//srv/shr",     TRUE },
-    { "//srv",         TRUE },
     { "//srv/shr/fld", FALSE },
 #else /* WIN32 or Cygwin */
+    { "/",             TRUE },
     { "/X:foo",        FALSE },
     { "/X:",           FALSE },
 #endif /* non-WIN32 */
@@ -72,7 +74,7 @@ test_dirent_is_root(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t retval;
 
@@ -109,6 +111,13 @@ test_uri_is_root(const char **msg,
     { "X:/",           FALSE },
     { "X:foo",         FALSE },
     { "X:",            FALSE },
+    { "file://",       TRUE },
+    { "file://a",      FALSE },
+    { "file:///a",     FALSE },
+    { "file:///A:/",   FALSE },
+    { "http://server", TRUE },
+    { "http://server/file", FALSE },
+    { "http://",       TRUE },
   };
 
   *msg = "test svn_uri_is_root";
@@ -116,7 +125,7 @@ test_uri_is_root(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t retval;
 
@@ -144,28 +153,28 @@ test_dirent_is_absolute(const char **msg,
   struct {
     const char *path;
     svn_boolean_t result;
-  } tests[] = {
-    { "/foo/bar",      TRUE },
-    { "/foo",          TRUE },
-    { "/",             TRUE },
+  } tests[] = {    
     { "foo/bar",       FALSE },
     { "foo",           FALSE },
     { "",              FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
+    { "/foo/bar",      FALSE },
+    { "/foo",          FALSE },
+    { "/",             FALSE },
     { "X:/foo",        TRUE },
     { "X:/",           TRUE },
-    { "X:foo",         TRUE },
-    { "X:foo/bar",     TRUE },
-    { "X:",            TRUE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", TRUE },
 #else/* WIN32 or Cygwin */
+    { "/foo/bar",      TRUE },
+    { "/foo",          TRUE },
+    { "/",             TRUE },
     { "X:/foo",        FALSE },
     { "X:/",           FALSE },
-    { "X:foo",         FALSE },
+#endif /* non-WIN32 */
+    { "X:foo",         FALSE }, /* Not special on Posix, relative on Windows */
     { "X:foo/bar",     FALSE },
     { "X:",            FALSE },
-#endif /* non-WIN32 */
   };
 
   *msg = "test svn_dirent_is_absolute";
@@ -173,7 +182,7 @@ test_dirent_is_absolute(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t retval;
 
@@ -222,7 +231,7 @@ test_uri_is_absolute(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t retval;
 
@@ -257,30 +266,36 @@ test_dirent_join(const char **msg,
     { "/abc", "/def", "/def" },
     { "/abc", "/d", "/d" },
     { "/abc", "/", "/" },
+    { "abc", "/def", "/def" },
     { SVN_EMPTY_PATH, "/", "/" },
     { "/", SVN_EMPTY_PATH, "/" },
     { SVN_EMPTY_PATH, "abc", "abc" },
     { "abc", SVN_EMPTY_PATH, "abc" },
     { SVN_EMPTY_PATH, "/abc", "/abc" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+    { "/", "/", "/" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "X:/",SVN_EMPTY_PATH, "X:/" },
-    { "X:/","abc", "X:/abc" },
-    { "X:/", "/def", "/def" },
-    { "X:/abc", "/d", "/d" },
-    { "X:/abc", "/", "/" },
+    { "X:/", SVN_EMPTY_PATH, "X:/" },
+    { "X:/", "abc", "X:/abc" },
+    { "X:/", "/def", "X:/def" },
+    { "X:/abc", "/d", "X:/d" },
+    { "X:/abc", "/", "X:/" },
     { "X:/abc", "X:/", "X:/" },
     { "X:/abc", "X:/def", "X:/def" },
-    { "X:",SVN_EMPTY_PATH, "X:" },
-    { "X:","abc", "X:abc" },
-    { "X:", "/def", "/def" },
-    { "X:abc", "/d", "/d" },
-    { "X:abc", "/", "/" },
+    { "X:", SVN_EMPTY_PATH, "X:" },
+    { "X:", "abc", "X:abc" },
+    { "X:", "/def", "X:/def" },
+    { "X:abc", "/d", "X:/d" },
+    { "X:abc", "/", "X:/" },
     { "X:abc", "X:/", "X:/" },
     { "X:abc", "X:/def", "X:/def" },
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
     { "//srv/shr/fld", "subfld",  "//srv/shr/fld/subfld" },
     { "//srv/shr/fld", "//srv/shr", "//srv/shr" },
+    { "aa", "/dir", "/dir"} ,
+    { "aa", "A:", "A:" },
+    { "aa", "A:file", "A:file"},
+    { "A:", "/", "A:/" },
 #else /* WIN32 or Cygwin */
     { "X:abc", "X:/def", "X:abc/X:/def" },
     { "X:","abc", "X:/abc" },
@@ -292,7 +307,7 @@ test_dirent_join(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(joins) / sizeof(joins[0]); i--; )
+  for (i = 0; i < COUNT_OF(joins); i++ )
     {
       const char *base = joins[i][0];
       const char *comp = joins[i][1];
@@ -377,6 +392,10 @@ test_dirent_join(const char **msg,
   TEST_MANY((pool, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+
+  TEST_MANY((pool, "abcd", "/dir", "A:", "file", NULL), "A:file");
+  TEST_MANY((pool, "abcd", "A:", "/dir", "file", NULL), "A:/dir/file");
+  
 #else /* WIN32 or Cygwin */
   TEST_MANY((pool, "X:", "def", "ghi", NULL), "X:/def/ghi");
   TEST_MANY((pool, "X:", SVN_EMPTY_PATH, "ghi", NULL), "X:/ghi");
@@ -385,6 +404,66 @@ test_dirent_join(const char **msg,
 #endif /* non-WIN32 */
 
   /* ### probably need quite a few more tests... */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_join(const char **msg,
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  int i;
+  char *result;
+
+  static const char * const joins[][3] = {
+    { "abc", "def", "abc/def" },
+    { "a", "def", "a/def" },
+    { "a", "d", "a/d" },
+    { "/", "d", "/d" },
+    { "/abc", "d", "/abc/d" },
+    { "/abc", "def", "/abc/def" },
+    { "/abc", "/def", "/def" },
+    { "/abc", "/d", "/d" },
+    { "/abc", "/", "/" },
+    { SVN_EMPTY_PATH, "/", "/" },
+    { "/", SVN_EMPTY_PATH, "/" },
+    { SVN_EMPTY_PATH, "abc", "abc" },
+    { "abc", SVN_EMPTY_PATH, "abc" },
+    { SVN_EMPTY_PATH, "/abc", "/abc" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+    { "http://server/dir", "file", "http://server/dir/file" },
+    { "svn+ssh://user@host", "abc", "svn+ssh://user@host/abc" },
+    { "http://server/dir", "/file", "http://server/file" },
+    { "http://server/dir", "svn://server2", "svn://server2" },
+    { "file:///etc/rc.d", "/shr", "file:///shr" },
+  };
+
+  *msg = "test svn_uri_join";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < COUNT_OF(joins); i++)
+    {
+      const char *base = joins[i][0];
+      const char *comp = joins[i][1];
+      const char *expect = joins[i][2];
+
+      result = svn_uri_join(base, comp, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_join(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);
+
+      /*result = svn_uri_join_many(pool, base, comp, NULL);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_join_many(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);*/
+    }
 
   return SVN_NO_ERROR;
 }
@@ -413,27 +492,27 @@ test_dirent_basename(const char **msg,
     { "/a", "a" },
     { "/b/a", "a" },
     { "/b/a", "a" },
-    { "/", "/" },
+    { "/", "" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "X:/abc", "abc" },
-    { "X:", "X:" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "X:/", "X:/" },
+    { "X:", "" },
+    { "X:/", "" },
     { "X:abc", "abc" },
-    { "//srv/shr",      "//srv/shr" },
-    { "//srv/shr/fld",  "fld" },
+    { "//srv/shr", "" },
+    { "//srv/shr/fld", "fld" },
     { "//srv/shr/fld/subfld", "subfld" },
 #else /* WIN32 or Cygwin */
+    { "X:", "X:" },
     { "X:abc", "X:abc" },
 #endif /* non-WIN32 */
-
   };
 
   *msg = "test svn_dirent_basename";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(tests) / sizeof(tests[0]); i--; )
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
@@ -462,16 +541,21 @@ test_uri_basename(const char **msg,
     const char *path;
     const char *result;
   } tests[] = {
+    { "/", "" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://s/file", "file" },
     { "http://s/dir/file", "file" },
-    { "http://s", "s" }, /* ### Current behavior */
+    { "http://s", "" },
+    { "file://", "" },
+    { "file:///a", "a" },
+    { "file:///a/b", "b" },
   };
 
   *msg = "test svn_uri_basename";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(tests) / sizeof(tests[0]); i--; )
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
@@ -529,7 +613,7 @@ test_dirent_dirname(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(tests) / sizeof(tests[0]); i--; )
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
@@ -558,16 +642,20 @@ test_uri_dirname(const char **msg,
     const char *path;
     const char *result;
   } tests[] = {
+    { "/", "/" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://server/dir", "http://server" },
     { "http://server/dir/file", "http://server/dir" },
-    { "http://server", "http:/" }, /* ### Current behavior */
+    { "http://server", "http://server" },
+    { "file:///a/b", "file:///a" },
+    { "file:///a", "file://" },
   };
 
   *msg = "test svn_dirent_dirname";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(tests) / sizeof(tests[0]); i--; )
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
@@ -640,7 +728,6 @@ test_dirent_canonicalize(const char **msg,
     { "//server/SHare/",      "//server/SHare" },
     { "//SERVER/SHare/",      "//server/SHare" },
 #endif /* WIN32 or Cygwin */
-    { NULL, NULL }
   };
   int i;
 
@@ -648,8 +735,7 @@ test_dirent_canonicalize(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  i = 0;
-  while (tests[i].path)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *canonical = svn_dirent_canonicalize(tests[i].path, pool);
 
@@ -658,7 +744,6 @@ test_dirent_canonicalize(const char **msg,
                                  "svn_dirent_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, canonical, tests[i].result);
-      ++i;
     }
 
   return SVN_NO_ERROR;
@@ -727,6 +812,9 @@ test_uri_canonicalize(const char **msg,
     { "fiLE://",              "file://" },
     { "file://SRV/shr/repos",  "file://srv/shr/repos" },
     { "file://SRV/SHR/REPOS",  "file://srv/SHR/REPOS" },
+    { "http://server////",     "http://server" },
+    { "http://server/file//",  "http://server/file" },
+    { "http://server//.//f//", "http://server/f" },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
@@ -736,7 +824,6 @@ test_uri_canonicalize(const char **msg,
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
 #endif /* non-WIN32 */
-    { NULL, NULL }
   };
   int i;
 
@@ -744,8 +831,8 @@ test_uri_canonicalize(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  i = 0;
-  while (tests[i].path)
+  for (i = 0; i < COUNT_OF(tests); i++)
+
     {
       const char *canonical = svn_uri_canonicalize(tests[i].path, pool);
 
@@ -754,7 +841,6 @@ test_uri_canonicalize(const char **msg,
                                  "svn_uri_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, canonical, tests[i].result);
-      ++i;
     }
 
   return SVN_NO_ERROR;
@@ -827,7 +913,6 @@ test_dirent_is_canonical(const char **msg,
     { ".:", TRUE },
     { "foo/.:", TRUE },
 #endif /* non-WIN32 */
-    { NULL, FALSE },
   };
   int i;
 
@@ -835,9 +920,10 @@ test_dirent_is_canonical(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; tests[i].path; i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t canonical;
+      const char* canonicalized;
 
       canonical = svn_dirent_is_canonical(tests[i].path, pool);
       if (tests[i].canonical != canonical)
@@ -847,6 +933,15 @@ test_dirent_is_canonical(const char **msg,
                                  tests[i].path,
                                  canonical ? "TRUE" : "FALSE",
                                  tests[i].canonical ? "TRUE" : "FALSE");
+
+      canonicalized = svn_dirent_canonicalize(tests[i].path, pool);
+
+      if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_canonicalize(\"%s\") returned \"%s\" "
+                                 "while svn_dirent_is_canonical returned TRUE",
+                                 tests[i].path,
+                                 canonicalized);
     }
 
   return SVN_NO_ERROR;
@@ -897,6 +992,7 @@ test_uri_is_canonical(const char **msg,
     { "foo/./bar",             FALSE },
     { "http://hst",            TRUE },
     { "http://hst/foo/../bar", TRUE },
+    { "http://hst/foo/bar/",   FALSE },
     { "http://hst/",           FALSE },
     { "http://HST/",           FALSE },
     { "http://HST/FOO/BaR",    FALSE },
@@ -920,6 +1016,10 @@ test_uri_is_canonical(const char **msg,
     { "file://SRV/share/repos", FALSE },
     { "file://srv/SHARE/repos", TRUE },
     { "file://srv/share/repos", TRUE },
+    { "file://srv/share/repos/", FALSE },
+    { "//server/share",         FALSE }, /* Only valid as dirent */
+    { "//server",               FALSE },
+    { "//",                     FALSE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
@@ -929,7 +1029,6 @@ test_uri_is_canonical(const char **msg,
     { "file:///c:/temp/REPOS", TRUE },
     { "file:///C:/temp/REPOS", TRUE },
 #endif /* non-WIN32 */
-    { NULL, FALSE },
   };
   int i;
 
@@ -937,9 +1036,10 @@ test_uri_is_canonical(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; tests[i].path; i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t canonical;
+      const char* canonicalized;
 
       canonical = svn_uri_is_canonical(tests[i].path, pool);
       if (tests[i].canonical != canonical)
@@ -949,6 +1049,16 @@ test_uri_is_canonical(const char **msg,
                                  tests[i].path,
                                  canonical ? "TRUE" : "FALSE",
                                  tests[i].canonical ? "TRUE" : "FALSE");
+
+      canonicalized = svn_uri_canonicalize(tests[i].path, pool);
+
+      if (canonical != (strcmp(tests[i].path, canonicalized) == 0))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_canonicalize(\"%s\") returned \"%s\" "
+                                 "while svn_uri_is_canonical returned %s",
+                                 tests[i].path,
+                                 canonicalized,
+                                 canonical ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
@@ -976,14 +1086,14 @@ test_dirent_split(const char **msg,
     { "../foo",          "..",            "foo" },
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
-    { "/",               "/",             "/" },
+    { "/",               "/",             "" },
     { "X:/foo/bar",      "X:/foo",        "bar" },
     { "X:foo/bar",       "X:foo",         "bar" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "X:/",             "X:/",           "X:/" },
+    { "X:/",             "X:/",           "" },
     { "X:/foo",          "X:/",           "foo" },
     { "X:foo",           "X:",            "foo" },
-    { "//srv/shr",       "//srv/shr",     "//srv/shr" },
+    { "//srv/shr",       "//srv/shr",     "" },
     { "//srv/shr/fld",   "//srv/shr",     "fld" },
 #else /* WIN32 or Cygwin */
     { "X:foo",           SVN_EMPTY_PATH,  "X:foo" },
@@ -995,7 +1105,7 @@ test_dirent_split(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < COUNT_OF(paths); i++)
     {
       const char *dir, *base_name;
 
@@ -1028,8 +1138,12 @@ test_uri_split(const char **msg,
 
   static const char * const paths[][3] = {
     { "http://server/foo/bar", "http://server/foo", "bar" },
-	{ "http://server/dir/foo/bar", "http://server/dir/foo", "bar" },
+    { "http://server/dir/foo/bar", "http://server/dir/foo", "bar" },
+    { "http://server/foo", "http://server", "foo" },
+    { "http://server", "http://server", "" },
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
+    { "file://", "file://", "" },
+    { "file:///a", "file://", "a" }
   };
 
   *msg = "test test_uri_split";
@@ -1037,7 +1151,7 @@ test_uri_split(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < COUNT_OF(paths); i++)
     {
       const char *dir, *base_name;
 
@@ -1113,7 +1227,7 @@ test_dirent_is_ancestor(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t retval;
 
@@ -1175,7 +1289,7 @@ test_uri_is_ancestor(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t retval;
 
@@ -1247,7 +1361,7 @@ test_dirent_get_longest_ancestor(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *retval;
 
@@ -1320,7 +1434,7 @@ test_uri_get_longest_ancestor(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+  for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *retval;
 
@@ -1354,8 +1468,6 @@ test_dirent_is_child(const char **msg,
 {
   int i, j;
 
-#define NUM_TEST_PATHS 25
-
   static const char * const paths[] = {
     "/foo/bar",
     "/foo/bars",
@@ -1386,8 +1498,11 @@ test_dirent_is_child(const char **msg,
 #endif /* Win32 and Cygwin */
     };
 
+  /* Maximum number of path[] items for all platforms */
+#define MAX_PATHS 32
+
   static const char * const
-    remainders[sizeof(paths) / sizeof(paths[0])][NUM_TEST_PATHS] = {
+    remainders[COUNT_OF(paths)][MAX_PATHS] = {
     { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1452,9 +1567,9 @@ test_dirent_is_child(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < COUNT_OF(paths); i++)
     {
-      for (j = 0; j < sizeof(paths) / sizeof(paths[0]); j++)
+      for (j = 0; j < COUNT_OF(paths); j++)
         {
           const char *remainder;
 
@@ -1506,7 +1621,7 @@ test_uri_is_child(const char **msg,
     };
 
   static const char * const
-    remainders[sizeof(paths) / sizeof(paths[0])][NUM_TEST_PATHS] = {
+    remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
     { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1549,9 +1664,9 @@ test_uri_is_child(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < COUNT_OF(paths); i++)
     {
-      for (j = 0; j < sizeof(paths) / sizeof(paths[0]); j++)
+      for (j = 0; j < COUNT_OF(paths); j++)
         {
           const char *remainder;
 
@@ -1633,7 +1748,7 @@ test_dirent_get_absolute(const char **msg,
   curdrive[0] = curdir[0];
 #endif /* WIN32 */
 
-  for (i = 0 ; i < sizeof(tests) / sizeof(tests[0]) ; i++ )
+  for (i = 0 ; i < COUNT_OF(tests) ; i++ )
     {
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
@@ -1661,6 +1776,73 @@ test_dirent_get_absolute(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dirent_condense_targets(const char **msg,
+                             svn_boolean_t msg_only,
+                             svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  int i;
+  struct {
+    const char *paths[8];
+    const char *common;
+    const char *results[8]; /* must be same size as paths */
+  } tests[] = {
+#if defined(WIN32) || defined(__CYGWIN__)
+    { {"C:/", "C:/zeta", NULL},              "C:/",    {"", "zeta"} },
+    { {"C:/dir", "C:/dir/zeta", NULL},       "C:/dir", {"", "zeta"} },
+    { {"C:/dir/omega", "C:/dir/zeta", NULL}, "C:/dir", {"omega", "zeta" } },
+#else
+    { { "/dir", "/dir/file", NULL }, "/dir", { "", "file" } },
+    { { "/dir1", "/dir2", NULL },    "/",     { "dir1", "dir2" } },
+#endif
+  };
+
+  *msg = "test svn_dirent_condense_targets";
+  
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      int j;
+      const char* common;
+      apr_array_header_t *hdr = apr_array_make(pool, 8, sizeof(const char*));
+      apr_array_header_t *condensed;
+
+      for (j = 0; j < COUNT_OF(tests[i].paths); j++)
+        {
+          if (tests[i].paths[j] != NULL)
+            APR_ARRAY_PUSH(hdr, const char*) = tests[i].paths[j];
+          else
+            break;
+        }
+
+      SVN_ERR(svn_dirent_condense_targets(&common, &condensed, hdr, 
+                                          FALSE, pool, pool));
+
+      if (strcmp(common, tests[i].common))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_condense_targets returned common"
+                                 "\"%s\". expected \"%s\"",
+                                 common, tests[i].common);
+
+      for (j = 0; j < COUNT_OF(tests[i].paths); j++)
+        {
+          if (tests[i].paths[j] == NULL || tests[i].results[j] == NULL)
+            break;
+
+          if (strcmp(APR_ARRAY_IDX(condensed, j, const char*), 
+                     tests[i].results[j]))
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                           "svn_dirent_condense_targets returned first"
+                           "\"%s\". expected \"%s\"",
+                           APR_ARRAY_IDX(condensed, j, const char*),
+                           tests[i].results[j]);
+        }
+    }
+
+  
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1672,6 +1854,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_dirent_is_absolute),
     SVN_TEST_PASS(test_uri_is_absolute),
     SVN_TEST_PASS(test_dirent_join),
+    SVN_TEST_PASS(test_uri_join),
     SVN_TEST_PASS(test_dirent_basename),
     SVN_TEST_PASS(test_uri_basename),
     SVN_TEST_PASS(test_dirent_dirname),
@@ -1689,5 +1872,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_dirent_is_ancestor),
     SVN_TEST_PASS(test_uri_is_ancestor),
     SVN_TEST_PASS(test_dirent_get_absolute),
+    SVN_TEST_PASS(test_dirent_condense_targets),
     SVN_TEST_NULL
   };

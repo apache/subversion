@@ -102,9 +102,7 @@ svn_uri_local_style(const char *uri,
  * empty string is returned.
  *
  * If the @a component is an absolute dirent, then it is copied and returned.
- * Exactly one slash character ('/') is used to join the components,
- * accounting for any trailing slash in @a base, except on Windows when
- * @a base is "X:".
+ * The platform specific rules for joining paths are used to join the components.
  *
  * This function is NOT appropriate for native (local) file
  * dirents. Only for "internal" canonicalized dirents, since it uses '/'
@@ -134,10 +132,30 @@ svn_dirent_join_many(apr_pool_t *pool,
                      const char *base,
                      ...);
 
-/** Get the basename of the specified canonicalized @a dirent.  The
- * basename is defined as the last component of the dirent.  If the @a dirent
- * is root ("/", "X:/", "//server/share/"), then that is returned.  Otherwise,
- * the returned value will have no slashes in it.
+/** Join a base uri (@a base) with a component (@a component), allocating
+ * the result in @a pool. @a component need not be a single component: it
+ * can be any uri, absolute or relative to @a base.
+ *
+ * If either @a base or @a component is the empty path, then the other
+ * argument will be copied and returned.  If both are the empty path the
+ * empty path is returned.
+ *
+ * If the @a component is an absolute uri, then it is copied and returned.
+ *
+ * It @a component starts with a '/' and @a base contains a scheme, the
+ * scheme defined joining rules are applied.
+ *
+ * @since New in 1.7.
+ */
+char *
+svn_uri_join(const char *base,
+             const char *component,
+             apr_pool_t *pool);
+
+
+/** Gets the name of the specified canonicalized @a dirent as it is known 
+ * within its parent directory. If the @a dirent is root, return "". The 
+ * returned value will not have slashes in it.
  *
  * Example: svn_dirent_basename("/foo/bar") -> "bar"
  *
@@ -145,17 +163,16 @@ svn_dirent_join_many(apr_pool_t *pool,
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_dirent_basename(const char *dirent,
                     apr_pool_t *pool);
 
-
 /** Get the dirname of the specified canonicalized @a dirent, defined as
  * the dirent with its basename removed.
  *
- * If @a dirent is root  ("/", "X:/", "//server/share/"), it is returned
+ * If @a dirent is root  ("/", "X:/", "//server/share/") or "", it is returned
  * unchanged.
  *
  * The returned dirname will be allocated in @a pool.
@@ -177,24 +194,25 @@ svn_dirent_dirname(const char *dirent,
  * If @a dirent has two or more components, the separator between @a dirpath
  * and @a base_name is not included in either of the new names.
  *
- *   examples:
+ * Examples:
  *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
  *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and "/"</pre>
+ *             - <pre>"/"             ==>  "/"  and ""</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
- *             - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
+ *  Windows:   - <pre>"X:/"           ==>  "X:/" and ""</pre>
  *             - <pre>"X:/foo"        ==>  "X:/" and "foo"</pre>
- *  posix:     - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
- *  windows:   - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
+ *             - <pre>"X:foo"         ==>  "X:" and "foo"</pre>
+ *  Posix:     - <pre>"X:foo"         ==>  ""   and "X:foo"</pre>
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 void
 svn_dirent_split(const char *dirent,
                  const char **dirpath,
                  const char **base_name,
                  apr_pool_t *pool);
+
 
 /** Divide the canonicalized @a uri into @a *dirpath and @a
  * *base_name, allocated in @a pool.
@@ -214,7 +232,7 @@ svn_dirent_split(const char *dirent,
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 void
 svn_uri_split(const char *dirent,
@@ -233,7 +251,7 @@ svn_uri_split(const char *dirent,
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_basename(const char *uri,
@@ -255,8 +273,8 @@ svn_uri_dirname(const char *dirent,
 
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
- * hand, amongst which '/foo' on all platforms or 'X:/foo',
- * '//server/share/foo' on Windows.
+ * hand. E.g. '/foo' on Posix platforms or 'X:/foo', '//server/share/foo'
+ * on Windows.
  *
  * @since New in 1.6.
  */
@@ -268,11 +286,16 @@ svn_dirent_is_absolute(const char *dirent);
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_uri_is_absolute(const char *dirent);
+svn_uri_is_absolute(const char *uri);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '//server/share'
- * on Windows.
+ * at hand. 
+ * E.g.:
+ *  On Posix:   '/' 
+ *  On Windows: '/', 'X:/', '//server/share', 'X:'
+ *
+ * Note that on Windows '/' and 'X:' are roots, but paths starting with this
+ * root are not absolute.
  *
  * @since New in 1.5.
  */
@@ -298,10 +321,10 @@ svn_uri_is_root(const char *uri,
  * separator characters, and possibly other semantically inoperative
  * transformations.
  *
- * Convert the server name of UNC paths lowercase on Windows.
+ * Convert the server name of UNC paths lowercase and drive letters to
+ * upper case on Windows.
  *
- * The returned dirent may be statically allocated, equal to @a dirent, or
- * allocated from @a pool.
+ * The returned dirent may be statically allocated or allocated from @a pool.
  *
  * @since New in 1.6.
  */
@@ -320,8 +343,7 @@ svn_dirent_canonicalize(const char *dirent,
  *
  * This functions supports URLs.
  *
- * The returned uri may be statically allocated, equal to @a uri, or
- * allocated from @a pool.
+ * The returned uri may be statically allocated or allocated from @a pool.
  *
  * @since New in 1.6.
  */
@@ -446,6 +468,47 @@ svn_dirent_is_ancestor(const char *path1,
 svn_boolean_t
 svn_uri_is_ancestor(const char *path1,
                     const char *path2);
+
+/** Find the common prefix of the canonicalized dirents in @a targets
+ * (an array of <tt>const char *</tt>'s), and remove redundant dirents if @a
+ * remove_redundancies is TRUE.
+ *
+ *   - Set @a *pcommon to the absolute dirent of the dirent common to
+ *     all of the targets.  If the targets have no common prefix (e.g. 
+ *     "C:/file" and "D:/file" on Windows), set @a *pcommon to the empty
+ *     string.
+ *
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
+ *     to an array of targets relative to @a *pcommon, and if
+ *     @a remove_redundancies is TRUE, omit any dirents that are
+ *     descendants of another dirent in @a targets.  If *pcommon
+ *     is empty, @a *pcondensed_targets will contain absolute dirents;
+ *     redundancies can still be removed.  If @a pcondensed_targets is NULL,
+ *     leave it alone.
+ *
+ * Else if there is exactly one target, then
+ *
+ *   - Set @a *pcommon to that target, and
+ *
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
+ *     to an array containing zero elements.  Else if
+ *     @a pcondensed_targets is NULL, leave it alone.
+ *
+ * If there are no items in @a targets, set @a *pcommon and (if
+ * applicable) @a *pcondensed_targets to @c NULL.
+ *
+ * Allocates @a *pcommon and @a *targets in @a result_pool. All
+ * intermediate allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_dirent_condense_targets(const char **pcommon,
+                            apr_array_header_t **pcondensed_targets,
+                            const apr_array_header_t *targets,
+                            svn_boolean_t remove_redundancies,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

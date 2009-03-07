@@ -767,7 +767,9 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
          array later in this function. */
 
       if (dir)
-        SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
+        SVN_ERR(find_absent_parents1(ra_session,
+                                     svn_path_uri_decode(dir, pool),
+                                     new_dirs, pool));
     }
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
@@ -1654,8 +1656,9 @@ try_copy(svn_commit_info_t **commit_info_p,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
-  apr_array_header_t *copy_pairs = apr_array_make(pool, sources->nelts,
-                                                  sizeof(struct copy_pair *));
+  apr_array_header_t *copy_pairs = 
+                        apr_array_make(pool, sources->nelts,
+                                       sizeof(svn_client__copy_pair_t *));
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
 

@@ -269,7 +269,7 @@ fi
 install_dependency neon "$NEON_PATH"
 install_dependency serf "$SERF_PATH"
 install_dependency zlib "$ZLIB_PATH"
-install_dependency sqlite "$SQLITE_PATH"
+install_dependency sqlite-amalgamation "$SQLITE_PATH"
 
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f

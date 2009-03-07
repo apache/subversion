@@ -519,8 +519,9 @@ def ensure_tree_conflict(sbox, operation,
 # Test 'update' and/or 'switch'
 # See test_wc_merge() for arguments.
 def test_tc_up_sw(sbox, incoming_scen, wc_scen):
+  sbox2 = sbox.clone_dependent()
   ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen, False)
-  ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen, False)
+  ensure_tree_conflict(sbox2, 'switch', incoming_scen, wc_scen, False)
 
 # Test 'merge'
 # INCOMING_SCEN is a list of scenarios describing the incoming changes to apply.
@@ -627,26 +628,30 @@ def up_sw_dir_add_onto_add(sbox):
 
 def merge_file_mod_onto_not_file(sbox):
   "merge file: modify onto not-file"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_mods, br_scen = f_dels + f_rpl_d)
-  test_tc_merge(sbox, f_mods, wc_scen = f_dels)
+  test_tc_merge(sbox2, f_mods, wc_scen = f_dels)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_same(sbox):
   "merge file: del/rpl/mv onto not-same"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_mods)
-  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_mods)
+  test_tc_merge(sbox2, f_dels + f_rpls, wc_scen = f_mods)
   # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_file(sbox):
   "merge file: del/rpl/mv onto not-file"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_dels + f_rpl_d)
-  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_dels)
+  test_tc_merge(sbox2, f_dels + f_rpls, wc_scen = f_dels)
   # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_add_onto_not_none(sbox):
   "merge file: add onto not-none"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_adds, br_scen = f_adds)  ### + d_adds (at path "F")
-  test_tc_merge(sbox, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
+  test_tc_merge(sbox2, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
 
 #----------------------------------------------------------------------
 
@@ -655,23 +660,27 @@ def merge_file_add_onto_not_none(sbox):
 
 def merge_dir_mod_onto_not_dir(sbox):
   "merge dir: modify onto not-dir"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
-  test_tc_merge(sbox, d_mods, wc_scen = d_dels)
+  test_tc_merge(sbox2, d_mods, wc_scen = d_dels)
 
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_mods)
-  test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_mods)
+  test_tc_merge(sbox2, d_dels + d_rpls, wc_scen = d_mods)
 
 def merge_dir_del_onto_not_dir(sbox):
   "merge dir: del/rpl/mv onto not-dir"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_dels + d_rpl_f)
-  test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_dels)
+  test_tc_merge(sbox2, d_dels + d_rpls, wc_scen = d_dels)
 
 def merge_dir_add_onto_not_none(sbox):
   "merge dir: add onto not-none"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
-  test_tc_merge(sbox, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
+  test_tc_merge(sbox2, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
 
 
 #######################################################################

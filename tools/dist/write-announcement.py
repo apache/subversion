@@ -40,7 +40,7 @@ PGP Signatures are available at:
 For this release, the following people have provided PGP signatures:
 
 @SIGINFO@
-
+@RCWARNING@
 Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
     http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html
@@ -94,7 +94,7 @@ ann_html = """\
 <dl>
 @SIGINFO@
 </dl>
-
+@RCWARNING@
 <p>Release notes for the @MAJOR_MINOR@.x release series may be found at:</p>
 
 <dl><dd><a href="http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html">http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html</a></dd></dl>
@@ -103,6 +103,28 @@ ann_html = """\
 
 <dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
 """
+
+rc_warning_text = [ """\
+
+The term 'release candidate' means the Subversion developers feel that this
+release is stable and ready to be tested in production use.  If this testing
+confirms its readiness, this candidate version will become the final released
+version.  Therefore, we encourage people to test this release thoroughly.
+""",
+"""\
+As a note to operating system distro packagers: while we wish to have this
+release candidate widely tested, we do not feel that it is ready for packaging
+and providing to end-users through a distro package system.  Packaging a
+release candidate poses many problems, the biggest being that our policy lets
+us break compatibility between the release candidate and the final release, if
+we find something serious enough.  Having many users depending on a release
+candidate through their distro would cause no end of pain and frustration that
+we do not want to have to deal with.  However, if your distro has a branch that
+is clearly labeled as containing experimental and often broken software, and
+explicitly destined to consenting developers and integrators only, then we're
+okay with packaging the release candidate there.  Just don't let it near the
+end users please.
+""" ]
 
 import sys, re
 
@@ -116,9 +138,15 @@ def main():
     global ann_text
     global ann_html
     version = sys.argv[1]
-    if not re.compile(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$').match(version):
+    match = re.match(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$', version)
+    if not match:
         print("Did you really mean to use version '%s'?" % version)
         return
+
+    if match.group(1):
+      warning_text = rc_warning_text
+    else:
+      warning_text = ''
 
     md5sums = []
     sha1sums = []
@@ -142,6 +170,9 @@ def main():
     ann_text = ann_text.replace('@SHA1SUMS@', fmtsums_text(sha1sums))
     ann_html = ann_html.replace('@MD5SUMS@', fmtsums_html(md5sums))
     ann_html = ann_html.replace('@SHA1SUMS@', fmtsums_html(sha1sums))
+    ann_text = ann_text.replace('@RCWARNING@', '\n'.join(warning_text))
+    ann_html = ann_html.replace('@RCWARNING@',
+                       '\n'.join([ '<p>' + x + '</p>' for x in warning_text]))
 
     ann_text = ann_text.replace('@SIGINFO@', "\n".join(siginfo))
     htmlsigs = []

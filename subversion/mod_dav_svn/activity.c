@@ -147,7 +147,6 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
 {
   dav_error *err = NULL;
   const char *pathname;
-  svn_fs_txn_t *txn;
   const char *txn_name;
   svn_error_t *serr;
 
@@ -164,40 +163,10 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
     }
 
   /* After this point, we have to cleanup the value and database. */
-
-  /* An empty txn_name indicates the transaction has been committed,
-     so don't try to clean it up. */
   if (*txn_name)
     {
-      /* Now, we attempt to delete TXN_NAME from the Subversion
-         repository.  If we fail only because the transaction doesn't
-         exist, don't sweat it (but then, also don't try to remove it). */
-      if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool)))
-        {
-          if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
-            {
-              svn_error_clear(serr);
-              serr = SVN_NO_ERROR;
-            }
-          else
-            {
-              err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "could not open transaction.",
-                                         repos->pool);
-              return err;
-            }
-        }
-      else
-        {
-          serr = svn_fs_abort_txn(txn, repos->pool);
-          if (serr)
-            {
-              err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "could not abort transaction.",
-                                         repos->pool);
-              return err;
-            }
-        }
+      if ((err = dav_svn__abort_txn(repos, txn_name, repos->pool)))
+        return err;
     }
 
   /* Finally, we remove the activity from the activities database. */
@@ -263,9 +232,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__create_activity(const dav_svn_repos *repos,
-                         const char **ptxn_name,
-                         apr_pool_t *pool)
+dav_svn__create_txn(const dav_svn_repos *repos,
+                    const char **ptxn_name,
+                    apr_pool_t *pool)
 {
   svn_revnum_t rev;
   svn_fs_txn_t *txn;
@@ -304,5 +273,37 @@ dav_svn__create_activity(const dav_svn_repos *repos,
                                   repos->pool);
     }
 
+  return NULL;
+}
+
+
+dav_error *
+dav_svn__abort_txn(const dav_svn_repos *repos, 
+                   const char *txn_name,
+                   apr_pool_t *pool)
+{
+  svn_error_t *serr;
+  svn_fs_txn_t *txn;
+
+  /* If we fail only because the transaction doesn't exist, don't
+     sweat it (but then, also don't try to remove it). */
+  if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, pool)))
+    {
+      if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
+        {
+          svn_error_clear(serr);
+          serr = SVN_NO_ERROR;
+        }
+      else
+        {
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "could not open transaction.", pool);
+        }
+    }
+  else if ((serr = svn_fs_abort_txn(txn, pool)))
+    {
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "could not abort transaction.", pool);
+    }
   return NULL;
 }

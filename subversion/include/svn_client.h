@@ -662,21 +662,42 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  * @{
  */
 
-/** Callback type used by svn_client_blame4() to notify the caller
+/** Callback type used by svn_client_blame5() to notify the caller
  * that line @a line_no of the blamed file was last changed in
  * @a revision by @a author on @a date, and that the contents were
  * @a line.
  *
  * If svn_client_blame4() was called with @a include_merged_revisions set to
- * TRUE, @a merged_revision, @a merged_author, @a merged_date, and
- * @a merged_path will be set, otherwise they will be NULL.  @a merged_path
- * will be set to the absolute repository path.
+ * TRUE, @a merged_revision, @a merged_rev_props and @a merged_path will be
+ * set, otherwise they will be NULL. @a merged_path will be set to the 
+ * absolute repository path.
  *
  * All allocations should be performed in @a pool.
  *
  * @note If there is no blame information for this line, @a revision will be
- * invalid and @a author and @a date will be NULL.
+ * invalid and @a rev_props will be NULL. In this case @a local_change
+ * will be true if the reason there is no blame information is that the line
+ * was modified locally, In all other cases @a local_change will be false.
  *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_client_blame_receiver3_t)
+  (void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   apr_hash_t *rev_props,
+   svn_revnum_t merged_revision,
+   apr_hash_t *merged_rev_props,
+   const char *merged_path,
+   const char *line,
+   svn_boolean_t local_change,
+   apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_client_blame_receiver3_t, but with separate revision
+ * properties and without information about local_only changes
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -2103,8 +2124,31 @@ svn_client_log(const apr_array_header_t *targets,
  *
  * Use @a pool for any temporary allocation.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_blame5(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver3_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_blame5(), but with @c svn_client_blame_receiver3_t 
+ * as the receiver.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame4(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,

@@ -937,14 +937,13 @@ dav_svn__update_report(const dav_resource *resource,
   arb.r = resource->info->r;
   arb.repos = repos;
 
-  if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
-    {
-      return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
-                                    "This report can only be run against "
-                                    "a VCC.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
-    }
+  if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
+      && (resource->info->restype != DAV_SVN_RESTYPE_ME))
+    return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
+                                  "This report can only be run against "
+                                  "a VCC or root-stub URI.",
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)

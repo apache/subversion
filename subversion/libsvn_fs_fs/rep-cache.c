@@ -104,9 +104,9 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
       *rep = apr_pcalloc(pool, sizeof(**rep));
       (*rep)->sha1_checksum = svn_checksum_dup(checksum, pool);
       (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->offset = svn_sqlite__column_int(stmt, 1);
-      (*rep)->size = svn_sqlite__column_int(stmt, 2);
-      (*rep)->expanded_size = svn_sqlite__column_int(stmt, 3);
+      (*rep)->offset = svn_sqlite__column_int64(stmt, 1);
+      (*rep)->size = svn_sqlite__column_int64(stmt, 2);
+      (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
   else
     *rep = NULL;
@@ -148,9 +148,9 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                  apr_psprintf(pool,
                               _("Representation key for checksum '%%s' exists "
-                                "in filesystem '%%s', with different value "
-                                "(%%ld,%%%s,%%%s,%%%s) than what we were about"
-                                " to store(%%ld,%%%s,%%%s,%%%s)"),
+                                "in filesystem '%%s' with a different value "
+                                "(%%ld,%%%s,%%%s,%%%s) than what we were about "
+                                "to store (%%ld,%%%s,%%%s,%%%s)"),
                               APR_OFF_T_FMT, SVN_FILESIZE_T_FMT,
                               SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
                               SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
