@@ -996,6 +996,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### merging tool of choice. Subversion will pass 4 arguments to"    NL
         "### the specified command: base theirs mine merged"                 NL
         "# merge-tool-cmd = merge_command"                                   NL
+        "### Set patch-cmd to your favorite patching program."               NL
+        "# patch-cmd = patch_program (patch, etc.)"                          NL
         ""                                                                   NL
         "### Section for configuring tunnel agents."                         NL
         "[tunnels]"                                                          NL

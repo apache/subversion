@@ -1,0 +1,203 @@
+This file documents the 'svnpatch' format that's used with both diff and patch
+subcommands.
+
+I HISTORY
+  -------
+
+Subversion's diff facility by default generates an unidiff format output.  The
+unidiff format is famous with tools like diff(1) and has been used for decades
+to produce contextual differences between files.  We also often associate it
+with patch(1) to apply those contextual differences.  When it comes to
+non-contextual changes like moving a directory, adding a property to a file, or
+modifying an image, unidiff is helpless.  Enters the svnpatch format.  It
+enables capturing all non-contextual changes into a WC-portable output so that
+it is possible to create rich patches to apply across working copies.  Another
+way to look at it is as an "offline merge", in which one dumps the diffs,
+passes them as a patch on to her peer who then applies it, without ever
+interacting with the repository.
+
+The svnpatch format is in fact a simplified version of the Subversion protocol
+-- see subversion/libsvn_ra_svn/protocol -- that meets our needs.  The
+advantage here is that changes are serialized into a language that Subversion
+already speaks and only a few minor tweaks were needed to accommodate.  As an
+example, revisions have been stripped from the protocol to allow fuzzing.
+
+The implementation with the command line client uses `svn diff --svnpatch' to
+generate the rich diffs and `svn patch' to apply the diffs against a working
+copy.  Other frontends can also take advantage of svnpatch in the same way
+through the usual API's svn_client_diff5 and svn_client_patch that use files to
+communicate.
+
+
+II SVNPATCH FORMAT IN A NUTSHELL
+   -----------------------------
+
+First off, let's define it.  svnpatch format is made of two ordered parts:
+  * (a) human-readable: made of unidiff bytes
+  * (b) computer-readable: made of svn protocol bytes (ra_svn), gzip'ed,
+        base64-encoded
+
+But, as we're not in a client/server configuration:
+  - (b) only uses the svn protocol's Editor Command Set, there's no need for
+    the Main Command Set nor the Report Command Set
+  - a client reads Editor Commands from the patch, i.e. the patch silently
+    drives the client's editor
+  - the only direction the information takes is from the patch to the client
+  - svndiff1 is solely used instead of being able to choose between svndiff1
+    and svndiff0 (e.g. binary-change needs svndiff)
+
+Such a format can be seen as a subset of the svn protocol which:
+  - Capabilities and Edit Pipelining have nothing to do with as we can't adjust
+    once the patch is rock-hard written in the file nor negotiate anything
+  - commands are restricted to the Editor Command Set
+  - lacks revision numbers and checksums except for binary files (see VI
+    FUZZING)
+
+For more about Command Sets, consult libsvn_ra_svn/protocol.
+
+
+III BOUNDARIES BETWEEN THE TWO PARTS
+    --------------------------------
+
+Now since the svn protocol would be happy to handle just any change that a
+working copy comes with, rules have to be set up so that we meet our goals (see
+I HISTORY).
+
+Concretely, what's in each part?
+
+In (a):
+ - contextual differences
+ - property-changes (in a similar way to 'svn diff')
+ - new non-binary-file content
+
+In (b):
+ - tree-changes ({add,del,move,copy}-directory, {add,del,move,copy}-file)
+ - property-changes
+ - binary-changes
+
+Consequences are we face cases where one change's representation lives in the
+two parts of the patch. e.g. a modified-file move: the move is represented
+within (b) while contextual differences within (a);  a file add: an add-file
+Editor Command in (b) plus its content in (a).
+
+Furthermore, we never end up with redundant information but with
+property-changes.  A file copy with modifications generates (a) contextual
+diff, (b) add-file w/ copy-path.
+
+The only thing that's left unreadable is tree-changes as defined above.
+However, a higher level layer (e.g. GUIs) would perfectly be able to
+base64-decode, uncompress and read operations to visually-render the changes.
+
+The (b) block starts with a header and its version.
+
+Here's what a directory add, a file add and a propset would look like:
+
+[[[
+Index: bar
+===================================================================
+--- bar
++++ bar
+@@ -0,0 +1,2 @@
++This is bar content.
++
+
+Property changes on: bar
+___________________________________________________________________
+Name: newprop
+   + propval
+
+======================== SVNPATCH BLOCK 1 =========================
+H4sICOz0mEYAA291dABtjsEKwyAMhu97Co/tQejcoZC3cU26CWLElu31l0ZXulE8GL//8yed4UzJ
+FubVdHJ64wAHuXp5eEQ7h0gy3uDuS80cTFc1qzQ9fXqQejYXzoLUGCHRu4ERtuHl4/5rq8ZQtHlm
+/jajOzZHXqhZGp3i4Qe3df931IwwrBVePlyTX//3AAAA
+]]]
+
+Let's uncompress and decode the above base64 block (lines are wrapped):
+
+( open-root ( ( ) 2:d0 ) ) ( add-file ( 3:bar 2:d0 2:c1 ( ) ) ) (
+change-file-prop ( 2:c1 7:newprop ( 7:propval ) ) ) ( add-dir ( 3:foo 2:d0 2:d2
+( ) ) ) ( close-dir ( 2:d2 ) ) ( close-dir ( 2:d0 ) ) ( close-file ( 2:c1 ( ) )
+) ( close-edit ( ) )
+
+Further examples can be found in subversion/tests/cmdline/diff_tests.py
+test-suite.
+
+
+IV SVNPATCH EDIT-ABILITY
+   ---------------------
+
+Because encoded and compressed, the computer-readable chunk (b) is not directly
+editable.  Should it be in cleartext, the user would still have to go through
+svn protocol writing manually -- calculate checksums and strings length, and
+place tokens, assumed to be not so friendly for the end-user.  However, there's
+a much easier workaround: apply the patch, and then start editing the working
+copy with regular svn subcommands.
+
+
+V PATCHING
+  --------
+
+When it comes to applying an svnpatch patch (RAS syndrom), the 'svn patch'
+subcommand is a good friend.  We don't currently support applying (a) Unidiffs
+internally.  We instead call an external program to do the job for us which the
+user may specify with the 'patch-cmd' entry in the run-time configuration.  'svn
+patch' also has a --patch-cmd flag that overrides this run-time config.  When
+none of those flags are specified, the ultimate fallback is to try to call
+'patch'.  Since GNU patch is widely available on many UNIX-like platforms, this
+workaround should cover a fairly large amount of users.  No decision nor
+consensus have been taken towards this issue yet.
+On the other hand, (b) is handled with internal routines that read and drive
+editor functions out from the patch file much like what's being performed by
+libsvn_ra_svn with a network stream.
+
+Put differently, for now 'svn patch' will gladly apply any (full-featured-)patch
+on GNU-patch-enabled environments while it will bail out with a message on a
+GNU-patch-less one.  In the latter, the user is left the burden to apply the
+Unidiff with his own tools.
+
+Now some words about the order to process (a) and (b).  There might be cases
+when operations to a single file live in the two parts of the patch (see above).
+Since Unidiff indexes are made against the most up-to-date file name, it makes
+sense that 'svn patch' first deals with the svnpatch block and then the Unidiff
+block.  E.g. consider a WC with a file copy from foo to bar and then contextual
+modifications to bar.  The patch that represents this WC changes would show
+diffs against 'bar' file.  So 'svn patch' first has to schedule-add-with-history
+bar from foo and then apply contextual diffs, which would not work the other way
+around.
+
+When the Editor Command Set comes to be extended, 'svn patch' will face
+unexpected commands and/or syntax.  As in libsvn_ra_svn, we warn the user with
+'unsupported command' messages and ignore its application.
+
+
+VI FUZZING a.k.a. DYSTOPIA
+   -----------------------
+
+The svn protocol is not very sensitive to fuzzing since most operations include
+a revision number.  However, to stick with this policy would widely lower the
+patch-application scope we're expecting.  For instance, 'svn patch' would fail
+at deleting dir@REV when REV is different from the one that comes with the
+delete-entry Editor Command.  Obviously we need loose here, and the solution is
+to free the svn protocol from revision numbers and checksums in our
+implementation for every change but binary-changes (for the checksums).  (It
+would be insane to associate binary stuff with fuzzing in this world.)  Now
+dealing with (b) patching is similar in many ways to GNU Patch's: we end up
+trying by all methods to drive the editor in the dark jungle, possibly failing
+in few cases shooting 'hunk failed' warnings.
+
+
+VII PATCH AND MERGE IN SUBVERSION
+    -----------------------------
+
+'svn patch' is similar in many ways to 'svn merge'.  Basically, we have a
+tree-delta in hand that we want to apply to a working-tree.  Thus it's not
+surprising to see they have a lot in common when comparing both implementations.
+'patch' uses a mix of revamped merge_callbacks (see libsvn_client/merge.c) and
+repos-repos editor functions (see libsvn_client/repos_diff.c).  Why not merge
+those two together then, for code-share sake?  Well, although they share a close
+logic, to join the two implies having one single file (repos_diff.c) to handle
+at least three burdens:  repos-repos diff, merge, and patch.  Such a design
+can't be achieved without a myriad of tests/conditions and a large amount of
+blurry mess at mixing three different tools in one place.  In the end, what was
+supposed to enhance software maintainability turned out to cause a lot of damage
+at tightening different things together.
