@@ -398,6 +398,17 @@ struct handler_baton
   /* Where we are assembling the new file. */
   const char *work_path;
 
+    /* The expected checksum of the text source or NULL if no base
+     checksum is available */
+  svn_checksum_t *expected_source_checksum;
+
+  /* The calculated checksum of the text source or NULL if the acual
+     checksum is not being calculated */
+  svn_checksum_t *actual_source_checksum;
+
+  /* The stream used to calculate the source checksum */
+  svn_stream_t *source_checksum_stream;
+
   /* This is initialized to all zeroes when the baton is created, then
      populated with the MD5 digest of the resultant fulltext after the
      last window is handled by the handler returned from
@@ -982,11 +993,28 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     return SVN_NO_ERROR;
 
   if (err)
-    {
       /* We failed to apply the delta; clean up the temporary file.  */
       svn_error_clear(svn_io_remove_file(hb->work_path, hb->pool));
+
+  if (hb->expected_source_checksum)
+    {
+      /* Close the stream to calculate the final checksum */
+      SVN_ERR(svn_stream_close(hb->source_checksum_stream));
+
+      if (!svn_checksum_match(hb->expected_source_checksum,
+                              hb->actual_source_checksum))
+        err = svn_error_createf
+                   (SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
+                    _("Checksum mismatch while updating '%s'; "
+                      "expected: '%s', actual: '%s'"),
+                    svn_dirent_local_style(fb->path, hb->pool),
+                    svn_checksum_to_cstring(hb->expected_source_checksum,
+                                            hb->pool),
+                    svn_checksum_to_cstring(hb->actual_source_checksum,
+                                            hb->pool));
     }
-  else
+
+  if (!err)
     {
       /* Tell the file baton about the new text base. */
       fb->new_text_base_path = apr_pstrdup(fb->pool, hb->work_path);
@@ -3732,7 +3760,7 @@ apply_textdelta(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->pool);
-  struct handler_baton *hb = apr_palloc(handler_pool, sizeof(*hb));
+  struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   svn_error_t *err;
   const char *checksum;
   svn_boolean_t replaced;
@@ -3757,43 +3785,16 @@ apply_textdelta(void *file_baton,
                             fb->edit_baton->adm_access, fb->path,
                             fb->pool, pool));
 
-  /* Only compare checksums if this file has an entry, and the entry has
-     a checksum.  If there's no entry, it just means the file is
-     created in this update, so there won't be any previously recorded
-     checksum to compare against.  If no checksum, well, for backwards
-     compatibility we assume that no checksum always matches. */
-  if (checksum)
+  /* Check if the given checksum matches the recorded checksum. */
+  if (checksum && base_checksum)
     {
-      svn_checksum_t *digest;
-      const char *hex_digest;
-
-      SVN_ERR(svn_io_file_checksum2(&digest, fb->text_base_path,
-                                    svn_checksum_md5, pool));
-
-      /* ### screw hex_digest. use svn_checksum_match() */
-
-      hex_digest = svn_checksum_to_cstring_display(digest, pool);
-
-      /* Compare the base_checksum here, rather than in the window
-         handler, because there's no guarantee that the handler will
-         see every byte of the base file. */
-      if (base_checksum)
-        {
-          if (strcmp(hex_digest, base_checksum) != 0)
-            return svn_error_createf
-              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-               _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
-               svn_path_local_style(fb->text_base_path, pool), base_checksum,
-               hex_digest);
-        }
-
-      if (! replaced && strcmp(hex_digest, checksum) != 0)
+      if (! replaced && strcmp(base_checksum, checksum) != 0)
         {
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-             svn_path_local_style(fb->text_base_path, pool), checksum,
-             hex_digest);
+             _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
+             svn_path_local_style(fb->text_base_path, pool), base_checksum,
+             checksum);
         }
     }
 
@@ -3830,8 +3831,22 @@ apply_textdelta(void *file_baton,
         source = svn_stream_empty(handler_pool);
     }
 
-  /* Open the text base for writing (this will get us a temporary file).  */
+  /* Checksum the text base while applying deltas */
+  if (base_checksum)
+    {
+      SVN_ERR(svn_checksum_parse_hex(&hb->expected_source_checksum,
+                                     svn_checksum_md5, base_checksum,
+                                     handler_pool));
 
+      /* Wrap stream and store reference to allow calculating */
+      hb->source_checksum_stream =
+                 source = svn_stream_checksummed2(source,
+                                                  &hb->actual_source_checksum,
+                                                  NULL, svn_checksum_md5,
+                                                  TRUE, handler_pool);
+    }
+
+  /* Open the text base for writing (this will get us a temporary file).  */
   {
     err = svn_wc__open_writable_base(&target, &hb->work_path, fb->path,
                                      replaced /* need_revert_base */,
