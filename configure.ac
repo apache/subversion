@@ -657,6 +657,13 @@ AS_HELP_STRING([--enable-debug],
 ])
 
 
+dnl Add -Werror=implicit-function-declaration to CFLAGS
+CFLAGS_KEEP="$CFLAGS"
+CFLAGS="$CFLAGS_KEEP -Werror=implicit-function-declaration"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+CFLAGS="$CFLAGS_KEEP"
+
+
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
                [Turn on debugging and very strict compile-time warnings]),
