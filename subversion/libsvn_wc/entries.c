@@ -2866,10 +2866,12 @@ walker_helper(const char *dirpath,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
+  svn_error_t *err;
 
-  SVN_ERR(walk_callbacks->handle_error
-          (dirpath, svn_wc_entries_read(&entries, adm_access, show_hidden,
-                                        pool), walk_baton, pool));
+  err = svn_wc_entries_read(&entries, adm_access, show_hidden, pool);
+
+  if (err)
+    SVN_ERR(walk_callbacks->handle_error(dirpath, err, walk_baton, pool));
 
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
@@ -2885,10 +2887,12 @@ walker_helper(const char *dirpath,
    * entry. Note that if this directory has been reached by recusrion, this
    * is the second visit as it will already have been visited once as a
    * child entry of its parent. */
-  SVN_ERR(walk_callbacks->handle_error
-          (dirpath,
-           walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool),
-           walk_baton, pool));
+
+  err = walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool);
+
+
+  if(err)
+    SVN_ERR(walk_callbacks->handle_error(dirpath, err, walk_baton, pool));
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
@@ -2921,11 +2925,12 @@ walker_helper(const char *dirpath,
       if (current_entry->kind == svn_node_file
           || depth >= svn_depth_immediates)
         {
-          SVN_ERR(walk_callbacks->handle_error
-                  (entrypath,
-                   walk_callbacks->found_entry(entrypath, current_entry,
-                                               walk_baton, subpool),
-                   walk_baton, pool));
+          err = walk_callbacks->found_entry(entrypath, current_entry,
+                                            walk_baton, subpool);
+
+          if (err)
+            SVN_ERR(walk_callbacks->handle_error(entrypath, err,
+                                                 walk_baton, pool));
         }
 
       /* Recurse into this entry if appropriate. */
@@ -2939,11 +2944,12 @@ walker_helper(const char *dirpath,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          SVN_ERR(walk_callbacks->handle_error
-                  (entrypath,
-                   svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
-                                       subpool),
-                   walk_baton, pool));
+          err = svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
+                                    subpool);
+          
+          if (err)
+            SVN_ERR(walk_callbacks->handle_error(entrypath, err,
+                                                 walk_baton, pool));
 
           if (entry_access)
             SVN_ERR(walker_helper(entrypath, entry_access,
@@ -2992,9 +2998,15 @@ svn_wc_walk_entries3(const char *path,
        walk_baton, pool);
 
   if (entry->kind == svn_node_file || entry->depth == svn_depth_exclude)
-    return walk_callbacks->handle_error
-      (path, walk_callbacks->found_entry(path, entry, walk_baton, pool),
-       walk_baton, pool);
+    {
+      svn_error_t *err = walk_callbacks->found_entry(path, entry, walk_baton,
+                                                     pool);
+
+      if (err)
+        return walk_callbacks->handle_error(path, err, walk_baton, pool);
+
+      return SVN_NO_ERROR;
+    }
 
   else if (entry->kind == svn_node_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
