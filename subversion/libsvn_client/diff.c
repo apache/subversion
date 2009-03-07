@@ -49,6 +49,12 @@
 
 #include "svn_private_config.h"
 
+#ifdef SVN_DEBUG
+#define SVNPATCH_DELETE_WHEN svn_io_file_del_none
+#else
+#define SVNPATCH_DELETE_WHEN svn_io_file_del_on_close
+#endif
+
 
 /*
  * Constant separator strings
@@ -1693,8 +1699,6 @@ svn_client_diff5(const apr_array_header_t *options,
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks4_t diff_callbacks;
 
-  const char *tempdir;
-
   /* We will never do a pegged diff from here. */
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
@@ -1740,11 +1744,12 @@ svn_client_diff5(const apr_array_header_t *options,
 
   if (svnpatch_format)
     {
-      SVN_ERR(svn_io_temp_dir(&tempdir, pool));
-      SVN_ERR(svn_io_open_unique_file2
-          (&(diff_cmd_baton.svnpatch_file), NULL,
-           svn_path_join(tempdir, "svnpatch", pool),
-           "", svn_io_file_del_none, pool));
+      svn_wc_adm_access_t *adm_access;
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, "", TRUE,
+                               0, NULL, NULL, pool));
+      SVN_ERR(svn_wc_create_tmp_file2(&(diff_cmd_baton.svnpatch_file), NULL,
+                                      svn_wc_adm_access_path(adm_access),
+                                      SVNPATCH_DELETE_WHEN, pool));
     }
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
@@ -1773,8 +1778,6 @@ svn_client_diff_peg5(const apr_array_header_t *options,
 
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks4_t diff_callbacks;
-
-  const char *tempdir;
 
   if (svn_path_is_url(path) &&
         (start_revision->kind == svn_opt_revision_base
@@ -1824,11 +1827,12 @@ svn_client_diff_peg5(const apr_array_header_t *options,
 
   if (svnpatch_format)
     {
-      SVN_ERR(svn_io_temp_dir(&tempdir, pool));
-      SVN_ERR(svn_io_open_unique_file2
-          (&(diff_cmd_baton.svnpatch_file), NULL,
-           svn_path_join(tempdir, "svnpatch", pool),
-           "", svn_io_file_del_none, pool));
+      svn_wc_adm_access_t *adm_access;
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, "", TRUE,
+                               0, NULL, NULL, pool));
+      SVN_ERR(svn_wc_create_tmp_file2(&(diff_cmd_baton.svnpatch_file), NULL,
+                                      svn_wc_adm_access_path(adm_access),
+                                      SVNPATCH_DELETE_WHEN, pool));
     }
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
