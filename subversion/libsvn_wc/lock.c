@@ -1066,7 +1066,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
   else
     {
       svn_error_t *err;
-      svn_wc_adm_access_t *p_access, *t_access;
+      svn_wc_adm_access_t *p_access = NULL;
+      svn_wc_adm_access_t *t_access = NULL;
       const char *parent = svn_dirent_dirname(path, pool);
       svn_error_t *p_access_err = SVN_NO_ERROR;
 
