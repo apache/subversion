@@ -248,7 +248,7 @@ class SvnBackup:
         if not os.path.isdir(self.__repospath):
             raise SvnBackupException("repos '%s' is not a directory." % self.__repospath)
         for subdir in [ "db", "conf", "hooks" ]:
-            dir = os.path.join(self.__repospath, "db")
+            dir = os.path.join(self.__repospath, subdir)
             if not os.path.isdir(dir):
                 raise SvnBackupException("repos '%s' is not a repository." % self.__repospath)
         rpathparts = os.path.split(self.__repospath)
