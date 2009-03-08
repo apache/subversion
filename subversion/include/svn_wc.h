@@ -5789,7 +5789,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 svn_error_t *
 svn_wc_write_number(svn_stream_t *target,
                     apr_pool_t *pool,
-                    const apr_uint64_t number);
+                    apr_uint64_t number);
 
 /* Append @a str into @a target stream.  Is binary-able. */
 svn_error_t *
