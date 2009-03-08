@@ -317,6 +317,10 @@ def compare_and_display_lines(message, label, expected, actual,
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
+  if isinstance(actual, type('')):
+    actual = actual.split('\n')
+  actual = [line for line in actual if not line.startswith('DBG:')]
+
   if expected != actual:
     expected.display_differences(message, label, actual)
     raise raisable

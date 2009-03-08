@@ -178,7 +178,7 @@ class SVNTreeNode:
         a.contents = newchild.contents
         a.props = newchild.props
         a.atts = newchild.atts
-        a.path = os.path.join (self.path, newchild.name)
+        a.path = os.path.join(self.path, newchild.name)
       else:
         # try to add dangling children to your matching node
         for i in newchild.children:
@@ -471,7 +471,7 @@ def handle_dir(path, current_parent, props, ignore_svn):
   for f in all_files:
     if path != '.':  # 'svn pl -v' strips leading './'
       f = os.path.join(path, f)
-    if (os.path.isdir(f) and os.path.basename(f) != main.get_admin_name()):
+    if os.path.isdir(f) and os.path.basename(f) != main.get_admin_name():
       dirs.append(f)
     elif os.path.isfile(f):
       files.append(f)
@@ -497,7 +497,7 @@ def get_child(node, name):
   if node.children == None:
     raise SVNTreeIsNotDirectory
   for n in node.children:
-    if (name == n.name):
+    if name == n.name:
       return n
   return None
 
@@ -572,16 +572,16 @@ def compare_trees(label,
     a.pprint()
 
   # Setup singleton handlers
-  if (singleton_handler_a is None):
+  if singleton_handler_a is None:
     singleton_handler_a = default_singleton_handler
     a_baton = "expected " + label
-  if (singleton_handler_b is None):
+  if singleton_handler_b is None:
     singleton_handler_b = default_singleton_handler
     b_baton = "actual " + label
 
   try:
     # A and B are both files.
-    if ((a.children is None) and (b.children is None)):
+    if (a.children is None) and (b.children is None):
       if compare_file_nodes(a, b):
         display_nodes(a, b)
         raise SVNTreeUnequal
@@ -613,7 +613,7 @@ def compare_trees(label,
         else:
           singleton_handler_a(a_child, a_baton)
       for b_child in b.children:
-        if (b_child not in accounted_for):
+        if b_child not in accounted_for:
           singleton_handler_b(b_child, b_baton)
   except SVNTypeMismatch:
     print('Unequal Types: one Node is a file, the other is a directory')
@@ -720,13 +720,15 @@ def build_tree_from_checkout(lines, include_skipped=1):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])([C ])\s+(.+)')
+  rm1 = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])([C ])\s+(.+)')
   if include_skipped:
-    rm2 = re.compile ('^(Restored|Skipped)\s+\'(.+)\'')
+    rm2 = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
   else:
-    rm2 = re.compile ('^(Restored)\s+\'(.+)\'')
+    rm2 = re.compile('^(Restored)\s+\'(.+)\'')
 
   for line in lines:
+    if line.startswith('DBG:'):
+      continue
     match = rm1.search(line)
     if match and match.groups():
       atts = {'status' : match.group(1)}
@@ -753,10 +755,12 @@ def build_tree_from_commit(lines):
 
   # Lines typically have a verb followed by whitespace then a path.
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^(\w+(  \(bin\))?)\s+(.+)')
-  rm2 = re.compile ('^Transmitting')
+  rm1 = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
+  rm2 = re.compile('^Transmitting')
 
   for line in lines:
+    if line.startswith('DBG:'):
+      continue
     match = rm2.search(line)
     if not match:
       match = rm1.search(line)
@@ -827,6 +831,8 @@ def build_tree_from_status(lines):
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
   rm = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
   for line in lines:
+    if line.startswith('DBG:'):
+      continue
 
     # Quit when we hit an externals status announcement (### someday we can fix
     # the externals tests to expect the additional flood of externals status
@@ -862,9 +868,11 @@ def build_tree_from_status(lines):
 def build_tree_from_skipped(lines):
 
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^Skipped.* '(.+)'\n")
+  rm = re.compile("^Skipped.* '(.+)'\n")
 
   for line in lines:
+    if line.startswith('DBG:'):
+      continue
     match = rm.search(line)
     if match and match.groups():
       new_branch = create_from_path(match.group(1))
@@ -875,9 +883,11 @@ def build_tree_from_skipped(lines):
 def build_tree_from_diff_summarize(lines):
   "Build a tree from output of diff --summarize"
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^([MAD ][M ])      (.+)\n")
+  rm = re.compile("^([MAD ][M ])      (.+)\n")
 
   for line in lines:
+    if line.startswith('DBG:'):
+      continue
     match = rm.search(line)
     if match and match.groups():
       new_branch = create_from_path(match.group(2),
