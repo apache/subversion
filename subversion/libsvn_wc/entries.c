@@ -72,7 +72,8 @@ enum statement_keys {
   STMT_DELETE_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
-  STMT_SELECT_INCOMPLETE_FLAG
+  STMT_SELECT_INCOMPLETE_FLAG,
+  STMT_SELECT_NOT_PRESENT
 };
 
 static const char * const statements[] = {
@@ -135,6 +136,9 @@ static const char * const statements[] = {
 
   "select incomplete_children from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select 1 from base_node "
+  "where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';",
 
   NULL
   };
@@ -978,24 +982,54 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
       if (status == svn_wc__db_status_normal)
         {
-          /* Plain old BASE node.  */
-          entry->schedule = svn_wc_schedule_normal;
+          svn_boolean_t have_row = FALSE;
 
-          /* Grab inherited repository information, if necessary. */
-          if (repos_relpath == NULL)
+          /* Ugh. During a checkout, it is possible that we are constructing
+             a subdirectory "over" a not-present directory. The read_info()
+             will return information out of the wc.db in the subdir. We
+             need to detect this situation and create a DELETED entry
+             instead.  */
+          if (kind == svn_wc__db_kind_dir)
             {
-              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                                 &entry->repos,
-                                                 &entry->uuid,
-                                                 db,
-                                                 entry_abspath,
-                                                 result_pool,
-                                                 iterpool));
+                svn_sqlite__stmt_t *stmt;
+
+                SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                                  STMT_SELECT_NOT_PRESENT));
+                SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                          (apr_uint64_t)1 /* wc_id */,
+                                          entry->name));
+                SVN_ERR(svn_sqlite__step(&have_row, stmt));
+                SVN_ERR(svn_sqlite__reset(stmt));
             }
 
-          /* ### hacky hacky  */
-          SVN_ERR(determine_incomplete(&entry->incomplete, wc_db,
-                                       1 /* wc_id */, entry->name));
+          if (have_row)
+            {
+              /* Just like a normal "not-present" node: schedule=normal
+                 and DELETED.  */
+              entry->schedule = svn_wc_schedule_normal;
+              entry->deleted = TRUE;
+            }
+          else
+            {
+              /* Plain old BASE node.  */
+              entry->schedule = svn_wc_schedule_normal;
+
+              /* Grab inherited repository information, if necessary. */
+              if (repos_relpath == NULL)
+                {
+                  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                     &entry->repos,
+                                                     &entry->uuid,
+                                                     db,
+                                                     entry_abspath,
+                                                     result_pool,
+                                                     iterpool));
+                }
+
+              /* ### hacky hacky  */
+              SVN_ERR(determine_incomplete(&entry->incomplete, wc_db,
+                                           1 /* wc_id */, entry->name));
+            }
         }
       else if (status == svn_wc__db_status_deleted
                || status == svn_wc__db_status_obstructed_delete)
