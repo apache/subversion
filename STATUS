@@ -30,11 +30,26 @@ Candidate changes:
      branch and to allow future merges in this part of the code.
    Votes:
      +1: rhuijben
+
+  * r36093, r36292, r36406
+    Improve some messages.
+    Votes:
+      +1: arfrever
+
+  * r36209
+    Update paths to svnmucc.
+    Votes:
+      +1: arfrever
+
+  * r36388
+    Recommend Neon 0.28.4.
+    Votes:
+      +1: arfrever
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
  * r36049-r36051, r36131
-   Resolve the SVN_ERR_MALFUNCTION() reproducable on Windows with
+   Resolve the SVN_ERR_MALFUNCTION() reproducible on Windows with
      svn ci "C:/Program FIles" C:/Windows
    by handling parent directories correctly.
    (r36050 and r36050 are typo fixes; r36131 some extra cleanup)
@@ -52,7 +67,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      With the fix, each slave server tries to field the lock/unlock, resulting
      in competing ideas of what is and isn't locked.
    Votes:
-     +1: cmpilato, rhuijben
+     +1: cmpilato, rhuijben, arfrever
      +1: gstein (for 1.6.1)
 
   * r36238
@@ -62,7 +77,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       1.6.0 but would be nice if the train is still in the station.  Otherwise
       please feel free to move to 1.6.1.
     Votes:
-       +1: dws
+       +1: dws, arfrever
        +0: gstein (for 1.6.0)
        +1: gstein (for 1.6.1)
 
@@ -71,7 +86,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
     Justification:
       UMRs are undefined behaviour
     Votes:
-      +1: philip, rhuijben, stsp
+      +1: philip, rhuijben, stsp, arfrever
       +1: gstein (for a new CODE tarball, not a doc tarball)
       
   * r36302
@@ -86,7 +101,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      Since the presence of that file has been deprecated for ages,
      let's just apply this easy fix to 1.6 instead of tweaking the script.
     Votes:
-      +1: rhuijben, stsp
+      +1: rhuijben, stsp, arfrever
       -0: gstein (for 1.6.0 since it isn't "needed" except for when somebody
                   uses a script which I conceptually disagree with)
       +1: gstein (for 1.6.1)
@@ -99,7 +114,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       Already merged to 1.6.x by Arfrever in r36214, but reverted
       in 36322 because it was not formally voted on.
     Votes:
-      +1: stsp
+      +1: stsp, arfrever
       +1: gstein (for 1.6.1; it can wait)
 
 
