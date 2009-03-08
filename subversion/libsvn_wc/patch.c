@@ -32,6 +32,8 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 /* Note: although 'svn patch' application is an offline operation, we'll
