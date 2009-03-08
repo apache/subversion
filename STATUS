@@ -29,22 +29,25 @@ Candidate changes:
      The tests are there to make sure we don't regress again on the 1.6.x
      branch and to allow future merges in this part of the code.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
   * r36093, r36292, r36406
     Improve some messages.
     Votes:
       +1: arfrever
+      +1: gstein (for 1.6.1; this can wait)
 
   * r36209
     Update paths to svnmucc.
     Votes:
       +1: arfrever
+      +1: gstein (for 1.6.1; this can wait)
 
   * r36388
     Recommend Neon 0.28.4.
     Votes:
       +1: arfrever
+      +1: gstein (for 1.6.1; this can wait)
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
