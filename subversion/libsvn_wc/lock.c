@@ -1250,7 +1250,7 @@ do_close(svn_wc_adm_access_t *adm_access,
               continue;
             }
 
-          if (! svn_path_is_ancestor(adm_access->path, path)
+          if (! svn_dirent_is_ancestor(adm_access->path, path)
               || strcmp(adm_access->path, path) == 0)
             continue;
 
