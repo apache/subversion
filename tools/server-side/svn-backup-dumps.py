@@ -23,16 +23,17 @@
 #    1. Create a full dump (revisions 0 to HEAD).
 #    2. Create incremental dumps containing at most N revisions.
 #    3. Create incremental single revision dumps (for use in post-commit).
+#    4. Create incremental dumps containing everything since last dump.
 #
 # All dump files are prefixed with the basename of the repository. All
 # examples below assume that the repository '/srv/svn/repos/src' is
 # dumped so all dumpfiles start with 'src'.
 #
 # Optional functionality:
-#    4. Create gzipped dump files.
-#    5. Create bzipped dump files.
-#    6. Transfer the dumpfile to another host using ftp.
-#    7. Transfer the dumpfile to another host using smb.
+#    5. Create gzipped dump files.
+#    6. Create bzipped dump files.
+#    7. Transfer the dumpfile to another host using ftp.
+#    8. Transfer the dumpfile to another host using smb.
 #
 # See also 'svn-backup-dumps.py -h'.
 #
@@ -46,6 +47,7 @@
 #
 #    This creates a dump file named 'src.000000-NNNNNN.svndmp.gz'
 #    where NNNNNN is the revision number of HEAD.
+#
 #
 # 2. Create incremental dumps containing at most N revisions.
 #
@@ -80,21 +82,35 @@
 #    NNNNNN is the revision number of HEAD.
 #
 #
-# 4. Create gzipped dump files.
+# 4. Create incremental dumps relative to last dump
+#
+#    svn-backup-dumps.py -i <repos> <dumpdir>
+#
+#    <repos>      Path to the repository.
+#    <dumpdir>    Directory for storing the dump file.
+#
+#    When if dumps are performed when HEAD is 2923,
+#    then when HEAD is 3045, is creates these files:
+#
+#    src.000000-002923.svndmp.gz
+#    src.002924-003045.svndmp.gz
+#
+#
+# 5. Create gzipped dump files.
 #
 #    svn-backup-dumps.py -z ...
 #
-#    ...          More options, see 1-3, 6, 7.
+#    ...          More options, see 1-4, 7, 8.
 #
 #
-# 5. Create bzipped dump files.
+# 6. Create bzipped dump files.
 #
 #    svn-backup-dumps.py -b ...
 #
-#    ...          More options, see 1-3, 6, 7.
+#    ...          More options, see 1-4, 7, 8.
 #
 #
-# 6. Transfer the dumpfile to another host using ftp.
+# 7. Transfer the dumpfile to another host using ftp.
 #
 #    svn-backup-dumps.py -t ftp:<host>:<user>:<password>:<path> ...
 #
@@ -102,13 +118,13 @@
 #    <user>       Username on the remote host.
 #    <password>   Password for the user.
 #    <path>       Subdirectory on the remote host.
-#    ...          More options, see 1-5.
+#    ...          More options, see 1-6.
 #
 #    If <path> contains the string '%r' it is replaced by the
 #    repository name (basename of the repository path).
 #
 #
-# 7. Transfer the dumpfile to another host using smb.
+# 8. Transfer the dumpfile to another host using smb.
 #
 #    svn-backup-dumps.py -t smb:<share>:<user>:<password>:<path> ...
 #
@@ -116,7 +132,7 @@
 #    <user>       Username on the remote host.
 #    <password>   Password for the user.
 #    <path>       Subdirectory of the share.
-#    ...          More options, see 1-5.
+#    ...          More options, see 1-6.
 #
 #    If <path> contains the string '%r' it is replaced by the
 #    repository name (basename of the repository path).
@@ -128,7 +144,7 @@
 #  - improve documentation
 #
 
-__version = "0.5"
+__version = "0.6"
 
 import sys
 import os
@@ -137,6 +153,7 @@ if os.name != "nt":
     import select
 import gzip
 import os.path
+import re
 from optparse import OptionParser
 from ftplib import FTP
 from subprocess import Popen, PIPE
@@ -265,6 +282,7 @@ class SvnBackup:
         self.__count = options.cnt
         self.__quiet = options.quiet
         self.__deltas = options.deltas
+        self.__relative_incremental = options.relative_incremental
         self.__zip = options.zip
         self.__overwrite = False
         self.__overwrite_all = False
@@ -358,6 +376,22 @@ class SvnBackup:
         else:
             print(r[2])
         return -1
+
+    def get_last_dumped_rev(self):
+        filename_regex = re.compile("(.+)\.\d+-(\d+)\.svndmp.*")
+        # start with -1 so the next one will be rev 0
+        highest_rev = -1
+
+        for filename in os.listdir(self.__dumpdir):
+            m = filename_regex.match( filename )
+            if m and (m.group(1) == self.__reposname):
+                rev_end = int(m.group(2))
+
+                if rev_end > highest_rev:
+                    # determine the latest revision dumped
+                    highest_rev = rev_end
+
+        return highest_rev    
 
     def transfer_ftp(self, absfilename, filename):
         rc = False
@@ -471,9 +505,27 @@ class SvnBackup:
             rc = self.create_dump(False, self.__overwrite, baserev, headrev)
         return rc
 
+    def export_relative_incremental(self):
+        headrev = self.get_head_rev()
+        if headrev == -1:
+            return False
+
+        last_dumped_rev = self.get_last_dumped_rev();
+        if headrev < last_dump_rev:
+            # that should not happen...
+            return False
+
+        if headrev == last_dump_rev:
+            # already up-to-date
+            return True
+
+        return self.create_dump(False, False, last_dumped_rev + 1, headrev)
+
     def execute(self):
         if self.__rev_nr != None:
             return self.export_single_rev()
+        elif self.__relative_incremental:
+            return self.export_relative_incremental()
         else:
             return self.export()
 
@@ -486,6 +538,10 @@ if __name__ == "__main__":
                        action="store_const", const="bzip2",
                        dest="zip", default=None,
                        help="compress the dump using bzip2.")
+    parser.add_option("-i",
+                       action="store_true",
+                       dest="relative_incremental", default=False,
+                       help="perform incremental relative to last dump.")
     parser.add_option("--deltas",
                        action="store_true",
                        dest="deltas", default=False,
