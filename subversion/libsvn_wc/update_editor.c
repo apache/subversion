@@ -993,8 +993,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     return SVN_NO_ERROR;
 
   if (err)
+    {
       /* We failed to apply the delta; clean up the temporary file.  */
       svn_error_clear(svn_io_remove_file(hb->work_path, hb->pool));
+    }
 
   if (hb->expected_source_checksum)
     {
@@ -3785,17 +3787,16 @@ apply_textdelta(void *file_baton,
                             fb->edit_baton->adm_access, fb->path,
                             fb->pool, pool));
 
-  /* Check if the given checksum matches the recorded checksum. */
-  if (checksum && base_checksum)
+  /* The incoming delta is targeted against BASE_CHECKSUM. Make sure that
+     it matches our recorded checksum. We cannot do this test for replaced
+     nodes -- that checksum is missing or the checksum of the replacement.  */
+  if (!replaced && checksum && base_checksum
+      && strcmp(base_checksum, checksum) != 0)
     {
-      if (! replaced && strcmp(base_checksum, checksum) != 0)
-        {
-          return svn_error_createf(
-             SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
-             svn_path_local_style(fb->text_base_path, pool), base_checksum,
-             checksum);
-        }
+      return svn_error_createf(
+        SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+        _("Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"),
+        svn_path_local_style(fb->path, pool), base_checksum, checksum);
     }
 
   /* Open the text base for reading, unless this is an added file. */
