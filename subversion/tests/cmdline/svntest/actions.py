@@ -67,8 +67,8 @@ def setup_pristine_repository():
 
     # verify the printed output of 'svn import'.
     lastline = output.pop().strip()
-    cm = re.compile ("(Committed|Imported) revision [0-9]+.")
-    match = cm.search (lastline)
+    cm = re.compile("(Committed|Imported) revision [0-9]+.")
+    match = cm.search(lastline)
     if not match:
       print("ERROR:  import did not succeed, while creating greek repos.")
       print("The final line from 'svn import' was:")
@@ -358,24 +358,24 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   ### repositories with no auth/auth requirements
   exit_code, output, errput = main.run_svn(None, 'co',
                                            URL, wc_dir_name, *args)
-  actual = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout(output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("output", actual, output_tree)
+    tree.compare_trees("output", actual, output_tree)
   except tree.SVNTreeUnequal:
     print("ACTUAL OUTPUT TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
   # Create a tree by scanning the working copy
-  actual = tree.build_tree_from_wc (wc_dir_name)
+  actual = tree.build_tree_from_wc(wc_dir_name)
 
   # Verify expected disk against actual disk.
   try:
-    tree.compare_trees ("disk", actual, disk_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    tree.compare_trees("disk", actual, disk_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
   except tree.SVNTreeUnequal:
     print("ACTUAL DISK TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
@@ -407,11 +407,11 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   ### repositories with no auth/auth requirements
   exit_code, output, errput = main.run_svn(None, 'export',
                                            URL, export_dir_name, *args)
-  actual = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout(output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("output", actual, output_tree)
+    tree.compare_trees("output", actual, output_tree)
   except tree.SVNTreeUnequal:
     print("ACTUAL OUTPUT TREE:")
     tree.dump_tree_script(actual, export_dir_name + os.sep)
@@ -420,13 +420,13 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
   # happen to show up.
-  actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
+  actual = tree.build_tree_from_wc(export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
   try:
-    tree.compare_trees ("disk", actual, disk_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    tree.compare_trees("disk", actual, disk_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
   except tree.SVNTreeUnequal:
     print("ACTUAL DISK TREE:")
     tree.dump_tree_script(actual, export_dir_name + os.sep)
@@ -606,7 +606,7 @@ def verify_update(actual_output, wc_dir_name,
   # Verify actual output against expected output.
   if output_tree:
     try:
-      tree.compare_trees ("output", actual_output, output_tree)
+      tree.compare_trees("output", actual_output, output_tree)
     except tree.SVNTreeUnequal:
       print("ACTUAL OUTPUT TREE:")
       tree.dump_tree_script(actual_output, wc_dir_name + os.sep)
@@ -614,11 +614,11 @@ def verify_update(actual_output, wc_dir_name,
 
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
-    actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
+    actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props)
     try:
-      tree.compare_trees ("disk", actual_disk, disk_tree,
-                          singleton_handler_a, a_baton,
-                          singleton_handler_b, b_baton)
+      tree.compare_trees("disk", actual_disk, disk_tree,
+                         singleton_handler_a, a_baton,
+                         singleton_handler_b, b_baton)
     except tree.SVNTreeUnequal:
       print("ACTUAL DISK TREE:")
       tree.dump_tree_script(actual_disk)
@@ -644,10 +644,10 @@ def verify_disk(wc_dir_name,
   failure."""
   if isinstance(disk_tree, wc.State):
     disk_tree = disk_tree.old_tree()
-  verify_update (None, wc_dir_name, None, disk_tree, None,
-                 singleton_handler_a, a_baton,
-                 singleton_handler_b, b_baton,
-                 check_props)
+  verify_update(None, wc_dir_name, None, disk_tree, None,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton,
+                check_props)
 
 
 
@@ -702,7 +702,7 @@ def run_and_verify_update(wc_dir_name,
                                              'up', wc_dir_name,
                                              *args)
 
-  if (error_re_string):
+  if error_re_string:
     rm = re.compile(error_re_string)
     for line in errput:
       match = rm.search(line)
@@ -710,12 +710,12 @@ def run_and_verify_update(wc_dir_name,
         return
     raise main.SVNUnmatchedError
 
-  actual = tree.build_tree_from_checkout (output)
-  verify_update (actual, wc_dir_name,
-                 output_tree, disk_tree, status_tree,
-                 singleton_handler_a, a_baton,
-                 singleton_handler_b, b_baton,
-                 check_props)
+  actual = tree.build_tree_from_checkout(output)
+  verify_update(actual, wc_dir_name,
+                output_tree, disk_tree, status_tree,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton,
+                check_props)
 
 
 def run_and_parse_info(*args):
@@ -942,11 +942,11 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise
 
   actual = tree.build_tree_from_checkout(out, 0)
-  verify_update (actual, dir,
-                 output_tree, disk_tree, status_tree,
-                 singleton_handler_a, a_baton,
-                 singleton_handler_b, b_baton,
-                 check_props)
+  verify_update(actual, dir,
+                output_tree, disk_tree, status_tree,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton,
+                check_props)
 
 
 def run_and_verify_patch(dir, patch_path,
@@ -1012,9 +1012,9 @@ def run_and_verify_patch(dir, patch_path,
 
   # Update and make a tree of the output.
   patch_command = patch_command + args
-  exit_code, out, err = main.run_svn (error_re_string, *patch_command)
+  exit_code, out, err = main.run_svn(error_re_string, *patch_command)
 
-  if (error_re_string):
+  if error_re_string:
     rm = re.compile(error_re_string)
     match = None
     for line in err:
@@ -1062,11 +1062,11 @@ def run_and_verify_patch(dir, patch_path,
     verify.verify_outputs(None, out, err, output_tree, error_re_string)
     output_tree = None
 
-  verify_update (mytree, dir,
-                 output_tree, disk_tree, status_tree,
-                 singleton_handler_a, a_baton,
-                 singleton_handler_b, b_baton,
-                 check_props)
+  verify_update(mytree, dir,
+                output_tree, disk_tree, status_tree,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton,
+                check_props)
 
 
 def run_and_verify_mergeinfo(error_re_string = None,
@@ -1159,13 +1159,13 @@ def run_and_verify_switch(wc_dir_name,
   elif errput:
     raise verify.SVNUnexpectedStderr(err)
 
-  actual = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout(output)
 
-  verify_update (actual, wc_dir_name,
-                 output_tree, disk_tree, status_tree,
-                 singleton_handler_a, a_baton,
-                 singleton_handler_b, b_baton,
-                 check_props)
+  verify_update(actual, wc_dir_name,
+                output_tree, disk_tree, status_tree,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton,
+                check_props)
 
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
@@ -1232,11 +1232,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
       output.append(lastline)
 
   # Convert the output into a tree.
-  actual = tree.build_tree_from_commit (output)
+  actual = tree.build_tree_from_commit(output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("output", actual, output_tree)
+    tree.compare_trees("output", actual, output_tree)
   except tree.SVNTreeError:
       verify.display_trees("Output of commit is unexpected",
                            "OUTPUT TREE", output_tree, actual)
@@ -1268,13 +1268,13 @@ def run_and_verify_status(wc_dir_name, output_tree,
   exit_code, output, errput = main.run_svn(None, 'status', '-v', '-u', '-q',
                                            wc_dir_name)
 
-  actual = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status(output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("status", actual, output_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    tree.compare_trees("status", actual, output_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
     print("ACTUAL STATUS TREE:")
@@ -1301,13 +1301,13 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree,
   exit_code, output, errput = main.run_svn(None, 'status', '-v',
                                            '-u', wc_dir_name)
 
-  actual = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status(output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("UNQUIET STATUS", actual, status_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    tree.compare_trees("UNQUIET STATUS", actual, status_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     print("ACTUAL UNQUIET STATUS TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
@@ -1417,13 +1417,13 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     verify.verify_outputs(None, None, errput, None, expected_err)
     return
 
-  actual = tree.build_tree_from_diff_summarize (output)
+  actual = tree.build_tree_from_diff_summarize(output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("output", actual, output_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    tree.compare_trees("output", actual, output_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     print("ACTUAL DIFF OUTPUT TREE:")
@@ -1449,16 +1449,16 @@ def run_and_validate_lock(path, username):
 
   ### TODO: Leverage RegexOuput([...], match_all=True) here.
   # prepare the regexs to compare against
-  token_re = re.compile (".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
-  author_re = re.compile (".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
-  created_re = re.compile (".*?Lock Created:.*?", re.DOTALL)
-  comment_re = re.compile (".*?%s\n.*?" % re.escape(comment), re.DOTALL)
+  token_re = re.compile(".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
+  author_re = re.compile(".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
+  created_re = re.compile(".*?Lock Created:.*?", re.DOTALL)
+  comment_re = re.compile(".*?%s\n.*?" % re.escape(comment), re.DOTALL)
   # join all output lines into one
   output = "".join(output)
   # Fail even if one regex does not match
-  if ( not (token_re.match(output) and \
-            author_re.match(output) and \
-            created_re.match(output) and \
+  if ( not (token_re.match(output) and
+            author_re.match(output) and
+            created_re.match(output) and
             comment_re.match(output))):
     raise Failure
 
@@ -1592,25 +1592,25 @@ def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a
 pre-revprop-change hook script and (if appropriate) making it executable."""
 
-  hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
-  main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
+  hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
+  main.create_python_hook_script(hook_path, 'import sys; sys.exit(0)')
 
 def disable_revprop_changes(repo_dir):
   """Disable revprop changes in a repository REPO_DIR by creating a
 pre-revprop-change hook script like enable_revprop_changes, except that
 the hook prints "pre-revprop-change" followed by sys.argv"""
-  hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
-  main.create_python_hook_script (hook_path,
-                                  'import sys\n'
-                                  'sys.stderr.write("pre-revprop-change %s %s %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]))\n'
-                                  'sys.exit(1)\n')
+  hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
+  main.create_python_hook_script(hook_path,
+                                 'import sys\n'
+                                 'sys.stderr.write("pre-revprop-change %s %s %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]))\n'
+                                 'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
 script which always reports errors."""
 
-  hook_path = main.get_post_commit_hook_path (repo_dir)
-  main.create_python_hook_script (hook_path, 'import sys; '
+  hook_path = main.get_post_commit_hook_path(repo_dir)
+  main.create_python_hook_script(hook_path, 'import sys; '
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
 
