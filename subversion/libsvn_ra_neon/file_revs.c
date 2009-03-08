@@ -2,7 +2,7 @@
  * file_revs.c :  routines for requesting and parsing file-revs reports
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -367,8 +367,8 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (http_status == 501)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                            _("'get-file-revs' REPORT not implemented"));
+    return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("'%s' REPORT not implemented"), "get-file-revs");
 
   SVN_ERR(err);
 

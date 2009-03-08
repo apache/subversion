@@ -1,7 +1,7 @@
 /* fs_fs.c --- filesystem operations specific to fs_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1861,7 +1861,7 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(string, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
 
   rep->revision = SVN_STR_TO_REV(str);
@@ -1875,21 +1875,21 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->offset = apr_atoi64(str);
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->size = apr_atoi64(str);
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->expanded_size = apr_atoi64(str);
 
@@ -1897,7 +1897,7 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(NULL, " ", &last_str);
   if ((str == NULL) || (strlen(str) != (APR_MD5_DIGESTSIZE * 2)))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   SVN_ERR(svn_checksum_parse_hex(&rep->md5_checksum, svn_checksum_md5, str,
                                  pool));
@@ -1910,7 +1910,7 @@ read_rep_offsets(representation_t **rep_p,
   /* Read the SHA1 hash. */
   if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum, svn_checksum_sha1, str,
                                  pool));
@@ -1919,7 +1919,7 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->uniquifier = apr_pstrdup(pool, str);
 
