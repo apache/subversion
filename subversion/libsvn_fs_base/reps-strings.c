@@ -805,7 +805,7 @@ svn_fs_base__rep_contents(svn_string_t *str,
   if (len != str->len)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       _("Failure reading rep '%s'"), rep_key);
+       _("Failure reading representation '%s'"), rep_key);
 
   /* Just the standard paranoia. */
   {
@@ -820,7 +820,7 @@ svn_fs_base__rep_contents(svn_string_t *str,
     if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         _("Checksum mismatch on rep '%s':\n"
+         _("Checksum mismatch on representation '%s':\n"
            "   expected:  %s\n"
            "     actual:  %s\n"), rep_key,
          svn_checksum_to_cstring_display(rep_checksum, pool),
@@ -914,7 +914,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->md5_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("MD5 checksum mismatch on rep '%s':\n"
+                   _("MD5 checksum mismatch on representation '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->md5_checksum,
@@ -927,7 +927,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->sha1_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("SHA1 checksum mismatch on rep '%s':\n"
+                   _("SHA1 checksum mismatch on representation '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->sha1_checksum,

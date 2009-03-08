@@ -2,7 +2,7 @@
  * get_location_segments.c :   RA get-location-segments API implementation
  *
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -202,9 +202,9 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (status_code == 501)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                            _("'get-location-segments' REPORT "
-                              "not implemented"));
+    return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("'%s' REPORT not implemented"),
+                             "get-location-segments");
 
   return err;
 }
