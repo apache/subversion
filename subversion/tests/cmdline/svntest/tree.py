@@ -417,6 +417,8 @@ def get_props(paths):
 
   # Parse the output
   for line in output:
+    if line.startswith('DBG:'):
+      continue
     line = line.rstrip('\r\n')  # ignore stdout's EOL sequence
 
     match = properties_on_re.match(line)
