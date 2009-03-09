@@ -34,8 +34,6 @@
 #include "svn_io.h"
 #include "svn_props.h"
 
-#include "private/svn_wc_private.h"
-
 #include "client.h"
 
 #define SAVEPOINT_RELEASED -1
