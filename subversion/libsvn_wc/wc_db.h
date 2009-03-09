@@ -176,7 +176,7 @@ typedef struct {
   /* The lock token */
   const char *token;
 
-  /* The owner of the lock */
+  /* The owner of the lock, possibly NULL */
   const char *owner;
 
   /* A comment about the lock, possibly NULL */
