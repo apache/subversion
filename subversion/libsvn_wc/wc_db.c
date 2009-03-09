@@ -2107,9 +2107,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   SVN_ERR(svn_sqlite__bindf(stmt_act, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
 
-  if (lock)
-    *lock = NULL;
-
   if (have_base || have_work)
     {
       const char *kind_str;
