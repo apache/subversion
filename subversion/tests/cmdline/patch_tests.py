@@ -372,9 +372,9 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              patch_basic,
-              patch_unidiff,
-              patch_copy_and_move,
+              Skip(patch_basic),
+              Skip(patch_unidiff),
+              Skip(patch_copy_and_move),
               ]
 
 if __name__ == '__main__':

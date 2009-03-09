@@ -3483,7 +3483,7 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              diff_svnpatch,
+              Skip(diff_svnpatch),
               ]
 
 if __name__ == '__main__':
