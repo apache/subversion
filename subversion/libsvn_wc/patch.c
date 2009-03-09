@@ -2,7 +2,7 @@
  * patch.c:  apply a patch to a working tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,6 +31,8 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+
+#include "private/svn_patch.h"
 
 #include "svn_private_config.h"
 
@@ -102,7 +104,7 @@ handle_open_root(apr_pool_t *pool,
   const char *token;
   void *root_baton;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "c", &token));
   subpool = svn_pool_create(ds->pool);
   SVN_CMD_ERR(ds->editor->open_root(ds->edit_baton,
                                     SVN_INVALID_REVNUM, subpool,
@@ -119,7 +121,7 @@ handle_delete_entry(apr_pool_t *pool,
   const char *path, *token;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "cc", &path, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   path = svn_path_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->delete_entry(path, SVN_INVALID_REVNUM,
@@ -137,8 +139,8 @@ handle_add_dir(apr_pool_t *pool,
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "ccc(?c)", &path, &token,
-                             &child_token, &copy_path));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "ccc(?c)", &path, &token,
+                                 &child_token, &copy_path));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
   path = svn_path_canonicalize(path, pool);
@@ -161,8 +163,8 @@ handle_open_dir(apr_pool_t *pool,
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "ccc", &path, &token,
-                             &child_token));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "ccc", &path, &token,
+                                 &child_token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
   path = svn_path_canonicalize(path, pool);
@@ -182,8 +184,8 @@ handle_change_dir_prop(apr_pool_t *pool,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "cc(?s)", &token, &name,
-                             &value));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "cc(?s)", &token, &name,
+                                 &value));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   SVN_CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value,
                                           entry->pool));
@@ -199,7 +201,7 @@ handle_close_dir(apr_pool_t *pool,
   ra_svn_token_entry_t *entry;
 
   /* Parse and look up the directory token. */
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "c", &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Close the directory and destroy the baton. */
@@ -217,8 +219,8 @@ handle_add_file(apr_pool_t *pool,
   const char *path, *token, *file_token, *copy_path;
   ra_svn_token_entry_t *entry, *file_entry;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "ccc(?c)", &path, &token,
-                             &file_token, &copy_path));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "ccc(?c)", &path, &token,
+                                 &file_token, &copy_path));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
   path = svn_path_canonicalize(path, pool);
@@ -239,8 +241,8 @@ handle_open_file(apr_pool_t *pool,
   const char *path, *token, *file_token;
   ra_svn_token_entry_t *entry, *file_entry;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "ccc", &path, &token,
-                             &file_token));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "ccc", &path, &token,
+                                 &file_token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
   path = svn_path_canonicalize(path, pool);
@@ -263,8 +265,8 @@ handle_apply_textdelta(apr_pool_t *pool,
   char *base_checksum;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "c(?c)",
-                             &token, &base_checksum));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "c(?c)",
+                                 &token, &base_checksum));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -286,7 +288,7 @@ handle_textdelta_chunk(apr_pool_t *pool,
   svn_string_t *str;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "cs", &token, &str));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "cs", &token, &str));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -304,7 +306,7 @@ handle_textdelta_end(apr_pool_t *pool,
   ra_svn_token_entry_t *entry;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "c", &token));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -324,7 +326,7 @@ handle_change_file_prop(apr_pool_t *pool,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "cc(?s)", &token, &name,
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "cc(?s)", &token, &name,
                                  &value));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value, pool));
@@ -341,8 +343,8 @@ handle_close_file(apr_pool_t *pool,
   const char *text_checksum;
 
   /* Parse arguments and look up the file token. */
-  SVN_ERR(svn_wc_parse_tuple(params, pool, "c(?c)",
-                             &token, &text_checksum));
+  SVN_ERR(svn_patch__parse_tuple(params, pool, "c(?c)",
+                                 &token, &text_checksum));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
 
   /* Close the file and destroy the baton. */
@@ -412,7 +414,7 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
   while (1)
     {
       apr_pool_clear(subpool);
-      SVN_ERR(svn_wc_read_tuple(patch_stream, subpool, "wl", &cmd, &params));
+      SVN_ERR(svn_patch__read_tuple(patch_stream, subpool, "wl", &cmd, &params));
       for (i = 0; edit_cmds[i].cmd; i++)
         if (strcmp(cmd, edit_cmds[i].cmd) == 0)
           break;
@@ -448,7 +450,7 @@ svn_wc_apply_unidiff(const char *patch_path,
   const char *patch_cmd_tmp = NULL;
   int exitcode = 0;
   apr_exit_why_e exitwhy = 0;
-  svn_boolean_t patch_bin_guess = TRUE; 
+  svn_boolean_t patch_bin_guess = TRUE;
   apr_file_t *patchfile;
   int nargs = 3; /* the command, the prefix arg and NULL at least */
   int i = 0;
