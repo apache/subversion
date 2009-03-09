@@ -1020,7 +1020,8 @@ typedef struct svn_wc_notify_t {
   const char *prop_name;
 
   /** If @c action is @c svn_wc_notify_blame_revision, contains a list of
-   * revision properties for the specified revision */
+   * revision properties for the specified revision 
+   * @since New in 1.6 */
   apr_hash_t *rev_props;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
