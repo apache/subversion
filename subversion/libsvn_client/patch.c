@@ -41,7 +41,7 @@
 
 /*** Code. ***/
 
-#ifdef SVN_DEBUG
+#ifdef SVN_DEBUG_SVNPATCH
 #define SVNPATCH_DELETE_WHEN svn_io_file_del_none
 #else
 #define SVNPATCH_DELETE_WHEN svn_io_file_del_on_close
