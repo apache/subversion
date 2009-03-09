@@ -3790,7 +3790,7 @@ apply_textdelta(void *file_baton,
   /* The incoming delta is targeted against BASE_CHECKSUM. Make sure that
      it matches our recorded checksum. We cannot do this test for replaced
      nodes -- that checksum is missing or the checksum of the replacement.  */
-  if (checksum && base_checksum
+  if (!replaced && checksum && base_checksum
       && strcmp(base_checksum, checksum) != 0)
     {
       return svn_error_createf(
@@ -3833,7 +3833,7 @@ apply_textdelta(void *file_baton,
     }
 
   /* If we don't have a local checksum, use the ra provided checksum */
-  if (!checksum && base_checksum)
+  if (replaced || !checksum)
     checksum = base_checksum;
 
   /* Checksum the text base while applying deltas */
