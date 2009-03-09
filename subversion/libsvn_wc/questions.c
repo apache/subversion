@@ -27,6 +27,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_io.h"
@@ -62,6 +63,10 @@ svn_wc_check_wc(const char *path,
     {
       svn_error_clear(err);
 
+      /* If the format file does not exist or path not directory, then for
+         our purposes this is not a working copy, so return 0. */
+      *wc_format = 0;
+
       /* Check path itself exists. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
 
@@ -72,9 +77,6 @@ svn_wc_check_wc(const char *path,
             svn_path_local_style(path, pool));
         }
 
-      /* If the metadata does not exist or path not directory, then for
-         our purposes this is not a working copy, so return 0. */
-      *wc_format = 0;
       return SVN_NO_ERROR;
     }
   else
@@ -457,7 +459,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
       tmp.working_size = finfo.size;
       tmp.text_time = finfo.mtime;
       SVN_ERR(svn_wc__entry_modify(adm_access,
-                                   svn_path_basename(filename, pool),
+                                   svn_dirent_basename(filename, pool),
                                    &tmp,
                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
@@ -492,7 +494,7 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 {
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  const char* dir_path = svn_path_dirname(path, pool);
+  const char* dir_path = svn_dirent_dirname(path, pool);
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
@@ -511,21 +513,21 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 
           if (entry->conflict_old)
             {
-              path = svn_path_join(dir_path, entry->conflict_old, pool);
+              path = svn_dirent_join(dir_path, entry->conflict_old, pool);
               SVN_ERR(svn_io_check_path(path, &kind, pool));
               *text_conflicted_p = (kind == svn_node_file);
             }
 
           if ((! *text_conflicted_p) && (entry->conflict_new))
             {
-              path = svn_path_join(dir_path, entry->conflict_new, pool);
+              path = svn_dirent_join(dir_path, entry->conflict_new, pool);
               SVN_ERR(svn_io_check_path(path, &kind, pool));
               *text_conflicted_p = (kind == svn_node_file);
             }
 
           if ((! *text_conflicted_p) && (entry->conflict_wrk))
             {
-              path = svn_path_join(dir_path, entry->conflict_wrk, pool);
+              path = svn_dirent_join(dir_path, entry->conflict_wrk, pool);
               SVN_ERR(svn_io_check_path(path, &kind, pool));
               *text_conflicted_p = (kind == svn_node_file);
             }
@@ -541,9 +543,9 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
         {
           /* A dir's .prej file is _inside_ the dir. */
           if (entry->kind == svn_node_dir)
-            path = svn_path_join(path, entry->prejfile, pool);
+            path = svn_dirent_join(path, entry->prejfile, pool);
           else
-            path = svn_path_join(dir_path, entry->prejfile, pool);
+            path = svn_dirent_join(dir_path, entry->prejfile, pool);
 
           SVN_ERR(svn_io_check_path(path, &kind, pool));
           *prop_conflicted_p = (kind == svn_node_file);
@@ -578,28 +580,28 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
 
   if (entry->conflict_old)
     {
-      path = svn_path_join(dir_path, entry->conflict_old, pool);
+      path = svn_dirent_join(dir_path, entry->conflict_old, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *text_conflicted_p = (kind == svn_node_file);
     }
 
   if ((! *text_conflicted_p) && (entry->conflict_new))
     {
-      path = svn_path_join(dir_path, entry->conflict_new, pool);
+      path = svn_dirent_join(dir_path, entry->conflict_new, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *text_conflicted_p = (kind == svn_node_file);
     }
 
   if ((! *text_conflicted_p) && (entry->conflict_wrk))
     {
-      path = svn_path_join(dir_path, entry->conflict_wrk, pool);
+      path = svn_dirent_join(dir_path, entry->conflict_wrk, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *text_conflicted_p = (kind == svn_node_file);
     }
 
   if (entry->prejfile)
     {
-      path = svn_path_join(dir_path, entry->prejfile, pool);
+      path = svn_dirent_join(dir_path, entry->prejfile, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *prop_conflicted_p = (kind == svn_node_file);
     }

@@ -35,6 +35,7 @@
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 
@@ -73,6 +74,7 @@ ra_serf_get_schemes(apr_pool_t *pool)
   return serf_ssl;
 }
 
+#define DEFAULT_HTTP_TIMEOUT 3600
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
@@ -82,21 +84,43 @@ load_config(svn_ra_serf__session_t *session,
   const char *server_group;
   const char *proxy_host = NULL;
   const char *port_str = NULL;
+  const char *timeout_str = NULL;
   unsigned int proxy_port;
 
-  config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
-                        APR_HASH_KEY_STRING);
-  config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                               APR_HASH_KEY_STRING);
+  if (config_hash)
+    {
+      config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
+                            APR_HASH_KEY_STRING);
+      config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                                   APR_HASH_KEY_STRING);
+    }
+  else
+    {
+      config = NULL;
+      config_client = NULL;
+    }
 
   SVN_ERR(svn_config_get_bool(config, &session->using_compression,
                               SVN_CONFIG_SECTION_GLOBAL,
                               SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+  svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
-  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, config_client);
-  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, config);
+  if (session->wc_callbacks->auth_baton)
+    {
+      if (config_client)
+        {
+          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
+                                 config_client);
+        }
+      if (config)
+        {
+          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
+                                 config);
+        }
+    }
 
   /* Load the global proxy server settings, if set. */
   svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
@@ -128,6 +152,9 @@ load_config(svn_ra_serf__session_t *session,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION,
                                   session->using_compression));
+      svn_config_get(config, &timeout_str, server_group,
+                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
+
       svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                              SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
@@ -149,6 +176,24 @@ load_config(svn_ra_serf__session_t *session,
       svn_config_get(config, &session->ssl_authorities, server_group,
                      SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
     }
+
+  /* Parse the connection timeout value, if any. */
+  if (timeout_str)
+    {
+      char *endstr;
+      const long int timeout = strtol(timeout_str, &endstr, 10);
+
+      if (*endstr)
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                _("Invalid config: illegal character in "
+                                  "timeout value"));
+      if (timeout < 0)
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                _("Invalid config: negative timeout value"));
+      session->timeout = apr_time_from_sec(timeout);
+    }
+  else
+    session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
 
   /* Convert the proxy port value, if any. */
   if (port_str)
@@ -188,6 +233,7 @@ load_config(svn_ra_serf__session_t *session,
 
   return SVN_NO_ERROR;
 }
+#undef DEFAULT_HTTP_TIMEOUT
 
 static void
 svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
@@ -453,7 +499,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
   /* If we have a relative path, append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component(path, rel_path, pool);
+      path = svn_path_url_add_component2(path, rel_path, pool);
     }
 
   props = apr_hash_make(pool);
@@ -482,7 +528,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
        * the revision's baseline-collection.
        */
       prop_ctx = NULL;
-      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
+      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
       svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
                                  path, revision, "0",
@@ -637,7 +683,7 @@ path_dirent_walker(void *baton,
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
-      base_name = svn_path_uri_decode(svn_path_basename(path, pool), pool);
+      base_name = svn_path_uri_decode(svn_uri_basename(path, pool), pool);
 
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
@@ -732,7 +778,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we have a relative path, URI encode and append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component(path, rel_path, pool);
+      path = svn_path_url_add_component2(path, rel_path, pool);
     }
 
   props = apr_hash_make(pool);
@@ -748,7 +794,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                              session, NULL, path, revision,
                                              fetched_rev, pool));
 
-      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
+      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
     }
 

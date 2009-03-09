@@ -29,6 +29,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_error.h"
@@ -192,7 +193,7 @@ open_reject_tmp_stream(svn_stream_t **stream, const char **reject_tmp_path,
   if (is_dir)
     tmp_base_path = svn_wc__adm_child(full_path, SVN_WC__ADM_TMP, pool);
   else
-    tmp_base_path = svn_wc__adm_child(svn_path_dirname(full_path, pool),
+    tmp_base_path = svn_wc__adm_child(svn_dirent_dirname(full_path, pool),
                                       SVN_WC__ADM_TMP, pool);
 
   return svn_stream_open_unique(stream, reject_tmp_path, tmp_base_path,
@@ -329,7 +330,7 @@ install_props_file(svn_stringbuf_t **log_accum,
   const char *propfile_path;
   const char *propfile_tmp_path;
 
-  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     node_kind = svn_node_dir;
   else
     node_kind = svn_node_file;
@@ -339,7 +340,7 @@ install_props_file(svn_stringbuf_t **log_accum,
 
   /* Write the property hash into a temporary file. */
   SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props,
-                             svn_path_dirname(propfile_path, pool),
+                             svn_dirent_dirname(propfile_path, pool),
                              FALSE, pool));
 
   /* Write a log entry to move tmp file to real file. */
@@ -365,7 +366,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   apr_array_header_t *prop_diffs;
   svn_node_kind_t kind;
 
-  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     kind = svn_node_dir;
   else
     kind = svn_node_file;
@@ -721,8 +722,8 @@ svn_wc__props_delete(const char *path,
 
       /* If PATH is a directory, then FILENAME will be NULL.
          If PATH is a file, then FILENAME will be the BASE_NAME of PATH. */
-      filename = svn_path_is_child(svn_wc_adm_access_path(path_access),
-                                   path, NULL);
+      filename = svn_dirent_is_child(svn_wc_adm_access_path(path_access),
+                                     path, NULL);
       if (! filename)
         {
           /* There is no point in reading the props just to determine if we
@@ -796,7 +797,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
                                     svn_io_file_del_none, pool));
   else
     SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop,
-                                    svn_path_dirname(path, pool),
+                                    svn_dirent_dirname(path, pool),
                                     svn_io_file_del_none, pool));
   SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind, svn_wc__props_base,
                             pool));
@@ -824,7 +825,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
          So manufacture an empty propfile and force it to be written out. */
 
       SVN_ERR(save_prop_tmp_file(&dst_bprop, apr_hash_make(pool),
-                                 svn_path_dirname(dst_bprop, pool),
+                                 svn_dirent_dirname(dst_bprop, pool),
                                  TRUE, pool));
 
       SVN_ERR(svn_wc__loggy_move(log_accum,
@@ -1097,7 +1098,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   svn_string_t *mime_propval = NULL;
   apr_pool_t *filepool = svn_pool_create(pool);
   svn_wc_conflict_description_t *cdesc;
-  const char *dirpath = svn_path_dirname(path, filepool);
+  const char *dirpath = svn_dirent_dirname(path, filepool);
 
   if (! conflict_func)
     {
@@ -1762,7 +1763,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
 
-  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     is_dir = TRUE;
   else
     is_dir = FALSE;
@@ -1893,7 +1894,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
               reject_filename = SVN_WC__THIS_DIR_PREJ;
             }
           else
-            svn_path_split(path, &reject_dirpath, &reject_filename, pool);
+            svn_dirent_split(path, &reject_dirpath, &reject_filename, pool);
 
           SVN_ERR(svn_io_open_uniquely_named(NULL, &reject_path,
                                              reject_dirpath,
@@ -1921,8 +1922,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       {
         svn_wc_entry_t entry;
 
-        entry.prejfile = svn_path_is_child(svn_wc_adm_access_path(adm_access),
-                                           reject_path, NULL);
+        entry.prejfile = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
+                                             reject_path, NULL);
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
                                            adm_access,
                                            path,
@@ -1970,8 +1971,8 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
   const svn_wc_entry_t *entry;
   apr_hash_t *all_wcprops;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
-  const char *path = svn_path_join(svn_wc_adm_access_path(adm_access),
-                                   entryname, pool);
+  const char *path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                     entryname, pool);
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (! entry)
@@ -2029,7 +2030,7 @@ wcprop_get(const svn_string_t **value,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
   else
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
-                                svn_path_dirname(path, pool), pool));
+                                svn_dirent_dirname(path, pool), pool));
 
   SVN_ERR_W(svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool),
             _("Failed to load properties from disk"));
@@ -2057,7 +2058,7 @@ svn_wc__wcprop_set(const char *name,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
   else
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
-                                svn_path_dirname(path, pool), pool));
+                                svn_dirent_dirname(path, pool), pool));
   SVN_ERR_W(svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool),
             _("Failed to load properties from disk"));
 
@@ -2109,7 +2110,7 @@ svn_wc_prop_list(apr_hash_t **props,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
   else
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
-                                svn_path_dirname(path, pool), pool));
+                                svn_dirent_dirname(path, pool), pool));
 
   return svn_wc__load_props(NULL, props, NULL, adm_access, path, pool);
 }
@@ -2322,7 +2323,7 @@ svn_wc_prop_set3(const char *name,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
   else
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
-                                svn_path_dirname(path, pool), pool));
+                                svn_dirent_dirname(path, pool), pool));
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
@@ -2750,7 +2751,7 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
   else
     {
       const char *dirname;
-      svn_path_split(path, &dirname, &entryname, pool);
+      svn_dirent_split(path, &dirname, &entryname, pool);
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, dirname, pool));
     }
 

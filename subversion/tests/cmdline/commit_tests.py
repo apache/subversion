@@ -1691,8 +1691,9 @@ def commit_out_of_date_deletions(sbox):
   svntest.main.run_svn(None, 'rm', C_path, F_path, omega_path, alpha_path,
                        psi_path)
 
-  # A commit of any one of these files or dirs should fail
-  error_re = "out of date"
+  # A commit of any one of these files or dirs should fail, preferably
+  # with an out-of-date error message.
+  error_re = "(out of date|not found)"
   commit(wc_backup, None, None, error_re, C_path)
   commit(wc_backup, None, None, error_re, I_path)
   commit(wc_backup, None, None, error_re, F_path)
@@ -2698,7 +2699,7 @@ test_list = [ None,
               commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_svn),
+              commit_out_of_date_deletions,
               commit_with_bad_log_message,
               commit_with_mixed_line_endings,
               commit_with_mixed_line_endings_in_ignored_part,

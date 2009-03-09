@@ -20,10 +20,11 @@
 
 #include <serf.h>
 
-#include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_props.h"
+#include "svn_dirent_uri.h"
+#include "svn_path.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
@@ -966,11 +967,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
      revision (if needed) with an OPTIONS request.  */
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      const char *decoded_url = svn_path_uri_decode(url, pool);
-      const char *decoded_root = 
-        svn_path_uri_decode(session->repos_root.path, pool);
-
-      basecoll_url = apr_psprintf(pool, "%s/%ld/", 
+      basecoll_url = apr_psprintf(pool, "%s/%ld",
                                   session->rev_root_stub, revision);
 
       if (latest_revnum)
@@ -1026,7 +1023,9 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                       _("The OPTIONS response did not include "
                                         "the requested checked-in value"));
             }
-          
+
+          baseline_url = svn_uri_canonicalize(baseline_url, pool);
+
           SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
                                               baseline_url, revision, "0",
                                               baseline_props, pool));
@@ -1041,7 +1040,9 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                   _("The OPTIONS response did not include the "
                                     "requested baseline-collection value"));
         }
-      
+
+      basecoll_url = svn_uri_canonicalize(basecoll_url, pool);
+
       if (latest_revnum)
         {
           const char *version_name;

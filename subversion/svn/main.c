@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -36,6 +36,7 @@
 #include "svn_client.h"
 #include "svn_config.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_diff.h"
@@ -46,6 +47,8 @@
 #include "svn_auth.h"
 #include "svn_hash.h"
 #include "cl.h"
+
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -102,6 +105,9 @@ typedef enum {
   opt_with_no_revprops,
   opt_parents,
   opt_accept,
+  opt_svnpatch_format,
+  opt_patch_cmd,
+  opt_from_source,
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert
@@ -186,9 +192,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "'immediates', or 'infinity')")},
   {"set-depth",     opt_set_depth, 1,
-                    N_("set new working copy depth to ARG ('empty',\n"
+                    N_("set new working copy depth to ARG ('exclude',\n"
                        "                            "
-                       "'exclude', 'files', 'immediates', or 'infinity')")},
+                       "'empty', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
@@ -207,6 +213,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("try operation but make no changes")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files")},
+  {"svnpatch",      opt_svnpatch_format, 0,
+                    N_("output in svnpatch format, implies the\n"
+                       "                             "
+                       "--no-diff-deleted option")},
   {"notice-ancestry", opt_notice_ancestry, 0,
                     N_("notice ancestry when calculating differences")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
@@ -216,6 +226,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
+  {"patch-cmd",     opt_patch_cmd, 1,
+                    N_("use ARG as external patch command")},
   {"record-only",   opt_record_only, 0,
                     N_("mark revisions as merged (use with -r)")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
@@ -465,7 +477,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
      opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml} },
+     opt_force, opt_xml, opt_svnpatch_format} },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -668,6 +680,21 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    URL -> URL:  complete server-side rename.\n"
      "  All the SRCs must be of the same type.\n"),
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+
+  { "patch", svn_cl__patch, {0}, N_
+    ("Apply a patch to a working copy path.\n"
+     "usage: patch PATCHFILE [WCPATH]\n"
+     "\n"
+     "  PATCHFILE is an input file which, when applied, turns the working\n"
+     "  copy WCPATH into a modified tree that reflects all the changes the\n"
+     "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
+     "\n"
+     "  The format of bytes embedded in the patch can be of two types: Unified\n"
+     "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "\n"
+     "  This command allows some amount of fuzzing as Unidiff is contextual\n"
+     "  and svnpatch revisionless.\n"),
+    {'q', opt_force, opt_patch_cmd, opt_config_dir} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -899,7 +926,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn status\n"
      "     M      wc/bar.c\n"
      "    !     C wc/qaz.c\n"
-     "          >   incoming edit, local missing\n"
+     "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
       opt_ignore_externals, opt_changelist} },
@@ -1034,50 +1061,6 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
-typedef struct config_option_t
-{
-  const char *file;
-  const char *section;
-  const char *option;
-  const char *value;
-} config_option_t;
-
-/* Parse argument of '--config-option'. */
-static svn_error_t *
-parse_config_option(apr_array_header_t **config_options,
-                    const char *opt_arg,
-                    apr_pool_t *pool)
-{
-  config_option_t *config_option;
-  const char *first_colon, *second_colon, *equals_sign;
-  apr_size_t len = strlen(opt_arg);
-  if ((first_colon = strchr(opt_arg, ':')) && (first_colon != opt_arg))
-    {
-      if ((second_colon = strchr(first_colon + 1, ':')) && (second_colon != first_colon + 1))
-        {
-          if ((equals_sign = strchr(second_colon + 1, '=')) && (equals_sign != second_colon + 1))
-            {
-              config_option = apr_pcalloc(pool, sizeof(config_option_t));
-              config_option->file = apr_pstrndup(pool, opt_arg, first_colon - opt_arg);
-              config_option->section = apr_pstrndup(pool, first_colon + 1, second_colon - first_colon - 1);
-              config_option->option = apr_pstrndup(pool, second_colon + 1, equals_sign - second_colon - 1);
-              if (! (strchr(config_option->option, ':')))
-                {
-                  config_option->value = apr_pstrndup(pool, equals_sign + 1, opt_arg + len - equals_sign - 1);
-                  if (! *config_options)
-                    {
-                      *config_options = apr_array_make(pool, 1, sizeof(config_option_t *));
-                    }
-                  APR_ARRAY_PUSH(*config_options, config_option_t *) = config_option;
-                  return SVN_NO_ERROR;
-                }
-            }
-        }
-    }
-  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          _("Invalid syntax of argument of --config-option"));
-}
-
 
 /*** Main. ***/
 
@@ -1099,7 +1082,7 @@ main(int argc, const char *argv[])
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
-  svn_config_t *cfg_config, *cfg_servers;
+  svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
   apr_hash_t *changelists;
@@ -1465,6 +1448,9 @@ main(int argc, const char *argv[])
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
+      case opt_patch_cmd:
+        opt_state.patch_cmd = apr_pstrdup(pool, opt_arg);
+        break;
       case opt_old_cmd:
         if (opt_state.used_change_arg)
           {
@@ -1480,16 +1466,21 @@ main(int argc, const char *argv[])
         break;
       case opt_config_dir:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
-        opt_state.config_dir = svn_path_canonicalize(path_utf8, pool);
+        if (err)
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        opt_state.config_dir = svn_dirent_internal_style(path_utf8, pool);
         break;
       case opt_config_options:
-        {
-          err = parse_config_option(&opt_state.config_options, opt_arg, pool);
-          if (err)
-            {
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-        }
+        if (!opt_state.config_options)
+          opt_state.config_options = 
+                   apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
+
+        err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
+        if (!err)
+          err = svn_cmdline__parse_config_option(opt_state.config_options,
+                                                 opt_arg, pool);
+        if (err)
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
       case opt_autoprops:
         opt_state.autoprops = TRUE;
@@ -1517,6 +1508,9 @@ main(int argc, const char *argv[])
         break;
       case opt_summarize:
         opt_state.summarize = TRUE;
+        break;
+      case opt_svnpatch_format:
+        opt_state.svnpatch = TRUE;
         break;
       case opt_remove:
         opt_state.remove = TRUE;
@@ -1911,34 +1905,13 @@ main(int argc, const char *argv[])
 
   cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
-  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
 
   /* Update the options in the config */
   if (opt_state.config_options)
     {
-      for (i = 0; i < opt_state.config_options->nelts; i++)
-        {
-          config_option_t *config_option = APR_ARRAY_IDX(opt_state.config_options,
-                                                         i, config_option_t *);
-          if (strcmp(config_option->file, "config") == 0)
-            {
-              svn_config_set(cfg_config, config_option->section,
-                             config_option->option, config_option->value);
-            }
-          else if (strcmp(config_option->file, "servers") == 0)
-            {
-              svn_config_set(cfg_servers, config_option->section,
-                             config_option->option, config_option->value);
-            }
-          else
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Unrecognized file in argument of --config-option"));
-              svn_handle_warning2(stderr, err, "svn: ");
-              svn_error_clear(err);
-            }
-        }
+      svn_error_clear(
+          svn_cmdline__apply_config_options(ctx->config, opt_state.config_options,
+                                            "svn: ", "--config-option"));
     }
 
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
@@ -1949,6 +1922,9 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+  if (opt_state.patch_cmd)
+    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_PATCH_CMD, opt_state.patch_cmd);
 
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
   if (opt_state.autoprops && opt_state.no_autoprops)

@@ -15,7 +15,7 @@ AC_DEFUN(SVN_LIB_KWALLET,
   AC_MSG_CHECKING([whether to look for KWallet])
   if test "$svn_lib_kwallet" != "no"; then
     AC_MSG_RESULT([yes])
-    if test "$enable_shared" = "yes"; then
+    if test "$svn_enable_shared" = "yes"; then
       if test "$APR_HAS_DSO" = "yes"; then
         if test "$USE_NLS" = "yes"; then
           if test -n "$PKG_CONFIG"; then

@@ -1,7 +1,7 @@
 /* fs_fs.c --- filesystem operations specific to fs_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,7 @@
 
 #include "svn_pools.h"
 #include "svn_fs.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_props.h"
@@ -1016,7 +1017,7 @@ write_format(const char *path, int format, int max_files_per_dir,
       const char *path_tmp;
 
       SVN_ERR(svn_io_write_unique(&path_tmp,
-                                  svn_path_dirname(path, pool),
+                                  svn_dirent_dirname(path, pool),
                                   contents->data, contents->len,
                                   svn_io_file_del_none, pool));
 
@@ -1448,9 +1449,11 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* First, copy packed shards. */
   for (rev = 0; rev < min_unpacked_rev; rev += max_files_per_dir)
     {
-      const char *packed_shard = apr_psprintf(iterpool, "%ld.pack", rev);
+      const char *packed_shard = apr_psprintf(iterpool, "%ld.pack",
+                                              rev / max_files_per_dir);
       const char *src_subdir_packed_shard;
-      src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard, pool);
+      src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard,
+                                              iterpool);
 
       SVN_ERR(svn_io_copy_dir_recursively(src_subdir_packed_shard,
                                           dst_subdir, packed_shard,
@@ -1461,7 +1464,7 @@ svn_fs_fs__hotcopy(const char *src_path,
     }
 
   /* Then, copy non-packed shards. */
-  assert(rev == min_unpacked_rev);
+  SVN_ERR_ASSERT(rev == min_unpacked_rev);
   for (; rev <= youngest; rev++)
     {
       const char *src_subdir_shard = src_subdir,
@@ -1858,7 +1861,7 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(string, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
 
   rep->revision = SVN_STR_TO_REV(str);
@@ -1872,21 +1875,21 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->offset = apr_atoi64(str);
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->size = apr_atoi64(str);
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->expanded_size = apr_atoi64(str);
 
@@ -1894,7 +1897,7 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(NULL, " ", &last_str);
   if ((str == NULL) || (strlen(str) != (APR_MD5_DIGESTSIZE * 2)))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   SVN_ERR(svn_checksum_parse_hex(&rep->md5_checksum, svn_checksum_md5, str,
                                  pool));
@@ -1907,7 +1910,7 @@ read_rep_offsets(representation_t **rep_p,
   /* Read the SHA1 hash. */
   if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum, svn_checksum_sha1, str,
                                  pool));
@@ -1916,7 +1919,7 @@ read_rep_offsets(representation_t **rep_p,
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text rep offset line in node-rev"));
+                            _("Malformed text representation offset line in node-rev"));
 
   rep->uniquifier = apr_pstrdup(pool, str);
 
@@ -2580,7 +2583,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   /* ### do we have a directory sitting around already? we really shouldn't
      ### have to get the dirname here. */
   SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_path_dirname(final_path, pool),
+                                 svn_dirent_dirname(final_path, pool),
                                  svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
@@ -4201,7 +4204,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   next_txn_id[len] = '\0';
 
   SVN_ERR(svn_io_write_unique(&tmp_filename,
-                              svn_path_dirname(txn_current_filename, pool),
+                              svn_dirent_dirname(txn_current_filename, pool),
                               next_txn_id, len, svn_io_file_del_none, pool));
   SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
                           txn_current_filename, pool));
@@ -4269,7 +4272,7 @@ create_txn_dir_pre_1_5(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
       if (! err)
         {
           /* We succeeded.  Return the basename minus the ".txn" extension. */
-          const char *name = svn_path_basename(unique_path, subpool);
+          const char *name = svn_dirent_basename(unique_path, subpool);
           *id_p = apr_pstrndup(pool, name,
                                strlen(name) - strlen(PATH_EXT_TXN));
           svn_pool_destroy(subpool);
@@ -5513,7 +5516,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
 
   name = svn_fs_fs__path_current(fs, pool);
   SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_path_dirname(name, pool),
+                              svn_dirent_dirname(name, pool),
                               buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
@@ -6418,7 +6421,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   my_uuid_len = strlen(my_uuid);
 
   SVN_ERR(svn_io_write_unique(&tmp_path,
-                              svn_path_dirname(uuid_path, pool),
+                              svn_dirent_dirname(uuid_path, pool),
                               my_uuid, my_uuid_len,
                               svn_io_file_del_none, pool));
 
@@ -6554,7 +6557,7 @@ set_node_origins_for_file(svn_fs_t *fs,
 
   /* Create a temporary file, write out our hash, and close the file. */
   SVN_ERR(svn_stream_open_unique(&stream, &path_tmp,
-                                 svn_path_dirname(node_origins_path, pool),
+                                 svn_dirent_dirname(node_origins_path, pool),
                                  svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(origins_hash, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));

@@ -350,9 +350,12 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
-  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
+  SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
+
+  /** @deprecated This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY. */
+#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
@@ -857,6 +860,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
 
+  /** @since New in 1.7 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+             SVN_ERR_RA_DAV_CATEGORY_START + 12,
+             "Connection timed out")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
@@ -1244,6 +1252,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA,
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
+             SVN_ERR_MISC_CATEGORY_START + 33,
+             "External program is missing")
 
   /* command-line client errors */
 

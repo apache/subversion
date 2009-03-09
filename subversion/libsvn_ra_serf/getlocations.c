@@ -229,7 +229,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                                          NULL, NULL, peg_revision, NULL,
                                          pool));
 
-  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

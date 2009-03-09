@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+#define SVN_CLIENT_SVNPATCH_VERSION   1
 
 
 /* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
@@ -687,11 +689,17 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton/  */
+   EDITOR/EDIT_BATON return the newly created editor and baton/
+  
+   SVNPATCH_FILE is the temporary file to which the library dumps
+   serialized ra_svn protocol Editor Commands.  It somehow determines
+   whether or not to utilize svnpatch format in the diff output when
+   checked against NULL.  The caller must allocate the file handler,
+   open and close the file respectively before and after the call. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks3_t *diff_cmd,
+                            const svn_wc_diff_callbacks4_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,
@@ -703,6 +711,7 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
+                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool);
 
 

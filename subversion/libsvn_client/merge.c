@@ -2,7 +2,7 @@
  * merge.c: merging
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -908,7 +908,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function.  Used for both file and directory
+/* An svn_wc_diff_callbacks4_t function.  Used for both file and directory
    property merges. */
 static svn_error_t *
 merge_props_changed(svn_wc_adm_access_t *adm_access,
@@ -1096,7 +1096,7 @@ conflict_resolver(svn_wc_conflict_result_t **result,
   return err;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_file_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *content_state,
@@ -1306,7 +1306,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
@@ -1319,6 +1319,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev2,
                  const char *mimetype1,
                  const char *mimetype2,
+                 const char *copyfrom_path,
+                 svn_revnum_t copyfrom_revision,
                  const apr_array_header_t *prop_changes,
                  apr_hash_t *original_props,
                  void *baton)
@@ -1571,7 +1573,7 @@ files_same_p(svn_boolean_t *same,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
@@ -1696,13 +1698,15 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *state,
                 svn_boolean_t *tree_conflicted,
                 const char *path,
                 svn_revnum_t rev,
+                const char *copyfrom_path,
+                svn_revnum_t copyfrom_revision,
                 void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
@@ -1878,7 +1882,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -2006,7 +2010,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_opened(svn_wc_adm_access_t *adm_access,
                  svn_boolean_t *tree_conflicted,
@@ -2059,7 +2063,7 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
+/* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_closed(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *contentstate,
@@ -2081,7 +2085,7 @@ merge_dir_closed(svn_wc_adm_access_t *adm_access,
 }
 
 /* The main callback table for 'svn merge'.  */
-static const svn_wc_diff_callbacks3_t
+static const svn_wc_diff_callbacks4_t
 merge_callbacks =
   {
     merge_file_changed,
@@ -3637,7 +3641,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
 
    DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
    do_directory_merge(), see that function for more info.  CALLBACKS are the
-   svn merge versions of the svn_wc_diff_callbacks3_t callbacks invoked by
+   svn merge versions of the svn_wc_diff_callbacks4_t callbacks invoked by
    the editor.
 
    If MERGE_B->sources_ancestral is set, then URL1@REVISION1 must be a
@@ -3655,7 +3659,7 @@ drive_merge_report_editor(const char *target_wcpath,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
                           svn_wc_adm_access_t *adm_access,
-                          const svn_wc_diff_callbacks3_t *callbacks,
+                          const svn_wc_diff_callbacks4_t *callbacks,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
@@ -3739,6 +3743,7 @@ drive_merge_report_editor(const char *target_wcpath,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
                                       &diff_editor, &diff_edit_baton,
+                                      NULL, /* disable svnpatch */
                                       pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
@@ -4579,10 +4584,10 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
 /* Helper for do_directory_merge()
 
-   Perform a depth first walk of the working copy tree rooted at
-   MERGE_CMD_BATON->TARGET (with the corresponding ENTRY).  Create an
-   svn_client__merge_path_t * for any path which meets one or more of the
-   following criteria:
+   If HONOR_MERGEINFO is TRUE, then perform a depth first walk of the working
+   copy tree rooted at MERGE_CMD_BATON->TARGET (with the corresponding ENTRY).
+   Create an svn_client__merge_path_t * for any path which meets one or more
+   of the following criteria:
 
      1) Path has working svn:mergeinfo from corresponding merge source or
         has empty mergeinfo.
@@ -4603,6 +4608,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         DEPTH is svn_depth_immediates.
      9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
         DEPTH is svn_depth_files.
+
+   If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
+   for MERGE_CMD_BATON->TARGET (i.e. only criteria 7 is applied).
 
    Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
    depth-first order based on the svn_client__merge_path_t *s path member as
@@ -4635,6 +4643,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     const char *url2,
                     svn_revnum_t revision1,
                     svn_revnum_t revision2,
+                    svn_boolean_t honor_mergeinfo,
                     svn_ra_session_t *ra_session,
                     svn_wc_adm_access_t *adm_access,
                     svn_depth_t depth,
@@ -4654,7 +4663,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
      have mergeinfo and/or are switched or are absent from disk or is the
      target of the merge. */
   SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
-                               &walk_callbacks, &wb, depth, TRUE,
+                               &walk_callbacks, &wb,
+                               /* If we are not honoring mergeinfo just
+                                  do a depth empty walk so all we put in
+                                  *CHILDREN_WITH_MERGEINFO is
+                                  MERGE_CMD_BATON->TARGET. */
+                               honor_mergeinfo ? depth : svn_depth_empty,
+                               TRUE,
                                merge_cmd_baton->ctx->cancel_func,
                                merge_cmd_baton->ctx->cancel_baton,
                                pool));
@@ -5568,6 +5583,7 @@ do_file_merge(const char *url1,
                                        r->start,
                                        r->end,
                                        mimetype1, mimetype2,
+                                       NULL, SVN_INVALID_REVNUM, /* XXX API */
                                        propchanges, props1,
                                        merge_b));
               single_file_merge_notify(notify_b, target_wcpath,
@@ -5931,7 +5947,7 @@ do_directory_merge(const char *url1,
   SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
                               mergeinfo_path, target_entry, source_root_url,
                               url1, url2, revision1, revision2,
-                              ra_session, adm_access,
+                              honor_mergeinfo, ra_session, adm_access,
                               depth, pool));
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
@@ -7926,7 +7942,7 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
   apr_pool_t *sesspool;
-  svn_boolean_t use_sleep;
+  svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
 

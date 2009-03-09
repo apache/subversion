@@ -733,7 +733,7 @@ merge_xml_in_filter(ap_filter_t *f,
 }
 
 
-/* Repsonse handler for POST requests (protocol-v2 commits).  */
+/* Response handler for POST requests (protocol-v2 commits).  */
 static int dav_svn__handler(request_rec *r)
 {
   /* HTTP-defined Methods we handle */

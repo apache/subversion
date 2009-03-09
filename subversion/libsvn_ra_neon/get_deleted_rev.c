@@ -2,7 +2,7 @@
  * get_deleted_rev.c :  ra_neon get_deleted_rev API implementation.
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -161,8 +161,8 @@ svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.5.x servers and older don't support this report. */
   if (status_code == 501)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                            _("'get-deleted-rev' REPORT not implemented"));
+    return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("'%s' REPORT not implemented"), "get-deleted-rev");
 
   SVN_ERR(err);
   *revision_deleted = b->revision;

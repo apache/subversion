@@ -30,6 +30,7 @@
 #include "svn_delta.h"
 #include "svn_base64.h"
 #include "svn_version.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 
@@ -102,6 +103,9 @@ typedef struct {
   /* Changed and removed properties. */
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
+
+  /* In HTTP v2, this is the file/directory version we think we're changing. */
+  svn_revnum_t base_revision;
 
   svn_ra_serf__simple_request_context_t progress;
 } proppatch_context_t;
@@ -277,7 +281,7 @@ handle_checkout(serf_request_t *request,
         }
       apr_uri_parse(pool, location, &uri);
 
-      ctx->resource_url = apr_pstrdup(ctx->pool, uri.path);
+      ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
 
   return status;
@@ -345,9 +349,9 @@ checkout_dir(dir_context_t *dir)
           dir->checkout->activity_url = dir->commit->activity_url;
           dir->checkout->activity_url_len = dir->commit->activity_url_len;
           dir->checkout->resource_url =
-            svn_path_url_add_component(dir->parent_dir->checkout->resource_url,
-                                       svn_path_basename(dir->name, dir->pool),
-                                       dir->pool);
+            svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
+                                        svn_uri_basename(dir->name, dir->pool),
+                                        dir->pool);
 
           apr_hash_set(dir->commit->copied_entries,
                        apr_pstrdup(dir->commit->pool, dir->name),
@@ -453,7 +457,7 @@ get_version_url(const char **checked_in_url,
 
       if (current_version)
         {
-          *checked_in_url = current_version->data;
+          *checked_in_url = svn_uri_canonicalize(current_version->data, pool);
           return SVN_NO_ERROR;
         }
     }
@@ -487,9 +491,11 @@ get_version_url(const char **checked_in_url,
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' not present"),
                                  session->repos_url.path);
+
+      root_checkout = svn_uri_canonicalize(root_checkout, pool);
     }
 
-  *checked_in_url = svn_path_url_add_component(root_checkout, relpath, pool);
+  *checked_in_url = svn_path_url_add_component2(root_checkout, relpath, pool);
 
   return SVN_NO_ERROR;
 }
@@ -525,9 +531,9 @@ checkout_file(file_context_t *file)
           file->checkout->activity_url_len = file->commit->activity_url_len;
           diff_path = svn_path_is_child(dir->name, file->name, file->pool);
           file->checkout->resource_url =
-            svn_path_url_add_component(dir->checkout->resource_url,
-                                       diff_path,
-                                       file->pool);
+            svn_path_url_add_component2(dir->checkout->resource_url,
+                                        diff_path,
+                                        file->pool);
           return SVN_NO_ERROR;
         }
     }
@@ -642,6 +648,13 @@ setup_proppatch_headers(serf_bucket_t *headers,
                         apr_pool_t *pool)
 {
   proppatch_context_t *proppatch = baton;
+
+  if (SVN_IS_VALID_REVNUM(proppatch->base_revision))
+    {
+      serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
+                              apr_psprintf(pool, "%ld", 
+                                           proppatch->base_revision));
+    }
 
   if (proppatch->name && proppatch->commit->lock_tokens)
     {
@@ -793,6 +806,12 @@ setup_put_headers(serf_bucket_t *headers,
 {
   file_context_t *ctx = baton;
 
+  if (SVN_IS_VALID_REVNUM(ctx->base_revision))
+    {
+      serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
+                              apr_psprintf(pool, "%ld", ctx->base_revision));
+    }
+
   if (ctx->base_checksum)
     {
       serf_bucket_headers_set(headers, SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
@@ -858,11 +877,18 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 
   /* The Dest URI must be absolute.  Bummer. */
   uri = dir->commit->session->repos_url;
-  uri.path =
-      (char*)svn_path_url_add_component(dir->parent_dir->checkout->resource_url,
-                                        svn_path_basename(dir->name, pool),
-                                        pool);
 
+  if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
+    {
+      uri.path = (char *)dir->url;
+    }
+  else
+    {
+      uri.path = (char *)svn_path_url_add_component2(
+        dir->parent_dir->checkout->resource_url,
+        svn_uri_basename(dir->name, pool),
+        pool);
+    }
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
@@ -979,9 +1005,9 @@ post_headers_iterator_callback(void *baton,
          given, and store the whole lot of it in the commit context.  */
       prc_cc->txn_name = apr_pstrdup(prc_cc->pool, val);
       prc_cc->txn_url =
-        svn_path_url_add_component(sess->txn_stub, val, prc_cc->pool);
+        svn_path_url_add_component2(sess->txn_stub, val, prc_cc->pool);
       prc_cc->txn_root_url =
-        svn_path_url_add_component(sess->txn_root_stub, val, prc_cc->pool);
+        svn_path_url_add_component2(sess->txn_root_stub, val, prc_cc->pool);
     }
   return 0;
 }
@@ -1072,8 +1098,8 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__get_relative_path(&rel_path,
                                              ctx->session->repos_url.path,
                                              ctx->session, NULL, dir_pool));
-      ctx->txn_root_url = svn_path_url_add_component(ctx->txn_root_url,
-                                                     rel_path, ctx->pool);
+      ctx->txn_root_url = svn_path_url_add_component2(ctx->txn_root_url,
+                                                      rel_path, ctx->pool);
 
       /* Build our directory baton. */
       dir = apr_pcalloc(dir_pool, sizeof(*dir));
@@ -1119,8 +1145,8 @@ open_root(void *edit_baton,
                                   "requested activity-collection-set value"));
 
       ctx->activity_url = 
-        svn_path_url_add_component(activity_str, svn_uuid_generate(ctx->pool),
-                                   ctx->pool);
+        svn_path_url_add_component2(activity_str, svn_uuid_generate(ctx->pool),
+                                    ctx->pool);
       ctx->activity_url_len = strlen(ctx->activity_url);
 
       /* Create our activity URL now on the server. */
@@ -1203,6 +1229,7 @@ open_root(void *edit_baton,
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
   for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
        hi = apr_hash_next(hi))
@@ -1252,16 +1279,16 @@ delete_entry(const char *path,
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
-      delete_target = svn_path_url_add_component(dir->commit->txn_root_url, 
-                                                 path, dir->pool);
+      delete_target = svn_path_url_add_component2(dir->commit->txn_root_url, 
+                                                  path, dir->pool);
     }
   else
     {
       /* Ensure our directory has been checked out */
       SVN_ERR(checkout_dir(dir));
-      delete_target = svn_path_url_add_component(dir->checkout->resource_url,
-                                                 svn_path_basename(path, pool),
-                                                 pool);
+      delete_target = svn_path_url_add_component2(dir->checkout->resource_url,
+                                                  svn_uri_basename(path, pool),
+                                                  pool);
     }
 
   /* DELETE our entry */
@@ -1356,8 +1383,8 @@ add_directory(const char *path,
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
-      dir->url = svn_path_url_add_component(parent->commit->txn_root_url,
-                                            path, dir->pool);
+      dir->url = svn_path_url_add_component2(parent->commit->txn_root_url,
+                                             path, dir->pool);
       mkcol_target = dir->url;
     }
   else
@@ -1365,12 +1392,12 @@ add_directory(const char *path,
       /* Ensure our parent is checked out. */ 
       SVN_ERR(checkout_dir(parent));
 
-      dir->url = svn_path_url_add_component(parent->commit->checked_in_url,
-                                            path, dir->pool);
-      mkcol_target = svn_path_url_add_component(parent->checkout->resource_url,
-                                                svn_path_basename(path,
-                                                                  dir->pool),
-                                                dir->pool);
+      dir->url = svn_path_url_add_component2(parent->commit->checked_in_url,
+                                             path, dir->pool);
+      mkcol_target = svn_path_url_add_component2(
+                               parent->checkout->resource_url,
+                               svn_uri_basename(path, dir->pool),
+                               dir->pool);
     }
 
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
@@ -1404,8 +1431,8 @@ add_directory(const char *path,
                                              dir->commit->conn,
                                              uri.path, dir->copy_revision,
                                              NULL, dir_pool));
-      req_url = svn_path_url_add_component(basecoll_url, rel_copy_path,
-                                           dir->pool);
+      req_url = svn_path_url_add_component2(basecoll_url, rel_copy_path,
+                                            dir->pool);
 
       handler->method = "COPY";
       handler->path = req_url;
@@ -1426,9 +1453,10 @@ add_directory(const char *path,
     {
       SVN_ERR(add_dir_ctx->server_error.error);
       return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                               _("Adding a directory failed: %s on %s (%d)"),
+                               _("Adding a directory failed: %s on %s "
+                                 "(%d %s)"),
                                handler->method, handler->path,
-                               add_dir_ctx->status);
+                               add_dir_ctx->status, add_dir_ctx->reason);
     }
 
   *child_baton = dir;
@@ -1461,8 +1489,8 @@ open_directory(const char *path,
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
-      dir->url = svn_path_url_add_component(parent->commit->txn_root_url,
-                                            path, dir->pool);
+      dir->url = svn_path_url_add_component2(parent->commit->txn_root_url,
+                                             path, dir->pool);
     }
   else
     {
@@ -1548,6 +1576,7 @@ close_directory(void *dir_baton,
       proppatch_ctx->name = dir->name;
       proppatch_ctx->changed_props = dir->changed_props;
       proppatch_ctx->removed_props = dir->removed_props;
+      proppatch_ctx->base_revision = dir->base_revision;
 
       if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
         {
@@ -1587,7 +1616,6 @@ add_file(const char *path,
   dir_context_t *dir = parent_baton;
   file_context_t *new_file;
   const char *deleted_parent = path;
-  const char *head_target_url = NULL;
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
@@ -1609,46 +1637,32 @@ add_file(const char *path,
      transaction root tree for this thing.  */
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
-      new_file->url = svn_path_url_add_component(dir->commit->txn_root_url,
-                                                 path, new_file->pool);
-      head_target_url = new_file->url;
+      new_file->url = svn_path_url_add_component2(dir->commit->txn_root_url,
+                                                  path, new_file->pool);
     }
-  /* Otherwise, we'll look at the public HEAD URL, but only if we
-     haven't deleted it in this commit already - directly, or
-     indirectly through its parent directories - or if the parent
-     directory was also added (without history) in this commit.
-   */
   else
     {
       /* Ensure our parent directory has been checked out */
       SVN_ERR(checkout_dir(dir));
 
       new_file->url =
-        svn_path_url_add_component(dir->checkout->resource_url,
-                                   svn_path_basename(path, new_file->pool),
-                                       new_file->pool);
-
-      while (deleted_parent && deleted_parent[0] != '\0')
-        {
-          if (apr_hash_get(dir->commit->deleted_entries,
-                           deleted_parent, APR_HASH_KEY_STRING))
-            {
-              break;
-            }
-          deleted_parent = svn_path_dirname(deleted_parent, file_pool);
-        };
-
-      if (! ((dir->added && !dir->copy_path) ||
-             (deleted_parent && deleted_parent[0] != '\0')))
-        {
-          head_target_url = 
-            svn_path_url_add_component(dir->commit->session->repos_url.path,
-                                       path, new_file->pool);
-        }
+        svn_path_url_add_component2(dir->checkout->resource_url,
+                                    svn_uri_basename(path, new_file->pool),
+                                    new_file->pool);
     }
 
-  /* If we calculated a URL to run a HEAD existence check against, do so. */
-  if (head_target_url)
+  while (deleted_parent && deleted_parent[0] != '\0')
+    {
+      if (apr_hash_get(dir->commit->deleted_entries, 
+                       deleted_parent, APR_HASH_KEY_STRING))
+        {
+          break;
+        }
+      deleted_parent = svn_uri_dirname(deleted_parent, file_pool);
+    }
+
+  if (! ((dir->added && !dir->copy_path) ||
+         (deleted_parent && deleted_parent[0] != '\0')))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;
@@ -1659,7 +1673,9 @@ add_file(const char *path,
       handler->session = new_file->commit->session;
       handler->conn = new_file->commit->conn;
       handler->method = "HEAD";
-      handler->path = head_target_url;
+      handler->path = svn_path_url_add_component2(
+        dir->commit->session->repos_url.path,
+        path, new_file->pool);
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = head_ctx;
       svn_ra_serf__request_create(handler);
@@ -1705,8 +1721,8 @@ open_file(const char *path,
 
   if (USING_HTTPV2_COMMIT_SUPPORT(parent->commit))
     {
-      new_file->url = svn_path_url_add_component(parent->commit->txn_root_url,
-                                                 path, new_file->pool);
+      new_file->url = svn_path_url_add_component2(parent->commit->txn_root_url,
+                                                  path, new_file->pool);
     }
   else
     {
@@ -1826,7 +1842,7 @@ close_file(void *file_baton,
                                              ctx->commit->conn,
                                              uri.path, ctx->copy_revision,
                                              NULL, pool));
-      req_url = svn_path_url_add_component(basecoll_url, rel_copy_path, pool);
+      req_url = svn_path_url_add_component2(basecoll_url, rel_copy_path, pool);
 
       handler = apr_pcalloc(pool, sizeof(*handler));
       handler->method = "COPY";
@@ -1916,6 +1932,7 @@ close_file(void *file_baton,
       proppatch->commit = ctx->commit;
       proppatch->changed_props = ctx->changed_props;
       proppatch->removed_props = ctx->removed_props;
+      proppatch->base_revision = ctx->base_revision;
 
       SVN_ERR(proppatch_resource(proppatch, ctx->commit, ctx->pool));
     }
@@ -2173,6 +2190,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
   if (value)
     {

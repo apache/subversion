@@ -207,6 +207,7 @@ typedef struct report_info_t
 
   /* controlling file_baton and textdelta handler */
   void *file_baton;
+  const char *base_checksum;
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
@@ -356,7 +357,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       report_info_t *new_info;
 
-      new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
+      new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->lock_token = NULL;
 
@@ -398,7 +399,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       report_info_t *new_info;
 
-      new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
+      new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
@@ -781,7 +782,7 @@ handle_fetch(serf_request_t *request,
         }
 
       err = info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                      NULL,
+                                                      info->base_checksum,
                                                       info->editor_pool,
                                                       &info->textdelta,
                                                       &info->textdelta_baton);
@@ -1076,7 +1077,7 @@ handle_propchange_only(report_info_t *info)
   if (info->fetch_file)
     {
       SVN_ERR(info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                    NULL,
+                                                    info->base_checksum,
                                                     info->editor_pool,
                                                     &info->textdelta,
                                                     &info->textdelta_baton));
@@ -1577,8 +1578,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "fetch-file") == 0)
         {
           info = parser->state->private;
+          info->base_checksum = svn_xml_get_attr_value("base-checksum", attrs);
+
+          if (info->base_checksum)
+            info->base_checksum = apr_pstrdup(info->pool, info->base_checksum);
 
           info->fetch_file = TRUE;
+
         }
       else if (strcmp(name.name, "set-prop") == 0 ||
                strcmp(name.name, "remove-prop") == 0)
@@ -2177,17 +2183,21 @@ finish_report(void *report_baton,
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
-      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
+      status = serf_context_run(sess->context, sess->timeout, pool);
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          continue;
+          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+                                  NULL,
+                                  _("Connection timed out"));
         }
       if (status)
         {
           if (parser_ctx->error)
-            svn_error_clear(sess->pending_error);
-
-          SVN_ERR(parser_ctx->error);
+            {
+              svn_error_clear(sess->pending_error);
+              sess->pending_error = SVN_NO_ERROR;
+              return parser_ctx->error;
+            }
           SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
@@ -2589,7 +2599,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* Fetch properties. */
   fetch_props = apr_hash_make(pool);
 
-  fetch_url = svn_path_url_add_component(session->repos_url.path, path, pool);
+  fetch_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
 
   /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
    *
@@ -2603,7 +2613,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
                                              session, conn, fetch_url,
                                              revision, NULL, pool));
-      fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
+      fetch_url = svn_path_url_add_component2(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }
 

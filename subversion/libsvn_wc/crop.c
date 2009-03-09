@@ -24,6 +24,7 @@
 #include "svn_error.h"
 #include "svn_client.h"
 #include "svn_error_codes.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "entries.h"
 
@@ -98,7 +99,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
         continue;
 
       current_entry = val;
-      this_path = svn_path_join(dir_path, current_entry->name, iterpool);
+      this_path = svn_dirent_join(dir_path, current_entry->name, iterpool);
 
       if (current_entry->kind == svn_node_file)
         {
@@ -208,7 +209,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
       _("Can only crop a working copy with a restrictive depth"));
 
   /* Only makes sense to crop a dir target. */
-  full_path = svn_path_join(svn_wc_adm_access_path(anchor), target, pool);
+  full_path = svn_dirent_join(svn_wc_adm_access_path(anchor), target, pool);
   SVN_ERR(svn_wc_entry(&entry, full_path, anchor, FALSE, pool));
   if (!entry || entry->kind != svn_node_dir)
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -244,7 +245,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
         {
           const char *bname, *pname;
           svn_error_t *err = NULL;
-          svn_path_split(full_path, &pname, &bname, pool);
+          svn_dirent_split(full_path, &pname, &bname, pool);
           SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, anchor, pname,
                                                 pool));
           if (! p_access)
@@ -290,7 +291,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                                       FALSE, pool));
 
           target_entry = apr_hash_get(parent_entries,
-                                      svn_path_basename(full_path, pool),
+                                      svn_dirent_basename(full_path, pool),
                                       APR_HASH_KEY_STRING);
 
           target_entry->depth = svn_depth_exclude;

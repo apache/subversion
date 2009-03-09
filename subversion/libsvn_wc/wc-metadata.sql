@@ -17,13 +17,14 @@
  */
 
 /*
- * the KIND column in these tables has one of five values:
+ * the KIND column in these tables has one of the following values:
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
+ *   "subdir"
  *
- * the PRESENCE column in these tables has one of five values:
+ * the PRESENCE column in these tables has one of the following values:
  *   "normal"
  *   "absent" -- server has declared it "absent" (ie. authz failure)
  *   "excluded" -- administratively excluded
@@ -37,12 +38,17 @@
 CREATE TABLE REPOSITORY (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  /* the root URL of the repository */
-  root  TEXT NOT NULL,
+  /* The root URL of the repository. This value is URI-encoded.  */
+  root  TEXT UNIQUE NOT NULL,
 
   /* the UUID of the repository */
   uuid  TEXT NOT NULL
   );
+
+/* Note: a repository (identified by its UUID) may appear at multiple URLs.
+   For example, http://example.com/repos/ and https://example.com/repos/.  */
+CREATE INDEX I_UUID ON REPOSITORY (uuid);
+CREATE INDEX I_ROOT ON REPOSITORY (root);
 
 
 /* ------------------------------------------------------------------------- */
@@ -52,7 +58,7 @@ CREATE TABLE WCROOT (
 
   /* absolute path in the local filesystem.  NULL if storing metadata in
      the wcroot itself. */
-  local_abspath  TEXT
+  local_abspath  TEXT UNIQUE
   );
 
 CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
@@ -61,13 +67,10 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE BASE_NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  /* the WCROOT that we are part of. NULL if the metadata is stored in
-     {wcroot}/.svn/ */
-  wc_id  INTEGER,
-
-  /* relative path from wcroot. this will be "" for the wcroot. */
+  /* specifies the location of this node in the local filesystem. wc_id
+     implies an absolute path, and local_relpath is relative to that
+     location (meaning it will be "" for the wcroot). */
+  wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
 
   /* the repository this node is part of, and the relative path [to its
@@ -79,9 +82,10 @@ CREATE TABLE BASE_NODE (
   repos_id  INTEGER,
   repos_relpath  TEXT,
 
-  /* parent node. used to aggregate all child nodes of a given parent.
-     NULL if this is the wcroot node. */
-  parent_id  INTEGER,
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
 
   /* is this node "present" or has it been excluded for some reason? */
   presence  TEXT NOT NULL,
@@ -99,14 +103,20 @@ CREATE TABLE BASE_NODE (
   checksum  TEXT,
   translated_size  INTEGER,
 
-  /* Information about the last change to this node. these could be
-     NULL for non-present nodes, when we have no info. */
+  /* Information about the last change to this node. changed_rev must be
+     not-null if this node has presence=="normal". changed_date and
+     changed_author may be null if the corresponding revprops are missing.
+
+     All three values may be null for non-present nodes.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
   depth  TEXT,
+
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
      ### internal to libsvn_wc, but those might be used in answering some
@@ -121,11 +131,12 @@ CREATE TABLE BASE_NODE (
      been created [for this revision number]. Note: boolean value. */
   /* ### this will probably disappear in favor of incomplete child
      ### nodes */
-  incomplete_children  INTEGER
+  incomplete_children  INTEGER,
+
+  PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE UNIQUE INDEX I_PATH ON BASE_NODE (wc_id, local_relpath);
-CREATE INDEX I_PARENT ON BASE_NODE (parent_id);
+CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -151,10 +162,8 @@ CREATE TABLE PRISTINE (
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE WORKING_NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT, 
-
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER,
+  wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -186,8 +195,11 @@ CREATE TABLE WORKING_NODE (
   checksum  TEXT,
   translated_size  INTEGER,
 
-  /* if this node was added-with-history, then the following fields will
-     be NOT NULL */
+  /* If this node was added-with-history, then the following fields may
+     have information about their source node. See BASE_NODE.changed_* for
+     more information.
+
+     For added or not-present nodes, these may be null.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
@@ -196,26 +208,29 @@ CREATE TABLE WORKING_NODE (
   /* ### depth on WORKING? seems this is a BASE-only concept. how do
      ### you do "files" on an added-directory? can't really ignore
      ### the subdirs! */
+  /* ### maybe a WC-to-WC copy can retain a depth?  */
   depth  TEXT,
 
-  /* Where this node was copied from. Set only on the root of the copy,
-     and implied for all children. */
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
+
+  /* Where this node was copied/moved from. Set only on the root of the
+     operation, and implied for all children. */
   copyfrom_repos_id  INTEGER,
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
-  /* If this node was moved (rather than just copied), this specifies
-     the local_relpath of the source of the move. */
-  moved_from  TEXT,
+  /* Boolean value, specifying if this node was moved here (rather than just
+     copied). The source of the move is specified in copyfrom_*.  */
+  moved_here  INTEGER,
 
-  /* If this node was moved (rather than just deleted), this specifies
-     where the BASE node was moved to.
+  /* If the underlying node was moved (rather than just deleted), this
+     specifies the local_relpath of where the BASE node was moved to.
+     This is set only on the root of a move, and implied for all children.
 
-     ### uh oh. what if the BASE is moved, then a directory is copied
-     ### here, then a child is moved? does "moved_to" apply to the BASE,
-     ### to to the replacing nodes?
-     ### answer: only use moved_to for the *root* of a moved tree. thus,
-     ### any moves below that point *must* apply to the replacing nodes. */
+     Note that moved_to never refers to *this* node. It always refers
+     to the "underlying" node, whether that is BASE or a child node
+     implied from a parent's move/copy.  */
   moved_to  TEXT,
 
   /* ### Do we need this?  We've currently got various mod time APIs
@@ -225,20 +240,30 @@ CREATE TABLE WORKING_NODE (
 
   /* serialized skel of this node's properties. could be NULL if we
      have no information about the properties (a non-present node). */
-  properties  BLOB
+  properties  BLOB,
+
+  /* should the node on disk be kept after a schedule delete?
+
+     ### Bert points out that this can disappear once we get centralized 
+     ### with our metadata.  The entire reason for this flag to exist is
+     ### so that the admin area can exist for the commit of a the delete,
+     ### and so the post-commit cleanup knows not to actually delete the dir
+     ### from disk (which is why the flag is only ever set on the this_dir
+     ### entry in WC-OLD.)  In the New World, we don't need to keep the old
+     ### admin area around, so this flag can disappear. */
+  keep_local  INTEGER,
+
+  PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE UNIQUE INDEX I_WORKING_PATH ON WORKING_NODE (wc_id, local_relpath);
 CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
 
 CREATE TABLE ACTUAL_NODE (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER,
+  wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -264,9 +289,12 @@ CREATE TABLE ACTUAL_NODE (
   text_mod  TEXT,
 
   /* if a directory, serialized data for all of tree conflicts therein. */
-  tree_conflict_data  TEXT
+  tree_conflict_data  TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
   );
 
+CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
 CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 

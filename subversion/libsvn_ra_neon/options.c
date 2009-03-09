@@ -2,7 +2,7 @@
  * options.c :  routines for performing OPTIONS server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -272,9 +272,9 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   if (msg && *msg)
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("The OPTIONS request returned invalid XML "
+                              _("The %s request returned invalid XML "
                                 "in the response: %s (%s)"),
-                              msg, ras->url->data);
+                              "OPTIONS", msg, ras->url->data);
       goto cleanup;
     }
 

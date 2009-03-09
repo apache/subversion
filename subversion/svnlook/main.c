@@ -1331,8 +1331,6 @@ do_cat(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
   svn_fs_root_t *root;
   svn_node_kind_t kind;
   svn_stream_t *fstream, *stdout_stream;
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_size_t len = SVN__STREAM_CHUNK_SIZE;
 
   SVN_ERR(get_root(&root, c, pool));
   SVN_ERR(verify_path(&kind, root, path, pool));
@@ -1345,15 +1343,9 @@ do_cat(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_file_contents(&fstream, root, path, pool));
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
-  do
-    {
-      SVN_ERR(check_cancel(NULL));
-      SVN_ERR(svn_stream_read(fstream, buf, &len));
-      SVN_ERR(svn_stream_write(stdout_stream, buf, &len));
-    }
-  while (len == SVN__STREAM_CHUNK_SIZE);
 
-  return SVN_NO_ERROR;
+  return svn_stream_copy3(fstream, svn_stream_disown(stdout_stream, pool),
+                          check_cancel, NULL, pool);
 }
 
 

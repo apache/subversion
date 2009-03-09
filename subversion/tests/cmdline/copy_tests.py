@@ -1600,7 +1600,11 @@ def url_to_non_existent_url_path(sbox):
 
   # Look for both possible versions of the error message, as the DAV
   # error is worded differently from that of other RA layers.
-  msg = ".*: (Path 'G(/C/E)?' not present|.*G(/C/E)?' path not found)"
+  msg = ".*: (" + \
+        "|".join(["Path 'G(/C/E)?' not present",
+                  ".*G(/C/E)?' path not found",
+                  "File not found.*'/G/C/E/I'",
+                  ]) + ")"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist

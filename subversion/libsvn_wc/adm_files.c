@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 
@@ -125,11 +126,11 @@ v_extend_with_adm_name(const char *path,
   const char *this;
 
   /* Tack on the administrative subdirectory. */
-  path = svn_path_join(path, adm_dir_name, pool);
+  path = svn_dirent_join(path, adm_dir_name, pool);
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
-    path = svn_path_join(path, SVN_WC__ADM_TMP, pool);
+    path = svn_dirent_join(path, SVN_WC__ADM_TMP, pool);
 
   /* Tack on everything else. */
   while ((this = va_arg(ap, const char *)) != NULL)
@@ -137,7 +138,7 @@ v_extend_with_adm_name(const char *path,
       if (this[0] == '\0')
         continue;
 
-      path = svn_path_join(path, this, pool);
+      path = svn_dirent_join(path, this, pool);
     }
 
   if (extension)
@@ -278,7 +279,7 @@ svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
   const char *tmp_path;
   const char *base_path;
 
-  svn_path_split(path, &parent_path, &base_name, pool);
+  svn_dirent_split(path, &parent_path, &base_name, pool);
 
   /* Extend tmp name. */
   tmp_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, TRUE, pool,
@@ -300,7 +301,7 @@ svn_wc__text_base_path(const char *path,
 {
   const char *newpath, *base_name;
 
-  svn_path_split(path, &newpath, &base_name, pool);
+  svn_dirent_split(path, &newpath, &base_name, pool);
   return extend_with_adm_name(newpath,
                               SVN_WC__BASE_EXT,
                               tmp,
@@ -316,7 +317,7 @@ svn_wc__text_revert_path(const char *path,
 {
   const char *newpath, *base_name;
 
-  svn_path_split(path, &newpath, &base_name, pool);
+  svn_dirent_split(path, &newpath, &base_name, pool);
   return extend_with_adm_name(newpath,
                               SVN_WC__REVERT_EXT,
                               FALSE,
@@ -388,7 +389,7 @@ svn_wc__prop_path(const char **prop_path,
 
       const char *base_name;
 
-      svn_path_split(path, prop_path, &base_name, pool);
+      svn_dirent_split(path, prop_path, &base_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
          extensions[props_kind],
@@ -555,7 +556,7 @@ svn_wc__open_writable_base(svn_stream_t **stream,
   const char *parent_path;
   const char *base_name;
 
-  svn_path_split(path, &parent_path, &base_name, scratch_pool);
+  svn_dirent_split(path, &parent_path, &base_name, scratch_pool);
 
   return open_adm_file(stream, temp_base_path,
                        parent_path,
@@ -588,7 +589,7 @@ svn_wc__write_old_wcprops(const char *path,
   if (kind == svn_node_dir)
     parent_dir = path;
   else
-    svn_path_split(path, &parent_dir, &base_name, pool);
+    svn_dirent_split(path, &parent_dir, &base_name, pool);
 
   /* At this point, we know we need to open a file in the admin area
      of parent_dir.  First check that parent_dir is a working copy: */
@@ -632,15 +633,8 @@ make_empty_adm(const char *path, apr_pool_t *pool)
 
 
 static svn_error_t *
-init_adm_tmp_area(const svn_wc_adm_access_t *adm_access,
-                  apr_pool_t *pool)
+init_adm_tmp_area(const char *path, apr_pool_t *pool)
 {
-  const char *path;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  path = svn_wc_adm_access_path(adm_access);
-
   /* SVN_WC__ADM_TMP */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
 
@@ -690,7 +684,7 @@ init_adm(const char *path,
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROPS, FALSE, pool));
 
   /** Init the tmp area. ***/
-  SVN_ERR(init_adm_tmp_area(adm_access, pool));
+  SVN_ERR(init_adm_tmp_area(path, pool));
 
   /** Initialize each administrative file. */
 
@@ -777,6 +771,7 @@ svn_error_t *
 svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
                              apr_pool_t *scratch_pool)
 {
+  const char *path = svn_wc_adm_access_path(adm_access);
   const char *tmp_path;
 
   /* If the admin area doesn't even *exist*, then the temp area is
@@ -787,13 +782,12 @@ svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                               SVN_WC__ADM_TMP, scratch_pool);
+  tmp_path = svn_wc__adm_child(path, SVN_WC__ADM_TMP, scratch_pool);
 
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
 
   /* Now, rebuild the tmp area. */
-  return init_adm_tmp_area(adm_access, scratch_pool);
+  return init_adm_tmp_area(path, scratch_pool);
 }
 
 

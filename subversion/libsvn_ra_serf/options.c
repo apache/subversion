@@ -32,6 +32,7 @@
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 
@@ -182,7 +183,8 @@ end_options(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "href") == 0)
     {
       options_ctx->collect_cdata = FALSE;
-      options_ctx->activity_collection = options_ctx->attr_val;
+      options_ctx->activity_collection =
+                 svn_uri_canonicalize(options_ctx->attr_val, options_ctx->pool);
       pop_state(options_ctx);
     }
 

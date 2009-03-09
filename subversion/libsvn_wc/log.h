@@ -278,7 +278,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
    to be upgraded to FORMAT. */
 svn_error_t *
 svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
-                             svn_wc_adm_access_t *adm_access,
                              int format,
                              apr_pool_t *pool);
 

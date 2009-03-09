@@ -51,6 +51,10 @@
 const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if ((path[0] == '/' || path[0] == '\\') && path[1] == path[0])
+    return svn_dirent_internal_style(path, pool);
+#endif
   return svn_uri_internal_style(path, pool);
 }
 
@@ -58,6 +62,10 @@ svn_path_internal_style(const char *path, apr_pool_t *pool)
 const char *
 svn_path_local_style(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_local_style(path, pool);
+#endif
   return svn_uri_local_style(path, pool);
 }
 
@@ -86,10 +94,12 @@ is_canonical(const char *path,
   return (! SVN_PATH_IS_PLATFORM_EMPTY(path, len)
           && strstr(path, "/./") == NULL
           && (len == 0
+              || (len == 1 && path[0] == '/')
+              || (path[len-1] != '/')
+#if defined(WIN32) || defined(__CYGWIN__)
               || svn_dirent_is_root(path, len)
-              /* The len > 0 check is redundant, but here to make
-               * sure we never ever end up indexing with -1. */
-              || (len > 0 && path[len-1] != '/')));
+#endif
+              ));
 }
 #endif
 
@@ -381,23 +391,6 @@ svn_path_basename(const char *path, apr_pool_t *pool)
 
   return apr_pstrmemdup(pool, path + start, len - start);
 }
-
-
-void
-svn_path_split(const char *path,
-               const char **dirpath,
-               const char **base_name,
-               apr_pool_t *pool)
-{
-  assert(dirpath != base_name);
-
-  if (dirpath)
-    *dirpath = svn_path_dirname(path, pool);
-
-  if (base_name)
-    *base_name = svn_path_basename(path, pool);
-}
-
 
 int
 svn_path_is_empty(const char *path)
@@ -943,9 +936,10 @@ svn_path_url_add_component2(const char *url,
                             const char *component,
                             apr_pool_t *pool)
 {
-  assert(svn_path_is_canonical(url, pool));
+  /* = svn_path_uri_encode() but without always copying */
+  component = uri_escape(component, uri_char_validity, pool);
 
-  return svn_path_join(url, svn_path_uri_encode(component, pool), pool);
+  return svn_path_join(url, component, pool);
 }
 
 svn_error_t *
@@ -961,57 +955,27 @@ svn_path_get_absolute(const char **pabsolute,
 
   return svn_dirent_get_absolute(pabsolute, relative, pool);
 }
-
-
-svn_error_t *
-svn_path_split_if_file(const char *path,
-                       const char **pdirectory,
-                       const char **pfile,
-                       apr_pool_t *pool)
-{
-  apr_finfo_t finfo;
-  svn_error_t *err;
-
-  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
-
-  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
-  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-    return err;
-
-  if (err || finfo.filetype == APR_REG)
-    {
-      svn_error_clear(err);
-      svn_path_split(path, pdirectory, pfile, pool);
-    }
-  else if (finfo.filetype == APR_DIR)
-    {
-      *pdirectory = path;
-      *pfile = SVN_EMPTY_PATH;
-    }
-  else
-    {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               _("'%s' is neither a file nor a directory name"),
-                               svn_path_local_style(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_canonicalize(path, pool);
+#endif
   return svn_uri_canonicalize(path, pool);
 }
-
 
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
 {
-  return svn_uri_is_canonical(path, pool);
+  return svn_uri_is_canonical(path, pool)
+#if defined(WIN32) || defined(__CYGWIN__)
+         || (path[0] == '/' && path[1] == '/' &&
+             svn_dirent_is_canonical(path, pool))
+#endif
+         ;
 }
-
 
 
 /** Get APR's internal path encoding. */

@@ -844,6 +844,14 @@ dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
                               ap_filter_t *output, dav_error *preferred_err,
                               apr_pool_t *pool);
 
+/* Send a "standardized" DAV error response based on the ERR's
+ * namespace and tag.
+ * 
+ * NOTE:  This was copied pretty much directory from mod_dav's
+ * dav_error_response_tag() function which is, sadly, not public.
+ */
+int dav_svn__error_response_tag(request_rec *r, dav_error *err);
+
 /*** mirror.c ***/
 
 /* Perform the fixup hook for the R request.  */

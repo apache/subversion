@@ -908,7 +908,12 @@ def set_props(dir, name, props):
     if props:
         _run_propset(dir, name, props)
     else:
-        svn_command('propdel "%s" "%s"' % (name, dir))
+        # Check if NAME exists on DIR before trying to delete it.
+        # As of 1.6 propdel no longer supports deleting a
+        # non-existent property.
+        out = launchsvn('propget "%s" "%s"' % (name, dir))
+        if (len(out) > 0):
+            svn_command('propdel "%s" "%s"' % (name, dir))
 
 def set_merge_props(dir, props):
     set_props(dir, opts["prop"], props)

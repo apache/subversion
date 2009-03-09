@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#  -*- coding: utf-8 -*-
 #
 #  diff_tests.py:  some basic diff tests
 #
@@ -18,6 +19,8 @@
 
 # General modules
 import sys, re, os, time
+import zlib, base64 #needed for diff_svnpatch test
+import textwrap
 
 # Our testing module
 import svntest
@@ -3025,6 +3028,405 @@ def diff_preexisting_rev_against_local_add(sbox):
   verify_expected_output(diff_output, "+Re-created file beta.")
 
 
+def diff_svnpatch(sbox):
+  "test svnpatch format in various ways"
+
+  re_svnpatch = re.compile("^=* SVNPATCH1 BLOCK =*$")
+
+  # a few helper functions
+  def extract_svnpatch(l):
+    ll = []
+    i = len(l) - 1
+    while i > 0:
+      if re_svnpatch.match(l[i]):
+        break
+      i = i - 1
+    ll = l[i+1:]
+    return ll
+  
+  def svnpatch_encode(l):
+    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
+
+  def svnpatch_decode(l):
+    return zlib.decompress(base64.decodestring("".join([x.rstrip("\n") for x in l])))
+
+  def verify_svnpatch(actual, expected):
+    if svntest.main.verbose_mode:
+      print("EXPECTED DECODED SVNPATCH:\n%s" % svnpatch_decode(expected))
+      print("ACTUAL DECODED SVNPATCH:\n%s" % svnpatch_decode(actual))
+    if actual != expected:
+      raise svntest.verify.SVNUnexpectedStdout("Unexpected svnpatch")
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  os.chdir(wc_dir)
+
+  # set a property and commit (we want to use propdel later)
+  beta_path = os.path.join('A', 'B', 'E', 'beta')
+  svntest.main.run_svn(None, 'propset', 'aprop',
+                       'a prop value', beta_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up')
+
+  # Ready.  Seven subtests follow in which we only verify the svnpatch
+  # block, i.e. no check is performed against the unidiff part.  Editor
+  # commands are written in clear-text-lists which we encode
+  # (gzip-base64'ed) before comparing against the extracted encoded
+  # chunk from the output.
+  #
+  # 1: BASE -> WC w/ local mods                  (svn diff)
+  # 2: BASE(r2) -> REPOS(r3/HEAD)                (svn diff -rBASE:HEAD)
+  # 3: BASE(r2) w/ local mods -> REPOS(r3/HEAD)  (svn diff -rBASE:HEAD)
+  # 4: REPOS(r3/HEAD) -> BASE(r2) w/ local mods  (svn diff -rHEAD:BASE)
+  # 5: REPOS(r3/HEAD) -> WC w/ local mods        (svn diff -rBASE)
+  # 6: REPOS(r2) -> REPOS(r3/HEAD)               (svn diff -r2:HEAD)
+  # 7: REPOS(r3/HEAD) -> REPOS(r2)               (svn diff -rHEAD:2)
+
+  # subtest 1
+  # remove a property
+  svntest.main.run_svn(None, 'propdel', 'aprop', beta_path)
+
+  # turn iota into a modified binary file
+  svntest.main.file_append('iota', "\nSome more bytes.\n")
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', 'iota')  
+
+  # update A/B/E/alpha and set a property
+  alpha_path = os.path.join('A', 'B', 'E', 'alpha')
+  svntest.main.file_append(alpha_path, "\nSome more bytes.\n")
+  svntest.main.run_svn(None, 'propset', 'newprop',
+                       'new val', alpha_path)  
+
+  # add dir
+  a_t_path = os.path.join('A', 'T')
+  os.mkdir(a_t_path)
+  svntest.main.run_svn(None, 'add', a_t_path)
+
+  # set dir prop
+  a_d_g_path = os.path.join('A', 'D', 'G')
+  svntest.main.run_svn(None, 'propset', 'dirprop',
+                       'prop val', a_d_g_path)  
+
+  # copy file
+  mu_path = os.path.join('A', 'mu')
+  mumu_path = os.path.join('A', 'T', 'mumu')
+  svntest.main.run_svn(None, 'cp', mu_path, mumu_path)  
+
+  # remove a file
+  lambda_path = os.path.join('A', 'B', 'lambda')
+  svntest.main.run_svn(None, 'rm', lambda_path)
+
+  # remove a dir (and recursively its childs)
+  # this is to test we only remove the top directory
+  a_d_h_path = os.path.join('A', 'D', 'H')
+  svntest.main.run_svn(None, 'rm', a_d_h_path)
+
+  svnpatch = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d3 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d3 2:c4 ) ) ',
+    '( change-file-prop ( 2:c4 7:newprop ( 7:new val ) ) ) ',
+    '( close-file ( 2:c4 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d3 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 5:aprop ( ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( close-dir ( 2:d3 ) ) ',
+    '( delete-entry ( 10:A/B/lambda 2:d2 ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d6 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d6 2:d7 ) ) ',
+    '( change-dir-prop ( 2:d7 7:dirprop ( 8:prop val ) ) ) ',
+    '( close-dir ( 2:d7 ) ) ',
+    '( delete-entry ( 5:A/D/H 2:d6 ) ) ',
+    '( close-dir ( 2:d6 ) ) ',
+    '( add-dir ( 3:A/T 2:d1 2:d8 ( ) ) ) ',
+    '( add-file ( 8:A/T/mumu 2:d8 2:c9 ( 4:A/mu ) ) ) ',
+    '( close-file ( 2:c9 ( ) ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c10 ) ) ',
+    '( change-file-prop ( 3:c10 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
+    '( apply-textdelta ( 3:c10 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c10 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c10 5:\000\000+\002, ) ) ',
+    '( textdelta-chunk ( 3:c10 2:\001\253 ) ) ',
+    '( textdelta-chunk ( 3:c10 44:+This is the file \'iota\'.\n',
+    '\n',
+    'Some more bytes.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c10 ) ) ',
+    '( close-file ( 3:c10 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch = svnpatch_encode(svnpatch)
+
+  exit_code, diff_output, err =  svntest.actions.run_and_verify_svn(
+                                   None, None, [],
+                                   'diff', '--svnpatch')
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  verify_svnpatch(svnpatch_output, expected_svnpatch)
+
+  # subtest 2
+  # Now commit r3 and update to r2 to perform a base/repos diff.
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up', '-r2')
+
+  # As we receive depth-first file-ish order from the server, revamp
+  # this a bit as this was depth-first directory-ish.  In other words,
+  # the two delete-entry commands directly follow open-dir's, rather
+  # than right prior to close-dir's.
+  svnpatch_output_base_head = svnpatch[:3]
+  svnpatch_output_base_head.append(svnpatch[11])
+  svnpatch_output_base_head += svnpatch[3:11] + svnpatch[12:14]
+  svnpatch_output_base_head.append(svnpatch[17])
+  svnpatch_output_base_head += svnpatch[14:17] + svnpatch[18:]
+
+  # No copy-path is received from the server.
+  svnpatch_output_base_head[20] =\
+    svnpatch_output_base_head[20].replace('4:A/mu ','')
+
+  expected_svnpatch_base_head = svnpatch_encode(svnpatch_output_base_head)
+
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'BASE:HEAD')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  verify_svnpatch(svnpatch_output, expected_svnpatch_base_head)
+
+  # subtest 3
+  # now do some local mods and diff -rBASE:HEAD once more
+  newfile_path = os.path.join('A', 'B', 'newfile')
+  gamma_path = os.path.join('A', 'D', 'gamma')
+  newdir_path = os.path.join('A', 'D', 'newdir')
+  foo_path = os.path.join('A', 'D', 'newdir', 'foo')
+  rho_path = os.path.join('A', 'D', 'G', 'rho')
+
+  svntest.main.file_append(newfile_path, "This is newfile.\n")
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'rm', gamma_path)
+  svntest.main.run_svn(None, 'mkdir', newdir_path)
+  svntest.main.file_append(foo_path, "This is foo.\n")
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'ps', 'rhoprop', 'rhoprop val', rho_path)
+
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'BASE:HEAD')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  verify_svnpatch(svnpatch_output, expected_svnpatch_base_head)
+
+  # subtest r4
+  # conversely compare HEAD to BASE now
+
+  svnpatch_output_head_base = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( add-file ( 10:A/B/lambda 2:d2 2:c3 ( ) ) ) ',
+    '( close-file ( 2:c3 ( ) ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( 12:a prop value ) ) ) ',
+    '( close-file ( 2:c6 ( ) ) ) ',
+    '( close-dir ( 2:d4 ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d7 ) ) ',
+    '( add-dir ( 5:A/D/H 2:d7 2:d8 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/chi 2:d8 2:c9 ( ) ) ) ',
+    '( close-file ( 2:c9 ( ) ) ) ',
+    '( add-file ( 11:A/D/H/omega 2:d8 3:c10 ( ) ) ) ',
+    '( close-file ( 3:c10 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/psi 2:d8 3:c11 ( ) ) ) ',
+    '( close-file ( 3:c11 ( ) ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d7 3:d12 ) ) ',
+    '( change-dir-prop ( 3:d12 7:dirprop ( ) ) ) ',
+    '( close-dir ( 3:d12 ) ) ',
+    '( close-dir ( 2:d7 ) ) ',
+    '( delete-entry ( 3:A/T 2:d1 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c14 ) ) ',
+    '( change-file-prop ( 3:c14 13:svn:mime-type ( ) ) ) ',
+    '( apply-textdelta ( 3:c14 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c14 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c14 5:\000\000\031\002\032 ) ) ',
+    '( textdelta-chunk ( 3:c14 2:\001\231 ) ) ',
+    '( textdelta-chunk ( 3:c14 26:\031This is the file \'iota\'.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c14 ) ) ',
+    '( close-file ( 3:c14 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch_head_base = svnpatch_encode(svnpatch_output_head_base)
+
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'HEAD:BASE')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  verify_svnpatch(svnpatch_output, expected_svnpatch_head_base)
+
+  # subtest 5
+  # compare HEAD to WC (with local mods)
+
+  svnpatch_output_head_wc = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( add-file ( 10:A/B/lambda 2:d2 2:c3 ( ) ) ) ',
+    '( close-file ( 2:c3 ( ) ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( 12:a prop value ) ) ) ',
+    '( close-file ( 2:c6 ( ) ) ) ',
+    '( close-dir ( 2:d4 ) ) ',
+    '( add-file ( 11:A/B/newfile 2:d2 2:c7 ( ) ) ) ',
+    '( close-file ( 2:c7 ( ) ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d8 ) ) ',
+    '( add-dir ( 5:A/D/H 2:d8 2:d9 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/chi 2:d9 3:c10 ( ) ) ) ',
+    '( close-file ( 3:c10 ( ) ) ) ',
+    '( add-file ( 11:A/D/H/omega 2:d9 3:c11 ( ) ) ) ',
+    '( close-file ( 3:c11 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/psi 2:d9 3:c12 ( ) ) ) ',
+    '( close-file ( 3:c12 ( ) ) ) ',
+    '( close-dir ( 2:d9 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d8 3:d13 ) ) ',
+    '( change-dir-prop ( 3:d13 7:dirprop ( ) ) ) ',
+    '( open-file ( 9:A/D/G/rho 3:d13 3:c14 ) ) ',
+    '( change-file-prop ( 3:c14 7:rhoprop ( 11:rhoprop val ) ) ) ',
+    '( close-file ( 3:c14 ( ) ) ) ',
+    '( close-dir ( 3:d13 ) ) ',
+    '( delete-entry ( 9:A/D/gamma 2:d8 ) ) ',
+    '( add-dir ( 10:A/D/newdir 2:d8 3:d15 ( ) ) ) ',
+    '( add-file ( 14:A/D/newdir/foo 3:d15 3:c16 ( ) ) ) ',
+    '( close-file ( 3:c16 ( ) ) ) ',
+    '( close-dir ( 3:d15 ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( delete-entry ( 3:A/T 2:d1 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c18 ) ) ',
+    '( change-file-prop ( 3:c18 13:svn:mime-type ( ) ) ) ',
+    '( apply-textdelta ( 3:c18 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c18 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c18 5:\000\000\031\002\032 ) ) ',
+    '( textdelta-chunk ( 3:c18 2:\001\231 ) ) ',
+    '( textdelta-chunk ( 3:c18 26:\031This is the file \'iota\'.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c18 ) ) ',
+    '( close-file ( 3:c18 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch_head_wc = svnpatch_encode(svnpatch_output_head_wc)
+
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'HEAD')
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  verify_svnpatch(svnpatch_output, expected_svnpatch_head_wc)
+
+  # subtest 6
+  # repos/repos diff, r2:r3
+
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', '2:HEAD')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  # should be rigorously equal to -rBASE:HEAD svnpatch diff (BASE is r2)
+  verify_svnpatch(svnpatch_output, expected_svnpatch_base_head)
+
+  # subtest 7
+  # conversely, repos/repos diff, r3:r2
+
+  # Note this output is pretty similar to svnpatch_output_head_base[] as
+  # it ought to be.  But, as we have some order-mismatches (depth-first
+  # directory-ish/file-ish), we rather put it clearly here and not start
+  # playing with a bloody list re-ordering plus a token-strip rampage.
+
+  svnpatch_output_head_r2 = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( delete-entry ( 3:A/T 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( add-file ( 10:A/B/lambda 2:d2 2:c3 ( ) ) ) ',
+    '( close-file ( 2:c3 ( ) ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( 12:a prop value ) ) ) ',
+    '( close-file ( 2:c6 ( ) ) ) ',
+    '( close-dir ( 2:d4 ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d7 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d7 2:d8 ) ) ',
+    '( change-dir-prop ( 2:d8 7:dirprop ( ) ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( add-dir ( 5:A/D/H 2:d7 2:d9 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/chi 2:d9 3:c10 ( ) ) ) ',
+    '( close-file ( 3:c10 ( ) ) ) ',
+    '( add-file ( 11:A/D/H/omega 2:d9 3:c11 ( ) ) ) ',
+    '( close-file ( 3:c11 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/psi 2:d9 3:c12 ( ) ) ) ',
+    '( close-file ( 3:c12 ( ) ) ) ',
+    '( close-dir ( 2:d9 ) ) ',
+    '( close-dir ( 2:d7 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c13 ) ) ',
+    '( change-file-prop ( 3:c13 13:svn:mime-type ( ) ) ) ',
+    '( apply-textdelta ( 3:c13 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c13 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c13 5:\000\000\031\002\032 ) ) ',
+    '( textdelta-chunk ( 3:c13 2:\001\231 ) ) ',
+    '( textdelta-chunk ( 3:c13 26:\031This is the file \'iota\'.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c13 ) ) ',
+    '( close-file ( 3:c13 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch_head_r2 = svnpatch_encode(svnpatch_output_head_r2)
+  
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'HEAD:2')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  verify_svnpatch(svnpatch_output, expected_svnpatch_head_r2)
+
 ########################################################################
 #Run the tests
 
@@ -3081,6 +3483,7 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
+              diff_svnpatch,
               ]
 
 if __name__ == '__main__':
