@@ -34,6 +34,8 @@
 #include "svn_io.h"
 #include "svn_props.h"
 
+#include "private/svn_patch.h"
+
 #include "client.h"
 
 #define SAVEPOINT_RELEASED -1
@@ -391,8 +393,8 @@ svnpatch_close_directory(void *dir_baton,
   struct edit_baton *eb = b->edit_baton;
 
   if (b->savepoint == SAVEPOINT_RELEASED || b->added)
-    SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                             "close-dir", "c", b->token));
+    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                 "close-dir", "c", b->token));
   else
     svnpatch_rollback(eb, b->savepoint);
 
@@ -409,9 +411,9 @@ svnpatch_change_dir_prop(void *dir_baton,
   struct edit_baton *eb = pb->edit_baton;
 
   svnpatch_release_savepoint(pb, svn_node_dir);
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "change-dir-prop", "cc(?s)", pb->token,
-                           name, value));
+  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                               "change-dir-prop", "cc(?s)", pb->token,
+                               name, value));
 
   return SVN_NO_ERROR;
 }
@@ -425,9 +427,9 @@ svnpatch_close_file(void *file_baton,
   struct edit_baton *eb = b->edit_baton;
 
   if (b->savepoint == SAVEPOINT_RELEASED || b->added)
-    SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                             "close-file", "c(?c)",
-                             b->token, text_checksum));
+    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                 "close-file", "c(?c)",
+                                 b->token, text_checksum));
   else
     svnpatch_rollback(eb, b->savepoint);
 
@@ -444,9 +446,9 @@ svnpatch_change_file_prop(void *file_baton,
   struct edit_baton *eb = b->edit_baton;
 
   svnpatch_release_savepoint(b, svn_node_file);
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "change-file-prop", "cc(?s)",
-                           b->token, name, value));
+  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                               "change-file-prop", "cc(?s)",
+                               b->token, name, value));
 
   return SVN_NO_ERROR;
 }
@@ -461,9 +463,9 @@ svnpatch_delete_entry(const char *path,
   struct edit_baton *eb = pb->edit_baton;
 
   svnpatch_release_savepoint(pb, svn_node_dir);
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "delete-entry", "cc",
-                           path, pb->token));
+  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                               "delete-entry", "cc",
+                               path, pb->token));
 
   return SVN_NO_ERROR;
 }
@@ -480,8 +482,8 @@ svndiff_write_handler(void *baton,
 
   str.data = data;
   str.len = *len;
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "textdelta-chunk", "cs", f->token, &str));
+  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                               "textdelta-chunk", "cs", f->token, &str));
   return SVN_NO_ERROR;
 }
 
@@ -492,8 +494,8 @@ svndiff_close_handler(void *baton)
   struct file_baton *f = baton;
   struct edit_baton *eb = f->edit_baton;
 
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "textdelta-end", "c", f->token));
+  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                               "textdelta-end", "c", f->token));
   return SVN_NO_ERROR;
   
 }
@@ -509,9 +511,9 @@ svnpatch_apply_textdelta(void *file_baton,
   struct edit_baton *eb = f->edit_baton;
   svn_stream_t *diff_stream;
 
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "apply-textdelta", "c(?c)", f->token,
-                           base_checksum));
+  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                               "apply-textdelta", "c(?c)", f->token,
+                               base_checksum));
   diff_stream = svn_stream_create(f, pool);
   svn_stream_set_write(diff_stream, svndiff_write_handler);
   svn_stream_set_close(diff_stream, svndiff_close_handler);
@@ -526,8 +528,8 @@ svnpatch_close_edit(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   
   if (eb->savepoint == SAVEPOINT_RELEASED)
-    SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                             "close-edit", ""));
+    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                 "close-edit", ""));
   else
     svnpatch_rollback(eb, 0); /* Empty svnpatch */
 
@@ -768,8 +770,8 @@ open_root(void *edit_baton,
   SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
   if (eb->svnpatch_stream)
-    SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                             "open-root", "c", token));
+    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                 "open-root", "c", token));
 
   *root_baton = b;
   return SVN_NO_ERROR;
@@ -964,9 +966,9 @@ add_directory(const char *path,
        * can/will be attempted on this path -- Editor Commands to
        * traverse from root to this directory. */
       svnpatch_release_savepoint(pb, svn_node_dir);
-      SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                               "add-dir", "ccc(?c)", path, pb->token,
-                               token, copyfrom_path));
+      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                   "add-dir", "ccc(?c)", path, pb->token,
+                                   token, copyfrom_path));
     }
 
   return SVN_NO_ERROR;
@@ -1008,8 +1010,8 @@ open_directory(const char *path,
   if (eb->svnpatch_stream)
     {
       SVN_ERR(svnpatch_savepoint(eb, &b->savepoint));
-      SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                               "open-dir", "ccc", path, pb->token, token));
+      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                   "open-dir", "ccc", path, pb->token, token));
     }
 
   return SVN_NO_ERROR;
@@ -1047,9 +1049,9 @@ add_file(const char *path,
       /* Release right away, we want this path all the way up to root as
        * this is an addition, which we always include in svnpatch. */
       svnpatch_release_savepoint(b, svn_node_file);
-      SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                               "add-file", "ccc(?c)", path, pb->token,
-                               token, copyfrom_path));
+      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                   "add-file", "ccc(?c)", path, pb->token,
+                                   token, copyfrom_path));
     }
 
   SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
@@ -1086,9 +1088,9 @@ open_file(const char *path,
   if (eb->svnpatch_stream)
     {
       SVN_ERR(svnpatch_savepoint(eb, &b->savepoint));
-      SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                               "open-file", "ccc", path,
-                               pb->token, token));
+      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
+                                   "open-file", "ccc", path,
+                                   pb->token, token));
     }
 
   return SVN_NO_ERROR;

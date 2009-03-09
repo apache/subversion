@@ -5773,7 +5773,6 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  void *cancel_baton,
                  apr_pool_t *pool);
 
-/** @} */
 
 /**
  *
@@ -5783,87 +5782,21 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
  *
  */
 
-/* Output -- Writing */
 
-/* Append @a number into @a target stream. */
-svn_error_t *
-svn_wc_write_number(svn_stream_t *target,
-                    apr_pool_t *pool,
-                    apr_uint64_t number);
-
-/* Append @a str into @a target stream.  Is binary-able. */
-svn_error_t *
-svn_wc_write_string(svn_stream_t *target,
-                    apr_pool_t *pool,
-                    const svn_string_t *str);
-
-/* Append @a s cstring into @a target stream. */
-svn_error_t *
-svn_wc_write_cstring(svn_stream_t *target,
-                     apr_pool_t *pool,
-                     const char *s);
-
-/* Append @a word into @a target stream. */
-svn_error_t *
-svn_wc_write_word(svn_stream_t *target,
-                  apr_pool_t *pool,
-                  const char *word);
-
-/* Append a list of properties @a props into @a target. */
-svn_error_t *
-svn_wc_write_proplist(svn_stream_t *target,
-                      apr_hash_t *props,
-                      apr_pool_t *pool);
-
-/* Begin a list, appended into @target */
-svn_error_t *
-svn_wc_start_list(svn_stream_t *target);
-
-/* End a list, appended into @target */
-svn_error_t *
-svn_wc_end_list(svn_stream_t *target);
-
-/* Append a tuple into @target in a printf-like fashion.
- * @see svn_ra_svn_write_tuple() for further details with the format. */
-svn_error_t *
-svn_wc_write_tuple(svn_stream_t *target,
-                   apr_pool_t *pool,
-                   const char *fmt, ...);
-
-/* Append a command into @target, using the same format notation as
- * svn_wc_write_tuple(). */
-svn_error_t *
-svn_wc_write_cmd(svn_stream_t *target,
-                 apr_pool_t *pool,
-                 const char *cmdname,
-                 const char *fmt, ...);
-
-/* Input -- Reading */
-
-svn_error_t *
-svn_wc_read_item(svn_stream_t *from,
-                 apr_pool_t *pool,
-                 svn_ra_svn_item_t **item);
-
-svn_error_t *
-svn_wc_parse_tuple(apr_array_header_t *list,
-                   apr_pool_t *pool,
-                   const char *fmt, ...);
-
-svn_error_t *
-svn_wc_read_tuple(svn_stream_t *from,
-                  apr_pool_t *pool,
-                  const char *fmt, ...);
-
-/* Drive @a diff_editor against @a decoded_patch_file's clear-text
- * Editor Commands. */
+/**
+ * Drive @a diff_editor against @a decoded_patch_file's clear-text
+ * Editor Commands.
+ *
+ * @since New in 1.7
+ */
 svn_error_t *
 svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
                       const svn_delta_editor_t *diff_editor,
                       void *diff_edit_baton,
                       apr_pool_t *pool);
 
-/* Run an external patch program against @a patch_path patch file.  @a
+/**
+ * Run an external patch program against @a patch_path patch file.  @a
  * outfile and @a errfile are respectively connected to the external
  * program's stdout and stderr pipes when executed.  @a config is looked
  * up for the SVN_CONFIG_OPTION_PATCH_CMD entry to use as the patch
@@ -5873,6 +5806,8 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
  * given the patch file via its stdin pipe.
  *
  * The program is passed the '--force' argument when @a force is set.
+ *
+ * @since New in 1.7
  */
 svn_error_t *
 svn_wc_apply_unidiff(const char *patch_path,
@@ -5882,9 +5817,10 @@ svn_wc_apply_unidiff(const char *patch_path,
                      apr_hash_t *config,
                      apr_pool_t *pool);
 
-/** @} end group: svnpatch related functions */
+/** @} */
 
-
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
