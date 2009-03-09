@@ -207,6 +207,7 @@ typedef struct report_info_t
 
   /* controlling file_baton and textdelta handler */
   void *file_baton;
+  const char *base_checksum;
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
@@ -356,7 +357,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       report_info_t *new_info;
 
-      new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
+      new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->lock_token = NULL;
 
@@ -398,7 +399,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       report_info_t *new_info;
 
-      new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
+      new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
@@ -781,7 +782,7 @@ handle_fetch(serf_request_t *request,
         }
 
       err = info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                      NULL,
+                                                      info->base_checksum,
                                                       info->editor_pool,
                                                       &info->textdelta,
                                                       &info->textdelta_baton);
@@ -1076,7 +1077,7 @@ handle_propchange_only(report_info_t *info)
   if (info->fetch_file)
     {
       SVN_ERR(info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                    NULL,
+                                                    info->base_checksum,
                                                     info->editor_pool,
                                                     &info->textdelta,
                                                     &info->textdelta_baton));
@@ -1577,8 +1578,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "fetch-file") == 0)
         {
           info = parser->state->private;
+          info->base_checksum = svn_xml_get_attr_value("base-checksum", attrs);
+
+          if (info->base_checksum)
+            info->base_checksum = apr_pstrdup(info->pool, info->base_checksum);
 
           info->fetch_file = TRUE;
+
         }
       else if (strcmp(name.name, "set-prop") == 0 ||
                strcmp(name.name, "remove-prop") == 0)
