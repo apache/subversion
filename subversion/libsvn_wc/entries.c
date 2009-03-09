@@ -1210,6 +1210,16 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                                  result_pool,
                                                  iterpool));
             }
+
+          /* For child nodes without a revision, pick up the parent's
+             revision.  */
+          if (!SVN_IS_VALID_REVNUM(entry->revision) && *entry->name != '\0')
+            {
+              const svn_wc_entry_t *parent_entry;
+
+              parent_entry = apr_hash_get(entries, "", 0);
+              entry->revision = parent_entry->revision;
+            }
         }
 
       /* ### default to the infinite depth if we don't know it. */
