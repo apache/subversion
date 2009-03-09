@@ -318,7 +318,7 @@ def compare_and_display_lines(message, label, expected, actual,
     expected = ExpectedOutput(expected)
 
   if isinstance(actual, type('')):
-    actual = actual.split('\n')
+    actual = [actual]
   actual = [line for line in actual if not line.startswith('DBG:')]
 
   if expected != actual:
