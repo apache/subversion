@@ -170,6 +170,22 @@ typedef enum {
 
 } svn_wc__db_status_t;
 
+/** Lock information.  We write/read it all as one, so let's use a struct
+    for convenience.  */
+typedef struct {
+  /* The lock token */
+  const char *token;
+
+  /* The owner of the lock */
+  const char *owner;
+
+  /* A comment about the lock, possibly NULL */
+  const char *comment;
+
+  /* The date the lock was created */
+  apr_time_t date;
+} svn_wc__db_lock_t;
+
 
 /* ### note conventions of "result_pool" for the pool where return results
    ### are allocated, and "scratch_pool" for the pool that is used for
@@ -915,6 +931,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
+ *   LOCK                    NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
@@ -1001,6 +1018,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
+
+                     svn_wc__db_lock_t **lock,
 
                      svn_wc__db_t *db,
                      const char *local_abspath,
