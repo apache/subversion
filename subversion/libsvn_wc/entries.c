@@ -210,15 +210,6 @@ typedef struct {
   const char *tree_conflict_data;
 } db_actual_node_t;
 
-typedef struct {
-  apr_int64_t repos_id;
-  const char *repos_relpath;
-  const char *lock_token;
-  const char *lock_owner;
-  const char *lock_comment;
-  apr_time_t lock_date;
-} db_lock_t;
-
 
 
 
@@ -1412,23 +1403,25 @@ svn_wc_entries_read(apr_hash_t **entries,
 
 static svn_error_t *
 insert_lock(svn_sqlite__db_t *wc_db,
-            const db_lock_t *lock,
+            apr_int64_t repos_id,
+            const char *repos_relpath,
+            const svn_wc__db_lock_t *lock,
             apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_LOCK));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, lock->repos_id));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 2, lock->repos_relpath));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 3, lock->lock_token));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, repos_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, repos_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, lock->token));
 
-  if (lock->lock_owner != NULL)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, lock->lock_owner));
+  if (lock->owner != NULL)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, lock->owner));
 
-  if (lock->lock_comment != NULL)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, lock->lock_comment));
+  if (lock->comment != NULL)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, lock->comment));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->lock_date));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->date));
 
   return svn_sqlite__insert(NULL, stmt);
 }
@@ -1827,16 +1820,15 @@ write_entry(svn_sqlite__db_t *wc_db,
 
       if (entry->lock_token)
         {
-          db_lock_t *lock = apr_pcalloc(scratch_pool, sizeof(*lock));
+          svn_wc__db_lock_t *lock = apr_pcalloc(scratch_pool, sizeof(*lock));
 
-          lock->repos_id = repos_id;
-          lock->repos_relpath = base_node->repos_relpath;
-          lock->lock_token = entry->lock_token;
-          lock->lock_owner = entry->lock_owner;
-          lock->lock_comment = entry->lock_comment;
-          lock->lock_date = entry->lock_creation_date;
+          lock->token = entry->lock_token;
+          lock->owner = entry->lock_owner;
+          lock->comment = entry->lock_comment;
+          lock->date = entry->lock_creation_date;
 
-          SVN_ERR(insert_lock(wc_db, lock, scratch_pool));
+          SVN_ERR(insert_lock(wc_db, repos_id, base_node->repos_relpath, lock,
+                              scratch_pool));
         }
 
       /* TODO: These values should always be present, if they are missing
