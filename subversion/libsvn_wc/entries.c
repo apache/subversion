@@ -1261,9 +1261,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
      if (lock)
        {
-         entry->lock_token = apr_pstrdup(result_pool, lock->token);
-         entry->lock_owner = apr_pstrdup(result_pool, lock->owner);
-         entry->lock_comment = apr_pstrdup(result_pool, lock->comment);
+         entry->lock_token = lock->token;
+         entry->lock_owner = lock->owner;
+         entry->lock_comment = lock->comment;
          entry->lock_creation_date = lock->date;
        }
 
