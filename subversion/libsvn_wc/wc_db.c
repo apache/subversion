@@ -148,6 +148,7 @@ static const char * const upgrade_sql[] = {
    and removed at the same time. */
 enum statement_keys {
   STMT_SELECT_BASE_NODE,
+  STMT_SELECT_BASE_NODE_WITH_LOCK,
   STMT_SELECT_WORKING_NODE,
   STMT_SELECT_ACTUAL_NODE,
   STMT_SELECT_REPOSITORY_BY_ID,
@@ -167,6 +168,15 @@ static const char * const statements[] = {
   "  presence, kind, revnum, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target "
   "from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath, "
+  "  presence, kind, revnum, checksum, translated_size, "
+  "  changed_rev, changed_date, changed_author, depth, symlink_target, "
+  "  lock_token, lock_owner, lock_comment, lock_date "
+  "from base_node "
+  "left outer join lock on base_node.repos_id = lock.repos_id "
+  "  and base_node.repos_relpath = lock.repos_relpath "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select presence, kind, checksum, translated_size, "
@@ -2059,6 +2069,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_boolean_t *text_mod,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,
+                     svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *result_pool,
@@ -2081,7 +2092,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, pdh->sdb,
-                                    STMT_SELECT_BASE_NODE));
+                                    lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
+                                         : STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt_base, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
 
@@ -2094,6 +2106,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                                     STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt_act, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
+
+  if (lock)
+    *lock = NULL;
 
   if (have_base || have_work)
     {
@@ -2208,6 +2223,25 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *repos_relpath = svn_sqlite__column_text(stmt_base, 3,
                                                      result_pool);
+        }
+      if (lock)
+        {
+          if (!svn_sqlite__column_is_null(stmt_base, 14))
+            {
+              *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
+              (*lock)->token = svn_sqlite__column_text(stmt_base, 14,
+                                                       result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 15))
+                (*lock)->owner = svn_sqlite__column_text(stmt_base, 15,
+                                                         result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 16))
+                (*lock)->comment = svn_sqlite__column_text(stmt_base, 16,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 17))
+                (*lock)->date = svn_sqlite__column_int64(stmt_base, 17);
+            }
+          else
+            *lock = NULL;
         }
       if (repos_root_url || repos_uuid)
         {

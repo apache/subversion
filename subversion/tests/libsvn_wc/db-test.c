@@ -623,6 +623,7 @@ test_working_info(apr_pool_t *pool)
   svn_boolean_t text_mod;
   svn_boolean_t props_mod;
   svn_boolean_t base_shadowed;
+  svn_wc__db_lock_t *lock;
   svn_wc__db_t *db;
 
   SVN_ERR(create_fake_wc("test_working_info", pool));
@@ -641,7 +642,7 @@ test_working_info(apr_pool_t *pool)
             &depth, &checksum, &translated_size, &target,
             &changelist, &original_repos_relpath, &original_root_url,
             &original_uuid, &original_revnum,
-            &text_mod, &props_mod, &base_shadowed,
+            &text_mod, &props_mod, &base_shadowed, &lock,
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_ERR_ASSERT(status == svn_wc__db_status_added);
@@ -665,6 +666,7 @@ test_working_info(apr_pool_t *pool)
   SVN_ERR_ASSERT(text_mod == FALSE);
   SVN_ERR_ASSERT(props_mod == FALSE);
   SVN_ERR_ASSERT(base_shadowed == TRUE);
+  SVN_ERR_ASSERT(lock == NULL);
 
 
   /* ### we need a hojillion more tests in here. I just want to get this

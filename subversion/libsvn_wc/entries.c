@@ -72,8 +72,10 @@ enum statement_keys {
   STMT_DELETE_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
+  STMT_DELETE_ALL_LOCK,
   STMT_SELECT_INCOMPLETE_FLAG,
-  STMT_SELECT_NOT_PRESENT
+  STMT_SELECT_NOT_PRESENT,
+  STMT_INSERT_LOCK
 };
 
 static const char * const statements[] = {
@@ -134,11 +136,18 @@ static const char * const statements[] = {
 
   "delete from base_node;",
 
+  "delete from lock;",
+
   "select incomplete_children from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select 1 from base_node "
   "where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';",
+
+  "insert or replace into lock "
+    "(repos_id, repos_relpath, lock_token, lock_owner, lock_comment, "
+    " lock_date)"
+  "values (?1, ?2, ?3, ?4, ?5, ?6);",
 
   NULL
   };
@@ -938,6 +947,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
     {
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
+      svn_wc__db_lock_t *lock;
       const char *repos_relpath;
       svn_checksum_t *checksum;
       svn_filesize_t translated_size;
@@ -975,6 +985,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 NULL,
                 NULL,
                 &base_shadowed,
+                &lock,
                 db,
                 entry_abspath,
                 result_pool,
@@ -1248,6 +1259,14 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (checksum)
         entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
 
+     if (lock)
+       {
+         entry->lock_token = apr_pstrdup(result_pool, lock->token);
+         entry->lock_owner = apr_pstrdup(result_pool, lock->owner);
+         entry->lock_comment = apr_pstrdup(result_pool, lock->comment);
+         entry->lock_creation_date = lock->date;
+       }
+
       /* ### there may be an ACTUAL_NODE to grab info from.  really, this
          ### should probably only exist for added/copied files, but it
          ### seems to always be needed. Just do so, for now.  */
@@ -1388,6 +1407,30 @@ svn_wc_entries_read(apr_hash_t **entries,
 
   *entries = new_entries;
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+insert_lock(svn_sqlite__db_t *wc_db,
+            const db_lock_t *lock,
+            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_LOCK));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, lock->repos_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, lock->repos_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, lock->lock_token));
+
+  if (lock->lock_owner != NULL)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, lock->lock_owner));
+
+  if (lock->lock_comment != NULL)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, lock->lock_comment));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->lock_date));
+
+  return svn_sqlite__insert(NULL, stmt);
 }
 
 
@@ -1782,6 +1825,20 @@ write_entry(svn_sqlite__db_t *wc_db,
             }
         }
 
+      if (entry->lock_token)
+        {
+          db_lock_t *lock = apr_pcalloc(scratch_pool, sizeof(*lock));
+
+          lock->repos_id = repos_id;
+          lock->repos_relpath = base_node->repos_relpath;
+          lock->lock_token = entry->lock_token;
+          lock->lock_owner = entry->lock_owner;
+          lock->lock_comment = entry->lock_comment;
+          lock->lock_date = entry->lock_creation_date;
+
+          SVN_ERR(insert_lock(wc_db, lock, scratch_pool));
+        }
+
       /* TODO: These values should always be present, if they are missing
          during an upgrade, set a flag, and then ask the user to talk to the
          server.
@@ -1915,13 +1972,15 @@ entries_write_body(void *baton,
       repos_root = NULL;
     }
 
-  /* Remove all WORKING and BASE nodes for this directory, since we're about
-     to replace 'em. */
+  /* Remove all WORKING and BASE nodes for this directory, as well as locks,
+     since we're about to replace 'em. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_WORKING));
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_BASE));
   SVN_ERR(svn_sqlite__step_done(stmt));
   /* ### what about all ACTUAL nodes? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_LOCK));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
