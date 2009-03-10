@@ -19,7 +19,8 @@ import os, types
 
 import svntest
 
-__all__ = ['XFail', 'Skip']
+# if somebody does a "from testcase import *", they only get three names
+__all__ = ['XFail', 'Skip', 'SkipUnless']
 
 RESULT_OK = 'ok'
 RESULT_FAIL = 'fail'
@@ -36,43 +37,22 @@ class TestCase:
     RESULT_SKIP: (2, 'SKIP: ', True),
     }
 
-  def __init__(self, delegate=None, cond_func=lambda: True):
+  def __init__(self, delegate=None, cond_func=lambda: True, doc=None):
     assert callable(cond_func)
 
     self._delegate = delegate
     self._cond_func = cond_func
-
-  def get_description(self):
-    return self._delegate.get_description()
-
-  def check_description(self):
-    description = self.get_description()
-
-    if len(description) > 50:
-      print('WARNING: Test doc string exceeds 50 characters')
-    if description[-1] == '.':
-      print('WARNING: Test doc string ends in a period (.)')
-    if not description[0].lower() == description[0]:
-      print('WARNING: Test doc string is capitalized')
-
-  def need_sandbox(self):
-    """Return True iff this test needs a Sandbox for its execution."""
-    return self._delegate.need_sandbox()
+    self.description = doc or delegate.description
 
   def get_sandbox_name(self):
     """Return the name that should be used for the sandbox.
 
-    This method is only called if self.need_sandbox() returns True.
+    If a sandbox should not be constructed, this method returns None.
     """
     return self._delegate.get_sandbox_name()
 
-  def run(self, sandbox=None):
-    """Run the test.
-
-    If self.need_sandbox() returns True, then a Sandbox instance is
-    passed to this method as the SANDBOX keyword argument; otherwise,
-    no argument is passed to this method.
-    """
+  def run(self, sandbox):
+    """Run the test within the given sandbox."""
     return self._delegate.run(sandbox)
 
   def list_mode(self):
@@ -90,30 +70,37 @@ class FunctionTestCase(TestCase):
 
   FUNC should be a function that returns None on success and throws an
   svntest.Failure exception on failure.  It should have a brief
-  docstring describing what it does (and fulfilling the conditions
-  enforced by TestCase.check_description()).  FUNC may take zero or
-  one argument.  It it takes an argument, it will be invoked with an
-  svntest.main.Sandbox instance as argument.  (The sandbox's name is
-  derived from the file name in which FUNC was defined.)"""
+  docstring describing what it does (and fulfilling certain conditions).
+  FUNC must take one argument, an svntest.main.Sandbox instance.
+  (The sandbox name is derived from the file name in which FUNC was defined)
+  """
 
   def __init__(self, func):
+    # it better be a function that accepts an sbox parameter and has a
+    # docstring on it.
     assert isinstance(func, types.FunctionType)
 
-    TestCase.__init__(self)
+    name = func.func_name
+
+    assert func.func_code.co_argcount == 1, \
+        '%s must take an sbox argument' % name
+
+    doc = func.__doc__.strip()
+    assert doc, '%s must have a docstring' % name
+
+    # enforce stylistic guidelines for the function docstrings:
+    # - no longer than 50 characters
+    # - should not end in a period
+    # - should not be capitalized
+    assert len(doc) <= 50, \
+        "%s's docstring must be 50 characters or less" % name
+    assert doc[-1] != '.', \
+        "%s's docstring should not end in a period" % name
+    assert doc[0].lower() == doc[0], \
+        "%s's docstring should not be capitalized" % name
+
+    TestCase.__init__(self, doc=doc)
     self.func = func
-
-  def get_description(self):
-    """Use the function's docstring as a description."""
-
-    description = self.func.__doc__
-    if not description:
-      raise Exception(self.func.__name__ + ' lacks required doc string')
-    return description
-
-  def need_sandbox(self):
-    """If the function requires an argument, then we need to pass it a
-    sandbox."""
-    return self.func.func_code.co_argcount != 0
 
   def get_sandbox_name(self):
     """Base the sandbox's name on the name of the file in which the
@@ -122,11 +109,8 @@ class FunctionTestCase(TestCase):
     filename = self.func.func_code.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
-  def run(self, sandbox=None):
-    if sandbox:
-      return self.func(sandbox)
-    else:
-      return self.func()
+  def run(self, sandbox):
+    return self.func(sandbox)
 
 
 class XFail(TestCase):
@@ -175,18 +159,15 @@ class Skip(TestCase):
       return 'SKIP'
     return self._delegate.list_mode()
 
-  def need_sandbox(self):
+  def get_sandbox_name(self):
     if self._cond_func():
-      return False
-    return self._delegate.need_sandbox()
+      return None
+    return self._delegate.get_sandbox_name()
 
-  def run(self, sandbox=None):
+  def run(self, sandbox):
     if self._cond_func():
       raise svntest.Skip
-    elif self.need_sandbox():
-      return self._delegate.run(sandbox=sandbox)
-    else:
-      return self._delegate.run()
+    return self._delegate.run(sandbox)
 
 
 class SkipUnless(Skip):
