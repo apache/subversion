@@ -52,6 +52,10 @@
 const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if ((path[0] == '/' || path[0] == '\\') && path[1] == path[0])
+    return svn_dirent_internal_style(path, pool);
+#endif
   return svn_uri_internal_style(path, pool);
 }
 
@@ -59,6 +63,10 @@ svn_path_internal_style(const char *path, apr_pool_t *pool)
 const char *
 svn_path_local_style(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_local_style(path, pool);
+#endif
   return svn_uri_local_style(path, pool);
 }
 
@@ -1003,16 +1011,23 @@ svn_path_split_if_file(const char *path,
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_canonicalize(path, pool);
+#endif
   return svn_uri_canonicalize(path, pool);
 }
-
 
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
 {
-  return svn_uri_is_canonical(path, pool);
+  return svn_uri_is_canonical(path, pool)
+#if defined(WIN32) || defined(__CYGWIN__)
+         || (path[0] == '/' && path[1] == '/' &&
+             svn_dirent_is_canonical(path, pool))
+#endif
+         ;
 }
-
 
 
 /** Get APR's internal path encoding. */
