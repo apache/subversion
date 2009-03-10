@@ -1288,7 +1288,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        'merge', 'mu@2')
 
   # sanity-check resulting file
-  if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
+  if svntest.tree.get_text('mu') != orig_mu_text + added_mu_text:
     raise svntest.Failure("Unexpected text in 'mu'")
 
   # merge using URL for sourcepath
@@ -1315,7 +1315,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        'merge', '-c', '-2', mu_url)
 
   # sanity-check resulting file
-  if (svntest.tree.get_text('mu') != orig_mu_text):
+  if svntest.tree.get_text('mu') != orig_mu_text:
     raise svntest.Failure("Unexpected text '%s' in 'mu', expected '%s'" %
                           (svntest.tree.get_text('mu'), orig_mu_text))
 
@@ -1336,7 +1336,7 @@ def merge_with_implicit_target_and_revs(sbox):
 
 #----------------------------------------------------------------------
 
-def merge_with_prev (sbox):
+def merge_with_prev(sbox):
   "merge operations using PREV revision"
 
   sbox.build()
@@ -1395,7 +1395,7 @@ def merge_with_prev (sbox):
                                      'merge', '-r', 'HEAD:PREV', 'mu')
 
   # sanity-check resulting file
-  if (svntest.tree.get_text('mu') != orig_mu_text):
+  if svntest.tree.get_text('mu') != orig_mu_text:
     raise svntest.Failure("Unexpected text in 'mu'")
 
   os.chdir(was_cwd)
@@ -1417,7 +1417,7 @@ def merge_with_prev (sbox):
                                      'merge', '-r', 'COMMITTED:PREV',
                                      'A', 'A')
 
-  if (svntest.tree.get_text('A/zot') != None):
+  if svntest.tree.get_text('A/zot') != None:
     raise svntest.Failure("Unexpected text in 'A/zot'")
 
   os.chdir(was_cwd)
@@ -1434,7 +1434,7 @@ def merge_with_prev (sbox):
 # merging a change into a binary file, unless it has local mods, or has
 # different contents from the left side of the merge.
 
-def merge_binary_file (sbox):
+def merge_binary_file(sbox):
   "merge change into unchanged binary file"
 
   sbox.build()
@@ -4604,7 +4604,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
     else:
       copy_A('A_COPY_' + str(i + 1), i + 2)
 
-  if (branch_only):
+  if branch_only:
     return expected_disk, expected_status
 
   # Make some changes under A which we'll later merge under A_COPY:
@@ -10790,10 +10790,9 @@ def merge_added_subtree(sbox):
   svntest.actions.run_and_verify_svn("", None, [],
                                      "cp", A_COPY_url + '/D2',
                                      os.path.join(A_path, "D2"))
-  actual_tree = svntest.tree.build_tree_from_wc (A_path, 0)
-  svntest.tree.compare_trees ("expected disk",
-                              actual_tree, expected_disk.old_tree(),
-                              None, None, None, None)
+  actual_tree = svntest.tree.build_tree_from_wc(A_path, 0)
+  svntest.tree.compare_trees("expected disk",
+                             actual_tree, expected_disk.old_tree())
   svntest.actions.run_and_verify_status(A_path, expected_status)
 
   # Remove the copy artifacts
