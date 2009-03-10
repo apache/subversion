@@ -992,8 +992,11 @@ typedef struct svn_wc_notify_t {
 
   /** When @c action is @c svn_wc_notify_update_completed, target revision
    * of the update, or @c SVN_INVALID_REVNUM if not available; when @c
-   * action is @c svn_wc_notify_blame_revision, processed revision.
-   * In all other cases, it is @c SVN_INVALID_REVNUM. */
+   * action is @c svn_wc_notify_blame_revision, processed revision; Since
+   * Subversion 1.7 when action is @c svn_wc_notify_update_update or @c
+   * svn_wc_notify_update_add, the target revision.
+   * In all other cases, it is @c SVN_INVALID_REVNUM.
+   */
   svn_revnum_t revision;
 
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
@@ -1023,6 +1026,12 @@ typedef struct svn_wc_notify_t {
    * revision properties for the specified revision 
    * @since New in 1.6 */
   apr_hash_t *rev_props;
+
+  /** If @c action is @c svn_wc_notify_update_update or @c
+   * svn_wc_notify_update_add, contains the revision before the update.
+   * In all other cases, it is @c SVN_INVALID_REVNUM.
+   * @since New in 1.7 */
+  svn_revnum_t old_revision;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify

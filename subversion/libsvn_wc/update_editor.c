@@ -315,6 +315,9 @@ struct dir_baton
   /* The repository URL this directory will correspond to. */
   const char *new_URL;
 
+  /* The revision of the directory before updating */
+  svn_revnum_t old_revision;
+
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -607,6 +610,7 @@ make_dir_baton(struct dir_baton **d_p,
   d->bump_info    = bdi;
   d->log_number   = 0;
   d->log_accum    = svn_stringbuf_create("", pool);
+  d->old_revision = SVN_INVALID_REVNUM;
 
   /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
@@ -852,6 +856,9 @@ struct file_baton
   /* The repository URL this file will correspond to. */
   const char *new_URL;
 
+  /* The revision of the file before updating */
+  svn_revnum_t old_revision;
+
   /* Set if this file is new. */
   svn_boolean_t added;
 
@@ -944,6 +951,7 @@ make_file_baton(struct file_baton **f_p,
   /* Make the file's on-disk name. */
   f->path = svn_dirent_join(pb->edit_baton->anchor, path, pool);
   f->name = svn_dirent_basename(path, pool);
+  f->old_revision = SVN_INVALID_REVNUM;
 
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
@@ -2613,6 +2621,7 @@ open_directory(const char *path,
     {
       db->ambient_depth = entry->depth;
       db->was_incomplete = entry->incomplete;
+      db->old_revision = entry->revision;
     }
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
@@ -2946,6 +2955,8 @@ close_directory(void *dir_baton,
                                pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
+      notify->revision = *db->edit_baton->target_revision;
+      notify->old_revision = db->old_revision;
       (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
                                      notify, pool);
     }
@@ -3670,6 +3681,7 @@ open_file(const char *path,
     }
 
   fb->deleted = locally_deleted;
+  fb->old_revision = entry->revision;
 
   if (victim_path != NULL || tree_conflict != NULL || text_conflicted
       || prop_conflicted)
@@ -4536,6 +4548,8 @@ close_file(void *file_baton,
       notify->content_state = content_state;
       notify->prop_state = prop_state;
       notify->lock_state = lock_state;
+      notify->revision = *eb->target_revision;
+      notify->old_revision = fb->old_revision;
 
       /* Fetch the mimetype */
       SVN_ERR(svn_wc_prop_get(&mime_type, SVN_PROP_MIME_TYPE, fb->path,
