@@ -143,9 +143,9 @@ _svn()
 	cmds='add blame annotate praise cat changelist cl checkout co cleanup'
 	cmds="$cmds commit ci copy cp delete remove rm diff export help import"
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
-	cmds="$cmds propdel pdel propedit pedit propget pget proplist plist"
-	cmds="$cmds propset pset resolve resolved revert status switch unlock"
-	cmds="$cmds update"
+	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
+	cmds="$cmds plist propset pset resolve resolved revert status switch"
+	cmds="$cmds unlock update"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -160,7 +160,7 @@ _svn()
 	optsParam="$optsParam|--old|--new|--config-dir|--config-option"
 	optsParam="$optsParam|--native-eol|-l|--limit|-c|--change"
 	optsParam="$optsParam|--depth|--set-depth|--with-revprop"
-	optsParam="$optsParam|--changelist|--accept|--show-revs"
+	optsParam="$optsParam|--changelist|--accept|--show-revs|--patch-cmd"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -760,7 +760,7 @@ _svn()
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
 		         $nOpts $pOpts --force --old --new --notice-ancestry \
-		         -c --change --summarize --changelist --xml"
+		         -c --change --summarize --changelist --xml --svnpatch"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
@@ -804,6 +804,9 @@ _svn()
 	move|mv|rename|ren)
 		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
                          --parents"
+		;;
+	patch)
+		cmdOpts="$qOpts --force --patch-cmd --config-dir"
 		;;
 	propdel|pdel|pd)
 		cmdOpts="$qOpts -R --recursive $rOpts $pOpts --changelist \
