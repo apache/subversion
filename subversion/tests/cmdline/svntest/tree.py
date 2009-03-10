@@ -776,34 +776,10 @@ def build_generic_tree(nodelist):
 #   Tree nodes will contain no contents, a 'status' att, and a
 #   'treeconflict' att.
 
-def build_tree_from_checkout(lines, include_skipped=1):
+def build_tree_from_checkout(lines, include_skipped=True):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
-  root = SVNTreeNode(root_node_name)
-  rm1 = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])([C ])\s+(.+)')
-  if include_skipped:
-    rm2 = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
-  else:
-    rm2 = re.compile('^(Restored)\s+\'(.+)\'')
-
-  for line in lines:
-    if line.startswith('DBG:'):
-      continue
-    match = rm1.search(line)
-    if match and match.groups():
-      atts = {'status' : match.group(1)}
-      if match.group(3) == 'C':
-        atts['treeconflict'] = 'C'
-      new_branch = create_from_path(match.group(4), None, {}, atts)
-      root.add_child(new_branch)
-    else:
-      match = rm2.search(line)
-      if match and match.groups():
-        new_branch = create_from_path(match.group(2), None, {},
-                                      {'verb' : match.group(1)})
-        root.add_child(new_branch)
-
-  return root
+  return svntest.wc.State.from_checkout(lines, include_skipped).old_tree()
 
 
 # Parse ci/im output into a tree.
@@ -813,23 +789,7 @@ def build_tree_from_checkout(lines, include_skipped=1):
 def build_tree_from_commit(lines):
   "Return a tree derived by parsing the output LINES from 'ci' or 'im'."
 
-  # Lines typically have a verb followed by whitespace then a path.
-  root = SVNTreeNode(root_node_name)
-  rm1 = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
-  rm2 = re.compile('^Transmitting')
-
-  for line in lines:
-    if line.startswith('DBG:'):
-      continue
-    match = rm2.search(line)
-    if not match:
-      match = rm1.search(line)
-      if match and match.groups():
-        new_branch = create_from_path(match.group(3), None, {},
-                                      {'verb' : match.group(1)})
-        root.add_child(new_branch)
-
-  return root
+  return svntest.wc.State.from_commit(lines).old_tree()
 
 
 # Parse status output into a tree.
@@ -845,116 +805,21 @@ def build_tree_from_commit(lines):
 def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st -vuq'."
 
-  root = SVNTreeNode(root_node_name)
-
-  # 'status -v' output looks like this:
-  #
-  #      "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
-  #
-  # (Taken from 'print_status' in subversion/svn/status.c.)
-  #
-  # Here are the parameters.  The middle number or string in parens is the
-  # match.group(), followed by a brief description of the field:
-  #
-  #    - text status           (1)  (single letter)
-  #    - prop status           (1)  (single letter)
-  #    - wc-lockedness flag    (2)  (single letter: "L" or " ")
-  #    - copied flag           (3)  (single letter: "+" or " ")
-  #    - switched flag         (4)  (single letter: "S" or " ")
-  #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
-  #    - tree conflict flag    (6)  (single letter: "C" or " ")
-  #
-  #    [one space]
-  #
-  #    - out-of-date flag      (7)  (single letter: "*" or " ")
-  #
-  #    [three spaces]
-  #
-  #    - working revision ('wc_rev') (either digits or "-" or " ")
-  #
-  #    [one space]
-  #
-  #    - last-changed revision      (either digits or "?" or " ")
-  #
-  #    [one space]
-  #
-  #    - last author                (optional string of non-whitespace
-  #                                  characters)
-  #
-  #    [spaces]
-  #
-  #    - path              ('path') (string of characters until newline)
-  #
-  # Working revision, last-changed revision, and last author are whitespace
-  # only if the item is missing.
-
-  # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
-  for line in lines:
-    if line.startswith('DBG:'):
-      continue
-
-    # Quit when we hit an externals status announcement (### someday we can fix
-    # the externals tests to expect the additional flood of externals status
-    # data).
-    if re.match(r'^Performing', line):
-      break
-
-    match = rm.search(line)
-    if match and match.groups():
-      if match.group(10) != '-': # ignore items that only exist on repos
-        atthash = {'status' : match.group(1)}
-        if match.group(2) != ' ':
-          atthash['locked'] = match.group(2)
-        if match.group(3) != ' ':
-          atthash['copied'] = match.group(3)
-        if match.group(4) != ' ':
-          atthash['switched'] = match.group(4)
-        if match.group(5) != ' ':
-          atthash['writelocked'] = match.group(5)
-        if match.group(6) != ' ':
-          atthash['treeconflict'] = match.group(6)
-        if match.group('wc_rev'):
-          atthash['wc_rev'] = match.group('wc_rev')
-        new_branch = create_from_path(match.group('path'), None, {}, atthash)
-
-      root.add_child(new_branch)
-
-  return root
+  return svntest.wc.State.from_status(lines).old_tree()
 
 
 # Parse merge "skipped" output
 
 def build_tree_from_skipped(lines):
 
-  root = SVNTreeNode(root_node_name)
-  rm = re.compile("^Skipped.* '(.+)'\n")
+  return svntest.wc.State.from_skipped(lines).old_tree()
 
-  for line in lines:
-    if line.startswith('DBG:'):
-      continue
-    match = rm.search(line)
-    if match and match.groups():
-      new_branch = create_from_path(match.group(1))
-      root.add_child(new_branch)
-
-  return root
 
 def build_tree_from_diff_summarize(lines):
   "Build a tree from output of diff --summarize"
-  root = SVNTreeNode(root_node_name)
-  rm = re.compile("^([MAD ][M ])      (.+)\n")
 
-  for line in lines:
-    if line.startswith('DBG:'):
-      continue
-    match = rm.search(line)
-    if match and match.groups():
-      new_branch = create_from_path(match.group(2),
-                                    atts={'status': match.group(1)})
-      root.add_child(new_branch)
+  return svntest.wc.State.from_summarize(lines).old_tree()
 
-  return root
 
 ####################################################################
 # Build trees by looking at the working copy

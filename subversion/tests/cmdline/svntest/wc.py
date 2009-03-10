@@ -18,8 +18,76 @@
 import os
 import types
 import sys
+import re
 
 import svntest
+
+
+#
+# 'status -v' output looks like this:
+#
+#      "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
+#
+# (Taken from 'print_status' in subversion/svn/status.c.)
+#
+# Here are the parameters.  The middle number or string in parens is the
+# match.group(), followed by a brief description of the field:
+#
+#    - text status           (1)  (single letter)
+#    - prop status           (1)  (single letter)
+#    - wc-lockedness flag    (2)  (single letter: "L" or " ")
+#    - copied flag           (3)  (single letter: "+" or " ")
+#    - switched flag         (4)  (single letter: "S" or " ")
+#    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
+#    - tree conflict flag    (6)  (single letter: "C" or " ")
+#
+#    [one space]
+#
+#    - out-of-date flag      (7)  (single letter: "*" or " ")
+#
+#    [three spaces]
+#
+#    - working revision ('wc_rev') (either digits or "-" or " ")
+#
+#    [one space]
+#
+#    - last-changed revision      (either digits or "?" or " ")
+#
+#    [one space]
+#
+#    - last author                (optional string of non-whitespace
+#                                  characters)
+#
+#    [spaces]
+#
+#    - path              ('path') (string of characters until newline)
+#
+# Working revision, last-changed revision, and last author are whitespace
+# only if the item is missing.
+#
+_re_parse_status = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])'
+                              '([L ])'
+                              '([+ ])'
+                              '([S ])'
+                              '([KOBT ])'
+                              '([C ]) '
+                              '([* ]) +'
+                              '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
+                              '(?P<path>.+)$')
+
+_re_parse_skipped = re.compile("^Skipped.* '(.+)'\n")
+
+_re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
+
+_re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
+                                '([B ])'
+                                '([C ])\s+'
+                                '(.+)')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
+_re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
+
+# Lines typically have a verb followed by whitespace then a path.
+_re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 
 
 class State:
@@ -188,6 +256,117 @@ class State:
 
   def __ne__(self, other):
     return not self.__eq__(other)
+
+  @classmethod
+  def from_status(cls, lines):
+    """Create a State object from 'svn status' output."""
+
+    def not_space(value):
+      if value and value != ' ':
+        return value
+      return None
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      # Quit when we hit an externals status announcement.
+      # ### someday we can fix the externals tests to expect the additional
+      # ### flood of externals status data.
+      if line.startswith('Performing'):
+        break
+
+      match = _re_parse_status.search(line)
+      if not match or match.group(10) == '-':
+        # ignore non-matching lines, or items that only exist on repos
+        continue
+
+      item = StateItem(status=match.group(1),
+                       locked=not_space(match.group(2)),
+                       copied=not_space(match.group(3)),
+                       switched=not_space(match.group(4)),
+                       writelocked=not_space(match.group(5)),
+                       treeconflict=not_space(match.group(6)),
+                       wc_rev=not_space(match.group('wc_rev')),
+                       )
+      desc[match.group('path')] = item
+
+    return cls('', desc)
+
+  @classmethod
+  def from_skipped(cls, lines):
+    """Create a State object from 'Skipped' lines."""
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      match = _re_parse_skipped.search(line)
+      if match:
+        desc[match.group(1)] = StateItem()
+
+    return cls('', desc)
+
+  @classmethod
+  def from_summarize(cls, lines):
+    """Create a State object from 'svn diff --summarize' lines."""
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      match = _re_parse_summarize.search(line)
+      if match:
+        desc[match.group(2)] = StateItem(status=match.group(1))
+
+    return cls('', desc)
+
+  @classmethod
+  def from_checkout(cls, lines, include_skipped=True):
+    """Create a State object from 'svn checkout' lines."""
+
+    if include_skipped:
+      re_extra = _re_parse_co_skipped
+    else:
+      re_extra = _re_parse_co_restored
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      match = _re_parse_checkout.search(line)
+      if match:
+        if match.group(3) == 'C':
+          treeconflict = 'C'
+        else:
+          treeconflict = None
+        desc[match.group(4)] = StateItem(status=match.group(1),
+                                         treeconflict=treeconflict)
+      else:
+        match = re_extra.search(line)
+        if match:
+          desc[match.group(2)] = StateItem(verb=match.group(1))
+
+    return cls('', desc)
+
+  @classmethod
+  def from_commit(cls, lines):
+    """Create a State object from 'svn commit' lines."""
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:') or line.startswith('Transmitting'):
+        continue
+
+      match = _re_parse_commit.search(line)
+      if match:
+        desc[match.group(3)] = StateItem(verb=match.group(1))
+
+    return cls('', desc)
 
 
 class StateItem:
