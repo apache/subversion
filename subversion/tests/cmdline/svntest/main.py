@@ -794,8 +794,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      sys.stdout.write('ERROR:  dump failed: %s ' % dump_line)
-      sys.stdout.flush()
+      print('ERROR:  dump failed: %s' % dump_line.strip())
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
@@ -808,8 +807,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        sys.stdout.write('ERROR:  load failed: %s ' % load_line)
-        sys.stdout.flush()
+        print('ERROR:  load failed: %s' % load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
@@ -1255,7 +1253,6 @@ class TestRunner:
     exit_code, result_text, result_benignity = self.pred.results(result)
     if not (quiet_mode and result_benignity):
       self._print_name(result_text)
-      sys.stdout.flush()
     if sandbox is not None and exit_code != 1 and cleanup_mode:
       sandbox.cleanup_test_paths()
     return exit_code
