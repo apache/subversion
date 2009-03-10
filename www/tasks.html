@@ -76,19 +76,6 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=2325" >issue
 </div>  <!-- externals-commit -->
 
 <!-- ************************************************************* -->
-<div class="h3" id="dav-interop" title="dav-interop">
-<h3>Better DAV interoperability.</h3>
-
-<p>Over DAV (http://), Subversion should map the svn:executable and
-svn:mime-type to the DAV-standard props, for better interoperability
-with existing DAV clients.</p>
-
-<p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1345"
->issue&nbsp;#1345</a>.</p>
-
-</div>  <!-- dav-interop -->
-
-<!-- ************************************************************* -->
 <div class="h3" id="progress-output" title="progress-output">
 <h3>Show progress output.</h3>
 
@@ -186,79 +173,6 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=2381">issue
 #2381</a>).</p>
 
 </div>
-
-
-<!-- ************************************************************* -->
-<div class="h3" id="svnserve-logging" title="svnserve-logging">
-<h3>Operation and error logging for svnserve (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
->issue&nbsp;#2409</a>):</h3>
-
-<p>Subversion 1.3.0 added support for operational logging in
-mod_dav_svn.  That is, logging what actual client-side operations are
-performed on a repository, rather than just logging the endless flow
-of WebDAV requests.  Support for this kind of logging, as well as
-error logging, needs to be added to the standalone svnserve daemon.
-This requires some work in the APR library, which would provide the
-actual logging facility.</p>
-
-<p>This has been extensively discussed on the Subversion development
-mailing list in the past.  A good first step would be to review the
-previous proposals.</p>
-
-<p><em>This task may have been started at <a
-href="http://svn.collab.net/repos/svn/branches/svnserve-logging"
->http://svn.collab.net/repos/svn/branches/svnserve-logging</a>.</em></p>
-</div>
-
-<!-- ************************************************************* -->
-<div class="h3" id="svn-augmented-diff" title="svn-augmented-diff">
-<h3>An augmented diff representation</h3>
-
-<p>Currently, 'svn diff' outputs a patch in the so-called "Unified
-diff" format.  The problem is, this format is fairly old, and as such
-can represent only textual differences between files.  It does not
-represent structural changes to the directory tree, nor can it
-encompass changes to various metadata, the kind used extremely
-frequently by Subversion.</p>
-
-<p>'svn diff' actually has two or three use cases.  The first is to
-produce a human-reviewable description of a change suitable for code
-review.  The second (and maybe third) are to produce a file that can
-be sent by email or stored somewhere for later application, by patch(1)
-(the second use case) or some other more-capable patch tool (the third
-use case).  Of these, 'svn diff' currently only supports the first case.
-For example, copied files are currently shown as differences against the
-original version of the file, which makes review easier, though isn't
-suitable for applying with patch.</p>
-
-<p>This task is: First, to propose a solution for serialising a complete
-representation of a change.  Then, implement that solution with a new
-switch to 'svn diff' and a new subcommand ('svn patch'?) that would
-apply a previously created serialised patch.</p>
-
-<p>Things to consider in your design of the serialisation format:</p>
-<ul>
-<li>Whether it represents content diffs in a human-readable format
-(probably using the unified diff format), Subversion's native binary
-delta format, or some other format.  Considerations include non-precise
-(fuzzy) patching and representing changes to binary files.</li>
-<li>Whether it should be compatible (to some degree) with patch(1)
-(by encoding extra information in a "garbage" chunk of data that patch
-will ignore, similar to the way property changes are reported today).</li>
-<li>How renames (when eventually implemented as a primitive operation)
-should be represented.</li>
-</ul>
-
-<p>Note that <a href="http://svk.elixus.org">SVK</a> posesses such a
-rich unified diff format.  It may or may not be desirable to reuse the
-same kind of representation; that decision is part of the task!</p>
-
-<p><em>This task may have been started at <a
-href="http://svn.collab.net/repos/svn/branches/svnpatch-diff"
->http://svn.collab.net/repos/svn/branches/svnpatch-diff</a>.</em></p>
-
-</div>
-
 
 </div>
 
