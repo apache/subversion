@@ -72,6 +72,7 @@ enum statement_keys {
   STMT_DELETE_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
+  STMT_DELETE_ALL_ACTUAL,
   STMT_DELETE_ALL_LOCK,
   STMT_SELECT_INCOMPLETE_FLAG,
   STMT_SELECT_NOT_PRESENT,
@@ -135,6 +136,8 @@ static const char * const statements[] = {
   "delete from working_node;",
 
   "delete from base_node;",
+
+  "delete from actual_node;",
 
   "delete from lock;",
 
@@ -1965,13 +1968,14 @@ entries_write_body(void *baton,
       repos_root = NULL;
     }
 
-  /* Remove all WORKING and BASE nodes for this directory, as well as locks,
-     since we're about to replace 'em. */
+  /* Remove all WORKING, BASE and ACTUAL nodes for this directory, as well
+     as locks, since we're about to replace 'em. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_WORKING));
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_BASE));
   SVN_ERR(svn_sqlite__step_done(stmt));
-  /* ### what about all ACTUAL nodes? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_ACTUAL));
+  SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_LOCK));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
