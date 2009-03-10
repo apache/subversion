@@ -15,22 +15,6 @@ Status of 1.6.0:
 
 Candidate changes:
 
- * ^/branches/1.6.x-UNC-paths
-   Resolves the regression on 1.6.X that disabled UNC path support on Windows.
-   (All \\server\share format paths were canonicalized to /local/dir format).
-   Justification:
-     A lot of Windows users use UNC paths in corporate environment. While
-     not fully supported until issue #2028 and #2556 are resolved, this is a
-     serious regression against older versions.
-   Notes:
-     Most of the changes in this branch are tests on the behavior of path
-     functions. The real changes are in path.c and reroute unc paths to
-     svn_dirent_*() functions. 
-     The tests are there to make sure we don't regress again on the 1.6.x
-     branch and to allow future merges in this part of the code.
-   Votes:
-     +1: rhuijben, gstein, steveking
-
   * r36093, r36292, r36406
     Improve some messages.
     Votes:
@@ -163,3 +147,19 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * ^/branches/1.6.x-UNC-paths
+   Resolves the regression on 1.6.X that disabled UNC path support on Windows.
+   (All \\server\share format paths were canonicalized to /local/dir format).
+   Justification:
+     A lot of Windows users use UNC paths in corporate environment. While
+     not fully supported until issue #2028 and #2556 are resolved, this is a
+     serious regression against older versions.
+   Notes:
+     Most of the changes in this branch are tests on the behavior of path
+     functions. The real changes are in path.c and reroute unc paths to
+     svn_dirent_*() functions. 
+     The tests are there to make sure we don't regress again on the 1.6.x
+     branch and to allow future merges in this part of the code.
+   Votes:
+     +1: rhuijben, gstein, steveking
