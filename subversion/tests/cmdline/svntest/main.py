@@ -1172,15 +1172,28 @@ class TestRunner:
     self.index = index
 
   def list(self):
-    print(" %2d     %-5s  %s" % (self.index,
-                                 self.pred.list_mode(),
-                                 self.pred.description))
+    if verbose_mode and self.pred.inprogress:
+      print(" %2d     %-5s  %s [[%s]]" % (self.index,
+                                        self.pred.list_mode(),
+                                        self.pred.description,
+                                        self.pred.inprogress))
+    else:
+      print(" %2d     %-5s  %s" % (self.index,
+                                   self.pred.list_mode(),
+                                   self.pred.description))
 
   def _print_name(self, prefix):
-    print("%s %s %s: %s" % (prefix,
-                            os.path.basename(sys.argv[0]),
-                            str(self.index),
-                            self.pred.description))
+    if self.pred.inprogress:
+      print("%s %s %s: %s [[WIMP: %s]]" % (prefix,
+                                           os.path.basename(sys.argv[0]),
+                                           str(self.index),
+                                           self.pred.description,
+                                           self.pred.inprogress))
+    else:
+      print("%s %s %s: %s" % (prefix,
+                              os.path.basename(sys.argv[0]),
+                              str(self.index),
+                              self.pred.description))
 
   def run(self):
     """Run self.pred and return the result.  The return value is
