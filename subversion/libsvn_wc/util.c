@@ -124,6 +124,7 @@ svn_wc_create_notify(const char *path,
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
+  ret->old_revision = SVN_INVALID_REVNUM;
 
   return ret;
 }
