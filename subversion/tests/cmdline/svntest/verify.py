@@ -18,13 +18,13 @@
 
 import re, sys
 
-import main, tree, wc  # general svntest routines in this module.
-from svntest import Failure
+import svntest
+
 
 ######################################################################
 # Exception types
 
-class SVNUnexpectedOutput(Failure):
+class SVNUnexpectedOutput(svntest.Failure):
   """Exception raised if an invocation of svn results in unexpected
   output of any kind."""
   pass
@@ -275,10 +275,10 @@ def display_trees(message, label, expected, actual):
     print(message)
   if expected is not None:
     print('EXPECTED %s:' % label)
-    tree.dump_tree(expected)
+    svntest.tree.dump_tree(expected)
   if actual is not None:
     print('ACTUAL %s:' % label)
-    tree.dump_tree(actual)
+    svntest.tree.dump_tree(actual)
 
 
 def display_lines(message, label, expected, actual, expected_is_regexp=None,
@@ -306,12 +306,14 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
       sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
-                              raisable=main.SVNLineUnequal):
+                              raisable=None):
   """Compare two sets of output lines, and print them if they differ,
   preceded by MESSAGE iff not None.  EXPECTED may be an instance of
   ExpectedOutput (and if not, it is wrapped as such).  RAISABLE is an
   exception class, an instance of which is thrown if ACTUAL doesn't
   match EXPECTED."""
+  if raisable is None:
+    raisable = svntest.main.SVNLineUnequal
   ### It'd be nicer to use createExpectedOutput() here, but its
   ### semantics don't match all current consumers of this function.
   if not isinstance(expected, ExpectedOutput):
@@ -347,9 +349,9 @@ def verify_outputs(message, actual_stdout, actual_stderr,
 
     expected = createExpectedOutput(expected)
     if isinstance(expected, RegexOutput):
-      raisable = main.SVNUnmatchedError
+      raisable = svntest.main.SVNUnmatchedError
     elif not isinstance(expected, AnyOutput):
-      raisable = main.SVNLineUnequal
+      raisable = svntest.main.SVNLineUnequal
 
     compare_and_display_lines(message, label, expected, actual, raisable)
 

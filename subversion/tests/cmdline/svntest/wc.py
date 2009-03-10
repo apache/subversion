@@ -19,7 +19,7 @@ import os
 import types
 import sys
 
-import svntest.tree
+import svntest
 
 
 class State:
