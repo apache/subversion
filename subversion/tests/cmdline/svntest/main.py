@@ -1175,15 +1175,13 @@ class TestRunner:
   def list(self):
     print(" %2d     %-5s  %s" % (self.index,
                                  self.pred.list_mode(),
-                                 self.pred.get_description()))
-    self.pred.check_description()
+                                 self.pred.description))
 
   def _print_name(self, prefix):
     print("%s %s %s: %s" % (prefix,
                             os.path.basename(sys.argv[0]),
                             str(self.index),
-                            self.pred.get_description()))
-    self.pred.check_description()
+                            self.pred.description))
 
   def run(self):
     """Run self.pred and return the result.  The return value is
@@ -1191,13 +1189,11 @@ class TestRunner:
         - 1 if it errored in a way that indicates test failure
         - 2 if the test skipped
         """
-    if self.pred.need_sandbox():
-      # ooh! this function takes a sandbox argument
-      sandbox = Sandbox(self.pred.get_sandbox_name(), self.index)
-      kw = { 'sandbox' : sandbox }
+    sbox_name = self.pred.get_sandbox_name()
+    if sbox_name:
+      sandbox = Sandbox(sbox_name, self.index)
     else:
       sandbox = None
-      kw = {}
 
     # Explicitly set this so that commands that commit but don't supply a
     # log message will fail rather than invoke an editor.
@@ -1216,7 +1212,7 @@ class TestRunner:
 
     saved_dir = os.getcwd()
     try:
-      rc = self.pred.run(**kw)
+      rc = self.pred.run(sandbox)
       if rc is not None:
         self._print_name('STYLE ERROR in')
         print('Test driver returned a status code.')
