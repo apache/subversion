@@ -1329,10 +1329,7 @@ open_root(void *edit_baton,
    (an SVN_ERR_WC_LEFT_LOCAL_MOD error), clear ERR.  Otherwise, return ERR.
 */
 static svn_error_t *
-leftmod_error_chain(svn_error_t *err,
-                    const char *logfile,
-                    const char *path,
-                    apr_pool_t *pool)
+leftmod_error_chain(svn_error_t *err)
 {
   svn_error_t *tmp_err;
 
@@ -1343,16 +1340,13 @@ leftmod_error_chain(svn_error_t *err,
      a local mod was left, or to the NULL end of the chain. */
   for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
     if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-      break;
-
-  /* If we found a "left a local mod" error, tolerate it
-     and clear the whole error. In that case we continue with
-     modified files left on the disk. */
-  if (tmp_err)
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
+      {
+        /* We just found a "left a local mod" error, so tolerate it
+           and clear the whole error. In that case we continue with
+           modified files left on the disk. */
+        svn_error_clear(err);
+        return SVN_NO_ERROR;
+      }
 
   /* Otherwise, we just return our top-most error. */
   return err;
@@ -2146,25 +2140,20 @@ do_entry_deletion(struct edit_baton *eb,
       if (entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
-          const char *logfile_path
-            = svn_wc__adm_child(parent_path,
-                                svn_wc__logfile_path(*log_number, pool),
-                                pool);
 
           SVN_ERR(svn_wc_adm_retrieve(
-                   &child_access, eb->adm_access,
-                   full_path, pool));
+                    &child_access, eb->adm_access,
+                    full_path, pool));
 
           SVN_ERR(leftmod_error_chain(
-                   svn_wc_remove_from_revision_control(
-                    child_access,
-                    SVN_WC_ENTRY_THIS_DIR,
-                    TRUE, /* destroy */
-                    FALSE, /* instant error */
-                    eb->cancel_func,
-                    eb->cancel_baton,
-                    pool),
-                   logfile_path, parent_path, pool));
+                    svn_wc_remove_from_revision_control(
+                      child_access,
+                      SVN_WC_ENTRY_THIS_DIR,
+                      TRUE, /* destroy */
+                      FALSE, /* instant error */
+                      eb->cancel_func,
+                      eb->cancel_baton,
+                      pool)));
         }
     }
 
