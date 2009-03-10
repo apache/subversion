@@ -31,6 +31,7 @@ from svntest.main import SVN_PROP_MERGEINFO
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 ########################################################################
@@ -372,9 +373,9 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(patch_basic),
-              Skip(patch_unidiff),
-              Skip(patch_copy_and_move),
+              Wimp('strange platform-specific behavioiur', patch_basic),
+              Wimp('strange platform-specific behavioiur', patch_unidiff),
+              Wimp('strange platform-specific behavioiur', patch_copy_and_move),
               ]
 
 if __name__ == '__main__':

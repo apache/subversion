@@ -20,7 +20,7 @@ import os, types
 import svntest
 
 # if somebody does a "from testcase import *", they only get three names
-__all__ = ['XFail', 'Skip', 'SkipUnless']
+__all__ = ['XFail', 'Wimp', 'Skip', 'SkipUnless']
 
 RESULT_OK = 'ok'
 RESULT_FAIL = 'fail'
@@ -37,12 +37,13 @@ class TestCase:
     RESULT_SKIP: (2, 'SKIP: ', True),
     }
 
-  def __init__(self, delegate=None, cond_func=lambda: True, doc=None):
+  def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
     assert callable(cond_func)
 
     self._delegate = delegate
     self._cond_func = cond_func
     self.description = doc or delegate.description
+    self.inprogress = wip
 
   def get_sandbox_name(self):
     """Return the name that should be used for the sandbox.
@@ -122,7 +123,7 @@ class XFail(TestCase):
     RESULT_SKIP: (2, 'SKIP: ', True),
     }
 
-  def __init__(self, test_case, cond_func=lambda: True):
+  def __init__(self, test_case, cond_func=lambda: True, wip=None):
     """Create an XFail instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -132,11 +133,25 @@ class XFail(TestCase):
     information that are not available at __init__ time (like the fact
     that we're running over a particular RA layer)."""
 
-    TestCase.__init__(self, create_test_case(test_case), cond_func)
+    TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip)
 
   def list_mode(self):
     # basically, the only possible delegate is a Skip test. favor that mode.
     return self._delegate.list_mode() or 'XFAIL'
+
+
+class Wimp(XFail):
+  """Like XFail, but indicates a work-in-progress: an unexpected pass
+  is not considered a test failure."""
+
+  _result_map = {
+    RESULT_OK:   (0, 'XPASS: ', True),
+    RESULT_FAIL: (0, 'XFAIL: ', True),
+    RESULT_SKIP: (2, 'SKIP: ', True),
+    }
+
+  def __init__(self, wip, test_case, cond_func=lambda: True):
+    XFail.__init__(self, test_case, cond_func, wip)
 
 
 class Skip(TestCase):

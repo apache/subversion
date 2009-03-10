@@ -80,7 +80,8 @@ class TestHarness:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
-    xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
+    xfailed = [x for x in log_lines
+               if x[:6] == 'XFAIL:' and 0 > x.find('[[WIMP: ')]
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
@@ -90,12 +91,25 @@ class TestHarness:
       print('At least one test FAILED, checking ' + self.logfile)
       for x in failed_list:
         sys.stdout.write(x)
-    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
+    xpassed = [x for x in log_lines
+               if x[:6] == 'XPASS:' and 0 > x.find('[[WIMP: ')]
     if xpassed:
       print('At least one test XPASSED, checking ' + self.logfile)
       for x in xpassed:
         sys.stdout.write(x)
-    if skipped or xfailed or failed_list or xpassed:
+    wimped = [x for x in log_lines
+              if x[:6] == 'XFAIL:' and 0 <= x.find('[[WIMP: ')]
+    if wimped:
+      print('At least one WORK-IN-PROGRESS XFAILED, checking ' + self.logfile)
+      for x in wimped:
+        sys.stdout.write(x)
+    xwimped = [x for x in log_lines
+               if x[:6] == 'XPASS:' and 0 <= x.find('[[WIMP: ')]
+    if xwimped:
+      print('At least one WORK-IN-PROGRESS XPASSED, checking ' + self.logfile)
+      for x in xwimped:
+        sys.stdout.write(x)
+    if skipped or xfailed or failed_list or xpassed or wimped or xwimped:
       print('Summary of test results:')
       if passed:
         print('  %d test%s PASSED' % (len(passed), 's'*min(len(passed), 1)))
@@ -108,6 +122,12 @@ class TestHarness:
                                       's'*min(len(failed_list), 1)))
       if xpassed:
         print('  %d test%s XPASSED' % (len(xpassed), 's'*min(len(xpassed), 1)))
+      if wimped:
+        print('  %d WORK-IN-PROGRESS test%s XFAILED'
+              % (len(wimped), 's'*min(len(wimped), 1)))
+      if xwimped:
+        print('  %d WORK-IN-PROGRESS test%s XPASSED'
+              % (len(xwimped), 's'*min(len(xwimped), 1)))
     self._close_log()
     return failed
 

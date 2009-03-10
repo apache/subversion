@@ -168,7 +168,7 @@ do_test_num(const char *progname,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
-  svn_boolean_t skip, xfail;
+  svn_boolean_t skip, xfail, wimp;
   svn_error_t *err = NULL;
   svn_boolean_t test_failed;
   const char *msg = NULL;  /* the message this individual test prints out */
@@ -185,6 +185,7 @@ do_test_num(const char *progname,
   desc = &test_funcs[test_num];
   skip = desc->mode == svn_test_skip;
   xfail = desc->mode == svn_test_xfail;
+  wimp = xfail && desc->wip;
 
   /* Do test */
   if (desc->func)
@@ -208,7 +209,7 @@ do_test_num(const char *progname,
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
-  test_failed = ((err != SVN_NO_ERROR) != (xfail != 0));
+  test_failed = (!wimp && ((err != SVN_NO_ERROR) != (xfail != 0)));
 
   /* If we got an error, print it out.  */
   if (err)
@@ -219,20 +220,26 @@ do_test_num(const char *progname,
 
   if (msg_only)
     {
-      printf(" %2d     %-5s  %s\n",
+      printf(" %2d     %-5s  %s%s%s%s\n",
              test_num,
              (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
-             msg ? msg : "(test did not provide name)");
+             msg ? msg : "(test did not provide name)",
+             (wimp && verbose_mode) ? " [[" : "",
+             (wimp && verbose_mode) ? desc->wip : "",
+             (wimp && verbose_mode) ? "]]" : "");
     }
   else if ((! quiet_mode) || test_failed)
     {
-      printf("%s %s %d: %s\n",
+      printf("%s %s %d: %s%s%s%s\n",
              (err
               ? (xfail ? "XFAIL:" : "FAIL: ")
               : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
              progname,
              test_num,
-             msg ? msg : "(test did not provide name)");
+             msg ? msg : "(test did not provide name)",
+             wimp ? " [[WIMP: " : "",
+             wimp ? desc->wip : "",
+             wimp ? "]]" : "");
     }
 
   if (msg)
