@@ -21,22 +21,29 @@ import svntest
 
 __all__ = ['XFail', 'Skip']
 
+RESULT_OK = 'ok'
+RESULT_FAIL = 'fail'
+RESULT_SKIP = 'skip'
+
 
 class TestCase:
   """A thing that can be tested.  This is an abstract class with
   several methods that need to be overridden."""
 
-  def __init__(self):
-    # Each element is a tuple whose second element indicates benignity:
-    # e.g., True means "can be ignored when in quiet_mode".  See also
-    # XFail.run_test().
-    self._result_text = [('PASS: ', True),
-                         ('FAIL: ', False),
-                         ('SKIP: ', True)]
-    self._list_mode_text = ''
+  _result_map = {
+    RESULT_OK:   (0, 'PASS: ', True),
+    RESULT_FAIL: (1, 'FAIL: ', False),
+    RESULT_SKIP: (2, 'SKIP: ', True),
+    }
+
+  def __init__(self, delegate=None, cond_func=lambda: True):
+    assert callable(cond_func)
+
+    self._delegate = delegate
+    self._cond_func = cond_func
 
   def get_description(self):
-    raise NotImplementedError()
+    return self._delegate.get_description()
 
   def check_description(self):
     description = self.get_description()
@@ -50,33 +57,32 @@ class TestCase:
 
   def need_sandbox(self):
     """Return True iff this test needs a Sandbox for its execution."""
-
-    return 0
+    return self._delegate.need_sandbox()
 
   def get_sandbox_name(self):
     """Return the name that should be used for the sandbox.
 
-    This method is only called if self.need_sandbox() returns True."""
-
-    return 'sandbox'
+    This method is only called if self.need_sandbox() returns True.
+    """
+    return self._delegate.get_sandbox_name()
 
   def run(self, sandbox=None):
     """Run the test.
 
     If self.need_sandbox() returns True, then a Sandbox instance is
     passed to this method as the SANDBOX keyword argument; otherwise,
-    no argument is passed to this method."""
-
-    raise NotImplementedError()
+    no argument is passed to this method.
+    """
+    return self._delegate.run(sandbox)
 
   def list_mode(self):
-    return self._list_mode_text
+    return ''
 
-  def run_text(self, result=0):
-    return self._result_text[result]
-
-  def convert_result(self, result):
-    return result
+  def results(self, result):
+    # if our condition applied, then use our result map. otherwise, delegate.
+    if self._cond_func():
+      return self._result_map[result]
+    return self._delegate.results(result)
 
 
 class FunctionTestCase(TestCase):
@@ -91,9 +97,10 @@ class FunctionTestCase(TestCase):
   derived from the file name in which FUNC was defined.)"""
 
   def __init__(self, func):
+    assert isinstance(func, types.FunctionType)
+
     TestCase.__init__(self)
     self.func = func
-    assert type(self.func) is types.FunctionType
 
   def get_description(self):
     """Use the function's docstring as a description."""
@@ -106,7 +113,6 @@ class FunctionTestCase(TestCase):
   def need_sandbox(self):
     """If the function requires an argument, then we need to pass it a
     sandbox."""
-
     return self.func.func_code.co_argcount != 0
 
   def get_sandbox_name(self):
@@ -117,16 +123,22 @@ class FunctionTestCase(TestCase):
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, sandbox=None):
-    if self.need_sandbox():
+    if sandbox:
       return self.func(sandbox)
     else:
       return self.func()
 
 
 class XFail(TestCase):
-  "A test that is expected to fail."
+  """A test that is expected to fail, if its condition is true."""
 
-  def __init__(self, test_case, cond_func=lambda:1):
+  _result_map = {
+    RESULT_OK:   (1, 'XPASS: ', False),
+    RESULT_FAIL: (0, 'XFAIL: ', True),
+    RESULT_SKIP: (2, 'SKIP: ', True),
+    }
+
+  def __init__(self, test_case, cond_func=lambda: True):
     """Create an XFail instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -136,38 +148,17 @@ class XFail(TestCase):
     information that are not available at __init__ time (like the fact
     that we're running over a particular RA layer)."""
 
-    TestCase.__init__(self)
-    self.test_case = create_test_case(test_case)
-    self._list_mode_text = self.test_case.list_mode() or 'XFAIL'
-    # Delegate most methods to self.test_case:
-    self.get_description = self.test_case.get_description
-    self.need_sandbox = self.test_case.need_sandbox
-    self.get_sandbox_name = self.test_case.get_sandbox_name
-    self.run = self.test_case.run
-    self.cond_func = cond_func
+    TestCase.__init__(self, create_test_case(test_case), cond_func)
 
-  def convert_result(self, result):
-    if self.cond_func():
-      # Conditions are reversed here: a failure is expected, therefore
-      # it isn't an error; a pass is an error; but a skip remains a skip.
-      return {0:1, 1:0, 2:2}[self.test_case.convert_result(result)]
-    else:
-      return self.test_case.convert_result(result)
-
-  def run_text(self, result=0):
-    if self.cond_func():
-      # Tuple elements mean same as in TestCase._result_text.
-      return [('XFAIL:', True),
-              ('XPASS:', False),
-              self.test_case.run_text(2)][result]
-    else:
-      return self.test_case.run_text(result)
+  def list_mode(self):
+    # basically, the only possible delegate is a Skip test. favor that mode.
+    return self._delegate.list_mode() or 'XFAIL'
 
 
 class Skip(TestCase):
   """A test that will be skipped if its conditional is true."""
 
-  def __init__(self, test_case, cond_func=lambda:1):
+  def __init__(self, test_case, cond_func=lambda: True):
     """Create an Skip instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -177,49 +168,32 @@ class Skip(TestCase):
     __init__ time (like the fact that we're running over a
     particular RA layer)."""
 
-    TestCase.__init__(self)
-    self.test_case = create_test_case(test_case)
-    self.cond_func = cond_func
-    try:
-      if self.conditional():
-        self._list_mode_text = 'SKIP'
-    except svntest.Failure:
-      pass
-    # Delegate most methods to self.test_case:
-    self.get_description = self.test_case.get_description
-    self.get_sandbox_name = self.test_case.get_sandbox_name
-    self.convert_result = self.test_case.convert_result
-    self.run_text = self.test_case.run_text
+    TestCase.__init__(self, create_test_case(test_case), cond_func)
+
+  def list_mode(self):
+    if self._cond_func():
+      return 'SKIP'
+    return self._delegate.list_mode()
 
   def need_sandbox(self):
-    if self.conditional():
-      return 0
-    else:
-      return self.test_case.need_sandbox()
+    if self._cond_func():
+      return False
+    return self._delegate.need_sandbox()
 
   def run(self, sandbox=None):
-    if self.conditional():
+    if self._cond_func():
       raise svntest.Skip
     elif self.need_sandbox():
-      return self.test_case.run(sandbox=sandbox)
+      return self._delegate.run(sandbox=sandbox)
     else:
-      return self.test_case.run()
-
-  def conditional(self):
-    """Invoke SELF.cond_func(), and return the result evaluated
-    against the expected value."""
-    return self.cond_func()
+      return self._delegate.run()
 
 
 class SkipUnless(Skip):
   """A test that will be skipped if its conditional is false."""
 
   def __init__(self, test_case, cond_func):
-    Skip.__init__(self, test_case, cond_func)
-
-  def conditional(self):
-    "Return the negation of SELF.cond_func()."
-    return not self.cond_func()
+    Skip.__init__(self, test_case, lambda c=cond_func: not c())
 
 
 def create_test_case(func):
@@ -227,6 +201,3 @@ def create_test_case(func):
     return func
   else:
     return FunctionTestCase(func)
-
-
-### End of file.
