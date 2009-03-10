@@ -30,7 +30,7 @@ Candidate changes:
   * r36388
     Recommend Neon 0.28.4.
     Votes:
-      +1: arfrever
+      +1: arfrever, steveking (already using neon 0.28.4 in TSVN)
       +1: gstein, rhuijben (for 1.6.1; this can wait)
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
