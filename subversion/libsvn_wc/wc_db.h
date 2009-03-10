@@ -500,6 +500,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  *   CHECKSUM         NULL
  *   TRANSLATED_SIZE  SVN_INVALID_FILESIZE
  *   TARGET           NULL
+ *   LOCK             NULL
  *
  * If the STATUS is normal, and the REPOS_* values are NULL, then the
  * caller should use svn_wc__db_scan_base_repos() to scan up the BASE
@@ -534,6 +535,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_checksum_t **checksum,  /* ### files only */
                          svn_filesize_t *translated_size,
                          const char **target,
+                         svn_wc__db_lock_t **lock,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

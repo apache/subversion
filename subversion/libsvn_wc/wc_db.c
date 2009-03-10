@@ -1536,6 +1536,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_checksum_t **checksum,
                          svn_filesize_t *translated_size,
                          const char **target,
+                         svn_wc__db_lock_t **lock,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -1553,7 +1554,9 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                    lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
+                                         : STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -1596,6 +1599,24 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
       if (repos_relpath)
         {
           *repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
+        }
+      if (lock)
+        {
+          if (!svn_sqlite__column_is_null(stmt, 14))
+            {
+              *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
+              (*lock)->token = svn_sqlite__column_text(stmt, 14, result_pool);
+              if (!svn_sqlite__column_is_null(stmt, 15))
+                (*lock)->owner = svn_sqlite__column_text(stmt, 15,
+                                                         result_pool);
+              if (!svn_sqlite__column_is_null(stmt, 16))
+                (*lock)->comment = svn_sqlite__column_text(stmt, 16,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt, 17))
+                (*lock)->date = svn_sqlite__column_int64(stmt, 17);
+            }
+          else
+            *lock = NULL;
         }
       if (repos_root_url || repos_uuid)
         {
