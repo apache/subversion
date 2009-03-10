@@ -141,6 +141,7 @@ def authz_read_access(sbox):
   iota_url = root_url + '/iota'
   lambda_url = B_url + '/lambda'
   alpha_url = E_url + '/alpha'
+  F_alpha_url = B_url + '/F/alpha'
   D_url = A_url + '/D'
   G_url = D_url + '/G'
   pi_url = G_url + '/pi'
@@ -163,6 +164,7 @@ def authz_read_access(sbox):
 
   write_authz_file(sbox, { "/": "* = r",
                            "/A/B": "* =",
+                           "/A/B/F": "* = rw",
                            "/A/D": "* = rw",
                            "/A/D/G": ("* = rw\n" +
                                       svntest.main.wc_author + " ="),
@@ -242,6 +244,25 @@ def authz_read_access(sbox):
                                      'cp',
                                      '-m', 'logmsg',
                                      E_url, D_url)
+
+  # move a remote file, source/target ancestor is readonly: should fail
+  #
+  # Note: interesting, we deem it okay for someone to break this move
+  # into two operations, a committed copy followed by a committed
+  # deletion.  But the editor drive required to do these atomically
+  # today is prohibitive.
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'mv', '-m', 'logmsg',
+                                     alpha_url, F_alpha_url)
+
+  # copy a remote file, source/target ancestor is readonly
+  ### we fail here due to issue #3242.
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'cp', '-m', 'logmsg',
+                                     alpha_url, F_alpha_url)
+
 
 # test whether write access is correctly granted and denied
 def authz_write_access(sbox):
@@ -830,7 +851,7 @@ test_list = [ None,
               Skip(authz_open_root, svntest.main.is_ra_type_file),
               Skip(authz_open_directory, svntest.main.is_ra_type_file),
               Skip(broken_authz_file, svntest.main.is_ra_type_file),
-              Skip(authz_read_access, svntest.main.is_ra_type_file),
+              XFail(Skip(authz_read_access, svntest.main.is_ra_type_file)),
               Skip(authz_write_access, svntest.main.is_ra_type_file),
               Skip(authz_checkout_test, svntest.main.is_ra_type_file),
               Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file),
