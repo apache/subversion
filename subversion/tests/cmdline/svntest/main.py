@@ -1180,9 +1180,11 @@ class TestRunner:
                                  self.pred.get_description()))
     self.pred.check_description()
 
-  def _print_name(self):
-    print("%s %s: %s" % (os.path.basename(sys.argv[0]), str(self.index),
-          self.pred.get_description()))
+  def _print_name(self, prefix):
+    print("%s %s %s: %s" % (prefix,
+                            os.path.basename(sys.argv[0]),
+                            str(self.index),
+                            self.pred.get_description()))
     self.pred.check_description()
 
   def run(self):
@@ -1218,16 +1220,14 @@ class TestRunner:
     try:
       rc = self.pred.run(**kw)
       if rc is not None:
-        sys.stdout.write('STYLE ERROR in ')
-        sys.stdout.flush()
-        self._print_name()
+        self._print_name('STYLE ERROR in')
         print('Test driver returned a status code.')
         sys.exit(255)
-      result = 0
+      result = testcase.RESULT_OK
     except Skip, ex:
-      result = 2
+      result = testcase.RESULT_SKIP
     except Failure, ex:
-      result = 1
+      result = testcase.RESULT_FAIL
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
       # failure, rather than relevant information. However, if there
@@ -1244,26 +1244,21 @@ class TestRunner:
       sys.exit(0)
     except SystemExit, ex:
       print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
-      sys.stdout.write(ex.code and 'FAIL:  ' or 'PASS:  ')
-      sys.stdout.flush()
-      self._print_name()
+      self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
     except:
-      result = 1
+      result = testcase.RESULT_FAIL
       print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
 
     os.chdir(saved_dir)
-    result = self.pred.convert_result(result)
-    (result_text, result_benignity) = self.pred.run_text(result)
+    exit_code, result_text, result_benignity = self.pred.results(result)
     if not (quiet_mode and result_benignity):
-      sys.stdout.write("%s " % result_text)
+      self._print_name(result_text)
       sys.stdout.flush()
-      self._print_name()
-      sys.stdout.flush()
-    if sandbox is not None and result != 1 and cleanup_mode:
+    if sandbox is not None and exit_code != 1 and cleanup_mode:
       sandbox.cleanup_test_paths()
-    return result
+    return exit_code
 
 ######################################################################
 # Main testing functions
