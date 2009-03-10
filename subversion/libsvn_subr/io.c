@@ -421,8 +421,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
                 }
 #endif
 
-              /* Else ignore apr_err_2; better to fall through and
-                 return the original error. */
+              /* Else fall through and return the original error. */
             }
 
           if (file) *file = NULL;
