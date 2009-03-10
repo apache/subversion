@@ -145,6 +145,38 @@ complexity.</p>
 
 </div>  <!-- interactive-merge-source-selection -->
 
+<!-- ************************************************************* -->
+<div class="h3" id="tree-conflicts-ui"
+             title="tree-conflicts-ui">
+<h3>Tree Conflicts: User interface improvements for command-line client</h3>
+
+<p>Interactive conflict resolution in the command line client
+should be taught about tree conflicts.</p>
+
+<p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3144"
+>issue&nbsp;#3144</a> and
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3342"
+>issue&nbsp;#3342</a>.</p>
+
+<p>Subclipse has taken an interesting use-case-based approach to this,
+see <a href="http://docs.google.com/Doc?id=dd885dbs_30c8x6bvcn"
+>this page</a>. The Subversion command-line client could be extended
+to provide similar mechanisms when doing interactive conflict resolution
+during update and merge, and during 'svn resolve'. Ideas for approaches
+other than the one taken by Subclipse are also welcome and can be
+discussed.</p>
+
+<p>For a bit of background on tree conflicts, see the section
+<a href="http://svnbook.red-bean.com/nightly/en/svn.tour.treeconflicts.html"
+>Dealing with Structural Conflicts</a> in the svnbook.</p>
+
+<p>For additional ideas about tree conflict resolution, see
+<a href="http://svn.collab.net/repos/svn/trunk/notes/tree-conflicts/resolution.txt"
+>notes/tree-conflicts/resolution.txt</a> in the Subversion source tree
+(note that this text may be partly out of date, consult Julian
+for updates).</p>
+
+</div>  <!-- tree-conflicts-ui -->
 
 <!-- These are some other ones I considered for SoC 2008, but decided
      (for now) to leave off the list.  Feel free to publish them if
