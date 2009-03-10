@@ -407,6 +407,20 @@ svn_io_open_uniquely_named(apr_file_t **file,
               if (!apr_err_2 && finfo.filetype == APR_DIR)
                 continue;
 
+#if WIN32
+              apr_err_2 = APR_TO_OS_ERROR(apr_err);
+
+              if (apr_err_2 == ERROR_ACCESS_DENIED ||
+                  apr_err_2 == ERROR_SHARING_VIOLATION)
+                {
+                  /* The file is in use by another process or is hidden;
+                     create a new name, but don't do this 99999 times in
+                     case the folder is not writable */
+                  i += 797;
+                  continue;
+                }
+#endif
+
               /* Else ignore apr_err_2; better to fall through and
                  return the original error. */
             }
