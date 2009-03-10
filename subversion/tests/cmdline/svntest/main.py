@@ -42,10 +42,9 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 
+import svntest
 from svntest import Failure
 from svntest import Skip
-from svntest import testcase
-from svntest import wc
 
 ######################################################################
 #
@@ -237,8 +236,8 @@ default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 # call main.greek_state.copy().  That method will return a copy of this
 # State object which can then be edited.
 #
-_item = wc.StateItem
-greek_state = wc.State('', {
+_item = svntest.wc.StateItem
+greek_state = svntest.wc.State('', {
   'iota'        : _item("This is the file 'iota'.\n"),
   'A'           : _item(),
   'A/mu'        : _item("This is the file 'mu'.\n"),
@@ -298,7 +297,7 @@ def setup_development_mode():
         'run_and_validate_lock']
 
   for func in l:
-    setattr(actions, func, wrap_ex(getattr(actions, func)))
+    setattr(svntest.actions, func, wrap_ex(getattr(svntest.actions, func)))
 
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
@@ -1067,7 +1066,7 @@ class Sandbox:
 
   def build(self, name = None, create_wc = True, read_only = False):
     self._set_name(name, read_only)
-    if actions.make_repo_and_wc(self, create_wc, read_only):
+    if svntest.actions.make_repo_and_wc(self, create_wc, read_only):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
   def add_test_path(self, path, remove=True):
@@ -1169,7 +1168,7 @@ class TestRunner:
   runing the test and test list output."""
 
   def __init__(self, func, index):
-    self.pred = testcase.create_test_case(func)
+    self.pred = svntest.testcase.create_test_case(func)
     self.index = index
 
   def list(self):
@@ -1208,7 +1207,7 @@ class TestRunner:
      os.environ['SVN_CURRENT_TEST'] = os.path.basename(sys.argv[0]) + "_" + \
                                       str(self.index)
 
-    actions.no_sleep_for_timestamps()
+    svntest.actions.no_sleep_for_timestamps()
 
     saved_dir = os.getcwd()
     try:
@@ -1217,11 +1216,11 @@ class TestRunner:
         self._print_name('STYLE ERROR in')
         print('Test driver returned a status code.')
         sys.exit(255)
-      result = testcase.RESULT_OK
+      result = svntest.testcase.RESULT_OK
     except Skip, ex:
-      result = testcase.RESULT_SKIP
+      result = svntest.testcase.RESULT_SKIP
     except Failure, ex:
-      result = testcase.RESULT_FAIL
+      result = svntest.testcase.RESULT_FAIL
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
       # failure, rather than relevant information. However, if there
@@ -1241,7 +1240,7 @@ class TestRunner:
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
     except:
-      result = testcase.RESULT_FAIL
+      result = svntest.testcase.RESULT_FAIL
       print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
 
@@ -1585,7 +1584,7 @@ def run_tests(test_list, serial_only = False):
   create_config_dir(default_config_dir)
 
   # Setup the pristine repository
-  actions.setup_pristine_repository()
+  svntest.actions.setup_pristine_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, parallel)
@@ -1600,10 +1599,3 @@ def run_tests(test_list, serial_only = False):
 
   # Return the appropriate exit code from the tests.
   sys.exit(exit_code)
-
-# the modules import each other, so we do this import very late, to ensure
-# that the definitions in "main" have been completed.
-import actions
-
-
-### End of file.

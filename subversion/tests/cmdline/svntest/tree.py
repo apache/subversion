@@ -25,13 +25,12 @@ else:
   # Python <3.0
   from StringIO import StringIO
 
-import main  # the general svntest routines in this module.
-from svntest import Failure
+import svntest
 
 # Tree Exceptions.
 
 # All tree exceptions should inherit from SVNTreeError
-class SVNTreeError(Failure):
+class SVNTreeError(svntest.Failure):
   "Exception raised if you screw up in the tree module."
   pass
 
@@ -288,8 +287,6 @@ class SVNTreeNode:
     return cmp(self.name, other.name)
 
   def as_state(self, prefix=None):
-    import svntest.wc
-
     root = self
     if self.path == root_node_name:
       assert prefix is None
@@ -333,7 +330,6 @@ class SVNTreeNode:
     return state
 
   def as_item(self):
-    import svntest.wc
     return svntest.wc.StateItem(self.contents,
                                 self.props,
                                 self.atts.get('status'),
@@ -449,7 +445,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
 
 def get_nodes_which_might_have_props(wc_path):
-  dot_svn = main.get_admin_name()
+  dot_svn = svntest.main.get_admin_name()
   def walker(output, dirname, names):
     names[:] = [n for n in names if n != dot_svn]
     output.extend([os.path.join(dirname, n) for n in names])
@@ -469,7 +465,10 @@ def get_props(paths):
 
   files = {}
   filename = None
-  exit_code, output, errput = main.run_svn(1, "proplist", "--verbose", *paths)
+  exit_code, output, errput = svntest.main.run_svn(1,
+                                                   "proplist",
+                                                   "--verbose",
+                                                   *paths)
 
   properties_on_re = re.compile("^Properties on '(.+)':$")
 
@@ -531,7 +530,8 @@ def handle_dir(path, current_parent, props, ignore_svn):
   for f in all_files:
     if path != '.':  # 'svn pl -v' strips leading './'
       f = os.path.join(path, f)
-    if os.path.isdir(f) and os.path.basename(f) != main.get_admin_name():
+    if os.path.isdir(f) \
+          and os.path.basename(f) != svntest.main.get_admin_name():
       dirs.append(f)
     elif os.path.isfile(f):
       files.append(f)
