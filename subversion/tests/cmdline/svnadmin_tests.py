@@ -120,7 +120,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       rev_tree = revs[rev].old_tree()
 
       try:
-        svntest.tree.compare_trees ("rev/disk", rev_tree, wc_tree)
+        svntest.tree.compare_trees("rev/disk", rev_tree, wc_tree)
       except svntest.tree.SVNTreeError:
         svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
