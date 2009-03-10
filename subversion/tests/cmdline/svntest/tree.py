@@ -287,6 +287,64 @@ class SVNTreeNode:
     children within a directory."""
     return cmp(self.name, other.name)
 
+  def as_state(self, prefix=None):
+    import svntest.wc
+
+    root = self
+    if self.path == root_node_name:
+      assert prefix is None
+      wc_dir = ''
+      while 1:
+        if root is not self:  # don't prepend ROOT_NODE_NAME
+          wc_dir = os.path.join(wc_dir, root.name)
+        if root.contents or root.props or root.atts:
+          break
+        if not root.children or len(root.children) != 1:
+          break
+        root = root.children[0]
+      state = svntest.wc.State(wc_dir, { })
+      if root.contents or root.props or root.atts:
+        state.add({'': root.as_item()})
+      prefix = wc_dir
+    else:
+      assert prefix is not None
+
+      path = self.path
+      if path.startswith(root_node_name):
+        path = path[len(root_node_name)+1:]
+      # prefix should only be set on a recursion, which means a child,
+      # which means this path better not be the same as the prefix.
+      assert path != prefix, 'not processing a child of the root'
+      l = len(prefix)
+      if l > 0:
+        assert path[:l] == prefix, \
+            '"%s" is not a prefix of "%s"' % (prefix, path)
+        # return the portion after the separator
+        path = path[l+1:].replace(os.sep, '/')
+
+      state = svntest.wc.State('', {
+          path: self.as_item()
+          })
+
+    if root.children:
+      for child in root.children:
+        state.add_state('', child.as_state(prefix))
+
+    return state
+
+  def as_item(self):
+    import svntest.wc
+    return svntest.wc.StateItem(self.contents,
+                                self.props,
+                                self.atts.get('status'),
+                                self.atts.get('verb'),
+                                self.atts.get('wc_rev'),
+                                self.atts.get('locked'),
+                                self.atts.get('copied'),
+                                self.atts.get('switched'),
+                                self.atts.get('writelocked'),
+                                self.atts.get('treeconflict'))
+
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"

@@ -165,10 +165,30 @@ class State:
                        item.props,
                        atts))
 
-    return svntest.tree.build_generic_tree(nodelist)
+    tree = svntest.tree.build_generic_tree(nodelist)
+    if 0:
+      check = tree.as_state()
+      if self != check:
+        import pprint
+        pprint.pprint(self.desc)
+        pprint.pprint(check.desc)
+        # STATE -> TREE -> STATE is lossy.
+        # In many cases, TREE -> STATE -> TREE is not.
+        # Even though our conversion from a TREE has lost some information, we
+        # may be able to verify that our lesser-STATE produces the same TREE.
+        svntest.tree.compare_trees('mismatch', tree, check.old_tree())
+
+    return tree
 
   def __str__(self):
     return str(self.old_tree())
+
+  def __eq__(self, other):
+    return isinstance(other, State) and self.desc == other.desc
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
 
 class StateItem:
   """Describes an individual item within a working copy.
@@ -224,3 +244,19 @@ class StateItem:
       if value is not None and name == 'wc_rev':
         value = str(value)
       setattr(self, name, value)
+
+  def __eq__(self, other):
+    if not isinstance(other, StateItem):
+      return False
+    v_self = vars(self)
+    v_other = vars(other)
+    if self.treeconflict is None:
+      v_other = v_other.copy()
+      v_other['treeconflict'] = None
+    if other.treeconflict is None:
+      v_self = v_self.copy()
+      v_self['treeconflict'] = None
+    return v_self == v_other
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
