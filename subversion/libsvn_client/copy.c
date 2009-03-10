@@ -161,10 +161,12 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
                                          adm_access, pool);
 }
 
-/* Find the longest common ancestor for all the SRCs and DSTs in COPY_PAIRS.
-   If SRC_ANCESTOR or DST_ANCESTOR is NULL, nothing will be returned in it.
-   COMMON_ANCESTOR will be the common ancestor of both the SRC_ANCESTOR and
-   DST_ANCESTOR, and will only be set if it is not NULL.
+/* Find the longest common ancestor of paths in COPY_PAIRS.  If
+   SRC_ANCESTOR is NULL, ignore source paths in this calculation.  If
+   DST_ANCESTOR is NULL, ignore destination paths in this calculation.
+   COMMON_ANCESTOR will be the common ancestor of both the
+   SRC_ANCESTOR and DST_ANCESTOR, and will only be set if it is not
+   NULL.
  */
 static svn_error_t *
 get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
@@ -178,33 +180,35 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   char *top_src;
   int i;
 
-  top_src = apr_pstrdup(subpool,
-                        APR_ARRAY_IDX(copy_pairs, 0,
-                                      svn_client__copy_pair_t *)->src);
-
   /* Because all the destinations are in the same directory, we can easily
      determine their common ancestor. */
   if (copy_pairs->nelts == 1)
-    top_dst = apr_pstrdup(subpool, APR_ARRAY_IDX(copy_pairs, 0,
-                                     svn_client__copy_pair_t *)->dst);
+    top_dst = apr_pstrdup(subpool,
+                          APR_ARRAY_IDX(copy_pairs, 0,
+                                        svn_client__copy_pair_t *)->dst);
   else
     top_dst = svn_path_dirname(APR_ARRAY_IDX(copy_pairs, 0,
                                              svn_client__copy_pair_t *)->dst,
                                subpool);
 
-  /* We don't need to clear the subpool here for several reasons:
-     1)  If we do, we can't use it to allocate the initial versions of
-         top_src and top_dst (above).
-     2)  We don't return any errors in the following loop, so we are guanteed
-         to destroy the subpool at the end of this function.
-     3)  The number of iterations is likely to be few, and the loop will be
-         through quickly, so memory leakage will not be significant, in time or
-         space.  */
+  /* Sources can came from anywhere, so we have to actually do some
+     work for them.  */
+  top_src = apr_pstrdup(subpool,
+                        APR_ARRAY_IDX(copy_pairs, 0,
+                                      svn_client__copy_pair_t *)->src);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
-      const svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                              svn_client__copy_pair_t *);
-
+      /* We don't need to clear the subpool here for several reasons:
+         1)  If we do, we can't use it to allocate the initial versions of
+             top_src and top_dst (above).
+         2)  We don't return any errors in the following loop, so we
+             are guanteed to destroy the subpool at the end of this function.
+         3)  The number of iterations is likely to be few, and the loop will
+             be through quickly, so memory leakage will not be significant,
+             in time or space.
+      */
+      const svn_client__copy_pair_t *pair =
+        APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
       top_src = svn_path_get_longest_ancestor(top_src, pair->src, subpool);
     }
 
