@@ -29,7 +29,7 @@ Candidate changes:
      The tests are there to make sure we don't regress again on the 1.6.x
      branch and to allow future merges in this part of the code.
    Votes:
-     +1: rhuijben, gstein
+     +1: rhuijben, gstein, steveking
 
   * r36093, r36292, r36406
     Improve some messages.
