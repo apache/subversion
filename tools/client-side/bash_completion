@@ -361,7 +361,7 @@ _svn()
 	    return 0
 	fi
 
-	if [[ $cmd = 'merge' ]]
+	if [[ $cmd = 'merge' || $cmd = 'mergeinfo' ]]
 	then
 	  local here=$(_svn_info URL)
 	  # suggest a possible URL for merging
