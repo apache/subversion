@@ -2884,6 +2884,13 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 
   if (is_subtree)
     {
+      apr_array_header_t *deleted_rangelist, *added_rangelist;
+
+      SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
+                                 child->remaining_ranges,
+                                 parent->remaining_ranges,
+                                 TRUE, pool));
+
       /* If CHILD is the merge target we then know that primary_url,
          REVISION1, and REVISION2 are provided by normalize_merge_sources()
          -- see 'MERGEINFO MERGE SOURCE NORMALIZATION'.  Due to this
@@ -2898,14 +2905,19 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
          primary_url, REVISION1, and REVISION2 as we do for the merge target.
          primary_url@REVSION1 and/or primary_url@REVSION2 might not exist.
 
-         If one or both doesn't exist, we need to know so we don't later try
-         to describe these invalid subtrees in drive_merge_report_editor(),
-         as that will break the merge. */
-      SVN_ERR(adjust_deleted_subtree_ranges(child, parent,
-                                            mergeinfo_path,
-                                            revision1, revision2,
-                                            primary_url, ra_session,
-                                            ctx, pool));
+         If one or both doesn't exist, then adjust CHILD->REMAINING_RANGES
+         such that we don't later try to describe invalid subtrees in
+         drive_merge_report_editor(), as that will break the merge.
+         If CHILD has the same remaining ranges as PARENT however, then
+         there is no need to make these adjustments, since
+         drive_merge_report_editor() won't attempt to describe CHILD in this
+         case, see the 'Note' in drive_merge_report_editor's docstring. */
+      if (deleted_rangelist->nelts || added_rangelist->nelts)
+        SVN_ERR(adjust_deleted_subtree_ranges(child, parent,
+                                              mergeinfo_path,
+                                              revision1, revision2,
+                                              primary_url, ra_session,
+                                              ctx, pool));
     }
 
   /* Issue #2973 -- from the continuing series of "Why, since the advent of
