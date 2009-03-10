@@ -392,9 +392,12 @@ _svn()
 	if [[ $stat = 'skip' ]]
 	then
 	    local previous=${COMP_WORDS[COMP_CWORD-1]}
-	    local values= dirs= beep=
+	    local values= dirs= beep= exes=
 
 	    [[ $previous = '--config-dir' ]] && dirs=1
+
+	    # external editor, diff, diff3, patch...
+	    [[ $previous = --*-cmd ]] && exes=1
 
 	    [[ $previous = '--native-eol' ]] && values='LF CR CRLF'
 
@@ -454,6 +457,7 @@ _svn()
 	    # or fallback on ordinary filename expansion
 	    [[ $values ]] && COMPREPLY=( $( compgen -W "$values" -- $cur ) )
 	    [[ $dirs ]] && COMPREPLY=( $( compgen -o dirnames -- $cur ) )
+	    [[ $exes ]] && COMPREPLY=( $( compgen -c -- $cur ) )
 	    [[ $beep ]] &&
 	    {
 		# 'no known completion'. hummm.
