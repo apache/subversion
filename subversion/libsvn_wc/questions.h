@@ -40,19 +40,6 @@ svn_error_t *
 svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool);
 
 
-/* Set *EQUAL_P to true if PATH's timestamp is the same as the one recorded
- * in its `entries' file, else to set to false. ADM_ACCESS must be an access
- * baton for PATH.
- *
- * Use POOL for any temporary allocation.
- */
-svn_error_t *
-svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
-                           const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           apr_pool_t *pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
