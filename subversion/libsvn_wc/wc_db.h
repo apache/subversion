@@ -496,6 +496,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  *   CHANGED_REV      SVN_INVALID_REVNUM
  *   CHANGED_DATE     0
  *   CHANGED_AUTHOR   NULL
+ *   LAST_MOD_TIME    0
  *   DEPTH            svn_depth_unknown
  *   CHECKSUM         NULL
  *   TRANSLATED_SIZE  SVN_INVALID_FILESIZE
@@ -531,6 +532,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_revnum_t *changed_rev,
                          apr_time_t *changed_date,
                          const char **changed_author,
+                         apr_time_t *last_mod_time,
                          svn_depth_t *depth,  /* ### for dirs only */
                          svn_checksum_t **checksum,  /* ### files only */
                          svn_filesize_t *translated_size,
