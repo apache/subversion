@@ -1013,7 +1013,11 @@ def run_and_verify_patch(dir, patch_path,
 
   # Update and make a tree of the output.
   patch_command = patch_command + args
-  exit_code, out, err = main.run_svn(error_re_string, *patch_command)
+  exit_code, out, err = main.run_svn(True, *patch_command)
+
+  # Return early if the patch program is missing
+  if exit_code == 1 and len(err) >= 4 and err[-1] == "svn: External program is missing\n":
+    return
 
   if error_re_string:
     rm = re.compile(error_re_string)
@@ -1025,8 +1029,10 @@ def run_and_verify_patch(dir, patch_path,
     if not match:
       raise main.SVNUnmatchedError
   elif err:
-    ### we should raise a less generic error here. which?
-    raise Failure(err)
+    print("UNEXPECTED STDERR:")
+    for x in err:
+      sys.stdout.write(x)
+    raise verify.SVNUnexpectedStderr
 
   if dry_run and out != out_dry:
     print("=============================================================")
