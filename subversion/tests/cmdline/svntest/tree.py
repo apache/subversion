@@ -444,14 +444,6 @@ def create_from_path(path, contents=None, props={}, atts={}):
   return root_node
 
 
-def get_nodes_which_might_have_props(wc_path):
-  dot_svn = svntest.main.get_admin_name()
-  def walker(output, dirname, names):
-    names[:] = [n for n in names if n != dot_svn]
-    output.extend([os.path.join(dirname, n) for n in names])
-  nodes = [wc_path]
-  os.path.walk(wc_path, walker, nodes)
-  return nodes
 
 # helper for build_tree_from_wc()
 def get_props(paths):
@@ -505,7 +497,7 @@ def get_props(paths):
 
   return files
 
-# helper for handle_dir(), which helps build_tree_from_wc()
+### ridiculous function. callers should do this one line themselves.
 def get_text(path):
   "Return a string with the textual contents of a file at PATH."
 
@@ -513,42 +505,8 @@ def get_text(path):
   if not os.path.isfile(path):
     return None
 
-  fp = open(path, 'r')
-  contents = fp.read()
-  fp.close()
-  return contents
+  return open(path, 'r').read()
 
-# main recursive helper for build_tree_from_wc()
-def handle_dir(path, current_parent, props, ignore_svn):
-
-  # get a list of all the files
-  all_files = os.listdir(path)
-  files = []
-  dirs = []
-
-  # put dirs and files in their own lists, and remove SVN dirs
-  for f in all_files:
-    if path != '.':  # 'svn pl -v' strips leading './'
-      f = os.path.join(path, f)
-    if os.path.isdir(f) \
-          and os.path.basename(f) != svntest.main.get_admin_name():
-      dirs.append(f)
-    elif os.path.isfile(f):
-      files.append(f)
-
-  # add each file as a child of CURRENT_PARENT
-  for f in files:
-    fcontents = get_text(f)
-    fprops = props.get(f, {})
-    current_parent.add_child(SVNTreeNode(os.path.basename(f), None,
-                                         fcontents, fprops))
-
-  # for each subdir, create a node, walk its tree, add it as a child
-  for d in dirs:
-    dprops = props.get(d, {})
-    new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
-    current_parent.add_child(new_dir_node)
-    handle_dir(d, new_dir_node, props, ignore_svn)
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
@@ -836,21 +794,4 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
     files.  If IGNORE_SVN is true, then exclude SVN admin dirs from the tree.
     If LOAD_PROPS is true, the props will be added to the tree."""
 
-    root = SVNTreeNode(root_node_name, None)
-
-    props = {}
-    wc_path = os.path.normpath(wc_path)
-    if load_props:
-      nodes = get_nodes_which_might_have_props(wc_path)
-      props = get_props(nodes)
-      if props.has_key(wc_path):
-        root_dir_node = SVNTreeNode(os.path.basename('.'), None, None,
-                                    props[wc_path])
-        root.add_child(root_dir_node)
-
-    # Walk the tree recursively
-    handle_dir(wc_path, root, props, ignore_svn)
-
-    return root
-
-### End of file.
+    return svntest.wc.State.from_wc(wc_path, load_props, ignore_svn).old_tree()

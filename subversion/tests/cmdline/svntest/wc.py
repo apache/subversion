@@ -368,6 +368,53 @@ class State:
 
     return cls('', desc)
 
+  @classmethod
+  def from_wc(cls, path, load_props=False, ignore_svn=True):
+    """Create a State object from a working copy.
+
+    Walks the tree at PATH, building a State based on the actual files
+    and directories found. If LOAD_PROPS is True, then the properties
+    will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
+    True, then the .svn subdirectories will be excluded from the State.
+    """
+
+    desc = { }
+    dot_svn = svntest.main.get_admin_name()
+
+    def path_to_key(p, l=len(path)+1):
+      if p == path:
+        return ''
+      assert p.startswith(path + os.sep)
+      return p[l:].replace(os.sep, '/')
+
+    def _walker(baton, dirname, names):
+      parent = path_to_key(dirname)
+      if parent:
+        parent += '/'
+      if ignore_svn and (dot_svn in names):
+        names.remove(dot_svn)
+      for name in names:
+        node = os.path.join(dirname, name)
+        if os.path.isfile(node):
+          contents = open(node, 'r').read()
+        else:
+          contents = None
+        desc['%s%s' % (parent, name)] = StateItem(contents=contents)
+
+    os.path.walk(path, _walker, None)
+
+    if load_props:
+      paths = [os.path.join(path, p.replace('/', os.sep)) for p in desc.keys()]
+      paths.append(path)
+      all_props = svntest.tree.get_props(paths)
+      for node, props in all_props.items():
+        if node == path:
+          desc['.'] = StateItem(props=props)
+        else:
+          desc[path_to_key(node)].props = props
+
+    return cls('', desc)
+
 
 class StateItem:
   """Describes an individual item within a working copy.
