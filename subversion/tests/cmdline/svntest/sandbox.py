@@ -53,9 +53,9 @@ class Sandbox:
     # contents.
     if self.repo_url.startswith("http"):
       # this dir doesn't exist out of the box, so we may have to make it
-      if not os.path.exists(work_dir):
-        os.makedirs(work_dir)
-      self.authz_file = os.path.join(work_dir, "authz")
+      if not os.path.exists(svntest.main.work_dir):
+        os.makedirs(svntest.main.work_dir)
+      self.authz_file = os.path.join(svntest.main.work_dir, "authz")
       open(self.authz_file, 'w').write("[/]\n* = rw\n")
 
     # For svnserve tests we have a per-repository authz file, and it
