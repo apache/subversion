@@ -3483,7 +3483,8 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              diff_svnpatch,
+              # ra_serf's editor order violation confuses this test
+              Skip(diff_svnpatch, svntest.main.is_ra_type_dav_serf),
               ]
 
 if __name__ == '__main__':
