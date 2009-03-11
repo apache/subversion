@@ -373,9 +373,9 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Wimp('strange platform-specific behavioiur', patch_basic),
-              Wimp('strange platform-specific behavioiur', patch_unidiff),
-              Wimp('strange platform-specific behavioiur', patch_copy_and_move),
+              Wimp('strange platform-specific failures', patch_basic),
+              Wimp('strange platform-specific failures', patch_unidiff),
+              Wimp('strange platform-specific failures', patch_copy_and_move),
               ]
 
 if __name__ == '__main__':
