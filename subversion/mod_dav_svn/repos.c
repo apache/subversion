@@ -2281,14 +2281,15 @@ get_parent_resource(const dav_resource *resource,
   dav_resource *parent;
   dav_resource_private *parentinfo;
   svn_stringbuf_t *path = resource->info->uri_path;
+  
+  /* Initialize the return value. */
+  *parent_resource = NULL;
 
-  /* the root of the repository has no parent */
+  /* The root of the repository has no parent. */
   if (path->len == 1 && *path->data == '/')
-    {
-      *parent_resource = NULL;
-      return NULL;
-    }
+    return NULL;
 
+  /* If possible, create a parent based on the type of RESOURCE. */
   switch (resource->type)
     {
     case DAV_RESOURCE_TYPE_REGULAR:
@@ -2334,18 +2335,26 @@ get_parent_resource(const dav_resource *resource,
         create_private_resource(resource, DAV_SVN_RESTYPE_ACT_COLLECTION);
       break;
 
+    case DAV_RESOURCE_TYPE_PRIVATE:
+      if ((resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
+          || (resource->info->restype == DAV_SVN_RESTYPE_REV_COLLECTION))
+        *parent_resource =
+          create_private_resource(resource, resource->info->restype);
+      /* ### FIXME:  Need parents for other private resource types. */
+      break;
+
     default:
-      /* ### needs more work. need parents for other resource types
-         ###
-         ### return an error so we can easily identify the cases where
-         ### we've called this function unexpectedly. */
-      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           apr_psprintf(resource->pool,
-                                        "get_parent_resource was called for "
-                                        "%s (type %d)",
-                                        resource->uri, resource->type));
+      /* ### FIXME:  Need parents for other resource types. */
       break;
     }
+
+  /* If we didn't create parent resource above, complain. */
+  if (! *parent_resource)
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "get_parent_resource was called for "
+                                      "%s (type %d)",
+                                      resource->uri, resource->type));
 
   return NULL;
 }
