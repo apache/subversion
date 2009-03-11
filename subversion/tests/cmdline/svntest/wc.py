@@ -377,6 +377,9 @@ class State:
     will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
     True, then the .svn subdirectories will be excluded from the State.
     """
+    # generally, the OS wants '.' rather than ''
+    if not path:
+      path = '.'
 
     desc = { }
     dot_svn = svntest.main.get_admin_name()
@@ -384,7 +387,8 @@ class State:
     def path_to_key(p, l=len(path)+1):
       if p == path:
         return ''
-      assert p.startswith(path + os.sep)
+      assert p.startswith(path + os.sep), \
+          "'%s' is not a prefix of '%s'" % (path + os.sep, p)
       return p[l:].replace(os.sep, '/')
 
     def _walker(baton, dirname, names):
@@ -411,6 +415,9 @@ class State:
         if node == path:
           desc['.'] = StateItem(props=props)
         else:
+          if path == '.':
+            # 'svn proplist' strips './' from the paths. put it back on.
+            node = './' + node
           desc[path_to_key(node)].props = props
 
     return cls('', desc)
