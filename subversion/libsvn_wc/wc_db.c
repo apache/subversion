@@ -1534,6 +1534,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_revnum_t *changed_rev,
                          apr_time_t *changed_date,
                          const char **changed_author,
+                         apr_time_t *last_mod_time,
                          svn_depth_t *depth,
                          svn_checksum_t **checksum,
                          svn_filesize_t *translated_size,
@@ -1647,6 +1648,10 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         {
           /* Result may be NULL. */
           *changed_author = svn_sqlite__column_text(stmt, 11, result_pool);
+        }
+      if (last_mod_time)
+        {
+          *last_mod_time = svn_sqlite__column_int64(stmt, 14);
         }
       if (depth)
         {
