@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -3483,7 +3483,7 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              Skip(diff_svnpatch),
+              diff_svnpatch,
               ]
 
 if __name__ == '__main__':
