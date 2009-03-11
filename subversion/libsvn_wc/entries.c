@@ -167,7 +167,7 @@ typedef struct {
   svn_revnum_t revision;
   svn_node_kind_t kind;  /* ### should switch to svn_wc__db_kind_t */
   svn_checksum_t *checksum;
-  apr_size_t translated_size;
+  svn_filesize_t translated_size;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -189,7 +189,7 @@ typedef struct {
   svn_boolean_t moved_here;
   const char *moved_to;
   svn_checksum_t *checksum;
-  apr_size_t translated_size;
+  svn_filesize_t translated_size;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -967,6 +967,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 &entry->cmt_rev,
                 &entry->cmt_date,
                 &entry->cmt_author,
+                &entry->text_time,
                 &entry->depth,
                 &checksum,
                 &translated_size,
@@ -1293,7 +1294,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
             }
         }
 
-      /* ### do something with translated_size  */
+      entry->working_size = translated_size;
 
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
@@ -1774,6 +1775,8 @@ write_entry(svn_sqlite__db_t *wc_db,
         base_node->parent_relpath = "";
       base_node->revision = entry->revision;
       base_node->depth = entry->depth;
+      base_node->last_mod_time = entry->text_time;
+      base_node->translated_size = entry->working_size;
 
       if (entry->deleted)
         {
@@ -1856,6 +1859,8 @@ write_entry(svn_sqlite__db_t *wc_db,
       working_node->parent_relpath = "";
       working_node->depth = entry->depth;
       working_node->changed_rev = SVN_INVALID_REVNUM;
+      working_node->last_mod_time = entry->text_time;
+      working_node->translated_size = entry->working_size;
 
       if (entry->kind == svn_node_dir)
         working_node->checksum = NULL;

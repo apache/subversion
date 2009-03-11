@@ -614,6 +614,7 @@ test_working_info(apr_pool_t *pool)
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
+  apr_time_t last_mod_time;
   svn_depth_t depth;
   svn_checksum_t *checksum;
   svn_filesize_t translated_size;
@@ -641,7 +642,7 @@ test_working_info(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_read_info(
             &status, &kind, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
-            &changed_rev, &changed_date, &changed_author,
+            &changed_rev, &changed_date, &changed_author, &last_mod_time,
             &depth, &checksum, &translated_size, &target,
             &changelist, &original_repos_relpath, &original_root_url,
             &original_uuid, &original_revnum,

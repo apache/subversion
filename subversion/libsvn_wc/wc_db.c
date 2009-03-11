@@ -166,13 +166,15 @@ enum statement_keys {
 static const char * const statements[] = {
   "select wc_id, local_relpath, repos_id, repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
-  "  changed_rev, changed_date, changed_author, depth, symlink_target "
+  "  changed_rev, changed_date, changed_author, depth, symlink_target, "
+  "  last_mod_time "
   "from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
+  "  last_mod_time, "
   "  lock_token, lock_owner, lock_comment, lock_date "
   "from base_node "
   "left outer join lock on base_node.repos_id = lock.repos_id "
@@ -182,7 +184,7 @@ static const char * const statements[] = {
   "select presence, kind, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
   "  copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum, "
-  "  moved_here, moved_to "
+  "  moved_here, moved_to, last_mod_time "
   "from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -1602,21 +1604,21 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         }
       if (lock)
         {
-          if (!svn_sqlite__column_is_null(stmt, 14))
+          if (svn_sqlite__column_is_null(stmt, 15))
+            *lock = NULL;
+          else
             {
               *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-              (*lock)->token = svn_sqlite__column_text(stmt, 14, result_pool);
-              if (!svn_sqlite__column_is_null(stmt, 15))
-                (*lock)->owner = svn_sqlite__column_text(stmt, 15,
-                                                         result_pool);
+              (*lock)->token = svn_sqlite__column_text(stmt, 15, result_pool);
               if (!svn_sqlite__column_is_null(stmt, 16))
-                (*lock)->comment = svn_sqlite__column_text(stmt, 16,
-                                                           result_pool);
+                (*lock)->owner = svn_sqlite__column_text(stmt, 16,
+                                                         result_pool);
               if (!svn_sqlite__column_is_null(stmt, 17))
-                (*lock)->date = svn_sqlite__column_int64(stmt, 17);
+                (*lock)->comment = svn_sqlite__column_text(stmt, 17,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt, 18))
+                (*lock)->date = svn_sqlite__column_int64(stmt, 18);
             }
-          else
-            *lock = NULL;
         }
       if (repos_root_url || repos_uuid)
         {
@@ -2078,6 +2080,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_revnum_t *changed_rev,
                      apr_time_t *changed_date,
                      const char **changed_author,
+                     apr_time_t *last_mod_time,
                      svn_depth_t *depth,
                      svn_checksum_t **checksum,
                      svn_filesize_t *translated_size,
@@ -2244,22 +2247,22 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (lock)
         {
-          if (!svn_sqlite__column_is_null(stmt_base, 14))
+          if (svn_sqlite__column_is_null(stmt_base, 15))
+            *lock = NULL;
+          else
             {
               *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-              (*lock)->token = svn_sqlite__column_text(stmt_base, 14,
+              (*lock)->token = svn_sqlite__column_text(stmt_base, 15,
                                                        result_pool);
-              if (!svn_sqlite__column_is_null(stmt_base, 15))
-                (*lock)->owner = svn_sqlite__column_text(stmt_base, 15,
-                                                         result_pool);
               if (!svn_sqlite__column_is_null(stmt_base, 16))
-                (*lock)->comment = svn_sqlite__column_text(stmt_base, 16,
-                                                           result_pool);
+                (*lock)->owner = svn_sqlite__column_text(stmt_base, 16,
+                                                         result_pool);
               if (!svn_sqlite__column_is_null(stmt_base, 17))
-                (*lock)->date = svn_sqlite__column_int64(stmt_base, 17);
+                (*lock)->comment = svn_sqlite__column_text(stmt_base, 17,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 18))
+                (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
             }
-          else
-            *lock = NULL;
         }
       if (repos_root_url || repos_uuid)
         {
@@ -2301,6 +2304,13 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *changed_author = svn_sqlite__column_text(stmt_base, 11,
                                                       result_pool);
+        }
+      if (last_mod_time)
+        {
+          if (have_work)
+            *last_mod_time = svn_sqlite__column_int64(stmt_work, 14);
+          else
+            *last_mod_time = svn_sqlite__column_int64(stmt_base, 14);
         }
       if (depth)
         {
