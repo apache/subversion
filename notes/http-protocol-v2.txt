@@ -240,14 +240,6 @@ PHASE 1 IN DETAIL
 STATUS
 ======
 
- * SUMMARY:  Most of the work slated for Subversion 1.7 is complete.
-   All but three of the regression tests are passing, and those are
-   failing for either of two reasons:
-
-      dav_validate_request() is preventing call to delete_resource(),
-      which means that aborted commits are leaving transactions
-      sitting in the repository.
-
  * Teach mod_dav_svn to answer the OPTIONS request with these
    additional pieces of information:
 
