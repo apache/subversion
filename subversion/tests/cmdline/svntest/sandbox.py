@@ -115,7 +115,7 @@ class Sandbox:
         sbox.cleanup_test_paths()
     # cleanup all test specific working copies and repositories
     for path in self.test_paths:
-      if not path is pristine_dir:
+      if not path is svntest.main.pristine_dir:
         _cleanup_test_path(path)
 
 
