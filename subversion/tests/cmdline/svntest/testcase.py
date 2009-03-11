@@ -19,7 +19,7 @@ import os, types
 
 import svntest
 
-# if somebody does a "from testcase import *", they only get three names
+# if somebody does a "from testcase import *", they only get these names
 __all__ = ['XFail', 'Wimp', 'Skip', 'SkipUnless']
 
 RESULT_OK = 'ok'
@@ -72,8 +72,8 @@ class FunctionTestCase(TestCase):
   FUNC should be a function that returns None on success and throws an
   svntest.Failure exception on failure.  It should have a brief
   docstring describing what it does (and fulfilling certain conditions).
-  FUNC must take one argument, an svntest.main.Sandbox instance.
-  (The sandbox name is derived from the file name in which FUNC was defined)
+  FUNC must take one argument, an Sandbox instance.  (The sandbox name
+  is derived from the file name in which FUNC was defined)
   """
 
   def __init__(self, func):

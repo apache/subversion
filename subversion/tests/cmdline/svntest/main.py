@@ -1002,121 +1002,7 @@ def server_enforces_date_syntax():
 
 
 ######################################################################
-# Sandbox handling
 
-class Sandbox:
-  """Manages a sandbox (one or more repository/working copy pairs) for
-  a test to operate within."""
-
-  dependents = None
-
-  def __init__(self, module, idx):
-    self._set_name("%s-%d" % (module, idx))
-
-  def _set_name(self, name, read_only = False):
-    """A convenience method for renaming a sandbox, useful when
-    working with multiple repositories in the same unit test."""
-    if not name is None:
-      self.name = name
-    self.read_only = read_only
-    self.wc_dir = os.path.join(general_wc_dir, self.name)
-    if not read_only:
-      self.repo_dir = os.path.join(general_repo_dir, self.name)
-      self.repo_url = test_area_url + '/' + pathname2url(self.repo_dir)
-    else:
-      self.repo_dir = pristine_dir
-      self.repo_url = pristine_url
-
-    ### TODO: Move this into to the build() method
-    # For dav tests we need a single authz file which must be present,
-    # so we recreate it each time a sandbox is created with some default
-    # contents.
-    if self.repo_url.startswith("http"):
-      # this dir doesn't exist out of the box, so we may have to make it
-      if not os.path.exists(work_dir):
-        os.makedirs(work_dir)
-      self.authz_file = os.path.join(work_dir, "authz")
-      file_write(self.authz_file, "[/]\n* = rw\n")
-
-    # For svnserve tests we have a per-repository authz file, and it
-    # doesn't need to be there in order for things to work, so we don't
-    # have any default contents.
-    elif self.repo_url.startswith("svn"):
-      self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
-
-    self.test_paths = [self.wc_dir, self.repo_dir]
-
-  def clone_dependent(self, copy_wc=False):
-    """A convenience method for creating a near-duplicate of this
-    sandbox, useful when working with multiple repositories in the
-    same unit test.  If COPY_WC is true, make an exact copy of this
-    sandbox's working copy at the new sandbox's working copy
-    directory.  Any necessary cleanup operations are triggered by
-    cleanup of the original sandbox."""
-
-    if not self.dependents:
-      self.dependents = []
-    clone = copy.deepcopy(self)
-    self.dependents.append(clone)
-    clone._set_name("%s-%d" % (self.name, len(self.dependents)))
-    if copy_wc:
-      self.add_test_path(clone.wc_dir)
-      shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
-    return clone
-
-  def build(self, name = None, create_wc = True, read_only = False):
-    self._set_name(name, read_only)
-    if svntest.actions.make_repo_and_wc(self, create_wc, read_only):
-      raise Failure("Could not build repository and sandbox '%s'" % self.name)
-
-  def add_test_path(self, path, remove=True):
-    self.test_paths.append(path)
-    if remove:
-      safe_rmtree(path)
-
-  def add_repo_path(self, suffix, remove=1):
-    path = os.path.join(general_repo_dir, self.name)  + '.' + suffix
-    url  = test_area_url + '/' + pathname2url(path)
-    self.add_test_path(path, remove)
-    return path, url
-
-  def add_wc_path(self, suffix, remove=1):
-    path = self.wc_dir + '.' + suffix
-    self.add_test_path(path, remove)
-    return path
-
-  def cleanup_test_paths(self):
-    "Clean up detritus from this sandbox, and any dependents."
-    if self.dependents:
-      # Recursively cleanup any dependent sandboxes.
-      for sbox in self.dependents:
-        sbox.cleanup_test_paths()
-    # cleanup all test specific working copies and repositories
-    for path in self.test_paths:
-      if not path is pristine_dir:
-        _cleanup_test_path(path)
-
-
-_deferred_test_paths = []
-def _cleanup_deferred_test_paths():
-  global _deferred_test_paths
-  test_paths = _deferred_test_paths[:]
-  _deferred_test_paths = []
-  for path in test_paths:
-    _cleanup_test_path(path, 1)
-
-def _cleanup_test_path(path, retrying=None):
-  if verbose_mode:
-    if retrying:
-      print("CLEANUP: RETRY: %s" % path)
-    else:
-      print("CLEANUP: %s" % path)
-  try:
-    safe_rmtree(path)
-  except:
-    if verbose_mode:
-      print("WARNING: cleanup failed, will try again later")
-    _deferred_test_paths.append(path)
 
 class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
@@ -1203,7 +1089,7 @@ class TestRunner:
         """
     sbox_name = self.pred.get_sandbox_name()
     if sbox_name:
-      sandbox = Sandbox(sbox_name, self.index)
+      sandbox = svntest.sandbox.Sandbox(sbox_name, self.index)
     else:
       sandbox = None
 
@@ -1342,7 +1228,7 @@ def _internal_run_tests(test_list, testnums, parallel):
       if result == 1:
         exit_code = 1
 
-  _cleanup_deferred_test_paths()
+  svntest.sandbox.cleanup_deferred_test_paths()
   return exit_code
 
 
@@ -1608,7 +1494,7 @@ def run_tests(test_list, serial_only = False):
     safe_rmtree(temp_dir, 1)
 
   # Cleanup after ourselves.
-  _cleanup_deferred_test_paths()
+  svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
   sys.exit(exit_code)
