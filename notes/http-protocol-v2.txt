@@ -244,10 +244,6 @@ STATUS
    All but three of the regression tests are passing, and those are
    failing for either of two reasons:
 
-      dav_svn__method_post() is dropping important error information,
-      leaving clients without such useful information as "Start-hook
-      commit failed..."
-
       dav_validate_request() is preventing call to delete_resource(),
       which means that aborted commits are leaving transactions
       sitting in the repository.
