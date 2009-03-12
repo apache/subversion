@@ -204,6 +204,66 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=2381">issue
 
 </div>
 
+<!-- ************************************************************* -->
+<div class="h3" id="authz-model-overhaul" title="authz-model-overhaul">
+<h3>Authorization model overhaul</h3>
+
+<p>Subversion's authorization model mostly does the job it was
+designed to do, but is in some ways overprotective to the point of
+unnecessary loss of functionality.
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3380"
+>Issue #3380</a> tracks the overhaul of the model.</p>
+
+</div>
+
+<!-- ************************************************************* -->
+<div class="h3" id="viewspecs" title="viewspecs">
+<h3>Viewspecs</h3>
+
+<p>Subversion currently supports some mechanisms for selectively
+building and populating a working copy, including sparse directory
+support and externals definitions.  What Subversion lacks is a handy
+way to be told &mdash; in one easy step &mdash; to go off and make use
+of those underlying features to build a working copy that looks some
+specific way.  Imagine being able to tell new developers on your
+project to checkout a working copy using some pre-formulated
+specification which results in an automated sparse checkout that
+includes your <tt>trunk</tt>, <tt>branches</tt>, and then various
+branches for the currently maintained versions of your software
+(<tt>branches/<em>SOME-VERSION</em></tt>), instead of having to tell
+them to first do a <tt>--depth=empty</tt> checkout of the root, then
+a <tt>--set-depth=infinity</tt> update of <tt>trunk</tt>
+and <tt>branches</tt>, then &hellip;.</p>
+
+</div>
+
+<!-- ************************************************************* -->
+<div class="h3" id="viewspecs" title="viewspecs">
+<h3>Successor links in the versioned filesystem</h3>
+
+<p>Subversion's filesystem backends (BDB and FSFS) currently store in
+the nodes of the DAG representation of the versioned filesystem
+predecessor references, so for any given node (identified by path and
+revision number), you can ask the question, "Which node represents the
+previous version of this file or directory?"  What you cannot ask
+today is, "Which node(s) represent the <em>next</em> version(s) of
+this file or directory?"  (There can be multiple answers because a
+given node can be succeeded both by making typical versioned changes
+to that file/directory and by copying it elsewhere (via <tt>svn
+copy</tt>, e.g.).)  Making the predecessor/successor linkage
+bi-directional could be crucial to allowing users to answer questions
+like, "Now that I've fixed this bug that was introduced
+into <em>SOME-FILE</em> at revision <em>REV</em>, to what other
+branches was this version of the file copied (so I can fix the bug in
+those places, too)?"</p>
+
+<p>Some work for the Berkeley DB backend was done long ago, and lives
+today in
+the <a href="http://svn.collab.net/viewvc/svn/branches/fs-successor-ids/"
+>fs-successor-ids</a> branch.</p>
+
+</div>
+
 </div>
 
 <!-- ============================================================= -->
