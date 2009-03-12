@@ -1781,11 +1781,8 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  val = svn_sqlite__column_blob(stmt, 0, &len);
-  SVN_ERR(svn_skel__parse_proplist(props,
-                                   svn_skel__parse(val, len, scratch_pool),
-                                   result_pool));
-
+  SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                        scratch_pool));
   return svn_sqlite__reset(stmt);
 }
 
