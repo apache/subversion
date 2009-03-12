@@ -163,8 +163,8 @@ enum statement_keys {
   STMT_SELECT_WORKING_IS_FILE,
   STMT_SELECT_BASE_IS_FILE,
   STMT_SELECT_BASE_PROPS,
-  STMT_SELECT_WORKING_PROPS,
-  STMT_UPDATE_WORKING_PROPS
+  STMT_SELECT_ACTUAL_PROPS,
+  STMT_UPDATE_ACTUAL_PROPS
 };
 
 static const char * const statements[] = {
@@ -233,10 +233,10 @@ static const char * const statements[] = {
   "select properties from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
-  "select properies from working_node "
+  "select properies from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
-  "update working_node set properties = ?3 "
+  "update actual_node set properties = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
@@ -2032,7 +2032,7 @@ svn_wc__db_op_set_prop(svn_wc__db_t *db,
 
   /* Retrieve the existing properties. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_SELECT_WORKING_PROPS));
+                                    STMT_SELECT_ACTUAL_PROPS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
@@ -2068,7 +2068,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_UPDATE_WORKING_PROPS));
+                                    STMT_UPDATE_ACTUAL_PROPS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
