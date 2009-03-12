@@ -1614,7 +1614,9 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
       if (lock)
         {
           if (svn_sqlite__column_is_null(stmt, 15))
-            *lock = NULL;
+            {
+              *lock = NULL;
+            }
           else
             {
               *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
@@ -1640,9 +1642,11 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                 *repos_uuid = NULL;
             }
           else
-            err = fetch_repos_info(repos_root_url, repos_uuid, pdh->sdb,
-                                   svn_sqlite__column_int64(stmt, 2),
-                                   result_pool);
+            {
+              err = fetch_repos_info(repos_root_url, repos_uuid, pdh->sdb,
+                                     svn_sqlite__column_int64(stmt, 2),
+                                     result_pool);
+            }
         }
       if (changed_rev)
         {
@@ -1664,7 +1668,9 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
       if (depth)
         {
           if (node_kind != svn_wc__db_kind_dir)
-            *depth = svn_depth_unknown;
+            {
+              *depth = svn_depth_unknown;
+            }
           else
             {
               const char *depth_str = svn_sqlite__column_text(stmt, 12, NULL);
@@ -1678,7 +1684,9 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
       if (checksum)
         {
           if (node_kind != svn_wc__db_kind_file)
-            *checksum = NULL;
+            {
+              *checksum = NULL;
+            }
           else
             {
               err = svn_sqlite__column_checksum(checksum, stmt, 7,
@@ -2328,7 +2336,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       if (depth)
         {
           if (node_kind != svn_wc__db_kind_dir)
-            *depth = svn_depth_unknown;
+            {
+              *depth = svn_depth_unknown;
+            }
           else
             {
               const char *depth_str;
@@ -2347,7 +2357,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       if (checksum)
         {
           if (node_kind != svn_wc__db_kind_file)
-            *checksum = NULL;
+            {
+              *checksum = NULL;
+            }
           else
             {
               if (have_work)
