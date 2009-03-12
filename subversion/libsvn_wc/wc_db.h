@@ -336,13 +336,13 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               apr_pool_t *scratch_pool);
 
 
-/** Add or replace a directory in the BASE tree.
+/** Add or replace a file in the BASE tree.
  *
- * The directory is located at LOCAL_ABSPATH on the local filesystem, and
+ * The file is located at LOCAL_ABSPATH on the local filesystem, and
  * corresponds to <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID> in the
  * repository, at revision REVISION.
  *
- * The directory properties are given by the PROPS hash (which is
+ * The file properties are given by the PROPS hash (which is
  * const char *name => const svn_string_t *).
  *
  * The last-change information is given by <CHANGED_REV, CHANGED_DATE,
