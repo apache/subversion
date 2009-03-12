@@ -253,7 +253,7 @@ svn_wc__db_open(svn_wc__db_t **db,
                 apr_pool_t *scratch_pool);
 
 
-/* This function answers at simple question: what format version of the wc
+/* This function answers a simple question: what format version of the wc
    exists at PATH.  The reason it takes a PATH instead of an existing db
    handle is because it may need to use legacy, pre-wc-ng methods to determine
    what that version is, and such versions don't have any db to open. 
@@ -263,10 +263,10 @@ svn_error_t *
 svn_wc__db_version(int *version,
                    const char *path,
                    apr_pool_t *scratch_pool);
-                   
+
 
 /**
- * Close @a db.
+ * Close DB.
  *
  * Temporary allocations will be made in SCRATCH_POOL.
  */
@@ -277,7 +277,7 @@ svn_wc__db_close(svn_wc__db_t *db,
 /** @} */
 
 /**
- * Different kind of trees
+ * Different kinds of trees
  *
  * The design doc mentions three different kinds of trees, BASE, WORKING and
  * ACTUAL: http://svn.collab.net/repos/svn/trunk/notes/wc-ng-design
@@ -415,6 +415,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
  * ###   how to represent the link in ACTUAL. higher-levels can also
  * ###   deal with translating to/from the svn:special property and
  * ###   the plain-text file contents.
+ * ### dlr: What about hard links? At minimum, mention in doc string.
  */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
@@ -651,8 +652,8 @@ typedef enum {
      rather than for detecting a usable file.
 
      Implementation note: the SQLite database will be opened (if not already),
-       and all checks will simply look in the TEXT_BASE table to see if the
-       given key is present. Note that the file may not e present. */
+     and all checks will simply look in the TEXT_BASE table to see if the
+     given key is present. Note that the file may not e present. */
   svn_wc__db_checkmode_multi,
 
   /* Similar to _usable, but the file is checksum'd to ensure that it has
@@ -697,6 +698,7 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 
 /* ### get a tempdir to drop files for later installation. */
+/* ### dlr: Why is a less specific temp dir insufficient? */
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir,
                                 svn_wc__db_pdh_t *pdh,
@@ -735,6 +737,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
    ### between the SQLite database and the filesystem. Failing that, then
    ### it will attempt to clean out the record and/or file. Failing that,
    ### then it will return SOME_ERROR. */
+/* ### dlr: What is this the checksum of? */
 svn_error_t *
 svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
                            const svn_checksum_t *checksum,
@@ -743,6 +746,9 @@ svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
 
 
 /* ### we may not need incref/decref. these are placeholders... */
+/* ### dlr: Do we offer some other form of locking? Assuming so, these
+   ###   could be used to implement pinning for read-locks, but otherwise
+   ###   seem unnecesary to my uninformed first glance. */
 
 /* ### @a new_refcount may be NULL */
 svn_error_t *
@@ -789,6 +795,8 @@ svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
+/* PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *". */
 /* ### props and children must be known before calling. */
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
@@ -798,7 +806,10 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
+/* PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *". */
 /* ### props must be specified */
+/* ### dlr: Just non-NULL, or contain a bunch of basic props? Document. */
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -806,7 +817,10 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
+/* PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *". */
 /* ### props must be specified */
+/* ### dlr: Just non-NULL, or contain a bunch of basic props? Document. */
 svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
@@ -823,6 +837,8 @@ svn_wc__db_op_set_prop(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
+/* PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *". */
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
@@ -831,6 +847,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
 
 
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
+/* ### dlr: Does this support recursive dir deletes (e.g. _revert)? Document. */
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
@@ -854,6 +871,8 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
 
 
 /* ### use NULL to remove from changelist ("add to the <null> changelist") */
+/* ### dlr: I don't mind the "associate with NULL CL" bit, but it makes the
+   ###   function name non-intuitive. How about _set_changelist or similar? */
 svn_error_t *
 svn_wc__db_op_add_to_changelist(svn_wc__db_t *db,
                                 const char *local_abspath,
@@ -869,7 +888,7 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### caller maintains ACTUAL. we're just recording state. */
+/* ### caller maintains actual resolution. we're just recording state. */
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             const char *local_abspath,
@@ -995,6 +1014,8 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### note that @a base_shadowed can be derived. if the status specifies
    ### an add/copy/move *and* there is a corresponding node in BASE, then
    ### the BASE has been deleted to open the way for this node.
+
+   ### dlr: Yikes! How about a simple struct encapsulating this parameter list?
 */
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
@@ -1042,6 +1063,8 @@ svn_wc__db_read_prop(const svn_string_t **propval,
                      apr_pool_t *scratch_pool);
 
 
+/* PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *". */
 svn_error_t *
 svn_wc__db_read_props(apr_hash_t **props,
                       svn_wc__db_t *db,
@@ -1050,6 +1073,8 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *scratch_pool);
 
 
+/* PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *". */
 svn_error_t *
 svn_wc__db_read_pristine_props(apr_hash_t **props,
                                svn_wc__db_t *db,
@@ -1066,6 +1091,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
  * ###   computing all info.
  *
  * ### KFF: see earlier comment on svn_wc__db_base_get_children().
+ * ### dlr: The doc string should include the wording "immediate children".
  */
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,
@@ -1216,6 +1242,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.
  */
+/* ### dlr: Again, this is a lot of parameters. Struct? */
 svn_error_t *
 svn_wc__db_scan_working(svn_wc__db_status_t *status,
                         const char **op_root_abspath,
