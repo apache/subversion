@@ -71,7 +71,7 @@
 #  A "target" is generally user-specified, and may be a working copy or
 #  a URL.
 
-import sys, os, getopt, re, types, tempfile, time, popen2, locale
+import sys, os, getopt, re, types, tempfile, time, locale
 from bisect import bisect
 from xml.dom import pulldom
 
@@ -282,6 +282,7 @@ except ImportError:
     # support versions of python before 2.4 (slower on some systems)
     def launch(cmd, split_lines=True):
         if os.name not in ['nt', 'os2']:
+            import popen2
             p = popen2.Popen4(cmd)
             p.tochild.close()
             if split_lines:
