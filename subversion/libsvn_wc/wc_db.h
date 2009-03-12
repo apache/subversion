@@ -653,7 +653,7 @@ typedef enum {
 
      Implementation note: the SQLite database will be opened (if not already),
      and all checks will simply look in the TEXT_BASE table to see if the
-     given key is present. Note that the file may not e present. */
+     given key is present. Note that the file may not be present. */
   svn_wc__db_checkmode_multi,
 
   /* Similar to _usable, but the file is checksum'd to ensure that it has
