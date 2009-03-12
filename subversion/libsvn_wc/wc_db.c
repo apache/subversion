@@ -1763,8 +1763,6 @@ svn_wc__db_base_get_props(apr_hash_t **props,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  const void *val;
-  apr_size_t len;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
