@@ -84,10 +84,6 @@
      svn_wc__working_props_committed(): Moves WORKING props to BASE props,
        sync'ing to disk and clearing appropriate caches.
      empty_props_p(): Used to determine if a path has properties or not.
-     svn_wc__props_last_modified(): Reads mtime of the props file.  Used
-       externally to answer the question about when a node changed.  We can
-       answer this question other ways in the SQLite schema, so this function
-       may disappear.
      svn_wc_props_modified_p(): Used to shortcut property differences by
        checking property filesize differences.
      install_props_file(): Used with loggy.
