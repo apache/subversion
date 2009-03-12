@@ -2382,8 +2382,7 @@ def basic_diff_summarize(sbox):
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status=' M'),
     })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
-                                                None, None, None, None,
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
                                                 os.path.join(wc_dir, 'iota'),
                                                 '-c2')
 
@@ -2395,8 +2394,7 @@ def basic_diff_summarize(sbox):
     'newfile': Item(status='A '),
     'A/B/lambda': Item(status='D '),
     })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
-                                                None, None, None, None,
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
                                                 wc_dir, '-r1:2')
 
 def diff_weird_author(sbox):

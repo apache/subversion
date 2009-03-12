@@ -23,7 +23,6 @@ import time
 # Our testing module
 import svntest
 from svntest import wc
-from svntest.tree import SVNTreeUnequal
 
 # (abbreviation)
 Item = wc.StateItem
@@ -4037,14 +4036,12 @@ def create_deep_trees(wc_dir):
     'A/copy-of-B/F/E1/beta'  : Item(contents="This is the file 'beta'.\n"),
     'A/copy-of-B/lambda'     : Item(contents="This is the file 'lambda'.\n"),
     })
-  svntest.actions.verify_disk(wc_dir, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Bring the entire WC up to date with rev 4.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
 
-  svntest.actions.verify_disk(wc_dir, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   expected_status.tweak(wc_rev=4)
   expected_disk.tweak('A/copy-of-B/F/E', 'A/copy-of-B/F/E1', status=' M')
@@ -10529,8 +10526,7 @@ def foreign_repos(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  svntest.actions.verify_disk(wc_dir, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Now, merge our committed revision into a working copy of another
   # repository.  Not only should the merge succeed, but the results on
@@ -10539,8 +10535,7 @@ def foreign_repos(sbox):
   ### TODO: Use run_and_verify_merge() ###
   svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
   svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
-  svntest.actions.verify_disk(wc_dir2, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir2, expected_disk, True)
 
 
 def foreign_repos_uuid(sbox):
@@ -10588,8 +10583,7 @@ def foreign_repos_uuid(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  svntest.actions.verify_disk(wc_dir, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
   svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
@@ -10698,8 +10692,7 @@ def foreign_repos_2_url(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  svntest.actions.verify_disk(wc_dir, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Now, "tag" the new state of the repository.
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
@@ -10715,8 +10708,7 @@ def foreign_repos_2_url(sbox):
                        sbox.repo_url + '/A-tag2',
                        os.path.join(wc_dir2, 'A'))
   svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
-  svntest.actions.verify_disk(wc_dir2, expected_disk,
-                              None, None, None, None, 1)
+  svntest.actions.verify_disk(wc_dir2, expected_disk, True)
 
 def merge_added_subtree(sbox):
   "merge added subtree"
