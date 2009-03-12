@@ -508,8 +508,9 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
  * caller should use svn_wc__db_scan_base_repos() to scan up the BASE
  * tree for the repository information.
  *
- * If DEPTH is requested, and the node is NOT a directory, then
- * the value will be set to svn_depth_unknown.
+ * If DEPTH is requested, and the node is NOT a directory, then the
+ * value will be set to svn_depth_unknown. If LOCAL_ABSPATH is a link,
+ * it's up to the caller to resolve depth for the link's target.
  *
  * If CHECKSUM is requested, and the node is NOT a file, then it will
  * be set to NULL.
@@ -534,8 +535,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          apr_time_t *changed_date,
                          const char **changed_author,
                          apr_time_t *last_mod_time,
-                         svn_depth_t *depth,  /* ### for dirs only */
-                         svn_checksum_t **checksum,  /* ### files only */
+                         svn_depth_t *depth,
+                         svn_checksum_t **checksum,
                          svn_filesize_t *translated_size,
                          const char **target,
                          svn_wc__db_lock_t **lock,
