@@ -118,8 +118,8 @@ class XFail(TestCase):
   """A test that is expected to fail, if its condition is true."""
 
   _result_map = {
-    RESULT_OK:   (1, 'XPASS: ', False),
-    RESULT_FAIL: (0, 'XFAIL: ', True),
+    RESULT_OK:   (1, 'XPASS:', False),
+    RESULT_FAIL: (0, 'XFAIL:', True),
     RESULT_SKIP: (2, 'SKIP: ', True),
     }
 
@@ -145,8 +145,8 @@ class Wimp(XFail):
   is not considered a test failure."""
 
   _result_map = {
-    RESULT_OK:   (0, 'XPASS: ', True),
-    RESULT_FAIL: (0, 'XFAIL: ', True),
+    RESULT_OK:   (0, 'XPASS:', True),
+    RESULT_FAIL: (0, 'XFAIL:', True),
     RESULT_SKIP: (2, 'SKIP: ', True),
     }
 
