@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-06 10:41+0800\n"
+"POT-Creation-Date: 2009-03-12 11:29+0800\n"
 "PO-Revision-Date: 2008-12-21 14:17+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -801,6 +801,10 @@ msgstr "无法关闭目录 “%s”"
 #, c-format
 msgid "Error during add of '%s'"
 msgstr "增加 “%s” 时出错"
+
+#, c-format
+msgid "'%s' ends in a reserved name"
+msgstr "“%s”以保留名称结束"
 
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
@@ -3811,14 +3815,6 @@ msgid "No pathname preceeding ':'"
 msgstr "没有路径名称前缀“:”"
 
 #, c-format
-msgid "Parsing of overlapping revision ranges '%s' and '%s' is not supported"
-msgstr "不支持解析重叠的版本范围 “%s” 和 “%s”"
-
-#, c-format
-msgid "Unable to parse unordered revision ranges '%s' and '%s'"
-msgstr "不能解析无序的版本范围 “%s” 和 “%s”"
-
-#, c-format
 msgid "Mergeinfo for '%s' maps to an empty revision range"
 msgstr "“%s” 的合并信息映射到空的版本范围"
 
@@ -3845,6 +3841,12 @@ msgstr "在遇到新行之前范围列表分析结束"
 #, c-format
 msgid "Could not find end of line in range list line in '%s'"
 msgstr "在“%s”的范围列表行中没有找到行结束符"
+
+#, c-format
+msgid ""
+"Unable to parse overlapping revision ranges '%s' and '%s' with different "
+"inheritance types"
+msgstr "不支持解析具有不同继承类型的重叠版本范围 “%s” 和 “%s”"
 
 #, c-format
 msgid "Could not parse mergeinfo string '%s'"
@@ -3913,10 +3915,6 @@ msgstr "URL“%s”包含“..”元素"
 #, c-format
 msgid "Error resolving case of '%s'"
 msgstr "解析“%s”出错"
-
-#, c-format
-msgid "'%s' ends in a reserved name"
-msgstr "“%s”以保留名称结束"
 
 #, c-format
 msgid ""
