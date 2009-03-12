@@ -207,31 +207,102 @@ class State:
         # write out the file contents now
         open(fullpath, 'wb').write(item.contents)
 
+  def normalize(self):
+    """Return a "normalized" version of self.
+
+    A normalized version has the following characteristics:
+
+      * wc_dir == ''
+      * paths use forward slashes
+      * paths are relative
+
+    If self is already normalized, then it is returned. Otherwise, a
+    new State is constructed with (shallow) references to self's
+    StateItem instances.
+
+    If the caller needs a fully disjoint State, then use .copy() on
+    the result.
+    """
+    if self.wc_dir == '':
+      return self
+
+    base = os.path.normpath(self.wc_dir).replace(os.sep, '/')
+    def join(path):
+      if path == '':
+        return base
+      return base + '/' + path
+
+    desc = dict([(join(path), item) for path, item in self.desc.items()])
+    return State('', desc)
+
+  def compare(self, other):
+    """Compare this State against an OTHER State.
+
+    Three new set objects will be returned: CHANGED, UNIQUE_SELF, and
+    UNIQUE_OTHER. These contain paths of StateItems that are different
+    between SELF and OTHER, paths of items unique to SELF, and paths
+    of item that are unique to OTHER, respectively.
+    """
+    assert isinstance(other, State)
+
+    norm_self = self.normalize()
+    norm_other = other.normalize()
+
+    # fast-path the easy case
+    if norm_self == norm_other:
+      fs = frozenset()
+      return fs, fs, fs
+
+    paths_self = set(norm_self.desc.keys())
+    paths_other = set(norm_other.desc.keys())
+    changed = set()
+    for path in paths_self.intersection(paths_other):
+      if norm_self.desc[path] != norm_other.desc[path]:
+        changed.add(path)
+
+    return changed, paths_self - paths_other, paths_other - paths_self
+
+  def compare_and_display(self, label, other):
+    """Compare this State against an OTHER State, and display differences.
+
+    Information will be written to stdout, displaying any differences
+    between the two states. LABEL will be used in the display.
+
+    If any changes are detected/diplayed, then SVNTreeUnequal is raised.
+    """
+    norm_self = self.normalize()
+    norm_other = other.normalize()
+
+    changed, unique_self, unique_other = norm_self.compare(norm_other)
+    if not changed and not unique_self and not unique_other:
+      return
+
+    # Use the shortest path as a way to find the "root-most" affected node.
+    def _shortest_path(path_set):
+      shortest = None
+      for path in path_set:
+        if shortest is None or len(path) < len(shortest):
+          shortest = path
+      return shortest
+
+    if changed:
+      path = _shortest_path(changed)
+      display_nodes(label, path, norm_self.desc[path], norm_other.desc[path])
+    elif unique_self:
+      path = _shortest_path(unique_self)
+      default_singleton_handler('actual ' + label, path, norm_self.desc[path])
+    elif unique_other:
+      path = _shortest_path(unique_other)
+      default_singleton_handler('expected ' + label, path,
+                                norm_other.desc[path])
+    
+    raise svntest.tree.SVNTreeUnequal
+
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
     nodelist = [ ]
     for path, item in self.desc.items():
-      atts = { }
-      if item.status is not None:
-        atts['status'] = item.status
-      if item.verb is not None:
-        atts['verb'] = item.verb
-      if item.wc_rev is not None:
-        atts['wc_rev'] = item.wc_rev
-      if item.locked is not None:
-        atts['locked'] = item.locked
-      if item.copied is not None:
-        atts['copied'] = item.copied
-      if item.switched is not None:
-        atts['switched'] = item.switched
-      if item.writelocked is not None:
-        atts['writelocked'] = item.writelocked
-      if item.treeconflict is not None:
-        atts['treeconflict'] = item.treeconflict
-      nodelist.append((os.path.normpath(os.path.join(self.wc_dir, path)),
-                       item.contents,
-                       item.props,
-                       atts))
+      nodelist.append(item.as_node_tuple(os.path.join(self.wc_dir, path)))
 
     tree = svntest.tree.build_generic_tree(nodelist)
     if 0:
@@ -252,7 +323,11 @@ class State:
     return str(self.old_tree())
 
   def __eq__(self, other):
-    return isinstance(other, State) and self.desc == other.desc
+    if not isinstance(other, State):
+      return False
+    norm_self = self.normalize()
+    norm_other = other.normalize()
+    return norm_self.desc == norm_other.desc
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -493,3 +568,61 @@ class StateItem:
 
   def __ne__(self, other):
     return not self.__eq__(other)
+
+  def as_node_tuple(self, path):
+    atts = { }
+    if self.status is not None:
+      atts['status'] = self.status
+    if self.verb is not None:
+      atts['verb'] = self.verb
+    if self.wc_rev is not None:
+      atts['wc_rev'] = self.wc_rev
+    if self.locked is not None:
+      atts['locked'] = self.locked
+    if self.copied is not None:
+      atts['copied'] = self.copied
+    if self.switched is not None:
+      atts['switched'] = self.switched
+    if self.writelocked is not None:
+      atts['writelocked'] = self.writelocked
+    if self.treeconflict is not None:
+      atts['treeconflict'] = self.treeconflict
+
+    return (os.path.normpath(path), self.contents, self.props, atts)
+
+
+# ------------
+# ### probably toss these at some point. or major rework. or something.
+# ### just bootstrapping some changes for now.
+#
+
+def item_to_node(path, item):
+  tree = svntest.tree.build_generic_tree([item.as_node_tuple(path)])
+  while tree.children:
+    assert len(tree.children) == 1
+    tree = tree.children[0]
+  return tree
+
+# ### yanked from tree.compare_trees()
+def display_nodes(label, path, expected, actual):
+  'Display two nodes, expected and actual.'
+  expected = item_to_node(path, expected)
+  actual = item_to_node(path, actual)
+  print("=============================================================")
+  print("Expected '%s' and actual '%s' in %s tree are different!"
+        % (expected.name, actual.name, label))
+  print("=============================================================")
+  print("EXPECTED NODE TO BE:")
+  print("=============================================================")
+  expected.pprint()
+  print("=============================================================")
+  print("ACTUAL NODE FOUND:")
+  print("=============================================================")
+  actual.pprint()
+
+# ### yanked from tree.py
+def default_singleton_handler(description, path, item):
+  node = item_to_node(path, item)
+  print("Couldn't find node '%s' in %s tree" % (node.name, description))
+  node.pprint()
+  raise svntest.tree.SVNTreeUnequal
