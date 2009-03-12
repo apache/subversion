@@ -162,7 +162,9 @@ enum statement_keys {
   STMT_SELECT_WORKING_CHILDREN,
   STMT_SELECT_WORKING_IS_FILE,
   STMT_SELECT_BASE_IS_FILE,
-  STMT_SELECT_BASE_PROPS
+  STMT_SELECT_BASE_PROPS,
+  STMT_SELECT_WORKING_PROPS,
+  STMT_UPDATE_WORKING_PROPS
 };
 
 static const char * const statements[] = {
@@ -229,6 +231,12 @@ static const char * const statements[] = {
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select properties from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select properies from working_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "update working_node set properties = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
@@ -2010,9 +2018,36 @@ svn_wc__db_op_set_prop(svn_wc__db_t *db,
                        const svn_string_t *propval,
                        apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_hash_t *props;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* Retrieve the existing properties. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                    STMT_SELECT_WORKING_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_sqlite__column_properties(&props, stmt, 0, scratch_pool,
+                                        scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Set the property of interest, and save them in the database. */
+  apr_hash_set(props, propname, APR_HASH_KEY_STRING, propval);
+  return svn_wc__db_op_set_props(db, local_abspath, props, scratch_pool);
 }
 
 
@@ -2022,9 +2057,22 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         apr_hash_t *props,
                         apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                    STMT_UPDATE_WORKING_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+
+  return svn_sqlite__step_done(stmt);
 }
 
 
