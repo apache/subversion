@@ -56,9 +56,9 @@ typedef struct svn_client__merge_path_t
   apr_array_header_t *remaining_ranges;
 
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
-                                           merge.*/
+                                           merge. May be NULL. */
   svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
-                                           to a merge.*/
+                                           to a merge.  May be NULL. */
   svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
                                            explicit or inherited. */
   svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
