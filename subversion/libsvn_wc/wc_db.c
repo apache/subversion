@@ -310,16 +310,20 @@ static svn_wc__db_status_t
 word_to_presence(const char *presence)
 {
   /* Be lazy and fast. */
-  if (*presence == 'a')
-    return svn_wc__db_status_absent;
-  if (*presence == 'e')
-    return svn_wc__db_status_excluded;
-  if (*presence == 'i')
-    return svn_wc__db_status_incomplete;
-  if (strcmp(presence, "not-present") == 0)
-    return svn_wc__db_status_not_present;
-  /* ### MALFUNCTION if not "normal" ? */
-  return svn_wc__db_status_normal;
+  switch (presence[0])
+    {
+    case 'a':
+      return svn_wc__db_status_absent;
+    case 'e':
+      return svn_wc__db_status_excluded;
+    case 'i':
+      return svn_wc__db_status_incomplete;
+    default:
+      if (strcmp(presence, "not-present") == 0)
+        return svn_wc__db_status_not_present;
+      /* Do not MALFUNCTION here if presence is not "normal". */
+      return svn_wc__db_status_normal;
+    }
 }
 
 
