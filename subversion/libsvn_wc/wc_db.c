@@ -268,14 +268,18 @@ static svn_wc__db_kind_t
 word_to_kind(const char *kind)
 {
   /* Let's be lazy and fast */
-  if (*kind == 'f')
-    return svn_wc__db_kind_file;
-  if (*kind == 'd')
-    return svn_wc__db_kind_dir;
-  if (*kind == 's')
-    return kind[1] == 'y' ? svn_wc__db_kind_symlink : svn_wc__db_kind_subdir;
-  /* ### MALFUNCTION if not "unknown" ? */
-  return svn_wc__db_kind_unknown;
+  switch (kind[0])
+    {
+    case 'f':
+      return svn_wc__db_kind_file;
+    case 'd':
+      return svn_wc__db_kind_dir;
+    case 's':
+      return kind[1] == 'y' ? svn_wc__db_kind_symlink : svn_wc__db_kind_subdir;
+    default:
+      /* Given our laziness, do not MALFUNCTION here. */
+      return svn_wc__db_kind_unknown;
+    }
 }
 
 
