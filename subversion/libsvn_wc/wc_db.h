@@ -830,6 +830,10 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           apr_pool_t *scratch_pool);
 
 
+/* Set the value of PROPNAME on LOCAL_ABSPATH to PROPVAL in the WORKING tree.
+   Using NULL for PROPVAL will erase any currently set property for PROPNAME.
+   PROPS maps property names of type "const char *" to values of type
+   "const svn_string_t *".  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_wc__db_op_set_prop(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -838,8 +842,10 @@ svn_wc__db_op_set_prop(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* PROPS maps property names of type "const char *" to values of type
-   "const svn_string_t *". */
+/* Set the props on the WORKING node for LOCAL_ABSPATH to PROPS.  This will
+   overwrite whatever working props the node currently has.  PROPS maps
+   property names of type "const char *" to values of type
+   "const svn_string_t *".  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
