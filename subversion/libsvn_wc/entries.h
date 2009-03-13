@@ -219,10 +219,6 @@ svn_wc__entry_remove(apr_hash_t *entries,
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
  *
- * *WRITE_REQUIRED will be set to TRUE if the tweaks make changes that
- * require the entries to be written to disk, otherwise *WRITE_REQUIRED
- * will not be altered.
- *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
  */
 svn_error_t *
@@ -232,7 +228,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
                     const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
-                    svn_boolean_t *write_required,
                     apr_pool_t *pool);
 
 /* For internal use by entries.c to read/write old-format working copies. */
