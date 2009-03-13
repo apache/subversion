@@ -1057,8 +1057,13 @@ svn_wc__db_read_prop(const svn_string_t **propval,
                      apr_pool_t *scratch_pool);
 
 
-/* PROPS maps property names of type "const char *" to values of type
-   "const svn_string_t *". */
+/* Read into PROPS the properties for LOCAL_ABSPATH in DB.  This first check
+   the ACTUAL node, then the WORKING node, and finally the BASE node for
+   properties.  PROPS maps property names of type "const char *" to values
+   of type "const svn_string_t *".
+   
+   Allocate PROPS in RESULT_POOL and do temporary allocations
+   in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__db_read_props(apr_hash_t **props,
                       svn_wc__db_t *db,
