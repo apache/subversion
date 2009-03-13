@@ -786,6 +786,12 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
    ### and caller definitely has to populate ACTUAL. */
 /* ### mark node as absent? adding children or props: auto-convert away
    ### from absent? ... or not "absent" but an "incomplete" status? */
+/* ### this needs to be split out into four functions to add nodes of each
+   ### kind. records copyfrom_* history, changed_* values, incomplete
+   ### children, properties, checksum values, etc. clients should construct
+   ### the full copied tree (maybe DEPTH can be used to avoid creating
+   ### nodes for all children?). for the child nodes, their copyfrom_*
+   ### information should be NULL.  */
 svn_error_t *
 svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -796,51 +802,33 @@ svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* PROPS maps property names of type "const char *" to values of type
-   "const svn_string_t *". */
-/* ### props and children must be known before calling. */
+/* ### add a new versioned directory. a list of children is NOT passed
+   ### since they are added in future, distinct calls to db_op_add_*.
+   ### this is freshly added, so it has no properties.  */
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             const char *local_abspath,
-                            apr_hash_t *props,
-                            const apr_array_header_t *children,
                             apr_pool_t *scratch_pool);
 
 
-/* PROPS maps property names of type "const char *" to values of type
-   "const svn_string_t *". */
-/* ### props must be specified */
-/* ### dlr: Just non-NULL, or contain a bunch of basic props? Document. */
+/* ### as a new file, there are no properties. this file has no "pristine"
+   ### contents, so a checksum [reference] is not required.  */
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
-                       apr_hash_t *props,
                        apr_pool_t *scratch_pool);
 
 
-/* PROPS maps property names of type "const char *" to values of type
-   "const svn_string_t *". */
-/* ### props must be specified */
-/* ### dlr: Just non-NULL, or contain a bunch of basic props? Document. */
+/* ### newly added symlinks have no properties.  */
 svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
-                          apr_hash_t *props,
                           const char *target,
                           apr_pool_t *scratch_pool);
 
 
-/* Set the value of PROPNAME on LOCAL_ABSPATH to PROPVAL in the WORKING tree.
-   Using NULL for PROPVAL will erase any currently set property for PROPNAME.
-   PROPS maps property names of type "const char *" to values of type
-   "const svn_string_t *".  Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_wc__db_op_set_prop(svn_wc__db_t *db,
-                       const char *local_abspath,
-                       const char *propname,
-                       const svn_string_t *propval,
-                       apr_pool_t *scratch_pool);
-
+/* ### note: there is no db_op_set_prop() function. callers must read
+   ### all the properties, change one, and write all the properties.  */
 
 /* Set the props on the WORKING node for LOCAL_ABSPATH to PROPS.  This will
    overwrite whatever working props the node currently has.  PROPS maps
@@ -877,14 +865,12 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* ### use NULL to remove from changelist ("add to the <null> changelist") */
-/* ### dlr: I don't mind the "associate with NULL CL" bit, but it makes the
-   ###   function name non-intuitive. How about _set_changelist or similar? */
+/* ### use NULL to remove from a changelist.  */
 svn_error_t *
-svn_wc__db_op_add_to_changelist(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *changelist,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_op_set_changelist(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             const char *changelist,
+                             apr_pool_t *scratch_pool);
 
 
 /* ### caller maintains ACTUAL. we're just recording state. */
@@ -895,7 +881,8 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### caller maintains actual resolution. we're just recording state. */
+/* ### caller maintains ACTUAL, and how the resolution occurred. we're just
+   ### recording state. */
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             const char *local_abspath,
