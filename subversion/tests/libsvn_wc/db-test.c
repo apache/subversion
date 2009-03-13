@@ -201,8 +201,8 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
 }
 
 
-/* Converts VALUE to a const svn_string_t *, and creates a mapping
-   from NAME to the converted data type in PROPS. */
+/* Convert VALUE to a const svn_string_t *, and create a mapping from
+   NAME to the converted data type in PROPS. */
 static void
 set_prop(apr_hash_t *props, const char *name, const char *value,
          apr_pool_t *result_pool)
@@ -413,9 +413,8 @@ validate_node(svn_wc__db_t *db,
   const char *path = svn_dirent_join(local_abspath, relpath, scratch_pool);
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
-#ifdef WHEN_GET_PROPS_WORKS
   apr_hash_t *props;
-#endif
+  const svn_string_t *value;
 
   SVN_ERR(svn_wc__db_base_get_info(
             &status, &kind, NULL,
@@ -428,16 +427,33 @@ validate_node(svn_wc__db_t *db,
   SVN_ERR_ASSERT(kind == expected_kind);
   SVN_ERR_ASSERT(status == expected_status);
 
-#ifdef WHEN_GET_PROPS_WORKS
   SVN_ERR(svn_wc__db_base_get_props(&props, db, path,
                                     scratch_pool, scratch_pool));
+  switch (status)
+    {
+    case svn_wc__db_status_absent:
+    case svn_wc__db_status_excluded:
+    case svn_wc__db_status_incomplete:
+    case svn_wc__db_status_not_present:
+      /* Our tests aren't setting properties on these node types, so
+         short-circuit examination of name/value pairs. */
+      return SVN_NO_ERROR;
+
+    default:
+      SVN_ERR_ASSERT(props != NULL);
+    }
 
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_ERR_ASSERT(value != NULL && strcmp(value, "v1") == 0);
+  SVN_ERR_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "p1",
+                                   scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
 
   value = apr_hash_get(props, "for-file", APR_HASH_KEY_STRING);
-  SVN_ERR_ASSERT(value != NULL && strcmp(value, relpath) == 0);
-#endif
+  SVN_ERR_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
+  SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "for-file",
+                                   scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
 
   return SVN_NO_ERROR;
 }
@@ -498,7 +514,6 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Replace an incomplete node with an absent file node. */
-  set_prop(props, "for-file", "N/N-b", pool);
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
@@ -506,7 +521,6 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new excluded directory node. */
-  set_prop(props, "for-file", "P", pool);
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "P", pool),
             "P", ROOT_ONE, UUID_ONE, 3,
@@ -514,7 +528,6 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new not-present symlink node. */
-  set_prop(props, "for-file", "Q", pool);
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
@@ -522,7 +535,6 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new absent unknown-kind node. */
-  set_prop(props, "for-file", "R", pool);
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,
