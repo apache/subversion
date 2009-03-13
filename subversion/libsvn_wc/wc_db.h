@@ -1048,6 +1048,13 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      apr_pool_t *scratch_pool);
 
 
+/** Return a property's value for a node, first using ACTUAL, then
+ * WORKING, then BASE.  The property's name is given in PROPNAME, and
+ * the value returned in PROPVAL.
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_wc__db_read_prop(const svn_string_t **propval,
                      svn_wc__db_t *db,
