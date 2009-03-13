@@ -2827,58 +2827,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 
 
 
-/* Baton for use with init_body() */
-struct init_txn_baton
-{
-  const char *uuid;
-  const char *url;
-  const char *repos;
-  svn_revnum_t initial_rev;
-  svn_depth_t depth;
-  apr_pool_t *scratch_pool;
-};
-
-/* Actually do the sqlite work within a transaction.
-   This implements svn_sqlite__transaction_callback_t */
-static svn_error_t *
-init_body(void *baton,
-          svn_sqlite__db_t *wc_db)
-{
-  struct init_txn_baton *itb = baton;
-  svn_sqlite__stmt_t *stmt;
-  apr_int64_t wc_id;
-  apr_int64_t repos_id;
-  svn_wc_entry_t *entry = alloc_entry(itb->scratch_pool);
-
-  /* Insert the repository. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", itb->repos, itb->uuid));
-  SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
-
-  /* Insert the wcroot. */
-  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
-
-  /* Add an entry for the dir itself.  The directory has no name.  It
-     might have a UUID, but otherwise only the revision and default
-     ancestry are present as XML attributes, and possibly an
-     'incomplete' flag if the revnum is > 0. */
-
-  entry->kind = svn_node_dir;
-  entry->url = itb->url;
-  entry->revision = itb->initial_rev;
-  entry->uuid = itb->uuid;
-  entry->repos = itb->repos;
-  entry->depth = itb->depth;
-  if (itb->initial_rev > 0)
-    entry->incomplete = TRUE;
-
-  return write_entry(wc_db, wc_id, repos_id, itb->repos, entry,
-                     SVN_WC_ENTRY_THIS_DIR, entry, itb->scratch_pool);
-}
-
-
 svn_error_t *
 svn_wc__entries_init(const char *path,
                      const char *uuid,
@@ -2892,7 +2840,10 @@ svn_wc__entries_init(const char *path,
   svn_sqlite__db_t *wc_db;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   const char *wc_db_path = db_path(path, scratch_pool);
-  struct init_txn_baton itb;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t wc_id;
+  apr_int64_t repos_id;
+  svn_wc_entry_t *entry = alloc_entry(scratch_pool);
 
   if (!should_create_next_gen())
     return svn_wc__entries_init_old(path, uuid, url, repos, initial_rev,
@@ -2923,14 +2874,32 @@ svn_wc__entries_init(const char *path,
   }
 #endif
 
-  /* Do the body of the work within an sqlite transaction. */
-  itb.uuid = uuid;
-  itb.url = url;
-  itb.repos = repos;
-  itb.initial_rev = initial_rev;
-  itb.depth = depth;
-  itb.scratch_pool = pool;
-  SVN_ERR(svn_sqlite__with_transaction(wc_db, init_body, &itb));
+  /* Insert the repository. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid));
+  SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
+
+  /* Insert the wcroot. */
+  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
+
+  /* Add an entry for the dir itself.  The directory has no name.  It
+     might have a UUID, but otherwise only the revision and default
+     ancestry are present as XML attributes, and possibly an
+     'incomplete' flag if the revnum is > 0. */
+
+  entry->kind = svn_node_dir;
+  entry->url = url;
+  entry->revision = initial_rev;
+  entry->uuid = uuid;
+  entry->repos = repos;
+  entry->depth = depth;
+  if (initial_rev > 0)
+    entry->incomplete = TRUE;
+
+  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos, entry,
+                      SVN_WC_ENTRY_THIS_DIR, entry, scratch_pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
