@@ -164,7 +164,8 @@ enum statement_keys {
   STMT_SELECT_BASE_IS_FILE,
   STMT_SELECT_BASE_PROPS,
   STMT_SELECT_ACTUAL_PROPS,
-  STMT_UPDATE_ACTUAL_PROPS
+  STMT_UPDATE_ACTUAL_PROPS,
+  STMT_SELECT_ALL_PROPS
 };
 
 static const char * const statements[] = {
@@ -238,6 +239,15 @@ static const char * const statements[] = {
 
   "update actual_node set properties = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select actual_node.properties, working_node.properties, "
+  "  base_node.properties "
+  "from base_node "
+  "left outer join working_node on base_node.wc_id = working_node.wc_id "
+  "  and base_node.local_relpath = working_node.local_relpath "
+  "left outer join actual_node on base_node.wc_id = actual_node.wc_id "
+  "  and base_node.local_relpath = actual_node.local_relpath "
+  "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
 
   NULL
 };
@@ -2505,9 +2515,38 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_ALL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  /* Try ACTUAL, then WORKING and finally BASE. */
+  if (!svn_sqlite__column_is_null(stmt, 0))
+    SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                          scratch_pool));
+  else if (!svn_sqlite__column_is_null(stmt, 1))
+    SVN_ERR(svn_sqlite__column_properties(props, stmt, 1, result_pool,
+                                          scratch_pool));
+  else
+    SVN_ERR(svn_sqlite__column_properties(props, stmt, 2, result_pool,
+                                          scratch_pool));
+
+  return svn_sqlite__reset(stmt);
 }
 
 
