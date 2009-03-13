@@ -1912,40 +1912,33 @@ write_entry(svn_sqlite__db_t *wc_db,
   return SVN_NO_ERROR;
 }
 
-/* Baton for use with entries_write_body(). */
-struct entries_write_txn_baton
-{
-  apr_hash_t *entries;
-  const svn_wc_entry_t *this_dir;
-  apr_pool_t *scratch_pool;
-};
-
 /* Actually do the sqlite work within a transaction.
    This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-entries_write_body(void *baton,
-                   svn_sqlite__db_t *wc_db)
+entries_write_body(svn_sqlite__db_t *wc_db,
+                   apr_hash_t *entries,
+                   const svn_wc_entry_t *this_dir,
+                   apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_hash_index_t *hi;
-  struct entries_write_txn_baton *ewtb = baton;
-  apr_pool_t *iterpool = svn_pool_create(ewtb->scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
 
   /* Get the repos ID. */
-  if (ewtb->this_dir->uuid != NULL)
+  if (this_dir->uuid != NULL)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
-      SVN_ERR(svn_sqlite__bindf(stmt, "s", ewtb->this_dir->repos));
+      SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->repos));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (have_row)
         {
           repos_id = svn_sqlite__column_int(stmt, 0);
-          repos_root = svn_sqlite__column_text(stmt, 1, ewtb->scratch_pool);
+          repos_root = svn_sqlite__column_text(stmt, 1, scratch_pool);
         }
       else
         {
@@ -1961,10 +1954,10 @@ entries_write_body(void *baton,
              ### any members?  */
           SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
                                             STMT_INSERT_REPOSITORY));
-          SVN_ERR(svn_sqlite__bindf(stmt, "ss", ewtb->this_dir->repos,
-                                    ewtb->this_dir->uuid));
+          SVN_ERR(svn_sqlite__bindf(stmt, "ss", this_dir->repos,
+                                    this_dir->uuid));
           SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
-          repos_root = ewtb->this_dir->repos;
+          repos_root = this_dir->repos;
         }
 
       SVN_ERR(svn_sqlite__reset(stmt));
@@ -1988,11 +1981,11 @@ entries_write_body(void *baton,
 
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
-  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, ewtb->this_dir,
-                      SVN_WC_ENTRY_THIS_DIR, ewtb->this_dir,
-                      ewtb->scratch_pool));
+  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, this_dir,
+                      SVN_WC_ENTRY_THIS_DIR, this_dir,
+                      scratch_pool));
 
-  for (hi = apr_hash_first(ewtb->scratch_pool, ewtb->entries); hi;
+  for (hi = apr_hash_first(scratch_pool, entries); hi;
         hi = apr_hash_next(hi))
     {
       const void *key;
@@ -2011,7 +2004,7 @@ entries_write_body(void *baton,
 
       /* Write the entry. */
       SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
-                          this_entry, key, ewtb->this_dir, iterpool));
+                          this_entry, key, this_dir, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -2026,7 +2019,6 @@ svn_wc__entries_write(apr_hash_t *entries,
 {
   svn_sqlite__db_t *wc_db;
   const svn_wc_entry_t *this_dir;
-  struct entries_write_txn_baton ewtb;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
@@ -2053,11 +2045,8 @@ svn_wc__entries_write(apr_hash_t *entries,
                            SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
                            scratch_pool, scratch_pool));
 
-  /* Do the work in a transaction. */
-  ewtb.entries = entries;
-  ewtb.this_dir = this_dir;
-  ewtb.scratch_pool = scratch_pool;
-  SVN_ERR(svn_sqlite__with_transaction(wc_db, entries_write_body, &ewtb));
+  /* Write the entries. */
+  SVN_ERR(entries_write_body(wc_db, entries, this_dir, scratch_pool));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
