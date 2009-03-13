@@ -201,6 +201,8 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
 }
 
 
+/* Converts VALUE to a const svn_string_t *, and creates a mapping
+   from NAME to the converted data type in PROPS. */
 static void
 set_prop(apr_hash_t *props, const char *name, const char *value,
          apr_pool_t *result_pool)
