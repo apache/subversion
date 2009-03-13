@@ -642,6 +642,15 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
      ### outside of the wcroot) and then managing all of that within DB.
      ### for now: play quick & dirty. */
 
+  /* ### for now, overwrite the provided mode.  We currently cache the
+     ### sdb handles, which is great but for the occasion where we
+     ### initially open the sdb in readonly mode and then later want
+     ### to write to it.  The solution is to reopen the db in readwrite
+     ### mode, but that assumes we can track the fact that it was
+     ### originally opened readonly.  So for now, just punt and open
+     ### everything in readwrite mode.  */
+  smode = svn_sqlite__mode_readwrite;
+
   *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
   if (*pdh != NULL)
     {
