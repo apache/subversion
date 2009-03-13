@@ -165,7 +165,8 @@ enum statement_keys {
   STMT_SELECT_BASE_PROPS,
   STMT_UPDATE_ACTUAL_PROPS,
   STMT_SELECT_ALL_PROPS,
-  STMT_SELECT_PRISTINE_PROPS
+  STMT_SELECT_PRISTINE_PROPS,
+  STMT_INSERT_LOCK
 };
 
 static const char * const statements[] = {
@@ -251,6 +252,11 @@ static const char * const statements[] = {
   "left outer join working_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
   "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
+
+  "insert or replace into lock "
+    "(repos_id, repos_relpath, lock_token, lock_owner, lock_comment, "
+    " lock_date)"
+  "values (?1, ?2, ?3, ?4, ?5, ?6);",
 
   NULL
 };
@@ -2653,6 +2659,55 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   SVN_ERR_ASSERT(new_author != NULL);
 
   NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_lock_add(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    const svn_wc__db_lock_t *lock,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  const char *repos_root_url;
+  const char *repos_relpath;
+  const char *repos_uuid;
+  apr_int64_t repos_id;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Fetch the repos root and repos uuid from the base node, we we can
+     then create or get the repos id.
+     ### is there a better way to do this? */
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                   &repos_root_url, &repos_uuid,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   db, local_abspath, scratch_pool,
+                                   scratch_pool));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, pdh->sdb,
+                          scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_INSERT_LOCK));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, repos_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, repos_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, lock->token));
+
+  if (lock->owner != NULL)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, lock->owner));
+
+  if (lock->comment != NULL)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, lock->comment));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->date));
+
+  return svn_sqlite__insert(NULL, stmt);
 }
 
 
