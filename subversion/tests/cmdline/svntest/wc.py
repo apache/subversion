@@ -347,8 +347,8 @@ class State:
         continue
 
       # Quit when we hit an externals status announcement.
-      # ### someday we can fix the externals tests to expect the additional
-      # ### flood of externals status data.
+      ### someday we can fix the externals tests to expect the additional
+      ### flood of externals status data.
       if line.startswith('Performing'):
         break
 
@@ -592,8 +592,8 @@ class StateItem:
 
 
 # ------------
-# ### probably toss these at some point. or major rework. or something.
-# ### just bootstrapping some changes for now.
+### probably toss these at some point. or major rework. or something.
+### just bootstrapping some changes for now.
 #
 
 def item_to_node(path, item):
@@ -603,7 +603,7 @@ def item_to_node(path, item):
     tree = tree.children[0]
   return tree
 
-# ### yanked from tree.compare_trees()
+### yanked from tree.compare_trees()
 def display_nodes(label, path, expected, actual):
   'Display two nodes, expected and actual.'
   expected = item_to_node(path, expected)
@@ -620,7 +620,7 @@ def display_nodes(label, path, expected, actual):
   print("=============================================================")
   actual.pprint()
 
-# ### yanked from tree.py
+### yanked from tree.py
 def default_singleton_handler(description, path, item):
   node = item_to_node(path, item)
   print("Couldn't find node '%s' in %s tree" % (node.name, description))
