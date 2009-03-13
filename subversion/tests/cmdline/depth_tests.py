@@ -290,9 +290,9 @@ def depth_empty_with_file(sbox):
   if os.path.exists(iota_path):
     raise svntest.Failure("'%s' exists when it shouldn't" % iota_path)
 
-  # ### I'd love to do this using the recommended {expected_output,
-  # ### expected_status, expected_disk} method here, but after twenty
-  # ### minutes of trying to figure out how, I decided to compromise.
+  ### I'd love to do this using the recommended {expected_output,
+  ### expected_status, expected_disk} method here, but after twenty
+  ### minutes of trying to figure out how, I decided to compromise.
 
   # Update iota by name, expecting to receive it.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', iota_path)

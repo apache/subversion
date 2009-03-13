@@ -1120,7 +1120,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                      'up', '-r', '1', rho_path)
 
   # Try one merge with an explicit target; it should succeed.
-  # ### Yes, it would be nice to use run_and_verify_merge(), but it
+  ### Yes, it would be nice to use run_and_verify_merge(), but it
   # appears to be impossible to get the expected_foo trees working
   # right.  I think something is still assuming a directory target.
   if arg_flav == 'r':

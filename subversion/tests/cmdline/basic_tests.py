@@ -361,8 +361,8 @@ def basic_corruption(sbox):
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)  # ### What's a more portable way to do this?
-  os.chmod(mu_tb_path, 0666)   # ### Would rather not use hardcoded numbers.
+  os.chmod(tb_dir_path, 0777)  ### What's a more portable way to do this?
+  os.chmod(mu_tb_path, 0666)   ### Would rather not use hardcoded numbers.
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aaagggkkk, corruption!')
   os.chmod(tb_dir_path, tb_dir_saved_mode)

@@ -1342,8 +1342,8 @@ def unlock_wrong_token(sbox):
                                      "--force", file_url)
 
   # Then, unlocking the WC path should fail.
-  # ### The error message returned is actually this, but let's worry about that
-  # ### another day...
+  ### The error message returned is actually this, but let's worry about that
+  ### another day...
   svntest.actions.run_and_verify_svn2(
     None, None, ".*((No lock on path)|(400 Bad Request))", 0,
     'unlock', file_path)
