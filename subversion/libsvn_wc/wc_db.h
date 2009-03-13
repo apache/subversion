@@ -1160,6 +1160,22 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 
 
 /**
+ * @defgroup svn_wc__db_lock  Function to manage the LOCKS table.
+ * @{
+ */
+
+/** Add LOCK for LOCAL_ABSPATH to DB */
+svn_error_t *
+svn_wc__db_lock_add(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    const svn_wc__db_lock_t *lock,
+                    apr_pool_t *scratch_pool);
+
+
+/** @} */
+
+
+/**
  * @defgroup svn_wc__db_scan  Functions to scan up a tree for further data.
  * @{
  */

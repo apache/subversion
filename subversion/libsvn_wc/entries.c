@@ -75,8 +75,7 @@ enum statement_keys {
   STMT_DELETE_ALL_ACTUAL,
   STMT_DELETE_ALL_LOCK,
   STMT_SELECT_INCOMPLETE_FLAG,
-  STMT_SELECT_NOT_PRESENT,
-  STMT_INSERT_LOCK
+  STMT_SELECT_NOT_PRESENT
 };
 
 static const char * const statements[] = {
@@ -146,11 +145,6 @@ static const char * const statements[] = {
 
   "select 1 from base_node "
   "where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';",
-
-  "insert or replace into lock "
-    "(repos_id, repos_relpath, lock_token, lock_owner, lock_comment, "
-    " lock_date)"
-  "values (?1, ?2, ?3, ?4, ?5, ?6);",
 
   NULL
   };
@@ -1409,32 +1403,6 @@ svn_wc_entries_read(apr_hash_t **entries,
 
 
 static svn_error_t *
-insert_lock(svn_sqlite__db_t *wc_db,
-            apr_int64_t repos_id,
-            const char *repos_relpath,
-            const svn_wc__db_lock_t *lock,
-            apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_LOCK));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, repos_id));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 2, repos_relpath));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 3, lock->token));
-
-  if (lock->owner != NULL)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, lock->owner));
-
-  if (lock->comment != NULL)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, lock->comment));
-
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->date));
-
-  return svn_sqlite__insert(NULL, stmt);
-}
-
-
-static svn_error_t *
 insert_base_node(svn_sqlite__db_t *wc_db,
                  const db_base_node_t *base_node,
                  apr_pool_t *scratch_pool)
@@ -1645,14 +1613,18 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
 
 
 /* Write the information for ENTRY to WC_DB.  The WC_ID, REPOS_ID and
-   REPOS_ROOT will all be used for writing ENTRY. */
+   REPOS_ROOT will all be used for writing ENTRY.
+   ### transitioning from straight sql to using the wc_db APIs.  For the
+   ### time being, we'll need both parameters. */
 static svn_error_t *
-write_entry(svn_sqlite__db_t *wc_db,
+write_entry(svn_wc__db_t *db,
+            svn_sqlite__db_t *wc_db,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
             const char *repos_root,
             const svn_wc_entry_t *entry,
             const char *name,
+            const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
             apr_pool_t *pool)
 {
@@ -1827,19 +1799,6 @@ write_entry(svn_sqlite__db_t *wc_db,
             }
         }
 
-      if (entry->lock_token)
-        {
-          svn_wc__db_lock_t *lock = apr_pcalloc(scratch_pool, sizeof(*lock));
-
-          lock->token = entry->lock_token;
-          lock->owner = entry->lock_owner;
-          lock->comment = entry->lock_comment;
-          lock->date = entry->lock_creation_date;
-
-          SVN_ERR(insert_lock(wc_db, repos_id, base_node->repos_relpath, lock,
-                              scratch_pool));
-        }
-
       /* TODO: These values should always be present, if they are missing
          during an upgrade, set a flag, and then ask the user to talk to the
          server.
@@ -1851,6 +1810,21 @@ write_entry(svn_sqlite__db_t *wc_db,
       base_node->changed_author = entry->cmt_author;
 
       SVN_ERR(insert_base_node(wc_db, base_node, scratch_pool));
+
+      /* We have to insert the lock after the base node, because the node
+         must exist to lookup various bits of repos related information for
+         the abs path. */
+      if (entry->lock_token)
+        {
+          svn_wc__db_lock_t *lock = apr_pcalloc(scratch_pool, sizeof(*lock));
+
+          lock->token = entry->lock_token;
+          lock->owner = entry->lock_owner;
+          lock->comment = entry->lock_comment;
+          lock->date = entry->lock_creation_date;
+
+          SVN_ERR(svn_wc__db_lock_add(db, entry_abspath, lock, scratch_pool));
+        }
     }
 
   /* Insert the working node. */
@@ -1917,6 +1891,7 @@ write_entry(svn_sqlite__db_t *wc_db,
 static svn_error_t *
 entries_write_body(svn_sqlite__db_t *wc_db,
                    apr_hash_t *entries,
+                   svn_wc_adm_access_t *adm_access,
                    const svn_wc_entry_t *this_dir,
                    apr_pool_t *scratch_pool)
 {
@@ -1927,6 +1902,13 @@ entries_write_body(svn_sqlite__db_t *wc_db,
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
+  const char *local_abspath;
+  svn_wc__db_t *db;
+
+  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  scratch_pool));
 
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
@@ -1981,9 +1963,11 @@ entries_write_body(svn_sqlite__db_t *wc_db,
 
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
-  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root, this_dir,
-                      SVN_WC_ENTRY_THIS_DIR, this_dir,
-                      scratch_pool));
+  SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root, this_dir,
+                      SVN_WC_ENTRY_THIS_DIR,
+                      svn_dirent_join(local_abspath, SVN_WC_ENTRY_THIS_DIR,
+                                      scratch_pool),
+                      this_dir, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, entries); hi;
         hi = apr_hash_next(hi))
@@ -2003,8 +1987,11 @@ entries_write_body(svn_sqlite__db_t *wc_db,
         continue;
 
       /* Write the entry. */
-      SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos_root,
-                          this_entry, key, this_dir, iterpool));
+      SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root,
+                          this_entry, key,
+                          svn_dirent_join(local_abspath, this_entry->name,
+                                          iterpool),
+                          this_dir, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -2046,7 +2033,8 @@ svn_wc__entries_write(apr_hash_t *entries,
                            scratch_pool, scratch_pool));
 
   /* Write the entries. */
-  SVN_ERR(entries_write_body(wc_db, entries, this_dir, scratch_pool));
+  SVN_ERR(entries_write_body(wc_db, entries, adm_access, this_dir,
+                             scratch_pool));
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
@@ -2825,11 +2813,11 @@ svn_wc__entries_init(const char *path,
                      svn_depth_t depth,
                      apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   svn_sqlite__db_t *wc_db;
+  svn_wc__db_t *db;
+  svn_sqlite__stmt_t *stmt;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   const char *wc_db_path = db_path(path, scratch_pool);
-  svn_sqlite__stmt_t *stmt;
   apr_int64_t wc_id;
   apr_int64_t repos_id;
   svn_wc_entry_t *entry = alloc_entry(scratch_pool);
@@ -2844,14 +2832,17 @@ svn_wc__entries_init(const char *path,
                  || depth == svn_depth_immediates
                  || depth == svn_depth_infinity);
 
-  /* Check that the entries sqlite database does not yet exist. */
-  SVN_ERR(svn_io_check_path(wc_db_path, &kind, scratch_pool));
-  if (kind != svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                             _("Existing sqlite database found at '%s'"),
-                             svn_path_local_style(wc_db_path, pool));
+  /* ### chicken and egg problem: we don't have an adm_access baton to
+     ### use to open the initial entries database, we we've got to do it
+     ### manually. */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite, path,
+                          NULL, scratch_pool, scratch_pool));
 
-  /* Create the entries database, and start a transaction. */
+  /* Open the sqlite database, and insert the REPOS and WCROOT.
+     ### this is redundant, but we currently need it for the entry
+     ### inserting API.  DB and WC_DB should be pointing to the *same*
+     ### sqlite database, and it works fine thanks for sqlite's
+     ### concurrency handling.  However, this should eventually disappear. */
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
                            statements,
                            SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
@@ -2869,15 +2860,14 @@ svn_wc__entries_init(const char *path,
   SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
 
   /* Insert the wcroot. */
-  /* TODO: Right now, this just assumes wc metadata is being stored locally. */
+  /* ### Right now, this just assumes wc metadata is being stored locally. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
   SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
 
   /* Add an entry for the dir itself.  The directory has no name.  It
      might have a UUID, but otherwise only the revision and default
-     ancestry are present as XML attributes, and possibly an
-     'incomplete' flag if the revnum is > 0. */
-
+     ancestry are present, and possibly an 'incomplete' flag if the revnum
+     is > 0. */
   entry->kind = svn_node_dir;
   entry->url = url;
   entry->revision = initial_rev;
@@ -2887,8 +2877,8 @@ svn_wc__entries_init(const char *path,
   if (initial_rev > 0)
     entry->incomplete = TRUE;
 
-  SVN_ERR(write_entry(wc_db, wc_id, repos_id, repos, entry,
-                      SVN_WC_ENTRY_THIS_DIR, entry, scratch_pool));
+  SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos, entry,
+                      SVN_WC_ENTRY_THIS_DIR, path, entry, scratch_pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
