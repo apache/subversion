@@ -4333,10 +4333,11 @@ struct get_mergeinfo_walk_baton
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
    of type "struct get_mergeinfo_walk_baton *":  If PATH is switched,
    has explicit working svn:mergeinfo from a corresponding merge source, is
-   missing a child due to a sparse checkout, is absent from disk, or is
-   scheduled for deletion, then create a svn_client__merge_path_t *
-   representing *PATH, allocated in WB->CHILDREN_WITH_MERGEINFO->POOL, and
-   push it onto the WB->CHILDREN_WITH_MERGEINFO array. */
+   missing a child due to a sparse checkout, is absent from disk, is
+   scheduled for deletion, or if the walk is being done as part of a reverse
+   merge, then create a svn_client__merge_path_t *representing *PATH,
+   allocated in WB->CHILDREN_WITH_MERGEINFO->POOL, and push it onto the
+   WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
 get_mergeinfo_walk_cb(const char *path,
                       const svn_wc_entry_t *entry,
@@ -4404,7 +4405,8 @@ get_mergeinfo_walk_cb(const char *path,
             svn_path_add_component(merge_src_child_path,
                                    path);
           SVN_ERR(svn_mergeinfo_parse(&mergehash, propval->data, pool));
-          if (propval->len == 0 /* empty mergeinfo */
+          if (wb->revision1 > wb->revision2 /* Reverse merge. */
+              || propval->len == 0 /* empty mergeinfo */
               || apr_hash_get(mergehash, merge_src_child_path->data,
                               APR_HASH_KEY_STRING))
             {
@@ -4732,6 +4734,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         DEPTH is svn_depth_immediates.
      9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
         DEPTH is svn_depth_files.
+    10) do_directory_merge() is processing a reverse merge.
 
    If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
    for MERGE_CMD_BATON->TARGET (i.e. only criteria 7 is applied).
