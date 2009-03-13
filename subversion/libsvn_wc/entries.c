@@ -2738,7 +2738,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
                     const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
-                    svn_boolean_t *write_required,
                     apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
@@ -2751,7 +2750,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
   if (new_url != NULL
       && (! entry->url || strcmp(new_url, entry->url)))
     {
-      *write_required = TRUE;
       entry->url = apr_pstrdup(pool, new_url);
     }
 
@@ -2789,7 +2787,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 
       if (set_repos)
         {
-          *write_required = TRUE;
           entry->repos = apr_pstrdup(pool, repos);
         }
     }
@@ -2800,7 +2797,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
       && (entry->copied != TRUE)
       && (entry->revision != new_rev))
     {
-      *write_required = TRUE;
       entry->revision = new_rev;
     }
 
@@ -2822,7 +2818,6 @@ svn_wc__tweak_entry(apr_hash_t *entries,
   if (allow_removal
       && (entry->deleted || (entry->absent && entry->revision != new_rev)))
     {
-      *write_required = TRUE;
       apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
     }
 

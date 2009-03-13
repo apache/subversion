@@ -99,7 +99,6 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_boolean_t write_required = FALSE;
   svn_wc_notify_t *notify;
 
   /* Skip an excluded path and its descendants. */
@@ -113,7 +112,6 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
   /* Tweak "this_dir" */
   SVN_ERR(svn_wc__tweak_entry(entries, SVN_WC_ENTRY_THIS_DIR,
                               base_url, repos, new_rev, FALSE,
-                              &write_required,
                               svn_wc_adm_access_pool(dirpath)));
 
   if (depth == svn_depth_unknown)
@@ -159,7 +157,6 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
               if (! excluded)
                 SVN_ERR(svn_wc__tweak_entry(entries, name,
                                             child_url, repos, new_rev, TRUE,
-                                            &write_required,
                                             svn_wc_adm_access_pool(dirpath)));
             }
 
@@ -214,8 +211,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
     }
 
   /* Write a shiny new entries file to disk. */
-  if (write_required)
-    SVN_ERR(svn_wc__entries_write(entries, dirpath, subpool));
+  SVN_ERR(svn_wc__entries_write(entries, dirpath, subpool));
 
   /* Cleanup */
   svn_pool_destroy(subpool);
@@ -269,7 +265,6 @@ svn_wc__do_update_cleanup(const char *path,
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
-      svn_boolean_t write_required = FALSE;
       if (apr_hash_get(exclude_paths, path, APR_HASH_KEY_STRING))
         return SVN_NO_ERROR;
       svn_dirent_split(path, &parent, &base_name, pool);
@@ -279,10 +274,8 @@ svn_wc__do_update_cleanup(const char *path,
                                   base_url, repos, new_revision,
                                   FALSE, /* Parent not updated so don't
                                             remove PATH entry */
-                                  &write_required,
                                   svn_wc_adm_access_pool(dir_access)));
-      if (write_required)
-        SVN_ERR(svn_wc__entries_write(entries, dir_access, pool));
+      SVN_ERR(svn_wc__entries_write(entries, dir_access, pool));
     }
 
   else if (entry->kind == svn_node_dir)
@@ -310,7 +303,6 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
                             apr_pool_t *pool)
 {
   apr_hash_t *entries;
-  svn_boolean_t write_required = FALSE;
   const svn_wc_entry_t *entry;
   const char *base_name;
   svn_wc_adm_access_t *dir_access;
@@ -341,11 +333,9 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 
   SVN_ERR(svn_wc__tweak_entry(entries, base_name,
                               NULL, repos, SVN_INVALID_REVNUM, FALSE,
-                              &write_required,
                               svn_wc_adm_access_pool(dir_access)));
 
-  if (write_required)
-    SVN_ERR(svn_wc__entries_write(entries, dir_access, pool));
+  SVN_ERR(svn_wc__entries_write(entries, dir_access, pool));
 
   return SVN_NO_ERROR;
 }
