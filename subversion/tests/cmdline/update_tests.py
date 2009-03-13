@@ -594,7 +594,7 @@ def update_to_resolve_text_conflicts(sbox):
   os.remove(mu_path_backup)
   os.remove(rho_path_backup)
 
-  # ### TODO: Can't get run_and_verify_update to work here :-( I get
+  ### TODO: Can't get run_and_verify_update to work here :-( I get
   # the error "Unequal Types: one Node is a file, the other is a
   # directory". Use run_svn and then run_and_verify_status instead
   exit_code, stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up',
@@ -631,7 +631,7 @@ def update_delete_modified_files(sbox):
   svntest.actions.run_and_verify_svn("Committing deletes failed", None, [],
                                      'ci', '-m', 'log msg', wc_dir)
 
-  # ### Update before backdating to avoid obstructed update error for G
+  ### Update before backdating to avoid obstructed update error for G
   svntest.actions.run_and_verify_svn("Updating after commit failed", None, [],
                                      'up', wc_dir)
 

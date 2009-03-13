@@ -782,7 +782,7 @@ def failed_anchor_is_target(sbox):
   svntest.actions.run_and_verify_resolved([psi_path])
 
   # The switch should now be complete.
-  # ### Instead of "treeconflict=None" which means "don't check", we should
+  ### Instead of "treeconflict=None" which means "don't check", we should
   # check "treeconflict=' '" but the test suite doesn't do the right thing.
   expected_status.tweak('A/D/H/psi', treeconflict=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
