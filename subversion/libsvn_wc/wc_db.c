@@ -163,7 +163,6 @@ enum statement_keys {
   STMT_SELECT_WORKING_IS_FILE,
   STMT_SELECT_BASE_IS_FILE,
   STMT_SELECT_BASE_PROPS,
-  STMT_SELECT_ACTUAL_PROPS,
   STMT_UPDATE_ACTUAL_PROPS,
   STMT_SELECT_ALL_PROPS,
   STMT_SELECT_PRISTINE_PROPS
@@ -233,9 +232,6 @@ static const char * const statements[] = {
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select properties from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  "select properies from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "update actual_node set properties = ?3 "
