@@ -2598,7 +2598,8 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_ALL_PROPS));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                    STMT_SELECT_PRISTINE_PROPS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
@@ -2607,7 +2608,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  /* Try ACTUAL, then WORKING and finally BASE. */
+  /* Try WORKING, then BASE. */
   if (!svn_sqlite__column_is_null(stmt, 0))
     SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                           scratch_pool));
