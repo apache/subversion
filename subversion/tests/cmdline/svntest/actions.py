@@ -965,10 +965,6 @@ def run_and_verify_patch(dir, patch_path,
   patch_command = patch_command + args
   exit_code, out, err = main.run_svn(True, *patch_command)
 
-  # Return early if the patch program is missing
-  if exit_code == 1 and len(err) >= 4 and err[-1] == "svn: External program is missing\n":
-    return
-
   if error_re_string:
     rm = re.compile(error_re_string)
     match = None

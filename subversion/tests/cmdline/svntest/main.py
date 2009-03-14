@@ -1000,6 +1000,13 @@ def server_enforces_date_syntax():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
+def has_patch():
+  try:
+    subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return True
+  except OSError:
+    return False
+
 
 ######################################################################
 
