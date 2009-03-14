@@ -865,9 +865,10 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 12,
              "Connection timed out")
 
+  /** @since New in 1.7 */
   SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
-			 SVN_ERR_RA_DAV_CATEGORY_START + 13,
-			 "URL access forbidden for unknown reason")
+             SVN_ERR_RA_DAV_CATEGORY_START + 13,
+             "URL access forbidden for unknown reason")
 
   /* ra_local errors */
 
