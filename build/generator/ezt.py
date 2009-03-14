@@ -167,7 +167,6 @@ Directives
 
 import string
 import re
-from types import StringType, IntType, FloatType
 import os
 
 #
@@ -347,7 +346,7 @@ class Template:
     to the file object 'fp' and functions are called.
     """
     for step in program:
-      if isinstance(step, StringType):
+      if isinstance(step, str):
         fp.write(step)
       else:
         step[0](step[1], fp, ctx)
@@ -431,7 +430,7 @@ class Template:
   def _cmd_for(self, args, fp, ctx):
     ((valref,), unused, section) = args
     list = _get_value(valref, ctx)
-    if isinstance(list, StringType):
+    if isinstance(list, str):
       raise NeedSequenceError()
     refname = valref[0]
     ctx.for_index[refname] = idx = [ list, 0 ]
@@ -509,7 +508,7 @@ def _get_value(refname_start_rest, ctx):
       raise UnknownReference(refname)
 
   # make sure we return a string instead of some various Python types
-  if isinstance(ob, IntType) or isinstance(ob, FloatType):
+  if isinstance(ob, int) or isinstance(ob, float):
     return str(ob)
   if ob is None:
     return ''
