@@ -64,8 +64,8 @@ random_cnonce(apr_pool_t *pool)
 
 static const char *
 build_digest_ha1(svn_auth_cred_simple_t *simple_creds,
-		 const char *realm_name,
-		 apr_pool_t *pool)
+                 const char *realm_name,
+                 apr_pool_t *pool)
 {
   const char *tmp;
   unsigned char ha1[APR_MD5_DIGESTSIZE];
@@ -74,9 +74,9 @@ build_digest_ha1(svn_auth_cred_simple_t *simple_creds,
   /* calculate ha1:
      MD5 hash of the combined user name, authentication realm and password */
   tmp = apr_psprintf(pool, "%s:%s:%s",
-		     simple_creds->username,
-		     realm_name,
-		     simple_creds->password);
+                     simple_creds->username,
+                     realm_name,
+                     simple_creds->password);
   status = apr_md5(ha1, tmp, strlen(tmp));
 
   return hex_encode(ha1, pool);
@@ -84,9 +84,9 @@ build_digest_ha1(svn_auth_cred_simple_t *simple_creds,
 
 static const char *
 build_digest_ha2(const char *uri,
-		 const char *method,
-		 const char *qop,
-		 apr_pool_t *pool)
+                 const char *method,
+                 const char *qop,
+                 apr_pool_t *pool)
 {
   if (!qop || strcmp(qop, "auth") == 0)
     {
@@ -95,10 +95,10 @@ build_digest_ha2(const char *uri,
       apr_status_t status;
 
       /* calculate ha2:
-	 MD5 hash of the combined method and URI */
+         MD5 hash of the combined method and URI */
       tmp = apr_psprintf(pool, "%s:%s",
-			 method,
-			 uri);
+                         method,
+                         uri);
       status = apr_md5(ha2, tmp, strlen(tmp));
 
       return hex_encode(ha2, pool);
@@ -113,9 +113,9 @@ build_digest_ha2(const char *uri,
 
 static const char *
 build_auth_header(serf_digest_context_t *context,
-		  const char *uri,
-		  const char *method,
-		  apr_pool_t *pool)
+                  const char *uri,
+                  const char *method,
+                  apr_pool_t *pool)
 {
   svn_stringbuf_t *hdr;
   const char *ha2;
@@ -139,7 +139,7 @@ build_auth_header(serf_digest_context_t *context,
       const char *nc_str;
 
       if (! context->cnonce)
-	context->cnonce = random_cnonce(context->pool);
+        context->cnonce = random_cnonce(context->pool);
       nc_str = apr_psprintf(pool, "%08x", context->digest_nc);
 
       svn_stringbuf_appendcstr(hdr, ", nc=");
@@ -151,9 +151,9 @@ build_auth_header(serf_digest_context_t *context,
       svn_stringbuf_appendcstr(hdr, "\"");
 
       /* calculate the response header:
-	 MD5 hash of the combined HA1 result, server nonce (nonce),
+         MD5 hash of the combined HA1 result, server nonce (nonce),
          request counter (nc), client nonce (cnonce),
-	 quality of protection code (qop) and HA2 result. */
+         quality of protection code (qop) and HA2 result. */
       response = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
                               context->ha1, context->nonce, nc_str,
                               context->cnonce, context->qop, ha2);
@@ -161,8 +161,8 @@ build_auth_header(serf_digest_context_t *context,
   else
     {
       /* calculate the response header:
-	 MD5 hash of the combined HA1 result, server nonce (nonce)
-	 and HA2 result. */
+         MD5 hash of the combined HA1 result, server nonce (nonce)
+         and HA2 result. */
       response = apr_psprintf(pool, "%s:%s:%s",
                               context->ha1, context->nonce, ha2);
     }
@@ -261,8 +261,8 @@ svn_ra_serf__handle_digest_auth(svn_ra_serf__handler_t *ctx,
   if (!realm_name)
     {
       return svn_error_create
-	(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-	 _("Missing 'realm' attribute in Authorization header"));
+        (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+         _("Missing 'realm' attribute in Authorization header"));
     }
   
   if (session->repos_url.port_str)
@@ -275,10 +275,10 @@ svn_ra_serf__handle_digest_auth(svn_ra_serf__handler_t *ctx,
     }
   
   session->realm = apr_psprintf(session->pool, "<%s://%s:%d> %s",
-				session->repos_url.scheme,
-				session->repos_url.hostname,
-				port,
-				realm_name);
+                                session->repos_url.scheme,
+                                session->repos_url.hostname,
+                                port,
+                                realm_name);
 
   /* Use svn_auth_first_credentials if this is the first time we ask for
      credentials during this session OR if the last time we asked
@@ -333,7 +333,7 @@ svn_ra_serf__handle_digest_auth(svn_ra_serf__handler_t *ctx,
   conn->auth_context = context;
 
   context->ha1 = build_digest_ha1(simple_creds, context->realm,
-				  context->pool);
+                                  context->pool);
 
   /* If the handshake is finished tell serf it can send as much requests as it
      likes. */
@@ -368,7 +368,7 @@ svn_ra_serf__setup_request_digest_auth(svn_ra_serf__connection_t *conn,
       /* Build a new Authorization header. */
       conn->auth_header = "Authorization";
       conn->auth_value = build_auth_header(context, uri, method, 
-					   context->pool);
+                                           context->pool);
 
       serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
       context->digest_nc++;
@@ -444,17 +444,17 @@ svn_ra_serf__validate_response_digest_auth(svn_ra_serf__handler_t *ctx,
 
       ha2 = build_digest_ha2(ctx->path, "", qop, pool);
       tmp = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
-			 context->ha1, context->nonce, nc_str,
-			 context->cnonce, context->qop, ha2);
+                         context->ha1, context->nonce, nc_str,
+                         context->cnonce, context->qop, ha2);
       apr_md5(resp_hdr, tmp, strlen(tmp));
       resp_hdr_hex =  hex_encode(resp_hdr, pool);
 
       if (strcmp(rspauth, resp_hdr_hex) != 0)
-	{
-	  return svn_error_create
-	    (SVN_ERR_AUTHN_FAILED, NULL,
-	     _("Incorrect response-digest in Authentication-Info header."));
-	}
+        {
+          return svn_error_create
+            (SVN_ERR_AUTHN_FAILED, NULL,
+             _("Incorrect response-digest in Authentication-Info header."));
+        }
     }
 
   return SVN_NO_ERROR;
