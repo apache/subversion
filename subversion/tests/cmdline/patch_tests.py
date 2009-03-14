@@ -140,7 +140,6 @@ def patch_basic(sbox):
                                        None,
                                        expected_skip,
                                        gnupatch_garbage_re, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
@@ -198,7 +197,6 @@ def patch_unidiff(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # dry-run
 
@@ -336,7 +334,6 @@ def patch_copy_and_move(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # dry-run
 
@@ -364,7 +361,6 @@ def patch_copy_and_move(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # dry-run
 
