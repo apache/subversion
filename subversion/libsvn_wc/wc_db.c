@@ -2706,7 +2706,8 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
   if (lock->comment != NULL)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, lock->comment));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->date));
+  if (lock->date != 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 6, lock->date));
 
   return svn_sqlite__insert(NULL, stmt);
 }
