@@ -5,7 +5,7 @@ if version_info[0] >= 3:
 else:
   # Python <3.0
   from cStringIO import StringIO
-import unittest, os, tempfile, shutil, types, setup_path, binascii
+import unittest, os, tempfile, shutil, setup_path, binascii
 import svn.diff
 from svn import core, repos, wc, client
 from svn import delta, ra
@@ -61,7 +61,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.failIf(wc.is_adm_dir(".foosvn"))
 
   def test_get_adm_dir(self):
-      self.assert_(isinstance(wc.get_adm_dir(), types.StringTypes))
+      self.assert_(isinstance(wc.get_adm_dir(), basestring))
 
   def test_set_adm_dir(self):
       self.assertRaises(SubversionException, wc.set_adm_dir, ".foobar")

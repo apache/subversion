@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -16,7 +16,6 @@
 ######################################################################
 
 import os
-import types
 import sys
 import re
 
@@ -101,14 +100,14 @@ class State:
 
   def __init__(self, wc_dir, desc):
     "Create a State using the specified description."
-    assert isinstance(desc, types.DictionaryType)
+    assert isinstance(desc, dict)
 
     self.wc_dir = wc_dir
     self.desc = desc      # dictionary: path -> StateItem
 
   def add(self, more_desc):
     "Add more state items into the State."
-    assert isinstance(more_desc, types.DictionaryType)
+    assert isinstance(more_desc, dict)
 
     self.desc.update(more_desc)
 
