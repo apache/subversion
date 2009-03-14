@@ -245,15 +245,15 @@ svn_ra_serf__handle_digest_auth(svn_ra_serf__handler_t *ctx,
             }
         }
       
-      if (strcasecmp(key, "realm") == 0)
+      if (svn_cstring_casecmp(key, "realm") == 0)
         realm_name = val;
-      else if (strcmp(key, "nonce") == 0)
+      else if (svn_cstring_casecmp(key, "nonce") == 0)
         nonce = val;
-      else if (strcmp(key, "algorithm") == 0)
+      else if (svn_cstring_casecmp(key, "algorithm") == 0)
         algorithm = val;
-      else if (strcmp(key, "qop") == 0)
+      else if (svn_cstring_casecmp(key, "qop") == 0)
         qop = val;
-      else if (strcmp(key, "opaque") == 0)
+      else if (svn_cstring_casecmp(key, "opaque") == 0)
         opaque = val;
       
       /* Ignore all unsupported attributes. */

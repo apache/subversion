@@ -210,7 +210,8 @@ handle_auth_header(void *baton,
      as that may have changed. (ex. fallback from ntlm to basic.) */
   for (prot = serf_auth_protocols; prot->code != 0; ++prot)
     {
-      if (ab->code == prot->code && strcasecmp(auth_name, prot->auth_name) == 0)
+      if (ab->code == prot->code &&
+          svn_cstring_casecmp(auth_name, prot->auth_name) == 0)
 	{
 	  svn_serf__auth_handler_func_t handler = prot->handle_func;
 	  svn_error_t *err = NULL;
