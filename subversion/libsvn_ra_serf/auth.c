@@ -42,8 +42,8 @@ init_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
-			 const char *method,
-			 const char *uri,
+                         const char *method,
+                         const char *uri,
                          serf_bucket_t *hdrs_bkt);
 
 static svn_error_t *
@@ -61,15 +61,15 @@ init_proxy_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
-			       const char *method,
-			       const char *uri,
+                               const char *method,
+                               const char *uri,
                                serf_bucket_t *hdrs_bkt);
 
 static svn_error_t *
 default_auth_response_handler(svn_ra_serf__handler_t *ctx,
-			      serf_request_t *request,
-			      serf_bucket_t *response,
-			      apr_pool_t *pool)
+                              serf_request_t *request,
+                              serf_bucket_t *response,
+                              apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
 }
@@ -177,8 +177,8 @@ typedef struct {
  */
 static int
 handle_auth_header(void *baton,
-		   const char *key,
-		   const char *header)
+                   const char *key,
+                   const char *header)
 {
   auth_baton_t *ab = (auth_baton_t *)baton;
   svn_ra_serf__session_t *session = ab->ctx->session;
@@ -212,50 +212,50 @@ handle_auth_header(void *baton,
     {
       if (ab->code == prot->code &&
           svn_cstring_casecmp(auth_name, prot->auth_name) == 0)
-	{
-	  svn_serf__auth_handler_func_t handler = prot->handle_func;
-	  svn_error_t *err = NULL;
+        {
+          svn_serf__auth_handler_func_t handler = prot->handle_func;
+          svn_error_t *err = NULL;
 
-	  /* If this is the first time we use this protocol in this session,
-	     make sure to initialize the authentication part of the session
-	     first. */
-	  if (ab->code == 401 && session->auth_protocol != prot)
-	    {
-	      err = prot->init_conn_func(session, conn, session->pool);
-	      if (err == SVN_NO_ERROR)
-		session->auth_protocol = prot;
-	      else
-		session->auth_protocol = NULL;
-	    }
-	  else if (ab->code == 407 && session->proxy_auth_protocol != prot)
-	    {
-	      err = prot->init_conn_func(session, conn, session->pool);
-	      if (err == SVN_NO_ERROR)
-		session->proxy_auth_protocol = prot;
-	      else
-		session->proxy_auth_protocol = NULL;
-	    }
+          /* If this is the first time we use this protocol in this session,
+             make sure to initialize the authentication part of the session
+             first. */
+          if (ab->code == 401 && session->auth_protocol != prot)
+            {
+              err = prot->init_conn_func(session, conn, session->pool);
+              if (err == SVN_NO_ERROR)
+                session->auth_protocol = prot;
+              else
+                session->auth_protocol = NULL;
+            }
+          else if (ab->code == 407 && session->proxy_auth_protocol != prot)
+            {
+              err = prot->init_conn_func(session, conn, session->pool);
+              if (err == SVN_NO_ERROR)
+                session->proxy_auth_protocol = prot;
+              else
+                session->proxy_auth_protocol = NULL;
+            }
 
-	  if (err == SVN_NO_ERROR)
-	    {
-	      proto_found = TRUE;
-	      ab->prot = prot;
-	      err = handler(ab->ctx, ab->request, ab->response,
-			    header, auth_attr, session->pool);
-	    }
-	  if (err)
-	    {
-	      /* If authentication fails, cache the error for now. Try the
-		 next available scheme. If there's none raise the error. */
-	      proto_found = FALSE;
-	      prot = NULL;
-	      if (ab->err)
-		svn_error_clear(ab->err);
-	      ab->err = err;
-	    }
+          if (err == SVN_NO_ERROR)
+            {
+              proto_found = TRUE;
+              ab->prot = prot;
+              err = handler(ab->ctx, ab->request, ab->response,
+                            header, auth_attr, session->pool);
+            }
+          if (err)
+            {
+              /* If authentication fails, cache the error for now. Try the
+                 next available scheme. If there's none raise the error. */
+              proto_found = FALSE;
+              prot = NULL;
+              if (ab->err)
+                svn_error_clear(ab->err);
+              ab->err = err;
+            }
 
-	  break;
-	}
+          break;
+        }
     }
 
   /* If a matching protocol handler was found, we can stop iterating 
@@ -315,8 +315,8 @@ svn_ra_serf__handle_auth(int code,
      work with.
   */
   serf_bucket_headers_do(hdrs,
-			 handle_auth_header,
-			 &ab);
+                         handle_auth_header,
+                         &ab);
   SVN_ERR(ab.err);
 
   if (!ab.prot || ab.prot->auth_name == NULL)
@@ -461,8 +461,8 @@ init_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
-			 const char *method,
-			 const char *uri,
+                         const char *method,
+                         const char *uri,
                          serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
@@ -529,8 +529,8 @@ init_proxy_basic_connection(svn_ra_serf__session_t *session,
 
 static svn_error_t *
 setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
-			       const char *method,
-			       const char *uri,
+                               const char *method,
+                               const char *uri,
                                serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
