@@ -32,6 +32,18 @@ Candidate changes:
     Votes:
       +1: arfrever, steveking (already using neon 0.28.4 in TSVN)
       +1: gstein, rhuijben (for 1.6.1; this can wait)
+
+  * r36540
+    Add SVN_ERR_RA_DAV_FORBIDDEN errorcode
+    Justification:
+      We need a special error code to test for, to resolve issue #3242.
+      Adding error codes changes our public API, so I nominate this part for
+      1.6.0. The usage of this error code can wait for 1.6.1.
+    Notes:
+      r36540 doesn't add a @since. A @since New in 1.6 should be added while
+      merging. (And trunk should be fixed)
+    Votes:
+      +1: rhuijben
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
