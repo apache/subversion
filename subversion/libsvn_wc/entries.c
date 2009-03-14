@@ -1816,14 +1816,14 @@ write_entry(svn_wc__db_t *db,
          the abs path. */
       if (entry->lock_token)
         {
-          svn_wc__db_lock_t *lock = apr_pcalloc(scratch_pool, sizeof(*lock));
+          svn_wc__db_lock_t lock;
 
-          lock->token = entry->lock_token;
-          lock->owner = entry->lock_owner;
-          lock->comment = entry->lock_comment;
-          lock->date = entry->lock_creation_date;
+          lock.token = entry->lock_token;
+          lock.owner = entry->lock_owner;
+          lock.comment = entry->lock_comment;
+          lock.date = entry->lock_creation_date;
 
-          SVN_ERR(svn_wc__db_lock_add(db, entry_abspath, lock, scratch_pool));
+          SVN_ERR(svn_wc__db_lock_add(db, entry_abspath, &lock, scratch_pool));
         }
     }
 
