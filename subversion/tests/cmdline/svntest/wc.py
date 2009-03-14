@@ -125,9 +125,7 @@ class State:
   def remove(self, *paths):
     "Remove a path from the state (the path must exist)."
     for path in paths:
-      if sys.platform == 'win32':
-        path = path.replace('\\', '/')
-      del self.desc[path]
+      del self.desc[to_relpath(path)]
 
   def copy(self, new_root=None):
     """Make a deep copy of self.  If NEW_ROOT is not None, then set the
@@ -153,9 +151,7 @@ class State:
     if args:
       for path in args:
         try:
-          if sys.platform == 'win32':
-            path = path.replace('\\', '/')
-          path_ref = self.desc[path]
+          path_ref = self.desc[to_relpath(path)]
         except KeyError, e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
@@ -226,7 +222,7 @@ class State:
     if self.wc_dir == '':
       return self
 
-    base = os.path.normpath(self.wc_dir).replace(os.sep, '/')
+    base = to_relpath(os.path.normpath(self.wc_dir))
     def join(path):
       if path == '':
         return base
@@ -365,7 +361,7 @@ class State:
                        treeconflict=not_space(match.group(6)),
                        wc_rev=not_space(match.group('wc_rev')),
                        )
-      desc[match.group('path')] = item
+      desc[to_relpath(match.group('path'))] = item
 
     return cls('', desc)
 
@@ -380,7 +376,7 @@ class State:
 
       match = _re_parse_skipped.search(line)
       if match:
-        desc[match.group(1)] = StateItem()
+        desc[to_relpath(match.group(1))] = StateItem()
 
     return cls('', desc)
 
@@ -395,7 +391,7 @@ class State:
 
       match = _re_parse_summarize.search(line)
       if match:
-        desc[match.group(2)] = StateItem(status=match.group(1))
+        desc[to_relpath(match.group(2))] = StateItem(status=match.group(1))
 
     return cls('', desc)
 
@@ -419,12 +415,12 @@ class State:
           treeconflict = 'C'
         else:
           treeconflict = None
-        desc[match.group(4)] = StateItem(status=match.group(1),
-                                         treeconflict=treeconflict)
+        desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),
+                                                     treeconflict=treeconflict)
       else:
         match = re_extra.search(line)
         if match:
-          desc[match.group(2)] = StateItem(verb=match.group(1))
+          desc[to_relpath(match.group(2))] = StateItem(verb=match.group(1))
 
     return cls('', desc)
 
@@ -439,7 +435,7 @@ class State:
 
       match = _re_parse_commit.search(line)
       if match:
-        desc[match.group(3)] = StateItem(verb=match.group(1))
+        desc[to_relpath(match.group(3))] = StateItem(verb=match.group(1))
 
     return cls('', desc)
 
@@ -464,7 +460,7 @@ class State:
         return ''
       assert p.startswith(path + os.sep), \
           "'%s' is not a prefix of '%s'" % (path + os.sep, p)
-      return p[l:].replace(os.sep, '/')
+      return to_relpath(p[l:])
 
     def _walker(baton, dirname, names):
       parent = path_to_key(dirname)
@@ -483,7 +479,7 @@ class State:
     os.path.walk(path, _walker, None)
 
     if load_props:
-      paths = [os.path.join(path, p.replace('/', os.sep)) for p in desc.keys()]
+      paths = [os.path.join(path, to_ospath(p)) for p in desc.keys()]
       paths.append(path)
       all_props = svntest.tree.get_props(paths)
       for node, props in all_props.items():
@@ -589,6 +585,15 @@ class StateItem:
       atts['treeconflict'] = self.treeconflict
 
     return (os.path.normpath(path), self.contents, self.props, atts)
+
+
+if os.sep == '/':
+  to_relpath = to_ospath = lambda path: path
+else:
+  def to_relpath(path):
+    return path.replace(os.sep, '/')
+  def to_ospath(path):
+    return path.replace('/', os.sep)
 
 
 # ------------
