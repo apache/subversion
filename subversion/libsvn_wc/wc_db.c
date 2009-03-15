@@ -1555,6 +1555,63 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 }
 
 
+/* ### temp API.  Remove before release. */
+svn_error_t *
+svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *repos_relpath,
+                                const char *repos_root_url,
+                                const char *repos_uuid,
+                                svn_revnum_t revision,
+                                svn_revnum_t changed_rev,
+                                apr_time_t changed_date,
+                                const char *changed_author,
+                                svn_depth_t depth,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  apr_int64_t repos_id;
+  insert_base_baton_t ibb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(repos_uuid != NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
+  SVN_ERR_ASSERT(changed_date > 0);
+  SVN_ERR_ASSERT(changed_author != NULL);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, pdh->sdb,
+                          scratch_pool));
+
+  ibb.status = svn_wc__db_status_normal;
+  ibb.kind = svn_wc__db_kind_subdir;
+  ibb.wc_id = pdh->wc_id;
+  ibb.local_relpath = local_relpath;
+  ibb.repos_id = repos_id;
+  ibb.repos_relpath = repos_relpath;
+  ibb.revision = revision;
+
+  ibb.props = NULL;
+  ibb.changed_rev = changed_rev;
+  ibb.changed_date = changed_date;
+  ibb.changed_author = changed_author;
+
+  ibb.children = NULL;
+  ibb.depth = depth;
+
+  ibb.scratch_pool = scratch_pool;
+
+  return insert_base_node(&ibb, pdh->sdb);
+}
+
+
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
