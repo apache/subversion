@@ -16,7 +16,7 @@ def parse_translation(f):
     # Parse comments
     comments = []
     while 1:
-        if line.strip() == '':
+        if line.strip() == '' or line[:2] == '#~':
             return comments, None, None, None
         elif line[0] == '#':
             comments.append(line[:-1])
