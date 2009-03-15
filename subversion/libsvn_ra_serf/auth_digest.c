@@ -400,6 +400,10 @@ svn_ra_serf__validate_response_digest_auth(svn_ra_serf__handler_t *ctx,
                           serf_bucket_headers_get(hdrs,
                                                   "Authentication-Info"));
 
+  /* If there's no Authentication-Info header there's nothing to validate. */
+  if (! auth_attr)
+    return SVN_NO_ERROR;
+
   /* We're expecting a list of key=value pairs, separated by a comma. 
      Ex. rspauth="8a4b8451084b082be6b105e2b7975087", 
          cnonce="346531653132652d303033392d3435", nc=00000007,
