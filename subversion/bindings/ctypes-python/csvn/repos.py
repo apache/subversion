@@ -433,7 +433,7 @@ class LocalRepository(object):
     def txn(self):
         """Open up a new transaction, so that you can commit a change
            to the repository"""
-        assert(self.user is not None,
+        assert self.user is not None, (
                "If you would like to commit changes to the repository, "
                "you must supply a user object when you initialize "
                "the repository object")
