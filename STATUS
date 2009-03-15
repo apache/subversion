@@ -18,7 +18,7 @@ Candidate changes:
   * r36559
     Fix warning in Python 2.6 for ctypes-python bindings
     Votes:
-      +1: djames
+      +1: djames, arfrever
 
   * r36093, r36292, r36406
     Improve some messages.
@@ -49,7 +49,7 @@ Candidate changes:
       @since to 1.6.0 for this backport. (r36567 should be reverted on trunk
       if this revision is not merged into 1.6.0)
     Votes:
-      +1: rhuijben
+      +1: rhuijben, arfrever
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
@@ -150,7 +150,7 @@ Candidate changes:
      target.  For large WCs the performance improvment can be dramatic.
      See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
    Votes:
-     +1: pburba, rhuijben, gstein
+     +1: pburba, rhuijben, gstein, arfrever
 
  * r36444
    Optimize merge performance when dealing with subtree mergeinfo.
@@ -161,7 +161,7 @@ Candidate changes:
      improvment can be dramatic, see
      http://svn.haxx.se/dev/archive-2009-03/0198.shtml.
    Votes:
-     +1: pburba, rhuijben
+     +1: pburba, rhuijben, arfrever
      
  * r36149-r36151, r36156
    Fix starting apache httpd in daemon mode from python versions with
@@ -173,7 +173,7 @@ Candidate changes:
      r36149 and r36150 contain the actual fix and r36151 and r36156 clean up
      the mess I left after performing only partial commits.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, arfrever
 
  * r36509
    Don't contact the server asking about implicit mergeinfo when the
