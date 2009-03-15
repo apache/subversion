@@ -23,14 +23,11 @@ import shutil, stat, re, os
 
 # Our testing module
 import svntest
-from svntest import wc
-from svntest.tree import SVNTreeError, SVNTreeUnequal, \
-                         SVNTreeIsNotDirectory, SVNTypeMismatch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
-Item = wc.StateItem
+Item = svntest.wc.StateItem
 
 ######################################################################
 # Tests
@@ -68,7 +65,7 @@ def verify_xml_elements(lines, exprs):
     print("Failed to find the following expressions:")
     for expr in unmatched_exprs:
       print(expr)
-    raise SVNTreeUnequal
+    raise svntest.tree.SVNTreeUnequal
 
 def match_xml_element(str, exprs):
   """Read from STR until the start of an element. If no element is found,
@@ -107,7 +104,7 @@ def match_xml_element(str, exprs):
     m = content_re.match(str)
     if not m:
       print("No XML end-tag for '%s' found in '%s...'" % (name, str[:100]))
-      raise(SVNTreeUnequal)
+      raise(svntest.tree.SVNTreeUnequal)
     content = m.group('content')
     str = str[m.end():]
   if content != '':

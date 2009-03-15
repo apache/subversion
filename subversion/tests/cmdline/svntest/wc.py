@@ -16,10 +16,77 @@
 ######################################################################
 
 import os
-import types
 import sys
+import re
 
-import svntest.tree
+import svntest
+
+
+#
+# 'status -v' output looks like this:
+#
+#      "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
+#
+# (Taken from 'print_status' in subversion/svn/status.c.)
+#
+# Here are the parameters.  The middle number or string in parens is the
+# match.group(), followed by a brief description of the field:
+#
+#    - text status           (1)  (single letter)
+#    - prop status           (1)  (single letter)
+#    - wc-lockedness flag    (2)  (single letter: "L" or " ")
+#    - copied flag           (3)  (single letter: "+" or " ")
+#    - switched flag         (4)  (single letter: "S" or " ")
+#    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
+#    - tree conflict flag    (6)  (single letter: "C" or " ")
+#
+#    [one space]
+#
+#    - out-of-date flag      (7)  (single letter: "*" or " ")
+#
+#    [three spaces]
+#
+#    - working revision ('wc_rev') (either digits or "-" or " ")
+#
+#    [one space]
+#
+#    - last-changed revision      (either digits or "?" or " ")
+#
+#    [one space]
+#
+#    - last author                (optional string of non-whitespace
+#                                  characters)
+#
+#    [spaces]
+#
+#    - path              ('path') (string of characters until newline)
+#
+# Working revision, last-changed revision, and last author are whitespace
+# only if the item is missing.
+#
+_re_parse_status = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])'
+                              '([L ])'
+                              '([+ ])'
+                              '([S ])'
+                              '([KOBT ])'
+                              '([C ]) '
+                              '([* ]) +'
+                              '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
+                              '(?P<path>.+)$')
+
+_re_parse_skipped = re.compile("^Skipped.* '(.+)'\n")
+
+_re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
+
+_re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
+                                '([B ])'
+                                '([C ])\s+'
+                                '(.+)')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
+_re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
+
+# Lines typically have a verb followed by whitespace then a path.
+_re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 
 
 class State:
@@ -33,14 +100,14 @@ class State:
 
   def __init__(self, wc_dir, desc):
     "Create a State using the specified description."
-    assert isinstance(desc, types.DictionaryType)
+    assert isinstance(desc, dict)
 
     self.wc_dir = wc_dir
     self.desc = desc      # dictionary: path -> StateItem
 
   def add(self, more_desc):
     "Add more state items into the State."
-    assert isinstance(more_desc, types.DictionaryType)
+    assert isinstance(more_desc, dict)
 
     self.desc.update(more_desc)
 
@@ -57,9 +124,7 @@ class State:
   def remove(self, *paths):
     "Remove a path from the state (the path must exist)."
     for path in paths:
-      if sys.platform == 'win32':
-        path = path.replace('\\', '/')
-      del self.desc[path]
+      del self.desc[to_relpath(path)]
 
   def copy(self, new_root=None):
     """Make a deep copy of self.  If NEW_ROOT is not None, then set the
@@ -85,9 +150,7 @@ class State:
     if args:
       for path in args:
         try:
-          if sys.platform == 'win32':
-            path = path.replace('\\', '/')
-          path_ref = self.desc[path]
+          path_ref = self.desc[to_relpath(path)]
         except KeyError as e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
@@ -139,36 +202,296 @@ class State:
         # write out the file contents now
         open(fullpath, 'wb').write(item.contents)
 
+  def normalize(self):
+    """Return a "normalized" version of self.
+
+    A normalized version has the following characteristics:
+
+      * wc_dir == ''
+      * paths use forward slashes
+      * paths are relative
+
+    If self is already normalized, then it is returned. Otherwise, a
+    new State is constructed with (shallow) references to self's
+    StateItem instances.
+
+    If the caller needs a fully disjoint State, then use .copy() on
+    the result.
+    """
+    if self.wc_dir == '':
+      return self
+
+    base = to_relpath(os.path.normpath(self.wc_dir))
+    def join(path):
+      if path == '':
+        return base
+      return base + '/' + path
+
+    desc = dict([(join(path), item) for path, item in self.desc.items()])
+    return State('', desc)
+
+  def compare(self, other):
+    """Compare this State against an OTHER State.
+
+    Three new set objects will be returned: CHANGED, UNIQUE_SELF, and
+    UNIQUE_OTHER. These contain paths of StateItems that are different
+    between SELF and OTHER, paths of items unique to SELF, and paths
+    of item that are unique to OTHER, respectively.
+    """
+    assert isinstance(other, State)
+
+    norm_self = self.normalize()
+    norm_other = other.normalize()
+
+    # fast-path the easy case
+    if norm_self == norm_other:
+      fs = frozenset()
+      return fs, fs, fs
+
+    paths_self = set(norm_self.desc.keys())
+    paths_other = set(norm_other.desc.keys())
+    changed = set()
+    for path in paths_self.intersection(paths_other):
+      if norm_self.desc[path] != norm_other.desc[path]:
+        changed.add(path)
+
+    return changed, paths_self - paths_other, paths_other - paths_self
+
+  def compare_and_display(self, label, other):
+    """Compare this State against an OTHER State, and display differences.
+
+    Information will be written to stdout, displaying any differences
+    between the two states. LABEL will be used in the display.
+
+    If any changes are detected/diplayed, then SVNTreeUnequal is raised.
+    """
+    norm_self = self.normalize()
+    norm_other = other.normalize()
+
+    changed, unique_self, unique_other = norm_self.compare(norm_other)
+    if not changed and not unique_self and not unique_other:
+      return
+
+    # Use the shortest path as a way to find the "root-most" affected node.
+    def _shortest_path(path_set):
+      shortest = None
+      for path in path_set:
+        if shortest is None or len(path) < len(shortest):
+          shortest = path
+      return shortest
+
+    if changed:
+      path = _shortest_path(changed)
+      display_nodes(label, path, norm_self.desc[path], norm_other.desc[path])
+    elif unique_self:
+      path = _shortest_path(unique_self)
+      default_singleton_handler('actual ' + label, path, norm_self.desc[path])
+    elif unique_other:
+      path = _shortest_path(unique_other)
+      default_singleton_handler('expected ' + label, path,
+                                norm_other.desc[path])
+    
+    raise svntest.tree.SVNTreeUnequal
+
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
     nodelist = [ ]
     for path, item in self.desc.items():
-      atts = { }
-      if item.status is not None:
-        atts['status'] = item.status
-      if item.verb is not None:
-        atts['verb'] = item.verb
-      if item.wc_rev is not None:
-        atts['wc_rev'] = item.wc_rev
-      if item.locked is not None:
-        atts['locked'] = item.locked
-      if item.copied is not None:
-        atts['copied'] = item.copied
-      if item.switched is not None:
-        atts['switched'] = item.switched
-      if item.writelocked is not None:
-        atts['writelocked'] = item.writelocked
-      if item.treeconflict is not None:
-        atts['treeconflict'] = item.treeconflict
-      nodelist.append((os.path.normpath(os.path.join(self.wc_dir, path)),
-                       item.contents,
-                       item.props,
-                       atts))
+      nodelist.append(item.as_node_tuple(os.path.join(self.wc_dir, path)))
 
-    return svntest.tree.build_generic_tree(nodelist)
+    tree = svntest.tree.build_generic_tree(nodelist)
+    if 0:
+      check = tree.as_state()
+      if self != check:
+        import pprint
+        pprint.pprint(self.desc)
+        pprint.pprint(check.desc)
+        # STATE -> TREE -> STATE is lossy.
+        # In many cases, TREE -> STATE -> TREE is not.
+        # Even though our conversion from a TREE has lost some information, we
+        # may be able to verify that our lesser-STATE produces the same TREE.
+        svntest.tree.compare_trees('mismatch', tree, check.old_tree())
+
+    return tree
 
   def __str__(self):
     return str(self.old_tree())
+
+  def __eq__(self, other):
+    if not isinstance(other, State):
+      return False
+    norm_self = self.normalize()
+    norm_other = other.normalize()
+    return norm_self.desc == norm_other.desc
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  @classmethod
+  def from_status(cls, lines):
+    """Create a State object from 'svn status' output."""
+
+    def not_space(value):
+      if value and value != ' ':
+        return value
+      return None
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      # Quit when we hit an externals status announcement.
+      ### someday we can fix the externals tests to expect the additional
+      ### flood of externals status data.
+      if line.startswith('Performing'):
+        break
+
+      match = _re_parse_status.search(line)
+      if not match or match.group(10) == '-':
+        # ignore non-matching lines, or items that only exist on repos
+        continue
+
+      item = StateItem(status=match.group(1),
+                       locked=not_space(match.group(2)),
+                       copied=not_space(match.group(3)),
+                       switched=not_space(match.group(4)),
+                       writelocked=not_space(match.group(5)),
+                       treeconflict=not_space(match.group(6)),
+                       wc_rev=not_space(match.group('wc_rev')),
+                       )
+      desc[to_relpath(match.group('path'))] = item
+
+    return cls('', desc)
+
+  @classmethod
+  def from_skipped(cls, lines):
+    """Create a State object from 'Skipped' lines."""
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      match = _re_parse_skipped.search(line)
+      if match:
+        desc[to_relpath(match.group(1))] = StateItem()
+
+    return cls('', desc)
+
+  @classmethod
+  def from_summarize(cls, lines):
+    """Create a State object from 'svn diff --summarize' lines."""
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      match = _re_parse_summarize.search(line)
+      if match:
+        desc[to_relpath(match.group(2))] = StateItem(status=match.group(1))
+
+    return cls('', desc)
+
+  @classmethod
+  def from_checkout(cls, lines, include_skipped=True):
+    """Create a State object from 'svn checkout' lines."""
+
+    if include_skipped:
+      re_extra = _re_parse_co_skipped
+    else:
+      re_extra = _re_parse_co_restored
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:'):
+        continue
+
+      match = _re_parse_checkout.search(line)
+      if match:
+        if match.group(3) == 'C':
+          treeconflict = 'C'
+        else:
+          treeconflict = None
+        desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),
+                                                     treeconflict=treeconflict)
+      else:
+        match = re_extra.search(line)
+        if match:
+          desc[to_relpath(match.group(2))] = StateItem(verb=match.group(1))
+
+    return cls('', desc)
+
+  @classmethod
+  def from_commit(cls, lines):
+    """Create a State object from 'svn commit' lines."""
+
+    desc = { }
+    for line in lines:
+      if line.startswith('DBG:') or line.startswith('Transmitting'):
+        continue
+
+      match = _re_parse_commit.search(line)
+      if match:
+        desc[to_relpath(match.group(3))] = StateItem(verb=match.group(1))
+
+    return cls('', desc)
+
+  @classmethod
+  def from_wc(cls, path, load_props=False, ignore_svn=True):
+    """Create a State object from a working copy.
+
+    Walks the tree at PATH, building a State based on the actual files
+    and directories found. If LOAD_PROPS is True, then the properties
+    will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
+    True, then the .svn subdirectories will be excluded from the State.
+    """
+    # generally, the OS wants '.' rather than ''
+    if not path:
+      path = '.'
+
+    desc = { }
+    dot_svn = svntest.main.get_admin_name()
+
+    def path_to_key(p, l=len(path)+1):
+      if p == path:
+        return ''
+      assert p.startswith(path + os.sep), \
+          "'%s' is not a prefix of '%s'" % (path + os.sep, p)
+      return to_relpath(p[l:])
+
+    def _walker(baton, dirname, names):
+      parent = path_to_key(dirname)
+      if parent:
+        parent += '/'
+      if ignore_svn and (dot_svn in names):
+        names.remove(dot_svn)
+      for name in names:
+        node = os.path.join(dirname, name)
+        if os.path.isfile(node):
+          contents = open(node, 'r').read()
+        else:
+          contents = None
+        desc['%s%s' % (parent, name)] = StateItem(contents=contents)
+
+    os.path.walk(path, _walker, None)
+
+    if load_props:
+      paths = [os.path.join(path, to_ospath(p)) for p in desc.keys()]
+      paths.append(path)
+      all_props = svntest.tree.get_props(paths)
+      for node, props in all_props.items():
+        if node == path:
+          desc['.'] = StateItem(props=props)
+        else:
+          if path == '.':
+            # 'svn proplist' strips './' from the paths. put it back on.
+            node = './' + node
+          desc[path_to_key(node)].props = props
+
+    return cls('', desc)
+
 
 class StateItem:
   """Describes an individual item within a working copy.
@@ -224,3 +547,86 @@ class StateItem:
       if value is not None and name == 'wc_rev':
         value = str(value)
       setattr(self, name, value)
+
+  def __eq__(self, other):
+    if not isinstance(other, StateItem):
+      return False
+    v_self = vars(self)
+    v_other = vars(other)
+    if self.treeconflict is None:
+      v_other = v_other.copy()
+      v_other['treeconflict'] = None
+    if other.treeconflict is None:
+      v_self = v_self.copy()
+      v_self['treeconflict'] = None
+    return v_self == v_other
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  def as_node_tuple(self, path):
+    atts = { }
+    if self.status is not None:
+      atts['status'] = self.status
+    if self.verb is not None:
+      atts['verb'] = self.verb
+    if self.wc_rev is not None:
+      atts['wc_rev'] = self.wc_rev
+    if self.locked is not None:
+      atts['locked'] = self.locked
+    if self.copied is not None:
+      atts['copied'] = self.copied
+    if self.switched is not None:
+      atts['switched'] = self.switched
+    if self.writelocked is not None:
+      atts['writelocked'] = self.writelocked
+    if self.treeconflict is not None:
+      atts['treeconflict'] = self.treeconflict
+
+    return (os.path.normpath(path), self.contents, self.props, atts)
+
+
+if os.sep == '/':
+  to_relpath = to_ospath = lambda path: path
+else:
+  def to_relpath(path):
+    return path.replace(os.sep, '/')
+  def to_ospath(path):
+    return path.replace('/', os.sep)
+
+
+# ------------
+### probably toss these at some point. or major rework. or something.
+### just bootstrapping some changes for now.
+#
+
+def item_to_node(path, item):
+  tree = svntest.tree.build_generic_tree([item.as_node_tuple(path)])
+  while tree.children:
+    assert len(tree.children) == 1
+    tree = tree.children[0]
+  return tree
+
+### yanked from tree.compare_trees()
+def display_nodes(label, path, expected, actual):
+  'Display two nodes, expected and actual.'
+  expected = item_to_node(path, expected)
+  actual = item_to_node(path, actual)
+  print("=============================================================")
+  print("Expected '%s' and actual '%s' in %s tree are different!"
+        % (expected.name, actual.name, label))
+  print("=============================================================")
+  print("EXPECTED NODE TO BE:")
+  print("=============================================================")
+  expected.pprint()
+  print("=============================================================")
+  print("ACTUAL NODE FOUND:")
+  print("=============================================================")
+  actual.pprint()
+
+### yanked from tree.py
+def default_singleton_handler(description, path, item):
+  node = item_to_node(path, item)
+  print("Couldn't find node '%s' in %s tree" % (node.name, description))
+  node.pprint()
+  raise svntest.tree.SVNTreeUnequal

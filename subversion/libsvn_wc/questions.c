@@ -151,30 +151,6 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
 */
 
 
-/* Is PATH's timestamp the same as the one recorded in our
-   `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_KIND
-   should be one of the enumerated type above. */
-svn_error_t *
-svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
-                           const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           apr_pool_t *pool)
-{
-  const svn_wc_entry_t *entry;
-  apr_time_t wfile_time;
-
-  /* Get the timestamp from the entries file */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-  /* Get the timestamp from the working file and the entry */
-  SVN_ERR(svn_io_file_affected_time(&wfile_time, path, pool));
-
-  *equal_p = wfile_time == entry->text_time;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE
  * differs from BASE_FILE, else to FALSE if not.  Also verify that
  * BASE_FILE matches the entry checksum for VERSIONED_FILE, if

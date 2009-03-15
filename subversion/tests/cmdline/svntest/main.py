@@ -42,10 +42,9 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 
+import svntest
 from svntest import Failure
 from svntest import Skip
-from svntest import testcase
-from svntest import wc
 
 ######################################################################
 #
@@ -237,8 +236,8 @@ default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 # call main.greek_state.copy().  That method will return a copy of this
 # State object which can then be edited.
 #
-_item = wc.StateItem
-greek_state = wc.State('', {
+_item = svntest.wc.StateItem
+greek_state = svntest.wc.State('', {
   'iota'        : _item("This is the file 'iota'.\n"),
   'A'           : _item(),
   'A/mu'        : _item("This is the file 'mu'.\n"),
@@ -298,7 +297,7 @@ def setup_development_mode():
         'run_and_validate_lock']
 
   for func in l:
-    setattr(actions, func, wrap_ex(getattr(actions, func)))
+    setattr(svntest.actions, func, wrap_ex(getattr(svntest.actions, func)))
 
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
@@ -794,8 +793,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      sys.stdout.write('ERROR:  dump failed: %s ' % dump_line)
-      sys.stdout.flush()
+      print('ERROR:  dump failed: %s' % dump_line.strip())
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
@@ -808,8 +806,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        sys.stdout.write('ERROR:  load failed: %s ' % load_line)
-        sys.stdout.flush()
+        print('ERROR:  load failed: %s' % load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
@@ -1003,123 +1000,16 @@ def server_enforces_date_syntax():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
+def has_patch():
+  try:
+    subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return True
+  except OSError:
+    return False
+
 
 ######################################################################
-# Sandbox handling
 
-class Sandbox:
-  """Manages a sandbox (one or more repository/working copy pairs) for
-  a test to operate within."""
-
-  dependents = None
-
-  def __init__(self, module, idx):
-    self._set_name("%s-%d" % (module, idx))
-
-  def _set_name(self, name, read_only = False):
-    """A convenience method for renaming a sandbox, useful when
-    working with multiple repositories in the same unit test."""
-    if not name is None:
-      self.name = name
-    self.read_only = read_only
-    self.wc_dir = os.path.join(general_wc_dir, self.name)
-    if not read_only:
-      self.repo_dir = os.path.join(general_repo_dir, self.name)
-      self.repo_url = test_area_url + '/' + pathname2url(self.repo_dir)
-    else:
-      self.repo_dir = pristine_dir
-      self.repo_url = pristine_url
-
-    ### TODO: Move this into to the build() method
-    # For dav tests we need a single authz file which must be present,
-    # so we recreate it each time a sandbox is created with some default
-    # contents.
-    if self.repo_url.startswith("http"):
-      # this dir doesn't exist out of the box, so we may have to make it
-      if not os.path.exists(work_dir):
-        os.makedirs(work_dir)
-      self.authz_file = os.path.join(work_dir, "authz")
-      file_write(self.authz_file, "[/]\n* = rw\n")
-
-    # For svnserve tests we have a per-repository authz file, and it
-    # doesn't need to be there in order for things to work, so we don't
-    # have any default contents.
-    elif self.repo_url.startswith("svn"):
-      self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
-
-    self.test_paths = [self.wc_dir, self.repo_dir]
-
-  def clone_dependent(self, copy_wc=False):
-    """A convenience method for creating a near-duplicate of this
-    sandbox, useful when working with multiple repositories in the
-    same unit test.  If COPY_WC is true, make an exact copy of this
-    sandbox's working copy at the new sandbox's working copy
-    directory.  Any necessary cleanup operations are triggered by
-    cleanup of the original sandbox."""
-
-    if not self.dependents:
-      self.dependents = []
-    clone = copy.deepcopy(self)
-    self.dependents.append(clone)
-    clone._set_name("%s-%d" % (self.name, len(self.dependents)))
-    if copy_wc:
-      self.add_test_path(clone.wc_dir)
-      shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
-    return clone
-
-  def build(self, name = None, create_wc = True, read_only = False):
-    self._set_name(name, read_only)
-    if actions.make_repo_and_wc(self, create_wc, read_only):
-      raise Failure("Could not build repository and sandbox '%s'" % self.name)
-
-  def add_test_path(self, path, remove=True):
-    self.test_paths.append(path)
-    if remove:
-      safe_rmtree(path)
-
-  def add_repo_path(self, suffix, remove=1):
-    path = os.path.join(general_repo_dir, self.name)  + '.' + suffix
-    url  = test_area_url + '/' + pathname2url(path)
-    self.add_test_path(path, remove)
-    return path, url
-
-  def add_wc_path(self, suffix, remove=1):
-    path = self.wc_dir + '.' + suffix
-    self.add_test_path(path, remove)
-    return path
-
-  def cleanup_test_paths(self):
-    "Clean up detritus from this sandbox, and any dependents."
-    if self.dependents:
-      # Recursively cleanup any dependent sandboxes.
-      for sbox in self.dependents:
-        sbox.cleanup_test_paths()
-    # cleanup all test specific working copies and repositories
-    for path in self.test_paths:
-      if not path is pristine_dir:
-        _cleanup_test_path(path)
-
-
-_deferred_test_paths = []
-def _cleanup_deferred_test_paths():
-  global _deferred_test_paths
-  test_paths = _deferred_test_paths[:]
-  _deferred_test_paths = []
-  for path in test_paths:
-    _cleanup_test_path(path, 1)
-
-def _cleanup_test_path(path, retrying=None):
-  if verbose_mode:
-    if retrying:
-      print("CLEANUP: RETRY: %s" % path)
-    else:
-      print("CLEANUP: %s" % path)
-  try:
-    safe_rmtree(path)
-  except:
-    if verbose_mode:
-      print("WARNING: cleanup failed, will try again later")
-    _deferred_test_paths.append(path)
 
 class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
@@ -1171,19 +1061,32 @@ class TestRunner:
   runing the test and test list output."""
 
   def __init__(self, func, index):
-    self.pred = testcase.create_test_case(func)
+    self.pred = svntest.testcase.create_test_case(func)
     self.index = index
 
   def list(self):
-    print(" %2d     %-5s  %s" % (self.index,
-                                 self.pred.list_mode(),
-                                 self.pred.get_description()))
-    self.pred.check_description()
+    if verbose_mode and self.pred.inprogress:
+      print(" %2d     %-5s  %s [[%s]]" % (self.index,
+                                        self.pred.list_mode(),
+                                        self.pred.description,
+                                        self.pred.inprogress))
+    else:
+      print(" %2d     %-5s  %s" % (self.index,
+                                   self.pred.list_mode(),
+                                   self.pred.description))
 
-  def _print_name(self):
-    print("%s %s: %s" % (os.path.basename(sys.argv[0]), str(self.index),
-          self.pred.get_description()))
-    self.pred.check_description()
+  def _print_name(self, prefix):
+    if self.pred.inprogress:
+      print("%s %s %s: %s [[WIMP: %s]]" % (prefix,
+                                           os.path.basename(sys.argv[0]),
+                                           str(self.index),
+                                           self.pred.description,
+                                           self.pred.inprogress))
+    else:
+      print("%s %s %s: %s" % (prefix,
+                              os.path.basename(sys.argv[0]),
+                              str(self.index),
+                              self.pred.description))
 
   def run(self):
     """Run self.pred and return the result.  The return value is
@@ -1191,13 +1094,11 @@ class TestRunner:
         - 1 if it errored in a way that indicates test failure
         - 2 if the test skipped
         """
-    if self.pred.need_sandbox():
-      # ooh! this function takes a sandbox argument
-      sandbox = Sandbox(self.pred.get_sandbox_name(), self.index)
-      kw = { 'sandbox' : sandbox }
+    sbox_name = self.pred.get_sandbox_name()
+    if sbox_name:
+      sandbox = svntest.sandbox.Sandbox(sbox_name, self.index)
     else:
       sandbox = None
-      kw = {}
 
     # Explicitly set this so that commands that commit but don't supply a
     # log message will fail rather than invoke an editor.
@@ -1212,22 +1113,20 @@ class TestRunner:
      os.environ['SVN_CURRENT_TEST'] = os.path.basename(sys.argv[0]) + "_" + \
                                       str(self.index)
 
-    actions.no_sleep_for_timestamps()
+    svntest.actions.no_sleep_for_timestamps()
 
     saved_dir = os.getcwd()
     try:
-      rc = self.pred.run(**kw)
+      rc = self.pred.run(sandbox)
       if rc is not None:
-        sys.stdout.write('STYLE ERROR in ')
-        sys.stdout.flush()
-        self._print_name()
+        self._print_name('STYLE ERROR in')
         print('Test driver returned a status code.')
         sys.exit(255)
-      result = 0
+      result = svntest.testcase.RESULT_OK
     except Skip as ex:
-      result = 2
+      result = svntest.testcase.RESULT_SKIP
     except Failure as ex:
-      result = 1
+      result = svntest.testcase.RESULT_FAIL
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
       # failure, rather than relevant information. However, if there
@@ -1244,26 +1143,20 @@ class TestRunner:
       sys.exit(0)
     except SystemExit as ex:
       print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
-      sys.stdout.write(ex.code and 'FAIL:  ' or 'PASS:  ')
-      sys.stdout.flush()
-      self._print_name()
+      self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
     except:
-      result = 1
+      result = svntest.testcase.RESULT_FAIL
       print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
 
     os.chdir(saved_dir)
-    result = self.pred.convert_result(result)
-    (result_text, result_benignity) = self.pred.run_text(result)
+    exit_code, result_text, result_benignity = self.pred.results(result)
     if not (quiet_mode and result_benignity):
-      sys.stdout.write("%s " % result_text)
-      sys.stdout.flush()
-      self._print_name()
-      sys.stdout.flush()
-    if sandbox is not None and result != 1 and cleanup_mode:
+      self._print_name(result_text)
+    if sandbox is not None and exit_code != 1 and cleanup_mode:
       sandbox.cleanup_test_paths()
-    return result
+    return exit_code
 
 ######################################################################
 # Main testing functions
@@ -1342,7 +1235,7 @@ def _internal_run_tests(test_list, testnums, parallel):
       if result == 1:
         exit_code = 1
 
-  _cleanup_deferred_test_paths()
+  svntest.sandbox.cleanup_deferred_test_paths()
   return exit_code
 
 
@@ -1597,7 +1490,7 @@ def run_tests(test_list, serial_only = False):
   create_config_dir(default_config_dir)
 
   # Setup the pristine repository
-  actions.setup_pristine_repository()
+  svntest.actions.setup_pristine_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, parallel)
@@ -1608,14 +1501,7 @@ def run_tests(test_list, serial_only = False):
     safe_rmtree(temp_dir, 1)
 
   # Cleanup after ourselves.
-  _cleanup_deferred_test_paths()
+  svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
   sys.exit(exit_code)
-
-# the modules import each other, so we do this import very late, to ensure
-# that the definitions in "main" have been completed.
-import actions
-
-
-### End of file.

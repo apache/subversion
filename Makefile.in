@@ -464,14 +464,15 @@ bdbcheck:
 
 check-clean:
 	rm -rf subversion/tests/cmdline/svn-test-work          \
-               subversion/tests/libsvn_fs/test-repo-*          \
-               subversion/tests/libsvn_fs_base/test-repo-*     \
-               subversion/tests/libsvn_fs_fs/test-repo-*       \
-               subversion/tests/libsvn_ra_local/test-repo-*    \
-               subversion/tests/libsvn_repos/test-repo-*       \
-               subversion/tests/libsvn_subr/z                  \
-               subversion/tests/svnserveautocheck.pid          \
-               tests.log
+	       subversion/tests/libsvn_fs/test-repo-*          \
+	       subversion/tests/libsvn_fs_base/test-repo-*     \
+	       subversion/tests/libsvn_fs_fs/test-repo-*       \
+	       subversion/tests/libsvn_ra_local/test-repo-*    \
+	       subversion/tests/libsvn_repos/test-repo-*       \
+	       subversion/tests/libsvn_subr/z                  \
+	       subversion/tests/libsvn_wc/fake-wc              \
+	       subversion/tests/svnserveautocheck.pid          \
+	       tests.log
 
 mkdir-init:
 	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \

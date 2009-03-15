@@ -175,7 +175,7 @@ def setup_working_copy(wc_dir, value_len):
 ### Helper functions for setting/removing properties
 
 # Set the property keyword for PATH.  Turn on all possible keywords.
-# ### todo: Later, take list of keywords to set.
+### todo: Later, take list of keywords to set.
 def keywords_on(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      "svn:keywords",
@@ -183,7 +183,7 @@ def keywords_on(path):
                                      path)
 
 # Delete property NAME from versioned PATH in the working copy.
-# ### todo: Later, take list of keywords to remove from the propval?
+### todo: Later, take list of keywords to remove from the propval?
 def keywords_off(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
                                      "svn:keywords", path)

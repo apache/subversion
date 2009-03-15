@@ -21,4 +21,11 @@ class Skip(Exception):
   'Base class for exceptions that indicate test was skipped'
   pass
 
-import main, tree, verify, actions, wc
+# import in a specific order: things with the fewest circular imports first.
+import testcase
+import wc
+import verify
+import tree
+import sandbox
+import main
+import actions

@@ -46,7 +46,6 @@ else:
 import smtplib
 import re
 import tempfile
-import types
 
 # Minimal version of Subversion's bindings required
 _MIN_SVN_VERSION = [1, 5, 0]

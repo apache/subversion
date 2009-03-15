@@ -282,7 +282,6 @@ def export_working_copy_at_base_revision(sbox):
                                         export_target,
                                         svntest.wc.State(sbox.wc_dir, {}),
                                         expected_disk,
-                                        None, None, None, None,
                                         '-rBASE')
 
 def export_native_eol_option(sbox):
@@ -314,7 +313,6 @@ def export_native_eol_option(sbox):
                                         export_target,
                                         expected_output,
                                         expected_disk,
-                                        None, None, None, None,
                                         '--native-eol','CR')
 
 def export_nonexistent_file(sbox):

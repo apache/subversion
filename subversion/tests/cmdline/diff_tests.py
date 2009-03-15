@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -473,7 +473,7 @@ def diff_multiple_reverse(sbox):
   repo_diff(wc_dir, 4, 1, check_add_a_file_in_a_subdir)
   repo_diff(wc_dir, 4, 1, check_add_a_file)
   repo_diff(wc_dir, 1, 4, check_update_a_file)
-# ### TODO: directory delete doesn't work yet
+### TODO: directory delete doesn't work yet
 #  repo_diff(wc_dir, 1, 4, check_add_a_file_in_a_subdir_reverse)
   repo_diff(wc_dir, 1, 4, check_add_a_file_reverse)
 
@@ -2382,8 +2382,7 @@ def basic_diff_summarize(sbox):
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status=' M'),
     })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
-                                                None, None, None, None,
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
                                                 os.path.join(wc_dir, 'iota'),
                                                 '-c2')
 
@@ -2395,8 +2394,7 @@ def basic_diff_summarize(sbox):
     'newfile': Item(status='A '),
     'A/B/lambda': Item(status='D '),
     })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
-                                                None, None, None, None,
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
                                                 wc_dir, '-r1:2')
 
 def diff_weird_author(sbox):
@@ -3483,7 +3481,8 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              diff_svnpatch,
+              # ra_serf's editor order violation confuses this test
+              Skip(diff_svnpatch, svntest.main.is_ra_type_dav_serf),
               ]
 
 if __name__ == '__main__':

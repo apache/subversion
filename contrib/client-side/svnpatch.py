@@ -11,14 +11,19 @@ import zlib
 
 svnpatch1_block_start = b"========================= SVNPATCH1 BLOCK =========================\n"
 
-def encode():
-	sys.stdout.write(svnpatch1_block_start.decode())
-	sys.stdout.write("\n".join(textwrap.wrap(base64.encodestring(zlib.compress(b"\n".join([x.rstrip(b"\n") for x in lines]))).decode(), 76)))
+def encode(input, output_file = sys.stdout):
+	output = svnpatch1_block_start.decode()
+	output += "\n".join(textwrap.wrap(base64.encodestring(zlib.compress(b"".join([x for x in input]).rstrip(b"\n"))).decode(), 76))
+	output_file.write(output)
 
-def decode():
-	svnpatch1_block_start_index = lines.index(svnpatch1_block_start)
-	svnpatch1_block = lines[svnpatch1_block_start_index+1:]
-	sys.stdout.write(zlib.decompress(base64.decodestring(b"".join([x.rstrip(b"\n") for x in svnpatch1_block]))).decode())
+def decode(input, output_file = sys.stdout):
+	svnpatch1_block_start_index = input.index(svnpatch1_block_start)
+	svnpatch1_block = input[svnpatch1_block_start_index+1:]
+	output = zlib.decompress(base64.decodestring(b"".join([x.rstrip(b"\n") for x in svnpatch1_block])))
+	if sys.version_info[0] >= 3:
+		output_file.buffer.write(output)
+	else:
+		output_file.write(output)
 
 def help():
 	print("svnpatch.py - svnpatch helper script")
@@ -38,7 +43,7 @@ elif len(sys.argv) < 3:
 	exit(1)
 
 elif len(sys.argv) > 3:
-	sys.stderr.write("svnpatch.py: Excessive arguments(s)\n")
+	sys.stderr.write("svnpatch.py: Excessive argument(s)\n")
 	exit(1)
 
 if sys.argv[1] in ("-e", "--encode"):
@@ -50,11 +55,12 @@ else:
 	exit(1)
 
 if sys.argv[2] == "-":
-	lines = sys.stdin.readlines()
 	if sys.version_info[0] >= 3:
-		lines = [x.encode() for x in lines]
+		lines = sys.stdin.buffer.readlines()
+	else:
+		lines = sys.stdin.readlines()
 else:
-	lines = open(sys.argv[1], "rb").readlines()
+	lines = open(sys.argv[2], "rb").readlines()
 
-func()
+func(lines)
 print("")

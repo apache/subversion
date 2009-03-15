@@ -141,6 +141,7 @@ def authz_read_access(sbox):
   iota_url = root_url + '/iota'
   lambda_url = B_url + '/lambda'
   alpha_url = E_url + '/alpha'
+  F_alpha_url = B_url + '/F/alpha'
   D_url = A_url + '/D'
   G_url = D_url + '/G'
   pi_url = G_url + '/pi'
@@ -148,7 +149,7 @@ def authz_read_access(sbox):
   chi_url = H_url + '/chi'
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -163,6 +164,7 @@ def authz_read_access(sbox):
 
   write_authz_file(sbox, { "/": "* = r",
                            "/A/B": "* =",
+                           "/A/B/F": "* = rw",
                            "/A/D": "* = rw",
                            "/A/D/G": ("* = rw\n" +
                                       svntest.main.wc_author + " ="),
@@ -243,6 +245,25 @@ def authz_read_access(sbox):
                                      '-m', 'logmsg',
                                      E_url, D_url)
 
+  # move a remote file, source/target ancestor is readonly: should fail
+  #
+  # Note: interesting, we deem it okay for someone to break this move
+  # into two operations, a committed copy followed by a committed
+  # deletion.  But the editor drive required to do these atomically
+  # today is prohibitive.
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'mv', '-m', 'logmsg',
+                                     alpha_url, F_alpha_url)
+
+  # copy a remote file, source/target ancestor is readonly
+  ### we fail here due to issue #3242.
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'cp', '-m', 'logmsg',
+                                     alpha_url, F_alpha_url)
+
+
 # test whether write access is correctly granted and denied
 def authz_write_access(sbox):
   "test authz for write operations"
@@ -252,7 +273,7 @@ def authz_write_access(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Access denied.*"
 
@@ -347,7 +368,7 @@ def authz_checkout_test(sbox):
 
   # write an authz file with *= on /
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -475,7 +496,7 @@ def authz_log_and_tracing_test(sbox):
 
   # write an authz file with *=rw on /
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -506,7 +527,7 @@ def authz_log_and_tracing_test(sbox):
   # now disable read access on the first version of rho, keep the copy in
   # /A/D readable.
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -592,7 +613,7 @@ def authz_aliases(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -637,7 +658,7 @@ def authz_validate(sbox):
                            "/A/B" : "@undefined_group = rw" })
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   elif sbox.repo_url.startswith("svn"):
     expected_err = ".*Invalid authz configuration"
   else:
@@ -657,7 +678,7 @@ devs2 = @admins, dev2
 devs = @devs1, dev3, dev4""" })
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   elif sbox.repo_url.startswith("svn"):
     expected_err = ".*Invalid authz configuration"
   else:
@@ -693,7 +714,7 @@ def authz_locking(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -830,7 +851,7 @@ test_list = [ None,
               Skip(authz_open_root, svntest.main.is_ra_type_file),
               Skip(authz_open_directory, svntest.main.is_ra_type_file),
               Skip(broken_authz_file, svntest.main.is_ra_type_file),
-              Skip(authz_read_access, svntest.main.is_ra_type_file),
+              XFail(Skip(authz_read_access, svntest.main.is_ra_type_file)),
               Skip(authz_write_access, svntest.main.is_ra_type_file),
               Skip(authz_checkout_test, svntest.main.is_ra_type_file),
               Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file),

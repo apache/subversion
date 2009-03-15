@@ -511,11 +511,11 @@ class SvnBackup:
             return False
 
         last_dumped_rev = self.get_last_dumped_rev();
-        if headrev < last_dump_rev:
+        if headrev < last_dumped_rev:
             # that should not happen...
             return False
 
-        if headrev == last_dump_rev:
+        if headrev == last_dumped_rev:
             # already up-to-date
             return True
 

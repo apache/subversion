@@ -377,7 +377,7 @@ assemble_status(svn_wc_status2_t **status,
 
       switched_p = (strcmp(
                      svn_uri_join(parent_entry->url,
-                          svn_path_uri_encode(svn_uri_basename(path, pool),
+                          svn_path_uri_encode(svn_dirent_basename(path, pool),
                           pool), pool), entry->url) != 0);
     }
 
@@ -502,9 +502,7 @@ assemble_status(svn_wc_status2_t **status,
       else if (path_kind != entry->kind)
         final_text_status = svn_wc_status_obstructed;
 #ifdef HAVE_SYMLINK
-      else if (((! wc_special) && (path_special))
-               || (wc_special && (! path_special))
-               )
+      else if ( wc_special != path_special)
         final_text_status = svn_wc_status_obstructed;
 #endif /* HAVE_SYMLINK */
 

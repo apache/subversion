@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-27 15:03+0800\n"
-"PO-Revision-Date: 2009-02-27 15:05+0800\n"
+"POT-Creation-Date: 2009-03-12 12:40+0800\n"
+"PO-Revision-Date: 2009-03-12 12:40+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -820,6 +820,9 @@ msgstr "试图写至只读 SQLite 数据库"
 msgid "Unsupported schema found in SQLite db"
 msgstr "不支持 SQLite 数据库中的方案"
 
+msgid "External program is missing"
+msgstr "丢失外部程序"
+
 msgid "Error parsing arguments"
 msgstr "解析参数出错"
 
@@ -1160,6 +1163,9 @@ msgstr "%s\t(工作副本)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
+#. -----------------------------------------------------------------------
+#. ** Utilities. **
+#. Sanity check -- ensure that we have valid revisions to look at.
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1170,8 +1176,8 @@ msgstr "对于 peg 差异，必须至少有一个非本地版本"
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "“%s” 不在版本库版本 %ld 中"
 
-msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
-msgstr "抱歉，svn_client_diff4 尚不支持这种调用方式"
+msgid "Sorry, svn_client_diff5 was called in a way that is not yet supported"
+msgstr "抱歉，svn_client_diff5 尚不支持这种调用方式"
 
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
@@ -1385,6 +1391,12 @@ msgstr ""
 "复兴只能用于版本 %ld 到 %ld 以前曾经从 %s 合并到复兴源的情况，但是现在不是这种"
 "情况：\n"
 "%s"
+
+msgid ".patch"
+msgstr ".patch"
+
+msgid ".empty"
+msgstr ".empty"
 
 #, c-format
 msgid "'%s' is a wcprop, thus not accessible to clients"
@@ -1817,11 +1829,11 @@ msgstr "试图设置不变节点的文本内容"
 
 #, c-format
 msgid ""
-"Checksum mismatch, rep '%s':\n"
+"Checksum mismatch, representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"校验和不匹配，版本库“%s”: \n"
+"校验和不匹配，修订版“%s”: \n"
 "  期望: %s\n"
 "  实际: %s\n"
 
@@ -1991,36 +2003,36 @@ msgid "Rep contents are too large: got %s, limit is %s"
 msgstr "版本内容太大: 得到 %s，上限是 %s"
 
 #, c-format
-msgid "Failure reading rep '%s'"
-msgstr "读取版本“%s”失败"
+msgid "Failure reading representation '%s'"
+msgstr "读取修订版“%s”失败"
 
 #, c-format
 msgid ""
-"Checksum mismatch on rep '%s':\n"
+"Checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"版本“%s”的校验和不匹配: \n"
+"修订版“%s”的校验和不匹配: \n"
 "       期望:  %s\n"
 "       实际:  %s\n"
 
 #, c-format
 msgid ""
-"MD5 checksum mismatch on rep '%s':\n"
+"MD5 checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"版本 “%s” 的 MD5 校验和不匹配: \n"
+"修订版 “%s” 的 MD5 校验和不匹配: \n"
 "       期望:  %s\n"
 "       实际:  %s\n"
 
 #, c-format
 msgid ""
-"SHA1 checksum mismatch on rep '%s':\n"
+"SHA1 checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"版本 “%s” 的 SHA1 校验和不匹配: \n"
+"修订版 “%s” 的 SHA1 校验和不匹配: \n"
 "       期望:  %s\n"
 "       实际:  %s\n"
 
@@ -2287,8 +2299,8 @@ msgstr "无效的版本号“%ld”"
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
 
-msgid "Malformed text rep offset line in node-rev"
-msgstr "node-rev 中有非法的文本版本偏移行"
+msgid "Malformed text representation offset line in node-rev"
+msgstr "node-rev 中有非法的文本修订版偏移行"
 
 msgid "Missing id field in node-rev"
 msgstr "node-rev 中没有 id"
@@ -2700,8 +2712,9 @@ msgstr "处理报告响应失败，不能完成编辑"
 msgid "Failed to write full amount to stream"
 msgstr "无法将全部数据写入流"
 
-msgid "'get-file-revs' REPORT not implemented"
-msgstr "未实现“get-file-revs” REPORT "
+#, c-format
+msgid "'%s' REPORT not implemented"
+msgstr "未实现 “%s” REPORT "
 
 msgid "The file-revs report didn't contain any revisions"
 msgstr "file-revs 报告中没有包含任何版本"
@@ -2712,20 +2725,11 @@ msgstr "服务器不支持基于日期的操作"
 msgid "Invalid server response to dated-rev request"
 msgstr "服务器请求 dated-rev 的响应无效"
 
-msgid "'get-deleted-rev' REPORT not implemented"
-msgstr "未实现 “get-deleted-rev” REPORT"
-
 msgid "Expected valid revision range"
 msgstr "期望合法的版本范围"
 
-msgid "'get-location-segments' REPORT not implemented"
-msgstr "未实现 “get-location-segments” REPORT"
-
 msgid "Expected a valid revnum and path"
 msgstr "期望合法的版本号和路径"
-
-msgid "'get-locations' REPORT not implemented"
-msgstr "未实现“get-locations” REPORT"
 
 msgid "Incomplete lock data returned"
 msgstr "返回了不完全的锁数据"
@@ -2789,8 +2793,8 @@ msgid "The MERGE property response had an error status"
 msgstr "MERGE 属性响应包含错误状态"
 
 #, c-format
-msgid "The OPTIONS request returned invalid XML in the response: %s (%s)"
-msgstr "OPTIONS 请求返回无效 XML: %s (%s)"
+msgid "The %s request returned invalid XML in the response: %s (%s)"
+msgstr "%s 请求的响应返回无效 XML: %s (%s)"
 
 msgid ""
 "The OPTIONS response did not include the requested activity-collection-set; "
@@ -2966,12 +2970,11 @@ msgstr "无法计算请求主体大小"
 msgid "Error reading spooled %s request response"
 msgstr "读取请求 %s 响应的脱机数据时出现错误"
 
-#, c-format
-msgid "The %s request returned invalid XML in the response: %s (%s)"
-msgstr "%s 请求的响应返回无效XML: %s (%s)"
-
 msgid "Missing 'realm' attribute in Authorization header"
 msgstr "授权头丢失属性 “realm”"
+
+msgid "Incorrect response-digest in Authentication-Info header."
+msgstr "认证信息头中的 response-digest 错误"
 
 #, c-format
 msgid "Directory '%s' is out of date; try updating"
@@ -3006,8 +3009,8 @@ msgid "The OPTIONS response did not include the requested checked-in value"
 msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
 
 #, c-format
-msgid "Adding a directory failed: %s on %s (%d)"
-msgstr "增加目录失败: “%s” 于 “%s”(%d)"
+msgid "Adding a directory failed: %s on %s (%d %s)"
+msgstr "增加目录失败: “%s” 于 “%s”(%d %s)"
 
 #, c-format
 msgid "Location segment report failed on '%s'@'%ld'"
@@ -3780,6 +3783,13 @@ msgstr "创建 memcache apr_memcache_t 时出现未知错误"
 msgid "Error initializing command line arguments"
 msgstr "初始化命令行参数出错"
 
+msgid "Invalid syntax of argument of --config-option"
+msgstr "参数 --config-option 的语法无效"
+
+#, c-format
+msgid "Unrecognized file in argument of %s"
+msgstr "不能识别参数 %s 指定的文件"
+
 #, c-format
 msgid "Config error: invalid boolean value '%s' for '[%s] %s'"
 msgstr "配置错误: 无效布尔值 “%s”，对于 “[%s] %s”"
@@ -3839,6 +3849,10 @@ msgstr ""
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "使用“%s help”得到用法。\n"
+
+#, c-format
+msgid "'%s' is neither a file nor a directory name"
+msgstr "“%s”不是文件名也不是目录名"
 
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
@@ -4308,9 +4322,8 @@ msgstr ""
 "此产品包含由 CollabNet(http://www.Collab.Net/) 开发的软件。\n"
 "\n"
 
-#, c-format
-msgid "'%s' is neither a file nor a directory name"
-msgstr "“%s”不是文件名也不是目录名"
+msgid "Malformed patch data"
+msgstr "非法补丁数据"
 
 #, c-format
 msgid "Can't determine the native path encoding"
@@ -4752,10 +4765,6 @@ msgid "No WC table entry"
 msgstr "没有 WC 表入口"
 
 #, c-format
-msgid "No REPOSITORY table entry for uuid '%s'"
-msgstr "对于 uuid '%s' 没有 REPOSITORY 表入口"
-
-#, c-format
 msgid "No default entry in directory '%s'"
 msgstr "在目录“%s”中没有默认入口"
 
@@ -5026,6 +5035,10 @@ msgid "Error writing entries file for '%s'"
 msgstr "写入“%s”的入口文件出错"
 
 #, c-format
+msgid "'%s' returned error exitcode %d"
+msgstr "“%s”返回错误退出码 %d"
+
+#, c-format
 msgid "Missing end of line in wcprops file for '%s'"
 msgstr "wcprops文件“%s”丢失了行结束符"
 
@@ -5213,6 +5226,10 @@ msgid "No '.' entry in: '%s'"
 msgstr "“%s” 中不存在条目 “.”"
 
 #, c-format
+msgid "Checksum mismatch while updating '%s'; expected: '%s', actual: '%s'"
+msgstr "更新 “%s” 时，校验和不匹配；期望: “%s”，实际: “%s”"
+
+#, c-format
 msgid "Path '%s' is not in the working copy"
 msgstr "路径 “%s” 不在工作副本中"
 
@@ -5299,8 +5316,8 @@ msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "文件 “%s” 不是版本控制资源，在目录 “%s” 中"
 
 #, c-format
-msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
-msgstr "“%s” 的校验和不匹配；记录: “%s”，实际: “%s”"
+msgid "Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"
+msgstr "“%s” 的校验和不匹配；期望值: “%s”，记录值: “%s”"
 
 #, c-format
 msgid "'%s' has no ancestry information"
@@ -5985,10 +6002,10 @@ msgid ""
 msgstr "受深度参数 ARG(“empty”，“files”，“immediates”，或“infinity”) 约束的操作"
 
 msgid ""
-"set new working copy depth to ARG ('empty',\n"
-"                            'exclude', 'files', 'immediates', or 'infinity')"
+"set new working copy depth to ARG ('exclude',\n"
+"                            'empty', 'files', 'immediates', or 'infinity')"
 msgstr ""
-"设置工作副本的新深度为 ARG(“empty”，“exclude”，“files”，“immediates”，\n"
+"设置工作副本的新深度为 ARG(“exclude”，“empty”，“files”，“immediates”，\n"
 "                            或“infinity”)"
 
 msgid "output in XML"
@@ -6020,6 +6037,13 @@ msgstr "尝试操作但没有修改"
 msgid "do not print differences for deleted files"
 msgstr "不要输出删除文件造成的差异"
 
+msgid ""
+"output in svnpatch format, implies the\n"
+"                             --no-diff-deleted option"
+msgstr ""
+"以 svnpatch 格式输出，意味着使用\n"
+"                             --no-diff-deleted 选项"
+
 msgid "notice ancestry when calculating differences"
 msgstr "比较差异时提示原始信息"
 
@@ -6037,6 +6061,9 @@ msgstr "使用 ARG 作为合并命令"
 
 msgid "use ARG as external editor"
 msgstr "使用 ARG 作为外部编辑器"
+
+msgid "use ARG as external patch command"
+msgstr "使用 ARG 作为外部补丁命令"
 
 msgid "mark revisions as merged (use with -r)"
 msgstr "标记版本为已合并(使用 -r 参数)"
@@ -6721,6 +6748,33 @@ msgstr ""
 "  所有 SRC 必须是同一类型。\n"
 
 msgid ""
+"Apply a patch to a working copy path.\n"
+"usage: patch PATCHFILE [WCPATH]\n"
+"\n"
+"  PATCHFILE is an input file which, when applied, turns the working\n"
+"  copy WCPATH into a modified tree that reflects all the changes the\n"
+"  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
+"\n"
+"  The format of bytes embedded in the patch can be of two types: Unified\n"
+"  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+"\n"
+"  This command allows some amount of fuzzing as Unidiff is contextual\n"
+"  and svnpatch revisionless.\n"
+msgstr ""
+"应用补丁到工作目录。\n"
+"用法: patch PATCHFILE [WCPATH]\n"
+"\n"
+"  PATCHFILE 是输入的补丁文件，当应用后，工作目录 WCPATH 就包含了补丁带来的\n"
+"  修改。\n"
+"\n"
+"  当省略 WCPATH 时，默认使用 '.'。\n"
+"\n"
+"  补丁的格式有 2 种类型: GNU 统一差异，或 svnpatch 差异(参见\n"
+"  'svn diff --svnpatch')。\n"
+"\n"
+"  此命令允许少许违反统一差异格式的内容，或者没有版本的 svnpatch 内容。\n"
+
+msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
 "       2. propdel PROPNAME --revprop -r REV [TARGET]\n"
@@ -7054,7 +7108,7 @@ msgid ""
 "    svn status\n"
 "     M      wc/bar.c\n"
 "    !     C wc/qaz.c\n"
-"          >   incoming edit, local missing\n"
+"          >   local missing, incoming edit upon update\n"
 "    D       wc/qax.c\n"
 msgstr ""
 "显示工作副本中目录与文件的状态。\n"
@@ -7137,7 +7191,7 @@ msgstr ""
 "    svn status\n"
 "     M      wc/bar.c\n"
 "    !     C wc/qaz.c\n"
-"          >   incoming edit, local missing\n"
+"          >   local missing, incoming edit upon update\n"
 "    D       wc/qax.c\n"
 
 msgid ""
@@ -7280,9 +7334,6 @@ msgstr ""
 msgid "Caught signal"
 msgstr "捕捉到信号"
 
-msgid "Invalid syntax of argument of --config-option"
-msgstr "参数 --config-option 的语法无效"
-
 msgid "Non-numeric limit argument given"
 msgstr "--limit取值不是数字"
 
@@ -7388,9 +7439,6 @@ msgstr "锁注释是路径名称 (本来想用-F 选项的吗？)；请使用“
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate 与 --depth 是互斥的"
 
-msgid "Unrecognized file in argument of --config-option"
-msgstr "不能接受在参数 --config-option 中的文件"
-
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 与 --no-auto-props 是互斥的"
 
@@ -7469,6 +7517,10 @@ msgstr "  跳过的路径：%u\n"
 #, c-format
 msgid "Skipped missing target: '%s'\n"
 msgstr "跳过缺少的目标: “%s”\n"
+
+#, c-format
+msgid "Skipped target: '%s' -- copy-source is missing\n"
+msgstr "跳过目标: '%s' -- copy-source 丢失\n"
 
 #, c-format
 msgid "Skipped '%s'\n"
@@ -7667,6 +7719,14 @@ msgstr "设定属性 “%s” 于版本库版本 %ld\n"
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "删除属性 “%s” 于版本库版本 %ld\n"
 
+msgid ""
+"No 'patch' program was found in your system.  Please try\n"
+"to use --patch-cmd or 'patch-cmd' run-time configuration\n"
+"option or manually use an external tool to apply Unidiffs."
+msgstr ""
+"在你的系统中找不到程序 'patch'。请尝试用命令行参数\n"
+" --patch-cmd 或运行时配置选项 'patch-cmd'，或者手工使用外部工具应用统一差异。"
+
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
 msgstr "删除纳入版本控制的属性 “%s” 时不可指定版本"
@@ -7853,6 +7913,10 @@ msgid ""
 "configuration option were not set.\n"
 msgstr ""
 "环境变量 SVN_MERGE 没有设置，运行时的配置中也没有设置 “merge-tool-cmd”。\n"
+
+#, c-format
+msgid "The external merge tool exited with exit code %d"
+msgstr "外部合并工具已经退出，代码是 %d"
 
 #, c-format
 msgid "Can't write to '%s'"

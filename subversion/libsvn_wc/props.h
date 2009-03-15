@@ -182,15 +182,6 @@ svn_wc__working_props_committed(const char *path,
                                 svn_boolean_t sync_entries,
                                 apr_pool_t *pool);
 
-/* Return in *MOD_TIME the time at which PROPS_KIND props of PATH
-   were last modified, or 0 (zero) if unknown. */
-svn_error_t *
-svn_wc__props_last_modified(apr_time_t *mod_time,
-                            const char *path,
-                            svn_wc__props_kind_t props_kind,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool);
-
 /* Load the base, working and revert props for PATH in ADM_ACCESS returning
    them in *BASE_PROPS_P, *PROPS_P and *REVERT_PROPS_P respectively.
    Any of BASE_PROPS, PROPS and REVERT_PROPS may be null.

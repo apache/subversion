@@ -27,7 +27,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl        bdb based filesystem.
 
   AC_ARG_WITH(berkeley-db, [AS_HELP_STRING(
-                                           [[--with-berkeley-db=[HEADER:INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
+                                           [[--with-berkeley-db[=HEADER:INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
                           The Subversion Berkeley DB based filesystem library 
                           requires Berkeley DB $db_version or newer.  If you
                           specify `--without-berkeley-db', that library will

@@ -944,9 +944,7 @@ if test "$do_javahl_build" = "yes"; then
   fi
   
   dnl The temporary directory where libtool compiles libsvnjavahl.
-  dnl N.B. objdir is "the name of the directory that contains temporary
-  dnl libtool files" and it is set by libtool.m4
-  JAVAHL_OBJDIR='$(libsvnjavahl_PATH)'/$objdir
+  JAVAHL_OBJDIR='$(libsvnjavahl_PATH)/.libs'
   
   os_arch=`uname`
   if test "$os_arch" = "Darwin"; then

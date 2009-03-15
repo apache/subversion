@@ -91,6 +91,9 @@ struct svn_test_descriptor_t
 
   /* A descriptive message for this test. */
   const char *msg;
+
+  /* An optional description of a work-in-progress test. */
+  const char *wip;
 };
 
 /* All Subversion test programs include an array of svn_test_descriptor_t's
@@ -129,6 +132,22 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_XFAIL_COND(func, p) \
                                 {func, (p) ? svn_test_xfail : svn_test_pass}
 #define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
+
+/* Initializer for XFAIL tests for works-in-progress. */
+#define SVN_TEST_WIMP(func, msg, wip) \
+  {NULL, svn_test_xfail, func, NULL, msg, wip}
+#define SVN_TEST_WIMP_COND(func, p, msg, wip) \
+  {NULL, (p) ? svn_test_xfail : svn_test_pass, func, NULL, msg, wip}
+#define SVN_TEST_OPTS_WIMP(func, msg, wip) \
+  {NULL, svn_test_xfail, NULL, func, msg, wip}
+#define SVN_TEST_OPTS_WIMP_COND(func, p, msg, wip) \
+  {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
+
+/* Obsolete versions of work-in-progress macros. */
+#define SVN_TEST_WIMP0(func, wip) \
+  {func, svn_test_xfail, NULL, NULL, NULL, wip}
+#define SVN_TEST_WIMP_COND0(func, p, NULL, wip) \
+  {func, (p) ? svn_test_xfail : svn_test_pass, NULL, NULL, NULL, wip}
 
 
 /* Return a pseudo-random number based on SEED, and modify SEED.

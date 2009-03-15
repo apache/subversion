@@ -30,6 +30,7 @@ from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -139,7 +140,6 @@ def patch_basic(sbox):
                                        None,
                                        expected_skip,
                                        gnupatch_garbage_re, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
@@ -197,7 +197,6 @@ def patch_unidiff(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # dry-run
 
@@ -335,7 +334,6 @@ def patch_copy_and_move(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # dry-run
 
@@ -363,7 +361,6 @@ def patch_copy_and_move(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected err
-                                       None, None, None, None,
                                        1, # check-props
                                        0) # dry-run
 
@@ -372,9 +369,9 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              patch_basic,
-              patch_unidiff,
-              patch_copy_and_move,
+              SkipUnless(patch_basic, svntest.main.has_patch),
+              SkipUnless(patch_unidiff, svntest.main.has_patch),
+              SkipUnless(patch_copy_and_move, svntest.main.has_patch),
               ]
 
 if __name__ == '__main__':

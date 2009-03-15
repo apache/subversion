@@ -1689,15 +1689,11 @@ path_driver_cb_func(void **dir_baton,
           }
 
         /* Process property changes. */
-        if (entry->has_prop_mods)
-          {
-            SVN_ERR(svn_wc_transmit_prop_deltas
-                    (path, adm_access, entry, editor,
-                     (entry->kind == svn_node_file) ? fb : *dir_baton,
-                     NULL, pool));
-            if (entry->kind == svn_node_file)
-              file_need_close = TRUE;
-          }
+        SVN_ERR(svn_wc_transmit_prop_deltas(path, adm_access, entry, editor,
+                                            (entry->kind == svn_node_file) ? fb
+                                            : *dir_baton, NULL, pool));
+        if (entry->kind == svn_node_file)
+          file_need_close = TRUE;
 
         /* Process binary changes. */
         SVN_ERR(svn_wc_has_binary_prop(&file_is_binary, path,

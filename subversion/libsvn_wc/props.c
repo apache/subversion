@@ -84,10 +84,6 @@
      svn_wc__working_props_committed(): Moves WORKING props to BASE props,
        sync'ing to disk and clearing appropriate caches.
      empty_props_p(): Used to determine if a path has properties or not.
-     svn_wc__props_last_modified(): Reads mtime of the props file.  Used
-       externally to answer the question about when a node changed.  We can
-       answer this question other ways in the SQLite schema, so this function
-       may disappear.
      svn_wc_props_modified_p(): Used to shortcut property differences by
        checking property filesize differences.
      install_props_file(): Used with loggy.
@@ -441,36 +437,6 @@ svn_wc__working_props_committed(const char *path,
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
   return svn_io_file_rename(working, base, pool);
-}
-
-
-svn_error_t *
-svn_wc__props_last_modified(apr_time_t *mod_time,
-                            const char *path,
-                            svn_wc__props_kind_t props_kind,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const char *props_file;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
-
-  err = svn_io_file_affected_time(mod_time, props_file, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      *mod_time = 0;
-    }
-  else
-    SVN_ERR_W(err,
-              apr_psprintf(pool,
-                           _("Error getting 'affected time' on '%s'"),
-                           svn_path_local_style(props_file, pool)));
-
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

@@ -1049,6 +1049,8 @@ def verify_output(expected_out, output, errput):
   output.sort()
   ln = 0
   for line in output:
+    if line.startswith('DBG:'):
+      continue
     if ((line.find(expected_out[ln]) == -1) or
         (line != '' and expected_out[ln] == '')):
       print('Error: expected keywords:  %s' % expected_out)

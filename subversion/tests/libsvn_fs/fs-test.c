@@ -4960,8 +4960,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(fetch_youngest_rev),
     SVN_TEST_PASS(basic_commit),
     SVN_TEST_PASS(test_tree_node_validation),
-    SVN_TEST_XFAIL(merging_commit), /* Needs to be written to match new
-                                        merge() algorithm expectations */
+    SVN_TEST_WIMP0(merging_commit,
+                   "needs to be written to match new"
+                   " merge() algorithm expectations"),
     SVN_TEST_PASS(copy_test),
     SVN_TEST_PASS(commit_date),
     SVN_TEST_PASS(check_old_revisions),

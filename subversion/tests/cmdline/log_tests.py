@@ -405,8 +405,7 @@ def merge_history_repos(sbox):
 
 # For errors seen while parsing log data.
 class SVNLogParseError(Exception):
-  def __init__(self, args=None):
-    self.args = args
+  pass
 
 
 def parse_log_output(log_lines):
@@ -470,6 +469,9 @@ def parse_log_output(log_lines):
 
   # The log chain to return.
   chain = []
+
+  # Filter debug lines from the output.
+  log_lines = [line for line in log_lines if not line.startswith('DBG:')]
 
   this_item = None
   while 1:
