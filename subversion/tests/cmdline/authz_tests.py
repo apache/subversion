@@ -149,7 +149,7 @@ def authz_read_access(sbox):
   chi_url = H_url + '/chi'
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -273,7 +273,7 @@ def authz_write_access(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Access denied.*"
 
@@ -368,7 +368,7 @@ def authz_checkout_test(sbox):
 
   # write an authz file with *= on /
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -496,7 +496,7 @@ def authz_log_and_tracing_test(sbox):
 
   # write an authz file with *=rw on /
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -527,7 +527,7 @@ def authz_log_and_tracing_test(sbox):
   # now disable read access on the first version of rho, keep the copy in
   # /A/D readable.
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -613,7 +613,7 @@ def authz_aliases(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
@@ -658,7 +658,7 @@ def authz_validate(sbox):
                            "/A/B" : "@undefined_group = rw" })
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   elif sbox.repo_url.startswith("svn"):
     expected_err = ".*Invalid authz configuration"
   else:
@@ -678,7 +678,7 @@ devs2 = @admins, dev2
 devs = @devs1, dev3, dev4""" })
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   elif sbox.repo_url.startswith("svn"):
     expected_err = ".*Invalid authz configuration"
   else:
@@ -714,7 +714,7 @@ def authz_locking(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: Authorization failed.*"
 
