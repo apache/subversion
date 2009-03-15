@@ -19,6 +19,7 @@ Candidate changes:
     Fix warning in Python 2.6 for ctypes-python bindings
     Votes:
       +1: djames, arfrever
+      +1: gstein (for 1.6.1; this can wait)
 
   * r36093, r36292, r36406
     Improve some messages.
@@ -49,7 +50,8 @@ Candidate changes:
       @since to 1.6.0 for this backport. (r36567 should be reverted on trunk
       if this revision is not merged into 1.6.0)
     Votes:
-      +1: rhuijben, arfrever
+      +1: rhuijben, arfrever, gstein
+
      
 Candidate if a new tarball is constructed (otherwise for 1.6.1):
 
@@ -185,6 +187,7 @@ Candidate changes:
      the performance improvement should be quite significant.
    Votes:
      +1: pburba
+
 
 Approved changes:
 =================
