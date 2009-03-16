@@ -842,6 +842,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
 
+  /** @since New in 1.6 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
+             SVN_ERR_RA_DAV_CATEGORY_START + 13,
+             "URL access forbidden for unknown reason")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,

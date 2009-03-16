@@ -178,16 +178,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
-  * r36540, r36554, r36567
-    Add SVN_ERR_RA_DAV_FORBIDDEN errorcode
-    Justification:
-      We need a special error code to test for, to resolve issue #3242.
-      Adding error codes changes our public API, so I nominate this part for
-      1.6.0. The usage of this error code can wait for 1.6.1.
-    Notes:
-      r36540 adds the error code, r36554 adds a @since and r36567 updates
-      @since to 1.6.0 for this backport. (r36567 should be reverted on trunk
-      if this revision is not merged into 1.6.0)
-    Votes:
-      +1: rhuijben, arfrever, gstein
