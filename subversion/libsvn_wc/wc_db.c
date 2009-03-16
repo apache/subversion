@@ -1557,6 +1557,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
                                 const char *repos_root_url,
                                 const char *repos_uuid,
                                 svn_revnum_t revision,
+                                const apr_hash_t *props,
                                 svn_revnum_t changed_rev,
                                 apr_time_t changed_date,
                                 const char *changed_author,
@@ -1573,6 +1574,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
