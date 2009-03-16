@@ -131,8 +131,9 @@ apr_uint32_t
 svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_off_t len);
 
 
-/* Normalize the characters pointed to by BUF of length *LENGTHP, starting
- * in state *STATEP according to the OPTIONS.
+/* Normalize the characters pointed to by the buffer BUF (of length *LENGTHP)
+ * according to the options *OPTS, starting in the state *STATEP.
+ *
  * Adjust *LENGTHP and *STATEP to be the length of the normalized buffer and
  * the final state, respectively.
  * Normalized data is written to the memory at *TGT. BUF and TGT may point
