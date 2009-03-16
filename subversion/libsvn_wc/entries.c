@@ -1964,9 +1964,7 @@ entries_write_body(svn_sqlite__db_t *wc_db,
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
   SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root, this_dir,
-                      SVN_WC_ENTRY_THIS_DIR,
-                      svn_dirent_join(local_abspath, SVN_WC_ENTRY_THIS_DIR,
-                                      scratch_pool),
+                      SVN_WC_ENTRY_THIS_DIR, local_abspath,
                       this_dir, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, entries); hi;
