@@ -1330,8 +1330,6 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
   SVN_ERR_ASSERT(children != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -1394,8 +1392,6 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
   SVN_ERR_ASSERT(checksum != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -1457,8 +1453,6 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
   SVN_ERR_ASSERT(target != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -1580,8 +1574,6 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
