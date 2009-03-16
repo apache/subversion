@@ -487,7 +487,7 @@ class State:
         else:
           if path == '.':
             # 'svn proplist' strips './' from the paths. put it back on.
-            node = './' + node
+            node = os.path.join('.', node)
           desc[path_to_key(node)].props = props
 
     return cls('', desc)
