@@ -4,8 +4,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
 
  User-visible changes:
   - General:
-    * Now require Windows 2000 or newer (r33170)
-    * Add --with-no-revprops to svn log, update mod_dav_svn, neon, serf (#3286)
+    * Now require Windows 2000 or newer on Windows (r33170)
 
   - Major new features:
     * Identical files share storage space in repository (issue #2286)
@@ -13,6 +12,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * Tree Conflicts (issue #2282, #2908)
 
   - Minor new features and improvements:
+    * Add --with-no-revprops to 'svn log' (issue #3286)
     * pre-lock hook can now specify lock tokens via stdout (r32778)
     * svnmucc: support --with-revprop (r29492)
     * merge: log include-descendants in operational log (r30426, r30428)
@@ -48,10 +48,11 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * can't add .svn (and children) to your wc via '--parents' (r35819)
     * improved performance removing unversioned directories (r36111)
     * 'svn cp --parents' had path URL encoding issues (issue #3374)
-    * many other minor bugfixes, optimizations, plugs of memory leaks, etc
     * repository root relative URLs support peg revisions (issue #3193)
     * support shell quoting rules in externals definitions (issue #2461)
+    * New SVN_LOCALE_DIR environment variable for localization (issue #2879)
     * scheme and domain name in urls handled case insensitive (issue #2475)
+    * many other minor bugfixes, optimizations, plugs of memory leaks, etc
  
   - Server-side bugfixes:
     * mod_dav_svn runs pre-revprop-change twice (issue #3085)
@@ -66,54 +67,35 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * ra_serf failuire during update (issue #3113)
     * ra_serf comply with RFC2617 in handling authentication headers (r35981)
     * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
+    * use both SHA1 and MD5 in the FS backends (r34388)
+    * many other minor bugfixes too numerous to list here
 
   - Contributed tools improvements and bugfixes:
     * commit-email.pl: Deprecated; use mailer.py instead (r31755, -67)
     * svnmerge.py migration tool munged svn:mergeinfo ordering (issue #3302)
+    * And other random sundry stuff
 
  Developer-visible changes:
   - General:
     * serf 0.3.0 required (r35586)
+    * require SQLite < 3.4.0 (r33520)
+    * allow the use of an in-tree SQLite amalgamation (r35263)
+    * svn_log_changed_path_t includes a 'kind' field (issue #1967)
+    * BDB `changes' table inconsistency when APIs are misused (issue #3349)
+    * configure should prefer apr-1 over apr-0 if both are present (issue #2671)
+    * make 'Not Found' errors consistent between RA layers (issue #3137)
+    * fix a potential a buffer overrun (r34374)
     * many bug fixes and improvements to the test suite
-    * Document SQLite building and fix configury (#3352)
-
-    * added: Use SVN_LOCALE_DIR environment variable for message localization (#2879) (r32419)
-    * added: Support to build and use SQLite amalgamation version.
-    * added: SVN_ERR_RA_DAV_FORBIDDEN errorcode in svn_error_codes.h (r36589)
-
-    * enhancement: svn_log_changed_path_t needs a 'kind' field (#1967) (r35329)
-
-    * fixed: BDB `changes' table inconsistency when APIs are misused (#3349)
-    * fixed: configure should prefer apr-1 instead of apr-0 if both are present (#2671) (r31717)
-    * fixed: Consistent 'Not Found' errors from RA layers (#3137) 
-             (SVN_ERR_FS_NOT_FOUND and SVN_ERR_RA_DAV_PATH_NOT_FOUND was deprecated). (r31313)
-    * fixed: segmentation fault with KDE 4.2. (r35737) 
-    * fixed: a buffer overrun (r34374) 
-    * fixed: 'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail. Fixed build error on Solaris (r36300) 
-    
-    * Make writing the sha1 checksum as part of the FSFS representation string 
-      conditional upon the filesystem format. (r34388)
-
-    * Allow to use unique Subversion application name when using KWallet. (r34367) 
 
   - API changes:
-    * Notification system for properties and revision properties (#783)
-    * fixed: make ra_svn's merge commit-revprops public (r30462, r30453)
-    * fixed: dav-svn operational logging compatible with svnserve logging (r30518) 
-    * fixed: Make the tree conflict WC APIs private. (#3321) (r34176)
-    * fixed: svn_client__get_copy_source() can be abysmally slow (#3356) (r35501)
-    * fixed: subversion/libsvn_fs_fs/tree.c (svn_fs_fs__commit_txn)
-             If the commit fails then the NEW_REV argument should be SVN_INVALID_REVNUM. (r35950)
+    * notification system for properties and revision properties (issue #783)
+    * make ra_svn's merge commit-revprops public (r30462, r30453)
+    * mod_dav_svn operational logging compatible with svnserve logging (r30518) 
+    * improve speed of svn_client__get_copy_source() (issue #3356)
+    * if fsfs commit fails return SVN_INVALID_REVNUM (r35950)
 
   - Bindings:
-      * SWIG/python bindings:
-       - ...
-      * SWIG/python bindings:
-       - ...
-      * JavaHL bindings:
-       - ...
-      * Ruby bindings:
-       - support svn_client_mergeinfo_log_merged() API (r30444)
+    * Many improvements to all bindings (Java, Perl, Python, and Ruby)
 
 
 Version 1.5.6
