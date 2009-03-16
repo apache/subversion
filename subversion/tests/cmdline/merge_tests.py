@@ -6507,7 +6507,7 @@ def update_loses_mergeinfo(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_C_wc_dir = wc_dir + '/A/C'
+  A_C_wc_dir = os.path.join(wc_dir, 'A', 'C')
   A_B_url = sbox.repo_url + '/A/B'
   A_B_J_url = sbox.repo_url + '/A/B/J'
   A_B_K_url = sbox.repo_url + '/A/B/K'
@@ -6555,7 +6555,7 @@ def update_loses_mergeinfo(sbox):
                                         None,
                                         A_C_wc_dir)
 
-  other_A_C_wc_dir = other_wc + '/A/C'
+  other_A_C_wc_dir = os.path.join(other_wc, 'A', 'C')
   expected_output = wc.State(other_A_C_wc_dir, {'K' : Item(status='A ')})
   expected_disk = wc.State('', {
     'K'       : Item(),
@@ -6610,7 +6610,7 @@ def merge_loses_mergeinfo(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_C_wc_dir = wc_dir + '/A/C'
+  A_C_wc_dir = os.path.join(wc_dir, 'A', 'C')
   A_B_url = sbox.repo_url + '/A/B'
   A_B_J_url = sbox.repo_url + '/A/B/J'
   A_B_K_url = sbox.repo_url + '/A/B/K'
