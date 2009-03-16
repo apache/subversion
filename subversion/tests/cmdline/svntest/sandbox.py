@@ -118,6 +118,14 @@ class Sandbox:
       if not path is svntest.main.pristine_dir:
         _cleanup_test_path(path)
 
+  def using_wc_ng(self):
+    "Is this sandbox using WC-NG for the working copy?"
+    ### maybe we want to take a path and see if *that* path is using NG?
+    ### should this environ test be switched to an investigation of the
+    ### actual wc? this seems reasonable enough for now, and we can always
+    ### change it later, as needed.
+    return os.environ.get('SVN_ENABLE_NG') is not None
+
 
 _deferred_test_paths = []
 
