@@ -79,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-03-16 16:54+0100\n"
-"PO-Revision-Date: 2009-03-16 16:58+0100\n"
+"PO-Revision-Date: 2009-03-16 17:12+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1613,10 +1613,9 @@ msgid "'%s' was not found in the repository at revision %ld"
 msgstr "»%s« wurde im Projektarchiv in Revision %ld nicht gefunden"
 
 #: ../libsvn_client/diff.c:1122
-#, fuzzy
 msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
 msgstr ""
-"svn_client_diff5 wurde in einer Art aufgerufen, die noch nicht unterstützt "
+"svn_client_diff4 wurde in einer Art aufgerufen, die noch nicht unterstützt "
 "wird"
 
 #: ../libsvn_client/diff.c:1161
@@ -2519,7 +2518,7 @@ msgid "Attempted to set textual contents of an immutable node"
 msgstr "Versuchte, den Textinhalt eines nicht-veränderlichen Knotens zu setzen"
 
 #: ../libsvn_fs_base/dag.c:1278
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch, rep '%s':\n"
 "   expected:  %s\n"
@@ -2754,12 +2753,12 @@ msgid "Rep contents are too large: got %s, limit is %s"
 msgstr "Inhalt der Darstellung zu groß: »%s« erhalten, Grenze ist »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:808
-#, fuzzy, c-format
+#, c-format
 msgid "Failure reading rep '%s'"
 msgstr "Fehler beim Lesen der Darstellung »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:823
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch on rep '%s':\n"
 "   expected:  %s\n"
@@ -2770,7 +2769,7 @@ msgstr ""
 "   Tatsächlich: %s\n"
 
 #: ../libsvn_fs_base/reps-strings.c:917
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "MD5 checksum mismatch on rep '%s':\n"
 "   expected:  %s\n"
@@ -2781,7 +2780,7 @@ msgstr ""
 "   Tatsächlich: %s\n"
 
 #: ../libsvn_fs_base/reps-strings.c:930
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "SHA1 checksum mismatch on rep '%s':\n"
 "   expected:  %s\n"
@@ -3151,9 +3150,8 @@ msgstr "Keine Revision %ld"
 #: ../libsvn_fs_fs/fs_fs.c:1883 ../libsvn_fs_fs/fs_fs.c:1890
 #: ../libsvn_fs_fs/fs_fs.c:1898 ../libsvn_fs_fs/fs_fs.c:1911
 #: ../libsvn_fs_fs/fs_fs.c:1920
-#, fuzzy
 msgid "Malformed text rep offset line in node-rev"
-msgstr "Fehlerhafte »text representation offset«-Zeile in Knotenrevision"
+msgstr "Fehlerhafte »text rep offset«-Zeile in Knotenrevision"
 
 #: ../libsvn_fs_fs/fs_fs.c:1987
 msgid "Missing id field in node-rev"
@@ -3378,7 +3376,7 @@ msgstr ""
 "werden.\n"
 
 #: ../libsvn_fs_fs/rep-cache.c:150
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Representation key for checksum '%%s' exists in filesystem '%%s', with "
 "different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store(%%ld,%"
@@ -3718,9 +3716,8 @@ msgid "Failed to write full amount to stream"
 msgstr "Konnte nicht alles in den Datenstrom schreiben"
 
 #: ../libsvn_ra_neon/file_revs.c:371
-#, fuzzy
 msgid "'get-file-revs' REPORT not implemented"
-msgstr "»get-file-revs« nicht implementiert"
+msgstr "»get-file-revs«-REPORT nicht implementiert"
 
 #: ../libsvn_ra_neon/file_revs.c:378
 msgid "The file-revs report didn't contain any revisions"
@@ -4151,9 +4148,9 @@ msgstr ""
 "collection«"
 
 #: ../libsvn_ra_serf/commit.c:1312
-#, fuzzy, c-format
+#, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
-msgstr "Hinzufügen eines Verzeichnisses schlug fehl: %s auf %s (%d %s)"
+msgstr "Hinzufügen eines Verzeichnisses schlug fehl: %s auf %s (%d)"
 
 #: ../libsvn_ra_serf/getlocationsegments.c:217
 #, c-format
@@ -8033,13 +8030,12 @@ msgstr ""
 "                            »files«, »immediates« oder »infinity«)"
 
 #: ../svn/main.c:189
-#, fuzzy
 msgid ""
 "set new working copy depth to ARG ('empty',\n"
 "                            'exclude', 'files', 'immediates', or 'infinity')"
 msgstr ""
-"setzt neue Tiefe der Arbeitskopie auf PAR (»exclude«,\n"
-"                            »empty«, »files«, »immediates« oder »infinity«)"
+"setzt neue Tiefe der Arbeitskopie auf PAR (»empty«,\n"
+"                            »exclude«, »files«, »immediates« oder »infinity«)"
 
 #: ../svn/main.c:192 ../svnlook/main.c:141
 msgid "output in XML"
@@ -9251,7 +9247,6 @@ msgstr ""
 "  herstellen.\n"
 
 #: ../svn/main.c:820
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -9770,9 +9765,8 @@ msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate und --depth schließen sich gegenseitig aus"
 
 #: ../svn/main.c:1937
-#, fuzzy
 msgid "Unrecognized file in argument of --config-option"
-msgstr "Unbekannte Datei im Parameter von %s"
+msgstr "Unbekannte Datei im Parameter von --config-option"
 
 #: ../svn/main.c:1957
 msgid "--auto-props and --no-auto-props are mutually exclusive"
