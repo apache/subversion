@@ -78,7 +78,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
  Developer-visible changes:
   - General:
     * serf 0.3.0 required (r35586)
-    * require SQLite < 3.4.0 (r33520)
+    * require SQLite 3.4.0 or newer (r33520)
     * allow the use of an in-tree SQLite amalgamation (r35263)
     * svn_log_changed_path_t includes a 'kind' field (issue #1967)
     * BDB `changes' table inconsistency when APIs are misused (issue #3349)
