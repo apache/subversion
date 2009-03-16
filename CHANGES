@@ -12,14 +12,16 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * Tree Conflicts (issue #2282, #2908)
 
   - Minor new features and improvements:
-    * Add --with-no-revprops to 'svn log' (issue #3286)
+    * add '--with-no-revprops' to 'svn log' (issue #3286)
     * pre-lock hook can now specify lock tokens via stdout (r32778)
-    * svnmucc: support --with-revprop (r29492)
+    * svnmucc: support '--with-revprop' (r29492)
     * merge: log include-descendants in operational log (r30426, r30428)
-    * improved operational logging for svn switch (r30517)
+    * improved operational logging for 'svn switch' (r30517)
     * PKS#11 (smartcard) support in libsvn_ra_neon (r29512)
-    * 'Header' keyword, similar to 'Id' but with full URL. (r35386)
+    * 'Header' keyword, similar to 'Id' but with full URL (r35386)
     * Cache SSL client cert passphrases (issue #2489)
+    * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
+    * add '--ignore-externals' option to 'svn cp' (issue #3365)
     * Improved Python 3 compatibility
     * Packing of FSFS filesystems
 
@@ -39,10 +41,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * 'svn up'/'svn co' early abort with svn:externals (issue #3148)
     * improve tempfile names for conflict resolver (issue #3166)
     * ra_serf: 'svn merge' aborts (issue #3212)
-    * plaintext-passwords assumed pools live across RA sessions (issue #3236)
     * 'svn cleanup' failed on non-ASCII characters (issue #3313)
     * 'svn update' fails on moved, modified file with local mods (issue #3354)
-    * 'svn copy' adds '--ignore-externals' option (issue #3365)
     * easier use of NTLM for proxy with ra_neon (r29874)
     * 2-url merge from DAV-accessed foreign repo makes bad wcprops (issue #3118)
     * can't add .svn (and children) to your wc via '--parents' (r35819)
@@ -50,8 +50,9 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * 'svn cp --parents' had path URL encoding issues (issue #3374)
     * repository root relative URLs support peg revisions (issue #3193)
     * support shell quoting rules in externals definitions (issue #2461)
-    * New SVN_LOCALE_DIR environment variable for localization (issue #2879)
+    * new SVN_LOCALE_DIR environment variable for localization (issue #2879)
     * scheme and domain name in urls handled case insensitive (issue #2475)
+    * merge: pick default revisions with peg revision in single url (r30455)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
  
   - Server-side bugfixes:
@@ -59,8 +60,6 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * case-sensitivity in hostname bug in libsvn_repos (issue #2475)
     * mod_dav_svn ignores pre-revprop-change failure on delete (issue #3086)
     * mod_dav_svn prevented lock breaks from being propogated to client (r29914)
-    * merge, pick default revisions with peg revision in single url (r30455)
-    * 'svndumpfilter' add '--prefix-file' option (issue #2697)
     * non-UTF8 filenames could enter repository (issue #2748)
     * 'svnlook proplist' xml output (issue #2809)
     * don't let mod_dav_svn hide errors from client (issue #3102)
