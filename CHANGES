@@ -1,30 +1,152 @@
 Version 1.6.0
-(?? ??? 2008, from /branches/1.6.x)
+(?? Mar 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.0
 
  User-visible changes:
   - General:
     * Windows versions of Subversion require at least Windows 2000 (r33170)
+    * added: Add --with-no-revprops to svn log, update mod_dav_svn, neon, serf (#3286)
 
   - Major new features:
+    * fixed: Identical files should share storage space in repository (#2286) (r33730)
+    * File-externals support for intra-repository files (#937) (r33229)
+    * Tree conflicts: detailed description can be found here 
+      http://subversion.tigris.org/svn_1.6_releasenotes.html#tree-conflicts
 
   - Minor new features and improvements:
     * pre-lock hook can now specify lock tokens via stdout (r32778)
+    * svnmucc: support --with-revprop (r29492)
+    * merge: log include-descendants in operational log (r30426, r30428)
+    * feature: improve operation logging for svn switch(r30517)
+    * feature: enable PKS#11 (smartcard) support in libsvn_ra_neon (r29512)
+    * fixed: Buffer overflow on ensuring a 0 byte string buffer (r35968, r35974)
 
   - Client-side bugfixes:
+    * added: Add the 'Header' keyword, which is similar to 'Id' but includes the full URL. (r35386)
 
+    * fixed: Remove filter *reflected* revisions implementation (#2897)
+    * fixed: conflict resolver needs more useful "diff" option (#3048) (r29189)
+    * fixed: Disable username assumption (#2324) (r32403)
+    * fixed: more accurate usage message for svn log command (r30449)
+    * fixed: if target has explict mergeinfo, merge should not be repeated (#2821)
+    * fixed: prevent corruption when filtering self-referential mergeinfo (r30467)
+    * fixed: filter empty mergeinfo with self-referential mergeinfo (r30510)
+    * fixed: minor bug fixes for changelist command (r30544)
+    * fixed: pay attention to partial replay from the server in svnsync (r30440)
+    * fixed: property name handling in svnsync (r30480)
+    * fixed: properly recognize the file:/// in repository with svnsync (r30482)
+    * fixed: Case-sensitivity in hostname bug in libsvn_repos (#2475) (r33236)
+    * fixed: svn+ssh SIGKILLs ssh processes (causing problems for OpenSSH connection multiplexing) (#2580) (r35533)
+    * fixed: conflict resolver needs more useful "diff" option (#3048) (r29189)
+    * fixed: Too early svn up/co abort if one item of svn:externals resource list is not accessible (#3148)
+    * fixed: Tree conflicts: check that properties match when checking that text matches. (#3152) 
+    * fixed: Delete should conflict with delete (at the repos level) (#3156)
+    * fixed: check svn_client__wc_delete's behaviour wrt tree conflicts (#3163)
+    * fixed: Tempfiles used by interactive conflict resolution editor have unhelpful names (#3166) (r35186)
+    * fixed: ra_serf: svn aborts when starting merge (#3212) (r33283)
+    * fixed: plaintext-passwords assumes pools live across RA sessions (#3236) (r33659)
+    * fixed: client cert passphrase cache keyed by relative path, not absolute path (#3239) (r32550)
+    * fixed: WC entries format number to be bumped now that tree-conflict storage is included (#3287)
+    * fixed: tree conflict data in entries not always printable (#3297) (r33635)
+    * fixed: "resolve" should resolve a tree conflict victim, not the parent (#3306) (r34166)
+    * fixed: Non-ASCII characters causes svn cleanup to fail (#3313) (r34106)
+    * fixed: Commit not blocked by tree conflict (#3320)
+    * fixed: In tree conflict info, report left/right URL@REV of the incoming change (#3322) (r34436)
+    * fixed: Update can't record >1 add/edit tree conflict per dir (#3328) (r34345)
+    * fixed: Tree conflict merry-go-round on update/switch (#3334) (r35817)
+    * fixed: Use "skel" format for tree-conflicts field in WC entry (#3343) (r35036)
+    * fixed: update fails when file with local mods is moved and modified (#3354) (r35390)
+    * fixed: svn copy --ignore-externals option (#3365) (r35554)
+    * fixed: Allow use of Negotiate/NTLM for proxy authentiation in ra_neon,
+             without needing to explicitly configure a redundant username and
+             password. (r29874)
+    * fixed: 2-url merge from DAV-accessed foreign repository leaves bogus wc-props 
+             in merge target (#3118) (r29876)
+    * fixed: Make it impossible to add .svn (and children) to your working copy via (r35819)
+             svn add --parents .svn/file
+             svn mkdir --parents .svn/dir/dir
+             svn cp --parents file .svn/dir/file
+    * fixed: Initialise 'src_repos_url' before using it. (r34402)
+    * fixed: Cache SSL client certificate passphrases, when user indicates it's okay. (#2489)
+    * fixed: improved performance removing unversioned directories (r36111)
+    * fixed: "svn cp --parents path URL encoding issues" (#3374) (r36106)
+ 
   - Server-side bugfixes:
+    * fixed: mod-dav-svn runs pre-revprop-change twice (#3085)
+    * fixed: mod-dav-svn ignores pre-revprop-change failure on revprop delete (#3086)
+    * fixed: mod_dav_svn Fix a bug in mod_dav_svn's update REPORT response that prevented lock
+             breaks/steals from being propogated to the client in skelta-response cases. (r29914)
+    * fixed: svnsync do not require destination directory to be 1.5 (r30453)
+    * fixed: merge, pick default revisions with peg revision in single url (r30455)
+    * fixed: Cache ssl client certificate passphrases (#2489) (r34220)
+    * added: Add a --prefix-file switch to svndumpfilter (#2697) (r32318)
+    * fixed: Non-UTF8 filenames can enter repository (#2748) (r33148)
+    * added: svnlook proplist output should be machine parsable (e.g. --xml) (#2809) (r31978)
+    * fixed: ap_fflush() calls in mod_dav_svn can hide some errors from client (#3102) (r35328)
+    * fixed: ra_serf: svn fails during update (#3113) (r33311)
+    * fixed: ra_serf: Following RFC2617, verify authentication header tokens case insensitive.
+             (r35981)
+    * fixed: SVNAllowBulkUpdates mod_dav_svn directive (#3121) (r29922)
+    * fixed: repository root relative URLs should support peg revisions (#3193) (r31458)
+    * fixed: Automatic database recovery with BDB-4.4. and DB_REGISTER (#2449) (r18144)
+    * added: Support the usual shell quoting rules in externals definitions 
+             (\ to escape," to quote).  This allows us to use local paths with 
+             spaces in externals. (#2461) (r33417).
+    * fixed: scheme and domain name in urls should be handled case insensitive. (#2475) (r33236)
+    * fixed: 'svnadmin hotcopy' of packaed repositories. (r36182)
 
   - Contributed tools improvements and bugfixes:
     * commit-email.pl: Deprecated; use mailer.py instead (r31755,r31767)
+    * fixed: svnmerge.py migration tool(s) do not guarantee proper svn:mergeinfo
+             range ordering (#3302) (r35297)
+    * Partially Python 3 compatibility: 
+       * tools/backup/hot-backup.py.in: Use list comprehensions instead of filter(). (r34364) 
+       * tools/dev/iz/find-fix.py
+         tools/dev/trails.py Try to import functools.reduce. (r34366)
 
  Developer-visible changes:
   - General:
     * serf 0.3.0 required (r35586)
+    * many bug fixes and improvements to the test suite
+    * Document SQLite building and fix configury (#3352)
+
+    * added: Use SVN_LOCALE_DIR environment variable for message localization (#2879) (r32419)
+    * added: Support to build and use SQLite amalgamation version.
+    * added: SVN_ERR_RA_DAV_FORBIDDEN errorcode in svn_error_codes.h (r36589)
+
+    * enhancement: svn_log_changed_path_t needs a 'kind' field (#1967) (r35329)
+
+    * fixed: BDB `changes' table inconsistency when APIs are misused (#3349)
+    * fixed: configure should prefer apr-1 instead of apr-0 if both are present (#2671) (r31717)
+    * fixed: Consistent 'Not Found' errors from RA layers (#3137) 
+             (SVN_ERR_FS_NOT_FOUND and SVN_ERR_RA_DAV_PATH_NOT_FOUND was deprecated). (r31313)
+    * fixed: segmentation fault with KDE 4.2. (r35737) 
+    * fixed: a buffer overrun (r34374) 
+    * fixed: 'tr "[:lower:]" "[:upper:]"' is locale-dependent and can fail. Fixed build error on Solaris (r36300) 
+    
+    * Make writing the sha1 checksum as part of the FSFS representation string 
+      conditional upon the filesystem format. (r34388)
+
+    * Allow to use unique Subversion application name when using KWallet. (r34367) 
 
   - API changes:
+    * Notification system for properties and revision properties (#783)
+    * fixed: make ra_svn's merge commit-revprops public (r30462, r30453)
+    * fixed: dav-svn operational logging compatible with svnserve logging (r30518) 
+    * fixed: Make the tree conflict WC APIs private. (#3321) (r34176)
+    * fixed: svn_client__get_copy_source() can be abysmally slow (#3356) (r35501)
+    * fixed: subversion/libsvn_fs_fs/tree.c (svn_fs_fs__commit_txn)
+             If the commit fails then the NEW_REV argument should be SVN_INVALID_REVNUM. (r35950)
 
   - Bindings:
+      * SWIG/python bindings:
+       - ...
+      * SWIG/python bindings:
+       - ...
+      * JavaHL bindings:
+       - ...
+      * Ruby bindings:
+       - support svn_client_mergeinfo_log_merged() API (r30444)
 
 
 Version 1.5.6
