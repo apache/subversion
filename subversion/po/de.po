@@ -33,7 +33,7 @@
 # log          Log, des Logs
 # log-message  Logmeldung
 # merge        zusammenführen
-# merge tool   Konflikteditor
+# merge tool   Konflikteditor??? Aktuell: Werkzeug zum Zusammenführen!?
 # note         Hinweis
 # obstruct(ed) behindern / behindert
 # property     Eigenschaft
@@ -79,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-03-16 15:24+0100\n"
-"PO-Revision-Date: 2009-03-16 15:30+0100\n"
+"PO-Revision-Date: 2009-03-16 16:30+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -790,11 +790,11 @@ msgstr "Projektarchiv wurde verschoben"
 #: ../include/svn_error_codes.h:866 ../libsvn_ra_serf/replay.c:807
 #: ../libsvn_ra_serf/update.c:2191 ../libsvn_ra_serf/util.c:544
 msgid "Connection timed out"
-msgstr ""
+msgstr "Die Wartezeit für die Verbindung ist abgelaufen"
 
 #: ../include/svn_error_codes.h:871
 msgid "URL access forbidden for unknown reason"
-msgstr ""
+msgstr "URL-Zugriff wegen unbekannter Ursache verboten"
 
 #: ../include/svn_error_codes.h:877 ../include/svn_error_codes.h:906
 msgid "Couldn't find a repository"
@@ -1137,7 +1137,7 @@ msgstr "Nicht unterstütztes Schema in SQLite-Datenbank gefunden"
 
 #: ../include/svn_error_codes.h:1264
 msgid "External program is missing"
-msgstr ""
+msgstr "Externes Programm fehlt"
 
 #: ../include/svn_error_codes.h:1270
 msgid "Error parsing arguments"
@@ -1634,10 +1634,9 @@ msgid "'%s' was not found in the repository at revision %ld"
 msgstr "»%s« wurde im Projektarchiv in Revision %ld nicht gefunden"
 
 #: ../libsvn_client/diff.c:1196
-#, fuzzy
 msgid "Sorry, svn_client_diff5 was called in a way that is not yet supported"
 msgstr ""
-"svn_client_diff4 wurde in einer Art aufgerufen, die noch nicht unterstützt "
+"svn_client_diff5 wurde in einer Art aufgerufen, die noch nicht unterstützt "
 "wird"
 
 #: ../libsvn_client/diff.c:1235
@@ -1950,11 +1949,11 @@ msgstr ""
 
 #: ../libsvn_client/patch.c:251
 msgid ".patch"
-msgstr ""
+msgstr ".patch"
 
 #: ../libsvn_client/patch.c:252
 msgid ".empty"
-msgstr ""
+msgstr ".leer"
 
 #: ../libsvn_client/prop_commands.c:74
 #, c-format
@@ -2548,7 +2547,7 @@ msgid "Attempted to set textual contents of an immutable node"
 msgstr "Versuchte, den Textinhalt eines nicht-veränderlichen Knotens zu setzen"
 
 #: ../libsvn_fs_base/dag.c:1278
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch, representation '%s':\n"
 "   expected:  %s\n"
@@ -2783,40 +2782,40 @@ msgid "Rep contents are too large: got %s, limit is %s"
 msgstr "Inhalt der Darstellung zu groß: »%s« erhalten, Grenze ist »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:808
-#, fuzzy, c-format
+#, c-format
 msgid "Failure reading representation '%s'"
 msgstr "Fehler beim Lesen der Darstellung »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:823
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Prüfsummenfehler, Darstellung »%s«:\n"
+"Prüfsummenfehler auf Darstellung »%s«:\n"
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
 #: ../libsvn_fs_base/reps-strings.c:917
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "MD5 checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"MD5-Prüfsummenfehler, Darstellung »%s«:\n"
+"MD5-Prüfsummenfehler auf Darstellung »%s«:\n"
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
 #: ../libsvn_fs_base/reps-strings.c:930
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "SHA1 checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"SHA1-Prüfsummenfehler, Darstellung »%s«:\n"
+"SHA1-Prüfsummenfehler auf Darstellung »%s«:\n"
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
@@ -3180,9 +3179,8 @@ msgstr "Keine Revision %ld"
 #: ../libsvn_fs_fs/fs_fs.c:1885 ../libsvn_fs_fs/fs_fs.c:1892
 #: ../libsvn_fs_fs/fs_fs.c:1900 ../libsvn_fs_fs/fs_fs.c:1913
 #: ../libsvn_fs_fs/fs_fs.c:1922
-#, fuzzy
 msgid "Malformed text representation offset line in node-rev"
-msgstr "Fehlerhafte »text rep offset« Zeile in Knotenrevision"
+msgstr "Fehlerhafte »text representation offset«-Zeile in Knotenrevision"
 
 #: ../libsvn_fs_fs/fs_fs.c:1989
 msgid "Missing id field in node-rev"
@@ -3750,9 +3748,9 @@ msgstr "Konnte nicht alles in den Datenstrom schreiben"
 #: ../libsvn_ra_neon/get_location_segments.c:206
 #: ../libsvn_ra_neon/get_locations.c:189
 #: ../libsvn_ra_serf/get_deleted_rev.c:233
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' REPORT not implemented"
-msgstr "»get-file-revs« REPORT nicht implementiert"
+msgstr "»%s« REPORT nicht implementiert"
 
 #: ../libsvn_ra_neon/file_revs.c:378
 msgid "The file-revs report didn't contain any revisions"
@@ -4068,7 +4066,7 @@ msgstr "»%s« Pfad nicht gefunden"
 #: ../libsvn_ra_neon/util.c:551
 #, c-format
 msgid "access to '%s' forbidden"
-msgstr ""
+msgstr "Zugriff zu »%s« verboten"
 
 #: ../libsvn_ra_neon/util.c:560 ../libsvn_ra_serf/util.c:1564
 #, c-format
@@ -4124,9 +4122,10 @@ msgstr "Fehler beim Lesen der Antwort auf die %s Anfrage von Festplatte"
 msgid "Missing 'realm' attribute in Authorization header"
 msgstr "Fehlendes Attribut »realm« in Autorisations-Header"
 
+# CHECKME: full stop in error message?
 #: ../libsvn_ra_serf/auth_digest.c:460
 msgid "Incorrect response-digest in Authentication-Info header."
-msgstr ""
+msgstr "Falsche Antwortnummer im Header der Authentifizierungs-Informationen."
 
 #: ../libsvn_ra_serf/commit.c:408
 #, c-format
@@ -4172,9 +4171,9 @@ msgid "The OPTIONS response did not include the requested checked-in value"
 msgstr "Die OPTIONS-Antwort enthielt nicht den angeforderten Wert »checked-in«"
 
 #: ../libsvn_ra_serf/commit.c:1456
-#, fuzzy, c-format
+#, c-format
 msgid "Adding a directory failed: %s on %s (%d %s)"
-msgstr "Hinzufügen eines Verzeichnisses schlug fehl: %s auf %s (%d)"
+msgstr "Hinzufügen eines Verzeichnisses schlug fehl: %s auf %s (%d %s)"
 
 #: ../libsvn_ra_serf/getlocationsegments.c:216
 #, c-format
@@ -5213,9 +5212,9 @@ msgid "Invalid syntax of argument of --config-option"
 msgstr "Ungültige Syntax im Argument von --config-option"
 
 #: ../libsvn_subr/cmdline.c:676
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized file in argument of %s"
-msgstr "Unbekannte Datei im Parameter von --config-option"
+msgstr "Unbekannte Datei im Parameter von %s"
 
 #: ../libsvn_subr/config.c:643
 #, c-format
@@ -5897,9 +5896,8 @@ msgstr ""
 
 #: ../libsvn_subr/patch.c:379 ../libsvn_subr/patch.c:494
 #: ../libsvn_subr/patch.c:526
-#, fuzzy
 msgid "Malformed patch data"
-msgstr "Fehlerhafter Datenstrom"
+msgstr "Fehlerhafte Patchdaten"
 
 #: ../libsvn_subr/path.c:991
 #, c-format
@@ -6838,9 +6836,9 @@ msgid "Error writing entries file for '%s'"
 msgstr "Fehler beim Schreiben der Eintragsdatei für »%s«"
 
 #: ../libsvn_wc/patch.c:532
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' returned error exitcode %d"
-msgstr "Prozess »%s« hat Fehlerwert %d zurückgegeben"
+msgstr "»%s« hat Fehlerwert %d zurückgegeben"
 
 #: ../libsvn_wc/props.c:509
 #, c-format
@@ -7088,9 +7086,9 @@ msgid "No '.' entry in: '%s'"
 msgstr "Kein ».« Eintrag in: »%s«"
 
 #: ../libsvn_wc/update_editor.c:1018
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch while updating '%s'; expected: '%s', actual: '%s'"
-msgstr "Prüfsummenfehler für »%s«; erwartet: »%s«, tatsächlich: »%s«"
+msgstr "Prüfsummenfehler beim Aktualisieren von »%s«; erwartet: »%s«, tatsächlich: »%s«"
 
 #: ../libsvn_wc/update_editor.c:1239
 #, c-format
@@ -7225,9 +7223,9 @@ msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Datei »%s« im Verzeichnis »%s« ist keine versionierte Ressource"
 
 #: ../libsvn_wc/update_editor.c:3799
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"
-msgstr "Prüfsummenfehler für »%s«; erwartet: »%s«, tatsächlich: »%s«"
+msgstr "Prüfsummenfehler für »%s«; erwartet: »%s«, verzeichnet: »%s«"
 
 #: ../libsvn_wc/update_editor.c:5159
 #, c-format
@@ -7288,9 +7286,9 @@ msgid "The node '%s' was not found."
 msgstr "Der Knoten »%s« wurde nicht gefunden."
 
 #: ../libsvn_wc/wc_db.c:2554
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt data for '%s'"
-msgstr "Kann keine URL für »%s« finden"
+msgstr "Fehlerhafte Daten für »%s«"
 
 #: ../svn/blame-cmd.c:277 ../svn/list-cmd.c:226
 msgid "'verbose' option invalid in XML mode"
@@ -8135,13 +8133,12 @@ msgstr ""
 "                            »files«, »immediates« oder »infinity«)"
 
 #: ../svn/main.c:195
-#, fuzzy
 msgid ""
 "set new working copy depth to ARG ('exclude',\n"
 "                            'empty', 'files', 'immediates', or 'infinity')"
 msgstr ""
-"setzt neue Tiefe der Arbeitskopie auf PAR (»empty«,\n"
-"                            »exclude«, »files«, »immediates« oder »infinity«)"
+"setzt neue Tiefe der Arbeitskopie auf PAR (»exclude«,\n"
+"                            »empty«, »files«, »immediates« oder »infinity«)"
 
 #: ../svn/main.c:198 ../svnlook/main.c:141
 msgid "output in XML"
@@ -8190,6 +8187,8 @@ msgid ""
 "output in svnpatch format, implies the\n"
 "                             --no-diff-deleted option"
 msgstr ""
+"Ausgabe in svnpatch-Format, impliziert die\n"
+"                             Option --no-diff-deleted"
 
 #: ../svn/main.c:221
 msgid "notice ancestry when calculating differences"
@@ -8218,9 +8217,8 @@ msgid "use ARG as external editor"
 msgstr "PAR als externen Editor verwenden"
 
 #: ../svn/main.c:230
-#, fuzzy
 msgid "use ARG as external patch command"
-msgstr "PAR als externen Editor verwenden"
+msgstr "PAR als externes Patch-Kommando verwenden"
 
 #: ../svn/main.c:232
 msgid "mark revisions as merged (use with -r)"
@@ -9068,6 +9066,18 @@ msgid ""
 "  This command allows some amount of fuzzing as Unidiff is contextual\n"
 "  and svnpatch revisionless.\n"
 msgstr ""
+"Wendet einen Patch auf einen Arbeitskopiepfad an.\n"
+"Aufruf: patch PATCHDATEI [AKPfad]\n"
+"\n"
+"  PATCHDATEI ist eine Eingabedatei, die, wenn angewandt, die Arbeitskopie\n"
+"  AKPfad in einen veränderten Baum umwandelt, der all die Änderungen umfasst,\n"
+"  die der Patch enthält. Falls AKPfad weggelassen wird, wird ».« verwendet.\n"
+"\n"
+"  Das Format der im Patch eingebetteten Bytes kann von zwei Arten sein:\n"
+"  Unified Diff und/oder svnpatch-Diff (vergleiche »svn diff --svnpatch«).\n"
+"\n"
+"  Dieses Kommando ermöglicht eine kleine Unschärfe, da Unidiff textabhängig\n"
+"  und svnpatch Revisionsunabhängig ist.\n"
 
 #: ../svn/main.c:700
 msgid ""
@@ -9379,9 +9389,7 @@ msgstr ""
 "wieder\n"
 "  herstellen.\n"
 
-# FIXME: "incoming edit" doesn't occur in the PO file!
 #: ../svn/main.c:847
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -9561,7 +9569,7 @@ msgstr ""
 "    svn status\n"
 "     M      wc/bar.c\n"
 "    !     C wc/qaz.c\n"
-"          >   eingehende Änderung, fehlt lokal\n"
+"          >   lokal fehlend, eingehend editiert bei Aktualisierung\n"
 "    D       wc/qax.c\n"
 
 #: ../svn/main.c:935
@@ -10009,7 +10017,7 @@ msgstr "Fehlendes Ziel: »%s« übersprungen\n"
 #: ../svn/notify.c:160
 #, c-format
 msgid "Skipped target: '%s' -- copy-source is missing\n"
-msgstr ""
+msgstr "Ziel: »%s« übersprungen -- copy-source fehlt\n"
 
 #: ../svn/notify.c:167
 #, c-format
@@ -10274,6 +10282,9 @@ msgid ""
 "to use --patch-cmd or 'patch-cmd' run-time configuration\n"
 "option or manually use an external tool to apply Unidiffs."
 msgstr ""
+"Kein »patch«-Programm wurde in Ihrem System gefunden. Bitte versuchen Sie\n"
+"--patch-cmd oder die Laufzeitkonfigurationsoption »patch-cmd«. Alternativ\n"
+"können Sie ein externes Werkzeug einsetzen, um Unidiffs einzuspielen."
 
 #: ../svn/propdel-cmd.c:111
 #, c-format
@@ -10530,7 +10541,7 @@ msgstr ""
 #: ../svn/util.c:261
 #, c-format
 msgid "The external merge tool exited with exit code %d"
-msgstr ""
+msgstr "Das externe Werkzeug zum Zusammenführen wurde mit Fehlercode %d beendet"
 
 #: ../svn/util.c:383
 #, c-format
