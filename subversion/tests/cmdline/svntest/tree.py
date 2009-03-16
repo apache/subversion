@@ -38,10 +38,6 @@ class SVNTreeUnequal(SVNTreeError):
   "Exception raised if two trees are unequal."
   pass
 
-class SVNTreeIsNotDirectory(SVNTreeError):
-  "Exception raised if get_child is passed a file."
-  pass
-
 class SVNTypeMismatch(SVNTreeError):
   "Exception raised if one node is file and other is dir"
   pass
@@ -510,10 +506,10 @@ def get_text(path):
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
-  else, return None. If SVNTreeNode is not a directory, raise a
-  SVNTreeIsNotDirectory exception"""
+  else, return None. If SVNTreeNode is not a directory, exit completely."""
   if node.children == None:
-    raise SVNTreeIsNotDirectory
+    print("Error: Foolish call to get_child.")
+    sys.exit(1)
   for n in node.children:
     if name == n.name:
       return n
@@ -636,9 +632,6 @@ def compare_trees(label,
   except SVNTypeMismatch:
     print('Unequal Types: one Node is a file, the other is a directory')
     raise SVNTreeUnequal
-  except SVNTreeIsNotDirectory:
-    print("Error: Foolish call to get_child.")
-    sys.exit(1)
   except IndexError:
     print("Error: unequal number of children")
     raise SVNTreeUnequal
