@@ -842,6 +842,8 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
 
+  /* SVN_ERR_RA_DAV_CATEGORY_START + 12 is reserved for use in 1.7. */
+
   /** @since New in 1.6 */
   SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
              SVN_ERR_RA_DAV_CATEGORY_START + 13,
