@@ -17,7 +17,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * svnmucc: support '--with-revprop' (r29492)
     * merge: log include-descendants in operational log (r30426, r30428)
     * improved operational logging for 'svn switch' (r30517)
-    * PKS#11 (smartcard) support in libsvn_ra_neon (r29512)
+    * PKCS#11 (smartcard) support in libsvn_ra_neon (r29512)
     * 'Header' keyword, similar to 'Id' but with full URL (r35386)
     * Cache SSL client cert passphrases (issue #2489)
     * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
@@ -63,8 +63,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * non-UTF8 filenames could enter repository (issue #2748)
     * 'svnlook proplist' xml output (issue #2809)
     * don't let mod_dav_svn hide errors from client (issue #3102)
-    * ra_serf failuire during update (issue #3113)
-    * ra_serf comply with RFC2617 in handling authentication headers (r35981)
+    * ra_serf failure during update (issue #3113)
+    * ra_serf comply with RFC 2617 in handling authentication headers (r35981)
     * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
     * use both SHA1 and MD5 in the FS backends (r34388)
     * many other minor bugfixes too numerous to list here
@@ -76,7 +76,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
 
  Developer-visible changes:
   - General:
-    * serf 0.3.0 required (r35586)
+    * serf 0.3.0 required, when building with serf (r35586)
     * require SQLite 3.4.0 or newer (r33520)
     * allow the use of an in-tree SQLite amalgamation (r35263)
     * svn_log_changed_path_t includes a 'kind' field (issue #1967)
