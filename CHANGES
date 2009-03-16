@@ -20,6 +20,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * PKS#11 (smartcard) support in libsvn_ra_neon (r29512)
     * 'Header' keyword, similar to 'Id' but with full URL. (r35386)
     * Cache SSL client cert passphrases (issue #2489)
+    * Improved Python 3 compatibility
+    * Packing of FSFS filesystems
 
   - Client-side bugfixes:
     * faulty reflexive merges (issue #2897)
@@ -47,40 +49,27 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * improved performance removing unversioned directories (r36111)
     * 'svn cp --parents' had path URL encoding issues (issue #3374)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
+    * repository root relative URLs support peg revisions (issue #3193)
+    * support shell quoting rules in externals definitions (issue #2461)
+    * scheme and domain name in urls handled case insensitive (issue #2475)
  
   - Server-side bugfixes:
-    * fixed: mod-dav-svn runs pre-revprop-change twice (#3085)
-    * fixed: Case-sensitivity in hostname bug in libsvn_repos (#2475) (r33236)
-    * fixed: mod-dav-svn ignores pre-revprop-change failure on revprop delete (#3086)
-    * fixed: mod_dav_svn Fix a bug in mod_dav_svn's update REPORT response that prevented lock
-             breaks/steals from being propogated to the client in skelta-response cases. (r29914)
-    * fixed: svnsync do not require destination directory to be 1.5 (r30453)
-    * fixed: merge, pick default revisions with peg revision in single url (r30455)
-    * fixed: Cache ssl client certificate passphrases (#2489) (r34220)
-    * added: Add a --prefix-file switch to svndumpfilter (#2697) (r32318)
-    * fixed: Non-UTF8 filenames can enter repository (#2748) (r33148)
-    * added: svnlook proplist output should be machine parsable (e.g. --xml) (#2809) (r31978)
-    * fixed: ap_fflush() calls in mod_dav_svn can hide some errors from client (#3102) (r35328)
-    * fixed: ra_serf: svn fails during update (#3113) (r33311)
-    * fixed: ra_serf: Following RFC2617, verify authentication header tokens case insensitive.
-             (r35981)
-    * fixed: SVNAllowBulkUpdates mod_dav_svn directive (#3121) (r29922)
-    * fixed: repository root relative URLs should support peg revisions (#3193) (r31458)
-    * fixed: Automatic database recovery with BDB-4.4. and DB_REGISTER (#2449) (r18144)
-    * added: Support the usual shell quoting rules in externals definitions 
-             (\ to escape," to quote).  This allows us to use local paths with 
-             spaces in externals. (#2461) (r33417).
-    * fixed: scheme and domain name in urls should be handled case insensitive. (#2475) (r33236)
-    * fixed: 'svnadmin hotcopy' of packaed repositories. (r36182)
+    * mod_dav_svn runs pre-revprop-change twice (issue #3085)
+    * case-sensitivity in hostname bug in libsvn_repos (issue #2475)
+    * mod_dav_svn ignores pre-revprop-change failure on delete (issue #3086)
+    * mod_dav_svn prevented lock breaks from being propogated to client (r29914)
+    * merge, pick default revisions with peg revision in single url (r30455)
+    * 'svndumpfilter' add '--prefix-file' option (issue #2697)
+    * non-UTF8 filenames could enter repository (issue #2748)
+    * 'svnlook proplist' xml output (issue #2809)
+    * don't let mod_dav_svn hide errors from client (issue #3102)
+    * ra_serf failuire during update (issue #3113)
+    * ra_serf comply with RFC2617 in handling authentication headers (r35981)
+    * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
 
   - Contributed tools improvements and bugfixes:
-    * commit-email.pl: Deprecated; use mailer.py instead (r31755,r31767)
-    * fixed: svnmerge.py migration tool(s) do not guarantee proper svn:mergeinfo
-             range ordering (#3302) (r35297)
-    * Partially Python 3 compatibility: 
-       * tools/backup/hot-backup.py.in: Use list comprehensions instead of filter(). (r34364) 
-       * tools/dev/iz/find-fix.py
-         tools/dev/trails.py Try to import functools.reduce. (r34366)
+    * commit-email.pl: Deprecated; use mailer.py instead (r31755, -67)
+    * svnmerge.py migration tool munged svn:mergeinfo ordering (issue #3302)
 
  Developer-visible changes:
   - General:
