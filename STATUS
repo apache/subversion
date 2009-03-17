@@ -67,7 +67,7 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
-  * r36613, r36615, r36631
+  * r36613, r36615, r36631, r36641
     Avoid potential segfault when dealing with subtree mergeinfo.
     Justification:
       One user reported a segfault due to the way, prior to this change, that
@@ -75,10 +75,10 @@ Candidate changes for 1.5.7:
       the elements from the array, see
       http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
     Notes:
-      The fix itself is r36613 and r36631, r36615 is a variable renaming
-      change that is necessary to avoid a conflict.  r36613 doesn't merge
-      cleanly due to text conflicts and the lack of SVN_ERR_ASSERT in 1.5.x.
-      A backport branch can be found at
+      The fix itself is r36613, r36631, and r36641.  r36615 is a variable
+      renaming change that is necessary to avoid a conflict.  r36613 doesn't
+      merge cleanly due to text conflicts and the lack of SVN_ERR_ASSERT in
+      1.5.x.  A backport branch can be found at
       http://svn.collab.net/repos/svn/branches/1.5.x-r36613.
       
     Votes:
