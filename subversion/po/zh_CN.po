@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-03-12 12:40+0800\n"
-"PO-Revision-Date: 2009-03-12 12:40+0800\n"
+"POT-Creation-Date: 2009-03-17 21:28+0800\n"
+"PO-Revision-Date: 2009-03-17 21:25+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -570,6 +570,9 @@ msgstr "版本库已经移动"
 
 msgid "Connection timed out"
 msgstr "连接超时"
+
+msgid "URL access forbidden for unknown reason"
+msgstr "因为未知的理由，禁止访问 URL"
 
 msgid "Couldn't find a repository"
 msgstr "无法找到版本库"
@@ -2937,6 +2940,10 @@ msgid "'%s' path not found"
 msgstr "找不到路径 “%s”"
 
 #, c-format
+msgid "access to '%s' forbidden"
+msgstr "禁止访问 '%s'"
+
+#, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr "版本库永久移到 “%s”；请重新定位。"
 
@@ -4794,10 +4801,6 @@ msgstr "条目“%s”有非法调度"
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "无此条目:“%s”"
-
-#, c-format
-msgid "Existing sqlite database found at '%s'"
-msgstr "在 '%s' 发现已有的 SQLite 数据库"
 
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
