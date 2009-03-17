@@ -111,6 +111,20 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       +1: stsp, arfrever
       +1: gstein (for 1.6.1; it can wait)
 
+  * r36613, r36631
+    Avoid potential segfault when dealing with subtree mergeinfo.
+    Justification:
+      One user reported a segfault due to the way, prior to this change, that
+      we set children_with_mergeinfo elements to NULL rather than removing
+      the elements from the array, see
+      http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
+    Notes:
+      While segfaults are serious, this one is not sufficient by itself to
+      hold up 1.6.0 given that it is not a regression from 1.5.x, no one has
+      been able to produce a reproduction recipe, and only one user has
+      reported it (and they were able to work around it). 
+    Votes:
+      +1: pburba
 
 Status of 1.6.1:
 ================
