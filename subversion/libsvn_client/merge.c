@@ -3637,33 +3637,26 @@ make_merge_conflict_error(const char *target_wcpath,
      r->start, r->end, svn_path_local_style(target_wcpath, pool));
 }
 
-/* Remove the element at IDX from the array CHILDREN_WITH_MERGEINFO.
-   If IDX is not a valid element of CHILDREN_WITH_MERGEINFO do nothing. */
+/* Remove the element at IDX from the array ARR.
+   If IDX is not a valid element of ARR do nothing. */
 static void
-remove_child_with_mergeinfo(apr_array_header_t *children_with_mergeinfo,
-                            int idx)
+remove_element_from_array(apr_array_header_t *arr,
+                          int idx)
 {
   /* Do we have a valid index? */
-  if (idx >= 0 && idx < children_with_mergeinfo->nelts)
+  if (idx >= 0 && idx < arr->nelts)
     {
-      if (idx == (children_with_mergeinfo->nelts - 1))
+      if (idx == (arr->nelts - 1))
         {
           /* Deleting the last or only element in an array is easy. */
-          apr_array_pop(children_with_mergeinfo);
+          apr_array_pop(arr);
         }
       else
         {
-          int remainder = children_with_mergeinfo->nelts - 1 - idx;
-          svn_client__merge_path_t *deleted_child =
-            APR_ARRAY_IDX(children_with_mergeinfo, idx,
-                          svn_client__merge_path_t *);
-          svn_client__merge_path_t *next_child =
-            APR_ARRAY_IDX(children_with_mergeinfo, idx + 1,
-                          svn_client__merge_path_t *);
-
-          memmove(deleted_child, next_child,
-                  children_with_mergeinfo->elt_size * remainder);
-          --(children_with_mergeinfo->nelts);
+          memmove(arr->elts + arr->elt_size * idx,
+                  arr->elts + arr->elt_size * (idx + 1),
+                  arr->elt_size * (arr->nelts - 1 - idx));
+          --(arr->nelts);
         }
     }
 }
@@ -3696,8 +3689,8 @@ remove_absent_children(const char *target_wcpath,
         {
           if (notify_b->skipped_paths)
             apr_hash_set(notify_b->skipped_paths, child->path,
-                         APR_HASH_KEY_STRING, NULL);
-          remove_child_with_mergeinfo(children_with_mergeinfo, i);
+              APR_HASH_KEY_STRING, NULL);
+          remove_element_from_array(children_with_mergeinfo, i--);
         }
     }
 }
@@ -3731,8 +3724,8 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
                            child->path,
                            APR_HASH_KEY_STRING))
             {
-              remove_child_with_mergeinfo(notify_b->children_with_mergeinfo,
-                                          i);
+              remove_element_from_array(notify_b->children_with_mergeinfo,
+                                        i);
             }
         }
     }
