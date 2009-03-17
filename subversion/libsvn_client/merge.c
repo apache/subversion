@@ -34,6 +34,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_utf.h"
@@ -1950,7 +1951,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                notes/tree-conflicts/detection.txt.
              */
 
-            svn_path_split(path, &parent_path, NULL, subpool);
+            svn_dirent_split(path, &parent_path, NULL, subpool);
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                         subpool));
             /* Passing NULL for the notify_func and notify_baton because
@@ -2312,7 +2313,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
             }
           else
             {
-              added_path_parent = svn_path_dirname(added_path, pool);
+              added_path_parent = svn_dirent_dirname(added_path, pool);
               if (!apr_hash_get(notify_b->added_paths, added_path_parent,
                                 APR_HASH_KEY_STRING))
                 is_root_of_added_subtree = TRUE;
@@ -4290,7 +4291,7 @@ single_file_merge_get_file(const char **filename,
   svn_stream_t *stream;
 
   SVN_ERR(svn_stream_open_unique(&stream, filename,
-                                 svn_path_dirname(wc_target, pool),
+                                 svn_dirent_dirname(wc_target, pool),
                                  svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
@@ -4382,7 +4383,7 @@ get_mergeinfo_walk_cb(const char *path,
   svn_boolean_t has_mergeinfo_from_merge_src = FALSE;
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(path, wb->merge_target_path);
-  const char *parent_path = svn_path_dirname(path, pool);
+  const char *parent_path = svn_dirent_dirname(path, pool);
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
 
@@ -4679,7 +4680,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                    apr_pool_t *pool)
 {
   svn_client__merge_path_t *parent;
-  const char *parent_path = svn_path_dirname(child->path, pool);
+  const char *parent_path = svn_dirent_dirname(child->path, pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_wc_adm_access_t *parent_access;
@@ -6505,7 +6506,7 @@ do_directory_merge(const char *url1,
                  non-inheritable marker. */
               SVN_ERR(svn_wc_prop_get(&added_path_parent_propval,
                                       SVN_PROP_MERGEINFO,
-                                      svn_path_dirname(added_path, iterpool),
+                                      svn_dirent_dirname(added_path, iterpool),
                                       adm_access, iterpool));
               if (added_path_parent_propval
                   && strstr(added_path_parent_propval->data,
