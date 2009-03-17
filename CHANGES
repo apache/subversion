@@ -9,23 +9,26 @@ http://svn.collab.net/repos/svn/tags/1.6.0
   - Major new features:
     * Identical files share storage space in repository (issue #2286)
     * File-externals support for intra-repository files (issue #937)
-    * Tree Conflicts (issue #2282, #2908)
+    * "Tree" conflicts now handled more gracefully (issue #2282, #2908)
 
   - Minor new features and improvements:
-    * add '--with-no-revprops' to 'svn log' (issue #3286)
     * pre-lock hook can now specify lock tokens via stdout (r32778)
     * svnmucc: support '--with-revprop' (r29492)
     * merge: log include-descendants in operational log (r30426, r30428)
     * improved operational logging for 'svn switch' (r30517)
     * PKCS#11 (smartcard) support in libsvn_ra_neon (r29512)
     * 'Header' keyword, similar to 'Id' but with full URL (r35386)
+    * new $Header$ keyword, similar to 'Id' but with full URL (r35386)
     * Warn/disallow when storing plain-text passwords (r31046)
     * Support KWallet and GNOME keyring for password storage (r31241, -337)
-    * Cache SSL client cert passphrases (issue #2489)
+    * client now caches SSL client cert passphrases (issue #2489)
     * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
     * add '--ignore-externals' option to 'svn cp' (issue #3365)
+    * add '--with-no-revprops' to 'svn log' (issue #3286)
     * Improved Python 3 compatibility
-    * Packing of FSFS filesystems
+    * new 'svnadmin pack' command to compress FSFS filesystems
+    * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
+    * new public mod_dav_svn URI syntax:  path?[p=PEG][&r=REV] (r34076)
 
   - Client-side bugfixes:
     * faulty reflexive merges (issue #2897)
@@ -67,7 +70,6 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * don't let mod_dav_svn hide errors from client (issue #3102)
     * ra_serf failure during update (issue #3113)
     * ra_serf comply with RFC 2617 in handling authentication headers (r35981)
-    * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
     * use both SHA1 and MD5 in the FS backends (r34388)
     * many other minor bugfixes too numerous to list here
 
@@ -81,7 +83,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * serf 0.3.0 required, when building with serf (r35586)
     * require SQLite 3.4.0 or newer (r33520)
     * allow the use of an in-tree SQLite amalgamation (r35263)
-    * svn_log_changed_path_t includes a 'kind' field (issue #1967)
+    * svn_log_changed_path_t now includes a 'kind' field (issue #1967)
     * BDB `changes' table inconsistency when APIs are misused (issue #3349)
     * configure should prefer apr-1 over apr-0 if both are present (issue #2671)
     * make 'Not Found' errors consistent between RA layers (issue #3137)
