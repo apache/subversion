@@ -72,7 +72,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
   // Clear all standing exceptions.
   env->ExceptionClear();
 
-  // Remember the env paramater for the remainder of the request.
+  // Remember the env parameter for the remainder of the request.
   setEnv(env);
 
   // Lock the list of finalized objects.
