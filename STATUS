@@ -111,7 +111,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       +1: stsp, arfrever
       +1: gstein (for 1.6.1; it can wait)
 
-  * r36613, r36615, r36631
+  * r36613, r36615, r36631, r36641
     Avoid potential segfault when dealing with subtree mergeinfo.
     Justification:
       One user reported a segfault due to the way, prior to this change, that
@@ -123,8 +123,8 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       hold up 1.6.0 given that it is not a regression from 1.5.x, no one has
       been able to produce a reproduction recipe, and only one user has
       reported it (and they were able to work around it).  The fix itself is
-      r36613 and r36631, r36615 is a variable renaming change that is
-      necessary to avoid a conflict.
+      r36613, r36631, and r36641.  r36615 is a variable renaming change that
+      is necessary to avoid a conflict.
     Votes:
       +1: pburba
 
