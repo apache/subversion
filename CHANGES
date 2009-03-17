@@ -7,9 +7,9 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * Now require Windows 2000 or newer on Windows (r33170)
 
   - Major new features:
-    * Identical files share storage space in repository (issue #2286)
-    * File-externals support for intra-repository files (issue #937)
-    * "Tree" conflicts now handled more gracefully (issue #2282, #2908)
+    * identical files share storage space in repository (issue #2286)
+    * file-externals support for intra-repository files (issue #937)
+    * "tree" conflicts now handled more gracefully (issue #2282, #2908)
 
   - Minor new features and improvements:
     * pre-lock hook can now specify lock tokens via stdout (r32778)
@@ -17,10 +17,9 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * merge: log include-descendants in operational log (r30426, r30428)
     * improved operational logging for 'svn switch' (r30517)
     * PKCS#11 (smartcard) support in libsvn_ra_neon (r29512)
-    * 'Header' keyword, similar to 'Id' but with full URL (r35386)
-    * new $Header$ keyword, similar to 'Id' but with full URL (r35386)
-    * Warn/disallow when storing plain-text passwords (r31046)
-    * Support KWallet and GNOME keyring for password storage (r31241, -337)
+    * new 'Header' keyword, similar to 'Id' but with full URL (r35386)
+    * warn/disallow when storing plain-text passwords (r31046)
+    * support KWallet and GNOME keyring for password storage (r31241, -337)
     * client now caches SSL client cert passphrases (issue #2489)
     * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
     * add '--ignore-externals' option to 'svn cp' (issue #3365)
@@ -98,7 +97,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * if fsfs commit fails return SVN_INVALID_REVNUM (r35950)
 
   - Bindings:
-    * Many improvements to all bindings (Java, Perl, Python, and Ruby)
+    * many improvements to all bindings (Java, Perl, Python, and Ruby)
 
 
 Version 1.5.6
