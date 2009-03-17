@@ -19,6 +19,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * improved operational logging for 'svn switch' (r30517)
     * PKCS#11 (smartcard) support in libsvn_ra_neon (r29512)
     * 'Header' keyword, similar to 'Id' but with full URL (r35386)
+    * Warn/disallow when storing plain-text passwords (r31046)
+    * Support KWallet and GNOME keyring for password storage (r31241, -337)
     * Cache SSL client cert passphrases (issue #2489)
     * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
     * add '--ignore-externals' option to 'svn cp' (issue #3365)
