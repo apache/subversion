@@ -1284,9 +1284,13 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  * that piece of information.
  *
  * ORIGINAL_REPOS_RELPATH will refer to the *root* of the operation. It
- * does *not* correspond to the node given by LOCAL_RELPATH. The caller
+ * does *not* correspond to the node given by LOCAL_ABSPATH. The caller
  * can use the suffix on LOCAL_ABSPATH (relative to OP_ROOT_ABSPATH) in
- * order to compute the corresponding source node.
+ * order to compute the source node which corresponds to LOCAL_ABSPATH.
+ *
+ * If the node given by LOCAL_ABSPATH does not have changes recorded in
+ * the WORKING tree, then SVN_ERR_WC_PATH_NOT_FOUND is returned.
+ * ### we should probably return a special error instead
  *
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.

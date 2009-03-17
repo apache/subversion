@@ -894,6 +894,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
+  svn_boolean_t parent_copied = FALSE;
   
   if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
     return svn_wc__read_entries_old(adm_access, scratch_pool);
@@ -1129,6 +1130,11 @@ read_entries(svn_wc_adm_access_t *adm_access,
             {
               entry->copied = TRUE;
 
+              /* If this is the parent directory, then record its copy
+                 status. This will be used for schedule-delete children.  */
+              if (*entry->name == '\0')
+                parent_copied = TRUE;
+
               /* If this is a child, then it should be schedule_normal.  */
               if (original_repos_relpath == NULL)
                 {
@@ -1222,6 +1228,93 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
               parent_entry = apr_hash_get(entries, "", 0);
               entry->revision = parent_entry->revision;
+            }
+
+          /* If the parent was copied, then we're copied too. For child nodes,
+             this is easy -- we dropped off the value in PARENT_COPIED. For
+             "this dir", we need a bit more work.  */
+          if (*entry->name != '\0')
+            {
+              entry->copied = parent_copied;
+            }
+          else
+            {
+              const char *current_abspath = local_abspath;
+
+              /* As long as CURRENT_ABSPATH refers to a deleted node, we
+                 will scan up the tree looking for a copy. We will either
+                 find this node is a deleted child of a copied subtree,
+                 or it is part of a deleted subtree.  */
+              while (TRUE)
+                {
+                  const char *parent_abspath;
+                  svn_wc__db_status_t parent_status;
+                  const char *op_root_abspath;
+
+                  /* Back up to this directory's parent. We know it is version-
+                     controlled since we are schedule-delete (you can't schedule
+                     the wcroot for deletion!). We then need to figure out what
+                     is going on with that node.  */
+                  parent_abspath = svn_dirent_dirname(current_abspath,
+                                                      iterpool);
+                  err = svn_wc__db_scan_working(&parent_status,
+                                                &op_root_abspath,
+                                                NULL, NULL, NULL,
+                                                NULL, NULL, NULL, NULL,
+                                                NULL,
+                                                db,
+                                                parent_abspath,
+                                                iterpool, iterpool);
+                  if (err)
+                    {
+                      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                        return err;
+                      svn_error_clear(err);
+
+                      /* The parent is not in the WORKING tree, meaning it is
+                         unmodified. That implies CURRENT_ABSPATH is the root
+                         of a deleted subtree, so it is certainly not copied.
+                         Nothing more to do.  */
+                      break;
+                    }
+                  if (parent_status == svn_wc__db_status_copied
+                      || parent_status == svn_wc__db_status_moved_dst)
+                    {
+                      /* The parent is copied/moved here, so CURRENT_ABSPATH
+                         is the root of a deleted subtree. Mark everything as
+                         COPIED.
+
+                         Note: MOVED_DST is a concept foreign to this old
+                         interface, but it is best represented as if a copy
+                         had occurred, so we'll model it that way to old
+                         clients.  */
+                      entry->copied = parent_copied = TRUE;
+                      break;
+                    }
+                  if (parent_status == svn_wc__db_status_added)
+                    {
+                      /* Whoops. CURRENT_ABSPATH is scheduled for deletion,
+                         yet the parent is scheduled for addition. That is
+                         illogical. CURRENT should have simply been removed
+                         from version control.  */
+                      SVN_ERR_MALFUNCTION();
+                    }
+
+                  /* Reaching here, the only valid response for the parent
+                     is that it has been deleted/moved-away.  */
+                  SVN_ERR_ASSERT(
+                    parent_status == svn_wc__db_status_deleted
+                    || parent_status == svn_wc__db_status_moved_src);
+
+                  /* OP_ROOT_ABSPATH is the root of the deletion/move. We
+                     now need to examine what happened to *its* parent.
+                     That root may be a deleted subtree within a copied
+                     subtree. We gotta go all the way up to the top.
+
+                     Set CURRENT_ABSPATH to this new root. We'll loop
+                     around to examine its parent.  */
+                  current_abspath = op_root_abspath;
+                }
             }
         }
 

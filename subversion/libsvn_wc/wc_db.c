@@ -2730,6 +2730,9 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* ### the next three calls could/should be optimized to reduce scanning
+     ### for a wc.db and row fetches within that.  */
+
   /* Fetch the repos root and repos uuid from the base node, we we can
      then create or get the repos id.
      ### is there a better way to do this? */
@@ -2902,6 +2905,8 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
             start_status = svn_wc__db_status_added;
           else
             start_status = svn_wc__db_status_deleted;
+          /* ### assert valid presence values? what if it is (say)
+             ### 'incomplete' ? probably return an error.  */
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
@@ -2924,6 +2929,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
 
       if (!svn_sqlite__column_is_null(stmt, 13 /* moved_to */))
         {
+          /* ### assert that presence == not-present ?  */
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
 
           if (status)
