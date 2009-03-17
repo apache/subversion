@@ -1,0 +1,55 @@
+API ERRATA -- $Id: wc001.txt 36598 2009-03-16 16:06:24Z gstein $
+
+Root Cause of Errata: incompatible
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_entry
+                      svn_wc_entries_read
+     New Behavior in: 1.7
+      Related Issues: n/a
+
+
+== Details of Previous Behavior ==
+
+When a working copy directory is being constructed, based on a *copy*,
+then it will transiently report its URL (via entry->url) as matching
+that of the copyfrom_url. The correct behavior should have been to
+report its intended location in the repository when the newly-added
+(-copied) directory is committed. By the time svn_wc_add3() completes,
+as part of the svn_client_copy5() ... wc_to_wc_copy() ... chain, the
+URL will have been rewritten properly (see the call to
+svn_wc__do_update_cleanup in svn_wc_add3).
+
+Only Subversion has control during this copy operation. It is possible
+that an API user will never see this transient state.
+
+
+== Details of New Behavior ==
+
+In version 1.7, the new working copy format does not have a way to
+store an intended URL that is *different* from the location specified
+or implied by its parent. In this case, the URL of the directory being
+copied will always report its correct, intended location, rather than
+that of the copyfrom URL.
+
+As noted above, it may be possible that an API user will never see
+this different behavior in the entry->url value.
+
+
+== Rationale for Change ==
+
+We do not have a way to model the transient reporting of an incorrect
+URL. Because that transient value is *incorrect*, and because the
+window of the (previous) behavior is narrow, it appears that the
+change in behavior will not have an impact on API consumers.
+
+
+== Impact on API Users ==
+
+It appears there will be no impact on consumers of the Subversion API.
+
+Internally to libsvn_wc, some calls to svn_wc_ensure_adm3() are aware
+of this erroneous behavior and pass the copyfrom URL as the "expected"
+URL of the entry. Because this is supposed to work as an assertion,
+those calls will be left untouched and the svn_wc_ensure_adm3()
+function will be updated to allow *either* entry->url or
+entry->copyfrom_url to match the passed URL.
