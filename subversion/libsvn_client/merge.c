@@ -3064,7 +3064,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
                            APR_HASH_KEY_STRING))
             {
               remove_element_from_array(notify_b->children_with_mergeinfo,
-                                        i);
+                                        i--);
             }
         }
     }
