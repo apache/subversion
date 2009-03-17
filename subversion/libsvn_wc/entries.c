@@ -1294,10 +1294,15 @@ read_entries(svn_wc_adm_access_t *adm_access,
                   if (parent_status == svn_wc__db_status_added)
                     {
                       /* Whoops. CURRENT_ABSPATH is scheduled for deletion,
-                         yet the parent is scheduled for addition. That is
-                         illogical. CURRENT should have simply been removed
-                         from version control.  */
-                      SVN_ERR_MALFUNCTION();
+                         yet the parent is scheduled for addition. This can
+                         occur when a subtree is deleted, and then nodes
+                         are added *later*. Since the parent is a simple add,
+                         then nothing has been copied. Nothing more to do.
+
+                         Note: if a subtree is added, *then* deletions are
+                         made, the nodes should simply be removed from
+                         version control.  */
+                      break;
                     }
 
                   /* Reaching here, the only valid response for the parent
