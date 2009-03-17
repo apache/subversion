@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-02-17 13:16+0800\n"
-"PO-Revision-Date: 2009-02-17 13:05+0800\n"
+"POT-Creation-Date: 2009-03-17 21:22+0800\n"
+"PO-Revision-Date: 2009-03-17 21:31+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -558,6 +558,9 @@ msgstr "不能从响应的头信息中获取数据"
 
 msgid "Repository has been moved"
 msgstr "版本库已经移动"
+
+msgid "URL access forbidden for unknown reason"
+msgstr "因为未知的理由，禁止访问 URL"
 
 msgid "Couldn't find a repository"
 msgstr "无法找到版本库"
@@ -2959,7 +2962,7 @@ msgstr "读取请求 %s 响应的脱机数据时出现错误"
 
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
-msgstr "%s 请求的响应返回无效XML: %s (%s)"
+msgstr "%s 请求的响应返回无效 XML: %s (%s)"
 
 msgid "Missing 'realm' attribute in Authorization header"
 msgstr "授权头丢失属性 “realm”"
