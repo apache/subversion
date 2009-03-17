@@ -3637,28 +3637,28 @@ make_merge_conflict_error(const char *target_wcpath,
      r->start, r->end, svn_path_local_style(target_wcpath, pool));
 }
 
-/* Remove the element at INDEX from the array CHILDREN_WITH_MERGEINFO.
-   If INDEX is not a valid element of CHILDREN_WITH_MERGEINFO do nothing. */
+/* Remove the element at IDX from the array CHILDREN_WITH_MERGEINFO.
+   If IDX is not a valid element of CHILDREN_WITH_MERGEINFO do nothing. */
 static void
 remove_child_with_mergeinfo(apr_array_header_t *children_with_mergeinfo,
-                            int index)
+                            int idx)
 {
   /* Do we have a valid index? */
-  if (index >= 0 && index < children_with_mergeinfo->nelts)
+  if (idx >= 0 && idx < children_with_mergeinfo->nelts)
     {
-      if (index == (children_with_mergeinfo->nelts - 1))
+      if (idx == (children_with_mergeinfo->nelts - 1))
         {
           /* Deleting the last or only element in an array is easy. */
           apr_array_pop(children_with_mergeinfo);
         }
       else
         {
-          int remainder = children_with_mergeinfo->nelts - 1 - index;
+          int remainder = children_with_mergeinfo->nelts - 1 - idx;
           svn_client__merge_path_t *deleted_child =
-            APR_ARRAY_IDX(children_with_mergeinfo, index,
+            APR_ARRAY_IDX(children_with_mergeinfo, idx,
                           svn_client__merge_path_t *);
           svn_client__merge_path_t *next_child =
-            APR_ARRAY_IDX(children_with_mergeinfo, index + 1,
+            APR_ARRAY_IDX(children_with_mergeinfo, idx + 1,
                           svn_client__merge_path_t *);
 
           memmove(deleted_child, next_child,
