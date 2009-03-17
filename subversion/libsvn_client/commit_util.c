@@ -404,7 +404,6 @@ harvest_committables(apr_hash_t *committables,
   apr_byte_t state_flags = 0;
   svn_node_kind_t kind;
   const char *p_path;
-  svn_boolean_t tc, pc, treec;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
@@ -484,18 +483,21 @@ harvest_committables(apr_hash_t *committables,
           entry = e;
     }
 
-  SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access,
-                               scratch_pool));
-
-  /* Bail now if any conflicts exist for the ENTRY. */
-  if (tc || pc || treec)
+  /* If ENTRY is in our changelist, then examine it for conflicts. We
+     need to bail out if any conflicts exist.  */
+  if (SVN_WC__CL_MATCH(changelists, entry))
     {
-      /* Paths in conflict which are not part of our changelist should
-         be ignored. */
-      if (SVN_WC__CL_MATCH(changelists, entry))
-        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                                 _("Aborting commit: '%s' remains in conflict"),
-                                 svn_dirent_local_style(path, scratch_pool));
+      svn_boolean_t tc, pc, treec;
+
+      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access,
+                                   scratch_pool));
+      if (tc || pc || treec)
+        {
+          return svn_error_createf(
+            SVN_ERR_WC_FOUND_CONFLICT, NULL,
+            _("Aborting commit: '%s' remains in conflict"),
+            svn_dirent_local_style(path, scratch_pool));
+        }
     }
 
   SVN_ERR(bail_on_tree_conflicted_children(path, entry, adm_access, depth,
@@ -689,7 +691,6 @@ harvest_committables(apr_hash_t *committables,
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
       apr_hash_index_t *hi;
-      const svn_wc_entry_t *this_entry;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       /* Loop over all other entries in this directory, skipping the
@@ -700,6 +701,7 @@ harvest_committables(apr_hash_t *committables,
         {
           const void *key;
           void *val;
+          const svn_wc_entry_t *this_entry;
           const char *name;
           const char *full_path;
           const char *used_url = NULL;
@@ -734,7 +736,7 @@ harvest_committables(apr_hash_t *committables,
              TODO: Do we even need this conditional with WC-NG?  Aren't we
              always returning the URL in the entry struct? */
           if (this_entry->url && !copy_mode)
-            used_url = entry->url;
+            used_url = this_entry->url;
           else
             used_url = svn_path_url_add_component2(url, name, iterpool);
 
