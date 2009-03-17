@@ -1230,11 +1230,24 @@ read_entries(svn_wc_adm_access_t *adm_access,
               entry->revision = parent_entry->revision;
             }
 
-          /* If the parent was copied, then we're copied too. For child nodes,
-             this is easy -- we dropped off the value in PARENT_COPIED. For
-             "this dir", we need a bit more work.  */
-          if (*entry->name != '\0')
+          /* Hold on tight. This is where it gets REALLY confusing.
+
+             If we have changed_* information for the node which is being
+             deleted, then it doesn't matter whether we are COPIED or not.
+             Presumably because we know what revision needs to be deleted.
+
+             If we do NOT have changed_* information, then if the parent
+             was COPIED, then we are also COPIED. For child nodes, detection
+             is easy -- we dropped off the value into PARENT_COPIED. For
+             "this dir", we have a lot more work to see if any ancestors
+             were copied, and (thus) making us a COPIED child.  */
+          if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
             {
+              /* Since we have change information, this is not COPIED.  */
+            }
+          else if (*entry->name != '\0')
+            {
+              /* Child nodes simply inherit the parent's COPIED flag.  */
               entry->copied = parent_copied;
             }
           else
