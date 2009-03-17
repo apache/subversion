@@ -97,6 +97,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * if fsfs commit fails return SVN_INVALID_REVNUM (r35950)
 
   - Bindings:
+    * new: ctypes python bindings
     * many improvements to all bindings (Java, Perl, Python, and Ruby)
 
 
