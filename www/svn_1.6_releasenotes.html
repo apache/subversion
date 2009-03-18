@@ -529,8 +529,11 @@ data of FSFS repositories.</p>
 <div class="h3" id="ctypes-python-bindings" title="ctypes-python-bindings">
 <h3>Ctypes Python Bindings</h3>
 
-<p>Subversion 1.6 has support for Ctypes python bindings which has
-many advantages over the SWIG based python bindings.</p>
+<p>Subversion 1.6 introduces a new python binding for the Subversion API. The
+new binding makes use of the ctypes library to present the standard API along
+with a selection of Python classes to give an object-oriented interface to
+standard Subversion constructs.  These bindings have several advantages over
+the traditional SWIG-based bindings:</p>
 <ul>
   <li>Generated automatically</li>
   <li>Straightforward, and don't have any special "transformation" rules</li>
@@ -540,6 +543,15 @@ many advantages over the SWIG based python bindings.</p>
   <li>High level classes make it easy to access common subversion
   functionality in a pythonic way</li>
 </ul>
+
+<p>Building the ctypes bindings produces two ways to access Subversion from
+python. The first interface is a direct python port of the standard API.
+Ctypes provides some basic type conversions and allows the calling of
+Subversion functions just like in C code. The new bindings also introduce a
+set of python classes to enable higher-level access to Subversion features.
+These classes take full advantage of python features and hide as much of the
+C implementation as possible to make Subversion easier to use for python
+programmers not familiar with the C API.</p>
 
 </div> <!-- ctypes-python-bindings -->
 
