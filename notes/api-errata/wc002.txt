@@ -1,4 +1,4 @@
-API ERRATA -- $Id: wc001.txt 36598 2009-03-16 16:06:24Z gstein $
+API ERRATA -- $Id$
 
 Root Cause of Errata: incompatible
  Library(s) Affected: libsvn_wc
