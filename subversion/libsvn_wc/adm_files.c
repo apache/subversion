@@ -746,12 +746,16 @@ svn_wc_ensure_adm3(const char *path,
       /** ### comparing URLs, should they be canonicalized first? */
       if (strcmp(entry->url, url) != 0
           && (entry->copyfrom_url == NULL
-              || strcmp(entry->copyfrom_url, url) != 0))
-        return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-           url, entry->url, path);
+              || strcmp(entry->copyfrom_url, url) != 0)
+          && ((repos != NULL && !svn_uri_is_ancestor(repos, entry->url))
+              || strcmp(entry->uuid, uuid) != 0))
+        {
+          return
+            svn_error_createf
+            (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+             _("URL '%s' doesn't match existing URL '%s' in '%s'"),
+             url, entry->url, path);
+        }
     }
 
   return SVN_NO_ERROR;
