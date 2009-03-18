@@ -57,10 +57,8 @@ svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
                                 const svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
-/* Store ENTRIES in the cache in ADM_ACCESS appropriate for SHOW_DELETED.
-   ENTRIES may be NULL. */
+/* Store ENTRIES in the cache in ADM_ACCESS.  ENTRIES may be NULL. */
 void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
-                                    svn_boolean_t show_deleted,
                                     apr_hash_t *entries);
 
 /* Return the entries hash appropriate for SHOW_DELETED cached in

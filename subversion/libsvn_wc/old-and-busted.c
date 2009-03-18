@@ -953,7 +953,7 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
   /* Fill in any implied fields. */
   SVN_ERR(svn_wc__resolve_to_defaults(entries, result_pool));
 
-  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
+  svn_wc__adm_access_set_entries(adm_access, entries);
 
   return SVN_NO_ERROR;
 }
@@ -1642,8 +1642,7 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                                  svn_wc_adm_access_path(adm_access),
                                  SVN_WC__ADM_ENTRIES, pool);
 
-  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
-  svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
+  svn_wc__adm_access_set_entries(adm_access, entries);
 
   return err;
 }

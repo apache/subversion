@@ -85,11 +85,9 @@ struct svn_wc_adm_access_t
   /* SET_OWNER is TRUE if SET is allocated from this access baton */
   svn_boolean_t set_owner;
 
-  /* ENTRIES is the cached entries for PATH, without those in state
-     deleted. ENTRIES_HIDDEN is the cached entries including those in
-     state deleted or state absent. Either may be NULL. */
-  apr_hash_t *entries;
-  apr_hash_t *entries_hidden;
+  /* ENTRIES_HIDDEN is all cached entries including those in
+     state deleted or state absent. It may be NULL. */
+  apr_hash_t *entries_all;
 
   /* A hash mapping const char * entry names to hashes of wcprops.
      These hashes map const char * names to svn_string_t * values.
@@ -415,8 +413,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   svn_wc_adm_access_t *lock = apr_palloc(pool, sizeof(*lock));
 
   lock->type = type;
-  lock->entries = NULL;
-  lock->entries_hidden = NULL;
+  lock->entries_all = NULL;
   lock->wcprops = NULL;
   lock->wc_format = 0;
   lock->shared = NULL;
@@ -1413,77 +1410,75 @@ svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
   return SVN_NO_ERROR;
 }
 
-/* Ensure that the cache for the pruned hash (no deleted entries) in
-   ADM_ACCESS is valid if the full hash is cached.  POOL is used for
-   local, short term, memory allocation.
+/* Prune the deleted entries from the cached entries in ADM_ACCESS, and
+   put that collection in *ENTRIES.  SCRATCH_POOL is used for local, short
+   term, memory allocation.
 
-   ### Should this sort of processing be in entries.c? */
-static void
+   ### Should this sort of processing be in entries.c?
+   ### yes, it should -hkw  */
+static apr_hash_t *
 prune_deleted(svn_wc_adm_access_t *adm_access,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
-  if (! adm_access->entries && adm_access->entries_hidden)
+  apr_hash_index_t *hi;
+  apr_hash_t *entries;
+
+  if (! adm_access->entries_all)
+    return NULL;
+
+  /* I think it will be common for there to be no deleted entries, so
+     it is worth checking for that case as we can optimise it. */
+  for (hi = apr_hash_first(scratch_pool, adm_access->entries_all);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      apr_hash_index_t *hi;
+      void *val;
+      const svn_wc_entry_t *entry;
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+      if ((entry->deleted
+           && (entry->schedule != svn_wc_schedule_add)
+           && (entry->schedule != svn_wc_schedule_replace))
+          || entry->absent || (entry->depth == svn_depth_exclude))
+        break;
+    }
 
-      /* I think it will be common for there to be no deleted entries, so
-         it is worth checking for that case as we can optimise it. */
-      for (hi = apr_hash_first(pool, adm_access->entries_hidden);
-           hi;
-           hi = apr_hash_next(hi))
+  if (! hi)
+    {
+      /* There are no deleted entries, so we can use the full hash */
+      return  adm_access->entries_all;
+    }
+
+  /* Construct pruned hash without deleted entries */
+  entries = apr_hash_make(adm_access->pool);
+  for (hi = apr_hash_first(scratch_pool, adm_access->entries_all);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const void *key;
+      const svn_wc_entry_t *entry;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      entry = val;
+      if (((entry->deleted == FALSE) && (entry->absent == FALSE)
+           && (entry->depth != svn_depth_exclude))
+          || (entry->schedule == svn_wc_schedule_add)
+          || (entry->schedule == svn_wc_schedule_replace))
         {
-          void *val;
-          const svn_wc_entry_t *entry;
-          apr_hash_this(hi, NULL, NULL, &val);
-          entry = val;
-          if ((entry->deleted
-               && (entry->schedule != svn_wc_schedule_add)
-               && (entry->schedule != svn_wc_schedule_replace))
-              || entry->absent || (entry->depth == svn_depth_exclude))
-            break;
-        }
-
-      if (! hi)
-        {
-          /* There are no deleted entries, so we can use the full hash */
-          adm_access->entries = adm_access->entries_hidden;
-          return;
-        }
-
-      /* Construct pruned hash without deleted entries */
-      adm_access->entries = apr_hash_make(adm_access->pool);
-      for (hi = apr_hash_first(pool, adm_access->entries_hidden);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          void *val;
-          const void *key;
-          const svn_wc_entry_t *entry;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          entry = val;
-          if (((entry->deleted == FALSE) && (entry->absent == FALSE)
-               && (entry->depth != svn_depth_exclude))
-              || (entry->schedule == svn_wc_schedule_add)
-              || (entry->schedule == svn_wc_schedule_replace))
-            {
-              apr_hash_set(adm_access->entries, key,
-                           APR_HASH_KEY_STRING, entry);
-            }
+          apr_hash_set(entries, key, APR_HASH_KEY_STRING, entry);
         }
     }
+
+  return entries;
 }
 
 
 void
 svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
-                               svn_boolean_t show_hidden,
                                apr_hash_t *entries)
 {
-  if (show_hidden)
-    adm_access->entries_hidden = entries;
-  else
-    adm_access->entries = entries;
+  adm_access->entries_all = entries;
 }
 
 
@@ -1493,12 +1488,9 @@ svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool)
 {
   if (! show_hidden)
-    {
-      prune_deleted(adm_access, pool);
-      return adm_access->entries;
-    }
+    return prune_deleted(adm_access, pool);
   else
-    return adm_access->entries_hidden;
+    return adm_access->entries_all;
 }
 
 void
