@@ -1490,6 +1490,67 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
 }
 
 
+/* Prune the deleted entries from the cached entries in ADM_ACCESS, and
+   return that collection.  SCRATCH_POOL is used for local, short
+   term, memory allocation, RESULT_POOL for permanent stuff.  */
+static apr_hash_t *
+prune_deleted(apr_hash_t *entries_all,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *entries;
+
+  if (!entries_all)
+    return NULL;
+
+  /* I think it will be common for there to be no deleted entries, so
+     it is worth checking for that case as we can optimise it. */
+  for (hi = apr_hash_first(scratch_pool, entries_all);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const svn_wc_entry_t *entry;
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+      if ((entry->deleted
+           && (entry->schedule != svn_wc_schedule_add)
+           && (entry->schedule != svn_wc_schedule_replace))
+          || entry->absent || (entry->depth == svn_depth_exclude))
+        break;
+    }
+
+  if (! hi)
+    {
+      /* There are no deleted entries, so we can use the full hash */
+      return  entries_all;
+    }
+
+  /* Construct pruned hash without deleted entries */
+  entries = apr_hash_make(result_pool);
+  for (hi = apr_hash_first(scratch_pool, entries_all);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const void *key;
+      const svn_wc_entry_t *entry;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      entry = val;
+      if (((entry->deleted == FALSE) && (entry->absent == FALSE)
+           && (entry->depth != svn_depth_exclude))
+          || (entry->schedule == svn_wc_schedule_add)
+          || (entry->schedule == svn_wc_schedule_replace))
+        {
+          apr_hash_set(entries, key, APR_HASH_KEY_STRING, entry);
+        }
+    }
+
+  return entries;
+}
+
 svn_error_t *
 svn_wc_entries_read(apr_hash_t **entries,
                     svn_wc_adm_access_t *adm_access,
@@ -1498,17 +1559,22 @@ svn_wc_entries_read(apr_hash_t **entries,
 {
   apr_hash_t *new_entries;
 
-  new_entries = svn_wc__adm_access_entries(adm_access, show_hidden, pool);
+  new_entries = svn_wc__adm_access_entries(adm_access, pool);
   if (! new_entries)
     {
       /* Ask for the deleted entries because most operations request them
          at some stage, getting them now avoids a second file parse. */
       SVN_ERR(read_entries(adm_access, pool));
 
-      new_entries = svn_wc__adm_access_entries(adm_access, show_hidden, pool);
+      new_entries = svn_wc__adm_access_entries(adm_access, pool);
     }
 
-  *entries = new_entries;
+  if (show_hidden)
+    *entries = new_entries;
+  else
+    *entries = prune_deleted(new_entries, svn_wc_adm_access_pool(adm_access),
+                             pool);
+
   return SVN_NO_ERROR;
 }
 

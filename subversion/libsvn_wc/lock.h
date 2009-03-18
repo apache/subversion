@@ -61,11 +61,9 @@ svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
 void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *entries);
 
-/* Return the entries hash appropriate for SHOW_DELETED cached in
-   ADM_ACCESS.  The returned hash may be NULL.  POOL is used for local,
-   short term, memory allocations. */
+/* Return the entries hash cached in ADM_ACCESS.  The returned hash may
+   be NULL.  POOL is used for local, short term, memory allocations. */
 apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t show_deleted,
                                        apr_pool_t *pool);
 
 /* Store the WCPROPS in the cache in ADM_ACCESS. */
