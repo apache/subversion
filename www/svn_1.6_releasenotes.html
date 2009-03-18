@@ -32,8 +32,8 @@ describes what is planned for the release.</p>
       >Improved handling of authentication data</a></li>
   <li><a href="#repository-root-relative-urls"
       >Repository root relative URLs</a></li>
-  <li><a href="#file-externals"
-      >Support for files in <tt>svn:externals</tt></a></li>
+  <li><a href="#externals"
+      >Improvements to <tt>svn:externals</tt></a></li>
   <li><a href="#tree-conflicts"
       >Detection of tree conflicts</a></li>
   <li><a href="#filesystem-improvements"
@@ -326,9 +326,22 @@ Keyring, Mac OS Keychain, a Windows CryptoAPI encrypted form or in plaintext for
 
 </div>  <!-- repository-root-relative-urls -->
 
-<div class="h3" id="file-externals" title="file-externals">
-<h3>Support for files in <tt>svn:externals</tt>
-    (<em>client</em>)</h3>
+<div class="h3" id="externals" title="externals">
+<h3>Improvements to <tt>svn:externals</tt></h3>
+
+<p>Subversion 1.6 adds a couple of new features for users of
+<tt>svn:externals</tt>.  The include:</p>
+
+<ul>
+  <li><a href="#file-externals"
+      >Support for files in <tt>svn:externals</tt></a></li>
+  <li><a href="#shell-quoting-externals"
+      >Support usual shell quoting rules in externals definitions</a></li>
+</ul>
+
+<div class="h4" id="file-externals" title="file-externals">
+<h4>Support for files in <tt>svn:externals</tt>
+    (<em>client</em>)</h4>
 
 <p>
   If the URL in a <tt>svn:externals</tt> description refers to a file,
@@ -380,6 +393,18 @@ external.</p>
   </li>
 </ul>
 
+</div>  <!-- file-externals-further-reading -->
+
+<div class="h4" id="shell-quoting-externals" title="shell-quoting-externals">
+<h4>Support usual shell quoting rules in externals definitions
+  (<em><a href="/issues/show_bug.cgi?id=2461">issue 2461</a></em>, client)</h4>
+
+<p>XXX: Need to document possible incompatibilies (see
+<a href="/ds/viewMessage.do?dsForumId=462&amp;dsMessageId=86142">this
+thread</a></p>
+
+</div>  <!-- shell-quoting-externals -->
+
 <div class="h4" id="file-externals-further-reading"
              title="file-externals-further-reading">
 <h4>Further reading</h4>
@@ -388,7 +413,7 @@ external.</p>
 href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
 >svn:externals</a> section of the Subversion Book.</p>
 
-</div>  <!-- file-externals-further-reading -->
+</div>  <!-- further-reading -->
 
 </div>  <!-- file-externals -->
 
