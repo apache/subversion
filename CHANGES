@@ -28,6 +28,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * new 'svnadmin pack' command to compress FSFS filesystems
     * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
     * new public mod_dav_svn URI syntax:  path?[p=PEG][&r=REV] (r34076)
+    * new 'svnsync info' command to show synchronization information (r35053)
 
   - Client-side bugfixes:
     * faulty reflexive merges (issue #2897)
@@ -35,7 +36,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * conflict resolver needed more useful 'diff' option (issue #3048)
     * disable username assumption (issue #2324)
     * more accurate usage message for 'svn log' (r30449)
-    * don't repeat merge if target has explict mergeinfo (issue #2821)
+    * do not repeat merge if target has explicit mergeinfo (issue #2821)
     * corruption when filtering self-referential mergeinfo (r30467)
     * filter empty mergeinfo with self-referential mergeinfo (r30510)
     * pay attention to partial replay from the server in svnsync (r30440)
@@ -61,9 +62,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
  
   - Server-side bugfixes:
     * mod_dav_svn runs pre-revprop-change twice (issue #3085)
-    * case-sensitivity in hostname bug in libsvn_repos (issue #2475)
     * mod_dav_svn ignores pre-revprop-change failure on delete (issue #3086)
-    * mod_dav_svn prevented lock breaks from being propogated to client (r29914)
+    * mod_dav_svn prevented lock breaks from being propagated to client (r29914)
     * non-UTF8 filenames could enter repository (issue #2748)
     * 'svnlook proplist' xml output (issue #2809)
     * don't let mod_dav_svn hide errors from client (issue #3102)
@@ -86,7 +86,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * BDB `changes' table inconsistency when APIs are misused (issue #3349)
     * configure should prefer apr-1 over apr-0 if both are present (issue #2671)
     * make 'Not Found' errors consistent between RA layers (issue #3137)
-    * fix a potential a buffer overrun (r34374)
+    * fix a potential buffer overrun (r34374)
     * many bug fixes and improvements to the test suite
 
   - API changes:
