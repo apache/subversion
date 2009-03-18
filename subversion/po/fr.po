@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-03-17 14:50+0100\n"
-"PO-Revision-Date: 2009-02-18 13:26+0100\n"
+"PO-Revision-Date: 2009-03-18 12:16+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -816,7 +816,7 @@ msgstr "Le dépôt a été déplacé"
 
 #: ../include/svn_error_codes.h:850
 msgid "URL access forbidden for unknown reason"
-msgstr ""
+msgstr "Accès URL interdit pour une raison inconnue"
 
 #: ../include/svn_error_codes.h:856 ../include/svn_error_codes.h:885
 msgid "Couldn't find a repository"
