@@ -1406,7 +1406,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
+  svn_wc__adm_access_set_entries(adm_access, entries);
 
   SVN_ERR(svn_sqlite__close(wc_db));
   svn_pool_destroy(iterpool);
@@ -2145,8 +2145,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   SVN_ERR(entries_write_body(wc_db, entries, adm_access, this_dir,
                              scratch_pool));
 
-  svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
-  svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
+  svn_wc__adm_access_set_entries(adm_access, entries);
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
