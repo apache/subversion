@@ -90,7 +90,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
       const char *this_path;
       void *val;
       apr_ssize_t klen;
-      svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *current_entry;
       svn_pool_clear(iterpool);
 
       /* Get the next entry */

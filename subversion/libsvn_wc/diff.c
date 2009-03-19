@@ -1600,8 +1600,8 @@ path_driver_cb_func(void **dir_baton,
   struct path_driver_cb_baton *cb_baton = callback_baton;
   const svn_delta_editor_t *editor = cb_baton->editor;
   svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
-  svn_wc_entry_t *entry = apr_hash_get(cb_baton->diffable_entries,
-                                       path, APR_HASH_KEY_STRING);
+  const svn_wc_entry_t *entry = apr_hash_get(cb_baton->diffable_entries,
+                                             path, APR_HASH_KEY_STRING);
   struct edit_baton *eb = cb_baton->edit_baton;
   struct dir_baton *pb = parent_baton;
   void *fb = NULL; /* file baton */

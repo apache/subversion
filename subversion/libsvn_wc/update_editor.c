@@ -651,7 +651,6 @@ complete_directory(struct edit_baton *eb,
   svn_wc_entry_t *entry;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
-  svn_wc_entry_t *current_entry;
   const char *name;
 
   /* If inside a tree conflict, do nothing. */
@@ -729,6 +728,7 @@ complete_directory(struct edit_baton *eb,
     {
       const void *key;
       void *val;
+      svn_wc_entry_t *current_entry;
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);

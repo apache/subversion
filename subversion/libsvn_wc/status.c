@@ -374,7 +374,6 @@ assemble_status(svn_wc_status2_t **status,
     {
       /* An item is switched if:
          parent-url + basename(path) != entry->url  */
-
       switched_p = (strcmp(
                      svn_uri_join(parent_entry->url,
                           svn_path_uri_encode(svn_dirent_basename(path, pool),
@@ -1535,7 +1534,7 @@ mark_deleted(void *baton,
    a deletion.  Use POOL for all allocations. */
 static svn_error_t *
 handle_statii(struct edit_baton *eb,
-              svn_wc_entry_t *dir_entry,
+              const svn_wc_entry_t *dir_entry,
               const char *dir_path,
               apr_hash_t *statii,
               svn_boolean_t dir_was_deleted,

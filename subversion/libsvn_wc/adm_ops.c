@@ -124,7 +124,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
           const void *key;
           void *val;
           const char *name;
-          svn_wc_entry_t *current_entry;
+          const svn_wc_entry_t *current_entry;
           const char *child_path;
           const char *child_url = NULL;
           svn_boolean_t excluded;
@@ -589,7 +589,7 @@ process_committed_internal(int *log_number,
                  created at the start of this function). */
               if (current_entry->schedule == svn_wc_schedule_delete)
                 {
-                  svn_wc_entry_t *parent_entry;
+                  const svn_wc_entry_t *parent_entry;
 
                   parent_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                                               APR_HASH_KEY_STRING);
@@ -2094,18 +2094,18 @@ revert_entry(svn_depth_t *depth,
          parent. */
       if (was_deleted)
         {
-          svn_wc_entry_t *tmpentry; /* ### FIXME: Why the heap alloc? */
-          tmpentry = apr_pcalloc(pool, sizeof(*tmpentry));
-          tmpentry->kind = entry->kind;
-          tmpentry->deleted = TRUE;
+          svn_wc_entry_t tmp_entry;
+
+          tmp_entry.kind = entry->kind;
+          tmp_entry.deleted = TRUE;
 
           if (entry->kind == svn_node_dir)
-            SVN_ERR(svn_wc__entry_modify(parent_access, basey, tmpentry,
+            SVN_ERR(svn_wc__entry_modify(parent_access, basey, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
                                          TRUE, pool));
           else
-            SVN_ERR(svn_wc__entry_modify(parent_access, bname, tmpentry,
+            SVN_ERR(svn_wc__entry_modify(parent_access, bname, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
                                          TRUE, pool));
@@ -2133,7 +2133,7 @@ revert_entry(svn_depth_t *depth,
           if (reverted && bname)
             {
               svn_boolean_t dummy_reverted;
-              svn_wc_entry_t *entry_in_parent;
+              const svn_wc_entry_t *entry_in_parent;
               apr_hash_t *entries;
 
               /* The entry to revert will not be an excluded item. Don't
@@ -2285,7 +2285,7 @@ revert_internal(const char *path,
           void *val;
           const char *full_entry_path;
           svn_depth_t depth_under_here = depth;
-          svn_wc_entry_t *child_entry;
+          const svn_wc_entry_t *child_entry;
 
           if (depth == svn_depth_files || depth == svn_depth_immediates)
             depth_under_here = svn_depth_empty;
@@ -2607,7 +2607,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
         if (! is_root)
           {
             const char *parent_dir, *base_name;
-            svn_wc_entry_t *dir_entry;
+            const svn_wc_entry_t *dir_entry;
             apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
