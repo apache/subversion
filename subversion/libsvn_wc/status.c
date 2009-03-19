@@ -75,7 +75,7 @@ struct edit_baton
   svn_revnum_t *target_revision;
 
   /* Status function/baton. */
-  svn_wc_status_func3_t status_func;
+  svn_wc_status_func4_t status_func;
   void *status_baton;
 
   /* Cancellation function/baton. */
@@ -570,7 +570,7 @@ send_status_structure(const char *path,
                       svn_boolean_t is_ignored,
                       apr_hash_t *repos_locks,
                       const char *repos_root,
-                      svn_wc_status_func3_t status_func,
+                      svn_wc_status_func4_t status_func,
                       void *status_baton,
                       apr_pool_t *pool)
 {
@@ -688,7 +688,7 @@ send_unversioned_item(const char *name,
                       svn_boolean_t no_ignore,
                       apr_hash_t *repos_locks,
                       const char *repos_root,
-                      svn_wc_status_func3_t status_func,
+                      svn_wc_status_func4_t status_func,
                       void *status_baton,
                       apr_pool_t *pool)
 {
@@ -725,7 +725,7 @@ get_dir_status(struct edit_baton *eb,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
                svn_boolean_t skip_this_dir,
-               svn_wc_status_func3_t status_func,
+               svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
@@ -747,7 +747,7 @@ handle_dir_entry(struct edit_baton *eb,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
-                 svn_wc_status_func3_t status_func,
+                 svn_wc_status_func4_t status_func,
                  void *status_baton,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
@@ -819,7 +819,7 @@ handle_dir_entry(struct edit_baton *eb,
    *will* be reported, regardless of this parameter's value.
 
    Other arguments are the same as those passed to
-   svn_wc_get_status_editor4().  */
+   svn_wc_get_status_editor5().  */
 static svn_error_t *
 get_dir_status(struct edit_baton *eb,
                const svn_wc_entry_t *parent_entry,
@@ -830,7 +830,7 @@ get_dir_status(struct edit_baton *eb,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
                svn_boolean_t skip_this_dir,
-               svn_wc_status_func3_t status_func,
+               svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
@@ -1108,12 +1108,12 @@ get_dir_status(struct edit_baton *eb,
 
 /* A faux status callback function for stashing STATUS item in an hash
    (which is the BATON), keyed on PATH.  This implements the
-   svn_wc_status_func3_t interface. */
+   svn_wc_status_func4_t interface. */
 static svn_error_t *
 hash_stash(void *baton,
            const char *path,
-           svn_wc_status2_t *status,
-           apr_pool_t *pool)
+           const svn_wc_status2_t *status,
+           apr_pool_t *scratch_pool)
 {
   apr_hash_t *stat_hash = baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(stat_hash);
@@ -1506,7 +1506,7 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
 /* Baton for mark_status. */
 struct status_baton
 {
-  svn_wc_status_func3_t real_status_func;  /* real status function */
+  svn_wc_status_func4_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
 };
 
@@ -1517,12 +1517,14 @@ struct status_baton
 static svn_error_t *
 mark_deleted(void *baton,
              const char *path,
-             svn_wc_status2_t *status,
-             apr_pool_t *pool)
+             const svn_wc_status2_t *status,
+             apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
-  status->repos_text_status = svn_wc_status_deleted;
-  return sb->real_status_func(sb->real_status_baton, path, status, pool);
+  svn_wc_status2_t *new_status = svn_wc_dup_status2(status, scratch_pool);
+  new_status->repos_text_status = svn_wc_status_deleted;
+  return sb->real_status_func(sb->real_status_baton, path, new_status,
+                              scratch_pool);
 }
 
 
@@ -1544,7 +1546,7 @@ handle_statii(struct edit_baton *eb,
   const apr_array_header_t *ignores = eb->ignores;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_wc_status_func3_t status_func = eb->status_func;
+  svn_wc_status_func4_t status_func = eb->status_func;
   void *status_baton = eb->status_baton;
   struct status_baton sb;
 
@@ -2157,7 +2159,7 @@ close_edit(void *edit_baton,
 /*** Public API ***/
 
 svn_error_t *
-svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
+svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           void **set_locks_baton,
                           svn_revnum_t *edit_revision,
@@ -2167,18 +2169,19 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
                           const apr_array_header_t *ignore_patterns,
-                          svn_wc_status_func3_t status_func,
+                          svn_wc_status_func4_t status_func,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_traversal_info_t *traversal_info,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb;
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor(result_pool);
 
   /* Construct an edit baton. */
-  eb = apr_palloc(pool, sizeof(*eb));
+  eb = apr_palloc(result_pool, sizeof(*eb));
   eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
   eb->adm_access        = anchor;
@@ -2189,7 +2192,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
   eb->cancel_func       = cancel_func;
   eb->cancel_baton      = cancel_baton;
   eb->traversal_info    = traversal_info;
-  eb->externals         = apr_hash_make(pool);
+  eb->externals         = apr_hash_make(result_pool);
   eb->anchor            = svn_wc_adm_access_path(anchor);
   eb->target            = target;
   eb->root_opened       = FALSE;
@@ -2204,16 +2207,17 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
     }
   else
     {
-      apr_array_header_t *ignores = apr_array_make(pool, 16,
+      apr_array_header_t *ignores = apr_array_make(result_pool, 16,
                                                    sizeof(const char *));
       svn_cstring_split_append(ignores, SVN_CONFIG_DEFAULT_GLOBAL_IGNORES,
-                               "\n\r\t\v ", FALSE, pool);
+                               "\n\r\t\v ", FALSE, result_pool);
       eb->ignores = ignores;
     }
 
   /* The edit baton's status structure maps to PATH, and the editor
      have to be aware of whether that is the anchor or the target. */
-  SVN_ERR(svn_wc_status2(&(eb->anchor_status), eb->anchor, anchor, pool));
+  SVN_ERR(svn_wc_status2(&(eb->anchor_status), eb->anchor, anchor,
+                         result_pool));
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2233,7 +2237,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
   /* Conjoin a cancellation editor with our status editor. */
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                             tree_editor, eb, editor,
-                                            edit_baton, pool));
+                                            edit_baton, result_pool));
 
   if (set_locks_baton)
     *set_locks_baton = eb;

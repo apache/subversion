@@ -3060,9 +3060,25 @@ svn_wc_status(svn_wc_status_t **status,
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
  *
- * @a pool will be cleared between invocations to the callback.
+ * @a scratch_pool will be cleared between invocations to the callback.
+ *
+ * ### we might be revamping the status infrastructure, and this callback
+ * ### could totally disappear by the end of 1.7 development. however, we
+ * ### need to mark the STATUS parameter as "const" so that it is easier
+ * ### to reason about who/what can modify those structures.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_wc_status_func4_t)(void *baton,
+                                              const char *path,
+                                              const svn_wc_status2_t *status,
+                                              apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_wc_status_func4_t, but with a non-const status.
  *
  * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef svn_error_t *(*svn_wc_status_func3_t)(void *baton,
                                               const char *path,
@@ -3070,7 +3086,7 @@ typedef svn_error_t *(*svn_wc_status_func3_t)(void *baton,
                                               apr_pool_t *pool);
 
 /**
- * Same as svn_wc_status_func3_t(), but without a provided pool or
+ * Same as svn_wc_status_func3_t, but without a provided pool or
  * the ability to propagate errors.
  *
  * @since New in 1.2.
@@ -3081,7 +3097,7 @@ typedef void (*svn_wc_status_func2_t)(void *baton,
                                       svn_wc_status2_t *status);
 
 /**
- *  Same as svn_wc_status_func2_t(), but for older svn_wc_status_t structures.
+ *  Same as svn_wc_status_func2_t, but for older svn_wc_status_t structures.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -3146,8 +3162,37 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          const apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func4_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_wc_get_status_editor5, but using @c svn_wc_status_func3_t
+ * instead of @c svn_wc_status_func4_t. This also uses a single pool
+ * parameter, stating that all temporary allocations are performed in
+ * manually constructed/destroyed subpool.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,

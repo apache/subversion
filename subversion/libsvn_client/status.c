@@ -47,7 +47,7 @@ struct status_baton
 {
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
   apr_hash_t *changelist_hash;             /* keys are changelist names */
-  svn_wc_status_func3_t real_status_func;  /* real status function */
+  svn_wc_status_func4_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
 };
 
@@ -56,12 +56,16 @@ struct status_baton
    need to make (such as noting that the target of the status is
    missing from HEAD in the repository).
 
-   This implements the 'svn_wc_status_func3_t' function type. */
+   This implements the 'svn_wc_status_func3_t' function type.
+
+   ### but it is (now) coded as if it was func4. just need to add a const
+   ### onto the param, and it will become the func4 signature. but... we
+   ### want a test run using the deprecation wrappers.  */
 static svn_error_t *
 tweak_status(void *baton,
              const char *path,
              svn_wc_status2_t *status,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
 
@@ -69,7 +73,11 @@ tweak_status(void *baton,
      we need to note that fact in all the status structures that come
      through here. */
   if (sb->deleted_in_repos)
-    status->repos_text_status = svn_wc_status_deleted;
+    {
+      svn_wc_status2_t *new_status = svn_wc_dup_status2(status, scratch_pool);
+      new_status->repos_text_status = svn_wc_status_deleted;
+      status = new_status;
+    }
 
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter our this status
@@ -78,7 +86,8 @@ tweak_status(void *baton,
     return SVN_NO_ERROR;
 
   /* Call the real status function/baton. */
-  return sb->real_status_func(sb->real_status_baton, path, status, pool);
+  return sb->real_status_func(sb->real_status_baton, path, status,
+                              scratch_pool);
 }
 
 /* A baton for our reporter that is used to collect locks. */
@@ -207,10 +216,10 @@ static svn_ra_reporter3_t lock_fetch_reporter = {
 
 
 svn_error_t *
-svn_client_status4(svn_revnum_t *result_rev,
+svn_client_status5(svn_revnum_t *result_rev,
                    const char *path,
                    const svn_opt_revision_t *revision,
-                   svn_wc_status_func3_t status_func,
+                   svn_wc_status_func4_t status_func,
                    void *status_baton,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
@@ -219,7 +228,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool)  /* ### aka scratch_pool */
 {
   svn_wc_adm_access_t *anchor_access, *target_access;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
