@@ -2259,6 +2259,25 @@ def excluded_receive_remote_removal(sbox):
                                      'cp', C_path, B_path)
 
 
+# Regression test for r36686.
+def exclude_keeps_hidden_entries(sbox):
+  "'up --set-depth exclude' doesn't lose entries"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  os.chdir(A_path)
+
+  # the second 'up' used to cause the entry of 'C' to be lost.
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'C')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'D')
+  # we could grep the 'entries' file, but...
+  expected_stderr = ".*svn: 'C' is already under version control.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'mkdir', 'C')
+
+
 #----------------------------------------------------------------------
 # Check that "svn resolved" visits tree-conflicts *on unversioned items*
 # according to the --depth parameter.
@@ -2446,6 +2465,7 @@ test_list = [ None,
               excluded_path_update_operation,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
+              exclude_keeps_hidden_entries,
               tree_conflicts_resolved_depth_empty,
               tree_conflicts_resolved_depth_files,
               tree_conflicts_resolved_depth_immediates,
