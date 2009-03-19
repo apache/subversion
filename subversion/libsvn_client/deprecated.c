@@ -1388,6 +1388,47 @@ svn_client_proplist(apr_array_header_t **props,
 }
 
 /*** From status.c ***/
+
+struct status4_wrapper_baton
+{
+  svn_wc_status_func3_t old_func;
+  void *old_baton;
+};
+
+static svn_error_t *
+status4_wrapper_func(void *baton,
+                     const char *path,
+                     const svn_wc_status2_t *status,
+                     apr_pool_t *scratch_pool)
+{
+  struct status4_wrapper_baton *swb = baton;
+  svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+
+  return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
+}
+
+svn_error_t *
+svn_client_status4(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func3_t status_func,
+                   void *status_baton,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  struct status4_wrapper_baton swb = { status_func, status_baton };
+
+  return svn_client_status5(result_rev, path, revision, status4_wrapper_func,
+                            &swb, depth, get_all, update, no_ignore,
+                            ignore_externals, changelists, ctx, pool);
+}
+
 struct status3_wrapper_baton
 {
   svn_wc_status_func2_t old_func;
@@ -1426,7 +1467,6 @@ svn_client_status3(svn_revnum_t *result_rev,
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
                             &swb, depth, get_all, update, no_ignore,
                             ignore_externals, changelists, ctx, pool);
-
 }
 
 svn_error_t *
