@@ -264,6 +264,39 @@ the <a href="http://svn.collab.net/viewvc/svn/branches/fs-successor-ids/"
 
 </div>
 
+<!-- ************************************************************* -->
+<div class="h3" id="ctypes-python" title="ctypes-python">
+<h3>Integrate the ctypes python bindings into Trac</h3>
+
+<p>Subversion has great new Python bindings, written using ctypes,
+but they are not yet used by any major projects. This summer of code
+project involves integrating the ctypes python binding into
+<a href="http://trac.edgewall.org/">Trac</a>.</p>
+
+<p>This project will consist of the following tasks:</p>
+
+<ul>
+   <li>Build redistributable packages for the ctypes bindings that work on
+       Windows, Linux, and Mac with Subversion 1.4 or later</li>
+   <li>Teach the <a href="http://svn.edgewall.org/repos/trac/trunk/trac/versioncontrol/">Trac
+       versioncontrol library</a> to optionally use the ctypes Python bindings</li>
+   <li>Test the updated versioncontrol library under high load with Apache and mod_python.
+       Fix any bugs you find.</li>
+   <li>Convince the <a href="http://trac.edgewall.org/wiki/TracDev">Trac developer community</a>
+       to integrate your changes into trunk</li>
+</ul>
+
+<p>Students accepted for this task will be granted a branch in the Subversion repository
+   for development of related changes, and will be expected to commit at least one change
+   or status update per week until the project is complete.</p>
+
+<p>For questions about this project (or feedback on planned proposals), please email
+   <a href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a> and CC
+   <a href="mailto:james@cs.toronto.edu">David James</a>, who has volunteered to
+   mentor ctypes python bindings projects.</p>
+
+</div>
+
 </div>
 
 <!-- ============================================================= -->
