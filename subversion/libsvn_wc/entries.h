@@ -223,20 +223,29 @@ svn_wc__entry_remove(apr_hash_t *entries,
  * If REPOS is non-NULL, set the repository root on the entry to REPOS,
  * provided it is a prefix of the entry's URL (and if it is the THIS_DIR
  * entry, all child URLs also match.)
+ *
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
  *
+ * If WRITE_TO_DISK is TRUE, then the tweaked ENTRIES will be written
+ * out to disk.
+ *
+ * If ENTRIES is NULL, then it will be read via ADM_ACCESS, tweaked,
+ * and then written to disk (WRITE_TO_DISK should be TRUE).
+ *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
  */
 svn_error_t *
-svn_wc__tweak_entry(apr_hash_t *entries,
+svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *entries,
                     const char *name,
                     const char *new_url,
                     const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
-                    apr_pool_t *pool);
+                    svn_boolean_t write_to_disk,
+                    apr_pool_t *scratch_pool);
 
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
