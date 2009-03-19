@@ -129,12 +129,9 @@ crop_children(svn_wc_adm_access_t *adm_access,
                  Anyway, don't report on excluded subdir, since they are
                  logically not exist. */
               if (depth < svn_depth_immediates)
-                {
-                  SVN_ERR(svn_wc__entry_remove(
-                                entries, svn_wc_adm_access_path(dir_access),
-                                current_entry->name, iterpool));
-                  SVN_ERR(svn_wc__entries_write(entries, dir_access, iterpool));
-                }
+                SVN_ERR(svn_wc__entry_remove(entries, dir_access,
+                                             current_entry->name, TRUE,
+                                             iterpool));
               continue;
             }
           else if (depth < svn_depth_immediates)

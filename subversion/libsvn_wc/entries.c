@@ -2479,14 +2479,25 @@ entry_remove_body(void *baton,
 
 svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
-                     const char *parent_dir,
+                     svn_wc_adm_access_t *adm_access,
                      const char *name,
+                     svn_boolean_t write_to_disk,
                      apr_pool_t *scratch_pool)
 {
-  svn_sqlite__db_t *wc_db;
-  svn_error_t *err;
+  if (entries == NULL)
+    {
+      assert(write_to_disk);
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+    }
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+
+#if 0
+  if (svn_wc__adm_wc_format(adm_access) >= SVN_WC__WC_NG_VERSION)
+    {
+  const char *parent_dir = svn_wc_adm_access_path(adm_access);
+  svn_sqlite__db_t *wc_db;
+  svn_error_t *err;
 
   /* Also remove from the sqlite database. */
   /* Open the wc.db sqlite database. */
@@ -2519,6 +2530,13 @@ svn_wc__entry_remove(apr_hash_t *entries,
     return err;
 
   return svn_sqlite__close(wc_db);
+    }
+#endif
+
+  if (write_to_disk)
+    SVN_ERR(svn_wc__entries_write(entries, adm_access, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 

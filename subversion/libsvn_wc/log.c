@@ -938,21 +938,12 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
         {
           if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
-              apr_hash_t *entries;
-
               svn_error_clear(err);
               err = SVN_NO_ERROR;
 
               if (entry->schedule != svn_wc_schedule_add)
-                {
-                  SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access,
-                                              TRUE, loggy->pool));
-                  SVN_ERR(svn_wc__entry_remove(
-                            entries, svn_wc_adm_access_path(loggy->adm_access),
-                            name, loggy->pool));
-                  SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access,
-                                                loggy->pool));
-                }
+                SVN_ERR(svn_wc__entry_remove(NULL, loggy->adm_access,
+                                             name, TRUE, loggy->pool));
             }
           else
             {

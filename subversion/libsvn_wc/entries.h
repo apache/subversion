@@ -198,14 +198,22 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   svn_boolean_t do_sync,
                                   apr_pool_t *pool);
 
-/* Remove entry NAME from ENTRIES, unconditionally.  PARENT_DIR should be
-   the directory which contains the .svn administrative directory for PATH
-   (in most cases, this will be svn_wc_adm_access_path() applied to the
-   access baton which ENTRIES is or will eventually be a part of. */
+/* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
+   the access baton for the directory which contains the .svn administrative
+   directory containing NAME.
+
+   If WRITE_TO_DISK is TRUE, then the modified ENTRIES will we written out
+   to disk.
+
+   If ENTRIES is NULL, then the entries will be read from disk, modified,
+   and written back to disk.
+
+   All temporary allocations will be performed in SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
-                     const char *parent_dir,
+                     svn_wc_adm_access_t *adm_access,
                      const char *name,
+                     svn_boolean_t write_to_disk,
                      apr_pool_t *scratch_pool);
 
 
