@@ -654,7 +654,9 @@ entry_is_hidden(const svn_wc_entry_t *entry)
    Typically, SRC is a parent directory's own entry, and DST is some
    child in that directory. */
 static void
-take_from_entry(svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
+take_from_entry(const svn_wc_entry_t *src,
+                svn_wc_entry_t *dst,
+                apr_pool_t *pool)
 {
   /* Inherits parent's revision if doesn't have a revision of one's
      own, unless this is a subdirectory. */
