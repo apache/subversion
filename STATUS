@@ -196,7 +196,7 @@ Candidate changes:
    Justification:     
      Enables some extra checking on what to update from the delta editor. This
      value is provided by ra_local and ra_svn, but not by neon and serf.
-     (The information is sent in the http request since well before 1.0)
+     (The information is sent in the http response since well before 1.0)
    Votes:
      +1: rhuijben
      
