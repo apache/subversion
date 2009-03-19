@@ -37,12 +37,12 @@
 /*** Code. ***/
 
 
-/* An svn_wc_status_func3_t callback function for finding
+/* An svn_wc_status_func4_t callback function for finding
    status structures which are not safely deletable. */
 static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  svn_wc_status2_t *status,
+                  const svn_wc_status2_t *status,
                   apr_pool_t *pool)
 {
   /* Check for error-ful states. */
@@ -83,9 +83,9 @@ svn_client__can_delete(const char *path,
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_client_status4
-         (NULL, path, &revision, find_undeletables, NULL,
-          svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, ctx, pool);
+  return svn_client_status5(NULL, path, &revision, find_undeletables, NULL,
+                            svn_depth_infinity, FALSE, FALSE, FALSE, FALSE,
+                            NULL, ctx, pool);
 }
 
 

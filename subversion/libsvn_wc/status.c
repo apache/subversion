@@ -1790,7 +1790,6 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct dir_baton *pb = db->parent_baton;
   struct edit_baton *eb = db->edit_baton;
-  svn_wc_status2_t *dir_status = NULL;
 
   /* If nothing has changed and directory has no out of
      date descendants, return. */
@@ -1854,6 +1853,7 @@ close_directory(void *dir_baton,
   if (pb && ! db->excluded)
     {
       svn_boolean_t was_deleted = FALSE;
+      const svn_wc_status2_t *dir_status;
 
       /* See if the directory was deleted or replaced. */
       dir_status = apr_hash_get(pb->statii, db->path, APR_HASH_KEY_STRING);
@@ -1878,9 +1878,9 @@ close_directory(void *dir_baton,
          target, we should only report the target. */
       if (*eb->target)
         {
-          svn_wc_status2_t *tgt_status;
+          const svn_wc_status2_t *tgt_status;
           const char *path = svn_dirent_join(eb->anchor, eb->target, pool);
-          dir_status = eb->anchor_status;
+
           tgt_status = apr_hash_get(db->statii, path, APR_HASH_KEY_STRING);
           if (tgt_status)
             {
