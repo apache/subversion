@@ -67,9 +67,6 @@ enum statement_keys {
   STMT_SELECT_WCROOT_NULL,
   STMT_SELECT_WORKING_NODE,
   STMT_SELECT_ACTUAL_NODE,
-  STMT_DELETE_BASE_NODE,
-  STMT_DELETE_WORKING_NODE,
-  STMT_DELETE_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
@@ -125,12 +122,6 @@ static const char * const statements[] = {
      "conflict_working, prop_reject, changelist, text_mod, "
      "tree_conflict_data "
   "from actual_node;",
-
-  "delete from base_node where wc_id = ?1 and local_relpath = ?2;",
-
-  "delete from working_node where wc_id = ?1 and local_relpath = ?2;",
-
-  "delete from actual_node where wc_id = ?1 and local_relpath = ?2;",
 
   "delete from working_node;",
 
@@ -2446,37 +2437,6 @@ fold_entry(apr_hash_t *entries,
 }
 
 
-/* Actually do the sqlite removal work within a transaction.
-   This implements svn_sqlite__transaction_callback_t */
-static svn_error_t *
-entry_remove_body(void *baton,
-                  svn_sqlite__db_t *wc_db)
-{
-  const char *local_relpath = baton;
-  svn_sqlite__stmt_t *stmt;
-  apr_int64_t wc_id;
-
-  SVN_ERR(fetch_wc_id(&wc_id, wc_db));
-
-  /* Remove the base node. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Remove the working node. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Remove the actual node. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
                      svn_wc_adm_access_t *adm_access,
@@ -2491,47 +2451,6 @@ svn_wc__entry_remove(apr_hash_t *entries,
     }
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-
-#if 0
-  if (svn_wc__adm_wc_format(adm_access) >= SVN_WC__WC_NG_VERSION)
-    {
-  const char *parent_dir = svn_wc_adm_access_path(adm_access);
-  svn_sqlite__db_t *wc_db;
-  svn_error_t *err;
-
-  /* Also remove from the sqlite database. */
-  /* Open the wc.db sqlite database. */
-  err = svn_sqlite__open(&wc_db, db_path(parent_dir, scratch_pool),
-                         svn_sqlite__mode_readwrite, statements,
-                         SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                         scratch_pool, scratch_pool);
-  if (err == NULL)
-    {
-      /* Do the work in a transaction, for consistency. */
-      SVN_ERR(svn_sqlite__with_transaction(wc_db, entry_remove_body,
-                                           /* non-const */ (void *)name));
-    }
-  else if (APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* ### fine for now. old-style working copy. */
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else if (err->apr_err == SVN_ERR_SQLITE_ERROR)
-    {
-      /* ### would be nice to know this is "database not found" or a real
-         ### problem... but we don't. for now, just assume *any* db error
-         ### means that the database wasn't found. and that is just fine...
-         ### it means an old-style working copy. */
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else
-    return err;
-
-  return svn_sqlite__close(wc_db);
-    }
-#endif
 
   if (write_to_disk)
     SVN_ERR(svn_wc__entries_write(entries, adm_access, scratch_pool));
@@ -2772,14 +2691,13 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                      svn_boolean_t do_sync,
                      apr_pool_t *pool)
 {
-  apr_hash_t *entries, *entries_nohidden;
+  apr_hash_t *entries;
   svn_boolean_t entry_was_deleted_p = FALSE;
 
   SVN_ERR_ASSERT(entry);
 
   /* Load ADM_ACCESS's whole entries file. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-  SVN_ERR(svn_wc_entries_read(&entries_nohidden, adm_access, FALSE, pool));
 
   /* Ensure that NAME is valid. */
   if (name == NULL)
@@ -2787,9 +2705,8 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
-      svn_wc_entry_t *entry_before, *entry_after;
-      apr_uint64_t orig_modify_flags = modify_flags;
-      svn_wc_schedule_t orig_schedule = entry->schedule;
+      const svn_wc_entry_t *entry_before;
+      const svn_wc_entry_t *entry_after;
 
       /* Keep a copy of the unmodified entry on hand. */
       entry_before = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
@@ -2798,24 +2715,6 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
          manage those modifications. */
       SVN_ERR(fold_scheduling(entries, name, &modify_flags,
                               &entry->schedule, pool));
-
-      /* Do a bit of self-testing. The "folding" algorithm should do the
-       * same whether we give it the normal entries or all entries including
-       * "deleted" ones. Check that it does. */
-      /* Note: This pointer-comparison will always be true unless
-       * undocumented implementation details are in play, so it's not
-       * necessarily saying the contents of the two hashes differ. So this
-       * check may be invoked redundantly, but that is harmless. */
-      if (entries != entries_nohidden)
-        {
-          SVN_ERR(fold_scheduling(entries_nohidden, name, &orig_modify_flags,
-                                  &orig_schedule, pool));
-
-          /* Make certain that both folding operations had the same
-             result. */
-          SVN_ERR_ASSERT(orig_modify_flags == modify_flags);
-          SVN_ERR_ASSERT(orig_schedule == entry->schedule);
-        }
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
@@ -2834,9 +2733,6 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
     {
       SVN_ERR(fold_entry(entries, name, modify_flags, entry,
                          svn_wc_adm_access_pool(adm_access)));
-      if (entries != entries_nohidden)
-        SVN_ERR(fold_entry(entries_nohidden, name, modify_flags, entry,
-                           svn_wc_adm_access_pool(adm_access)));
     }
 
   /* Sync changes to disk. */
