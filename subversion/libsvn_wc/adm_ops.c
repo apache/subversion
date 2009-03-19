@@ -110,9 +110,11 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
   SVN_ERR(svn_wc_entries_read(&entries, dirpath, TRUE, pool));
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(entries, SVN_WC_ENTRY_THIS_DIR,
-                              base_url, repos, new_rev, FALSE,
-                              svn_wc_adm_access_pool(dirpath)));
+  SVN_ERR(svn_wc__tweak_entry(dirpath, entries, SVN_WC_ENTRY_THIS_DIR,
+                              base_url, repos, new_rev,
+                              FALSE /* allow_removal */,
+                              FALSE /* write_to_disk */,
+                              pool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -155,9 +157,11 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   || current_entry->depth == svn_depth_exclude))
             {
               if (! excluded)
-                SVN_ERR(svn_wc__tweak_entry(entries, name,
-                                            child_url, repos, new_rev, TRUE,
-                                            svn_wc_adm_access_pool(dirpath)));
+                SVN_ERR(svn_wc__tweak_entry(dirpath, entries, name,
+                                            child_url, repos, new_rev,
+                                            TRUE /* allow_removal */,
+                                            FALSE /* write_to_disk */,
+                                            pool));
             }
 
           /* If a directory and recursive... */
@@ -252,7 +256,6 @@ svn_wc__do_update_cleanup(const char *path,
                           apr_hash_t *exclude_paths,
                           apr_pool_t *pool)
 {
-  apr_hash_t *entries;
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
@@ -266,17 +269,19 @@ svn_wc__do_update_cleanup(const char *path,
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
+
       if (apr_hash_get(exclude_paths, path, APR_HASH_KEY_STRING))
         return SVN_NO_ERROR;
+
       svn_dirent_split(path, &parent, &base_name, pool);
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, parent, pool));
-      SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
-      SVN_ERR(svn_wc__tweak_entry(entries, base_name,
+
+      /* Parent not updated so don't remove PATH entry.  */
+      SVN_ERR(svn_wc__tweak_entry(dir_access, NULL, base_name,
                                   base_url, repos, new_revision,
-                                  FALSE, /* Parent not updated so don't
-                                            remove PATH entry */
-                                  svn_wc_adm_access_pool(dir_access)));
-      SVN_ERR(svn_wc__entries_write(entries, dir_access, pool));
+                                  FALSE /* allow_removal */,
+                                  TRUE /* write_to_disk */,
+                                  pool));
     }
 
   else if (entry->kind == svn_node_dir)
@@ -303,7 +308,6 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
                             const char *repos,
                             apr_pool_t *pool)
 {
-  apr_hash_t *entries;
   const svn_wc_entry_t *entry;
   const char *base_name;
   svn_wc_adm_access_t *dir_access;
@@ -327,16 +331,12 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
                                             path, pool));
     }
 
-  if (! dir_access)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
-
-  SVN_ERR(svn_wc__tweak_entry(entries, base_name,
-                              NULL, repos, SVN_INVALID_REVNUM, FALSE,
-                              svn_wc_adm_access_pool(dir_access)));
-
-  SVN_ERR(svn_wc__entries_write(entries, dir_access, pool));
+  if (dir_access)
+    SVN_ERR(svn_wc__tweak_entry(dir_access, NULL, base_name,
+                                NULL, repos, SVN_INVALID_REVNUM,
+                                FALSE /* allow_removal */,
+                                TRUE /* write_to_disk */,
+                                pool));
 
   return SVN_NO_ERROR;
 }
