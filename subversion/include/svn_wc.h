@@ -2837,7 +2837,7 @@ enum svn_wc_status_kind
 typedef struct svn_wc_status2_t
 {
   /** Can be @c NULL if not under version control. */
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /** The status of the entries text. */
   enum svn_wc_status_kind text_status;
@@ -2952,7 +2952,7 @@ typedef struct svn_wc_status2_t
 typedef struct svn_wc_status_t
 {
   /** Can be @c NULL if not under version control. */
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /** The status of the entries text. */
   enum svn_wc_status_kind text_status;

@@ -1288,8 +1288,8 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
     {
       const char *url;
       struct dir_baton *pb = db->parent_baton;
-      svn_wc_status2_t *status = apr_hash_get(pb->statii, db->name,
-                                              APR_HASH_KEY_STRING);
+      const svn_wc_status2_t *status = apr_hash_get(pb->statii, db->name,
+                                                    APR_HASH_KEY_STRING);
       /* Note that status->entry->url is NULL in the case of a missing
        * directory, which means we need to recurse up another level to
        * get a useful URL. */
@@ -1318,7 +1318,7 @@ make_dir_baton(void **dir_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
   const char *full_path;
-  svn_wc_status2_t *status_in_parent;
+  const svn_wc_status2_t *status_in_parent;
 
   SVN_ERR_ASSERT(path || (! pb));
 
@@ -1387,7 +1387,7 @@ make_dir_baton(void **dir_baton,
           )
     {
       svn_wc_adm_access_t *dir_access;
-      svn_wc_status2_t *this_dir_status;
+      const svn_wc_status2_t *this_dir_status;
       const apr_array_header_t *ignores = eb->ignores;
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                   d->path, pool));
@@ -2309,21 +2309,6 @@ svn_wc_status2(svn_wc_status2_t **status,
 }
 
 
-svn_error_t *
-svn_wc_status(svn_wc_status_t **status,
-              const char *path,
-              svn_wc_adm_access_t *adm_access,
-              apr_pool_t *pool)
-{
-  svn_wc_status2_t *stat2;
-
-  SVN_ERR(svn_wc_status2(&stat2, path, adm_access, pool));
-  *status = (svn_wc_status_t *) stat2;
-  return SVN_NO_ERROR;
-}
-
-
-
 svn_wc_status2_t *
 svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
                    apr_pool_t *pool)
@@ -2333,7 +2318,7 @@ svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
   /* Shallow copy all members. */
   *new_stat = *orig_stat;
 
-  /* No go back and dup the deep item. */
+  /* Now go back and dup the deep items into this pool. */
   if (orig_stat->entry)
     new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
 
@@ -2355,23 +2340,6 @@ svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
   return new_stat;
 }
 
-
-svn_wc_status_t *
-svn_wc_dup_status(const svn_wc_status_t *orig_stat,
-                  apr_pool_t *pool)
-{
-  svn_wc_status_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
-
-  /* Shallow copy all members. */
-  *new_stat = *orig_stat;
-
-  /* No go back and dup the deep item. */
-  if (orig_stat->entry)
-    new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
-
-  /* Return the new hotness. */
-  return new_stat;
-}
 
 svn_error_t *
 svn_wc_get_ignores(apr_array_header_t **patterns,

@@ -1403,6 +1403,37 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
                                    traversal_info, pool);
 }
 
+svn_error_t *
+svn_wc_status(svn_wc_status_t **status,
+              const char *path,
+              svn_wc_adm_access_t *adm_access,
+              apr_pool_t *pool)
+{
+  svn_wc_status2_t *stat2;
+
+  SVN_ERR(svn_wc_status2(&stat2, path, adm_access, pool));
+  *status = (svn_wc_status_t *) stat2;
+  return SVN_NO_ERROR;
+}
+
+svn_wc_status_t *
+svn_wc_dup_status(const svn_wc_status_t *orig_stat,
+                  apr_pool_t *pool)
+{
+  svn_wc_status_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
+
+  /* Shallow copy all members. */
+  *new_stat = *orig_stat;
+
+  /* Now go back and dup the deep item into this pool. */
+  if (orig_stat->entry)
+    new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
+
+  /* Return the new hotness. */
+  return new_stat;
+}
+
+
 /*** From update_editor.c ***/
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
