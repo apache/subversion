@@ -10,6 +10,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * identical files share storage space in repository (issue #2286)
     * file-externals support for intra-repository files (issue #937)
     * "tree" conflicts now handled more gracefully (issue #2282, #2908)
+    * repository root relative URL support on most commands (issue #3193)
 
   - Minor new features and improvements:
     * pre-lock hook can now specify lock tokens via stdout (r32778)
@@ -52,8 +53,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * 2-url merge from DAV-accessed foreign repo makes bad wcprops (issue #3118)
     * can't add .svn (and children) to your wc via '--parents' (r35819)
     * improved performance removing unversioned directories (r36111)
-    * 'svn cp --parents' had path URL encoding issues (issue #3374)
-    * repository root relative URLs support peg revisions (issue #3193)
+    * 'svn cp --parents' had path URL encoding issues (issue #3374)    
     * support shell quoting rules in externals definitions (issue #2461)
     * new SVN_LOCALE_DIR environment variable for localization (issue #2879)
     * scheme and domain name in urls handled case insensitive (issue #2475)
