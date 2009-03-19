@@ -180,9 +180,10 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   if (current_entry->schedule != svn_wc_schedule_add
                       && !excluded)
                     {
-                      SVN_ERR(svn_wc__entry_remove(
-                                     entries, svn_wc_adm_access_path(dirpath),
-                                     name, subpool));
+                      /* WRITE_TO_DISK is FALSE because we're batching
+                         these up. We'll write out the entries later.  */
+                      SVN_ERR(svn_wc__entry_remove(entries, dirpath, name,
+                                                   FALSE, subpool));
                       if (notify_func)
                         {
                           notify = svn_wc_create_notify(child_path,
@@ -1215,10 +1216,8 @@ svn_wc_delete3(const char *path,
                  with!  this means we're dealing with a missing item
                  that's scheduled for addition.  Easiest to just
                  remove the entry.  */
-              SVN_ERR(svn_wc__entry_remove(
-                            entries, svn_wc_adm_access_path(parent_access),
-                            base_name, pool));
-              SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+              SVN_ERR(svn_wc__entry_remove(entries, parent_access, base_name,
+                                           TRUE, pool));
             }
         }
       else
@@ -2063,10 +2062,8 @@ revert_entry(svn_depth_t *depth,
                  adm_access, for which we definitely can't use the 'else'
                  code path (as it will remove the parent from version
                  control... (See issue 2425) */
-              SVN_ERR(svn_wc__entry_remove(
-                            entries, svn_wc_adm_access_path(parent_access),
-                            basey, pool));
-              SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+              SVN_ERR(svn_wc__entry_remove(entries, parent_access, basey,
+                                           TRUE, pool));
             }
           else
             {
@@ -2414,7 +2411,6 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   svn_boolean_t is_file;
   svn_boolean_t left_something = FALSE;
-  apr_hash_t *entries = NULL;
   const char *full_path = apr_pstrdup(pool,
                                       svn_wc_adm_access_path(adm_access));
 
@@ -2458,10 +2454,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                    adm_access, pool));
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__entry_remove(entries, svn_wc_adm_access_path(adm_access),
-                                   name, pool));
-      SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+      SVN_ERR(svn_wc__entry_remove(NULL, adm_access, name, TRUE, pool));
 
       /* Remove text-base/NAME.svn-base */
       SVN_ERR(remove_file_if_present(svn_wc__text_base_path(full_path, FALSE,
@@ -2485,6 +2478,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       apr_pool_t *subpool = svn_pool_create(pool);
       apr_hash_index_t *hi;
       svn_wc_entry_t incomplete_entry;
+      apr_hash_t *entries;
 
       /* ### sanity check:  check 2 places for DELETED flag? */
 
@@ -2559,10 +2553,17 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                 {
                   /* The directory is either missing or excluded,
                      so don't try to recurse, just delete the
-                     entry in the parent directory. */
-                  SVN_ERR(svn_wc__entry_remove(
-                                entries, svn_wc_adm_access_path(adm_access),
-                                current_entry_name, subpool));
+                     entry in the parent directory.
+
+                     WRITE_TO_DISK is FALSE because we're just going to
+                     blow away the administrative data anyways.
+
+                     ### tho maybe we should write it out in case our
+                     ### removal is interrupted? get the partial state
+                     ### written to disk.  */
+                  SVN_ERR(svn_wc__entry_remove(entries, adm_access,
+                                               current_entry_name, FALSE,
+                                               subpool));
                 }
               else
                 {
@@ -2625,13 +2626,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
             dir_entry = apr_hash_get(parent_entries, base_name,
                                      APR_HASH_KEY_STRING);
             if (dir_entry->depth != svn_depth_exclude)
-              {
-                SVN_ERR(svn_wc__entry_remove(
-                        parent_entries, svn_wc_adm_access_path(parent_access),
-                        base_name, pool));
-                SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
-
-              }
+              SVN_ERR(svn_wc__entry_remove(parent_entries, parent_access,
+                                           base_name, TRUE, pool));
           }
       }
 
