@@ -284,8 +284,9 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
         {
           svn_wc_entry_t *target_entry;
           apr_hash_t *parent_entries;
+
           SVN_ERR(svn_wc_entries_read(&parent_entries, p_access,
-                                      FALSE, pool));
+                                      TRUE, pool));
 
           target_entry = apr_hash_get(parent_entries,
                                       svn_dirent_basename(full_path, pool),
