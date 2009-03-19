@@ -30,6 +30,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
     * new public mod_dav_svn URI syntax:  path?[p=PEG][&r=REV] (r34076)
     * new 'svnsync info' command to show synchronization information (r35053)
+    * conflict resolver supports mine-conflict and theirs-conflict
 
   - Client-side bugfixes:
     * faulty reflexive merges (issue #2897)
