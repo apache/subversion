@@ -44,6 +44,8 @@ describes what is planned for the release.</p>
       >Improved interactive conflict resolution</a></li>
   <li><a href="#svnserve-logging"
       >Logging support for svnserve</a></li>
+  <li><a href="#historical-uris"
+      >New public HTTP URI syntax for examining history</a></li>
   <li><a href="#cmdline"
       >Command-line client improvements</a></li>
   <li><a href="#apis"
@@ -608,6 +610,42 @@ programmers not familiar with the C API.</p>
 <p>XXX</p>
 
 </div>  <!-- svnserve-logging -->
+
+
+<div class="h3" id="historical-uris"
+             title="historical-uris">
+<h3>New public 'historical' HTTP URI syntax for mod_dav_svn (<em>server</em>)</h3>
+
+<p>mod_dav_svn now supports a new public URI syntax for
+examining older versions of files or directories.  The intent here is
+to allow users to examine history without the use of an svn client,
+and to make it easier for 3rd-party tools (e.g. code-review services)
+to work directly against repositories without using svn libraries.</p>
+
+    <pre>http://host/repos/path?[p=PEG][&r=REV]</pre>
+
+<p>The new syntax works similarly to the way URIs work with the svn
+  commandline client.  Simply requesting <b>http://host/repos/path</b>
+  fetches "path" in the HEAD revision.  Adding a "p" query argument
+  specifies a different peg revision instead, so that:</p>
+
+    <pre>http://host/repos/path?p=38</pre>
+
+<p>...is similar to specifying "path@38" on the commandline.  Adding a
+  "r" query argument is like specifying "-r" on the commandline,
+  causing the repository to follow history backwards from the peg
+  revision to the older operative revision:</p>
+
+    <pre>http://host/repos/path?p=38&r=20</pre>
+
+<p>As with the commandline, the peg revision defaults to HEAD if
+  unspecified, and the operative revision defaults to the peg
+  revision.  The online Subversion Book has
+  a <a href="http://svnbook.red-bean.com/en/1.5/svn.advanced.pegrevs.html">section
+  explaining peg and operative revisions</a> in great detail.</p>
+
+</div>  <!-- historical-uris -->
+
 
 <div class="h3" id="cmdline" title="cmdline">
 <h3>Command-line client improvements (<em>client</em>)</h3>
