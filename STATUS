@@ -114,11 +114,6 @@ Approved changes:
    Votes:
      +1: rhuijben, gstein, danielsh
 
-  * r36093, r36292, r36406
-    Improve some messages.
-    Votes:
-      +1: arfrever, gstein, rhuijben
-
  * r36049-r36051, r36131
    Resolve the SVN_ERR_MALFUNCTION() reproducible on Windows with
      svn ci "C:/Program FIles" C:/Windows
