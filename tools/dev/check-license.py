@@ -117,7 +117,8 @@ def main():
   for f in sys.argv[1:]:
     if os.path.isdir(f):
       baton = file_func
-      os.path.walk(f, visit, baton)
+      for dirpath, dirs, files in os.walk(f):
+        visit(baton, dirpath, dirs + files)
     else:
       baton = file_func
       dir, i = os.path.split(f)

@@ -37,16 +37,11 @@ def mod_all_files(wc_dir, new_text):
   """Walk over working copy WC_DIR, appending NEW_TEXT to all the
   files in that tree (but not inside the .svn areas of that tree)."""
 
-  def tweak_files(new_text, dirname, names):
-    if os.path.basename(dirname) == ".svn":
-      del names[:]
-    else:
-      for name in names:
-        full_path = os.path.join(dirname, name)
-        if os.path.isfile(full_path):
-          svntest.main.file_append(full_path, new_text)
-
-  os.path.walk(wc_dir, tweak_files, new_text)
+  for dirpath, dirs, files in os.walk(wc_dir):
+    if ".svn" in dirs:
+      dirs.remove(".svn")
+    for name in files:
+      svntest.main.file_append(os.path.join(dirpath, name), new_text)
 
 def changelist_all_files(wc_dir, name_func):
   """Walk over working copy WC_DIR, adding versioned files to
@@ -54,20 +49,16 @@ def changelist_all_files(wc_dir, name_func):
   noting its string return value (or None, if we wish to remove the
   file from a changelist)."""
 
-  def do_changelist(name_func, dirname, names):
-    if os.path.basename(dirname) == ".svn":
-      del names[:]
-    else:
-      for name in names:
-        full_path = os.path.join(dirname, name)
-        if os.path.isfile(full_path):
-          clname = name_func(full_path)
-          if not clname:
-            svntest.main.run_svn(None, "changelist", "--remove", full_path)
-          else:
-            svntest.main.run_svn(None, "changelist", clname, full_path)
-
-  os.path.walk(wc_dir, do_changelist, name_func)
+  for dirpath, dirs, files in os.walk(wc_dir):
+    if ".svn" in dirs:
+      dirs.remove(".svn")
+    for name in files:
+        full_path = os.path.join(dirpath, name)
+        clname = name_func(full_path)
+        if not clname:
+          svntest.main.run_svn(None, "changelist", "--remove", full_path)
+        else:
+          svntest.main.run_svn(None, "changelist", clname, full_path)
 
 def clname_from_lastchar_cb(full_path):
   """Callback for changelist_all_files() that returns a changelist

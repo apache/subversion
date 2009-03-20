@@ -53,14 +53,12 @@ archive_map = {
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
-  def visit(arg, dirname, names):
-    mode, mask = arg
-    for name in names:
-      fullname = os.path.join(dirname, name)
+  for dirpath, dirs, files in os.walk(path):
+    for name in dirs + files:
+      fullname = os.path.join(dirpath, name)
       if not os.path.islink(fullname):
         new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
         os.chmod(fullname, new_mode)
-  os.path.walk(path, visit, (mode, mask))
 
 # For clearing away read-only directories
 def safe_rmtree(dirname, retry=0):
@@ -285,19 +283,20 @@ if archive_type:
     try:
       import zipfile
       
-      def add_to_zip(baton, dirname, names):
-        zp = baton[0]
-        root = os.path.join(baton[1], '')
+      def add_to_zip(zp, root, dirname, names):
+        root = os.path.join(root, '')
         
         for file in names:
           path = os.path.join(dirname, file)
           if os.path.isfile(path):
             zp.write(path, path[len(root):])
           elif os.path.isdir(path) and os.path.islink(path):
-            os.path.walk(path, add_to_zip, (zp, path))
+            for dirpath, dirs, files in os.walk(path):
+              add_to_zip(zp, path, dirpath, dirs + files)
             
       zp = zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED)
-      os.path.walk(backup_subdir, add_to_zip, (zp, backup_dir))
+      for dirpath, dirs, files in os.walk(archive_path):
+        add_to_zip(zp, backup_dir, dirpath, dirs + files)
       zp.close()
     except ImportError, e:
       err_msg = "Import failed: " + str(e)
