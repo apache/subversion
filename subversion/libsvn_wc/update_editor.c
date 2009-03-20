@@ -4126,6 +4126,12 @@ merge_file(svn_wc_notify_state_t *content_state,
      might require changing the working file. */
   magic_props_changed = svn_wc__has_magic_property(fb->propchanges);
 
+  /* Set the new revision and URL in the entry and clean up some other
+     fields. This clears DELETED from any prior versioned file with the
+     same name (needed before attempting to install props).  */
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, fb->path,
+                            *eb->target_revision, fb->new_URL, pool));
+
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
@@ -4164,11 +4170,6 @@ merge_file(svn_wc_notify_state_t *content_state,
       flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE |
                 SVN_WC__ENTRY_MODIFY_FORCE);
     }
-
-  /* Set the new revision and URL in the entry and clean up some other
-     fields. */
-  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, fb->path,
-                            *eb->target_revision, fb->new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -5420,12 +5421,13 @@ svn_wc_add_repos_file3(const char *dst_path,
   }
 
   /* Set the new revision number and URL in the entry and clean up some other
-     fields. */
+     fields. This clears DELETED from any prior versioned file with the
+     same name (needed before attempting to install props).  */
   SVN_ERR(loggy_tweak_entry(log_accum, adm_access, dst_path,
                             dst_entry ? dst_entry->revision : ent->revision,
                             new_URL, pool));
 
-  /* Install the props first, so that the loggy translation has access to
+  /* Install the props before the loggy translation, so that it has access to
      the properties for this file. */
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));
