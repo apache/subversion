@@ -36,7 +36,7 @@ class Config:
         cursectdict = None
         optname = None
         lineno = 0
-        for line in file.xreadlines():
+        for line in file:
             lineno = lineno + 1
             if line.isspace() or line[0] == '#':
                 continue
