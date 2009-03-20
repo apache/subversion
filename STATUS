@@ -101,10 +101,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
-  * r36252-36253 (on branch 1.6.x-r36252)
-    Fix valgrind UMRs.
-    Justification:
-      UMRs are undefined behaviour
-    Votes:
-      +1: philip, rhuijben, stsp, arfrever, gstein

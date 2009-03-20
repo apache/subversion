@@ -78,6 +78,10 @@ svn_wc_check_wc(const char *path,
 
       svn_error_clear(err);
 
+      /* If the format file does not exist or path not directory, then for
+         our purposes this is not a working copy, so return 0. */
+      *wc_format = 0;
+
       /* Check path itself exists. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
 
@@ -88,9 +92,6 @@ svn_wc_check_wc(const char *path,
             svn_path_local_style(path, pool));
         }
 
-      /* If the format file does not exist or path not directory, then for
-         our purposes this is not a working copy, so return 0. */
-      *wc_format = 0;
     }
   else if (err)
     return err;
