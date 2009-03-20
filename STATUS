@@ -144,15 +144,6 @@ Approved changes:
    Votes:
      +1: cmpilato, rhuijben, arfrever, gstein
 
-  * r36238
-    Fix build of RHEL5 RPM packages.
-    Justification:
-      Won't build properly without these changes.  Not a release blocker for
-      1.6.0 but would be nice if the train is still in the station.  Otherwise
-      please feel free to move to 1.6.1.
-    Votes:
-       +1: dws, arfrever, gstein
-
   * r36252-36253 (on branch 1.6.x-r36252)
     Fix valgrind UMRs.
     Justification:
