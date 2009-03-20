@@ -357,20 +357,12 @@ opt_revision_to_string(const char **str,
   return SVN_NO_ERROR;
 }
 
-/* Parse a file external specification in the NULL terminated STR and
-   place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
-   and revision number in REV_RESULT.  STR may be NULL, in which case
-   PATH_RESULT will be set to NULL and both PEG_REV_RESULT and
-   REV_RESULT set to svn_opt_revision_unspecified.
-
-   The format that is read is the same as a working-copy path with a
-   peg revision; see svn_opt_parse_path(). */
-static svn_error_t *
-unserialize_file_external(const char **path_result,
-                          svn_opt_revision_t *peg_rev_result,
-                          svn_opt_revision_t *rev_result,
-                          const char *str,
-                          apr_pool_t *pool)
+svn_error_t *
+svn_wc__unserialize_file_external(const char **path_result,
+                                  svn_opt_revision_t *peg_rev_result,
+                                  svn_opt_revision_t *rev_result,
+                                  const char *str,
+                                  apr_pool_t *pool)
 {
   if (str)
     {
@@ -395,20 +387,12 @@ unserialize_file_external(const char **path_result,
   return SVN_NO_ERROR;
 }
 
-/* Serialize into STR the file external path, peg revision number and
-   the operative revision number into a format that
-   unserialize_file_external() can parse.  The format is
-     %{peg_rev}:%{rev}:%{path}
-   where a rev will either be HEAD or the string revision number.  If
-   PATH is NULL then STR will be set to NULL.  This method writes to a
-   string instead of a svn_stringbuf_t so that the string can be
-   protected by write_str(). */
-static svn_error_t *
-serialize_file_external(const char **str,
-                        const char *path,
-                        const svn_opt_revision_t *peg_rev,
-                        const svn_opt_revision_t *rev,
-                        apr_pool_t *pool)
+svn_error_t *
+svn_wc__serialize_file_external(const char **str,
+                                const char *path,
+                                const svn_opt_revision_t *peg_rev,
+                                const svn_opt_revision_t *rev,
+                                apr_pool_t *pool)
 {
   const char *s;
 
@@ -675,11 +659,11 @@ read_entry(svn_wc_entry_t **new_entry,
   {
     const char *str;
     SVN_ERR(read_str(&str, buf, end, pool));
-    SVN_ERR(unserialize_file_external(&entry->file_external_path,
-                                      &entry->file_external_peg_rev,
-                                      &entry->file_external_rev,
-                                      str,
-                                      pool));
+    SVN_ERR(svn_wc__unserialize_file_external(&entry->file_external_path,
+                                              &entry->file_external_peg_rev,
+                                              &entry->file_external_rev,
+                                              str,
+                                              pool));
   }
   MAYBE_DONE;
 
@@ -1224,9 +1208,9 @@ svn_wc__write_entry_old(svn_stringbuf_t *buf,
   /* File externals. */
   {
     const char *s;
-    SVN_ERR(serialize_file_external(&s, entry->file_external_path,
-                                    &entry->file_external_peg_rev,
-                                    &entry->file_external_rev, pool));
+    SVN_ERR(svn_wc__serialize_file_external(&s, entry->file_external_path,
+                                            &entry->file_external_peg_rev,
+                                            &entry->file_external_rev, pool));
     write_str(buf, s, pool);
   }
 

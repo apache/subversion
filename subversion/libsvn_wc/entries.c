@@ -72,7 +72,9 @@ enum statement_keys {
   STMT_DELETE_ALL_ACTUAL,
   STMT_DELETE_ALL_LOCK,
   STMT_SELECT_INCOMPLETE_FLAG,
-  STMT_SELECT_NOT_PRESENT
+  STMT_SELECT_NOT_PRESENT,
+  STMT_SELECT_FILE_EXTERNAL,
+  STMT_UPDATE_FILE_EXTERNAL
 };
 
 static const char * const statements[] = {
@@ -136,6 +138,12 @@ static const char * const statements[] = {
 
   "select 1 from base_node "
   "where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';",
+
+  "select file_external from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "update base_node set file_external = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
   };
@@ -1394,6 +1402,35 @@ read_entries(svn_wc_adm_access_t *adm_access,
             }
         }
 
+      /* Let's check for a file external.
+         ### right now this is ugly, since we have no good way querying
+         ### for a file external OR retrieving properties.  ugh.  */
+      if (entry->kind == svn_node_file)
+        {
+          svn_sqlite__stmt_t *stmt;
+          svn_boolean_t have_row;
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                            STMT_SELECT_FILE_EXTERNAL));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    (apr_uint64_t)1 /* wc_id */,
+                                    entry->name));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+          if (!svn_sqlite__column_is_null(stmt, 0))
+            {
+              SVN_ERR(svn_wc__unserialize_file_external(
+                            &entry->file_external_path,
+                            &entry->file_external_peg_rev,
+                            &entry->file_external_rev,
+                            svn_sqlite__column_text(stmt, 0, NULL),
+                            result_pool));
+
+            }
+
+          SVN_ERR(svn_sqlite__reset(stmt));
+        }
+
       entry->working_size = translated_size;
 
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
@@ -1908,6 +1945,11 @@ write_entry(svn_wc__db_t *db,
       actual_node->tree_conflict_data = entry->tree_conflict_data;
     }
 
+  if (entry->file_external_path != NULL)
+    {
+      base_node = MAYBE_ALLOC(base_node, scratch_pool);
+    }
+
   /* Insert the base node. */
   if (base_node)
     {
@@ -1994,6 +2036,28 @@ write_entry(svn_wc__db_t *db,
           lock.date = entry->lock_creation_date;
 
           SVN_ERR(svn_wc__db_lock_add(db, entry_abspath, &lock, scratch_pool));
+        }
+
+      /* Now, update the file external information.
+         ### This is a hack!  */
+      if (entry->file_external_path)
+        {
+          svn_sqlite__stmt_t *stmt;
+          const char *str;
+
+          SVN_ERR(svn_wc__serialize_file_external(&str,
+                                                  entry->file_external_path,
+                                                  &entry->file_external_peg_rev,
+                                                  &entry->file_external_rev,
+                                                  scratch_pool));
+       
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                            STMT_UPDATE_FILE_EXTERNAL));
+          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                                    (apr_uint64_t)1 /* wc_id */,
+                                    entry->name,
+                                    str));
+          SVN_ERR(svn_sqlite__step_done(stmt));
         }
     }
 
