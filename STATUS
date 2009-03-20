@@ -10,7 +10,7 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.6.0:
+Status of 1.6.1:
 ================
 
 Candidate changes:
@@ -19,28 +19,25 @@ Candidate changes:
     Fix warning in Python 2.6 for ctypes-python bindings
     Votes:
       +1: djames, arfrever
-      +1: gstein (for 1.6.1; this can wait)
+      +1: gstein
 
   * r36093, r36292, r36406
     Improve some messages.
     Votes:
       +1: arfrever
-      +1: gstein, rhuijben (for 1.6.1; this can wait)
+      +1: gstein, rhuijben
 
   * r36209
     Update paths to svnmucc.
     Votes:
       +1: arfrever
-      +1: gstein, rhuijben (for 1.6.1; this can wait)
+      +1: gstein, rhuijben
 
   * r36388
     Recommend Neon 0.28.4.
     Votes:
       +1: arfrever, steveking (already using neon 0.28.4 in TSVN)
-      +1: gstein, rhuijben (for 1.6.1; this can wait)
-
-     
-Candidate if a new tarball is constructed (otherwise for 1.6.1):
+      +1: gstein, rhuijben
 
  * r36049-r36051, r36131
    Resolve the SVN_ERR_MALFUNCTION() reproducible on Windows with
@@ -52,8 +49,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      delays the Windows automated testrun until a user confirms.
      (This doesn't fix this testcase; it just handles this part of the problem)
    Votes:
-     +1: rhuijben, pburba, steveking
-     +1: gstein (for a new CODE tarball, not a doc tarball)
+     +1: rhuijben, pburba, steveking, gstein
 
  * r36159
    Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
@@ -61,8 +57,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      With the fix, each slave server tries to field the lock/unlock, resulting
      in competing ideas of what is and isn't locked.
    Votes:
-     +1: cmpilato, rhuijben, arfrever
-     +1: gstein (for 1.6.1)
+     +1: cmpilato, rhuijben, arfrever, gstein
 
   * r36238
     Fix build of RHEL5 RPM packages.
@@ -71,17 +66,14 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       1.6.0 but would be nice if the train is still in the station.  Otherwise
       please feel free to move to 1.6.1.
     Votes:
-       +1: dws, arfrever
-       +0: gstein (for 1.6.0)
-       +1: gstein (for 1.6.1)
+       +1: dws, arfrever, gstein
 
   * r36252-36253 (on branch 1.6.x-r36252)
     Fix valgrind UMRs.
     Justification:
       UMRs are undefined behaviour
     Votes:
-      +1: philip, rhuijben, stsp, arfrever
-      +1: gstein (for a new CODE tarball, not a doc tarball)
+      +1: philip, rhuijben, stsp, arfrever, gstein
       
   * r36302
     Fix a small problem in the loggy upgrade process. Some v10 working copies
@@ -95,10 +87,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
      Since the presence of that file has been deprecated for ages,
      let's just apply this easy fix to 1.6 instead of tweaking the script.
     Votes:
-      +1: rhuijben, stsp, arfrever
-      -0: gstein (for 1.6.0 since it isn't "needed" except for when somebody
-                  uses a script which I conceptually disagree with)
-      +1: gstein (for 1.6.1)
+      +1: rhuijben, stsp, arfrever, gstein
 
   * r36213
     Trivial help output fix.
@@ -108,8 +97,7 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       Already merged to 1.6.x by Arfrever in r36214, but reverted
       in 36322 because it was not formally voted on.
     Votes:
-      +1: stsp, arfrever
-      +1: gstein (for 1.6.1; it can wait)
+      +1: stsp, arfrever, gstein
 
   * r36613, r36615, r36631, r36641
     Avoid potential segfault when dealing with subtree mergeinfo.
@@ -127,11 +115,6 @@ Candidate if a new tarball is constructed (otherwise for 1.6.1):
       is necessary to avoid a conflict.
     Votes:
       +1: pburba
-
-Status of 1.6.1:
-================
-
-Candidate changes:
 
  * r36178
    External merge-tool improvements.
@@ -229,7 +212,7 @@ Candidate changes:
    Notes:
      r36686 is the fix and r36689 adds a regression test.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
 
 Approved changes:
