@@ -146,14 +146,3 @@ Approved changes:
       in r36647.
     Votes:
       +1: stsp, arfrever, gstein, rhuijben
-
- * r36444
-   Optimize merge performance when dealing with subtree mergeinfo.
-   Justification:
-     Another simple change which, in many common situations, avoids unneeded
-     communication with the server for each subtree with explicit mergeinfo.
-     If the merge target has many subtrees with mergeinfo, the performance
-     improvment can be dramatic, see
-     http://svn.haxx.se/dev/archive-2009-03/0198.shtml.
-   Votes:
-     +1: pburba, rhuijben, arfrever
