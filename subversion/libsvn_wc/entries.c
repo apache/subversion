@@ -1091,6 +1091,14 @@ read_entries(svn_wc_adm_access_t *adm_access,
             }
           else
             {
+              /* ### if this looks like a plain old add, then rev=0.  */
+              if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
+                  && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
+                entry->revision = 0;
+
+              if (status == svn_wc__db_status_obstructed_add)
+                entry->revision = SVN_INVALID_REVNUM;
+
               /* ### when we're reading a directory that is not present,
                  ### then it must be "normal" rather than "add".  */
               if (*entry->name == '\0'
@@ -1098,11 +1106,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 entry->schedule = svn_wc_schedule_normal;
               else
                 entry->schedule = svn_wc_schedule_add;
-
-              /* ### if this looks like a plain old add, then rev=0.  */
-              if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
-                  && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
-                entry->revision = 0;
             }
 
           SVN_ERR(svn_wc__db_scan_working(&work_status,
