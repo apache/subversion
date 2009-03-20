@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -899,7 +899,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn status\n"
      "     M      wc/bar.c\n"
      "    !     C wc/qaz.c\n"
-     "          >   incoming edit, local missing\n"
+     "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
       opt_ignore_externals, opt_changelist} },
