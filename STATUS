@@ -192,8 +192,10 @@ Approved changes:
     Notes:
       Already merged to 1.6.x by Arfrever in r36214, but reverted
       in 36322 because it was not formally voted on.
+      And a few weeks later merged in r36625 by Jens Seidel and reverted
+      in r36647.
     Votes:
-      +1: stsp, arfrever, gstein
+      +1: stsp, arfrever, gstein, rhuijben
 
  * r36256
    Fix potentially awful performance of --ignore-ancestry merges.
