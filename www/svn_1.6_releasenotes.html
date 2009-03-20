@@ -35,6 +35,8 @@
       >Ctypes Python Bindings</a></li>
   <li><a href="#improved-interactive-conflict-resolution"
       >Improved interactive conflict resolution</a></li>
+  <li><a href="#sparse-directory-exclusion"
+      >Sparse directory exclusion</a></li>
   <li><a href="#svnserve-logging"
       >Logging support for svnserve</a></li>
   <li><a href="#historical-uris"
@@ -581,6 +583,36 @@ programmers not familiar with the C API.</p>
 </pre>
 
 </div>  <!-- improved-interactive-conflict-resolution -->
+
+<div class="h3" id="sparse-directory-exclusion"
+             title="sparse-directory-exclusion">
+<h3>Sparse directory exclusion</h3>
+
+<p>In Subversion 1.6, the <code>--set-depth</code> parameter to <code>svn
+update</code> has grown a new value&mdash;<em>exclude</em>. This value tells
+Subversion to exclude the target from the working copy, immediately and until
+further notice. Prior to Subversion 1.6, if a directory could not easily be
+removed from a working copy.  If it was deleted without the help of Subvesion,
+it would return on the next <code>svn update</code>.  If it was deleted with
+<code>svn delete</code>, the directory remained as a local modification
+forever. (Unless, of course, it was accidentally committed.)  The new exclusion
+mechanism in Subversion 1.6 fixes both these problems.</p>
+
+<p>Note that if you exclude a versioned directory that has some unversioned
+files in it, or some files with local modifications, Subversion handles this
+situation gracefully. All the files that aren't safe to delete, Subversion
+leaves around, and of course leaves any intermediate directories required to
+reach those files, too.</p>
+
+<div class="h4" id="sparse-directory-exclusion-further-reading"
+             title="sparse-directory-exclusion-further-reading">
+<h4>Further reading</h4>
+
+<p>See this <a href="">blog post</a> for more examples and information.</p>
+
+</div>  <!-- further-reading -->
+
+</div>  <!-- sparse-directory-exclusion -->
 
 <div class="h3" id="svnserve-logging"
              title="svnserve-logging">
