@@ -15,90 +15,6 @@ Status of 1.6.1:
 
 Candidate changes:
 
-  * r36559
-    Fix warning in Python 2.6 for ctypes-python bindings
-    Votes:
-      +1: djames, arfrever
-      +1: gstein
-
-  * r36093, r36292, r36406
-    Improve some messages.
-    Votes:
-      +1: arfrever
-      +1: gstein, rhuijben
-
-  * r36209
-    Update paths to svnmucc.
-    Votes:
-      +1: arfrever
-      +1: gstein, rhuijben
-
-  * r36388
-    Recommend Neon 0.28.4.
-    Votes:
-      +1: arfrever, steveking (already using neon 0.28.4 in TSVN)
-      +1: gstein, rhuijben
-
- * r36049-r36051, r36131
-   Resolve the SVN_ERR_MALFUNCTION() reproducible on Windows with
-     svn ci "C:/Program FIles" C:/Windows
-   by handling parent directories correctly.
-   (r36050 and r36050 are typo fixes; r36131 some extra cleanup)
-   Justification:
-     This malfunction makes update_tests.py 32 abort on Windows. Which in turn
-     delays the Windows automated testrun until a user confirms.
-     (This doesn't fix this testcase; it just handles this part of the problem)
-   Votes:
-     +1: rhuijben, pburba, steveking, gstein
-
- * r36159
-   Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
-   Justification:
-     With the fix, each slave server tries to field the lock/unlock, resulting
-     in competing ideas of what is and isn't locked.
-   Votes:
-     +1: cmpilato, rhuijben, arfrever, gstein
-
-  * r36238
-    Fix build of RHEL5 RPM packages.
-    Justification:
-      Won't build properly without these changes.  Not a release blocker for
-      1.6.0 but would be nice if the train is still in the station.  Otherwise
-      please feel free to move to 1.6.1.
-    Votes:
-       +1: dws, arfrever, gstein
-
-  * r36252-36253 (on branch 1.6.x-r36252)
-    Fix valgrind UMRs.
-    Justification:
-      UMRs are undefined behaviour
-    Votes:
-      +1: philip, rhuijben, stsp, arfrever, gstein
-      
-  * r36302
-    Fix a small problem in the loggy upgrade process. Some v10 working copies
-    have .svn/format, and some don't. The *intent* is to remove the file if
-    present, so make the code match.
-    Justification:
-     If change-svn-wc-format.py is used to downgrade a working copy
-     from 1.6 to 1.5 format, the script does not add the format file,
-     rendering 1.6 clients unable to update the working copy again:
-     "svn: Can't remove file '.svn/format': No such file or directory"
-     Since the presence of that file has been deprecated for ages,
-     let's just apply this easy fix to 1.6 instead of tweaking the script.
-    Votes:
-      +1: rhuijben, stsp, arfrever, gstein
-
-  * r36213
-    Trivial help output fix.
-    Justification:
-      Errors in documentation are bad, obvious fix.
-    Notes:
-      Already merged to 1.6.x by Arfrever in r36214, but reverted
-      in 36322 because it was not formally voted on.
-    Votes:
-      +1: stsp, arfrever, gstein
-
   * r36613, r36615, r36631, r36641
     Avoid potential segfault when dealing with subtree mergeinfo.
     Justification:
@@ -130,26 +46,6 @@ Candidate changes:
      +1: stsp (I'd say it's a fix for a feature we already support (merge
                under control of external non-interactive tool), albeit
                the feature is currently so buggy that you can't use it.)
-
- * r36256
-   Fix potentially awful performance of --ignore-ancestry merges.
-   Justification:
-     A very simple change which avoids an unneeded walk of the entire merge
-     target.  For large WCs the performance improvment can be dramatic.
-     See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
-   Votes:
-     +1: pburba, rhuijben, gstein, arfrever
-
- * r36444
-   Optimize merge performance when dealing with subtree mergeinfo.
-   Justification:
-     Another simple change which, in many common situations, avoids unneeded
-     communication with the server for each subtree with explicit mergeinfo.
-     If the merge target has many subtrees with mergeinfo, the performance
-     improvment can be dramatic, see
-     http://svn.haxx.se/dev/archive-2009-03/0198.shtml.
-   Votes:
-     +1: pburba, rhuijben, arfrever
      
  * r36149-r36151, r36156
    Fix starting apache httpd in daemon mode from python versions with
@@ -217,3 +113,104 @@ Candidate changes:
 
 Approved changes:
 =================
+
+  * r36559
+    Fix warning in Python 2.6 for ctypes-python bindings
+    Votes:
+      +1: djames, arfrever, gstein
+
+  * r36093, r36292, r36406
+    Improve some messages.
+    Votes:
+      +1: arfrever, gstein, rhuijben
+
+  * r36209
+    Update paths to svnmucc.
+    Votes:
+      +1: arfrever, gstein, rhuijben
+
+  * r36388
+    Recommend Neon 0.28.4.
+    Votes:
+      +1: arfrever, gstein, rhuijben,
+          steveking (already using neon 0.28.4 in TSVN)
+
+ * r36049-r36051, r36131
+   Resolve the SVN_ERR_MALFUNCTION() reproducible on Windows with
+     svn ci "C:/Program FIles" C:/Windows
+   by handling parent directories correctly.
+   (r36050 and r36050 are typo fixes; r36131 some extra cleanup)
+   Justification:
+     This malfunction makes update_tests.py 32 abort on Windows. Which in turn
+     delays the Windows automated testrun until a user confirms.
+     (This doesn't fix this testcase; it just handles this part of the problem)
+   Votes:
+     +1: rhuijben, pburba, steveking, gstein
+
+ * r36159
+   Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
+   Justification:
+     With the fix, each slave server tries to field the lock/unlock, resulting
+     in competing ideas of what is and isn't locked.
+   Votes:
+     +1: cmpilato, rhuijben, arfrever, gstein
+
+  * r36238
+    Fix build of RHEL5 RPM packages.
+    Justification:
+      Won't build properly without these changes.  Not a release blocker for
+      1.6.0 but would be nice if the train is still in the station.  Otherwise
+      please feel free to move to 1.6.1.
+    Votes:
+       +1: dws, arfrever, gstein
+
+  * r36252-36253 (on branch 1.6.x-r36252)
+    Fix valgrind UMRs.
+    Justification:
+      UMRs are undefined behaviour
+    Votes:
+      +1: philip, rhuijben, stsp, arfrever, gstein
+      
+  * r36302
+    Fix a small problem in the loggy upgrade process. Some v10 working copies
+    have .svn/format, and some don't. The *intent* is to remove the file if
+    present, so make the code match.
+    Justification:
+     If change-svn-wc-format.py is used to downgrade a working copy
+     from 1.6 to 1.5 format, the script does not add the format file,
+     rendering 1.6 clients unable to update the working copy again:
+     "svn: Can't remove file '.svn/format': No such file or directory"
+     Since the presence of that file has been deprecated for ages,
+     let's just apply this easy fix to 1.6 instead of tweaking the script.
+    Votes:
+      +1: rhuijben, stsp, arfrever, gstein
+
+  * r36213
+    Trivial help output fix.
+    Justification:
+      Errors in documentation are bad, obvious fix.
+    Notes:
+      Already merged to 1.6.x by Arfrever in r36214, but reverted
+      in 36322 because it was not formally voted on.
+    Votes:
+      +1: stsp, arfrever, gstein
+
+ * r36256
+   Fix potentially awful performance of --ignore-ancestry merges.
+   Justification:
+     A very simple change which avoids an unneeded walk of the entire merge
+     target.  For large WCs the performance improvment can be dramatic.
+     See http://svn.haxx.se/dev/archive-2009-03/0067.shtml.
+   Votes:
+     +1: pburba, rhuijben, gstein, arfrever
+
+ * r36444
+   Optimize merge performance when dealing with subtree mergeinfo.
+   Justification:
+     Another simple change which, in many common situations, avoids unneeded
+     communication with the server for each subtree with explicit mergeinfo.
+     If the merge target has many subtrees with mergeinfo, the performance
+     improvment can be dramatic, see
+     http://svn.haxx.se/dev/archive-2009-03/0198.shtml.
+   Votes:
+     +1: pburba, rhuijben, arfrever
