@@ -114,18 +114,6 @@ Approved changes:
    Votes:
      +1: rhuijben, gstein, danielsh
 
- * r36049-r36051, r36131
-   Resolve the SVN_ERR_MALFUNCTION() reproducible on Windows with
-     svn ci "C:/Program FIles" C:/Windows
-   by handling parent directories correctly.
-   (r36050 and r36050 are typo fixes; r36131 some extra cleanup)
-   Justification:
-     This malfunction makes update_tests.py 32 abort on Windows. Which in turn
-     delays the Windows automated testrun until a user confirms.
-     (This doesn't fix this testcase; it just handles this part of the problem)
-   Votes:
-     +1: rhuijben, pburba, steveking, gstein
-
  * r36159
    Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
    Justification:
