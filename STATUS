@@ -98,6 +98,10 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+
+Approved changes:
+=================
+
  * r36686, r36689
    Fix an apparent bug in crop.c: it was fetch a *pruned* list of entries,
    modifying the depth value of one of them, then writing the *subset* as if
@@ -108,11 +112,7 @@ Candidate changes:
    Notes:
      r36686 is the fix and r36689 adds a regression test.
    Votes:
-     +1: rhuijben, gstein
-
-
-Approved changes:
-=================
+     +1: rhuijben, gstein, danielsh
 
   * r36559
     Fix warning in Python 2.6 for ctypes-python bindings
