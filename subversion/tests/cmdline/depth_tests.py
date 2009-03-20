@@ -2273,9 +2273,44 @@ def exclude_keeps_hidden_entries(sbox):
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'C')
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'D')
   # we could grep the 'entries' file, but...
+  # or we could use 'info', but info_excluded() is XFail.
   expected_stderr = ".*svn: 'C' is already under version control.*"
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'mkdir', 'C')
+
+
+def info_excluded(sbox):
+  "'info' should treat excluded item as versioned"
+
+  # The problem: 'svn info' on an excluded item would behave as if it
+  # was not versioned at all:
+  #
+  #     % svn up --set-depth exclude A
+  #     D         A
+  #     % svn info A
+  #     A:  (Not a versioned resource)
+  #     
+  #     ..\..\..\subversion\svn\info-cmd.c:562: (apr_err=200000)
+  #     svn: A problem occurred; see other errors for details
+  # 
+  # It should acknowledge the existence (in the repos) of ./A and print some
+  # info about it, like it does if '--set-depth empty' is used instead.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
+
+  import re
+  expected_info = {
+      'Path' : re.escape(A_path),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Depth' : 'exclude',
+  }
+  svntest.actions.run_and_verify_info([expected_info], A_path)
+
 
 
 #----------------------------------------------------------------------
@@ -2466,6 +2501,7 @@ test_list = [ None,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
               exclude_keeps_hidden_entries,
+              XFail(info_excluded),
               tree_conflicts_resolved_depth_empty,
               tree_conflicts_resolved_depth_files,
               tree_conflicts_resolved_depth_immediates,
