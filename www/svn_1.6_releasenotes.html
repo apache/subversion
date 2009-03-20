@@ -640,7 +640,7 @@ to allow users to examine history without the use of an svn client,
 and to make it easier for 3rd-party tools (e.g. code-review services)
 to work directly against repositories without using svn libraries.</p>
 
-    <pre>http://host/repos/path?[p=PEG][&r=REV]</pre>
+    <pre>http://host/repos/path?[p=PEG][&amp;r=REV]</pre>
 
 <p>The new syntax works similarly to the way URIs work with the svn
   commandline client.  Simply requesting <b>http://host/repos/path</b>
@@ -654,7 +654,7 @@ to work directly against repositories without using svn libraries.</p>
   causing the repository to follow history backwards from the peg
   revision to the older operative revision:</p>
 
-    <pre>http://host/repos/path?p=38&r=20</pre>
+    <pre>http://host/repos/path?p=38&amp;r=20</pre>
 
 <p>As with the commandline, the peg revision defaults to HEAD if
   unspecified, and the operative revision defaults to the peg
