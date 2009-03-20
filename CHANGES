@@ -1,3 +1,21 @@
+Version 1.6.1
+(?? ??? 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.1
+
+ User-visible changes:
+  * support Neon 0.28.4. (r36388)
+  * improve performance of 'svn merge --ignore-ancestry' (r36256)
+  * improve 'svn merge' performance with subtree mergeinfo (r36444)
+  * correctly proxy LOCK and UNLOCK requests (r36159)
+  * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
+  * fixed: unintialized memory errors (r36252, -3)
+  * fixed: potential working copy corruption (r36714)
+  * fixed: working copy upgrade error (r36302)
+
+ Developer-visible changes:
+  * fixed: warning with Python 2.6 and ctypes bindings (r36559)
+
+
 Version 1.6.0
 (20 Mar 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.0
