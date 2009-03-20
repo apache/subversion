@@ -24,7 +24,12 @@ def main():
   print("Do not proceed unless this is a *COPY* of your real repository")
   print("If this is really what you want to do, " \
       "type 'YESERASE' and press Return")
-  confirmation = raw_input("Confirmation string> ")
+  if sys.version_info[0] >= 3:
+    # Python >=3.0
+    confirmation = input("Confirmation string> ")
+  else:
+    # Python <3.0
+    confirmation = raw_input("Confirmation string> ")
   if confirmation != "YESERASE":
     print("Cancelled - confirmation string not matched")
     sys.exit(0)
