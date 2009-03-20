@@ -102,18 +102,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36686, r36689
-   Fix an apparent bug in crop.c: it was fetch a *pruned* list of entries,
-   modifying the depth value of one of them, then writing the *subset* as if
-   it were the entire list of entries.
-   Justification:
-     Makes it possible to corrupt the working copy by removing entries that
-     shouldn't be removed.
-   Notes:
-     r36686 is the fix and r36689 adds a regression test.
-   Votes:
-     +1: rhuijben, gstein, danielsh
-
   * r36252-36253 (on branch 1.6.x-r36252)
     Fix valgrind UMRs.
     Justification:
