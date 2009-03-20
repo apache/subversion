@@ -595,14 +595,12 @@ def run_svnversion(*varargs):
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
-  def visit(arg, dirname, names):
-    mode, mask = arg
-    for name in names:
-      fullname = os.path.join(dirname, name)
+  for dirpath, dirs, files in os.walk(path):
+    for name in dirs + files:
+      fullname = os.path.join(dirpath, name)
       if not os.path.islink(fullname):
         new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
         os.chmod(fullname, new_mode)
-  os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
 def safe_rmtree(dirname, retry=0):

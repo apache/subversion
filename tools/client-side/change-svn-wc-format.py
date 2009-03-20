@@ -3,7 +3,7 @@
 # change-svn-wc-format.py: Change the format of a Subversion working copy.
 #
 # ====================================================================
-# Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2007-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -115,7 +115,8 @@ class WCFormatConverter:
     """Walk all paths in a WC tree, and change their format to
     FORMAT_NBR.  Throw LossyConversionException or NotImplementedError
     if the WC format should not be converted, or is unrecognized."""
-    os.path.walk(self.root_path, self.write_dir_format, format_nbr)
+    for dirpath, dirs, files in os.walk(self.root_path):
+      self.write_dir_format(format_nbr, dirpath, dirs + files)
 
 class Entries:
   """Represents a .svn/entries file.

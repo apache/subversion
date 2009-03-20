@@ -552,7 +552,8 @@ if create_dirs:
   try:
     os.chdir(abs_objdir)
     baton = copied_execs
-    os.path.walk('subversion', copy_execs, baton)
+    for dirpath, dirs, files in os.walk('subversion'):
+      copy_execs(baton, dirpath, dirs + files)
   except:
     os.chdir(old_cwd)
     raise

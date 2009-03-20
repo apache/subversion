@@ -461,21 +461,19 @@ class State:
           "'%s' is not a prefix of '%s'" % (path + os.sep, p)
       return to_relpath(p[l:])
 
-    def _walker(baton, dirname, names):
-      parent = path_to_key(dirname)
+    for dirpath, dirs, files in os.walk(path):
+      parent = path_to_key(dirpath)
       if parent:
         parent += '/'
-      if ignore_svn and (dot_svn in names):
-        names.remove(dot_svn)
-      for name in names:
-        node = os.path.join(dirname, name)
+      if ignore_svn and dot_svn in dirs:
+        dirs.remove(dot_svn)
+      for name in dirs + files:
+        node = os.path.join(dirpath, name)
         if os.path.isfile(node):
           contents = open(node, 'r').read()
         else:
           contents = None
         desc['%s%s' % (parent, name)] = StateItem(contents=contents)
-
-    os.path.walk(path, _walker, None)
 
     if load_props:
       paths = [os.path.join(path, to_ospath(p)) for p in desc.keys()]
