@@ -782,24 +782,25 @@ complete_directory(struct edit_baton *eb,
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 current_entry->depth = svn_depth_infinity;
-            } else if ((svn_wc__adm_missing(adm_access, child_path))
-                       && (! current_entry->absent)
-                       && (current_entry->schedule != svn_wc_schedule_add))
-              {
-                /* WRITE_TO_DISK is FALSE since we'll write the entries
-                   as a batch later.  */
-                SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
-                                             FALSE, subpool));
-                if (eb->notify_func)
-                  {
-                    svn_wc_notify_t *notify
-                      = svn_wc_create_notify(child_path,
-                                             svn_wc_notify_update_delete,
-                                             subpool);
-                    notify->kind = current_entry->kind;
-                    (* eb->notify_func)(eb->notify_baton, notify, subpool);
-                  }
-              }
+            }
+          else if ((svn_wc__adm_missing(adm_access, child_path))
+                   && (! current_entry->absent)
+                   && (current_entry->schedule != svn_wc_schedule_add))
+            {
+              /* WRITE_TO_DISK is FALSE since we'll write the entries
+                 as a batch later.  */
+              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
+                                           FALSE, subpool));
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify
+                    = svn_wc_create_notify(child_path,
+                                           svn_wc_notify_update_delete,
+                                           subpool);
+                  notify->kind = current_entry->kind;
+                  (* eb->notify_func)(eb->notify_baton, notify, subpool);
+                }
+            }
         }
     }
 
@@ -2640,11 +2641,11 @@ open_directory(const char *path,
                                 svn_wc_conflict_action_edit,
                                 svn_node_dir, db->new_URL, pool));
 
-    /* Remember the roots of any locally deleted trees. */
-    if (tree_conflict
-        && tree_conflict->reason == svn_wc_conflict_reason_deleted
-        && !in_deleted_tree(eb, full_path, TRUE, pool))
-      remember_deleted_tree(eb, full_path);
+  /* Remember the roots of any locally deleted trees. */
+  if (tree_conflict
+      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && !in_deleted_tree(eb, full_path, TRUE, pool))
+    remember_deleted_tree(eb, full_path);
 
   /* If property-conflicted, skip the tree with notification. */
   SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
