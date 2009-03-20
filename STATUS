@@ -114,14 +114,6 @@ Approved changes:
    Votes:
      +1: rhuijben, gstein, danielsh
 
- * r36159
-   Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
-   Justification:
-     With the fix, each slave server tries to field the lock/unlock, resulting
-     in competing ideas of what is and isn't locked.
-   Votes:
-     +1: cmpilato, rhuijben, arfrever, gstein
-
   * r36252-36253 (on branch 1.6.x-r36252)
     Fix valgrind UMRs.
     Justification:
