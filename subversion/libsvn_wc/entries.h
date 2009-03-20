@@ -273,12 +273,6 @@ svn_wc__entries_init_old(const char *path,
                          svn_depth_t depth,
                          apr_pool_t *pool);
 
-/* Resolve any missing information in ENTRIES by deducing from the
-   directory's own entry (which must already be present in ENTRIES). */
-svn_error_t *
-svn_wc__resolve_to_defaults(apr_hash_t *entries,
-                            apr_pool_t *pool);
-
 /* Parse a file external specification in the NULL terminated STR and
    place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
    and revision number in REV_RESULT.  STR may be NULL, in which case
