@@ -85,7 +85,7 @@ typedef struct
 
 /* The main body of svn_wc__do_update_cleanup. */
 static svn_error_t *
-tweak_entries(svn_wc_adm_access_t *dirpath,
+tweak_entries(svn_wc_adm_access_t *dir_access,
               const char *base_url,
               const char *repos,
               svn_revnum_t new_rev,
@@ -102,15 +102,15 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
   svn_wc_notify_t *notify;
 
   /* Skip an excluded path and its descendants. */
-  if (apr_hash_get(exclude_paths, svn_wc_adm_access_path(dirpath),
-                     APR_HASH_KEY_STRING))
+  if (apr_hash_get(exclude_paths, svn_wc_adm_access_path(dir_access),
+                   APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
-  /* Read DIRPATH's entries. */
-  SVN_ERR(svn_wc_entries_read(&entries, dirpath, TRUE, pool));
+  /* Read DIR_ACCESS's entries. */
+  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(dirpath, entries, SVN_WC_ENTRY_THIS_DIR,
+  SVN_ERR(svn_wc__tweak_entry(dir_access, entries, SVN_WC_ENTRY_THIS_DIR,
                               base_url, repos, new_rev,
                               FALSE /* allow_removal */,
                               FALSE /* write_to_disk */,
@@ -145,8 +145,8 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
           if (base_url)
             child_url = svn_path_url_add_component2(base_url, name, subpool);
 
-          child_path = svn_dirent_join(svn_wc_adm_access_path(dirpath), name,
-                                       subpool);
+          child_path = svn_dirent_join(svn_wc_adm_access_path(dir_access),
+                                       name, subpool);
           excluded = (apr_hash_get(exclude_paths, child_path,
                                    APR_HASH_KEY_STRING) != NULL);
 
@@ -157,7 +157,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   || current_entry->depth == svn_depth_exclude))
             {
               if (! excluded)
-                SVN_ERR(svn_wc__tweak_entry(dirpath, entries, name,
+                SVN_ERR(svn_wc__tweak_entry(dir_access, entries, name,
                                             child_url, repos, new_rev,
                                             TRUE /* allow_removal */,
                                             FALSE /* write_to_disk */,
@@ -179,14 +179,14 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                  svn_wc__do_update_cleanup, since the update will already have
                  restored any missing items that it didn't want to delete. */
               if (remove_missing_dirs
-                  && svn_wc__adm_missing(dirpath, child_path))
+                  && svn_wc__adm_missing(dir_access, child_path))
                 {
                   if (current_entry->schedule != svn_wc_schedule_add
                       && !excluded)
                     {
                       /* WRITE_TO_DISK is FALSE because we're batching
                          these up. We'll write out the entries later.  */
-                      SVN_ERR(svn_wc__entry_remove(entries, dirpath, name,
+                      SVN_ERR(svn_wc__entry_remove(entries, dir_access, name,
                                                    FALSE, subpool));
                       if (notify_func)
                         {
@@ -204,7 +204,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
               else
                 {
                   svn_wc_adm_access_t *child_access;
-                  SVN_ERR(svn_wc_adm_retrieve(&child_access, dirpath,
+                  SVN_ERR(svn_wc_adm_retrieve(&child_access, dir_access,
                                               child_path, subpool));
                   SVN_ERR(tweak_entries
                           (child_access, child_url, repos, new_rev,
@@ -216,7 +216,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
     }
 
   /* Write a shiny new entries file to disk. */
-  SVN_ERR(svn_wc__entries_write(entries, dirpath, subpool));
+  SVN_ERR(svn_wc__entries_write(entries, dir_access, subpool));
 
   /* Cleanup */
   svn_pool_destroy(subpool);
