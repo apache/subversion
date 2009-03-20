@@ -114,11 +114,6 @@ Approved changes:
    Votes:
      +1: rhuijben, gstein, danielsh
 
-  * r36559
-    Fix warning in Python 2.6 for ctypes-python bindings
-    Votes:
-      +1: djames, arfrever, gstein
-
   * r36093, r36292, r36406
     Improve some messages.
     Votes:
