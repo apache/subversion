@@ -77,7 +77,7 @@ Candidate changes:
      value is provided by ra_local and ra_svn, but not by neon and serf.
      (The information is sent in the http response since well before 1.0)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, arfrever
      
  * r36389-r36390, r36412, r36421, r36423
    Instead of verifying the pristine copy of a file before updating it, 
@@ -96,7 +96,12 @@ Candidate changes:
      r36390 is a space before paren cleanup of update_editor.c needed for a
      clean merge.     
    Votes:
-     +1: rhuijben
+     +1: rhuijben, arfrever
+
+ * r36741, r36742
+   Improve detection of Berkeley DB.
+   Votes:
+     +1: arfrever
 
 
 Approved changes:
