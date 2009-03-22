@@ -163,7 +163,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     #
     SVN_DB_LIBS=["${SVN_DB_LIBS-`$apu_config --libs | sed -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`}"]
 
-    CPPFLAGS="$SVN_APRUTIL_INCLUDES $SVN_DB_INCLUDES $CPPFLAGS" 
+    CPPFLAGS="$SVN_DB_INCLUDES $SVN_APRUTIL_INCLUDES $CPPFLAGS" 
     LIBS="`$apu_config --ldflags` $SVN_DB_LIBS $LIBS"
 
     if test -n "$svn_berkeley_db_header"; then
