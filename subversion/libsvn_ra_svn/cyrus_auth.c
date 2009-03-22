@@ -341,7 +341,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
   if (is_tunneled)
     {
       /* We need to tell SASL that this connection is tunneled,
-         otherwise it will ignore EXTERNAL. The third paramater
+         otherwise it will ignore EXTERNAL. The third parameter
          should be the username, but since SASL doesn't seem
          to use it on the client side, any non-empty string will do. */
       result = sasl_setprop(*sasl_ctx,

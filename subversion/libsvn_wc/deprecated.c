@@ -1267,6 +1267,60 @@ svn_wc_prop_set(const char *name,
 }
 
 /*** From status.c ***/
+
+struct status4_wrapper_baton
+{
+  svn_wc_status_func3_t old_func;
+  void *old_baton;
+};
+
+static svn_error_t *
+status4_wrapper_func(void *baton,
+                     const char *path,
+                     const svn_wc_status2_t *status,
+                     apr_pool_t *scratch_pool)
+{
+  struct status4_wrapper_baton *swb = baton;
+  svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+
+  return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
+}
+
+svn_error_t *
+svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          const apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func3_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  struct status4_wrapper_baton *swb = apr_palloc(pool, sizeof(*swb));
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_error_t *err;
+
+  swb->old_func = status_func;
+  swb->old_baton = status_baton;
+
+  err = svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
+                                  edit_revision, anchor, target, depth,
+                                  get_all, no_ignore, ignore_patterns,
+                                  status4_wrapper_func, swb,
+                                  cancel_func, cancel_baton, traversal_info,
+                                  pool, scratch_pool);
+  svn_pool_destroy(scratch_pool);
+  return err;
+}
+
 struct status_editor3_compat_baton
 {
   svn_wc_status_func2_t old_func;
@@ -1402,6 +1456,37 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
                                    cancel_func, cancel_baton,
                                    traversal_info, pool);
 }
+
+svn_error_t *
+svn_wc_status(svn_wc_status_t **status,
+              const char *path,
+              svn_wc_adm_access_t *adm_access,
+              apr_pool_t *pool)
+{
+  svn_wc_status2_t *stat2;
+
+  SVN_ERR(svn_wc_status2(&stat2, path, adm_access, pool));
+  *status = (svn_wc_status_t *) stat2;
+  return SVN_NO_ERROR;
+}
+
+svn_wc_status_t *
+svn_wc_dup_status(const svn_wc_status_t *orig_stat,
+                  apr_pool_t *pool)
+{
+  svn_wc_status_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
+
+  /* Shallow copy all members. */
+  *new_stat = *orig_stat;
+
+  /* Now go back and dup the deep item into this pool. */
+  if (orig_stat->entry)
+    new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
+
+  /* Return the new hotness. */
+  return new_stat;
+}
+
 
 /*** From update_editor.c ***/
 svn_error_t *

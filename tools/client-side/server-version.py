@@ -16,11 +16,16 @@
 
 import sys
 import httplib
-import urlparse
+try:
+  # Python >=3.0
+  from urllib.parse import urlparse as urllib_parse_urlparse
+except ImportError:
+  # Python <3.0
+  from urlparse import urlparse as urllib_parse_urlparse
 
 
 def print_version(url):
-  scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+  scheme, netloc, path, params, query, fragment = urllib_parse_urlparse(url)
   if scheme == 'http':
     conn = httplib.HTTPConnection(netloc)
   elif scheme == 'https':

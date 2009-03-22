@@ -738,13 +738,24 @@ svn_wc_ensure_adm3(const char *path,
            _("Revision %ld doesn't match existing revision %ld in '%s'"),
            revision, entry->revision, path);
 
+      /* The caller gives us a URL which should match the entry. However,
+         some callers compensate for an old problem in entry->url and pass
+         the copyfrom_url instead. See ^/notes/api-errata/wc002.txt. As
+         a result, we allow the passed URL to match copyfrom_url if it
+         does match the entry's primary URL.  */
       /** ### comparing URLs, should they be canonicalized first? */
-      if (strcmp(entry->url, url) != 0)
-        return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-           url, entry->url, path);
+      if (strcmp(entry->url, url) != 0
+          && (entry->copyfrom_url == NULL
+              || strcmp(entry->copyfrom_url, url) != 0)
+          && ((repos != NULL && !svn_uri_is_ancestor(repos, entry->url))
+              || strcmp(entry->uuid, uuid) != 0))
+        {
+          return
+            svn_error_createf
+            (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+             _("URL '%s' doesn't match existing URL '%s' in '%s'"),
+             url, entry->url, path);
+        }
     }
 
   return SVN_NO_ERROR;

@@ -31,12 +31,12 @@ struct status_baton
   apr_pool_t *pool;         /* pool in which to store alloc-needy things */
 };
 
-/* An svn_wc_status_func3_t callback function for analyzing status
+/* An svn_wc_status_func4_t callback function for analyzing status
    structures. */
 static svn_error_t *
 analyze_status(void *baton,
                const char *path,
-               svn_wc_status2_t *status,
+               const svn_wc_status2_t *status,
                apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
@@ -112,7 +112,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                                  cancel_func, cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_get_status_editor4(&editor, &edit_baton, NULL,
+  SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, NULL,
                                     &edit_revision, anchor_access, target,
                                     svn_depth_infinity,
                                     TRUE  /* get_all */,
@@ -121,7 +121,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                                     analyze_status, &sb,
                                     cancel_func, cancel_baton,
                                     NULL  /* traversal_info */,
-                                    pool));
+                                    pool, pool));
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 

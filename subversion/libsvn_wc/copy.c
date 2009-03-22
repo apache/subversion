@@ -631,7 +631,6 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_wc_entry_t *entry;
   const char *path = svn_wc_adm_access_path(adm_access);
 
   /* Remove wcprops. */
@@ -663,6 +662,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
     {
       const void *key;
       void *val;
+      svn_wc_entry_t *entry;
       svn_node_kind_t kind;
       svn_boolean_t deleted = FALSE;
       apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_FORCE;

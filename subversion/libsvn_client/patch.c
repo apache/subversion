@@ -1685,7 +1685,7 @@ extract_svnpatch(const char *original_patch_path,
   SVN_ERR(svn_wc_create_tmp_file2(patch_file, NULL,
                                   svn_wc_adm_access_path(adm_access),
                                   SVNPATCH_DELETE_WHEN, pool));
-  svnpatch_stream = svn_stream_from_aprfile(*patch_file, pool);
+  svnpatch_stream = svn_stream_from_aprfile2(*patch_file, TRUE, pool);
 
   /* Oh, and we can't gzip-base64 decode in one step since
    * svn_base64_decode wraps a write-decode handler and

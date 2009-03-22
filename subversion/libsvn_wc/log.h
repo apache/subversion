@@ -158,7 +158,7 @@ svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *path,
-                           svn_wc_entry_t *entry,
+                           const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool);
 

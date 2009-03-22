@@ -198,14 +198,22 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   svn_boolean_t do_sync,
                                   apr_pool_t *pool);
 
-/* Remove entry NAME from ENTRIES, unconditionally.  PARENT_DIR should be
-   the directory which contains the .svn administrative directory for PATH
-   (in most cases, this will be svn_wc_adm_access_path() applied to the
-   access baton which ENTRIES is or will eventually be a part of. */
+/* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
+   the access baton for the directory which contains the .svn administrative
+   directory containing NAME.
+
+   If WRITE_TO_DISK is TRUE, then the modified ENTRIES will we written out
+   to disk.
+
+   If ENTRIES is NULL, then the entries will be read from disk, modified,
+   and written back to disk.
+
+   All temporary allocations will be performed in SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
-                     const char *parent_dir,
+                     svn_wc_adm_access_t *adm_access,
                      const char *name,
+                     svn_boolean_t write_to_disk,
                      apr_pool_t *scratch_pool);
 
 
@@ -215,20 +223,29 @@ svn_wc__entry_remove(apr_hash_t *entries,
  * If REPOS is non-NULL, set the repository root on the entry to REPOS,
  * provided it is a prefix of the entry's URL (and if it is the THIS_DIR
  * entry, all child URLs also match.)
+ *
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
  *
+ * If WRITE_TO_DISK is TRUE, then the tweaked ENTRIES will be written
+ * out to disk.
+ *
+ * If ENTRIES is NULL, then it will be read via ADM_ACCESS, tweaked,
+ * and then written to disk (WRITE_TO_DISK should be TRUE).
+ *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
  */
 svn_error_t *
-svn_wc__tweak_entry(apr_hash_t *entries,
+svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *entries,
                     const char *name,
                     const char *new_url,
                     const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
-                    apr_pool_t *pool);
+                    svn_boolean_t write_to_disk,
+                    apr_pool_t *scratch_pool);
 
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
@@ -256,12 +273,35 @@ svn_wc__entries_init_old(const char *path,
                          svn_depth_t depth,
                          apr_pool_t *pool);
 
-/* Resolve any missing information in ENTRIES by deducing from the
-   directory's own entry (which must already be present in ENTRIES). */
-svn_error_t *
-svn_wc__resolve_to_defaults(apr_hash_t *entries,
-                            apr_pool_t *pool);
+/* Parse a file external specification in the NULL terminated STR and
+   place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
+   and revision number in REV_RESULT.  STR may be NULL, in which case
+   PATH_RESULT will be set to NULL and both PEG_REV_RESULT and
+   REV_RESULT set to svn_opt_revision_unspecified.
 
+   The format that is read is the same as a working-copy path with a
+   peg revision; see svn_opt_parse_path(). */
+svn_error_t *
+svn_wc__unserialize_file_external(const char **path_result,
+                                  svn_opt_revision_t *peg_rev_result,
+                                  svn_opt_revision_t *rev_result,
+                                  const char *str,
+                                  apr_pool_t *pool);
+
+/* Serialize into STR the file external path, peg revision number and
+   the operative revision number into a format that
+   unserialize_file_external() can parse.  The format is
+     %{peg_rev}:%{rev}:%{path}
+   where a rev will either be HEAD or the string revision number.  If
+   PATH is NULL then STR will be set to NULL.  This method writes to a
+   string instead of a svn_stringbuf_t so that the string can be
+   protected by write_str(). */
+svn_error_t *
+svn_wc__serialize_file_external(const char **str,
+                                const char *path,
+                                const svn_opt_revision_t *peg_rev,
+                                const svn_opt_revision_t *rev,
+                                apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

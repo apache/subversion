@@ -195,7 +195,7 @@ StatusCallback::createJavaStatus(const char *path,
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      svn_wc_entry_t *entry = status->entry;
+      const svn_wc_entry_t *entry = status->entry;
       if (entry != NULL)
         {
           jNodeKind = EnumMapper::mapNodeKind(entry->kind);

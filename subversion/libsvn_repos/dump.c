@@ -23,6 +23,7 @@
 #include "svn_iter.h"
 #include "svn_repos.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_checksum.h"
@@ -698,7 +699,7 @@ open_directory(const char *path,
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_path_join(pb->cmp_path,
-                               svn_path_basename(path, pool), pool);
+                               svn_dirent_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 
@@ -795,7 +796,7 @@ open_file(const char *path,
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_path_join(pb->cmp_path,
-                               svn_path_basename(path, pool), pool);
+                               svn_dirent_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 

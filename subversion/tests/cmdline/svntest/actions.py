@@ -753,8 +753,8 @@ def run_and_verify_info(expected_infos, *args):
                                     "not found" % (key, value))
         if value is not None and not re.search(value, actual[key]):
           raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
-                                           "  Expected: '%s'\n"
-                                           "  Found:    '%s'\n"
+                                           "  Expected: '%s' (regex)\n"
+                                           "  Found:    '%s' (string)\n"
                                            % (key, value, actual[key]))
 
   except:

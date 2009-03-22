@@ -1173,27 +1173,32 @@ class WinGeneratorBase(GeneratorBase):
     self.jdk_path = None
     jdk_ver = None
     try:
-      import _winreg
-      key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                            r"SOFTWARE\JavaSoft\Java Development Kit")
+      try:
+        # Python >=3.0
+        import winreg
+      except ImportError:
+        # Python <3.0
+        import _winreg as winreg
+      key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                           r"SOFTWARE\JavaSoft\Java Development Kit")
       # Find the newest JDK version.
-      num_values = _winreg.QueryInfoKey(key)[1]
+      num_values = winreg.QueryInfoKey(key)[1]
       for i in range(num_values):
-        (name, value, key_type) = _winreg.EnumValue(key, i)
+        (name, value, key_type) = winreg.EnumValue(key, i)
         if name == "CurrentVersion":
           jdk_ver = value
           break
 
       # Find the JDK path.
       if jdk_ver is not None:
-        key = _winreg.OpenKey(key, jdk_ver)
-        num_values = _winreg.QueryInfoKey(key)[1]
+        key = winreg.OpenKey(key, jdk_ver)
+        num_values = winreg.QueryInfoKey(key)[1]
         for i in range(num_values):
-          (name, value, key_type) = _winreg.EnumValue(key, i)
+          (name, value, key_type) = winreg.EnumValue(key, i)
           if name == "JavaHome":
             self.jdk_path = value
             break
-      _winreg.CloseKey(key)
+      winreg.CloseKey(key)
     except (ImportError, EnvironmentError):
       pass
     if self.jdk_path:

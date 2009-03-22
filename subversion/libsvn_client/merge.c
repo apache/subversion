@@ -34,6 +34,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_utf.h"
@@ -131,7 +132,8 @@
  *
  * CHILDREN_WITH_MERGEINFO is initially created by get_mergeinfo_paths()
  * and outside of that function and its helpers should always meet the
- * criteria dictated in get_mergeinfo_paths()'s doc string.
+ * criteria dictated in get_mergeinfo_paths()'s doc string.  The elements
+ * of CHILDREN_WITH_MERGINFO should never be NULL.
  */
 
 /*-----------------------------------------------------------------------*/
@@ -1949,7 +1951,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                notes/tree-conflicts/detection.txt.
              */
 
-            svn_path_split(path, &parent_path, NULL, subpool);
+            svn_dirent_split(path, &parent_path, NULL, subpool);
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                         subpool));
             /* Passing NULL for the notify_func and notify_baton because
@@ -2311,7 +2313,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
             }
           else
             {
-              added_path_parent = svn_path_dirname(added_path, pool);
+              added_path_parent = svn_dirent_dirname(added_path, pool);
               if (!apr_hash_get(notify_b->added_paths, added_path_parent,
                                 APR_HASH_KEY_STRING))
                 is_root_of_added_subtree = TRUE;
@@ -3269,7 +3271,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       svn_client__merge_path_t *parent = NULL;
 
       /* If the path is absent don't do subtree merge either. */
-      if (!child || child->absent)
+      SVN_ERR_ASSERT(child);
+      if (child->absent)
         continue;
 
       svn_pool_clear(iterpool);
@@ -3634,6 +3637,30 @@ make_merge_conflict_error(const char *target_wcpath,
      r->start, r->end, svn_path_local_style(target_wcpath, pool));
 }
 
+/* Remove the element at IDX from the array ARR.
+   If IDX is not a valid element of ARR do nothing. */
+static void
+remove_element_from_array(apr_array_header_t *arr,
+                          int idx)
+{
+  /* Do we have a valid index? */
+  if (idx >= 0 && idx < arr->nelts)
+    {
+      if (idx == (arr->nelts - 1))
+        {
+          /* Deleting the last or only element in an array is easy. */
+          apr_array_pop(arr);
+        }
+      else
+        {
+          memmove(arr->elts + arr->elt_size * idx,
+                  arr->elts + arr->elt_size * (idx + 1),
+                  arr->elt_size * (arr->nelts - 1 - idx));
+          --(arr->nelts);
+        }
+    }
+}
+
 /* Helper for do_directory_merge().
 
    TARGET_WCPATH is a directory and CHILDREN_WITH_MERGEINFO is filled
@@ -3657,15 +3684,13 @@ remove_absent_children(const char *target_wcpath,
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo,
                       i, svn_client__merge_path_t *);
-      if (child
-          && (child->absent || child->scheduled_for_deletion)
+      if ((child->absent || child->scheduled_for_deletion)
           && svn_path_is_ancestor(target_wcpath, child->path))
         {
           if (notify_b->skipped_paths)
             apr_hash_set(notify_b->skipped_paths, child->path,
-                         APR_HASH_KEY_STRING, NULL);
-          APR_ARRAY_IDX(children_with_mergeinfo, i,
-                        svn_client__merge_path_t *) = NULL;
+              APR_HASH_KEY_STRING, NULL);
+          remove_element_from_array(children_with_mergeinfo, i--);
         }
     }
 }
@@ -3695,13 +3720,12 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
                           i, svn_client__merge_path_t *);
-          if (child
-              && apr_hash_get(merge_b->paths_with_deleted_mergeinfo,
-                              child->path,
-                              APR_HASH_KEY_STRING))
+          if (apr_hash_get(merge_b->paths_with_deleted_mergeinfo,
+                           child->path,
+                           APR_HASH_KEY_STRING))
             {
-              APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
-                            svn_client__merge_path_t *) = NULL;
+              remove_element_from_array(notify_b->children_with_mergeinfo,
+                                        i--);
             }
         }
     }
@@ -3822,7 +3846,7 @@ drive_merge_report_editor(const char *target_wcpath,
          see 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
       child = APR_ARRAY_IDX(children_with_mergeinfo, 0,
                             svn_client__merge_path_t *);
-
+      SVN_ERR_ASSERT(child);
       if (child->remaining_ranges->nelts == 0)
         {
           /* The merge target doesn't need anything merged. */
@@ -3899,7 +3923,8 @@ drive_merge_report_editor(const char *target_wcpath,
           int parent_index;
           svn_boolean_t nearest_parent_is_target;
 
-          if (!child || child->absent)
+          SVN_ERR_ASSERT(child);
+          if (child->absent)
             continue;
 
           /* Find this child's nearest wc ancestor with mergeinfo. */
@@ -4259,7 +4284,7 @@ single_file_merge_get_file(const char **filename,
   svn_stream_t *stream;
 
   SVN_ERR(svn_stream_open_unique(&stream, filename,
-                                 svn_path_dirname(wc_target, pool),
+                                 svn_dirent_dirname(wc_target, pool),
                                  svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
@@ -4351,7 +4376,7 @@ get_mergeinfo_walk_cb(const char *path,
   svn_boolean_t has_mergeinfo_from_merge_src = FALSE;
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(path, wb->merge_target_path);
-  const char *parent_path = svn_path_dirname(path, pool);
+  const char *parent_path = svn_dirent_dirname(path, pool);
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
 
@@ -4648,7 +4673,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                    apr_pool_t *pool)
 {
   svn_client__merge_path_t *parent;
-  const char *parent_path = svn_path_dirname(child->path, pool);
+  const char *parent_path = svn_dirent_dirname(child->path, pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_wc_adm_access_t *parent_access;
@@ -6330,7 +6355,8 @@ do_directory_merge(const char *url1,
           svn_client__merge_path_t *child =
                          APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
                                        svn_client__merge_path_t *);
-          if (!child || child->absent)
+          SVN_ERR_ASSERT(child);
+          if (child->absent)
             continue;
 
           if (strlen(child->path) == merge_target_len)
@@ -6473,7 +6499,7 @@ do_directory_merge(const char *url1,
                  non-inheritable marker. */
               SVN_ERR(svn_wc_prop_get(&added_path_parent_propval,
                                       SVN_PROP_MERGEINFO,
-                                      svn_path_dirname(added_path, iterpool),
+                                      svn_dirent_dirname(added_path, iterpool),
                                       adm_access, iterpool));
               if (added_path_parent_propval
                   && strstr(added_path_parent_propval->data,

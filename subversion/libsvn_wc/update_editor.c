@@ -651,7 +651,6 @@ complete_directory(struct edit_baton *eb,
   svn_wc_entry_t *entry;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
-  svn_wc_entry_t *current_entry;
   const char *name;
 
   /* If inside a tree conflict, do nothing. */
@@ -729,6 +728,7 @@ complete_directory(struct edit_baton *eb,
     {
       const void *key;
       void *val;
+      svn_wc_entry_t *current_entry;
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
@@ -743,9 +743,12 @@ complete_directory(struct edit_baton *eb,
       if (current_entry->deleted)
         {
           if (current_entry->schedule != svn_wc_schedule_add)
-            SVN_ERR(svn_wc__entry_remove(
-                             entries, svn_wc_adm_access_path(adm_access),
-                             name, subpool));
+            {
+              /* WRITE_TO_DISK is FALSE since we'll write the entries
+                 as a batch later.  */
+              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, FALSE,
+                                           subpool));
+            }
           else
             {
               svn_wc_entry_t tmpentry;
@@ -764,9 +767,10 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          SVN_ERR(svn_wc__entry_remove(
-                                entries, svn_wc_adm_access_path(adm_access),
-                                name, subpool));
+          /* WRITE_TO_DISK is FALSE since we'll write the entries
+             as a batch later.  */
+          SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, FALSE,
+                                       subpool));
         }
       else if (current_entry->kind == svn_node_dir)
         {
@@ -778,23 +782,25 @@ complete_directory(struct edit_baton *eb,
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 current_entry->depth = svn_depth_infinity;
-            } else if ((svn_wc__adm_missing(adm_access, child_path))
-                       && (! current_entry->absent)
-                       && (current_entry->schedule != svn_wc_schedule_add))
-              {
-                SVN_ERR(svn_wc__entry_remove(
-                             entries, svn_wc_adm_access_path(adm_access),
-                             name, subpool));
-                if (eb->notify_func)
-                  {
-                    svn_wc_notify_t *notify
-                      = svn_wc_create_notify(child_path,
-                                             svn_wc_notify_update_delete,
-                                             subpool);
-                    notify->kind = current_entry->kind;
-                    (* eb->notify_func)(eb->notify_baton, notify, subpool);
-                  }
-              }
+            }
+          else if ((svn_wc__adm_missing(adm_access, child_path))
+                   && (! current_entry->absent)
+                   && (current_entry->schedule != svn_wc_schedule_add))
+            {
+              /* WRITE_TO_DISK is FALSE since we'll write the entries
+                 as a batch later.  */
+              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
+                                           FALSE, subpool));
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify
+                    = svn_wc_create_notify(child_path,
+                                           svn_wc_notify_update_delete,
+                                           subpool);
+                  notify->kind = current_entry->kind;
+                  (* eb->notify_func)(eb->notify_baton, notify, subpool);
+                }
+            }
         }
     }
 
@@ -1995,13 +2001,10 @@ do_entry_deletion(struct edit_baton *eb,
   /* Receive the remote removal of excluded entry. Do not notify. */
   if (entry->depth == svn_depth_exclude)
     {
-      apr_hash_t *entries;
       const char *base_name = svn_dirent_basename(full_path, pool);
-      SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__entry_remove(
-                        entries, svn_wc_adm_access_path(parent_adm_access),
-                        base_name, pool));
-      SVN_ERR(svn_wc__entries_write(entries, parent_adm_access, pool));
+
+      SVN_ERR(svn_wc__entry_remove(NULL, parent_adm_access, base_name,
+                                   TRUE, pool));
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
       return SVN_NO_ERROR;
@@ -2638,11 +2641,11 @@ open_directory(const char *path,
                                 svn_wc_conflict_action_edit,
                                 svn_node_dir, db->new_URL, pool));
 
-    /* Remember the roots of any locally deleted trees. */
-    if (tree_conflict
-        && tree_conflict->reason == svn_wc_conflict_reason_deleted
-        && !in_deleted_tree(eb, full_path, TRUE, pool))
-      remember_deleted_tree(eb, full_path);
+  /* Remember the roots of any locally deleted trees. */
+  if (tree_conflict
+      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && !in_deleted_tree(eb, full_path, TRUE, pool))
+    remember_deleted_tree(eb, full_path);
 
   /* If property-conflicted, skip the tree with notification. */
   SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
@@ -4124,6 +4127,12 @@ merge_file(svn_wc_notify_state_t *content_state,
      might require changing the working file. */
   magic_props_changed = svn_wc__has_magic_property(fb->propchanges);
 
+  /* Set the new revision and URL in the entry and clean up some other
+     fields. This clears DELETED from any prior versioned file with the
+     same name (needed before attempting to install props).  */
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, fb->path,
+                            *eb->target_revision, fb->new_URL, pool));
+
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
@@ -4162,11 +4171,6 @@ merge_file(svn_wc_notify_state_t *content_state,
       flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE |
                 SVN_WC__ENTRY_MODIFY_FORCE);
     }
-
-  /* Set the new revision and URL in the entry and clean up some other
-     fields. */
-  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, fb->path,
-                            *eb->target_revision, fb->new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -5418,12 +5422,13 @@ svn_wc_add_repos_file3(const char *dst_path,
   }
 
   /* Set the new revision number and URL in the entry and clean up some other
-     fields. */
+     fields. This clears DELETED from any prior versioned file with the
+     same name (needed before attempting to install props).  */
   SVN_ERR(loggy_tweak_entry(log_accum, adm_access, dst_path,
                             dst_entry ? dst_entry->revision : ent->revision,
                             new_URL, pool));
 
-  /* Install the props first, so that the loggy translation has access to
+  /* Install the props before the loggy translation, so that it has access to
      the properties for this file. */
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));

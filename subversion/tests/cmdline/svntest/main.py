@@ -595,14 +595,12 @@ def run_svnversion(*varargs):
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
-  def visit(arg, dirname, names):
-    mode, mask = arg
-    for name in names:
-      fullname = os.path.join(dirname, name)
+  for dirpath, dirs, files in os.walk(path):
+    for name in dirs + files:
+      fullname = os.path.join(dirpath, name)
       if not os.path.islink(fullname):
         new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
         os.chmod(fullname, new_mode)
-  os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
 def safe_rmtree(dirname, retry=0):
@@ -1273,6 +1271,8 @@ def usage():
   print(" --fsfs-sharding Default shard size (for fsfs)\n"
         " --fsfs-packing  Run 'svnadmin pack' automatically")
   print(" --config-file   Configuration file for tests.")
+  print(" --keep-local-tmp  Don't remove svn-test-work/local_tmp after test\n"
+        "                 run is complete.  Useful for debugging failures.")
   print(" --help          This information")
 
 
@@ -1316,6 +1316,7 @@ def run_tests(test_list, serial_only = False):
   parallel = 0
   svn_bin = None
   use_jsvn = False
+  keep_local_tmp = False
   config_file = None
 
   try:
@@ -1324,7 +1325,8 @@ def run_tests(test_list, serial_only = False):
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
-                            'use-jsvn', 'development', 'config-file='])
+                            'use-jsvn', 'development', 'keep-local-tmp',
+                            'config-file='])
   except getopt.GetoptError as e:
     print("ERROR: %s\n" % e)
     usage()
@@ -1422,6 +1424,9 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--use-jsvn':
       use_jsvn = True
 
+    elif opt == '--keep-local-tmp':
+      keep_local_tmp = True
+
     elif opt == '--development':
       setup_development_mode()
 
@@ -1497,7 +1502,7 @@ def run_tests(test_list, serial_only = False):
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
-  if not is_child_process:
+  if not is_child_process and not keep_local_tmp:
     safe_rmtree(temp_dir, 1)
 
   # Cleanup after ourselves.

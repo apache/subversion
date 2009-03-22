@@ -115,7 +115,8 @@ class WCFormatConverter:
     """Walk all paths in a WC tree, and change their format to
     FORMAT_NBR.  Throw LossyConversionException or NotImplementedError
     if the WC format should not be converted, or is unrecognized."""
-    os.path.walk(self.root_path, self.write_dir_format, format_nbr)
+    for dirpath, dirs, files in os.walk(self.root_path):
+      self.write_dir_format(format_nbr, dirpath, dirs + files)
 
 class Entries:
   """Represents a .svn/entries file.

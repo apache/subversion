@@ -1330,8 +1330,6 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
   SVN_ERR_ASSERT(children != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -1394,8 +1392,6 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
   SVN_ERR_ASSERT(checksum != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -1457,8 +1453,6 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
   SVN_ERR_ASSERT(target != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -1563,6 +1557,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
                                 const char *repos_root_url,
                                 const char *repos_uuid,
                                 svn_revnum_t revision,
+                                const apr_hash_t *props,
                                 svn_revnum_t changed_rev,
                                 apr_time_t changed_date,
                                 const char *changed_author,
@@ -1579,9 +1574,8 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-  SVN_ERR_ASSERT(changed_date > 0);
-  SVN_ERR_ASSERT(changed_author != NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
@@ -2736,6 +2730,9 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* ### the next three calls could/should be optimized to reduce scanning
+     ### for a wc.db and row fetches within that.  */
+
   /* Fetch the repos root and repos uuid from the base node, we we can
      then create or get the repos id.
      ### is there a better way to do this? */
@@ -2908,6 +2905,8 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
             start_status = svn_wc__db_status_added;
           else
             start_status = svn_wc__db_status_deleted;
+          /* ### assert valid presence values? what if it is (say)
+             ### 'incomplete' ? probably return an error.  */
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
@@ -2930,6 +2929,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
 
       if (!svn_sqlite__column_is_null(stmt, 13 /* moved_to */))
         {
+          /* ### assert that presence == not-present ?  */
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
 
           if (status)
