@@ -1241,6 +1241,9 @@ svn_subst_translate_cstring2(const char *src,
   /* Jam the text into the destination stream (to translate it). */
   SVN_ERR(svn_stream_write(dst_stream, src, &len));
 
+  /* Close the destination stream to flush unwritten data. */
+  SVN_ERR(svn_stream_close(dst_stream));
+
   *dst = dst_stringbuf->data;
   return SVN_NO_ERROR;
 }
