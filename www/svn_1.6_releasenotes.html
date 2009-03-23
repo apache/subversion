@@ -224,6 +224,30 @@ displayed after each item remaining in tree conflict.</p>
 
 </div>  <!-- svn-status -->
 
+<div class="h4" id="conflict-summary" title="conflict-summary">
+<h4>Conflict summary printed by <code>svn update</code> and
+  <code>svn merge</code></h4>
+
+<code>svn update</code> and <code>svn merge</code> now print
+a summary of conflicts upon completion.
+
+<pre>
+$ svn update --accept=postpone
+   C alpha
+ C   beta
+C    gamma
+Updated to revision 3.
+Summary of conflicts:
+  Text conflicts: 1
+  Property conflicts: 1
+  Tree conflicts: 1
+</pre>
+
+Minor problems with the conflict summary are described in
+<em><a href="/issues/show_bug.cgi?id=3342">issue 3343</a></em>.
+
+</div>  <!-- conflict summary -->
+
 </div>  <!-- output-changes -->
 
 <div class="h3" id="hook-changes" title="hook-changes">
