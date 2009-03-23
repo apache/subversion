@@ -65,13 +65,13 @@ enum statement_keys {
   STMT_INSERT_ACTUAL_NODE,
   STMT_SELECT_REPOSITORY,
   STMT_SELECT_WCROOT_NULL,
-  STMT_SELECT_WORKING_NODE,
   STMT_SELECT_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
   STMT_DELETE_ALL_LOCK,
   STMT_SELECT_INCOMPLETE_FLAG,
+  STMT_SELECT_KEEP_LOCAL_FLAG,
   STMT_SELECT_NOT_PRESENT,
   STMT_SELECT_FILE_EXTERNAL,
   STMT_UPDATE_FILE_EXTERNAL
@@ -112,13 +112,6 @@ static const char * const statements[] = {
 
   "select id from wcroot where local_abspath is null;",
 
-  "select wc_id, local_relpath, parent_relpath, presence, kind, "
-    "copyfrom_repos_id, "
-    "copyfrom_repos_path, copyfrom_revnum, moved_here, moved_to, checksum, "
-    "translated_size, changed_rev, changed_date, changed_author, depth, "
-    "last_mod_time, properties, keep_local "
-  "from working_node;",
-
   "select wc_id, local_relpath, parent_relpath, properties, conflict_old, "
      "conflict_new, "
      "conflict_working, prop_reject, changelist, text_mod, "
@@ -134,6 +127,9 @@ static const char * const statements[] = {
   "delete from lock;",
 
   "select incomplete_children from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select keep_local from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select 1 from base_node "
@@ -678,96 +674,6 @@ take_from_entry(const svn_wc_entry_t *src,
 }
 
 
-/* Select all the rows from working_node table in WC_DB and put them into
-   *NODES allocated in RESULT_POOL. */
-static svn_error_t *
-fetch_working_nodes(apr_hash_t **nodes,
-                    svn_sqlite__db_t *wc_db,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  *nodes = apr_hash_make(result_pool);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      apr_size_t len;
-      const void *val;
-      db_working_node_t *working_node = apr_pcalloc(result_pool,
-                                                    sizeof(*working_node));
-      const char *presence;
-
-      working_node->wc_id = svn_sqlite__column_int(stmt, 0);
-      working_node->local_relpath = svn_sqlite__column_text(stmt, 1,
-                                                            result_pool);
-      working_node->parent_relpath = svn_sqlite__column_text(stmt, 2,
-                                                             result_pool);
-
-      /* ### only bother with a couple values for now */
-      presence = svn_sqlite__column_text(stmt, 3, NULL);
-      if (strcmp(presence, "not-present") == 0)
-        working_node->presence = svn_wc__db_status_not_present;
-      else
-        working_node->presence = svn_wc__db_status_normal;
-
-      working_node->kind = svn_node_kind_from_word(
-                                     svn_sqlite__column_text(stmt, 4, NULL));
-
-      if (!svn_sqlite__column_is_null(stmt, 5))
-        {
-          working_node->copyfrom_repos_id = svn_sqlite__column_int(stmt, 5);
-          working_node->copyfrom_repos_path = svn_sqlite__column_text(stmt, 6,
-                                                                result_pool);
-          working_node->copyfrom_revnum = svn_sqlite__column_revnum(stmt, 7);
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 8))
-        working_node->moved_here = svn_sqlite__column_boolean(stmt, 8);
-
-      if (!svn_sqlite__column_is_null(stmt, 9))
-        working_node->moved_to = svn_sqlite__column_text(stmt, 9, result_pool);
-
-      if (!svn_sqlite__column_is_null(stmt, 10))
-        {
-          const char *digest = svn_sqlite__column_text(stmt, 10, NULL);
-          svn_checksum_kind_t kind = (digest[1] == 'm'
-                                      ? svn_checksum_md5 : svn_checksum_sha1);
-          SVN_ERR(svn_checksum_parse_hex(&working_node->checksum, kind,
-                                         digest + 6, result_pool));
-          working_node->translated_size = svn_sqlite__column_int(stmt, 11);
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 12))
-        {
-          working_node->changed_rev = svn_sqlite__column_revnum(stmt, 12);
-          working_node->changed_date = svn_sqlite__column_int(stmt, 13);
-          working_node->changed_author = svn_sqlite__column_text(stmt, 14,
-                                                                 result_pool);
-        }
-
-      working_node->depth = svn_depth_from_word(
-                                    svn_sqlite__column_text(stmt, 15, NULL));
-      working_node->last_mod_time = svn_sqlite__column_int(stmt, 16);
-
-      val = svn_sqlite__column_blob(stmt, 17, &len);
-      SVN_ERR(svn_skel__parse_proplist(&working_node->properties,
-                                       svn_skel__parse(val, len, scratch_pool),
-                                       result_pool));
-
-      working_node->keep_local = svn_sqlite__column_boolean(stmt, 18);
-
-      apr_hash_set(*nodes, working_node->local_relpath, APR_HASH_KEY_STRING,
-                   working_node);
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Select all the rows from actual_node table in WC_DB and put them into
    *NODES allocated in RESULT_POOL. */
 static svn_error_t *
@@ -854,6 +760,24 @@ fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *wc_db)
 
 
 static svn_error_t *
+determine_keep_local(svn_boolean_t *keep_local,
+                     svn_sqlite__db_t *sdb,
+                     apr_int64_t wc_id,
+                     const char *local_relpath)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_KEEP_LOCAL_FLAG));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+
+  *keep_local = svn_sqlite__column_boolean(stmt, 0);
+
+  return svn_sqlite__reset(stmt);
+}
+
+
+static svn_error_t *
 determine_incomplete(svn_boolean_t *incomplete,
                      svn_sqlite__db_t *sdb,
                      apr_int64_t wc_id,
@@ -884,7 +808,6 @@ static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
              apr_pool_t *scratch_pool)
 {
-  apr_hash_t *working_nodes;
   apr_hash_t *actual_nodes;
   svn_sqlite__db_t *wc_db;
   apr_pool_t *result_pool;
@@ -916,8 +839,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
   /* ### some of the data is not in the wc_db interface. grab it manually.
      ### trim back the columns fetched?  */
-  SVN_ERR(fetch_working_nodes(&working_nodes, wc_db, scratch_pool,
-                              scratch_pool));
   SVN_ERR(fetch_actual_nodes(&actual_nodes, wc_db, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
@@ -1036,16 +957,12 @@ read_entries(svn_wc_adm_access_t *adm_access,
       else if (status == svn_wc__db_status_deleted
                || status == svn_wc__db_status_obstructed_delete)
         {
-          const db_working_node_t *working_node;
-
           /* ### we don't have to worry about moves, so this is a delete. */
           entry->schedule = svn_wc_schedule_delete;
 
-          /* ### keep_local */
-          working_node = apr_hash_get(working_nodes,
-                                      entry->name, APR_HASH_KEY_STRING);
-          if (working_node && working_node->keep_local)
-            entry->keep_local = TRUE;
+          /* ### keep_local (same hack as determine_incomplete) */
+          SVN_ERR(determine_keep_local(&entry->keep_local, wc_db,
+                                       1 /* wc_id */, entry->name));
         }
       else if (status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
