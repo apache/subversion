@@ -2355,12 +2355,15 @@ add_directory(const char *path,
 
              A dir added with history is a tree conflict. */
 
-          if (strcmp(entry->uuid, parent_entry->uuid) != 0)
-            return svn_error_createf(
-               SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("UUID mismatch: existing directory '%s' was checked out "
-                 "from a different repository"),
-               svn_path_local_style(db->path, pool));
+          if (entry->uuid && parent_entry->uuid)
+            {
+              if (strcmp(entry->uuid, parent_entry->uuid) != 0)
+                return svn_error_createf(
+                  SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                  _("UUID mismatch: existing directory '%s' was checked out "
+                    "from a different repository"),
+                  svn_path_local_style(db->path, pool));
+            }
 
           if (!eb->switch_url
               && strcmp(db->new_URL, entry->url) != 0)
