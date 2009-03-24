@@ -776,11 +776,20 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 #endif
 
   SVN_ERR(svn_sqlite__exec(*db, 
-                           "PRAGMA case_sensitive_like=on;"
-                           /* ### Switch to normal when using transactions
-                             resolves the major performance penalty.*/
-                           "PRAGMA synchronous = NONE;" 
-                           ));
+              "PRAGMA case_sensitive_like=1;"
+              /* Disable synchronization to disable the explicit disk flushes
+                 that make Sqlite up to 50 times slower; especially on small
+                 transactions.
+
+                 This removes some stability guarantees on specific hardware
+                 and power failures, but still guarantees atomic commits on
+                 application crashes. With our dependency on external data
+                 like pristine files (Wc) and revision files (repository),
+                 we can't keep up these additional guarantees anyway.
+
+                 ### Maybe switch to NORMAL(1) when we use larger transaction
+                     scopes */
+              "PRAGMA synchronous=OFF;"));
 
   /* Validate the schema, upgrading if necessary. */
   SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
