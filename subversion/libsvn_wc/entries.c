@@ -1820,6 +1820,7 @@ write_entry(svn_wc__db_t *db,
         }
       else
         {
+#if 0
           const char *parent_abspath = svn_dirent_dirname(entry_abspath,
                                                           scratch_pool);
           const char *op_root_abspath;
@@ -1855,6 +1856,7 @@ write_entry(svn_wc__db_t *db,
               working_node->copyfrom_repos_path = new_copyfrom_relpath;
               working_node->copyfrom_revnum = entry->revision;
             }
+#endif
         }
     }
 
