@@ -59,7 +59,6 @@ static const char * const upgrade_sql[] = {
    and removed at the same time. */
 enum statement_keys {
   STMT_INSERT_REPOSITORY,
-  STMT_INSERT_WCROOT,
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
@@ -80,9 +79,6 @@ enum statement_keys {
 static const char * const statements[] = {
   "insert into repository (root, uuid) "
   "values (?1, ?2);",
-
-  "insert into wcroot (local_abspath) "
-  "values (?1);",
 
   "insert or replace into base_node "
     "(wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
@@ -2935,77 +2931,31 @@ svn_error_t *
 svn_wc__entries_init(const char *path,
                      const char *uuid,
                      const char *url,
-                     const char *repos,
+                     const char *repos_root,
                      svn_revnum_t initial_rev,
                      svn_depth_t depth,
                      apr_pool_t *pool)
 {
-  svn_sqlite__db_t *wc_db;
-  svn_wc__db_t *db;
-  svn_sqlite__stmt_t *stmt;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
-  const char *wc_db_path = db_path(path, scratch_pool);
-  apr_int64_t wc_id;
-  apr_int64_t repos_id;
-  svn_wc_entry_t *entry = alloc_entry(scratch_pool);
+  const char *abspath;
+  const char *repos_relpath;
 
   if (!should_create_next_gen())
-    return svn_wc__entries_init_old(path, uuid, url, repos, initial_rev,
+    return svn_wc__entries_init_old(path, uuid, url, repos_root, initial_rev,
                                     depth, pool);
 
-  SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
+  SVN_ERR_ASSERT(! repos_root || svn_path_is_ancestor(repos_root, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
                  || depth == svn_depth_files
                  || depth == svn_depth_immediates
                  || depth == svn_depth_infinity);
 
-  /* ### chicken and egg problem: we don't have an adm_access baton to
-     ### use to open the initial entries database, we we've got to do it
-     ### manually. */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite, path,
-                          NULL, scratch_pool, scratch_pool));
-
-  /* Open the sqlite database, and insert the REPOS and WCROOT.
-     ### this is redundant, but we currently need it for the entry
-     ### inserting API.  DB and WC_DB should be pointing to the *same*
-     ### sqlite database, and it works fine thanks for sqlite's
-     ### concurrency handling.  However, this should eventually disappear. */
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_rwcreate,
-                           statements,
-                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                           scratch_pool, scratch_pool));
-
-#ifdef SVN_DEBUG
-  {
-    SVN_ERR(svn_sqlite__exec(wc_db, WC_CHECKS_SQL));
-  }
-#endif
-
-  /* Insert the repository. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos, uuid));
-  SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
-
-  /* Insert the wcroot. */
-  /* ### Right now, this just assumes wc metadata is being stored locally. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
-
-  /* Add an entry for the dir itself.  The directory has no name.  It
-     might have a UUID, but otherwise only the revision and default
-     ancestry are present, and possibly an 'incomplete' flag if the revnum
-     is > 0. */
-  entry->kind = svn_node_dir;
-  entry->url = url;
-  entry->revision = initial_rev;
-  entry->uuid = uuid;
-  entry->repos = repos;
-  entry->depth = depth;
-  if (initial_rev > 0)
-    entry->incomplete = TRUE;
-
-  SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos, entry,
-                      SVN_WC_ENTRY_THIS_DIR, path, entry, scratch_pool));
+  /* Initialize the db for this directory. */
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, scratch_pool));
+  repos_relpath = svn_uri_is_child(repos_root, url, scratch_pool);
+  SVN_ERR(svn_wc__db_init(abspath, repos_relpath == NULL ? ""
+                            : svn_path_uri_decode(repos_relpath, scratch_pool),
+                          repos_root, uuid, initial_rev, depth, scratch_pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;

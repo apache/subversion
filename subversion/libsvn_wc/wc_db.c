@@ -166,7 +166,8 @@ enum statement_keys {
   STMT_UPDATE_ACTUAL_PROPS,
   STMT_SELECT_ALL_PROPS,
   STMT_SELECT_PRISTINE_PROPS,
-  STMT_INSERT_LOCK
+  STMT_INSERT_LOCK,
+  STMT_INSERT_WCROOT
 };
 
 static const char * const statements[] = {
@@ -209,9 +210,9 @@ static const char * const statements[] = {
   "insert or replace into base_node ("
   "  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence, "
   "  kind, revnum, properties, changed_rev, changed_date, changed_author, "
-  "  depth, checksum, translated_size, symlink_target) "
+  "  depth, checksum, translated_size, symlink_target, incomplete_children) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-  "        ?15, ?16);",
+  "        ?15, ?16, ?17);",
 
   "insert or ignore into base_node ("
   "  wc_id, local_relpath, parent_relpath, presence, kind, revnum) "
@@ -258,6 +259,9 @@ static const char * const statements[] = {
     " lock_date)"
   "values (?1, ?2, ?3, ?4, ?5, ?6);",
 
+  "insert into wcroot (local_abspath) "
+  "values (?1);",
+
   NULL
 };
 
@@ -289,6 +293,7 @@ typedef struct {
   const char *target;
 
   /* for inserting absent nodes */
+  svn_boolean_t incomplete_children;
 
   /* for temporary allocations */
   apr_pool_t *scratch_pool;
@@ -1102,6 +1107,8 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb)
         SVN_ERR(svn_sqlite__bind_text(stmt, 16, pibb->target));
     }
 
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 17, pibb->incomplete_children));
+
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
@@ -1300,6 +1307,62 @@ svn_wc__db_close(svn_wc__db_t *db,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_init(const char *local_abspath,
+                const char *repos_relpath,
+                const char *repos_root_url,
+                const char *repos_uuid,
+                svn_revnum_t initial_rev,
+                svn_depth_t depth,
+                apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t *sdb;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
+  insert_base_baton_t ibb;
+
+  SVN_ERR(svn_sqlite__open(&sdb,
+                           svn_wc__adm_child(local_abspath, "wc.db",
+                                             scratch_pool),
+                           svn_sqlite__mode_rwcreate, statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                           scratch_pool, scratch_pool));
+
+  /* Insert the repository. */
+  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
+                          scratch_pool));
+
+  /* Insert the wcroot. */
+  /* ### Right now, this just assumes wc metadata is being stored locally. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
+
+  ibb.status = svn_wc__db_status_normal;
+  ibb.kind = svn_wc__db_kind_dir;
+  ibb.wc_id = wc_id;
+  ibb.local_relpath = "";
+  ibb.repos_id = repos_id;
+  ibb.repos_relpath = repos_relpath;
+  ibb.revision = initial_rev;
+
+  ibb.props = NULL;
+  ibb.changed_rev = SVN_INVALID_REVNUM;
+  ibb.changed_date = 0;
+  ibb.changed_author = NULL;
+
+  ibb.children = NULL;
+  ibb.incomplete_children = TRUE;
+  ibb.depth = depth;
+  
+  ibb.scratch_pool = scratch_pool;
+
+  SVN_ERR(insert_base_node(&ibb, sdb));
+
+  return svn_sqlite__close(sdb);
 }
 
 
