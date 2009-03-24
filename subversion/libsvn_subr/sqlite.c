@@ -777,7 +777,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   SVN_ERR(svn_sqlite__exec(*db, 
                            "PRAGMA case_sensitive_like=on;"
-                           /* ### Switch to normal when transactions
+                           /* ### Switch to normal when using transactions
                              resolves the major performance penalty.*/
                            "PRAGMA synchronous = NONE;" 
                            ));
