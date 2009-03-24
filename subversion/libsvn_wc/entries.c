@@ -1056,11 +1056,12 @@ read_entries(svn_wc_adm_access_t *adm_access,
               if (*entry->name == '\0')
                 parent_copied = TRUE;
 
-              /* If this is a child, then it should be schedule_normal.  */
+              /* If this is a child of a copied subtree, then it should be
+                 schedule_normal.  */
               if (original_repos_relpath == NULL)
                 {
-                  entry->schedule = svn_wc_schedule_normal;
                   /* ### what if there is a BASE node under there? */
+                  entry->schedule = svn_wc_schedule_normal;
                 }
 
               /* ### copied nodes need to mirror their copyfrom_rev */
@@ -1816,6 +1817,44 @@ write_entry(svn_wc__db_t *db,
                 svn_path_uri_decode(relative_url, scratch_pool);
             }
           working_node->copyfrom_revnum = entry->copyfrom_rev;
+        }
+      else
+        {
+          const char *parent_abspath = svn_dirent_dirname(entry_abspath,
+                                                          scratch_pool);
+          const char *op_root_abspath;
+          const char *original_repos_relpath;
+          svn_revnum_t original_revision;
+
+          /* The parent will *always* have info in the WORKING tree, since
+             we've been designated as COPIED but do not have our own
+             COPYFROM information. Therefore, our parent or a more distant
+             ancestor has that information. Grab the data.  */
+          SVN_ERR(svn_wc__db_scan_working(
+                    NULL,
+                    &op_root_abspath,
+                    NULL, NULL, NULL,
+                    &original_repos_relpath, NULL, NULL, &original_revision,
+                    NULL,
+                    db,
+                    parent_abspath,
+                    scratch_pool, scratch_pool));
+
+          /* We may have been copied from a mixed-rev working copy. We need
+             to simulate additional copies around revision changes. The old
+             code could separately store the revision, but NG needs to create
+             copies at each change.  */
+          if (original_revision != entry->revision)
+            {
+              const char *relpath_to_entry = svn_dirent_is_child(
+                op_root_abspath, entry_abspath, NULL);
+              const char *new_copyfrom_relpath = svn_uri_join(
+                original_repos_relpath, relpath_to_entry, scratch_pool);
+
+              working_node->copyfrom_repos_id = repos_id;
+              working_node->copyfrom_repos_path = new_copyfrom_relpath;
+              working_node->copyfrom_revnum = entry->revision;
+            }
         }
     }
 
