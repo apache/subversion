@@ -106,7 +106,7 @@ Candidate changes:
  * r36751
    Prevent a crash when updating (old) working copies that lack UUID info.
    Votes:
-     +1: sbutler
+     +1: sbutler, hwright
 
 
 Approved changes:
