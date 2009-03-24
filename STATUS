@@ -108,9 +108,10 @@ Candidate changes:
    stream to flush unwritten data.
    Justification:
      Without this fix svn_subst_translate_cstring2() function does not work as
-     expected in most sutuations.
+     expected in most situations. (The final translate_chunk call of the
+     translated stream was not called from the stream close function).
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 
 Approved changes:
