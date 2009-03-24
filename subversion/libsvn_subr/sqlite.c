@@ -775,7 +775,12 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
 
-  SVN_ERR(svn_sqlite__exec(*db, "PRAGMA case_sensitive_like=on;"));
+  SVN_ERR(svn_sqlite__exec(*db, 
+                           "PRAGMA case_sensitive_like=on;"
+                           /* ### Switch to normal when transactions
+                             resolves the major performance penalty.*/
+                           "PRAGMA synchronous = NONE;" 
+                           ));
 
   /* Validate the schema, upgrading if necessary. */
   SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
