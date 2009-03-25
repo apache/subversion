@@ -7680,7 +7680,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
   /* Limit new_catalog to the youngest revisions previously merged from
      the target to the source. */
-  if (SVN_IS_VALID_REVNUM(youngest_merged_rev))
+  if (SVN_IS_VALID_REVNUM(*youngest_merged_rev))
     {
       SVN_ERR(svn_mergeinfo__filter_catalog_by_ranges(&new_catalog,
                                                       new_catalog,
