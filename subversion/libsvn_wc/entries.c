@@ -1064,12 +1064,86 @@ read_entries(svn_wc_adm_access_t *adm_access,
               entry->revision = original_revision;
             }
 
+          /* Does this node have copyfrom_* information?  */
           if (original_repos_relpath != NULL)
             {
-              entry->copyfrom_url =
-                svn_path_url_add_component2(original_root_url,
-                                            original_repos_relpath,
-                                            result_pool);
+              const char *parent_abspath;
+              svn_boolean_t set_copyfrom = TRUE;
+              svn_error_t *err;
+              const char *op_root_abspath;
+              const char *parent_repos_relpath;
+              const char *parent_root_url;
+
+              SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied);
+
+              /* When we insert entries into the database, we will construct
+                 additional copyfrom records for mixed-revision copies. The
+                 old entries would simply record the different revision in
+                 the entry->revision field. That is not available within
+                 wc-ng, so additional copies are made (see the logic inside
+                 write_entry()). However, when reading these back *out* of
+                 the database, the additional copies look like new "Added"
+                 nodes rather than a simple mixed-rev working copy.
+
+                 That would be a behavior change if we did not compensate.
+                 If there is copyfrom information for this node, then the
+                 code below looks at the parent to detect if it *also* has
+                 copyfrom information, and if the copyfrom_url would align
+                 properly. If it *does*, then we omit storing copyfrom_url
+                 and copyfrom_rev, and simply leave the mixed-rev value
+                 that was stored into entry->revision by the code above.  */
+
+              /* Get the copyfrom information from our parent.
+
+                 Note that the parent could be added/copied/moved-here. There
+                 is no way for it to be deleted/moved-away and have *this*
+                 node appear as copied.  */
+              parent_abspath = svn_dirent_dirname(entry_abspath, iterpool);
+              err = svn_wc__db_scan_working(NULL,
+                                            &op_root_abspath,
+                                            NULL, NULL, NULL,
+                                            &parent_repos_relpath,
+                                            &parent_root_url,
+                                            NULL, NULL,
+                                            NULL,
+                                            db,
+                                            parent_abspath,
+                                            iterpool, iterpool);
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                    return err;
+                  svn_error_clear(err);
+                }
+              else if (parent_root_url != NULL
+                       && strcmp(original_root_url, parent_root_url) == 0)
+                {
+                  const char *relpath_to_entry = svn_dirent_is_child(
+                    op_root_abspath, entry_abspath, NULL);
+                  const char *entry_repos_relpath = svn_uri_join(
+                    parent_repos_relpath, relpath_to_entry, iterpool);
+
+                  /* The copyfrom roots matched. Now we look to see if the
+                     copyfrom path of the parent would align with our own
+                     path (meaning this copyfrom was inserted for mixed-rev
+                     purposes and can be eliminated without changing the
+                     implied copyfrom path).  */
+                  if (strcmp(entry_repos_relpath, original_repos_relpath) == 0)
+                    {
+                      set_copyfrom = FALSE;
+
+                      /* Reset a couple fields, to their proper states when
+                         no copyfrom information is present.  */
+                      entry->copyfrom_rev = SVN_INVALID_REVNUM;
+                      entry->schedule = svn_wc_schedule_normal;
+                    }
+                }
+
+              if (set_copyfrom)
+                entry->copyfrom_url =
+                  svn_path_url_add_component2(original_root_url,
+                                              original_repos_relpath,
+                                              result_pool);
             }
         }
       else if (status == svn_wc__db_status_not_present)
