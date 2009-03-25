@@ -913,7 +913,7 @@ def set_props(dir, name, props):
         # As of 1.6 propdel no longer supports deleting a
         # non-existent property.
         out = launchsvn('propget "%s" "%s"' % (name, dir))
-        if (len(out) > 0):
+        if (out):
             svn_command('propdel "%s" "%s"' % (name, dir))
 
 def set_merge_props(dir, props):
