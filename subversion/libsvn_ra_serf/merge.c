@@ -287,40 +287,41 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                          apr_hash_get(info->props,
                                       "post-commit-err", APR_HASH_KEY_STRING));
         }
-      else if (ctx->session->wc_callbacks->push_wc_prop)
+      else
         {
-          const char *href, *checked_in;
-          svn_string_t checked_in_str;
+          const char *href;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          checked_in = apr_hash_get(info->props, "checked-in",
-                                    APR_HASH_KEY_STRING);
-
           if (! svn_path_is_ancestor(ctx->merge_url, href))
             {
               /* ### need something better than APR_EGENERAL */
               return svn_error_createf(APR_EGENERAL, NULL,
-                                       _("A MERGE response for '%s' is not a child "
-                                         "of the destination ('%s')"),
+                                       _("A MERGE response for '%s' is not "
+                                         "a child of the destination ('%s')"),
                                        href, ctx->merge_url);
             }
           href = svn_path_is_child(ctx->merge_url, href, NULL);
           if (! href) /* the paths are equal */
             href = "";
 
-          checked_in_str.data = checked_in;
-          checked_in_str.len = strlen(checked_in);
-
           /* We now need to dive all the way into the WC to update the
            * base VCC url.
            */
-          SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
-                                       ctx->session->wc_callback_baton,
-                                       href,
-                                       SVN_RA_SERF__WC_CHECKED_IN_URL,
-                                       &checked_in_str,
-                                       info->pool));
+          if ((! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
+              && ctx->session->wc_callbacks->push_wc_prop)
+            {
+              svn_string_t checked_in_str;
+              const char *checked_in;
 
+              checked_in = apr_hash_get(info->props, "checked-in",
+                                        APR_HASH_KEY_STRING);
+              checked_in_str.data = checked_in;
+              checked_in_str.len = strlen(checked_in);
+
+              SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
+                ctx->session->wc_callback_baton, href, 
+                SVN_RA_SERF__WC_CHECKED_IN_URL, &checked_in_str, info->pool));
+            }
         }
 
       svn_ra_serf__xml_pop_state(parser);
