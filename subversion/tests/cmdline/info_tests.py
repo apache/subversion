@@ -283,7 +283,7 @@ def info_on_mkdir(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               info_with_tree_conflicts,
-              XFail(info_on_added_file),
+              XFail(info_on_added_file, svntest.main.is_not_ng),
               info_on_mkdir
              ]
 
