@@ -6226,7 +6226,6 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
   "set no mergeinfo when merging from foreign repos"
 
   # Test for issue #2788 and issue #3383.
-  # This test is set as XFail until the latter is fixed.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -15374,7 +15373,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(prop_add_to_child_with_mergeinfo,
                          server_has_mergeinfo),
-              XFail(foreign_repos_does_not_update_mergeinfo),
+              foreign_repos_does_not_update_mergeinfo,
               XFail(avoid_reflected_revs),
               SkipUnless(update_loses_mergeinfo,
                          server_has_mergeinfo),
