@@ -121,5 +121,15 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r36086, r36767, r36769
+   Fix a svnmerge.py regression.
+   Justification:
+     In 1.6.x an error is raised if attempting to delete a non-existent
+     property, so svnmerge.py shouldn't attempt that.
+   Notes:
+     r36086 is the fix, the other revisions are minor cleanup of r36086.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
