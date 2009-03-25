@@ -84,5 +84,21 @@ Candidate changes for 1.5.7:
     Votes:
       +1: pburba
 
+ * r36730, r36766, r36775
+   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
+   foreign repos'
+   Justification:
+     At best this mergeinfo refers to non-existent paths in the target's
+     repos.  At worst the mergeinfo intersects with actual path/revisions
+     in the merge target.  The latter might cause real problems, making it
+     appear merges have been done that actually have not or vice-versa.
+   Notes:
+     r36775 is the fix, the other revisions are expansion of an existing
+     merge test to cover this issue.  There are some minor conflicts, a
+     backport branch can be found at
+     http://svn.collab.net/repos/svn/branches/1.5.x-r36775.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
