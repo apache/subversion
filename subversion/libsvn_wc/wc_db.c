@@ -292,7 +292,8 @@ typedef struct {
   /* for inserting symlinks */
   const char *target;
 
-  /* for inserting absent nodes */
+  /* for inserting incomplete directories */
+  /* ### this is a temp column, and this field will eventual disappear. */
   svn_boolean_t incomplete_children;
 
   /* for temporary allocations */
@@ -1417,6 +1418,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
   ibb.children = children;
   ibb.depth = depth;
+  ibb.incomplete_children = FALSE;
 
   ibb.scratch_pool = scratch_pool;
 
@@ -1479,6 +1481,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 
   ibb.checksum = checksum;
   ibb.translated_size = translated_size;
+  ibb.incomplete_children = FALSE;
 
   ibb.scratch_pool = scratch_pool;
 
@@ -1539,6 +1542,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.changed_author = changed_author;
 
   ibb.target = target;
+  ibb.incomplete_children = FALSE;
 
   ibb.scratch_pool = scratch_pool;
 
@@ -1601,6 +1605,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   ibb.checksum = NULL;
   ibb.translated_size = SVN_INVALID_FILESIZE;
   ibb.target = NULL;
+  ibb.incomplete_children = FALSE;
 
   ibb.scratch_pool = scratch_pool;
 
@@ -1659,6 +1664,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   ibb.changed_rev = changed_rev;
   ibb.changed_date = changed_date;
   ibb.changed_author = changed_author;
+  ibb.incomplete_children = FALSE;
 
   ibb.children = NULL;
   ibb.depth = depth;
