@@ -82,6 +82,51 @@ trim_string(char **pstr)
   str[i] = '\0';
 }
 
+/* Split PROPERTY and store each individual value in PROPS.
+   Allocates from POOL. */
+static void
+split_props(apr_array_header_t **props,
+            const char *property,
+            apr_pool_t *pool)
+{
+  apr_array_header_t *temp_props;
+  char *new_prop;
+  char *prop;
+  int i = 0;
+  int j = 0;
+
+  temp_props = apr_array_make(pool, 4, sizeof(const char *));
+  new_prop = apr_palloc(pool, strlen(property));
+
+  for (i = 0; i <= strlen(property); i++)
+    {
+      if (property[i] != ';')
+        {
+          new_prop[j] = property[i];
+          j++;
+        }
+      else if (property[i] == ';')
+        {
+          if (property[i+1] == ';')
+            {
+              new_prop[j] = property[i];
+              j++;
+              i++;
+            }
+          else
+            {
+              new_prop[j] = '\0';
+              prop = apr_palloc(pool, j+1);
+              j = 0;
+	      strcpy(prop, new_prop);
+              APR_ARRAY_PUSH(temp_props, const char *) = prop;
+            }
+	}
+    }
+  APR_ARRAY_PUSH(temp_props, const char *) = new_prop;
+  *props = temp_props;
+}
+
 /* For one auto-props config entry (NAME, VALUE), if the filename pattern
    NAME matches BATON->filename case insensitively then add the properties
    listed in VALUE into BATON->properties.
@@ -93,9 +138,9 @@ auto_props_enumerator(const char *name,
                       void *baton,
                       apr_pool_t *pool)
 {
+  int i;
   auto_props_baton_t *autoprops = baton;
-  char *property;
-  char *last_token;
+  apr_array_header_t *props;
 
   /* nothing to do here without a value */
   if (strlen(value) == 0)
@@ -105,41 +150,44 @@ auto_props_enumerator(const char *name,
   if (apr_fnmatch(name, autoprops->filename, APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
     return TRUE;
 
-  /* parse the value (we dup it first to effectively lose the
-     'const', and to avoid messing up the original value) */
-  property = apr_pstrdup(autoprops->pool, value);
-  property = apr_strtok(property, ";", &last_token);
-  while (property)
+  props = apr_array_make(pool, 4, sizeof(const char *));
+  split_props(&props, value, autoprops->pool);
+
+  for (i = 0; i < props->nelts; i++)
     {
       int len;
+      char *new_token;
       const char *this_value;
-      char *equal_sign = strchr(property, '=');
+      const char *token = APR_ARRAY_IDX(props, i, const char *);
+      char *equal_sign = strchr(token, '=');
 
       if (equal_sign)
         {
           *equal_sign = '\0';
           equal_sign++;
           trim_string(&equal_sign);
+          this_value = apr_palloc(autoprops->pool, strlen(equal_sign)+1);
           this_value = equal_sign;
         }
       else
         {
           this_value = "";
         }
-      trim_string(&property);
-      len = strlen(property);
+      new_token = apr_pstrdup(autoprops->pool, token);
+      trim_string(&new_token);
+      len = strlen(new_token);
+
       if (len > 0)
         {
           svn_string_t *propval = svn_string_create(this_value,
                                                     autoprops->pool);
 
-          apr_hash_set(autoprops->properties, property, len, propval);
-          if (strcmp(property, SVN_PROP_MIME_TYPE) == 0)
+          apr_hash_set(autoprops->properties, new_token, len, propval);
+          if (strcmp(new_token, SVN_PROP_MIME_TYPE) == 0)
             autoprops->mimetype = this_value;
-          else if (strcmp(property, SVN_PROP_EXECUTABLE) == 0)
+          else if (strcmp(new_token, SVN_PROP_EXECUTABLE) == 0)
             autoprops->have_executable = TRUE;
         }
-      property = apr_strtok(NULL, ";", &last_token);
     }
   return TRUE;
 }
