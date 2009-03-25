@@ -111,7 +111,7 @@ Candidate changes:
      expected in most situations. (The final translate_chunk call of the
      translated stream was not called from the stream close function).
    Votes:
-     +1: ivan, rhuijben
+     +1: zhakov, rhuijben
 
 
 Approved changes:
