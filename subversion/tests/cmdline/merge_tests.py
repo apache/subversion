@@ -6274,17 +6274,44 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
   # Get a working copy for the foreign repos.  
   svntest.actions.run_and_verify_svn(None, None, [], 'co', other_repo_url,
                                      other_wc_dir)
-  # Do a merge on the foreign repos so it creates some mergeinfo and
-  # commit it as r7.  And no, we aren't checking these intermediate
-  # steps very thoroughly, but we test these simple merges to *death*
-  # elsewhere. 
+
+  # Create mergeinfo on the foreign repos on an existing directory and
+  # file and an added directory and file.  Commit as r7.  And no, we aren't
+  # checking these intermediate steps very thoroughly, but we test these
+  # simple merges to *death* elsewhere.
+
+  # Create mergeinfo on an existing directory.
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      other_repo_url + '/A',
                                      os.path.join(other_wc_dir, 'A_COPY'),
                                      '-c5')
+
+  # Create mergeinfo on an existing file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     other_repo_url + '/A/D/H/psi',
+                                     os.path.join(other_wc_dir, 'A_COPY',
+                                                  'D', 'H', 'psi'),
+                                     '-c3')
+
+  # Add a new directory with mergeinfo in the foreign repos.
+  new_dir = os.path.join(other_wc_dir, 'A_COPY', 'N')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', new_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '', new_dir)
+
+  # Add a new file with mergeinfo in the foreign repos.
+  new_file = os.path.join(other_wc_dir, 'A_COPY', 'nu')
+  svntest.main.file_write(new_file, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', new_file)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '', new_file)
+
   expected_output = wc.State(other_wc_dir,{
     'A_COPY'          : Item(verb='Sending'), # Mergeinfo created
     'A_COPY/B/E/beta' : Item(verb='Sending'),
+    'A_COPY/D/H/psi'  : Item(verb='Sending'), # Mergeinfo created
+    'A_COPY/N'        : Item(verb='Adding'),  # Has empty mergeinfo
+    'A_COPY/nu'       : Item(verb='Adding'),  # Has empty mergeinfo
     })
   svntest.actions.run_and_verify_commit(other_wc_dir, expected_output,
                                         None, None, other_wc_dir,
