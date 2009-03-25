@@ -1816,18 +1816,18 @@ write_entry(svn_wc__db_t *db,
         }
       else
         {
-#if 0
           const char *parent_abspath = svn_dirent_dirname(entry_abspath,
                                                           scratch_pool);
           const char *op_root_abspath;
           const char *original_repos_relpath;
           svn_revnum_t original_revision;
+          svn_error_t *err;
 
           /* The parent will *always* have info in the WORKING tree, since
              we've been designated as COPIED but do not have our own
              COPYFROM information. Therefore, our parent or a more distant
              ancestor has that information. Grab the data.  */
-          SVN_ERR(svn_wc__db_scan_working(
+          err = svn_wc__db_scan_working(
                     NULL,
                     &op_root_abspath,
                     NULL, NULL, NULL,
@@ -1835,13 +1835,25 @@ write_entry(svn_wc__db_t *db,
                     NULL,
                     db,
                     parent_abspath,
-                    scratch_pool, scratch_pool));
+                    scratch_pool, scratch_pool);
+
+          /* We could be reading the entries while in a transitional state
+             during an add/copy operation. The scan_working *does* throw
+             errors sometimes. So clear anything that may come out of it,
+             and perform the copyfrom construction only when it looks like
+             we have a good/real set of return values.  */
+          svn_error_clear(err);
 
           /* We may have been copied from a mixed-rev working copy. We need
              to simulate additional copies around revision changes. The old
              code could separately store the revision, but NG needs to create
              copies at each change.  */
-          if (original_revision != entry->revision)
+          if (err == NULL
+              && op_root_abspath != NULL
+              && original_repos_relpath != NULL
+              && SVN_IS_VALID_REVNUM(original_revision)
+              /* above is valid result testing. below is the key test.  */
+              && original_revision != entry->revision)
             {
               const char *relpath_to_entry = svn_dirent_is_child(
                 op_root_abspath, entry_abspath, NULL);
@@ -1852,7 +1864,6 @@ write_entry(svn_wc__db_t *db,
               working_node->copyfrom_repos_path = new_copyfrom_relpath;
               working_node->copyfrom_revnum = entry->revision;
             }
-#endif
         }
     }
 
