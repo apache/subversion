@@ -2502,7 +2502,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (depth)
         {
-          if (node_kind != svn_wc__db_kind_dir)
+          if (node_kind != svn_wc__db_kind_dir
+                && node_kind != svn_wc__db_kind_subdir)
             {
               *depth = svn_depth_unknown;
             }
