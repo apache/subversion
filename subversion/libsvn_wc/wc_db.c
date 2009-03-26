@@ -2869,7 +2869,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 
 
 svn_error_t *
-svn_wc__db_scan_working(svn_wc__db_status_t *status,
+svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
                         const char **op_root_abspath,
                         const char **repos_relpath,
                         const char **repos_root_url,
@@ -2885,6 +2885,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t start_status;
+  svn_wc__db_status_t status;
   const char *current_abspath = local_abspath;
   const char *current_relpath;
   const char *child_abspath = NULL;
@@ -2979,8 +2980,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
              ### 'incomplete' ? probably return an error.  */
 
           /* Provide the default status; we'll override as appropriate. */
-          if (status)
-            *status = start_status;
+          status = start_status;
         }
       else if (start_status == svn_wc__db_status_deleted
                && strcmp("normal",
@@ -3002,8 +3002,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           /* ### assert that presence == not-present ?  */
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
 
-          if (status)
-            *status = svn_wc__db_status_moved_src;
+           status = svn_wc__db_status_moved_src;
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (moved_to_abspath)
@@ -3023,13 +3022,11 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
         {
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_added);
 
-          if (status)
-            {
-              if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
-                *status = svn_wc__db_status_moved_dst;
-              else
-                *status = svn_wc__db_status_copied;
-            }
+          if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
+            status = svn_wc__db_status_moved_dst;
+          else
+            status = svn_wc__db_status_copied;
+
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (original_repos_relpath)
@@ -3080,6 +3077,9 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
       current_abspath = pdh->local_abspath;
       current_relpath = pdh->local_relpath;
     }
+
+  if (status_out)
+    *status_out = status;
 
   /* If we're here, then we have an added/copied/moved (start) node, and
      CURRENT_ABSPATH now points to a BASE node. Figure out the repository
