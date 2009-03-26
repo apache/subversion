@@ -4380,12 +4380,13 @@ struct get_mergeinfo_walk_baton
 
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
    of type "struct get_mergeinfo_walk_baton *":  If PATH is switched,
-   has explicit working svn:mergeinfo from a corresponding merge source, is
-   missing a child due to a sparse checkout, is absent from disk, is
-   scheduled for deletion, or if the walk is being done as part of a reverse
-   merge, then create a svn_client__merge_path_t *representing *PATH,
-   allocated in WB->CHILDREN_WITH_MERGEINFO->POOL, and push it onto the
-   WB->CHILDREN_WITH_MERGEINFO array. */
+   has explicit working svn:mergeinfo from the corresponding merge source and
+   this walk is being done as part of a forward merge or has *any* explicit
+   working svn:mergeinfo and this walk is being done as part of a reverse
+   merge, is missing a child due to a sparse checkout, is absent from disk,
+   is scheduled for deletion, then create a svn_client__merge_path_t *
+   representing *PATH, allocated in WB->CHILDREN_WITH_MERGEINFO->POOL, and
+   push it onto the WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
 get_mergeinfo_walk_cb(const char *path,
                       const svn_wc_entry_t *entry,
@@ -4763,8 +4764,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
    Create an svn_client__merge_path_t * for any path which meets one or more
    of the following criteria:
 
-     1) Path has working svn:mergeinfo from corresponding merge source or
-        has empty mergeinfo.
+     1) do_directory_merge() is processing a forward merge and path has
+        working svn:mergeinfo from corresponding merge source or has empty
+        mergeinfo.
      2) Path is switched.
      3) Path has no mergeinfo of its own but its parent has mergeinfo with
         non-inheritable ranges (in this case the function will actually set
@@ -4782,7 +4784,8 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         DEPTH is svn_depth_immediates.
      9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
         DEPTH is svn_depth_files.
-    10) do_directory_merge() is processing a reverse merge.
+    10) do_directory_merge() is processing a reverse merge and path has any
+        working svn:mergeinfo.
 
    If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
    for MERGE_CMD_BATON->TARGET (i.e. only criteria 7 is applied).
