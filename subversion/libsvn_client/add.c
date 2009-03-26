@@ -91,14 +91,13 @@ split_props(apr_array_header_t **props,
 {
   apr_array_header_t *temp_props;
   char *new_prop;
-  char *prop;
   int i = 0;
   int j = 0;
 
-  temp_props = apr_array_make(pool, 4, sizeof(const char *));
-  new_prop = apr_palloc(pool, strlen(property));
+  temp_props = apr_array_make(pool, 4, sizeof(char *));
+  new_prop = apr_palloc(pool, strlen(property)+1);
 
-  for (i = 0; i <= strlen(property); i++)
+  for (i = 0; property[i] != '\0'; i++)
     {
       if (property[i] != ';')
         {
@@ -109,21 +108,21 @@ split_props(apr_array_header_t **props,
         {
           if (property[i+1] == ';')
             {
-              new_prop[j] = property[i];
+              new_prop[j] = ';';
               j++;
               i++;
             }
           else
             {
               new_prop[j] = '\0';
-              prop = apr_palloc(pool, j+1);
+              APR_ARRAY_PUSH(temp_props, char *) = new_prop;
+              new_prop += j + 1;
               j = 0;
-	      strcpy(prop, new_prop);
-              APR_ARRAY_PUSH(temp_props, const char *) = prop;
             }
-	}
+        }
     }
-  APR_ARRAY_PUSH(temp_props, const char *) = new_prop;
+  new_prop[j] = '\0';
+  APR_ARRAY_PUSH(temp_props, char *) = new_prop;
   *props = temp_props;
 }
 
@@ -150,42 +149,40 @@ auto_props_enumerator(const char *name,
   if (apr_fnmatch(name, autoprops->filename, APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
     return TRUE;
 
-  props = apr_array_make(pool, 4, sizeof(const char *));
   split_props(&props, value, autoprops->pool);
 
   for (i = 0; i < props->nelts; i++)
     {
       int len;
-      char *new_token;
       const char *this_value;
-      const char *token = APR_ARRAY_IDX(props, i, const char *);
-      char *equal_sign = strchr(token, '=');
+      char *property = APR_ARRAY_IDX(props, i, char *);
+      char *equal_sign = strchr(property, '=');
 
       if (equal_sign)
         {
           *equal_sign = '\0';
           equal_sign++;
           trim_string(&equal_sign);
-          this_value = apr_palloc(autoprops->pool, strlen(equal_sign)+1);
           this_value = equal_sign;
         }
       else
         {
           this_value = "";
         }
-      new_token = apr_pstrdup(autoprops->pool, token);
-      trim_string(&new_token);
-      len = strlen(new_token);
+      trim_string(&property);
+      len = strlen(property);
 
       if (len > 0)
         {
-          svn_string_t *propval = svn_string_create(this_value,
-                                                    autoprops->pool);
+          svn_string_t *propval = apr_palloc(autoprops->pool,
+                                             sizeof(*propval));
+          propval->data = this_value;
+          propval->len = strlen(this_value);
 
-          apr_hash_set(autoprops->properties, new_token, len, propval);
-          if (strcmp(new_token, SVN_PROP_MIME_TYPE) == 0)
+          apr_hash_set(autoprops->properties, property, len, propval);
+          if (strcmp(property, SVN_PROP_MIME_TYPE) == 0)
             autoprops->mimetype = this_value;
-          else if (strcmp(new_token, SVN_PROP_EXECUTABLE) == 0)
+          else if (strcmp(property, SVN_PROP_EXECUTABLE) == 0)
             autoprops->have_executable = TRUE;
         }
     }
