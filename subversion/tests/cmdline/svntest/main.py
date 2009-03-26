@@ -506,7 +506,9 @@ def run_command_stdin(command, error_expected, binary_mode=0,
         sys.stdout.write(x)
     raise Failure
 
-  return exit_code, stdout_lines, stderr_lines
+  return exit_code, \
+         [line for line in stdout_lines if not line.startswith("DBG:")], \
+         stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   "Create config directories and files"
