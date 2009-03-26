@@ -5891,6 +5891,45 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* SUBTREES is one of the following notification_receiver_baton_t members:
+   merged_paths, skipped_paths, or added_paths.  Return true if any path in
+   SUBTRESS is equal to, or is a subtree of, PATH.  Return false otherwise.
+   If PATH or SUBTREES are NULL return false. */
+static svn_boolean_t
+path_is_subtree(const char *path,
+                apr_hash_t *subtrees)
+{
+  if (path && subtrees)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(NULL, subtrees);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path_touched_by_merge;
+
+          apr_hash_this(hi, &path_touched_by_merge, NULL, NULL);
+          if (svn_path_is_ancestor(path, path_touched_by_merge))
+            return TRUE;
+        }
+    }
+  return FALSE;
+}
+
+/* Return true if PATH is equal to or a subtree of any of th paths in
+   NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, or
+   NOTIFY_B->ADDED_PATHS.  Return false otherwise. */
+static svn_boolean_t
+subtree_touched_by_merge(const char *path,
+                         notification_receiver_baton_t *notify_b,
+                         apr_pool_t *pool)
+{
+  return (path_is_subtree(path, notify_b->merged_paths)
+          || path_is_subtree(path, notify_b->skipped_paths)
+          || path_is_subtree(path, notify_b->added_paths));
+}
+
 /* Helper for do_merge() when the merge target is a directory.
 
    Perform a merge of changes between URL1@REVISION1 and URL2@REVISION2
@@ -6229,6 +6268,7 @@ do_directory_merge(const char *url1,
         &filtered_rangelist, mergeinfo_path, merge_target->implicit_mergeinfo,
         &range, iterpool));
 
+      /* Always record mergeinfo on the merge target. */
       if (filtered_rangelist->nelts)
         {
           SVN_ERR(determine_merges_performed(&merges, merge_b->target,
@@ -6241,7 +6281,8 @@ do_directory_merge(const char *url1,
                                       iterpool));
         }
 
-      for (i = 0; i < notify_b->children_with_mergeinfo->nelts; i++)
+      /* Record mergeinfo on any subtree affected by the merge. */
+      for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
         {
           const char *child_repos_path;
           const char *child_merge_src_canon_path;
@@ -6252,8 +6293,27 @@ do_directory_merge(const char *url1,
                          APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
                                        svn_client__merge_path_t *);
           SVN_ERR_ASSERT(child);
+
+          /* Can't record mereginfo on something that isn't here. */
           if (child->absent)
             continue;
+
+          /* ### subtree-mergeinfo-branch: Our initial simplistic approach:
+             ### Don't record mergeinfo on any subtree not touched by the
+             ### merge.
+             ###
+             ### Why is this simplistic?  Because the paths in
+             ### NOTIFY_B->CHILDREN_WITH_MERGEINFO are there for many
+             ### reasons, not just because they have explicit mergeinfo
+             ### (see the doc string for get_mergeinfo_paths)  Consider a
+             ### path that has a missing child due to a sparse checkout.  We
+             ### don't know that child would not have been modified, so
+             ### not recording non-inheritable mergeinfo on the path
+             ### is incorrect. */
+          if (!subtree_touched_by_merge(child->path, notify_b, pool))
+            {              
+              continue;
+            }
 
           if (strlen(child->path) == merge_target_len)
             child_repos_path = "";
