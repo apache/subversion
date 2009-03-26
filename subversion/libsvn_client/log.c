@@ -124,11 +124,16 @@ svn_client__get_copy_source(const char *path_or_url,
                             apr_pool_t *pool)
 {
   svn_error_t *err;
-  copyfrom_info_t copyfrom_info = { TRUE, NULL, SVN_INVALID_REVNUM, pool };
+  copyfrom_info_t copyfrom_info = { 0 };
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
   svn_revnum_t at_rev;
   const char *at_url;
+
+  copyfrom_info.is_first = TRUE;
+  copyfrom_info.path = NULL;
+  copyfrom_info.rev = SVN_INVALID_REVNUM;
+  copyfrom_info.pool = pool;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
                                            path_or_url, NULL,

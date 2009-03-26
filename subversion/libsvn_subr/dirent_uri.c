@@ -45,7 +45,7 @@
 /* Path type definition. Used only by internal functions. */
 typedef enum {
   type_uri,
-  type_dirent,
+  type_dirent
 } path_type_t;
 
 
