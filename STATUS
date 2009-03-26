@@ -113,11 +113,13 @@ Candidate changes:
    Votes:
      +1: zhakov, rhuijben
 
- * r36763
+ * r36763, r36784
    Fix escaping of separator characters in auto-props.
    Justification:
      This is a long pending issue which exists in older versions of subversion
      and fixed now. Will help many users if we release it early.
+   Notes:
+     r36763 is the fix, r36784 is a follow up to r36763.
    Votes:
      +1: stylesen
 
