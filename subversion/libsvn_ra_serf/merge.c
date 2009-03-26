@@ -300,9 +300,6 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                                          "a child of the destination ('%s')"),
                                        href, ctx->merge_url);
             }
-          href = svn_path_is_child(ctx->merge_url, href, NULL);
-          if (! href) /* the paths are equal */
-            href = "";
 
           /* We now need to dive all the way into the WC to update the
            * base VCC url.
@@ -312,6 +309,14 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
             {
               svn_string_t checked_in_str;
               const char *checked_in;
+
+              /* From the above check, we know that CTX->MERGE_URL is
+                 an ancestor of HREF.  All that remains is to
+                 determine of HREF is the same as CTX->MERGE_URL, or --
+                 if not -- is relative value as a child thereof. */
+              href = svn_path_is_child(ctx->merge_url, href, NULL);
+              if (! href)
+                href = "";
 
               checked_in = apr_hash_get(info->props, "checked-in",
                                         APR_HASH_KEY_STRING);
