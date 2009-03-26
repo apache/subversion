@@ -2869,7 +2869,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 
 
 svn_error_t *
-svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
+svn_wc__db_scan_working(svn_wc__db_status_t *status,
                         const char **op_root_abspath,
                         const char **repos_relpath,
                         const char **repos_root_url,
@@ -2885,7 +2885,6 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t start_status;
-  svn_wc__db_status_t status;
   const char *current_abspath = local_abspath;
   const char *current_relpath;
   const char *child_abspath = NULL;
@@ -2959,7 +2958,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
              need to continue scanning BASE nodes upwards to determine a
              repository location.  */
           if (start_status == svn_wc__db_status_deleted)
-            goto set_status_and_return;
+            return SVN_NO_ERROR;
 
           /* Otherwise, this node was added/copied/moved and has an implicit
              location in the repository. We now need to traverse BASE nodes
@@ -2980,7 +2979,8 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
              ### 'incomplete' ? probably return an error.  */
 
           /* Provide the default status; we'll override as appropriate. */
-          status = start_status;
+          if (status)
+            *status = start_status;
         }
       else if (start_status == svn_wc__db_status_deleted
                && strcmp("normal",
@@ -2994,8 +2994,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, child_abspath);
 
-          SVN_ERR(svn_sqlite__reset(stmt));
-          goto set_status_and_return;
+          return svn_sqlite__reset(stmt);
         }
 
       if (!svn_sqlite__column_is_null(stmt, 13 /* moved_to */))
@@ -3003,7 +3002,8 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
           /* ### assert that presence == not-present ?  */
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
 
-           status = svn_wc__db_status_moved_src;
+          if (status)
+            *status = svn_wc__db_status_moved_src;
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (moved_to_abspath)
@@ -3013,8 +3013,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
                                   result_pool);
 
           /* There is no other information to retrieve. We're done. */
-          SVN_ERR(svn_sqlite__reset(stmt));
-          goto set_status_and_return;
+          return svn_sqlite__reset(stmt);
         }
 
       /* We want the operation closest to the start node, and then we
@@ -3024,11 +3023,13 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
         {
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_added);
 
-          if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
-            status = svn_wc__db_status_moved_dst;
-          else
-            status = svn_wc__db_status_copied;
-
+          if (status)
+            {
+              if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
+                *status = svn_wc__db_status_moved_dst;
+              else
+                *status = svn_wc__db_status_copied;
+            }
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (original_repos_relpath)
@@ -3047,10 +3048,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
           if (repos_relpath == NULL
               && repos_root_url == NULL
               && repos_uuid == NULL)
-            {
-              SVN_ERR(svn_sqlite__reset(stmt));
-              goto set_status_and_return;
-            }
+            return svn_sqlite__reset(stmt);
 
           /* We've found the info we needed. Scan for the top of the
              WORKING tree, and then the REPOS_* information.  */
@@ -3100,10 +3098,6 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
         *repos_relpath = svn_dirent_join(base_relpath, build_relpath,
                                          result_pool);
     }
-
-set_status_and_return:
-  if (status_out)
-    *status_out = status;
 
   return SVN_NO_ERROR;
 }
