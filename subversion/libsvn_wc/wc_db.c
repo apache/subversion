@@ -2959,7 +2959,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
              need to continue scanning BASE nodes upwards to determine a
              repository location.  */
           if (start_status == svn_wc__db_status_deleted)
-            return SVN_NO_ERROR;
+            goto set_status_and_return;
 
           /* Otherwise, this node was added/copied/moved and has an implicit
              location in the repository. We now need to traverse BASE nodes
@@ -2994,7 +2994,8 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, child_abspath);
 
-          return svn_sqlite__reset(stmt);
+          SVN_ERR(svn_sqlite__reset(stmt));
+          goto set_status_and_return;
         }
 
       if (!svn_sqlite__column_is_null(stmt, 13 /* moved_to */))
@@ -3012,7 +3013,8 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
                                   result_pool);
 
           /* There is no other information to retrieve. We're done. */
-          return svn_sqlite__reset(stmt);
+          SVN_ERR(svn_sqlite__reset(stmt));
+          goto set_status_and_return;
         }
 
       /* We want the operation closest to the start node, and then we
@@ -3045,7 +3047,10 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
           if (repos_relpath == NULL
               && repos_root_url == NULL
               && repos_uuid == NULL)
-            return svn_sqlite__reset(stmt);
+            {
+              SVN_ERR(svn_sqlite__reset(stmt));
+              goto set_status_and_return;
+            }
 
           /* We've found the info we needed. Scan for the top of the
              WORKING tree, and then the REPOS_* information.  */
@@ -3078,9 +3083,6 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
       current_relpath = pdh->local_relpath;
     }
 
-  if (status_out)
-    *status_out = status;
-
   /* If we're here, then we have an added/copied/moved (start) node, and
      CURRENT_ABSPATH now points to a BASE node. Figure out the repository
      information for the current node, and use that to compute the start
@@ -3098,6 +3100,10 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status_out,
         *repos_relpath = svn_dirent_join(base_relpath, build_relpath,
                                          result_pool);
     }
+
+set_status_and_return:
+  if (status_out)
+    *status_out = status;
 
   return SVN_NO_ERROR;
 }
