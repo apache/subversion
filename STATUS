@@ -147,5 +147,16 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r36799
+   Fix some syntax for the benefit of strict C89 compilers (such as exist on
+   AIX).
+   Justification:
+     Subversion works better when it builds.
+   Notes:
+     As is, may not backport cleanly.  (But the conflict resolution should be
+     pretty obvious.)
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
