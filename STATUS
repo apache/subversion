@@ -147,5 +147,15 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r36783
+    Dereference a pointer to a svn_revnum_t to check if it's a valid
+    revision.
+   Justification:
+     Thorugh sheer luck it doesn't appear that this can cause any problems,
+     see http://svn.haxx.se/dev/archive-2009-03/0746.shtml, but it is
+     clearly wrong.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
