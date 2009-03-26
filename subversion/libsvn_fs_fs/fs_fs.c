@@ -7041,7 +7041,11 @@ svn_fs_fs__pack(svn_fs_t *fs,
                 void *cancel_baton,
                 apr_pool_t *pool)
 {
-  struct pack_baton pb = { fs, notify_func, notify_baton,
-                           cancel_func, cancel_baton };
+  struct pack_baton pb = { 0 };
+  pb.fs = fs;
+  pb.notify_func = notify_func;
+  pb.notify_baton = notify_baton;
+  pb.cancel_func = cancel_func;
+  pb.cancel_baton = cancel_baton;
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }

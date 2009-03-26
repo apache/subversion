@@ -1155,8 +1155,9 @@ svn_wc_walk_entries2(const char *path,
                      void *cancel_baton,
                      apr_pool_t *pool)
 {
-  svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
-                                         svn_wc__walker_default_error_handler };
+  svn_wc_entry_callbacks2_t walk_cb2 = { 0 };
+  walk_cb2.found_entry = walk_callbacks->found_entry;
+  walk_cb2.handle_error = svn_wc__walker_default_error_handler;
   return svn_wc_walk_entries3(path, adm_access,
                               &walk_cb2, walk_baton, svn_depth_infinity,
                               show_hidden, cancel_func, cancel_baton, pool);

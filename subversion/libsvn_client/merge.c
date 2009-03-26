@@ -1294,9 +1294,13 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           const char *right_label = apr_psprintf(subpool,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
-          conflict_resolver_baton_t conflict_baton =
-            { merge_b->ctx->conflict_func, merge_b->ctx->conflict_baton,
-              &merge_b->conflicted_paths, merge_b->pool };
+          conflict_resolver_baton_t conflict_baton = { 0 };
+
+          conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
+          conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
+          conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
+          conflict_baton.pool = merge_b->pool;
+
           SVN_ERR(svn_wc_merge3(&merge_outcome,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
@@ -4831,11 +4835,20 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   apr_pool_t *iterpool;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { get_mergeinfo_walk_cb, get_mergeinfo_error_handler };
-  struct get_mergeinfo_walk_baton wb =
-    { adm_access, children_with_mergeinfo,
-      merge_src_canon_path, merge_cmd_baton->target, source_root_url,
-      url1, url2, revision1, revision2,
-      depth, ra_session, merge_cmd_baton->ctx };
+  struct get_mergeinfo_walk_baton wb = { 0 };
+
+  wb.base_access = adm_access;
+  wb.children_with_mergeinfo = children_with_mergeinfo;
+  wb.merge_src_canon_path = merge_src_canon_path;
+  wb.merge_target_path = merge_cmd_baton->target;
+  wb.source_root_url = source_root_url;
+  wb.url1 = url1;
+  wb.url2 = url2;
+  wb.revision1 = revision1;
+  wb.revision2 = revision2;
+  wb.depth = depth;
+  wb.ra_session = ra_session;
+  wb.ctx = merge_cmd_baton->ctx;
 
   /* Cover cases 1), 2), 6), and 7) by walking the WC to get all paths which
      have mergeinfo and/or are switched or are absent from disk or is the
