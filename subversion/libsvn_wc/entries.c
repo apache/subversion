@@ -1237,7 +1237,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                    parent_repos_relpath,
                                    svn_dirent_is_child(parent_abspath,
                                                        entry_abspath,
-                                                       iterpool),
+                                                       NULL),
                                    iterpool);
             }
           else
