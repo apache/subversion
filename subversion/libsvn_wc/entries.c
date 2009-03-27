@@ -1235,7 +1235,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
               /* Now glue it all together */
               repos_relpath = svn_uri_join(
                                    parent_repos_relpath,
-                                   svn_dirent_is_child(op_root_abspath,
+                                   svn_dirent_is_child(parent_abspath,
                                                        entry_abspath,
                                                        iterpool),
                                    iterpool);
