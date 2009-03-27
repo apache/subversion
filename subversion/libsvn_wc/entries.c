@@ -1196,6 +1196,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
             {
               svn_wc__db_status_t refined_status;
               const char *op_root_abspath;
+              const char *parent_repos_relpath;
+              const char *parent_abspath;
 
               if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
                 return err;
@@ -1207,44 +1209,36 @@ read_entries(svn_wc_adm_access_t *adm_access,
               SVN_ERR(svn_wc__db_scan_working(&refined_status,
                                               &op_root_abspath,
                                               &repos_relpath,
-                                              &entry->repos,
-                                              &entry->uuid,
                                               NULL, NULL, NULL,
-                                              NULL, NULL,
+                                              NULL, NULL, NULL, NULL,
                                               db,
                                               entry_abspath,
                                               result_pool,
                                               iterpool));
 
-              /* Check to see if we need to reconstruct this from the
-                 parent's information. */
-              if (repos_relpath == NULL)
-                {
-                  const char *parent_repos_relpath;
-                  const char *parent_abspath =
-                                svn_dirent_dirname(op_root_abspath, iterpool);
+              /* Reconstruct this from the parent's information. */
+              SVN_ERR_ASSERT(repos_relpath == NULL);
+              SVN_ERR_ASSERT(refined_status == svn_wc__db_status_deleted);
+              parent_abspath = svn_dirent_dirname(op_root_abspath, iterpool);
 
-                  SVN_ERR_ASSERT(refined_status == svn_wc__db_status_deleted);
-                  SVN_ERR(svn_wc__db_scan_working(NULL, NULL,
-                                                  &parent_repos_relpath,
-                                                  &entry->repos,
-                                                  &entry->uuid,
-                                                  NULL, NULL, NULL,
-                                                  NULL, NULL,
-                                                  db,
-                                                  parent_abspath,
-                                                  result_pool,
-                                                  iterpool));
+              SVN_ERR(svn_wc__db_scan_working(NULL, NULL,
+                                              &parent_repos_relpath,
+                                              &entry->repos,
+                                              &entry->uuid,
+                                              NULL, NULL, NULL,
+                                              NULL, NULL,
+                                              db,
+                                              parent_abspath,
+                                              result_pool,
+                                              iterpool));
 
-                  /* Now glue it all together */
-                  repos_relpath = svn_uri_join(
-                                       parent_repos_relpath,
-                                       svn_dirent_is_child(parent_abspath,
-                                                           entry_abspath,
-                                                           iterpool),
-                                       iterpool);
-                }
-
+              /* Now glue it all together */
+              repos_relpath = svn_uri_join(
+                                   parent_repos_relpath,
+                                   svn_dirent_is_child(op_root_abspath,
+                                                       entry_abspath,
+                                                       iterpool),
+                                   iterpool);
             }
           else
             {
