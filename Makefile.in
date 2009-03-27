@@ -430,36 +430,36 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: 
+davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: 
+davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-svncheck: 
+svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=svn://127.0.0.1
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
-svnserveautocheck: svnserve
+svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	bash $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
 
-svncheck6: 
+svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=svn://\[::1\]
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
-svnsshcheck:
+svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
 
-bdbcheck:
+bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
