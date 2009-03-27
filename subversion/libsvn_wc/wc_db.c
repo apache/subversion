@@ -2925,6 +2925,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
     {
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;
+      svn_boolean_t presence_is_normal;
 
       /* ### is it faster to fetch fewer columns? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
@@ -2966,6 +2967,9 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           break;
         }
 
+      presence_is_normal = strcmp("normal",
+                                  svn_sqlite__column_text(stmt, 0, NULL)) == 0;
+
       /* Record information from the starting node.  */
       if (current_abspath == local_abspath)
         {
@@ -2983,8 +2987,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
             *status = start_status;
         }
       else if (start_status == svn_wc__db_status_deleted
-               && strcmp("normal",
-                         svn_sqlite__column_text(stmt, 0, NULL)) == 0)
+               && presence_is_normal)
         {
           /* We have moved upwards at least one node, the start node
              was deleted, but we have now run into a not-deleted node.
@@ -3019,6 +3022,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
       /* We want the operation closest to the start node, and then we
          ignore any operations on its ancestors.  */
       if (!found_info
+          && presence_is_normal
           && !svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
         {
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_added);
