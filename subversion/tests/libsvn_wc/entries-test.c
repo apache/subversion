@@ -30,16 +30,43 @@
 #define WCROOT "entries-wc/root"
 
 #define TEST_UUID "uuid"
-#define TEST_URL "http://example.com/A"
-#define TEST_REPOS "http://example.com/"
+#define TEST_URL "http://example.com/repos/A"
+#define TEST_REPOS "http://example.com/repos"
 
+
+static svn_error_t *
+set_up_wc(apr_pool_t *pool)
+{
+  const char *path;
+  svn_wc_adm_access_t *adm_access;
+
+  SVN_ERR(svn_io_remove_dir2(WCROOT, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(WCROOT, pool));
+  SVN_ERR(svn_wc_ensure_adm3(WCROOT, TEST_UUID, TEST_URL, TEST_REPOS, 0,
+                             svn_depth_infinity, pool));
+
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, WCROOT, TRUE, -1,
+                           NULL, NULL, pool));
+
+  /* Create/add an "f1" child.  */
+  path = svn_dirent_join(WCROOT, "f1", pool);
+  SVN_ERR(svn_io_file_create(path, "root/f1 contents", pool));
+  SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_unknown, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+
+
+  /* All done. We're outta here...  */
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 test_entries(apr_pool_t *pool)
 {
-  SVN_ERR(svn_io_make_dir_recursively(WCROOT, pool));
-  SVN_ERR(svn_wc_ensure_adm3(WCROOT, TEST_UUID, TEST_URL, TEST_REPOS, 1,
-                             svn_depth_infinity, pool));
+  SVN_ERR(set_up_wc(pool));
+
+  /* ### now query it. make sure it all looks good.  */
 
   return SVN_NO_ERROR;
 }
