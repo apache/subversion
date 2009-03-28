@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -12368,7 +12368,7 @@ def svn_merge(rev_spec, source, target, exp_out=None):
   or a command-line option revision range string such as '-r10:20'."""
   source = local_path(source)
   target = local_path(target)
-  if isinstance(rev_spec, type(0)):
+  if isinstance(rev_spec, int):
     rev_spec = '-c' + str(rev_spec)
   if exp_out is None:
     target_re = re.escape(target)
