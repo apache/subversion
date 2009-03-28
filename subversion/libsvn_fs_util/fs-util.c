@@ -2,7 +2,7 @@
  * ends.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -131,9 +131,9 @@ svn_fs__next_entry_name(const char **next_p,
 }
 
 svn_fs_path_change2_t *
-svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
-                           svn_fs_path_change_kind_t change_kind,
-                           apr_pool_t *pool)
+svn_fs__path_change2_create(const svn_fs_id_t *node_rev_id,
+                            svn_fs_path_change_kind_t change_kind,
+                            apr_pool_t *pool)
 {
   svn_fs_path_change2_t *change;
 
