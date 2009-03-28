@@ -235,9 +235,9 @@ class Contributor:
       return 1
     if other.is_full_committer and not self.is_full_committer:
       return -1
-    result = cmp(self.score(), other.score())
+    result = (self.score() > other.score()) - (self.score() < other.score())
     if result == 0:
-      return cmp(self.big_name(), other.big_name())
+      return (self.big_name() > other.big_name()) - (self.big_name() < other.big_name())
     else:
       return 0 - result
 
