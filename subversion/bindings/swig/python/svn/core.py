@@ -144,7 +144,7 @@ class Stream:
     if amt is None:
       # read the rest of the stream
       chunks = [ ]
-      while 1:
+      while True:
         data = svn_stream_read(self._stream, SVN_STREAM_CHUNK_SIZE)
         if not data:
           break

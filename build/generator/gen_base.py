@@ -932,7 +932,7 @@ class IncludeDependencyInfo:
       self._deps[fname] = {}
 
     # Keep recomputing closures until we see no more changes
-    while 1:
+    while True:
       changes = 0
       for fname in self._deps.keys():
         changes = self._include_closure(self._deps[fname]) or changes

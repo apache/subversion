@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -474,7 +474,7 @@ def parse_log_output(log_lines):
   log_lines = [line for line in log_lines if not line.startswith('DBG:')]
 
   this_item = None
-  while 1:
+  while True:
     try:
       this_line = log_lines.pop(0)
     except IndexError:
