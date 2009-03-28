@@ -1089,7 +1089,7 @@ write_config(svn_fs_t *fs,
 ""                                                                           NL
 "[" CONFIG_SECTION_REP_SHARING "]"                                           NL
 "### To conserve space, the filesystem can optionally avoid storing"         NL
-"### duplicate representations.  This comes at a slight cost in performace," NL
+"### duplicate representations. This comes at a slight cost in performance," NL
 "### as maintaining a database of shared representations can increase"       NL
 "### commit times.  The space savings are dependent upon the size of the"    NL
 "### repository, the number of objects it contains and the amount of"        NL
