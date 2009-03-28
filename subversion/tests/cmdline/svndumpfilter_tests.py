@@ -42,7 +42,7 @@ Item = svntest.wc.StateItem
 def filter_and_return_output(dump, *varargs):
   """Filter the array of lines passed in 'dump' and return the output"""
 
-  if type(dump) is str:
+  if isinstance(dump, str):
     dump = [ dump ]
 
   ## TODO: Should we need to handle errput and exit_code?

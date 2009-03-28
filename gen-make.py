@@ -55,7 +55,7 @@ def main(fname, gentype, verfname=None,
     gen_keys = sorted(generator.__dict__.keys())
     for name in gen_keys:
       value = generator.__dict__[name]
-      if type(value) == list:
+      if isinstance(value, list):
         print(name + ": ")
         for i in value:
           print("  " + _objinfo(i))
@@ -63,7 +63,7 @@ def main(fname, gentype, verfname=None,
 
 
 def _objinfo(o):
-  if type(o) == str:
+  if isinstance(o, str):
     return repr(o)
   else:
     t = o.__class__.__name__

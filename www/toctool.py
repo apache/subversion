@@ -31,7 +31,7 @@ class Index:
   def prettyString(self):
     out = []
     def step(ilevel, node):
-      if type(node) == list:
+      if isinstance(node, list):
         for subnode in node:
           step(ilevel+1, subnode)
       else:

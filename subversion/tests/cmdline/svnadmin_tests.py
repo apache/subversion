@@ -83,7 +83,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   using the array of wc.States passed in revs. VARARGS are optional
   arguments passed to the 'load' command"""
 
-  if type(dump) is str:
+  if isinstance(dump, str):
     dump = [ dump ]
 
   exit_code, output, errput = svntest.main.run_command_stdin(
