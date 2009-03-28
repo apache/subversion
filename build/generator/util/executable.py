@@ -26,9 +26,9 @@ def output(cmd, strip=None):
   """Run a command and collect all output"""
   # Check that cmd is in PATH (otherwise we'd get a generic OSError later)
   import distutils.spawn
-  if type(cmd) == type(''):
+  if type(cmd) == str:
     cmdname = cmd
-  elif type(cmd) == type([]):
+  elif type(cmd) == list:
     cmdname = cmd[0]
   if distutils.spawn.find_executable(cmdname) is None:
     return None

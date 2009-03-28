@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2007-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -42,7 +42,7 @@ Item = svntest.wc.StateItem
 def filter_and_return_output(dump, *varargs):
   """Filter the array of lines passed in 'dump' and return the output"""
 
-  if type(dump) is type(""):
+  if type(dump) is str:
     dump = [ dump ]
 
   ## TODO: Should we need to handle errput and exit_code?

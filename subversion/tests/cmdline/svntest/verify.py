@@ -67,9 +67,9 @@ def createExpectedOutput(expected, match_all=True):
   """Return EXPECTED, promoted to an ExpectedOutput instance if not
   None.  Raise SVNIncorrectDatatype if the data type of EXPECTED is
   not handled."""
-  if isinstance(expected, type([])):
+  if isinstance(expected, list):
     expected = ExpectedOutput(expected)
-  elif isinstance(expected, type('')):
+  elif isinstance(expected, str):
     expected = RegexOutput(expected, match_all)
   elif expected == AnyOutput:
     expected = AnyOutput()
@@ -107,10 +107,10 @@ class ExpectedOutput:
       actual = other
 
     if isinstance(actual, list):
-      if isinstance(expected, type('')):
+      if isinstance(expected, str):
         expected = [expected]
       is_match = self.is_equivalent_list(expected, actual)
-    elif isinstance(actual, type('')):
+    elif isinstance(actual, str):
       is_match = self.is_equivalent_line(expected, actual)
     else: # unhandled type
       is_match = False
@@ -319,7 +319,7 @@ def compare_and_display_lines(message, label, expected, actual,
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
-  if isinstance(actual, type('')):
+  if isinstance(actual, str):
     actual = [actual]
   actual = [line for line in actual if not line.startswith('DBG:')]
 
