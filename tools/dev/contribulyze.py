@@ -387,8 +387,7 @@ class Contributor:
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = list(unique_logs.keys())
-    sorted_logs.sort()
+    sorted_logs = sorted(unique_logs.keys())
     for log in sorted_logs:
       out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,

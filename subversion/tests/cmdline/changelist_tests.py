@@ -515,10 +515,7 @@ def info_with_changelists(sbox):
 
       # Filter the output for lines that begin with 'Path:', and
       # reduce even those lines to just the actual path.
-      def startswith_path(line):
-        return line[:6] == 'Path: ' and 1 or 0
-      paths = [x[6:].rstrip() for x in filter(startswith_path, output)]
-      paths.sort()
+      paths = sorted([x[6:].rstrip() for x in output if x[:6] == 'Path: '])
 
       # And, compare!
       if (paths != expected_paths):
@@ -583,10 +580,7 @@ def diff_with_changelists(sbox):
 
         # Filter the output for lines that begin with 'Index:', and
         # reduce even those lines to just the actual path.
-        def startswith_path(line):
-          return line[:7] == 'Index: ' and 1 or 0
-        paths = [x[7:].rstrip() for x in filter(startswith_path, output)]
-        paths.sort()
+        paths = sorted([x[7:].rstrip() for x in output if x[:7] == 'Index: '])
 
         # Diff output on Win32 uses '/' path separators.
         if sys.platform == 'win32':
