@@ -158,5 +158,14 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r36816
+   Correct an issue with diffing large data when whitespaces/eols are ignored.
+   Justification:
+     TortoiseMerge does diffing with EOLs ignored by default, and without this
+     fix there's a diff shown at every 128k boundary even if the line has not
+     changed at all.
+   Votes:
+     +1: steveking
+
 Approved changes:
 =================
