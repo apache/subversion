@@ -100,18 +100,10 @@ Candidate changes:
 
  * r36741, r36742
    Improve detection of Berkeley DB.
+   Justification:
+     Regression.
    Votes:
      +1: arfrever
-  
- * r36747
-   Fix broken svn_subst_translate_cstring2 function: Close the destination
-   stream to flush unwritten data.
-   Justification:
-     Without this fix svn_subst_translate_cstring2() function does not work as
-     expected in most situations. (The final translate_chunk call of the
-     translated stream was not called from the stream close function).
-   Votes:
-     +1: zhakov, rhuijben
 
  * r36763, r36784
    Fix escaping of separator characters in auto-props.
@@ -121,17 +113,7 @@ Candidate changes:
    Notes:
      r36763 is the fix, r36784 is a follow up to r36763.
    Votes:
-     +1: stylesen
-
- * r36086, r36767, r36769
-   Fix a svnmerge.py regression.
-   Justification:
-     In 1.6.x an error is raised if attempting to delete a non-existent
-     property, so svnmerge.py shouldn't attempt that.
-   Notes:
-     r36086 is the fix, the other revisions are minor cleanup of r36086.
-   Votes:
-     +1: pburba, blair
+     +1: stylesen, arfrever
 
  * r36730, r36766, r36775
    Fix issue #3383 'Foreign repository merge can add mergeinfo from the
@@ -145,7 +127,7 @@ Candidate changes:
      r36775 is the fix, the other revisions are expansion of an existing
      merge test to cover this issue.
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
 
  * r36799
    Fix some syntax for the benefit of strict C89 compilers (such as exist on
@@ -167,5 +149,32 @@ Candidate changes:
    Votes:
      +1: steveking
 
+ * r36823
+   Fix undefined references to svn_fs_path_change2_create().
+   Justification:
+     Regression.
+   Votes:
+     +1: arfrever
+
 Approved changes:
 =================
+  
+ * r36086, r36767, r36769
+   Fix a svnmerge.py regression.
+   Justification:
+     In 1.6.x an error is raised if attempting to delete a non-existent
+     property, so svnmerge.py shouldn't attempt that.
+   Notes:
+     r36086 is the fix, the other revisions are minor cleanup of r36086.
+   Votes:
+     +1: pburba, blair, arfrever
+
+ * r36747
+   Fix broken svn_subst_translate_cstring2 function: Close the destination
+   stream to flush unwritten data.
+   Justification:
+     Without this fix svn_subst_translate_cstring2() function does not work as
+     expected in most situations. (The final translate_chunk call of the
+     translated stream was not called from the stream close function).
+   Votes:
+     +1: zhakov, rhuijben, arfrever
