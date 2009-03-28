@@ -52,7 +52,7 @@ _ok_implicit = re.compile(r'^[A-Za-z]([^\(\) \r\n\t\f]*)$')
 def unparse(struc):
   accum = []
   for ent in struc:
-    if type(ent) == str:
+    if isinstance(ent, str):
       if len(ent) > 0 and _ok_implicit.match(ent[0]):
         accum.append(ent)
       else:
@@ -66,7 +66,7 @@ def unparse(struc):
 class Rev:
   def __init__(self, skelstring="(revision null)"):
     sk = parse(skelstring)
-    if len(sk) == 2 and sk[0] == "revision" and type(sk[1]) == str:
+    if len(sk) == 2 and sk[0] == "revision" and isinstance(sk[1], str):
       self.txn = sk[1]
     else:
       raise ValueError("Invalid revision skel: %s" % skelstring)
@@ -112,9 +112,9 @@ class Copy:
 class Node:
   def __init__(self,skelstring="((file null null 1 0) null null)"):
     sk = parse(skelstring)
-    if (len(sk) == 3 or (len(sk) == 4 and type(sk[3]) == str)) \
-        and type(sk[0]) == list and type(sk[1]) == str \
-        and type(sk[2]) == str and sk[0][0] in ("file", "dir") \
+    if (len(sk) == 3 or (len(sk) == 4 and isinstance(sk[3], str))) \
+        and isinstance(sk[0], list) and isinstance(sk[1], str) \
+        and isinstance(sk[2], str) and sk[0][0] in ("file", "dir") \
         and type(sk[0][1]) == type(sk[0][2]) == type(sk[0][3]) == str:
           self.kind = sk[0][0]
           self.createpath = sk[0][1]
@@ -180,9 +180,9 @@ class Rep:
   def __init__(self, skelstring="((fulltext 0  (md5 16 \0\0\0\0\0\0\0\0" \
           "\0\0\0\0\0\0\0\0)) null)"):
     sk = parse(skelstring)
-    if type(sk[0]) == list and len(sk[0]) == 3 \
-        and type(sk[0][1]) == str \
-        and type(sk[0][2]) == list and len(sk[0][2]) == 2 \
+    if isinstance(sk[0], list) and len(sk[0]) == 3 \
+        and isinstance(sk[0][1], str) \
+        and isinstance(sk[0][2], list) and len(sk[0][2]) == 2 \
         and type(sk[0][2][0]) == type(sk[0][2][1]) == str:
           self.kind = sk[0][0]
           self.txn = sk[0][1]

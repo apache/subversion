@@ -443,7 +443,7 @@ def _make_dist(cfg):
       action = _disttree[reldir]
       if action is None:
         continue
-      if type(action) == tuple:
+      if isinstance(action, tuple):
         for subaction in action:
           subaction.run(dir, cfg)
       else:
