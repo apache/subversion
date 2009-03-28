@@ -457,9 +457,22 @@ class State:
     def path_to_key(p, l=len(path)+1):
       if p == path:
         return ''
-      assert p.startswith(path + os.sep), \
-          "'%s' is not a prefix of '%s'" % (path + os.sep, p)
-      return to_relpath(p[l:])
+
+      if not path.endswith(os.sep) and not path.endswith('/') \
+           and not path.endswith(':'):
+        parent = path + os.sep
+        assert p.startswith(parent), \
+            "'%s' is not a prefix of '%s'" % (parent, p)
+        return to_relpath(p[l:])
+      else:
+        # Special paths formats: 
+        # Windows:
+        #  'C:/' Is a valid root which includes its separator ('C:/file')
+        #  'C:'  is a valid root which isn't followed by a separator ('C:file')
+
+        assert p.startswith(path), \
+            "'%s' is not a prefix of '%s'" % (path, p)
+        return to_relpath(p[l-1:])
 
     for dirpath, dirs, files in os.walk(path):
       parent = path_to_key(dirpath)
