@@ -280,7 +280,7 @@ class SVNTreeNode:
     """Define a simple ordering of two nodes without regard to their full
     path (i.e. position in the tree). This can be used for sorting the
     children within a directory."""
-    return cmp(self.name, other.name)
+    return (self.name > other.name) - (self.name < other.name)
 
   def as_state(self, prefix=None):
     root = self
