@@ -28,7 +28,7 @@ def getfile(path, filename, rev=None):
 
   root = fs.revision_root(fsob, rev)
   file = fs.file_contents(root, filename)
-  while 1:
+  while True:
     data = core.svn_stream_read(file, CHUNK_SIZE)
     if not data:
       break

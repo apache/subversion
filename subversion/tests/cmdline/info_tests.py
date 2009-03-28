@@ -88,7 +88,7 @@ def match_xml_element(str, exprs):
   name = m.group('name')
   str = str[m.end():]
   atts = {}
-  while 1:
+  while True:
     m = atttribute_re.match(str)
     if not m:
       break
@@ -108,7 +108,7 @@ def match_xml_element(str, exprs):
     content = m.group('content')
     str = str[m.end():]
   if content != '':
-    while 1:
+    while True:
       (new_content, exprs) = match_xml_element(content, exprs)
       if new_content == content:
         # there are no (more) child elements

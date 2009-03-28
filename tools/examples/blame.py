@@ -43,7 +43,7 @@ def blame(path, filename, rev=None):
     file = fs.file_contents(root, filename)
     previousdata = filedata
     filedata = ''
-    while 1:
+    while True:
       data = core.svn_stream_read(file, CHUNK_SIZE)
       if not data:
         break

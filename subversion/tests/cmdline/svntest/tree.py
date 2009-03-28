@@ -287,7 +287,7 @@ class SVNTreeNode:
     if self.path == root_node_name:
       assert prefix is None
       wc_dir = ''
-      while 1:
+      while True:
         if root is not self:  # don't prepend ROOT_NODE_NAME
           wc_dir = os.path.join(wc_dir, root.name)
         if root.contents or root.props or root.atts:
@@ -429,7 +429,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
   # deposit contents in the very last node.
   node = root_node
-  while 1:
+  while True:
     if node.children is None:
       node.contents = contents
       node.props = props

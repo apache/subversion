@@ -9,7 +9,7 @@ def parse(s):
   s = s[1:-1].lstrip()
   prev_accums = []
   accum = []
-  while 1:
+  while True:
     if len(s) == 0:
       return accum
     if s[0] in string.digits:
