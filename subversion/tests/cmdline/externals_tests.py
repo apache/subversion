@@ -1188,7 +1188,8 @@ def binary_file_externals(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3),
+    'A/theta'      : Item(status='  ', wc_rev=3),
+    'A/C/external' : Item(status='  ', wc_rev=3, switched='X'),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,

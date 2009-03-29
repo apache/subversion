@@ -36,7 +36,7 @@ import svntest
 #    - prop status           (1)  (single letter)
 #    - wc-lockedness flag    (2)  (single letter: "L" or " ")
 #    - copied flag           (3)  (single letter: "+" or " ")
-#    - switched flag         (4)  (single letter: "S" or " ")
+#    - switched flag         (4)  (single letter: "S", "X" or " ")
 #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
 #    - tree conflict flag    (6)  (single letter: "C" or " ")
 #
@@ -67,7 +67,7 @@ import svntest
 _re_parse_status = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
-                              '([S ])'
+                              '([SX ])'
                               '([KOBT ])'
                               '([C ]) '
                               '([* ]) +'
