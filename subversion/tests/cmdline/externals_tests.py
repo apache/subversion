@@ -1128,6 +1128,8 @@ def external_into_path_with_spaces(sbox):
       os.path.join(wc_dir, 'A', 'another copy of D'),
   ])
 
+#----------------------------------------------------------------------
+
 # Issue #3368
 def binary_file_externals(sbox):
   "binary file externals"
@@ -1143,18 +1145,16 @@ def binary_file_externals(sbox):
 
   svntest.main.run_svn(None, 'add', theta_path)
 
-  # Created expected output tree for 'svn ci'
+  # Commit the binary file
   expected_output = svntest.wc.State(wc_dir, {
     'A/theta' : Item(verb='Adding  (bin)'),
     })
 
-  # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     })
 
-  # Commit the new binary file, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
