@@ -261,7 +261,8 @@ class State:
     """Compare this State against an OTHER State, and display differences.
 
     Information will be written to stdout, displaying any differences
-    between the two states. LABEL will be used in the display.
+    between the two states. LABEL will be used in the display. SELF is the
+    "expected" state, and OTHER is the "actual" state.
 
     If any changes are detected/diplayed, then SVNTreeUnequal is raised.
     """
@@ -439,7 +440,7 @@ class State:
     return cls('', desc)
 
   @classmethod
-  def from_wc(cls, path, load_props=False, ignore_svn=True):
+  def from_wc(cls, base, load_props=False, ignore_svn=True):
     """Create a State object from a working copy.
 
     Walks the tree at PATH, building a State based on the actual files
@@ -447,35 +448,15 @@ class State:
     will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
     True, then the .svn subdirectories will be excluded from the State.
     """
-    # generally, the OS wants '.' rather than ''
-    if not path:
-      path = '.'
+    if not base:
+      # we're going to walk the base, and the OS wants "."
+      base = '.'
 
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    def path_to_key(p, l=len(path)+1):
-      if p == path:
-        return ''
-
-      if not path.endswith(os.sep) and not path.endswith('/') \
-           and not path.endswith(':'):
-        parent = path + os.sep
-        assert p.startswith(parent), \
-            "'%s' is not a prefix of '%s'" % (parent, p)
-        return to_relpath(p[l:])
-      else:
-        # Special paths formats: 
-        # Windows:
-        #  'C:/' Is a valid root which includes its separator ('C:/file')
-        #  'C:'  is a valid root which isn't followed by a separator ('C:file')
-
-        assert p.startswith(path), \
-            "'%s' is not a prefix of '%s'" % (path, p)
-        return to_relpath(p[l-1:])
-
-    for dirpath, dirs, files in os.walk(path):
-      parent = path_to_key(dirpath)
+    for dirpath, dirs, files in os.walk(base):
+      parent = path_to_key(dirpath, base)
       if parent:
         parent += '/'
       if ignore_svn and dot_svn in dirs:
@@ -489,17 +470,54 @@ class State:
         desc['%s%s' % (parent, name)] = StateItem(contents=contents)
 
     if load_props:
-      paths = [os.path.join(path, to_ospath(p)) for p in desc.keys()]
-      paths.append(path)
+      paths = [os.path.join(base, to_ospath(p)) for p in desc.keys()]
+      paths.append(base)
       all_props = svntest.tree.get_props(paths)
       for node, props in all_props.items():
-        if node == path:
+        if node == base:
           desc['.'] = StateItem(props=props)
         else:
-          if path == '.':
+          if base == '.':
             # 'svn proplist' strips './' from the paths. put it back on.
             node = os.path.join('.', node)
-          desc[path_to_key(node)].props = props
+          desc[path_to_key(node, base)].props = props
+
+    return cls('', desc)
+
+  @classmethod
+  def from_entries(cls, base):
+    """Create a State object from a working copy, via the old "entries" API.
+
+    Walks the tree at PATH, building a State based on the information
+    provided by the old entries API, as accessed via the 'entries-dump'
+    program.
+    """
+    if not base:
+      # we're going to walk the base, and the OS wants "."
+      base = '.'
+
+    ### don't return anything yet. still filling in skeleton.
+    return None
+
+    desc = { }
+    dot_svn = svntest.main.get_admin_name()
+
+    for dirpath, dirs, files in os.walk(base):
+      if dot_svn in dirs:
+        # don't visit the .svn subdir
+        dirs.remove(dot_svn)
+      else:
+        # this is not a versioned directory. remove all subdirectories since
+        # we don't want to visit them. then skip this directory.
+        dirs[:] = []
+        continue
+
+      parent = path_to_key(dirpath, base)
+      if parent:
+        parent += '/'
+      for name in dirs:
+        node = os.path.join(dirpath, name)
+        desc['%s%s' % (parent, name)] = StateItem()
 
     return cls('', desc)
 
@@ -604,6 +622,25 @@ else:
     return path.replace(os.sep, '/')
   def to_ospath(path):
     return path.replace('/', os.sep)
+
+
+def path_to_key(path, base):
+  if path == base:
+    return ''
+
+  if base.endswith(os.sep) or base.endswith('/') or base.endswith(':'):
+    # Special path format on Windows:
+    #  'C:/' Is a valid root which includes its separator ('C:/file')
+    #  'C:'  is a valid root which isn't followed by a separator ('C:file')
+    #
+    # In this case, we don't need a separator between the base and the path.
+    pass
+  else:
+    # Account for a separator between the base and the relpath we're creating
+    base += os.sep
+
+  assert path.startswith(base), "'%s' is not a prefix of '%s'" % (base, path)
+  return to_relpath(path[len(base):])
 
 
 # ------------
