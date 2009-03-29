@@ -258,13 +258,6 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                           apr_pool_t *pool);
 
 svn_error_t *
-svn_wc__write_entry_old(svn_stringbuf_t *buf,
-                        const svn_wc_entry_t *entry,
-                        const char *name,
-                        const svn_wc_entry_t *this_dir,
-                        apr_pool_t *pool);
-
-svn_error_t *
 svn_wc__entries_init_old(const char *path,
                          const char *uuid,
                          const char *url,

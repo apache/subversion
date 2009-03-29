@@ -274,6 +274,21 @@ svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool);
 
+
+/**
+ * Initialize the DB for LOCAL_ABSPATH, which should be a working copy path.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_init(const char *local_abspath,
+                const char *repos_relpath,
+                const char *repos_root_url,
+                const char *repos_uuid,
+                svn_revnum_t initial_rev,
+                svn_depth_t depth,
+                apr_pool_t *scratch_pool);
+
+
 /** @} */
 
 /**

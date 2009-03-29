@@ -1726,15 +1726,30 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (info->lock_token && info->fetch_props == FALSE)
         info->fetch_props = TRUE;
 
-      /* If we have a WC, we can dive all the way into the WC to get the
-       * previous URL so we can do an differential GET with the base URL.
+      /* If possible, we'd like to fetch only a delta against a
+       * version of the file we already have in our working copy,
+       * rather than fetching a fulltext.
        *
-       * If we don't have a WC (as is the case for URL<->URL diff), we can
-       * manually reconstruct the base URL.  This avoids us having to grab
-       * two full-text for URL<->URL diffs.  Instead, we can just grab one
-       * full-text and a diff from the server against that other file.
+       * In HTTP v2, we can simply construct the URL we need given the
+       * path and base revision number.
        */
-      if (ctx->sess->wc_callbacks->get_wc_prop)
+      if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
+        {
+          const char *fs_path;
+          const char *full_path = svn_path_join(ctx->sess->repos_url.path,
+                                                info->name, info->pool);
+          SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
+                                                 ctx->sess, NULL, info->pool));
+          info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",
+                                                ctx->sess->rev_root_stub, 
+                                                info->base_rev, fs_path);
+        }
+
+      /* Still no base URL?  If we have a WC, we might be able to dive all
+       * the way into the WC to get the previous URL so we can do a
+       * differential GET with the base URL.
+       */
+      if ((! info->delta_base) && (ctx->sess->wc_callbacks->get_wc_prop))
         {
           ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
                                                info->name,
@@ -1742,7 +1757,14 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                                &info->delta_base,
                                                info->pool);
         }
-      else
+
+      /* STILL no base URL?  Well, all else has failed, but we can
+       * manually reconstruct the base URL.  This avoids us having to
+       * grab two full-text for URL<->URL diffs.  Instead, we can just
+       * grab one full-text and a diff from the server against that
+       * other file.
+       */
+      if (! info->delta_base)
         {
           const char *c;
           apr_size_t comp_count;
@@ -1757,9 +1779,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           svn_path_remove_components(path, comp_count);
 
-          /* Find out the difference of the destination compared to the repos
-           * root url. Cut of this difference from path, which will give us our
-           * version resource root path.
+          /* Find out the difference of the destination compared to
+           * the repos root url. Cut off this difference from path,
+           * which will give us our version resource root path.
            *
            * Example:
            * path:
@@ -1769,7 +1791,8 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * destination:
            *  http://localhost/repositories/log_tests-17/branches/a
            *
-           * So, find 'branches/a' as the difference. Cut it of path, gives us:
+           * So, find 'branches/a' as the difference. Cutting it off
+           * path, gives us:
            *  /repositories/log_tests-17/!svn/ver/4
            */
           if (ctx->destination &&

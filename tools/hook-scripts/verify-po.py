@@ -76,7 +76,7 @@ class ChangeReceiver(delta.Editor):
         stream = core.Stream(fs.file_contents(self.txn_root, path, subpool))
         reader = codecs.getreader('UTF-8')(stream, 'strict')
         writer = codecs.getwriter('UTF-8')(checker, 'strict')
-        while 1:
+        while True:
           data = reader.read(core.SVN_STREAM_CHUNK_SIZE)
           if not data:
             break

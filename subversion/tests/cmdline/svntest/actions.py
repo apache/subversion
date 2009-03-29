@@ -1013,7 +1013,7 @@ def run_and_verify_patch(dir, patch_path,
 
   # when the expected output is a list, we want a line-by-line
   # comparison to happen instead of a tree comparison
-  if isinstance(output_tree, type([])):
+  if isinstance(output_tree, list):
     verify.verify_outputs(None, out, err, output_tree, error_re_string)
     output_tree = None
 

@@ -1462,8 +1462,9 @@ svn_client_status3(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  struct status3_wrapper_baton swb = { status_func, status_baton };
-
+  struct status3_wrapper_baton swb = { 0 };
+  swb.old_func = status_func;
+  swb.old_baton = status_baton;
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
                             &swb, depth, get_all, update, no_ignore,
                             ignore_externals, changelists, ctx, pool);

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -439,11 +439,15 @@ def add_with_history(sbox):
     ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q2'     : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar2' : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
+    'Q/bar2' : Item(status='  ', wc_rev='-', copied='+'),
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     'foo2'   : Item(status='A ', wc_rev='-', copied='+'),
     })
+  if not sbox.using_wc_ng():
+    # see notes/api-errata/wc003.txt. in wc-1, these look like separate adds.
+    expected_status.tweak('Q/bar', 'Q/bar2', status='A ')
+
   expected_skip = wc.State(C_path, { })
 
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
@@ -458,11 +462,16 @@ def add_with_history(sbox):
     'A/C'       : Item(verb='Sending'),
     'A/C/Q'     : Item(verb='Adding'),
     'A/C/Q2'    : Item(verb='Adding'),
-    'A/C/Q/bar' : Item(verb='Adding'),
-    'A/C/Q/bar2': Item(verb='Adding'),
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
+  if not sbox.using_wc_ng():
+    # see notes/api-errata/wc003.txt. in wc-1, these look like separate adds
+    # from their parent, so they get committed separately.
+    expected_output.add({
+      'A/C/Q/bar' : Item(verb='Adding'),
+      'A/C/Q/bar2': Item(verb='Adding'),
+      })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C'         : Item(status='  ', wc_rev=3),
@@ -1713,8 +1722,11 @@ def merge_skips_obstructions(sbox):
   expected_status = wc.State(C_path, {
     ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
     })
+  if not sbox.using_wc_ng():
+    # see notes/api-errata/wc003.txt. in wc-1, this looks like a separate add.
+    expected_status.tweak('Q/bar', status='A ')
   expected_skip = wc.State(C_path, {
     'foo' : Item(),
     })
@@ -2356,7 +2368,9 @@ def merge_funny_chars_on_path(sbox):
     for target in targets:
       key = '%s' % target[1]
       expected_output_dic[key] = Item(verb='Adding')
-      if target[2]:
+      if target[2] and not sbox.using_wc_ng():
+        # see notes/api-errata/wc003.txt. these children appear like separate
+        # adds/commits, instead of a single copy of the parent.
         key = '%s/%s' % (target[1], target[2])
         expected_output_dic[key] = Item(verb='Adding')
 
@@ -6226,7 +6240,6 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
   "set no mergeinfo when merging from foreign repos"
 
   # Test for issue #2788 and issue #3383.
-  # This test is set as XFail until the latter is fixed.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -6274,17 +6287,44 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
   # Get a working copy for the foreign repos.  
   svntest.actions.run_and_verify_svn(None, None, [], 'co', other_repo_url,
                                      other_wc_dir)
-  # Do a merge on the foreign repos so it creates some mergeinfo and
-  # commit it as r7.  And no, we aren't checking these intermediate
-  # steps very thoroughly, but we test these simple merges to *death*
-  # elsewhere. 
+
+  # Create mergeinfo on the foreign repos on an existing directory and
+  # file and an added directory and file.  Commit as r7.  And no, we aren't
+  # checking these intermediate steps very thoroughly, but we test these
+  # simple merges to *death* elsewhere.
+
+  # Create mergeinfo on an existing directory.
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      other_repo_url + '/A',
                                      os.path.join(other_wc_dir, 'A_COPY'),
                                      '-c5')
+
+  # Create mergeinfo on an existing file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     other_repo_url + '/A/D/H/psi',
+                                     os.path.join(other_wc_dir, 'A_COPY',
+                                                  'D', 'H', 'psi'),
+                                     '-c3')
+
+  # Add a new directory with mergeinfo in the foreign repos.
+  new_dir = os.path.join(other_wc_dir, 'A_COPY', 'N')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', new_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '', new_dir)
+
+  # Add a new file with mergeinfo in the foreign repos.
+  new_file = os.path.join(other_wc_dir, 'A_COPY', 'nu')
+  svntest.main.file_write(new_file, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', new_file)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '', new_file)
+
   expected_output = wc.State(other_wc_dir,{
     'A_COPY'          : Item(verb='Sending'), # Mergeinfo created
     'A_COPY/B/E/beta' : Item(verb='Sending'),
+    'A_COPY/D/H/psi'  : Item(verb='Sending'), # Mergeinfo created
+    'A_COPY/N'        : Item(verb='Adding'),  # Has empty mergeinfo
+    'A_COPY/nu'       : Item(verb='Adding'),  # Has empty mergeinfo
     })
   svntest.actions.run_and_verify_commit(other_wc_dir, expected_output,
                                         None, None, other_wc_dir,
@@ -12328,7 +12368,7 @@ def svn_merge(rev_spec, source, target, exp_out=None):
   or a command-line option revision range string such as '-r10:20'."""
   source = local_path(source)
   target = local_path(target)
-  if isinstance(rev_spec, type(0)):
+  if isinstance(rev_spec, int):
     rev_spec = '-c' + str(rev_spec)
   if exp_out is None:
     target_re = re.escape(target)
@@ -15347,7 +15387,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(prop_add_to_child_with_mergeinfo,
                          server_has_mergeinfo),
-              XFail(foreign_repos_does_not_update_mergeinfo),
+              foreign_repos_does_not_update_mergeinfo,
               XFail(avoid_reflected_revs),
               SkipUnless(update_loses_mergeinfo,
                          server_has_mergeinfo),
@@ -15407,7 +15447,7 @@ test_list = [ None,
               foreign_repos,
               foreign_repos_uuid,
               foreign_repos_2_url,
-              XFail(merge_added_subtree),
+              XFail(merge_added_subtree, svntest.main.is_not_ng),
               SkipUnless(merge_unknown_url,
                          server_has_mergeinfo),
               SkipUnless(reverse_merge_away_all_mergeinfo,

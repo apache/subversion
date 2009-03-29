@@ -1,6 +1,8 @@
 %define apache_version 2.0.52
 %define apr_version 0.9.7
 %define neon_version 0.26.1
+%define python_version 2.4
+%define sqlite_version 3.4
 %define swig_version 1.3.25
 %define apache_dir /usr
 %define pyver 2.3
@@ -21,12 +23,15 @@ URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
 Patch1: subversion-0.31.0-rpath.patch
+Patch2: python-2.4.patch
+Patch3: apache.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apr >= %{apr_version}
 Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.2.52
 Requires: neon >= %{neon_version}
+Requires: sqlite >= %{sqlite_version}
 BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.2.52
 BuildPreReq: docbook-style-xsl >= 1.58.1
@@ -41,9 +46,10 @@ BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: perl
-BuildPreReq: python
-BuildPreReq: python-devel
+BuildPreReq: python%{python_version} >= %{python_version}
+BuildPreReq: python%{python_version}-devel >= %{python_version}
 BuildPreReq: swig >= %{swig_version}
+BuildPreReq: sqlite >= %{sqlite_version}
 BuildPreReq: zlib-devel
 Obsoletes: subversion-server
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
@@ -94,7 +100,7 @@ Provides Perl (SWIG) support for Subversion.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: python >= 2
+Requires: python%{python_version} >= %{python_version}
 %description python
 Provides Python (SWIG) support for Subversion.
 
@@ -105,6 +111,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Mar 28 2009 David Summers <david@summersoft.fay.ar.us> r36833
+- [RHEL4] Changes to build 1.7 trunk, backported to 1.6.
+- Added patch to build with with new required non-RHEL4 python-2.4.6.
+- Added patch to fix Subversion APACHE APR version checking.
+
 * Sun Mar 01 2009 David Summers <david@summersoft.fay.ar.us> r36231
 - [RHEL5] Changes to build 1.7 trunk, backported to 1.6.
 
@@ -492,7 +503,11 @@ Tools for Subversion.
 %setup -q
 
 # Patch for RPATH
-%patch1 -p1
+%patch1 -p1 -b .rpath
+# Patch for python-2.4.6
+%patch2 -p0 -b .python
+# Patch for apache APR version checking.
+%patch3 -p0 -b .apache
 
 if [ -f /usr/bin/autoconf-2.53 ]; then
    AUTOCONF="autoconf-2.53"
@@ -506,6 +521,8 @@ sh autogen.sh
 rm -rf apr apr-util neon
 
 
+SED=/bin/sed
+export SED
 %configure \
 	--disable-mod-activation \
 	--with-swig \
@@ -513,7 +530,8 @@ rm -rf apr apr-util neon
 	--with-python=%{_bindir}/python%{pyver} \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
+	--with-apr-util=%{apache_dir}/bin/apu-config \
+	--with-neon
 
 %build
 make clean
