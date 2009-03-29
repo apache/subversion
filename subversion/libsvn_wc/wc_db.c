@@ -1356,7 +1356,7 @@ svn_wc__db_init(const char *local_abspath,
   ibb.changed_author = NULL;
 
   ibb.children = NULL;
-  ibb.incomplete_children = TRUE;
+  ibb.incomplete_children = initial_rev > 0;
   ibb.depth = depth;
   
   ibb.scratch_pool = scratch_pool;
