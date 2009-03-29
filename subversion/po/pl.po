@@ -38,8 +38,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-03-17 14:50+0100\n"
-"PO-Revision-Date: 2009-03-15 18:00+0100\n"
+"POT-Creation-Date: 2009-03-30 01:00+0200\n"
+"PO-Revision-Date: 2009-03-30 01:00+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -726,7 +726,7 @@ msgstr "Repozytorium zostało przeniesione"
 
 #: ../include/svn_error_codes.h:850
 msgid "URL access forbidden for unknown reason"
-msgstr ""
+msgstr "Dostęp do URL-u zabroniony z nieznanego powodu"
 
 #: ../include/svn_error_codes.h:856 ../include/svn_error_codes.h:885
 msgid "Couldn't find a repository"
@@ -1195,7 +1195,7 @@ msgid "New entry name required when importing a file"
 msgstr "Wymagane podanie nazwy obiektu podczas importowania pliku"
 
 #: ../libsvn_client/commit.c:576 ../libsvn_wc/adm_ops.c:1017
-#: ../libsvn_wc/questions.c:87
+#: ../libsvn_wc/questions.c:91
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' nie istnieje"
@@ -1430,7 +1430,7 @@ msgstr "'%s' leży w miejscu pliku podlegającego zarządzaniu wersjami"
 
 #: ../libsvn_client/delete.c:56 ../libsvn_wc/adm_ops.c:3137
 #: ../libsvn_wc/entries.c:1463 ../libsvn_wc/entries.c:2486
-#: ../libsvn_wc/entries.c:3114 ../libsvn_wc/update_editor.c:4087
+#: ../libsvn_wc/entries.c:3114 ../libsvn_wc/update_editor.c:4090
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' nie podlega zarządzaniu wersjami"
@@ -1499,8 +1499,8 @@ msgstr "%s\t(kopia robocza)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Nie można wyświetlić: plik binarny.%s"
 
-#: ../libsvn_client/diff.c:924 ../libsvn_client/merge.c:5089
-#: ../libsvn_client/merge.c:6827
+#: ../libsvn_client/diff.c:924 ../libsvn_client/merge.c:5111
+#: ../libsvn_client/merge.c:6849
 msgid "Not all required revisions are specified"
 msgstr "Nie wszystkie wymagane wersje zostały podane"
 
@@ -1550,7 +1550,7 @@ msgid "'%s' already exists"
 msgstr "'%s' już istnieje"
 
 #: ../libsvn_client/export.c:768 ../libsvn_wc/adm_crawler.c:994
-#: ../libsvn_wc/update_editor.c:3773 ../libsvn_wc/update_editor.c:4463
+#: ../libsvn_wc/update_editor.c:3776 ../libsvn_wc/update_editor.c:4466
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Błąd sumy kontrolnej dla '%s'; oczekiwana: '%s', faktyczna: '%s'"
@@ -1635,9 +1635,9 @@ msgstr "URL '%s' nie istnieje w tej wersji"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Nie znaleziono wspólnego rodzica, nie można użyć rozłącznych argumentów"
 
-#: ../libsvn_client/locking_commands.c:267 ../libsvn_client/merge.c:6844
-#: ../libsvn_client/merge.c:6850 ../libsvn_client/merge.c:7765
-#: ../libsvn_client/merge.c:7950 ../libsvn_client/ra.c:401
+#: ../libsvn_client/locking_commands.c:267 ../libsvn_client/merge.c:6866
+#: ../libsvn_client/merge.c:6872 ../libsvn_client/merge.c:7787
+#: ../libsvn_client/merge.c:7972 ../libsvn_client/ra.c:401
 #: ../libsvn_client/ra.c:433 ../libsvn_client/ra.c:636
 #, c-format
 msgid "'%s' has no URL"
@@ -1708,11 +1708,11 @@ msgstr ".merge-lewo.w%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-prawo.w%ld"
 
-#: ../libsvn_client/merge.c:2963
+#: ../libsvn_client/merge.c:2975
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "Nie można połączyć odwróconych zmian z własnej przyszłości ścieżki. Spróbuj najpierw zaktualizować kopię roboczą"
 
-#: ../libsvn_client/merge.c:3502
+#: ../libsvn_client/merge.c:3514
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1725,50 +1725,50 @@ msgstr ""
 "rozwiąż wszystkie konflikty i uruchom merge ponownie, by zastosować\n"
 "pozostałe wersje"
 
-#: ../libsvn_client/merge.c:6510
+#: ../libsvn_client/merge.c:6532
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "Użycie dwu URL-i jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:6517 ../libsvn_client/merge.c:6763
+#: ../libsvn_client/merge.c:6539 ../libsvn_client/merge.c:6785
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "Łączenie zmian z zewnętrznego repozytorium jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:7056
+#: ../libsvn_client/merge.c:7078
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "Nie można reintegrować do kopii roboczej z przełączonym poddrzewem"
 
-#: ../libsvn_client/merge.c:7061
+#: ../libsvn_client/merge.c:7083
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "Nie można reintegrować do kopii roboczej z niecałkowicie nieskończoną głębokością"
 
-#: ../libsvn_client/merge.c:7066
+#: ../libsvn_client/merge.c:7088
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "Nie można reintegrować do kopii roboczej posiadającej lokalne modyfikacje"
 
-#: ../libsvn_client/merge.c:7072
+#: ../libsvn_client/merge.c:7094
 msgid "Cannot determine revision of working copy"
 msgstr "Nie można określić wersji kopii roboczej"
 
-#: ../libsvn_client/merge.c:7076
+#: ../libsvn_client/merge.c:7098
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "Nie można reintegrować do kopii roboczej z mieszanymi wersjami. Spróbuj najpierw zaktualizować kopię roboczą"
 
-#: ../libsvn_client/merge.c:7155
+#: ../libsvn_client/merge.c:7177
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "Przynajmniej jedna wersja (r%ld) niepołączona jeszcze z '%s'"
 
-#: ../libsvn_client/merge.c:7630 ../libsvn_client/merge.c:7836
+#: ../libsvn_client/merge.c:7652 ../libsvn_client/merge.c:7858
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "'%s@%ld' musi być spokrewnione z '%s@%ld'"
 
-#: ../libsvn_client/merge.c:7783
+#: ../libsvn_client/merge.c:7805
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s' musi być z tego samego repozytorium co '%s'"
 
-#: ../libsvn_client/merge.c:7860
+#: ../libsvn_client/merge.c:7882
 #, c-format
 msgid ""
 "Reintegrate can only be used if revisions %ld through %ld were previously merged from %s to the reintegrate source, but this is not the case:\n"
@@ -1882,7 +1882,7 @@ msgid "Cannot both exclude and switch a path"
 msgstr "Nie można zarówno wykluczyć, jak i przełączyć ścieżki"
 
 #: ../libsvn_client/switch.c:171 ../libsvn_ra_local/ra_plugin.c:193
-#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4656
+#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4659
 #, c-format
 msgid ""
 "'%s'\n"
@@ -2324,13 +2324,13 @@ msgid "Attempted to set textual contents of an immutable node"
 msgstr "Próba ustawienia tekstowej zawartości węzła niepodlegającego zmianom"
 
 #: ../libsvn_fs_base/dag.c:1278
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"Checksum mismatch, rep '%s':\n"
+"Checksum mismatch, representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Błąd weryfikacji sumy kontrolnej dla pliku '%s':\n"
+"Błąd weryfikacji sumy kontrolnej dla reprezentacji '%s':\n"
 "   oczekiwano:     %s\n"
 "    wyliczono:     %s\n"
 
@@ -2538,25 +2538,25 @@ msgid "Rep contents are too large: got %s, limit is %s"
 msgstr "Zawartość reprezentacji jest zbyt duża: pobrano %s, natomiast limit wynosi %s"
 
 #: ../libsvn_fs_base/reps-strings.c:808
-#, fuzzy, c-format
-msgid "Failure reading rep '%s'"
+#, c-format
+msgid "Failure reading representation '%s'"
 msgstr "Błąd czytania reprezentacji '%s'"
 
 #: ../libsvn_fs_base/reps-strings.c:823
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"Checksum mismatch on rep '%s':\n"
+"Checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Błąd weryfikacji sumy kontrolnej dla pliku '%s':\n"
-"   oczekiwano:     %s\n"
-"    wyliczono:     %s\n"
+"Niezgodność sumy kontrolnej dla reprezentacji '%s':\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_fs_base/reps-strings.c:917
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"MD5 checksum mismatch on rep '%s':\n"
+"MD5 checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
@@ -2565,9 +2565,9 @@ msgstr ""
 "  rzeczywista:  %s\n"
 
 #: ../libsvn_fs_base/reps-strings.c:930
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"SHA1 checksum mismatch on rep '%s':\n"
+"SHA1 checksum mismatch on representation '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
@@ -2904,8 +2904,7 @@ msgstr "Nie ma takiej wersji %ld"
 #: ../libsvn_fs_fs/fs_fs.c:1883 ../libsvn_fs_fs/fs_fs.c:1890
 #: ../libsvn_fs_fs/fs_fs.c:1898 ../libsvn_fs_fs/fs_fs.c:1911
 #: ../libsvn_fs_fs/fs_fs.c:1920
-#, fuzzy
-msgid "Malformed text rep offset line in node-rev"
+msgid "Malformed text representation offset line in node-rev"
 msgstr "Błędna linia offsetu reprezentacji tekstu w node-rev"
 
 #: ../libsvn_fs_fs/fs_fs.c:1987
@@ -3120,8 +3119,8 @@ msgid "Only SHA1 checksums can be used as keys in the rep_cache table.\n"
 msgstr "Tylko sumy kontrolne SHA1 mogą być używane jako klucze w tablicy rep_cache.\n"
 
 #: ../libsvn_fs_fs/rep-cache.c:150
-#, fuzzy, c-format
-msgid "Representation key for checksum '%%s' exists in filesystem '%%s', with different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store(%%ld,%%%s,%%%s,%%%s)"
+#, c-format
+msgid "Representation key for checksum '%%s' exists in filesystem '%%s' with a different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store (%%ld,%%%s,%%%s,%%%s)"
 msgstr "Klucz reprezentacji dla sumy kontrolnej '%%s' istnieje w systemie plików '%%s' z inną wartością (%%ld,%%%s,%%%s,%%%s) niż ta, którą prawie mieliśmy zapisać (%%ld,%%%s,%%%s,%%%s)"
 
 #: ../libsvn_fs_fs/tree.c:3425
@@ -3429,10 +3428,13 @@ msgstr "Obsługa odpowiedzi REPORT nie zrealizowała cyklu współpracy z edytor
 msgid "Failed to write full amount to stream"
 msgstr "Nie można pisać całej ilości do strumienia"
 
-#: ../libsvn_ra_neon/file_revs.c:371
-#, fuzzy
-msgid "'get-file-revs' REPORT not implemented"
-msgstr "Niezaimplementowane 'get-file-revs'"
+#: ../libsvn_ra_neon/file_revs.c:371 ../libsvn_ra_neon/get_deleted_rev.c:165
+#: ../libsvn_ra_neon/get_location_segments.c:206
+#: ../libsvn_ra_neon/get_locations.c:189
+#: ../libsvn_ra_serf/get_deleted_rev.c:233
+#, c-format
+msgid "'%s' REPORT not implemented"
+msgstr "Niezaimplementowane '%s' REPORT"
 
 #: ../libsvn_ra_neon/file_revs.c:378
 msgid "The file-revs report didn't contain any revisions"
@@ -3446,30 +3448,14 @@ msgstr "Serwer nie obsługuje operacji związanych z datami"
 msgid "Invalid server response to dated-rev request"
 msgstr "Błędna odpowiedź od serwera na żądanie dated-rev"
 
-#: ../libsvn_ra_neon/get_deleted_rev.c:165
-#: ../libsvn_ra_serf/get_deleted_rev.c:233
-#, fuzzy
-msgid "'get-deleted-rev' REPORT not implemented"
-msgstr "Niezaimplementowane 'get-deleted-rev'"
-
 #: ../libsvn_ra_neon/get_location_segments.c:117
 #: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1580
 msgid "Expected valid revision range"
 msgstr "Oczekiwano poprawny zakres wersji"
 
-#: ../libsvn_ra_neon/get_location_segments.c:206
-#, fuzzy
-msgid "'get-location-segments' REPORT not implemented"
-msgstr "Niezaimplementowane 'get-location-segments'"
-
 #: ../libsvn_ra_neon/get_locations.c:107
 msgid "Expected a valid revnum and path"
 msgstr "Oczekiwano poprawny numer wersji i ścieżka"
-
-#: ../libsvn_ra_neon/get_locations.c:189
-#, fuzzy
-msgid "'get-locations' REPORT not implemented"
-msgstr "Niezaimplementowane 'get-locations'"
 
 #: ../libsvn_ra_neon/get_locks.c:231
 msgid "Incomplete lock data returned"
@@ -3542,9 +3528,9 @@ msgstr "Odpowiedź MERGE dla '%s' nie jest dzieckiem celu ('%s')"
 msgid "The MERGE property response had an error status"
 msgstr "Odpowiedź MERGE dla atrybutu zawiera status błędu."
 
-#: ../libsvn_ra_neon/options.c:231
-#, fuzzy, c-format
-msgid "The OPTIONS request returned invalid XML in the response: %s (%s)"
+#: ../libsvn_ra_neon/options.c:231 ../libsvn_ra_neon/util.c:1259
+#, c-format
+msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "Dla żądania '%s' otrzymano niepoprawny wynikowy XML: %s (%s)"
 
 #: ../libsvn_ra_neon/options.c:242
@@ -3764,11 +3750,6 @@ msgstr "Nie można ustalić rozmiaru żądania"
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "Błąd podczas czytania zgromadzonych danych żądania %s"
-
-#: ../libsvn_ra_neon/util.c:1259
-#, c-format
-msgid "The %s request returned invalid XML in the response: %s (%s)"
-msgstr "Dla żądania '%s' otrzymano niepoprawny wynikowy XML: %s (%s)"
 
 #: ../libsvn_ra_serf/auth.c:287 ../libsvn_ra_serf/auth.c:293
 msgid "Missing 'realm' attribute in Authorization header"
@@ -6459,12 +6440,12 @@ msgstr "Nieprawidłowy atrybut %s dla '%s': nie można używać URL-u '%s' jako 
 msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
 msgstr "Błędny atrybut %s dla '%s': cel '%s' jest ścieżką bezwględną albo wykorzystuje '..'"
 
-#: ../libsvn_wc/questions.c:116
+#: ../libsvn_wc/questions.c:117
 #, c-format
 msgid "Working copy format of '%s' is too old (%d); please check out your working copy again"
 msgstr "Format kopii roboczej '%s' jest zbyt stary (%d). Pobierz kopię roboczą ponownie"
 
-#: ../libsvn_wc/questions.c:127
+#: ../libsvn_wc/questions.c:128
 #, c-format
 msgid ""
 "This client is too old to work with working copy '%s'.  You need\n"
@@ -6477,7 +6458,7 @@ msgstr ""
 "Zobacz szczegóły na stronie:\n"
 "http://subversion.tigris.org/faq.html#working-copy-format-change"
 
-#: ../libsvn_wc/questions.c:300
+#: ../libsvn_wc/questions.c:301
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -6540,92 +6521,92 @@ msgstr "Błąd dodawania katalogu '%s': niekatalogowy obiekt o tej samej nazwie 
 msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
 msgstr "Błąd dodawania katalogu '%s': niewersjonowany katalog o tej samej nazwie już istnieje"
 
-#: ../libsvn_wc/update_editor.c:2319
+#: ../libsvn_wc/update_editor.c:2321
 #, c-format
 msgid "UUID mismatch: existing directory '%s' was checked out from a different repository"
 msgstr "Niezgodność UUID-u: istniejący katalog '%s' został pobrany z innego repozytorium"
 
-#: ../libsvn_wc/update_editor.c:2327
+#: ../libsvn_wc/update_editor.c:2330
 #, c-format
 msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
 msgstr "URL '%s' istniejącego repozytorium '%s' nie zgadza się z oczekiwanym URL-em '%s'"
 
-#: ../libsvn_wc/update_editor.c:2335
+#: ../libsvn_wc/update_editor.c:2338
 #, c-format
 msgid "Failed to add directory '%s': a versioned directory of the same name already exists"
 msgstr "Błąd dodawania katalogu '%s': wersjonowany katalog o tej samej nazwie już istnieje"
 
-#: ../libsvn_wc/update_editor.c:2381
+#: ../libsvn_wc/update_editor.c:2384
 #, c-format
 msgid "Failed to add directory '%s': object of the same name as the administrative directory"
 msgstr "Błąd dodawania katalogu '%s': obiekt o tej samej nazwie jak katalog administracyjny"
 
-#: ../libsvn_wc/update_editor.c:2415
+#: ../libsvn_wc/update_editor.c:2418
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr "Błąd dodawania katalogu '%s': argumenty copyfrom nie są jeszcze obsługiwane"
 
-#: ../libsvn_wc/update_editor.c:2859
+#: ../libsvn_wc/update_editor.c:2862
 msgid "Couldn't do property merge"
 msgstr "Nie udało się łączenie zmian atrybutu"
 
-#: ../libsvn_wc/update_editor.c:2939
+#: ../libsvn_wc/update_editor.c:2942
 #, c-format
 msgid "Failed to mark '%s' absent: item of the same name is already scheduled for addition"
 msgstr "Nie udało się oznaczanie '%s' jako brakującego: element o tej samej nazwie oczekuje na dodanie"
 
-#: ../libsvn_wc/update_editor.c:3029
+#: ../libsvn_wc/update_editor.c:3032
 msgid "Destination directory of add-with-history is missing a URL"
 msgstr "Katalog docelowy add-with-history nie posiada URL-u"
 
-#: ../libsvn_wc/update_editor.c:3044
+#: ../libsvn_wc/update_editor.c:3047
 msgid "Destination URLs are broken"
 msgstr "Docelowe URL-e są uszkodzone"
 
-#: ../libsvn_wc/update_editor.c:3304
+#: ../libsvn_wc/update_editor.c:3307
 msgid "No fetch_func supplied to update_editor"
 msgstr "fetch_func niedostarczone do update_editor"
 
-#: ../libsvn_wc/update_editor.c:3378
+#: ../libsvn_wc/update_editor.c:3381
 msgid "Bad copyfrom arguments received"
 msgstr "Otrzymano złe argumenty copyfrom"
 
-#: ../libsvn_wc/update_editor.c:3433
+#: ../libsvn_wc/update_editor.c:3436
 #, c-format
 msgid "Failed to add file '%s': a non-file object of the same name already exists"
 msgstr "Błąd dodawania pliku '%s': nieplik o tej samej nazwie już istnieje"
 
-#: ../libsvn_wc/update_editor.c:3445
+#: ../libsvn_wc/update_editor.c:3448
 #, c-format
 msgid "Failed to add file '%s': an unversioned file of the same name already exists"
 msgstr "Błąd dodawania pliku '%s': niewersjonowany plik o tej samej nazwie już istnieje"
 
-#: ../libsvn_wc/update_editor.c:3481
+#: ../libsvn_wc/update_editor.c:3484
 #, c-format
 msgid "UUID mismatch: existing file '%s' was checked out from a different repository"
 msgstr "Niezgodność UUID-u: istniejący plik '%s' został pobrany z innego repozytorium"
 
-#: ../libsvn_wc/update_editor.c:3489
+#: ../libsvn_wc/update_editor.c:3492
 #, c-format
 msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
 msgstr "URL '%s' istniejącego pliku '%s' nie zgadza się z oczekiwanym URL-em '%s'"
 
-#: ../libsvn_wc/update_editor.c:3585
+#: ../libsvn_wc/update_editor.c:3588
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Plik '%s' w katalogu '%s' nie podlega zarządzaniu wersjami"
 
-#: ../libsvn_wc/update_editor.c:3782
+#: ../libsvn_wc/update_editor.c:3785
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "Błąd sumy kontrolnej dla '%s'; zapisana: '%s', faktyczna: '%s'"
 
-#: ../libsvn_wc/update_editor.c:5121
+#: ../libsvn_wc/update_editor.c:5124
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "Brak informacji o pochodzeniu '%s'"
 
-#: ../libsvn_wc/update_editor.c:5328
+#: ../libsvn_wc/update_editor.c:5331
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Źródłowy URL '%s' jest z innego repozytorium niż '%s'"
@@ -7417,10 +7398,9 @@ msgstr ""
 "                            'immediates' lub 'infinity')"
 
 #: ../svn/main.c:189
-#, fuzzy
 msgid ""
-"set new working copy depth to ARG ('empty',\n"
-"                            'exclude', 'files', 'immediates', or 'infinity')"
+"set new working copy depth to ARG ('exclude',\n"
+"                            'empty', 'files', 'immediates', or 'infinity')"
 msgstr ""
 "ustaw nową głębokość kopii roboczej na ARG ('exclude',\n"
 "                            'empty', 'files', 'immediates' lub 'infinity')"
@@ -8583,7 +8563,6 @@ msgstr ""
 "  katalogów.\n"
 
 #: ../svn/main.c:820
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -8667,7 +8646,7 @@ msgid ""
 "    svn status\n"
 "     M      wc/bar.c\n"
 "    !     C wc/qaz.c\n"
-"          >   incoming edit, local missing\n"
+"          >   local missing, incoming edit upon update\n"
 "    D       wc/qax.c\n"
 msgstr ""
 "Podaj stan plików i katalogów w ramach kopii roboczej.\n"
@@ -11569,24 +11548,3 @@ msgstr "wyeksportowane%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' niepodlegające zarządzaniu wersjami i niewyeksportowane\n"
-
-#~ msgid ""
-#~ "Checksum mismatch, representation '%s':\n"
-#~ "   expected:  %s\n"
-#~ "     actual:  %s\n"
-#~ msgstr ""
-#~ "Błąd weryfikacji sumy kontrolnej dla reprezentacji '%s':\n"
-#~ "   oczekiwano:     %s\n"
-#~ "    wyliczono:     %s\n"
-
-#~ msgid ""
-#~ "Checksum mismatch on representation '%s':\n"
-#~ "   expected:  %s\n"
-#~ "     actual:  %s\n"
-#~ msgstr ""
-#~ "Niezgodność sumy kontrolnej dla reprezentacji '%s':\n"
-#~ "   oczekiwana:  %s\n"
-#~ "  rzeczywista:  %s\n"
-
-#~ msgid "'%s' REPORT not implemented"
-#~ msgstr "Niezaimplementowane '%s' REPORT"
