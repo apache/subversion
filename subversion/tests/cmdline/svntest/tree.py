@@ -276,11 +276,11 @@ class SVNTreeNode:
     return s.getvalue()
 
 
-  def __cmp__(self, other):
-    """Define a simple ordering of two nodes without regard to their full
-    path (i.e. position in the tree). This can be used for sorting the
-    children within a directory."""
-    return (self.name > other.name) - (self.name < other.name)
+  def __eq__(self, other):
+    return self.name == other.name
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
 
   def as_state(self, prefix=None):
     root = self

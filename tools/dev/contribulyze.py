@@ -122,7 +122,7 @@ def html_footer():
   return '\n</body>\n</html>\n'
 
 
-class Contributor:
+class Contributor(object):
   # Map contributor names to contributor instances, so that there
   # exists exactly one instance associated with a given name.
   # Fold names with email addresses.  That is, if we see someone
@@ -130,9 +130,6 @@ class Contributor:
   # name and that same email address together, we create only one
   # instance, and store it under both the email and the real name.
   all_contributors = { }
-
-  # See __hash__() for why this is necessary.
-  hash_value = 1
 
   def __init__(self, username, real_name, email):
     """Instantiate a contributor.  Don't use this to generate a
@@ -147,9 +144,6 @@ class Contributor:
     # "Patch" represent all the revisions for which this contributor
     # contributed a patch.
     self.activities = { }
-    # Sigh.
-    self.unique_hash_value = Contributor.hash_value
-    Contributor.hash_value += 1
 
   def add_activity(self, field_name, log):
     """Record that this contributor was active in FIELD_NAME in LOG."""
@@ -230,20 +224,17 @@ class Contributor:
     else:
       return other_str
 
-  def __cmp__(self, other):
-    if self.is_full_committer and not other.is_full_committer:
-      return 1
-    if other.is_full_committer and not self.is_full_committer:
-      return -1
-    result = (self.score() > other.score()) - (self.score() < other.score())
-    if result == 0:
-      return (self.big_name() > other.big_name()) - (self.big_name() < other.big_name())
-    else:
-      return 0 - result
+  def __eq__(self, other):
+    return self.score() == other.score() and self.big_name() == other.big_name()
 
-  def __hash__(self):
-    """See LogMessage.__hash__() for why this exists."""
-    return self.hash_value
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  def __lt__(self, other):
+    return self.score() > other.score() or (self.score() == other.score() and self.big_name() < other.big_name())
+
+  def __gt__(self, other):
+    return self.score() < other.score() or (self.score() == other.score() and self.big_name() > other.big_name())
 
   @staticmethod
   def parse(name):
@@ -440,7 +431,7 @@ class Field:
     return s
 
 
-class LogMessage:
+class LogMessage(object):
   # Maps revision strings (e.g., "r12345") onto LogMessage instances,
   # holding all the LogMessage instances ever created.
   all_logs = { }
@@ -468,28 +459,17 @@ class LogMessage:
     """Accumulate one more line of raw message."""
     self.message += line
 
-  def __cmp__(self, other):
-    """Compare two log messages by revision number, for sort().
-    Return -1, 0 or 1 depending on whether a > b, a == b, or a < b.
-    Note that this is reversed from normal sorting behavior, but it's
-    what we want for reverse chronological ordering of revisions."""
-    a = int(self.revision[1:])
-    b = int(other.revision[1:])
-    if a > b: return -1
-    if a < b: return 1
-    else:     return 0
+  def __eq__(self, other):
+    return int(self.revision[1:]) == int(other.revision[1:])
 
-  def __hash__(self):
-    """I don't really understand why defining __cmp__() but not
-    __hash__() renders an object type unfit to be a dictionary key,
-    especially in light of the recommendation that if a class defines
-    mutable objects and implements __cmp__() or __eq__(), then it
-    should not implement __hash__().  See these for details:
-    http://mail.python.org/pipermail/python-dev/2004-February/042580.html
-    http://mail.python.org/pipermail/python-bugs-list/2003-December/021314.html
+  def __ne__(self, other):
+    return not self.__eq__(other)
 
-    In the meantime, I think it's safe to use the revision as a hash value."""
-    return int(self.revision[1:])
+  def __lt__(self, other):
+    return int(self.revision[1:]) > int(other.revision[1:])
+
+  def __gt__(self, other):
+    return int(self.revision[1:]) < int(other.revision[1:])
 
   def __str__(self):
     s = '=' * 15
