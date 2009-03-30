@@ -163,6 +163,13 @@ Candidate changes:
    Votes:
      +1: dws
 
+ * r36851
+   Upgrading repositories created with pre svn1.2 fails.
+   Justification:
+     Regression.
+   Votes:
+     +1: kameshj
+
 Approved changes:
 =================
   
