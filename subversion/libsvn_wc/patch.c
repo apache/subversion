@@ -30,6 +30,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_ra_svn.h"    /* for SVN_CMD_ERR macro */
 #include "svn_string.h"
 
 #include "private/svn_patch.h"
