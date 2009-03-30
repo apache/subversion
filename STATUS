@@ -175,8 +175,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r36860
-   Fix an error leak.
-   Votes:
-     +1: danielsh, cmpilato, hwright
