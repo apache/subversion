@@ -110,5 +110,14 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba, blair
 
+ * r36851, r36857
+   'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
+   'db/format' file.
+   Justification:
+     'svnadmin upgrade' was designed to allow for this situation, but clearly
+     does not.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
