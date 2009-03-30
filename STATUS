@@ -119,5 +119,10 @@ Candidate changes for 1.5.7:
    Votes:
      +1: cmpilato
 
+ * r36860
+   Fix an error leak.
+   Votes:
+     +1: danielsh, cmpilato
+
 Approved changes:
 =================
