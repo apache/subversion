@@ -138,7 +138,7 @@ Candidate changes:
      As is, may not backport cleanly.  (But the conflict resolution should be
      pretty obvious.)
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r36816
    Correct an issue with diffing large data when whitespaces/eols are ignored.
@@ -154,7 +154,7 @@ Candidate changes:
    Justification:
      Regression.
    Votes:
-     +1: arfrever
+     +1: arfrever, hwright
 
  * r36834
    Fixes to build Subversion RPM trunk (1.7) and 1.6.x for RHEL4.
@@ -173,10 +173,10 @@ Candidate changes:
      +1: kameshj (r36851 only)
      +1: cmpilato, danielsh
 
+Approved changes:
+=================
+
  * r36860
    Fix an error leak.
    Votes:
-     +1: danielsh, cmpilato
-
-Approved changes:
-=================
+     +1: danielsh, cmpilato, hwright
