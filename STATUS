@@ -117,7 +117,7 @@ Candidate changes for 1.5.7:
      'svnadmin upgrade' was designed to allow for this situation, but clearly
      does not.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
  * r36860
    Fix an error leak.
