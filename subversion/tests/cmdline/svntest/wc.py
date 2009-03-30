@@ -542,14 +542,22 @@ class State:
 
       entries = svntest.main.run_entriesdump(dirpath)
       for name, entry in entries.items():
-        if entry.deleted:
-          # these items will not show up in 'svn status', so skip them.
+        # if the entry is marked as DELETED *and* it is something other than
+        # schedule-add, then skip it. we can add a new node "over" where a
+        # DELETED node lives.
+        if entry.deleted and entry.schedule != 1:
           continue
         item = StateItem.from_entry(entry)
         if name:
           desc['%s/%s' % (parent, name)] = item
         else:
           desc[parent] = item
+
+      # only recurse into directories found in this entries. remove any
+      # which are not mentioned.
+      unmentioned = set(dirs) - set(entries.keys())
+      for subdir in unmentioned:
+        dirs.remove(subdir)
 
     return cls('', desc)
 
@@ -655,6 +663,13 @@ class StateItem:
       status = 'D '
     elif entry.schedule == 3:  # svn_wc_schedule_replace
       status = 'R '
+    elif entry.conflict_old:
+      ### I'm assuming we only need to check one, rather than all conflict_*
+      status = 'C '
+
+    ### is this the sufficient? guessing here w/o investigation.
+    if entry.prejfile:
+      status = status[0] + 'C'
 
     if entry.locked:
       locked = 'L'
@@ -662,8 +677,10 @@ class StateItem:
       locked = None
 
     if entry.copied:
+      wc_rev = '-'
       copied = '+'
     else:
+      wc_rev = entry.revision
       copied = None
 
     ### figure out switched
@@ -675,7 +692,7 @@ class StateItem:
       writelocked = None
 
     return cls(status=status,
-               wc_rev=entry.revision,
+               wc_rev=wc_rev,
                locked=locked,
                copied=copied,
                switched=switched,
