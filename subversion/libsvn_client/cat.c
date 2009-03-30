@@ -109,7 +109,7 @@ cat_local_file(const char *path,
 
   if (keywords)
     {
-      const char *fmt;
+      const char *rev_str;
       const char *author;
 
       if (local_mod)
@@ -118,19 +118,17 @@ cat_local_file(const char *path,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          fmt = "%ldM";
+          rev_str = apr_psprintf(pool, "%ldM", entry->cmt_rev);
           author = _("(local)");
         }
       else
         {
-          fmt = "%ld";
+          rev_str = apr_psprintf(pool, "%ld", entry->cmt_rev);
           author = entry->cmt_author;
         }
 
       SVN_ERR(svn_subst_build_keywords2
-              (&kw, keywords->data,
-               apr_psprintf(pool, fmt, entry->cmt_rev),
-               entry->url, tm, author, pool));
+              (&kw, keywords->data, rev_str, entry->url, tm, author, pool));
     }
 
   /* Our API contract says that OUTPUT will not be closed. The two paths
