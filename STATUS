@@ -163,12 +163,15 @@ Candidate changes:
    Votes:
      +1: dws
 
- * r36851
-   Upgrading repositories created with pre svn1.2 fails.
+ * r36851, r36857
+   'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
+   'db/format' file.
    Justification:
-     Regression.
+     'svnadmin upgrade' was designed to allow for this situation, but clearly
+     does not.
    Votes:
-     +1: kameshj
+     +1: kameshj (r36851 only)
+     +1: cmpilato
 
 Approved changes:
 =================
