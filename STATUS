@@ -171,7 +171,7 @@ Candidate changes:
      does not.
    Votes:
      +1: kameshj (r36851 only)
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
  * r36860
    Fix an error leak.
