@@ -918,6 +918,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
       return SVN_NO_ERROR;
     }
+  SVN_ERR(err);
 
   len = sizeof(buf);
   err = svn_io_read_length_line(file, buf, &len, pool);
