@@ -6329,7 +6329,22 @@ do_directory_merge(const char *url1,
              ### not recording non-inheritable mergeinfo on the path
              ### is incorrect. */
           if (!subtree_touched_by_merge(child->path, notify_b, pool))
-            {              
+            {
+              /* Even if CHILD->PATH wasn't touched by the merge, if
+                 CHILD->PATH had no explicit mergeinfo prior to the merge
+                 and has missing children, then we must record mergeinfo.
+                 Otherwise the subtree rooted at CHILD->PATH may inherit
+                 mergeinfo previously recorded by this loop on one of 
+                 CHILD->PATH's parents, making it appear that URL1@REVISION1
+                 URL2@REVISION2 *was* merged to CHILD-PATH.
+                 
+                 ### subtree-mergeinfo-branch: Should we optimize this further
+                 ### to check if the diff between URL1@REVISION1 URL2@REVISION2
+                 ### could have affected CHILD->PATH even if its children were
+                 ### present and if not then skip recording mergeinfo? */
+              if (!child->missing_child
+                  || (child->pre_merge_mergeinfo
+                      && !child->indirect_mergeinfo))
               continue;
             }
 
