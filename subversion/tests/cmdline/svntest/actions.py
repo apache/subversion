@@ -1235,8 +1235,10 @@ def run_and_verify_status(wc_dir_name, output_tree,
   if output_state:
     entries_state = wc.State.from_entries(wc_dir_name)
     if entries_state:
+      tweaked = output_state.copy()
+      tweaked.tweak_for_entries_compare()
       try:
-        output_state.compare_and_display('entries', entries_state)
+        tweaked.compare_and_display('entries', entries_state)
       except tree.SVNTreeUnequal:
         ### do something more
         raise

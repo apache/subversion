@@ -294,6 +294,14 @@ class State:
     
     raise svntest.tree.SVNTreeUnequal
 
+  def tweak_for_entries_compare(self):
+    for item in self.desc.values():
+      if item.status:
+        if item.status[0] in 'M!':
+          item.status = ' ' + item.status[1]
+        if item.status[1] == 'M':
+          item.status = item.status[0] + ' '
+
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
     nodelist = [ ]
@@ -492,12 +500,12 @@ class State:
     provided by the old entries API, as accessed via the 'entries-dump'
     program.
     """
+    ### delete the following line to experiment with the new entries testing
+    return None
+
     if not base:
       # we're going to walk the base, and the OS wants "."
       base = '.'
-
-    ### don't return anything yet. still filling in skeleton.
-    return None
 
     desc = { }
     dot_svn = svntest.main.get_admin_name()
@@ -512,12 +520,15 @@ class State:
         dirs[:] = []
         continue
 
-      parent = path_to_key(dirpath, base)
-      if parent:
-        parent += '/'
-      for name in dirs:
-        node = os.path.join(dirpath, name)
-        desc['%s%s' % (parent, name)] = StateItem()
+      parent = to_relpath(dirpath)
+
+      entries = svntest.main.run_entriesdump(dirpath)
+      for name, entry in entries.items():
+        item = StateItem.from_entry(entry)
+        if name:
+          desc['%s/%s' % (parent, name)] = item
+        else:
+          desc[parent] = item
 
     return cls('', desc)
 
@@ -613,6 +624,42 @@ class StateItem:
       atts['treeconflict'] = self.treeconflict
 
     return (os.path.normpath(path), self.contents, self.props, atts)
+
+  @classmethod
+  def from_entry(cls, entry):
+    status = '  '
+    if entry.schedule == 1:  # svn_wc_schedule_add
+      status = 'A '
+    elif entry.schedule == 2:  # svn_wc_schedule_delete
+      status = 'D '
+    elif entry.schedule == 3:  # svn_wc_schedule_replace
+      status = 'R '
+
+    if entry.locked:
+      locked = 'L'
+    else:
+      locked = None
+
+    if entry.copied:
+      copied = '+'
+    else:
+      copied = None
+
+    ### figure out switched
+    switched = None
+
+    if entry.lock_token:
+      writelocked = 'L'
+    else:
+      writelocked = None
+
+    return cls(status=status,
+               wc_rev=entry.revision,
+               locked=locked,
+               copied=copied,
+               switched=switched,
+               writelocked=writelocked,
+               )
 
 
 if os.sep == '/':

@@ -60,7 +60,9 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  svn_boolean_t locked;
 
+  SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dir_path, FALSE, 0,
                            NULL, NULL, pool));
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
@@ -115,6 +117,7 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
       /* skip: file_external_path */
       /* skip: file_external_peg_rev */
       /* skip: file_external_rev */
+      bool_value("locked", locked && *entry->name == '\0');
       printf("entries['%s'] = e\n", (const char *)key);
     }
 
