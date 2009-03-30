@@ -2522,7 +2522,7 @@ move_into_place(const char *old_filename,
     const char *dirname;
     apr_file_t *file;
 
-    dirname = svn_path_dirname(new_filename, pool);
+    dirname = svn_dirent_dirname(new_filename, pool);
     SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
                              pool));
     SVN_ERR(svn_io_file_flush_to_disk(file, pool));
