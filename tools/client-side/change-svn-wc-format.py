@@ -84,7 +84,7 @@ class WCFormatConverter:
     if self.verbosity:
       print("Processing directory '%s'" % dirname)
     entries = Entries(os.path.join(dirname, get_adm_dir(), "entries"))
-
+    entries_parsed = True
     if self.verbosity:
       print("Parsing file '%s'" % entries.path)
     try:
@@ -94,7 +94,17 @@ class WCFormatConverter:
         raise
       sys.stderr.write("%s, skipping\n" % e)
       sys.stderr.flush()
+      entries_parsed = False
 
+    if entries_parsed:
+      format = Format(os.path.join(dirname, get_adm_dir(), "format"))
+      if self.verbosity:
+        print("Updating file '%s'" % format.path)
+      format.write_format(format_nbr, self.verbosity)
+    else:
+      if self.verbosity:
+        print("Skipping file '%s'" % format.path)
+        
     if self.verbosity:
       print("Checking whether WC format can be converted")
     try:
@@ -299,6 +309,25 @@ class Entry:
       rep += "[%s] %s\n" % (Entries.entry_fields[i], self.fields[i])
     return rep
 
+class Format:
+  """Represents a .svn/format file."""
+
+  def __init__(self, path):
+    self.path = path
+
+  def write_format(self, format_nbr, verbosity=0):
+    format_string = '%d\n'
+    if os.path.exists(self.path):
+      if verbosity >= 1:
+        print("%s will be updated." % self.path)
+      os.chmod(self.path,0600)
+    else:
+      if verbosity >= 1:
+        print("%s does not exist, creating it." % self.path)
+    format = open(self.path, "w")
+    format.write(format_string % format_nbr)
+    format.close()
+    os.chmod(self.path, 0400)
 
 class LocalException(Exception):
   """Root of local exception class hierarchy."""
