@@ -297,10 +297,28 @@ class State:
   def tweak_for_entries_compare(self):
     for item in self.desc.values():
       if item.status:
+        # when reading the entry structures, we don't examine for text or
+        # property mods, so clear those flags. we also do not examine the
+        # filesystem, so we cannot detect missing files.
         if item.status[0] in 'M!':
           item.status = ' ' + item.status[1]
         if item.status[1] == 'M':
           item.status = item.status[0] + ' '
+      if item.writelocked:
+        # we don't contact the repository, so our only information is what
+        # is in the working copy. 'K' means we have one and it matches the
+        # repos. 'O' means we don't have one but the repos says the item
+        # is locked by us, elsewhere. 'T' means we have one, and the repos
+        # has one, but it is now owned by somebody else. 'B' means we have
+        # one, but the repos does not.
+        #
+        # for each case of "we have one", set the writelocked state to 'K',
+        # and clear it to None for the others. this will match what is
+        # generated when we examine our working copy state.
+        if item.writelocked in 'TB':
+          item.writelocked = 'K'
+        elif item.writelocked == 'O':
+          item.writelocked = None
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
@@ -524,6 +542,9 @@ class State:
 
       entries = svntest.main.run_entriesdump(dirpath)
       for name, entry in entries.items():
+        if entry.deleted:
+          # these items will not show up in 'svn status', so skip them.
+          continue
         item = StateItem.from_entry(entry)
         if name:
           desc['%s/%s' % (parent, name)] = item
@@ -649,7 +670,7 @@ class StateItem:
     switched = None
 
     if entry.lock_token:
-      writelocked = 'L'
+      writelocked = 'K'
     else:
       writelocked = None
 
