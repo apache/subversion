@@ -173,5 +173,17 @@ Candidate changes:
      +1: kameshj (r36851 only)
      +1: cmpilato, danielsh
 
+ * r36874, r36875
+   Fix crash when upgrading to 1.6 format (r36874).
+   Modified change-svn-wc-format.py to create or update format file
+   in the .svn folder. (r36875)
+   Justification:
+     r36874 is needed to make the script work reliably.
+     r36875 is a workaround for a bug in 1.6.0, which was fixed in
+     1.6.1. Bit late. But the fix makes sense in 1.6.x only,
+     so let's do it while here! The script won't work with 1.7.
+   Votes
+     +1: stsp
+
 Approved changes:
 =================
