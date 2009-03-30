@@ -182,13 +182,3 @@ Approved changes:
      r36086 is the fix, the other revisions are minor cleanup of r36086.
    Votes:
      +1: pburba, blair, arfrever
-
- * r36747
-   Fix broken svn_subst_translate_cstring2 function: Close the destination
-   stream to flush unwritten data.
-   Justification:
-     Without this fix svn_subst_translate_cstring2() function does not work as
-     expected in most situations. (The final translate_chunk call of the
-     translated stream was not called from the stream close function).
-   Votes:
-     +1: zhakov, rhuijben, arfrever
