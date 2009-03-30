@@ -2134,6 +2134,10 @@ typedef struct
      relative to the current working directory. */
   apr_hash_t *added_paths;
 
+  /* A list of tree conflict victim paths which may be NULL.  The paths
+     are all either absolute or relative to the current working directory. */
+  apr_hash_t *tree_conflicted_paths;
+
   /* Flag indicating whether it is a single file merge or not. */
   svn_boolean_t is_single_file_merge;
 
@@ -2299,6 +2303,19 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           apr_hash_set(notify_b->skipped_paths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
         }
+
+      if (notify->action == svn_wc_notify_tree_conflict)
+        {
+          const char *tree_conflicted_path = apr_pstrdup(notify_b->pool,
+                                                         notify->path);
+
+          if (notify_b->tree_conflicted_paths == NULL)
+            notify_b->tree_conflicted_paths = apr_hash_make(notify_b->pool);
+
+          apr_hash_set(notify_b->tree_conflicted_paths, tree_conflicted_path,
+                       APR_HASH_KEY_STRING, tree_conflicted_path);
+        }
+
       if (notify->action == svn_wc_notify_update_add)
         {
           svn_boolean_t is_root_of_added_subtree = FALSE;
@@ -5918,8 +5935,8 @@ path_is_subtree(const char *path,
 }
 
 /* Return true if PATH is equal to or a subtree of any of th paths in
-   NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, or
-   NOTIFY_B->ADDED_PATHS.  Return false otherwise. */
+   NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, NOTIFY_B->ADDED_PATHS,
+   or NOTIFY_B->CONFLICTED_PATHS.  Return false otherwise. */
 static svn_boolean_t
 subtree_touched_by_merge(const char *path,
                          notification_receiver_baton_t *notify_b,
@@ -5927,7 +5944,8 @@ subtree_touched_by_merge(const char *path,
 {
   return (path_is_subtree(path, notify_b->merged_paths)
           || path_is_subtree(path, notify_b->skipped_paths)
-          || path_is_subtree(path, notify_b->added_paths));
+          || path_is_subtree(path, notify_b->added_paths)
+          || path_is_subtree(path, notify_b->tree_conflicted_paths));
 }
 
 /* Helper for do_merge() when the merge target is a directory.
@@ -6684,6 +6702,7 @@ do_merge(apr_array_header_t *merge_sources,
   notify_baton.merged_paths = NULL;
   notify_baton.skipped_paths = NULL;
   notify_baton.added_paths = NULL;
+  notify_baton.tree_conflicted_paths = NULL;
   notify_baton.is_single_file_merge = FALSE;
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_index = -1;
