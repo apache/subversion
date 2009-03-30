@@ -264,6 +264,7 @@ class Entry:
       8  : (30, 31, 33, 34, 35),
       # Not in 1.5: tree-conflicts, file-externals
       9  : (34, 35),
+      10 : ()
       }
 
   def __init__(self):
