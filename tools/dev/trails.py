@@ -74,9 +74,9 @@ def output_summary(trails, outfile):
 def _freqtable_cmp(a_b, c_d):
   (a, b) = a_b
   (c, d) = c_d
-  c = (d > b) - (d < b)
+  c = cmp(d, b)
   if not c:
-    c = (a > c) - (a < c)
+    c = cmp(a, c)
   return c
 
 def list_frequencies(list):
