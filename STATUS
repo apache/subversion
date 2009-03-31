@@ -177,12 +177,3 @@ Approved changes:
      pretty obvious.)
    Votes:
      +1: cmpilato, hwright, rhuijben
-
- * r36422
-   Make serf report a base_checksum to apply_textdelta.
-   Justification:     
-     Enables some extra checking on what to update from the delta editor. This
-     value is provided by ra_local and ra_svn, but not by neon and serf.
-     (The information is sent in the http response since well before 1.0)
-   Votes:
-     +1: rhuijben, arfrever, gstein
