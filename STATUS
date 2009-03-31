@@ -109,6 +109,20 @@ Candidate changes for 1.5.7:
    Votes:
      +1: cmpilato, danielsh
 
+ * r36879
+   Fix a merge bug which can occur when the merge target or a subtree of
+   the target has non-inheritable mergeinfo.
+   Justification:
+     I don't know that anyone has encountered this problem in the wild, but
+     the code is clearly incorrect and r36879 expands an existing merge
+     test to demonstrate how it could result in incorrect mergeinfo.
+   Notes:
+     There are a few minor conflicts in merge_tests.py, a backport branch
+     resolving these can be found here:
+     http://svn.collab.net/repos/svn/branches/1.5.x-r36879
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
