@@ -62,6 +62,7 @@ enable-auto-props = %s
 fubar* = tarfile=si
 foobar.lha = lhafile=da;lzhfile=niet
 spacetest = abc = def ; ghi = ; = j
+escapetest = myval=;;;;val;myprop=p
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
@@ -125,7 +126,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
                'foo.jpg',
                'fubar.tar',
                'foobar.lha',
-               'spacetest']
+               'spacetest',
+               'escapetest']
   for filename in filenames:
     svntest.main.file_write(os.path.join(files_dir, filename),
                             'foo\nbar\nbaz\n')
@@ -166,6 +168,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     check_proplist(filename, {'auto':'oui', 'lhafile':'da', 'lzhfile':'niet'})
     filename = os.path.join(files_wc_dir, 'spacetest')
     check_proplist(filename, {'auto':'oui', 'abc':'def', 'ghi':''})
+    filename = os.path.join(files_wc_dir, 'escapetest')
+    check_proplist(filename, {'auto':'oui', 'myval':';;val', 'myprop':'p'})
   else:
     for filename in filenames:
       check_proplist(os.path.join(files_wc_dir, filename), {})
