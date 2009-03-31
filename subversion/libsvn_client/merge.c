@@ -4855,6 +4855,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable =
                     apr_pcalloc(children_with_mergeinfo->pool,
                                 sizeof(*child_of_noninheritable));
+                  child_of_noninheritable->child_of_noninheritable = TRUE;
                   child_of_noninheritable->path =
                     apr_pstrdup(children_with_mergeinfo->pool, child_path);
                   insert_child_to_merge(children_with_mergeinfo,
@@ -6385,7 +6386,23 @@ do_directory_merge(const char *url1,
               if (!child->missing_child
                   || (child->pre_merge_mergeinfo
                       && !child->indirect_mergeinfo))
-              continue;
+                {
+                  /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
+                     because it had no explicit mergeinfo of its own at the
+                     start of the merge but is the child of of some path with
+                     non-inheritable mergeinfo, then the explicit mergeinfo it
+                     has *now* was set by get_mergeinfo_paths() -- see criteria
+                     3 in that function's doc string.  So since CHILD->PATH
+                     was not touched by the merge we can remove the
+                     mergeinfo. */
+                  if (child->child_of_noninheritable)
+                    SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
+                                                            NULL,
+                                                            adm_access,
+                                                            iterpool));
+
+                  continue;
+                }
             }
 
           if (strlen(child->path) == merge_target_len)
