@@ -15,7 +15,7 @@ def parse_translation(f):
 
     # Parse comments
     comments = []
-    while 1:
+    while True:
         if line.strip() == '' or line[:2] == '#~':
             return comments, None, None, None
         elif line[0] == '#':
@@ -28,7 +28,7 @@ def parse_translation(f):
     if line[:7] != 'msgid "' or line[-2] != '"':
         raise RuntimeError("parse error")
     msgid = line[6:-1]
-    while 1:
+    while True:
         line = f.readline()
         if line[0] != '"':
             break
@@ -40,7 +40,7 @@ def parse_translation(f):
         if line[-2] != '"':
             raise RuntimeError("parse error")
         msgid_plural = line[13:-1]
-        while 1:
+        while True:
             line = f.readline()
             if line[0] != '"':
                 break
@@ -52,7 +52,7 @@ def parse_translation(f):
         if line[:8] != 'msgstr "' or line[-2] != '"':
             raise RuntimeError("parse error")
         msgstr.append(line[7:-1])
-        while 1:
+        while True:
             line = f.readline()
             if len(line) == 0 or line[0] != '"':
                 break
@@ -61,14 +61,14 @@ def parse_translation(f):
         if line[:7] != 'msgstr[' or line[-2] != '"':
             raise RuntimeError("parse error")
         i = 0
-        while 1:
+        while True:
             matched_msgstr = msgstr_re.match(line)
             if matched_msgstr:
                 matched_msgstr_len = len(matched_msgstr.group(0))
                 msgstr.append(line[matched_msgstr_len-1:-1])
             else:
                 break
-            while 1:
+            while True:
                 line = f.readline()
                 if len(line) == 0 or line[0] != '"':
                     break
@@ -108,7 +108,7 @@ def main(argv):
 
     # Read the source po file into a hash
     source = {}
-    while 1:
+    while True:
         comments, msgid, msgid_plural, msgstr = parse_translation(sys.stdin)
         if not comments and msgid is None:
             break
@@ -126,7 +126,7 @@ def main(argv):
     string_count = 0
     update_count = 0
     untranslated = 0
-    while 1:
+    while True:
         comments, msgid, msgid_plural, msgstr = parse_translation(infile)
         if not comments and msgid is None:
             break

@@ -1,0 +1,638 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion 1.6发布说明</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center">Subversion 1.6发布说明</h1>
+
+<p>本文根据原文r36726，由<a href="http://www.subversion.org.cn">Subversion中文站</a>的中文化翻译小组翻译，欢迎各位参与翻译工作，加入地址：<a href="http://code.google.com/p/svncndoc/">http://code.google.com/p/svncndoc/</a>，参与翻译的志愿者包括<a href="http://rocksun.cn">rocksun</a>。
+
+<div class="h2" id="news" title="news">
+<h2>Subversion 1.6的新东西</h2>
+
+<ul>
+  <li><a href="#auth-related-improvements"
+      >改进的认证数据处理</a></li>
+  <li><a href="#repository-root-relative-urls"
+      >版本库根的相对URL</a></li>
+  <li><a href="#externals"
+      ><tt>svn:externals</tt>的改进</a></li>
+  <li><a href="#tree-conflicts"
+      >目录树冲突的检测</a></li>
+  <li><a href="#filesystem-improvements"
+      >文件系统存储改进</a></li>
+  <li><a href="#ctypes-python-bindings"
+      >Ctypes Python绑定</a></li>
+  <li><a href="#improved-interactive-conflict-resolution"
+      >改进的交互式冲突解决</a></li>
+  <li><a href="#sparse-directory-exclusion"
+      >稀疏目录的排除选项</a></li>
+  <li><a href="#svnserve-logging"
+      >svnserve的日志支持</a></li>
+  <li><a href="#historical-uris"
+      >察看历史的新HTTP URI语法</a></li>
+  <li><a href="#cmdline"
+      >命令行客户端改进</a></li>
+  <li><a href="#apis"
+      >API变更、改进以及多种语言绑定</a></li>
+  <li><a href="#bug-fixes"
+      >超过65项新的bug修正和提升</a></li>
+</ul>
+
+<p>Subversion 1.6是所有以前Subversion版本的超集，可以认为是当前最好的版本。任何1.0.x到1.5.x的bug修正和特性，都存在于1.6中。新的特性最终会纪录在Subversion图书中(<a href="http://svnbook.red-bean.com" >svnbook.red-bean.com</a>)。
+</p>
+
+<p>本文描述了主要的变更，完整的列表可以看<a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES" >CHANGES</a>的1.6部分。</p>
+
+</div>  <!-- news -->
+
+<div class="h2" id="compatibility" title="compatibility">
+<h2>兼容性情况</h2>
+
+<p>以前的客户端和服务器可以直接与1.6的服务器和客户端交互，然而，如果服务器和客户端不全是1.6时，一些新的1.6特性将会不可用。而另外一些特性，在服务器是旧的，客户端是新的时，可以运行但是效率比较低。</p>
+
+<p><strong>没有必要</strong>转储并重新加载版本库，subversion 1.6可以读取以前创建的版本，升级只需用最新的库和二进制程序覆盖原来的程序。</p>
+
+<p>Subversion会维护与先前版本API/ABI的兼容，只会增加新的特性，而不会删除旧的特性。根据1.0, 1.1, 1.2, 1.3, 1.4或1.5 的API编写的程序，可以使用1.6的库编译，为1.6编写的程序不一定能为旧库编译或运行。</p>
+
+<div class="h3" id="new-feature-compatibility-table"
+             title="new-feature-compatibility-table">
+<h3>新特性的兼容性表格</h3>
+<table border="1">
+  <tr>
+    <th>新特性</th>
+    <th>Minimum Client<sup>1</sup></th>
+    <th>Minimum Server</th>
+    <th>Minimum Repository</th>
+    <th>说明</th></tr>
+  <tr>
+    <td><a href="#fsfs-packing">FSFS Packing</a></td>
+    <td>any</td>
+    <td>1.6</td>
+    <td>1.6</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#tree-conflicts">Tree Conflicts</a></td>
+    <td>1.6</td>
+    <td>1.6</td>
+    <td>any</td>
+    <td>可以用1.6以前的服务器，但是某些类的冲突将不能检测到。</td></tr>
+   <tr>
+     <td colspan="5"><sup>1</sup>提醒：在使用<code>file://</code>访问方法时，Subversion程序同时是客户端<em>和</em>服务器。</td></tr>
+</table>
+
+</div>  <!-- new-feature-compatibility-table -->
+
+<div class="h3" id="wc-and-fs-format-change"
+             title="wc-and-fs-format-change">
+<h3>工作拷贝和版本库文件系统格式变更</h3>
+
+<p>工作拷贝格式已经升级，这意味着1.5和更老的Subversion客户端<em>不能</em>在Subversion 1.6的工作拷贝上工作，工作拷贝是<a
+href="#wc-upgrades" >自动升级的</a>。</p>
+
+<p>类似的，版本库文件系统格式也已经改变，意味着那些直接访问库的1.5以及旧的版本的工具如<tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
+<tt>svnadmin</tt>等不能读取Subversion 1.6的版本库，但是版本库<a href="#repos-upgrades"
+><strong>不是</strong>自动升级的</a>。</p>
+
+<div class="h4" id="wc-upgrades" title="wc-upgrades">
+<h4>工作拷贝升级</h4>
+
+<p>警告：如果一个Subversion 1.6客户端遇到了一个1.6以前的工作拷贝，它会在接触到工作拷贝时<em>自动</em>升级工作拷贝格式，并使旧的Subversion客户端不能再读这些工作拷贝了。如果你在机器上使用多个版本的Subversion，请确认你对工作拷贝使用的subversion版本，防止意外升级工作拷贝。（但是这种“自动升级”行为<em>不会</em>发生在<a href="#repos-upgrades" >版本库上</a>，只发生在工作拷贝。）</p>
+
+<p>如果你意外的将工作拷贝从1.5升级到1.6，并希望降级到1.5，可以使用<a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+><tt>change-svn-wc-format.py</tt></a>，详情看<a
+href="http://subversion.tigris.org/faq.zh.html#working-copy-format-change"
+>这篇FAQ文章</a>，也可以加<code>--help</code>运行来查看使用指导。</p>
+
+</div>  <!-- wc-upgrades -->
+
+<div class="h4" id="repos-upgrades" title="repos-upgrades">
+<h4>版本库升级</h4>
+
+<p>Subversion 1.6服务器可以与1.5和以前的版本库工作，如果不使用<strong><code>svnadmin&nbsp;upgrade</code></strong>命令，版本库不会自动升级到1.6。这意味仅仅升级服务器不能直接得到某些特性，你也需要升级版本库。（我们决定不使用自动升级版本库，因为我们不希望subversion 1.6偷偷的升级成1.5不可用的版本库，这对于版本库管理来说是一件很慎重的事情。）</p>
+
+</div>  <!-- repos-upgrades -->
+
+</div>  <!-- wc-and-fs-format-change -->
+
+<div class="h3" id="output-changes" title="output-changes">
+<h3>命令行输出的变更</h3>
+
+<p>尽管我们希望尽可能让命令行程序的的输出与以前版本保持兼容，但是还是要添加一些信息，这会破坏一些精确依赖输出的脚本。</p>
+
+<div class="h4" id="proplist-verbose" title="proplist-verbose">
+<h4>改善的<code>svn proplist --verbose</code>输出</h4>
+
+<p>XXX(r32484): <code>svn proplist --verbose</code>的输出已经改善。</p>
+
+<pre>
+   $ svn proplist --verbose build.conf
+   Properties on 'build.conf':
+     svn:eol-style
+       native
+     svn:mergeinfo
+       /trunk/build.conf:1-4800
+       /branches/a/build.conf:3000-3400
+       /branches/b/build.conf:3200-3600
+   $ 
+</pre>
+
+</div>  <!-- proplist-verbose -->
+
+<div class="h4" id="svn-status" title="svn-status">
+<h4><code>svn status</code>的输出发生变化</h4>
+
+<p><code>svn status</code>增加了第7列输出，用来显示项目是否为目录树冲突的牺牲品，另外还增加了一行，显示目录树中冲突的详细描述。
+</p>
+
+<pre>
+   $ svn status
+   M       Makefile.in
+   A     C src/error.c
+         >   local add, incoming add upon update
+   M       src/log.c
+   M     C src/path.c
+         >   local edit, incoming delete upon update
+   D     C src/properties.c
+         >   local delete, incoming edit upon merge
+   M     C src/time.c
+   $ 
+</pre>
+
+</div>  <!-- svn-status -->
+
+</div>  <!-- output-changes -->
+
+<div class="h3" id="hook-changes" title="hook-changes">
+<h3>钩子变更</h3>
+
+<div class="h4" id="pre-lock-hook-output" title="pre-lock-hook-output">
+<h4><code>pre-lock</code>中对于输出数据处理的变化</h4>
+
+<p>XXX(r32778)</p>
+
+</div>  <!-- pre-lock-hook-output -->
+
+</div>  <!-- hook-changes -->
+
+</div>  <!-- compatibility -->
+
+<div class="h2" id="new-features" title="new-features">
+<h2>新特性</h2>
+
+<div class="h3" id="auth-related-improvements" title="auth-related-improvements">
+<h3>改进的认证数据处理(<em>客户端</em>)</h3>
+
+<p>XXX</p>
+
+<div class="h4" id="auth-related-improvements-plaintext-passwords"
+title="auth-related-improvements-plaintext-passwords">
+<h4>在以明文保存密码时会提示</h4>
+
+<p>Subversion在以明文保存密码时会提示。</p>
+
+<p>例如:</p>
+
+<pre>
+   $ svn checkout https://www.example.com/repository/trunk repository_trunk
+   Authentication realm: &lt;https://www.example.com&gt; Example
+   Password for 'user':
+   -----------------------------------------------------------------------
+   ATTENTION!  Your password for authentication realm:
+
+      &lt;https://www.example.com&gt; Example
+
+   can only be stored to disk unencrypted!  You are advised to configure
+   your system so that Subversion can store passwords encrypted, if
+   possible.  See the documentation for details.
+
+   You can avoid future appearances of this warning by setting the value
+   of the 'store-plaintext-passwords' option to either 'yes' or 'no' in
+   '/home/user/.subversion/servers'.
+   -----------------------------------------------------------------------
+   Store password unencrypted (yes/no)?
+</pre>
+
+</div>  <!-- auth-related-improvements-plaintext-passwords -->
+
+<div class="h4" id="auth-related-improvements-kwallet-gnome-keyring"
+title="auth-related-improvements-kwallet-gnome-keyring">
+<h4>支持按照KWallet和GNOME Keyring加密方式保存密码(类Unix系统)</h4>
+
+<p>密码可以以KWallet (KDE 4)和GNOME Keyring加密方式保存。</p>
+
+</div> <!-- auth-related-improvements-kwallet-gnome-keyring -->
+
+<div class="h4" id="auth-related-improvements-ssl-client-certificate-passphrases"
+title="auth-related-improvements-ssl-client-certificate-passphrases">
+<h4>支持保存SSL客户端凭证密码短语</h4>
+
+<p>SSL客户端凭证密码短语可以通过KWallet, GNOME
+Keyring, Mac OS Keychain以及Windows CryptoAPI的形式保存，或者是明文形式。</p>
+
+</div> <!-- auth-related-improvements-ssl-client-certificate-passphrases -->
+
+</div> <!-- auth-related-improvements -->
+
+<div class="h3" id="repository-root-relative-urls"
+             title="repository-root-relative-urls">
+<h3>版本库根的相对URL (<em>客户端</em>)</h3>
+
+<p>XXX (<a href="http://svn.collab.net/repos/svn/trunk/notes/cli-repo-root-relative-support.txt">描述</a>)</p>
+
+<pre>
+   $ svn SUBCOMMAND ^/
+   $ svn SUBCOMMAND ^/PATH
+</pre>
+
+</div>  <!-- repository-root-relative-urls -->
+
+<div class="h3" id="externals" title="externals">
+<h3><tt>svn:externals</tt>的改进</h3>
+
+<p>Subversion 1.6对于<tt>svn:externals</tt>的使用增加了许多新的特性。包括：</p>
+
+<ul>
+  <li><a href="#file-externals"
+      >支持文件的<tt>svn:externals</tt></a></li>
+  <li><a href="#shell-quoting-externals"
+      >在外部定义中支持常见的shell转义规则</a></li>
+</ul>
+
+<div class="h4" id="file-externals" title="file-externals">
+<h4>支持文件的<tt>svn:externals</tt>
+    (<em>客户端</em>)</h4>
+
+<p>如果<tt>svn:externals</tt>的描述指向了一个文件，这个文件会作为版本化条目加入到工作拷贝。
+</p>
+
+<p>目录和文件外部定义有一些区别。
+</p>
+
+<ul>
+  <li>文件外部定义的路径必须是已经检出的，而目录外部定义可以位于任意深度的外部目录，程序会自动创建中间目录，文件外部定义必须位于已经检出的工作拷贝中。
+  </li>
+  <li>文件的外部定义URL的须与其所添加的URL位于相同的版本库；跨版本库的文件外部定义并不支持。
+  </li>
+  <li>提交不会传递到目录外部定义，而包含文件外部定义的目录会提交所有外部文件的修改。
+  </li>
+</ul>
+
+<p>普通版本化文件和外部文件的区别。</p>
+
+<ul>
+  <li>外部文件不能移动或删除；而应该删除<tt>svn:externals</tt>属性；然后，外部文件可以被复制。
+  </li>
+</ul>
+
+<p>其他事实。</p>
+
+<ul>
+  <li>外部文件会在switched状态栏显示<tt>X</tt>。
+  </li>
+</ul>
+
+</div>  <!-- file-externals-further-reading -->
+
+<div class="h4" id="shell-quoting-externals" title="shell-quoting-externals">
+<h4>在外部定义中支持常见的shell转义规则。(<em><a href="/issues/show_bug.cgi?id=2461">issue 2461</a></em>，客户端)</h4>
+
+<p>XXX: Need to document possible incompatibilies (see
+<a href="/ds/viewMessage.do?dsForumId=462&amp;dsMessageId=86142">this
+thread</a></p>
+
+</div>  <!-- shell-quoting-externals -->
+
+<div class="h4" id="file-externals-further-reading"
+             title="file-externals-further-reading">
+<h4>更多阅读</h4>
+
+<p>可以看Subversion图书的<a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
+>svn:externals</a>小节。</p>
+
+</div>  <!-- further-reading -->
+
+</div>  <!-- file-externals -->
+
+<div class="h3" id="tree-conflicts" title="tree-conflicts">
+<h3>目录树冲突的检测(<em>客户端</em>)</h3>
+
+<p>Subversion 1.6能够识别出一种新的冲突类别，称为“目录树冲突”。这种冲突位于目录结构级别，而不是文件内容。</p>
+
+<p>包括删除本地已经修改的文件，对于本地删除文件的修改。在冲突被标示为解决之前，不能提交目录树冲突的相关文件和目录。</p>
+
+<p>请注意，Subversion一直将重命名处理为“copy+delete”操作，所以文件重命名造成的目录树冲突只能被检测为文件的添加和删除，因此，有可能错报目录树的冲突。</p>
+
+<p>为了利用目录树冲突检测，尝试提交在HEAD修订中已经删除的文件将会报错，在Subversion 1.5中，这被认为是正常的操作，潜在的导致了没有变更的修订版本。</p>
+
+
+<div class="h4" id="tree-conflicts-further-reading"
+             title="tree-conflicts-further-reading">
+<h4>详细阅读</h4>
+
+<p>Subversion图书的<a
+href="http://svnbook.red-bean.com/nightly/en/svn.tour.treeconflicts.html"
+>tree conflicts</a>小节。</p>
+
+</div>  <!-- tree-conflicts-further-reading -->
+
+</div>  <!-- tree-conflicts -->
+
+<div class="h3" id="filesystem-improvements" title="filesystem-improvements">
+<h3>文件系统存储改进</h3>
+
+<p>Subversion 1.6包含了Berkeley DB和FSFS后端的改进，主要为了改进存储空间，可以显著产生更小的版本库，这些变更包括：</p>
+<ul>
+  <li><a href="#rep-sharing"
+      >表示（representations）共享</a></li>
+  <li><a href="#fsfs-packing"
+      >FSFS inode打包</a></li>
+  <li><a href="#fsfs-memcached"
+      >FSFS版本库：支持Memcached</a></li>
+  <li><a href="#bdb-reverse-deltas"
+      >BDB版本库：反向增量</a></li>
+</ul>
+
+<div class="h4" id="rep-sharing" title="rep-sharing">
+<h4>分享多个共有的表示（representations）(<em><a href="/issues/show_bug.cgi?id=2286">issue 2286</a></em>，
+   <em>服务器</em>)</h4>
+<p>当使用多个分支，并在其间合并时，经常会有一些文件的行的历史包含相同的内容，在过去，Subversion会按照前一个版本的增量保存这些文件。Subversion 1.6会使用文件系统中已有的表示来处理重复的存储。根据版本库的大小，以及分支和合并的程度，这样可以节省20%的Berkeley DB版本库，或者15%的FSFS版本库空间。</p>
+
+</div> <!-- rep-sharing -->
+
+<div class="h4" id="fsfs-packing" title="fsfs-memcached">
+<h4>FSFS版本库： 打包完全的碎片（shards） (<em>服务器</em>)</h4>
+
+<p>Subversion 1.5为FSFS版本库引入了将修订版本文件和修订属性文件的<em><a href="svn_1.5_releasenotes.html#fsfs-sharding">碎片（sharded）</a></em>存放到多个目录。Subversion 1.6将这个概念进一步深入，允许完全粉碎的目录<em>打包</em>成一个文件。通过减少文件系统内部的碎块，打包的FSFS版本库显著的节省了空间，特别是如果包含了很多小的提交。使用一组碎片一个文件的方法，也可以让Subversion减少磁盘I/O的开销，充分挖掘操作系统缓存。</p>
+
+<p>为了打包，可以对版本库运行<code>svnadmin pack</code>，一旦打包，将没有回到未打包状态的方法，只能通过Subversion 1.6或以后的服务器使用。</p>
+
+</div> <!-- fs-packing -->
+
+<div class="h4" id="fsfs-memcached" title="fsfs-memcached">
+<h4>FSFS版本库：支持Memcached (<em>服务器</em>)</h4>
+
+<p>XXX: <a href="http://www.danga.com/memcached/">Memcached</a>可以为FSFS版本库缓存数据。</p>
+
+<p>额外的构建依赖：APR-Util &ge;1.3 || ( APR-Util &lt;
+1.3 &amp;&amp; APR_Memcache )</p>
+
+</div> <!-- fsfs-memcached -->
+
+<div class="h4" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
+<h4>BDB版本库：反向增量 (<em>服务器</em>)</h4>
+
+<p>XXX</p>
+
+</div> <!-- bdb-reverse-deltas -->
+
+</div> <!-- filesystem-improvements -->
+
+<div class="h3" id="ctypes-python-bindings" title="ctypes-python-bindings">
+<h3>Ctypes Python绑定</h3>
+
+<p>Subversion 1.6为Subversion API引入了新的python绑定，新的绑定可以充分利用ctypes库提供的标准API，提供标准Subversion结构的面向对象的接口，这个绑定相比于原来的基于SWIG的绑定有以下优势：</p>
+<ul>
+  <li>自动生成</li>
+  <li>直接，无需特别的“转化”规则</li>
+  <li>完全的python并且跨平台</li>
+  <li>只要程序中使用的方法有兼容的定义，就可以向前后兼容</li>
+  <li>高级的类可以用python化的方法简单的访问subversion功能</li>
+</ul>
+
+<p>构建ctypes绑定会产生两种访问Subversion的方式。第一种是标准API的直接python转移，ctypes提供了一些基本的类型转化，并允许象在C代码中一样调用Subversion功能。新的绑定也引入了一组python类来实现Subversion特性的高级访问，这些类充分利用了python的特性，并尽可能的隐藏了C实现，使得不熟悉C API的python程序员可以简便的使用Subversion。</p>
+
+</div> <!-- ctypes-python-bindings -->
+
+</div>  <!-- new-features -->
+
+<div class="h2" id="enhancements" title="enhancements">
+<h2>改进和bug修正</h2>
+
+<div class="h3" id="improved-interactive-conflict-resolution"
+             title="improved-interactive-conflict-resolution">
+<h3>改进的交互式冲突解决(<em>客户端</em>)</h3>
+
+<p>dc, mc, tc选项。</p>
+
+<p>这是一个使用命令行客户端的例子:</p>
+
+<pre>
+   $ svn up
+   U    Makefile.in
+   Conflict discovered in 'configure.ac'.
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (mc) mine-conflict, (tc) theirs-conflict,
+           (s) show all options: s
+
+     (e)  edit             - change merged file in an editor
+     (df) diff-full        - show all changes made to merged file
+     (r)  resolved         - accept merged version of file
+
+     (dc) display-conflict - show all conflicts (ignoring merged version)
+     (mc) mine-conflict    - accept my version for all conflicts (same)
+     (tc) theirs-conflict  - accept their version for all conflicts (same)
+
+     (mf) mine-full        - accept my version of entire file (even non-conflicts)
+     (tf) theirs-full      - accept their version of entire file (same)
+
+     (p)  postpone         - mark the conflict to be resolved later
+     (l)  launch           - launch external tool to resolve conflict
+     (s)  show all         - show this list
+
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (mc) mine-conflict, (tc) theirs-conflict,
+           (s) show all options: mc
+   G    configure.ac
+   Updated to revision 36666.
+   $ 
+</pre>
+
+</div>  <!-- improved-interactive-conflict-resolution -->
+
+<div class="h3" id="sparse-directory-exclusion"
+             title="sparse-directory-exclusion">
+<h3>稀疏目录的排除选项</h3>
+
+<p>在Subversion 1.6，<code>svn
+update</code>的<code>--set-depth</code>参数有了新的值&mdash;<em>exclude</em>，这个值告诉Subversion忽略工作拷贝中的目标，立刻起作用，直到以后再通知改变。在Subversion 1.6之前，一个目录很难从工作拷贝删除。如果不是借助Subversion命令删除一个目录，它会在下一次<code>svn update</code>回来。如果通过<code>svn delete</code>删除这个目录，它会一直在本地被标示为修改。（当然，如果你不小心提交了则另当别论。）1.6中新的排他机制修正了这些问题。</p>
+
+<p>请注意，如果你排除了一个版本化的目录，其中包含了未版本化或本地有修改的文件，Subversion会优雅的处理这种情形，所有的文件都不能安全的删除，Subversion会保留他们，当然也包括所有中间目录。</p>
+
+<div class="h4" id="sparse-directory-exclusion-further-reading"
+             title="sparse-directory-exclusion-further-reading">
+<h4>更多阅读</h4>
+
+<p>看这篇<a href="http://www.subversion.org.cn/submerged/?p=111">博文</a>。</p>
+
+</div>  <!-- further-reading -->
+
+</div>  <!-- sparse-directory-exclusion -->
+
+<div class="h3" id="svnserve-logging"
+             title="svnserve-logging">
+<h3>svnserve的日志支持(<em>服务器</em>)</h3>
+
+<p>XXX</p>
+
+</div>  <!-- svnserve-logging -->
+
+
+<div class="h3" id="historical-uris"
+             title="historical-uris">
+<h3>mod_dav_svn中察看历史的新HTTP URI语法(<em>服务器</em>)</h3>
+
+<p>mod_dav_svn现在支持一个新的公共URI语法来检查较早版本的文件和目录。这样可以让用户无需Subversion客户端就可以访问历史，并让第三方工具更加简单（例如代码评审服务），直接与版本库交互而无需svn库。</p>
+
+    <pre>http://host/repos/path?[p=PEG][&r=REV]</pre>
+
+<p>新的语法与svn命令行客户端的语法类似。简单的<b>http://host/repos/path</b>请求获取路径上的HEAD修订版本，而添加“p”查询参数，可以指明另外的peg修订版本，例如：</p>
+
+    <pre>http://host/repos/path?p=38</pre>
+
+<p>...这与在命令行指明“path@38”类似。添加“r”查询参数则类似于命令行中的“-r”选项，让版本库从peg修订版本回溯到较早的操作修订版本：</p>
+
+    <pre>http://host/repos/path?p=38&r=20</pre>
+
+<p>同命令行一样，peg修订版本缺省与HEAD相同，而操作修订版本则默认与peg修订版本相同。在线图书<a href="http://svnbook.red-bean.com/en/1.5/svn.advanced.pegrevs.html">这个小节</a>详细介绍了这些东西。</p>
+
+</div>  <!-- historical-uris -->
+
+
+<div class="h3" id="cmdline" title="cmdline">
+<h3>命令行客户端改进(<em>客户端</em>)</h3>
+
+<p>在命令行客户端有太多改进和新选项可以在这里列出来，除了本文已经提到的部分，下面是一些被认为是重要的，但是完整的列表请看<a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>文件。</p>
+
+<div class="h4" id="log-multiple-args" title="log-multiple-args">
+<h4>日志可以接受多个修订版本</h4>
+
+<p><code>svn log</code>命令可以在一次调用中接受多个修订版本参数，-c和-r选项都支持。</p>
+
+<pre>
+   $ svn log -r36169 -r36171 http://svn.collab.net/repos/svn/
+   ------------------------------------------------------------------------
+   r36169 | sussman | 2009-02-26 14:46:44 -0800 (Thu, 26 Feb 2009) | 1 line
+
+   ...log message omitted...
+   ------------------------------------------------------------------------
+   r36171 | joeswatosh | 2009-02-26 22:05:28 -0800 (Thu, 26 Feb 2009) | 20 lines
+
+   ...log message omitted...
+   $ svn log -c36169,36171 http://svn.collab.net/repos/svn/
+   ------------------------------------------------------------------------
+   r36169 | sussman | 2009-02-26 14:46:44 -0800 (Thu, 26 Feb 2009) | 1 line
+
+   ...log message omitted...
+   ------------------------------------------------------------------------
+   r36171 | joeswatosh | 2009-02-26 22:05:28 -0800 (Thu, 26 Feb 2009) | 20 lines
+
+   ...log message omitted...
+</pre>
+
+</div>  <!-- log-multiple-args  -->
+
+<div class="h4" id="trust-server-cert" title="trust-server-cert">
+<h4>--trust-server-cert选项</h4>
+
+<p>添加到<code>svn</code>和<code>svnsync</code>的选项，这样非交互式的操作也可以在未经过权威信任的自签名凭证下工作。</p>
+
+通过这个选项：
+<pre>
+   $ svn log -r36364 https://svn.collab.net/repos/svn/trunk --trust-server-cert --non-interactive
+   ------------------------------------------------------------------------
+   r36364 | stylesen | 2009-03-06 13:11:20 +0530 (Fri, 06 Mar 2009) | 3 lines
+   
+   ...log message omitted...
+   ------------------------------------------------------------------------
+</pre>
+
+没有这个选项：
+<pre>
+   $ svn log -r36364 https://svn.collab.net/repos/svn/trunk 
+   Error validating server certificate for 'https://svn.collab.net':
+    - The certificate is not issued by a trusted authority. Use the
+      fingerprint to validate the certificate manually!
+   Certificate information:
+    - Hostname: svn.collab.net
+    - Valid: from Sep 24 22:01:07 2007 GMT until Sep 23 22:01:07 2011 GMT
+    - Issuer: sv, CollabNet, Brisbane, California, US
+   (hostname@collab.net)
+    - Fingerprint:
+   AA:5B:74:B1:E2:7F:38:B3:2B:C2:B1:60:6E:01:BB:F5:7C:37:98:46
+   (R)eject, accept (t)emporarily or accept (p)ermanently? t
+   ------------------------------------------------------------------------
+   r36364 | stylesen | 2009-03-06 13:11:20 +0530 (Fri, 06 Mar 2009) | 3 lines
+
+   ...log message omitted...
+   ------------------------------------------------------------------------
+</pre>
+
+</div>  <!-- trust-server-cert -->
+
+</div>  <!-- cmdline -->
+
+<div class="h3" id="apis" title="apis">
+<h3>API变更、改进以及多种语言绑定
+    (<em>客户端和服务器</em>)</h3>
+
+<p><tt>pre-lock</tt>钩子现在可以通过标准输出指明锁定令牌字符串；详细请看<a
+href="http://svn.collab.net/viewcvs/svn?rev=32778&amp;view=rev"
+>r32778</a>。注意，当钩子用了这个特性，必须确保锁定令牌在版本库范围是唯一的。</p>
+
+<p>Subversion 1.6有许多新的修正的API需要列出来，一般的API信息可以看<a
+href="http://svn.collab.net/svn-doxygen/" >Subversion API</a>，如果你使用Subversion API开发第三方的客户端程序，你可能需要看接口的头文件来查看发生的变更。</p>
+
+<p>一个常见的API变更是以前接受的<tt>recurse</tt>参数，现在升级为接受<tt>depth</tt>参数，为了接纳新的<a
+href="#sparse-checkouts">稀疏检出</a>特性。</p>
+
+<p>语言绑定几乎已经根据新API更新，尽管可能有些会有滞后。</p>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bug-fixes" title="bug-fixes">
+<h3>Bug修正 (<em>客户端和服务器</em>)</h3>
+
+<p>大量bug被修正，细节请看<a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>的1.6.0部分。
+</p>
+
+</div>  <!-- bug-fixes -->
+
+</div>  <!-- enhancements -->
+
+<div class="h2" id="svn-1.4-deprecation" title="svn-1.4-deprecation">
+<h2>Subversion 1.4.x系列不再支持</h2>
+
+<p>Subversion 1.4.x线不再支持，这不是意味着1.4的安装已经要完蛋了；如果它工作良好，满足了你的需要，那很好。“不再支持”的意思是我们不再接受1.4.x版本的bug报告，也不会发布任何1.4.x的bug修正版本，除非有绝对安全隐患或数据丢失的bug。</p>
+
+</div>  <!-- svn-1.4-deprecation -->
+
+<div class="h2" id="sqlite" title="sqlite">
+<h2>新的依赖：SQLite</h2>
+
+<p>我们现在需要<a href="http://www.sqlite.org/">SQLite</a>来构建服务器和客户端，我们推荐3.6.11或更新的版本，但是3.4.0已经足够。如果它位于tarball的根下，Subversion会尝试使用SQLite
+<a href="http://www.sqlite.org/amalgamation.html">amalgamation</a>，否则Subversion会在系统的常见位置寻找SQLite。你也可以通过传递给<code>configure</code>命令<code>--with-sqlite</code>来指明SQLite库或amalgamation的位置。</p>
+
+</div>  <!-- sqlite -->
+
+</div>  <!-- app -->
+</body>
+</html>

@@ -824,12 +824,46 @@ log_do_modify_entry(struct log_runner *loggy,
       entry->working_size = finfo.size;
     }
 
-
   /* Handle force flag. */
   valuestr = apr_hash_get(ah, SVN_WC__LOG_ATTR_FORCE,
                           APR_HASH_KEY_STRING);
   if (valuestr && strcmp(valuestr, "true") == 0)
     modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
+
+  /* It is possible that we will find a log that has a misordered sequence
+     of entry modifications and wcprop modifications. The entry must be
+     "not hidden" before wcprops can be installed. The sequence of actions
+     will look like:
+
+       1. modify_entry
+       2. modify_wcprops
+       3. modify_entry(DELETD=FALSE)
+
+     Step 2 will fail if the current node is marked DELETED. r36697 fixes
+     the ordering, moving step 3 to the beginning of the sequence. However,
+     old logs may still contain the above sequence. To compensate, we will
+     attempt to detect the pattern used by step 1, and preemptively clear
+     the DELETED flag.
+
+     The misordered entry is written by accumulate_entry_props() in
+     update_editor.c. That may modify the CMT_* values and/or the UUID.
+     If we see any of those, then we've detected a modify_entry constructed
+     by that function. And that means we *just* ran a step 3 (new code)
+     or we *will* run a step 3 (too late; old code). In both situations,
+     we can safely clear the DELETED flag.
+
+     The UUID modification is *only* performed by that function. The CMT_*
+     changes are also performed by process_committed_leaf() in adm_ops.c.
+     A just-committed node setting these values will NEVER be DELETED,
+     so it is safe to clear the value.  */
+  if (modify_flags & (SVN_WC__ENTRY_MODIFY_CMT_REV
+                      | SVN_WC__ENTRY_MODIFY_CMT_DATE
+                      | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR
+                      | SVN_WC__ENTRY_MODIFY_UUID))
+    {
+      entry->deleted = FALSE;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
+    }
 
   /* Now write the new entry out */
   err = svn_wc__entry_modify(loggy->adm_access, name,
@@ -938,21 +972,12 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
         {
           if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
-              apr_hash_t *entries;
-
               svn_error_clear(err);
               err = SVN_NO_ERROR;
 
               if (entry->schedule != svn_wc_schedule_add)
-                {
-                  SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access,
-                                              TRUE, loggy->pool));
-                  SVN_ERR(svn_wc__entry_remove(
-                            entries, svn_wc_adm_access_path(loggy->adm_access),
-                            name, loggy->pool));
-                  SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access,
-                                                loggy->pool));
-                }
+                SVN_ERR(svn_wc__entry_remove(NULL, loggy->adm_access,
+                                             name, TRUE, loggy->pool));
             }
           else
             {
@@ -2091,7 +2116,7 @@ svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *path,
-                           svn_wc_entry_t *entry,
+                           const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool)
 {

@@ -2961,7 +2961,7 @@ set_headers(request_rec *r, const dav_resource *resource)
                && r->content_type)
         mimetype = r->content_type;
       else
-        mimetype = ap_default_type(r);
+        mimetype = "application/octet-stream";
 
       serr = svn_mime_type_validate(mimetype, resource->pool);
       if (serr)

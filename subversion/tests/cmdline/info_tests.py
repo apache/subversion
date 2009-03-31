@@ -88,7 +88,7 @@ def match_xml_element(str, exprs):
   name = m.group('name')
   str = str[m.end():]
   atts = {}
-  while 1:
+  while True:
     m = atttribute_re.match(str)
     if not m:
       break
@@ -108,7 +108,7 @@ def match_xml_element(str, exprs):
     content = m.group('content')
     str = str[m.end():]
   if content != '':
-    while 1:
+    while True:
       (new_content, exprs) = match_xml_element(content, exprs)
       if new_content == content:
         # there are no (more) child elements
@@ -283,7 +283,7 @@ def info_on_mkdir(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               info_with_tree_conflicts,
-              XFail(info_on_added_file),
+              XFail(info_on_added_file, svntest.main.is_not_ng),
               info_on_mkdir
              ]
 

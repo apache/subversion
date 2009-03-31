@@ -30,7 +30,7 @@ def dump_revision(rev, nodepaths):
 
 def parse_header_block(fp):
     headers = {}
-    while 1:
+    while True:
         line = fp.readline()
         if line == '':
             return headers, 1
@@ -47,7 +47,7 @@ def parse_file(fp):
     nodepaths = {}
     current_rev = None
 
-    while 1:
+    while True:
         # Parse a block of headers
         headers, eof = parse_header_block(fp)
 

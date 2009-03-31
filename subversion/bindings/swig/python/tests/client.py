@@ -5,7 +5,12 @@ from svn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
-from urlparse import urljoin
+try:
+  # Python >=3.0
+  from urllib.parse import urljoin
+except ImportError:
+  # Python <3.0
+  from urlparse import urljoin
 
 class SubversionClientTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion client layer"""

@@ -3085,7 +3085,7 @@ def diff_svnpatch(sbox):
   svntest.main.run_svn(None, 'propdel', 'aprop', beta_path)
 
   # turn iota into a modified binary file
-  svntest.main.file_append('iota', "\nSome more bytes.\n")
+  svntest.main.file_append_binary('iota', "\nSome more bytes.\n")
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', 'iota')  
 

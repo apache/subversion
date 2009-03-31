@@ -24,6 +24,7 @@
 
 #include "svn_client.h"
 #include "client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
@@ -193,8 +194,8 @@ organize_lock_targets(const char **common_parent,
      1 member, so we special case that. */
   if (apr_is_empty_array(rel_targets))
     {
-      char *base_name = svn_path_basename(*common_parent, pool);
-      *common_parent = svn_path_dirname(*common_parent, pool);
+      char *base_name = svn_uri_basename(*common_parent, pool);
+      *common_parent = svn_uri_dirname(*common_parent, pool);
 
       APR_ARRAY_PUSH(rel_targets, char *) = base_name;
     }
@@ -279,8 +280,8 @@ organize_lock_targets(const char **common_parent,
          1 member, so we special case that (again). */
       if (apr_is_empty_array(rel_urls))
         {
-          char *base_name = svn_path_basename(common_url, pool);
-          common_url = svn_path_dirname(common_url, pool);
+          char *base_name = svn_uri_basename(common_url, pool);
+          common_url = svn_uri_dirname(common_url, pool);
           APR_ARRAY_PUSH(rel_urls, char *) = base_name;
         }
 

@@ -1,0 +1,84 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: incompatible
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_entry
+                      svn_wc_entries_read
+     New Behavior in: 1.7
+      Related Issues: n/a
+
+
+== Details of Previous Behavior ==
+
+Entries can record copyfrom_url and copyfrom_rev, indicating they are
+the root of a copied subtree. Children of this subtree are marked as
+COPIED, but have null information for the url and rev. These children
+may also have revision values that different from their parent,
+indicating a copy of a mixed-rev working copy subtree.
+
+The copyfrom information could be attached to a node, written into the
+entries file, and retrieved as written.
+
+
+== Details of New Behavior ==
+
+If the copyfrom_url of a child is equal to its parent's copyfrom_url
+joined with the child's name, then it will be omitted from the entry
+record.
+
+From a behavior standpoint, the two data representations are
+equivalent. The child gets its copyfrom information inherited from its
+parent, rather than explicitly stating what it will be.
+
+The copyfrom_rev is also left unset, since entry->revision contains
+that information.
+
+
+== Rationale for Change ==
+
+The old entries system allowed for a copied subtree to contain mixed
+source revisions, but it would *not* record these in the copyfrom_rev
+field. The variant revisions were stored in entry->revision instead.
+
+The new storage system only has the copyfrom_rev concept, but *not* a
+separate revision. Thus, when a change in revision value is detected,
+a second copyfrom record is constructed, indicating a copy of the
+different revision.
+
+[ Note: This is conceptually correct, and is even how we perform the
+        commit: at a series of copies of each source path/rev pair.
+        Thus, our new storage system is closer to the intended changes
+        to be made at commit time. ]
+
+On retrieval, subversion does not expect these extra copyfrom
+records. They look like multiple "add with history", rather than the
+*actual* operation of a single add of a mixed-rev subtree. Thus, we
+look for these "introduced" copyfrom records at retrieval time, and
+elide them, producing the original mixed-rev subtree.
+
+The variant behavior occurs when multiple add-with-history operations
+*did* occur. The old behavior would report a copyfrom in multiple
+locations, even though it is redundant due to the parent/child
+relationship in the copyfrom_url. Some code "expects" these multiple
+adds-with-histories.
+
+
+== Impact on API Users ==
+
+The change could go in one of two directions:
+
+1) add the extra copies, and let API clients see them
+2) hide the extra copies, but unknowningly hide true multiple-adds
+
+We've decided on the second because it removes information from the
+data flow, rather than introducing new data. For all the callers may
+know, this is simply an optimization made internally when we see a
+parent/child pair of copyfrom records align with each other.
+
+There should be little impact on callers since the data represents the
+exact same resulting state. We're simply removing some indication of
+*how* that state was arrived at. Hopefully, API users do not care
+about the historical aspect of the state.
+
+Note: we actually perform fewer operations during the commit process
+as a result of collapsing the copyfrom information.

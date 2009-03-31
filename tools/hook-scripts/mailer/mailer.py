@@ -707,7 +707,7 @@ class DiffGenerator:
     return True
 
   def __getitem__(self, idx):
-    while 1:
+    while True:
       if self.idx == len(self.changelist):
         raise IndexError
 

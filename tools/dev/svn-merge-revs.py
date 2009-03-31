@@ -79,7 +79,7 @@ for rev in revs:
 
   # Get our log
   fh = os.popen(log_cmd)
-  while 1:
+  while True:
     line = fh.readline()
     if not line:
       break
@@ -88,7 +88,7 @@ for rev in revs:
 
   # Get our diff
   fh = os.popen(diff_cmd)
-  while 1:
+  while True:
     line = fh.readline()
     if not line:
       break

@@ -17,6 +17,7 @@
  */
 
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
@@ -163,7 +164,7 @@ svn_client_list2(const char *path_or_url,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_path_split(url, &parent_url, &base_name, pool);
+              svn_uri_split(url, &parent_url, &base_name, pool);
 
               /* 'base_name' is now the last component of an URL, but we want
                  to use it as a plain file name. Therefore, we must URI-decode

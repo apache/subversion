@@ -42,7 +42,7 @@ def main(input, output, filename):
 
     if line.strip():
       # got something besides whitespace. write it out.
-      output.write('  "' + line + '"\\\n')
+      output.write('  "' + line + '\\n"\\\n')
 
   output.write('  ""\n')
 

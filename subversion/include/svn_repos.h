@@ -2181,12 +2181,9 @@ svn_repos_dump_fs(svn_repos_t *repos,
 
 /**
  * Read and parse dumpfile-formatted @a dumpstream, reconstructing
- * filesystem revisions in already-open @a repos, handling uuids
- * in accordance with @a uuid_action.
- *
- * Read and parse dumpfile-formatted @a dumpstream, reconstructing
- * filesystem revisions in already-open @a repos.  Use @a pool for all
- * allocation.  If non-@c NULL, send feedback to @a feedback_stream.
+ * filesystem revisions in already-open @a repos, handling uuids in
+ * accordance with @a uuid_action.  If non-@c NULL, send feedback to
+ * @a feedback_stream.  Use @a pool for all allocation.
  *
  * If the dumpstream contains copy history that is unavailable in the
  * repository, an error will be thrown.

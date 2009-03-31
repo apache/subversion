@@ -17,6 +17,7 @@
 ######################################################################
 
 # General modules
+import sys
 import os
 import warnings
 
@@ -1127,6 +1128,155 @@ def external_into_path_with_spaces(sbox):
       os.path.join(wc_dir, 'A', 'another copy of D'),
   ])
 
+#----------------------------------------------------------------------
+
+# Issue #3368
+def binary_file_externals(sbox):
+  "binary file externals"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a binary file A/theta, write PNG file data into it.
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
+  svntest.main.run_svn(None, 'add', theta_path)
+
+  # Commit the binary file
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+
+  # Create a file external on the binary file A/theta
+  C = os.path.join(wc_dir, 'A', 'C')
+  external = os.path.join(C, 'external')
+  externals_prop = "^/A/theta external\n"
+
+  # Set and commit the property.
+  change_external(C, externals_prop)
+
+
+  # Now, /A/C/external is designated as a file external pointing to
+  # the binary file /A/theta, but the external file is not there yet.
+  # Try to actually insert the external file via a verified update:
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/C/external'      : Item(status='E '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta'      : Item(
+                       theta_contents,
+                       props={'svn:mime-type' : 'application/octet-stream'}),
+    'A/C'          : Item(props={'svn:externals':externals_prop}),
+    'A/C/external' : Item(
+                       theta_contents,
+                       props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/theta'      : Item(status='  ', wc_rev=3),
+    'A/C/external' : Item(status='  ', wc_rev=3, switched='X'),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+#----------------------------------------------------------------------
+
+# Issue #3351.
+def update_lose_file_external(sbox):
+  "delete a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+
+  # Create a file external in A/C/external on the file A/mu
+  C = os.path.join(wc_dir, 'A', 'C')
+  external = os.path.join(C, 'external')
+  externals_prop = "^/A/mu external\n"
+
+  # Set and commit the property.
+  change_external(C, externals_prop)
+
+
+  # Now, /A/C/external is designated as a file external pointing to
+  # the file /A/mu, but the external file is not there yet.
+  # Try to actually insert the external file via an update:
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/C/external'      : Item(status='E '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/C'          : Item(props={'svn:externals':externals_prop}),
+    'A/C/external' : Item("This is the file 'mu'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/C/external' : Item(status='  ', wc_rev='2', switched='X'),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  # now remove the svn:external prop
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'svn:externals', C)
+
+  # commit the property change
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C' : Item(verb='Sending'),
+    })
+
+  # (re-use above expected_status)
+  expected_status.tweak('A/C', wc_rev = 3)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # try to actually get rid of the external via an update
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  # (re-use above expected_disk)
+  expected_disk.tweak('A/C', props = {})
+  expected_disk.remove('A/C/external')
+
+  # (re-use above expected_status)
+  expected_status.tweak(wc_rev = 3)
+  expected_status.remove('A/C/external')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+
 ########################################################################
 # Run the tests
 
@@ -1150,6 +1300,8 @@ test_list = [ None,
               cannot_move_or_remove_file_externals,
               can_place_file_external_into_dir_external,
               external_into_path_with_spaces,
+              XFail(binary_file_externals),
+              XFail(update_lose_file_external),
              ]
 
 if __name__ == '__main__':

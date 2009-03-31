@@ -133,6 +133,18 @@ CREATE TABLE BASE_NODE (
      ### nodes */
   incomplete_children  INTEGER,
 
+  /* The serialized file external information. */
+  /* ### hack.  hack.  hack.
+     ### This information is already stored in properties, but because the
+     ### current working copy implementation is such a pain, we can't
+     ### readily retrieve it, hence this temporary cache column.
+     ### When it is removed, be sure to remove the extra column from
+     ### the db-tests.
+
+     ### Note: This is only here as a hack, and should *NOT* be added
+     ### to any wc_db APIs.  */
+  file_external  TEXT,
+
   PRIMARY KEY (wc_id, local_relpath)
   );
 

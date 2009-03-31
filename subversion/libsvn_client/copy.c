@@ -26,6 +26,7 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_time.h"
@@ -242,7 +243,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
 
   get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
   if (copy_pairs->nelts == 1)
-    dst_parent = svn_path_dirname(dst_parent, pool);
+    dst_parent = svn_dirent_dirname(dst_parent, pool);
 
   /* Because all copies are to the same destination directory, we can open
      the directory once, and use it for each copy. */
@@ -306,7 +307,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      svn_path_split(pair->src, &src_parent, NULL, iterpool);
+      svn_dirent_split(pair->src, &src_parent, NULL, iterpool);
 
       SVN_ERR(svn_wc_adm_open3(&src_access, NULL, src_parent, TRUE,
                                pair->src_kind == svn_node_dir ? -1 : 0,
@@ -405,7 +406,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
                                  _("Path '%s' already exists"),
                                  svn_path_local_style(pair->dst, pool));
 
-      svn_path_split(pair->dst, &pair->dst_parent, &pair->base_name, pool);
+      svn_dirent_split(pair->dst, &pair->dst_parent, &pair->base_name, pool);
 
       /* Make sure the destination parent is a directory and produce a clear
          error message if it is not. */
@@ -583,7 +584,7 @@ find_absent_parents1(svn_ra_session_t *ra_session,
       svn_pool_clear(iterpool);
 
       APR_ARRAY_PUSH(new_dirs, const char *) = dir;
-      svn_path_split(dir, &dir, NULL, pool);
+      svn_dirent_split(dir, &dir, NULL, pool);
 
       SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
                                 &kind, iterpool));
@@ -622,7 +623,7 @@ find_absent_parents2(svn_ra_session_t *ra_session,
   while (kind == svn_node_none)
     {
       APR_ARRAY_PUSH(new_dirs, const char *) = root_url;
-      svn_path_split(root_url, &root_url, NULL, pool);
+      svn_uri_split(root_url, &root_url, NULL, pool);
 
       SVN_ERR(svn_ra_reparent(ra_session, root_url, pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -698,7 +699,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
              *parent* of all three. */
           if (strcmp(pair->src, top_url) == 0)
             {
-              top_url = svn_path_dirname(top_url, pool);
+              top_url = svn_uri_dirname(top_url, pool);
             }
         }
     }
@@ -756,7 +757,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       const char *dir;
 
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
-      dir = svn_path_is_child(top_url, svn_path_dirname(pair->dst, pool),
+      dir = svn_path_is_child(top_url, svn_uri_dirname(pair->dst, pool),
                               pool);
 
       /* Imagine a situation where the user tries to copy an existing source
@@ -794,7 +795,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
           && svn_path_is_child(pair->dst, pair->src, pool) != NULL)
         {
           info->resurrection = TRUE;
-          top_url = svn_path_dirname(top_url, pool);
+          top_url = svn_uri_dirname(top_url, pool);
 
           SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
         }
@@ -1047,9 +1048,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
   /* ### But why start by getting the _parent_ of the first one? */
-  svn_path_split(APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst,
-                 &top_dst_url,
-                 NULL, pool);
+  svn_uri_split(APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst,
+                &top_dst_url,
+                NULL, pool);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
@@ -1472,7 +1473,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
   if (copy_pairs->nelts == 1)
-    top_src_url = svn_path_dirname(top_src_url, pool);
+    top_src_url = svn_uri_dirname(top_src_url, pool);
 
   /* Open a repository session to the longest common src ancestor.  We do not
      (yet) have a working copy, so we don't have a corresponding path and
@@ -1534,7 +1535,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
       /* Make sure the destination parent is a directory and produce a clear
          error message if it is not. */
-      dst_parent = svn_path_dirname(pair->dst, iterpool);
+      dst_parent = svn_dirent_dirname(pair->dst, iterpool);
       SVN_ERR(svn_io_check_path(dst_parent, &dst_parent_kind, iterpool));
       if (make_parents && dst_parent_kind == svn_node_none)
         {
@@ -1603,7 +1604,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
        not exist.  ### TODO:  we should probably walk up the wc here,
        in case the parent dir has an imaginary URL.  */
     if (copy_pairs->nelts == 1)
-      parent = svn_path_dirname(top_dst_path, pool);
+      parent = svn_dirent_dirname(top_dst_path, pool);
     else
       parent = top_dst_path;
     dst_err = svn_client_uuid_from_path(&dst_uuid, parent, adm_access,

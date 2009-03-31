@@ -618,20 +618,27 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
 }
 
 
-/* Helper for merge_props_changed().  Filter out mergeinfo property additions
-   to PATH when those additions refer to the same line of history as PATH.
+/* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
    to be added to the working copy PATH.  ADM_ACCESS and MERGE_B are cascaded
    from the arguments of the same name in merge_props_changed().
 
-   If mergeinfo is not being honored, do nothing.  Otherwise examine the added
-   mergeinfo, looking at each range (or single rev) of each source path.  If a
-   source_path/range refers to the same line of history as PATH (pegged at its
-   base revision), then filter out that range.  If the entire rangelist for a
-   given path is filtered then filter out the path as well.  Set outgoing
-   *PROPS to a shallow copy (allocated in POOL) of incoming *PROPS minus the
-   filtered self-referential mergeinfo. */
+   If mergeinfo is not being honored and MERGE_B->SAME_REPOS is true, do
+   nothing.  If MERGE_B->SAME_REPOS is false then filter out all mergeinfo
+   property additions (Issue #3383) from *PROPS.  If MERGE_B->SAME_REPOS is
+   true then filter out mergeinfo property additions to PATH when those
+   additions refer to the same line of history as PATH as described below.  
+
+   If mergeinfo is being honored and MERGE_B->SAME_REPOS is true
+   then examine the added mergeinfo, looking at each range (or single rev)
+   of each source path.  If a source_path/range refers to the same line of
+   history as PATH (pegged at its base revision), then filter out that range.
+   If the entire rangelist for a given path is filtered then filter out the
+   path as well.
+
+   If any filtering occurs, set outgoing *PROPS to a shallow copy (allocated
+   in POOL) of incoming *PROPS minus the filtered mergeinfo. */
 static svn_error_t*
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *path,
@@ -644,16 +651,19 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   int i;
   const svn_wc_entry_t *target_entry;
 
-  /* If we aren't honoring mergeinfo, get outta here. */
+  /* If we aren't honoring mergeinfo and this is a merge from the
+     same repository, then get outta here. */
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
-  if (! honor_mergeinfo)
+  if (! honor_mergeinfo && merge_b->same_repos)
     return SVN_NO_ERROR;
 
-  /* If PATH itself is newly added or replaced there is no need to filter. */
+  /* If this is a merge from the same repository and PATH itself is
+     newly added or replaced there is no need to filter. */
   SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
                                   FALSE, pool));
-  if (target_entry->schedule == svn_wc_schedule_add
-      || target_entry->schedule == svn_wc_schedule_replace)
+  if (merge_b->same_repos
+      && (target_entry->schedule == svn_wc_schedule_add
+          || target_entry->schedule == svn_wc_schedule_replace))
     return SVN_NO_ERROR;
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
@@ -661,12 +671,20 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
     {
       svn_prop_t *prop = &APR_ARRAY_IDX((*props), i, svn_prop_t);
 
-      /* If this property isn't mergeinfo or is NULL valued (i.e. prop removal)
+      /* If this is a merge from a foreign repository we must strip all
+         incoming mergeinfo (including mergeinfo deletions).  Otherwise if
+         this property isn't mergeinfo or is NULL valued (i.e. prop removal)
          or empty mergeinfo it does not require any special handling.  There
          is nothing to filter out of empty mergeinfo and the concept of
          filtering doesn't apply if we are trying to remove mergeinfo
          entirely. */
-      if ((strcmp(prop->name, SVN_PROP_MERGEINFO) != 0)
+      if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
+          && (! merge_b->same_repos))
+        {
+          /* Issue #3383: We don't want mergeinfo from a foreign repos. */
+          continue;
+        }
+      else if ((strcmp(prop->name, SVN_PROP_MERGEINFO) != 0)
           || (! prop->value)       /* Removal of mergeinfo */
           || (! prop->value->len)) /* Empty mergeinfo */
         {
@@ -1276,9 +1294,13 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           const char *right_label = apr_psprintf(subpool,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
-          conflict_resolver_baton_t conflict_baton =
-            { merge_b->ctx->conflict_func, merge_b->ctx->conflict_baton,
-              &merge_b->conflicted_paths, merge_b->pool };
+          conflict_resolver_baton_t conflict_baton = { 0 };
+
+          conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
+          conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
+          conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
+          conflict_baton.pool = merge_b->pool;
+
           SVN_ERR(svn_wc_merge3(&merge_outcome,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
@@ -1360,6 +1382,11 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
          regular properties. */
       if ((! merge_b->same_repos)
           && (svn_property_kind(NULL, prop->name) != svn_prop_regular_kind))
+        continue;
+
+      /* Issue #3383: We don't want mergeinfo from a foreign repository. */
+      if ((! merge_b->same_repos)
+          && strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
         continue;
 
       apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
@@ -4375,9 +4402,8 @@ struct get_mergeinfo_walk_baton
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
    of type "struct get_mergeinfo_walk_baton *":  If PATH is switched,
    has explicit working svn:mergeinfo, is missing a child due to a sparse
-   checkout, is absent from disk, is scheduled for deletion, or if the walk
-   is being done as part of a reverse merge, then create a
-   svn_client__merge_path_t *representing *PATH, allocated in
+   checkout, is absent from disk, or is scheduled for deletion, then create
+   a svn_client__merge_path_t * representing *PATH, allocated in
    WB->CHILDREN_WITH_MERGEINFO->POOL, and push it onto the
    WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
@@ -4672,7 +4698,6 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         DEPTH is svn_depth_immediates.
      9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
         DEPTH is svn_depth_files.
-    10) do_directory_merge() is processing a reverse merge.
 
    If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
    for MERGE_CMD_BATON->TARGET (i.e. only criteria 7 is applied).
@@ -4718,11 +4743,20 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   apr_pool_t *iterpool;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { get_mergeinfo_walk_cb, get_mergeinfo_error_handler };
-  struct get_mergeinfo_walk_baton wb =
-    { adm_access, children_with_mergeinfo,
-      merge_src_canon_path, merge_cmd_baton->target, source_root_url,
-      url1, url2, revision1, revision2,
-      depth, ra_session, merge_cmd_baton->ctx };
+  struct get_mergeinfo_walk_baton wb = { 0 };
+
+  wb.base_access = adm_access;
+  wb.children_with_mergeinfo = children_with_mergeinfo;
+  wb.merge_src_canon_path = merge_src_canon_path;
+  wb.merge_target_path = merge_cmd_baton->target;
+  wb.source_root_url = source_root_url;
+  wb.url1 = url1;
+  wb.url2 = url2;
+  wb.revision1 = revision1;
+  wb.revision2 = revision2;
+  wb.depth = depth;
+  wb.ra_session = ra_session;
+  wb.ctx = merge_cmd_baton->ctx;
 
   /* Cover cases 1), 2), 6), and 7) by walking the WC to get all paths which
      have mergeinfo and/or are switched or are absent from disk or is the
@@ -4830,10 +4864,16 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     {
                       svn_boolean_t inherited;
                       svn_mergeinfo_t mergeinfo;
+                      const svn_wc_entry_t *child_entry;
+
+                      SVN_ERR(svn_wc__entry_versioned(
+                        &child_entry, child_of_noninheritable->path,
+                        adm_access, FALSE, iterpool));
+
                       SVN_ERR(svn_client__get_wc_mergeinfo
                               (&mergeinfo, &inherited, FALSE,
                                svn_mergeinfo_nearest_ancestor,
-                               entry, child_of_noninheritable->path,
+                               child_entry, child_of_noninheritable->path,
                                merge_cmd_baton->target, NULL, adm_access,
                                merge_cmd_baton->ctx, iterpool));
 
@@ -7647,7 +7687,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
   /* Limit new_catalog to the youngest revisions previously merged from
      the target to the source. */
-  if (SVN_IS_VALID_REVNUM(youngest_merged_rev))
+  if (SVN_IS_VALID_REVNUM(*youngest_merged_rev))
     {
       SVN_ERR(svn_mergeinfo__filter_catalog_by_ranges(&new_catalog,
                                                       new_catalog,

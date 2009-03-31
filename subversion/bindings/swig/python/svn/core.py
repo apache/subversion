@@ -121,7 +121,7 @@ def svn_path_compare_paths(path1, path2):
 
   # Common prefix was skipped above, next character is compared to
   # determine order
-  return cmp(char1, char2)
+  return (char1 > char2) - (char1 < char2)
 
 def svn_mergeinfo_merge(mergeinfo, changes):
   return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes)
@@ -144,7 +144,7 @@ class Stream:
     if amt is None:
       # read the rest of the stream
       chunks = [ ]
-      while 1:
+      while True:
         data = svn_stream_read(self._stream, SVN_STREAM_CHUNK_SIZE)
         if not data:
           break

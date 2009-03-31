@@ -1,3 +1,21 @@
+Version 1.6.1
+(?? ??? 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.1
+
+ User-visible changes:
+  * recommend Neon 0.28.4. (r36388)
+  * improve performance of 'svn merge --ignore-ancestry' (r36256)
+  * improve 'svn merge' performance with subtree mergeinfo (r36444)
+  * correctly proxy LOCK and UNLOCK requests (r36159)
+  * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
+  * fixed: unintialized memory errors (r36252, -3)
+  * fixed: potential working copy corruption (r36714)
+  * fixed: working copy upgrade error (r36302)
+
+ Developer-visible changes:
+  * fixed: warning with Python 2.6 and ctypes bindings (r36559)
+
+
 Version 1.6.0
 (20 Mar 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.0
@@ -10,13 +28,13 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * identical files share storage space in repository (issue #2286)
     * file-externals support for intra-repository files (issue #937)
     * "tree" conflicts now handled more gracefully (issue #2282, #2908)
+    * repository root relative URL support on most commands (issue #3193)
 
   - Minor new features and improvements:
     * pre-lock hook can now specify lock tokens via stdout (r32778)
     * svnmucc: support '--with-revprop' (r29492)
     * merge: log include-descendants in operational log (r30426, r30428)
     * improved operational logging for 'svn switch' (r30517)
-    * PKCS#11 (smartcard) support in libsvn_ra_neon (r29512)
     * new 'Header' keyword, similar to 'Id' but with full URL (r35386)
     * warn/disallow when storing plain-text passwords (r31046)
     * support KWallet and GNOME keyring for password storage (r31241, -337)
@@ -24,11 +42,11 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
     * add '--ignore-externals' option to 'svn cp' (issue #3365)
     * add '--with-no-revprops' to 'svn log' (issue #3286)
-    * Improved Python 3 compatibility
     * new 'svnadmin pack' command to compress FSFS filesystems
     * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
     * new public mod_dav_svn URI syntax:  path?[p=PEG][&r=REV] (r34076)
     * new 'svnsync info' command to show synchronization information (r35053)
+    * conflict resolver supports display-conflict, mine-conflict and theirs-conflict
 
   - Client-side bugfixes:
     * faulty reflexive merges (issue #2897)
@@ -53,7 +71,6 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * can't add .svn (and children) to your wc via '--parents' (r35819)
     * improved performance removing unversioned directories (r36111)
     * 'svn cp --parents' had path URL encoding issues (issue #3374)
-    * repository root relative URLs support peg revisions (issue #3193)
     * support shell quoting rules in externals definitions (issue #2461)
     * new SVN_LOCALE_DIR environment variable for localization (issue #2879)
     * scheme and domain name in urls handled case insensitive (issue #2475)
@@ -99,6 +116,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
   - Bindings:
     * new: ctypes python bindings
     * many improvements to all bindings (Java, Perl, Python, and Ruby)
+    * respect CFLAGS in SWIG bindings (r35879)
+    * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
 
 
 Version 1.5.6
@@ -215,7 +234,7 @@ http://svn.collab.net/repos/svn/tags/1.5.2
 
  Developer-visible changes:
   * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
-  * respect LDFLAGS in Swig bindings (r32416, r32421, r32442)
+  * respect LDFLAGS in SWIG bindings (r32416, r32421, r32442)
   * fixed: test failures in non-English locales (r32491)
 
 
