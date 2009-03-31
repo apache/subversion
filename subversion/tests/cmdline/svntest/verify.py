@@ -67,9 +67,9 @@ def createExpectedOutput(expected, match_all=True):
   """Return EXPECTED, promoted to an ExpectedOutput instance if not
   None.  Raise SVNIncorrectDatatype if the data type of EXPECTED is
   not handled."""
-  if isinstance(expected, type([])):
+  if isinstance(expected, list):
     expected = ExpectedOutput(expected)
-  elif isinstance(expected, type('')):
+  elif isinstance(expected, str):
     expected = RegexOutput(expected, match_all)
   elif expected == AnyOutput:
     expected = AnyOutput()
@@ -93,7 +93,7 @@ class ExpectedOutput:
   def __str__(self):
     return str(self.output)
 
-  def __cmp__(self, other):
+  def __eq__(self, other):
     """Return whether SELF.output matches OTHER (which may be a list
     of newline-terminated lines, or a single string).  Either value
     may be None."""
@@ -107,18 +107,21 @@ class ExpectedOutput:
       actual = other
 
     if isinstance(actual, list):
-      if isinstance(expected, type('')):
+      if isinstance(expected, str):
         expected = [expected]
       is_match = self.is_equivalent_list(expected, actual)
-    elif isinstance(actual, type('')):
+    elif isinstance(actual, str):
       is_match = self.is_equivalent_line(expected, actual)
     else: # unhandled type
       is_match = False
 
     if is_match:
-      return 0
+      return True
     else:
-      return 1
+      return False
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
 
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
@@ -216,14 +219,6 @@ class RegexOutput(ExpectedOutput):
 
 class UnorderedOutput(ExpectedOutput):
   """Marks unordered output, and performs comparisions."""
-
-  def __cmp__(self, other):
-    "Handle ValueError."
-    try:
-      return ExpectedOutput.__cmp__(self, other)
-    except ValueError:
-      return 1
-
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."
     if self.match_all:
@@ -319,7 +314,7 @@ def compare_and_display_lines(message, label, expected, actual,
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
-  if isinstance(actual, type('')):
+  if isinstance(actual, str):
     actual = [actual]
   actual = [line for line in actual if not line.startswith('DBG:')]
 

@@ -201,7 +201,7 @@ handle_auth_header(void *baton,
       ++auth_attr;
     }
   else
-    auth_name = NULL;
+    auth_name = header;
 
   ab->last_prot_name = auth_name;
 

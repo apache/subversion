@@ -152,6 +152,7 @@ svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
+entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 
 # Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
@@ -506,7 +507,9 @@ def run_command_stdin(command, error_expected, binary_mode=0,
         sys.stdout.write(x)
     raise Failure
 
-  return exit_code, stdout_lines, stderr_lines
+  return exit_code, \
+         [line for line in stdout_lines if not line.startswith("DBG:")], \
+         stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   "Create config directories and files"
@@ -593,16 +596,34 @@ def run_svnversion(*varargs):
   as list of lines."""
   return run_command(svnversion_binary, 1, 0, *varargs)
 
+def run_entriesdump(path):
+  """Run the entries-dump helper, returning a dict of Entry objects."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, None, path)
+  if verbose_mode:
+    ### finish the CMD output
+    print
+  if exit_code or stderr_lines:
+    ### report on this? or continue to just skip it?
+    return None
+
+  class Entry(object):
+    pass
+  entries = { }
+  exec ''.join(stdout_lines)
+  return entries
+
+
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
-  def visit(arg, dirname, names):
-    mode, mask = arg
-    for name in names:
-      fullname = os.path.join(dirname, name)
+  for dirpath, dirs, files in os.walk(path):
+    for name in dirs + files:
+      fullname = os.path.join(dirpath, name)
       if not os.path.islink(fullname):
         new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
         os.chmod(fullname, new_mode)
-  os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
 def safe_rmtree(dirname, retry=0):
@@ -971,6 +992,9 @@ def is_posix_os():
 
 def is_os_darwin():
   return sys.platform == 'darwin'
+
+def is_not_ng():
+  return 'SVN_ENABLE_NG' not in os.environ.keys()
 
 def server_has_mergeinfo():
   _check_command_line_parsed()

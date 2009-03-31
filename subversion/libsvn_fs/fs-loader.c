@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "svn_string.h"
 #include "svn_private_config.h"
 
+#include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
 
 #include "fs-loader.h"
@@ -1320,6 +1321,13 @@ svn_fs_print_modules(svn_stringbuf_t *output,
   return SVN_NO_ERROR;
 }
 
+svn_fs_path_change2_t *
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
+                           svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *pool)
+{
+  return svn_fs__path_change2_create(node_rev_id, change_kind, pool);
+}
 
 /* Return the library version number. */
 const svn_version_t *

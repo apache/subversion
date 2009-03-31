@@ -918,6 +918,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
       return SVN_NO_ERROR;
     }
+  SVN_ERR(err);
 
   len = sizeof(buf);
   err = svn_io_read_length_line(file, buf, &len, pool);
@@ -1089,10 +1090,10 @@ write_config(svn_fs_t *fs,
 ""                                                                           NL
 "[" CONFIG_SECTION_REP_SHARING "]"                                           NL
 "### To conserve space, the filesystem can optionally avoid storing"         NL
-"### duplicate representations.  This comes at a slight cost in performace," NL
-"### as maintaining a database of shared representations can increase"       NL
-"### commit times.  The space savings are dependent upon the size of the"    NL
-"### repository, the number of objects it contains and the amount of"        NL
+"### duplicate representations.  This comes at a slight cost in"             NL
+"### performance, as maintaining a database of shared representations can"   NL
+"### increase commit times.  The space savings are dependent upon the size"  NL
+"### of the repository, the number of objects it contains and the amount of" NL
 "### duplication between them, usually a function of the branching and"      NL
 "### merging process."                                                       NL
 "###"                                                                        NL
@@ -2521,7 +2522,7 @@ move_into_place(const char *old_filename,
     const char *dirname;
     apr_file_t *file;
 
-    dirname = svn_path_dirname(new_filename, pool);
+    dirname = svn_dirent_dirname(new_filename, pool);
     SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
                              pool));
     SVN_ERR(svn_io_file_flush_to_disk(file, pool));
@@ -7041,7 +7042,11 @@ svn_fs_fs__pack(svn_fs_t *fs,
                 void *cancel_baton,
                 apr_pool_t *pool)
 {
-  struct pack_baton pb = { fs, notify_func, notify_baton,
-                           cancel_func, cancel_baton };
+  struct pack_baton pb = { 0 };
+  pb.fs = fs;
+  pb.notify_func = notify_func;
+  pb.notify_baton = notify_baton;
+  pb.cancel_func = cancel_func;
+  pb.cancel_baton = cancel_baton;
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }

@@ -1008,10 +1008,12 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   apr_array_header_t *elidable_paths = apr_array_make(pool, 1,
                                                       sizeof(const char *));
   svn_delta_editor_t *editor = svn_delta_default_editor(pool);
-  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths,
-                                                mergeinfo_catalog,
-                                                pool};
+  struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
   int i;
+
+  cb.elidable_paths = elidable_paths;
+  cb.mergeinfo_catalog = mergeinfo_catalog;
+  cb.result_pool = pool;
 
   editor->open_root = elide_mergeinfo_catalog_open_root;
   editor->open_directory = elide_mergeinfo_catalog_open_directory;

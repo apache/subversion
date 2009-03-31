@@ -36,7 +36,7 @@ import svntest
 #    - prop status           (1)  (single letter)
 #    - wc-lockedness flag    (2)  (single letter: "L" or " ")
 #    - copied flag           (3)  (single letter: "+" or " ")
-#    - switched flag         (4)  (single letter: "S" or " ")
+#    - switched flag         (4)  (single letter: "S", "X" or " ")
 #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
 #    - tree conflict flag    (6)  (single letter: "C" or " ")
 #
@@ -67,7 +67,7 @@ import svntest
 _re_parse_status = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
-                              '([S ])'
+                              '([SX ])'
                               '([KOBT ])'
                               '([C ]) '
                               '([* ]) +'
@@ -261,7 +261,8 @@ class State:
     """Compare this State against an OTHER State, and display differences.
 
     Information will be written to stdout, displaying any differences
-    between the two states. LABEL will be used in the display.
+    between the two states. LABEL will be used in the display. SELF is the
+    "expected" state, and OTHER is the "actual" state.
 
     If any changes are detected/diplayed, then SVNTreeUnequal is raised.
     """
@@ -292,6 +293,32 @@ class State:
                                 norm_other.desc[path])
     
     raise svntest.tree.SVNTreeUnequal
+
+  def tweak_for_entries_compare(self):
+    for item in self.desc.values():
+      if item.status:
+        # when reading the entry structures, we don't examine for text or
+        # property mods, so clear those flags. we also do not examine the
+        # filesystem, so we cannot detect missing files.
+        if item.status[0] in 'M!':
+          item.status = ' ' + item.status[1]
+        if item.status[1] == 'M':
+          item.status = item.status[0] + ' '
+      if item.writelocked:
+        # we don't contact the repository, so our only information is what
+        # is in the working copy. 'K' means we have one and it matches the
+        # repos. 'O' means we don't have one but the repos says the item
+        # is locked by us, elsewhere. 'T' means we have one, and the repos
+        # has one, but it is now owned by somebody else. 'B' means we have
+        # one, but the repos does not.
+        #
+        # for each case of "we have one", set the writelocked state to 'K',
+        # and clear it to None for the others. this will match what is
+        # generated when we examine our working copy state.
+        if item.writelocked in 'TB':
+          item.writelocked = 'K'
+        elif item.writelocked == 'O':
+          item.writelocked = None
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
@@ -439,7 +466,7 @@ class State:
     return cls('', desc)
 
   @classmethod
-  def from_wc(cls, path, load_props=False, ignore_svn=True):
+  def from_wc(cls, base, load_props=False, ignore_svn=True):
     """Create a State object from a working copy.
 
     Walks the tree at PATH, building a State based on the actual files
@@ -447,48 +474,112 @@ class State:
     will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
     True, then the .svn subdirectories will be excluded from the State.
     """
-    # generally, the OS wants '.' rather than ''
-    if not path:
-      path = '.'
+    if not base:
+      # we're going to walk the base, and the OS wants "."
+      base = '.'
 
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    def path_to_key(p, l=len(path)+1):
-      if p == path:
-        return ''
-      assert p.startswith(path + os.sep), \
-          "'%s' is not a prefix of '%s'" % (path + os.sep, p)
-      return to_relpath(p[l:])
-
-    def _walker(baton, dirname, names):
-      parent = path_to_key(dirname)
+    for dirpath, dirs, files in os.walk(base):
+      parent = path_to_key(dirpath, base)
       if parent:
         parent += '/'
-      if ignore_svn and (dot_svn in names):
-        names.remove(dot_svn)
-      for name in names:
-        node = os.path.join(dirname, name)
+      if ignore_svn and dot_svn in dirs:
+        dirs.remove(dot_svn)
+      for name in dirs + files:
+        node = os.path.join(dirpath, name)
         if os.path.isfile(node):
           contents = open(node, 'r').read()
         else:
           contents = None
         desc['%s%s' % (parent, name)] = StateItem(contents=contents)
 
-    os.path.walk(path, _walker, None)
-
     if load_props:
-      paths = [os.path.join(path, to_ospath(p)) for p in desc.keys()]
-      paths.append(path)
+      paths = [os.path.join(base, to_ospath(p)) for p in desc.keys()]
+      paths.append(base)
       all_props = svntest.tree.get_props(paths)
       for node, props in all_props.items():
-        if node == path:
+        if node == base:
           desc['.'] = StateItem(props=props)
         else:
-          if path == '.':
+          if base == '.':
             # 'svn proplist' strips './' from the paths. put it back on.
             node = os.path.join('.', node)
-          desc[path_to_key(node)].props = props
+          desc[path_to_key(node, base)].props = props
+
+    return cls('', desc)
+
+  @classmethod
+  def from_entries(cls, base):
+    """Create a State object from a working copy, via the old "entries" API.
+
+    Walks the tree at PATH, building a State based on the information
+    provided by the old entries API, as accessed via the 'entries-dump'
+    program.
+    """
+    ### delete the following line to experiment with the new entries testing
+    return None
+
+    if not base:
+      # we're going to walk the base, and the OS wants "."
+      base = '.'
+
+    if os.path.isfile(base):
+      # a few tests run status on a single file. quick-and-dirty this. we
+      # really should analyze the entry (similar to below) to be general.
+      dirpath, basename = os.path.split(base)
+      entries = svntest.main.run_entriesdump(dirpath)
+      return cls('', {
+          to_relpath(base): StateItem.from_entry(entries[basename]),
+          })
+
+    desc = { }
+    dot_svn = svntest.main.get_admin_name()
+
+    for dirpath, dirs, files in os.walk(base):
+      if dot_svn in dirs:
+        # don't visit the .svn subdir
+        dirs.remove(dot_svn)
+      else:
+        # this is not a versioned directory. remove all subdirectories since
+        # we don't want to visit them. then skip this directory.
+        dirs[:] = []
+        continue
+
+      entries = svntest.main.run_entriesdump(dirpath)
+
+      parent = to_relpath(dirpath)
+      parent_url = entries[''].url
+
+      for name, entry in entries.items():
+        # if the entry is marked as DELETED *and* it is something other than
+        # schedule-add, then skip it. we can add a new node "over" where a
+        # DELETED node lives.
+        if entry.deleted and entry.schedule != 1:
+          continue
+        item = StateItem.from_entry(entry)
+        if name:
+          desc['%s/%s' % (parent, name)] = item
+          implied_url = '%s/%s' % (parent_url, name)
+        else:
+          item._url = entry.url  # attach URL to directory StateItems
+          desc[parent] = item
+
+          grandpa, this_name = repos_split(parent)
+          if grandpa in desc:
+            implied_url = '%s/%s' % (desc[grandpa]._url, this_name)
+          else:
+            implied_url = None
+
+        if implied_url and implied_url != entry.url:
+          item.switched = 'S'
+
+      # only recurse into directories found in this entries. remove any
+      # which are not mentioned.
+      unmentioned = set(dirs) - set(entries.keys())
+      for subdir in unmentioned:
+        dirs.remove(subdir)
 
     return cls('', desc)
 
@@ -551,8 +642,10 @@ class StateItem:
   def __eq__(self, other):
     if not isinstance(other, StateItem):
       return False
-    v_self = vars(self)
-    v_other = vars(other)
+    v_self = dict([(k, v) for k, v in vars(self).items()
+                   if not k.startswith('_')])
+    v_other = dict([(k, v) for k, v in vars(other).items()
+                    if not k.startswith('_')])
     if self.treeconflict is None:
       v_other = v_other.copy()
       v_other['treeconflict'] = None
@@ -585,6 +678,54 @@ class StateItem:
 
     return (os.path.normpath(path), self.contents, self.props, atts)
 
+  @classmethod
+  def from_entry(cls, entry):
+    status = '  '
+    if entry.schedule == 1:  # svn_wc_schedule_add
+      status = 'A '
+    elif entry.schedule == 2:  # svn_wc_schedule_delete
+      status = 'D '
+    elif entry.schedule == 3:  # svn_wc_schedule_replace
+      status = 'R '
+    elif entry.conflict_old:
+      ### I'm assuming we only need to check one, rather than all conflict_*
+      status = 'C '
+
+    ### is this the sufficient? guessing here w/o investigation.
+    if entry.prejfile:
+      status = status[0] + 'C'
+
+    if entry.locked:
+      locked = 'L'
+    else:
+      locked = None
+
+    if entry.copied:
+      wc_rev = '-'
+      copied = '+'
+    else:
+      if entry.revision == -1:
+        wc_rev = '?'
+      else:
+        wc_rev = entry.revision
+      copied = None
+
+    ### figure out switched
+    switched = None
+
+    if entry.lock_token:
+      writelocked = 'K'
+    else:
+      writelocked = None
+
+    return cls(status=status,
+               wc_rev=wc_rev,
+               locked=locked,
+               copied=copied,
+               switched=switched,
+               writelocked=writelocked,
+               )
+
 
 if os.sep == '/':
   to_relpath = to_ospath = lambda path: path
@@ -593,6 +734,32 @@ else:
     return path.replace(os.sep, '/')
   def to_ospath(path):
     return path.replace('/', os.sep)
+
+
+def path_to_key(path, base):
+  if path == base:
+    return ''
+
+  if base.endswith(os.sep) or base.endswith('/') or base.endswith(':'):
+    # Special path format on Windows:
+    #  'C:/' Is a valid root which includes its separator ('C:/file')
+    #  'C:'  is a valid root which isn't followed by a separator ('C:file')
+    #
+    # In this case, we don't need a separator between the base and the path.
+    pass
+  else:
+    # Account for a separator between the base and the relpath we're creating
+    base += os.sep
+
+  assert path.startswith(base), "'%s' is not a prefix of '%s'" % (base, path)
+  return to_relpath(path[len(base):])
+
+
+def repos_split(repos_relpath):
+  idx = repos_relpath.rfind('/')
+  if idx == -1:
+    return '', repos_relpath
+  return repos_relpath[:idx], repos_relpath[idx+1:]
 
 
 # ------------

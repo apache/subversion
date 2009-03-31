@@ -95,7 +95,8 @@ class hashDir:
 
   def __init__(self, rootdir):
     self.allfiles = []
-    os.path.walk(rootdir, self.walker_callback, len(rootdir))
+    for dirpath, dirs, files in os.walk(rootdir):
+      self.walker_callback(len(rootdir), dirpath, dirs + files)
 
   def gen_seed(self):
     # Return a base64-encoded (kinda ... strip the '==\n' from the
@@ -275,7 +276,8 @@ def main():
   if seed is None:
     seed = hashDir(rootdir).gen_seed()
   scrambler = Scrambler(seed, vc_actions, dry_run, quiet)
-  os.path.walk(rootdir, walker_callback, scrambler)
+  for dirpath, dirs, files in os.walk(rootdir):
+    walker_callback(scrambler, dirpath, dirs + files)
   scrambler.enact(limit)
 
 if __name__ == '__main__':

@@ -35,7 +35,7 @@ class HistoryChecker:
   def _check_history(self, path, revision):
     root = fs.revision_root(self.fs_ptr, revision)
     changes = fs.paths_changed(root)
-    while 1:
+    while True:
       if path in changes:
         return 1
       if path == '/':
@@ -55,8 +55,7 @@ class HistoryChecker:
 
 def check_history(fs_ptr, path, revision):
   history = HistoryChecker(fs_ptr)
-  repos.history(fs_ptr, path, history.add_history,
-		1, revision, 1)
+  repos.history(fs_ptr, path, history.add_history, 1, revision, 1)
 
 
 def main():

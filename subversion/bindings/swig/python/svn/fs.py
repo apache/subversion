@@ -73,7 +73,7 @@ class FileDiff:
     if path is not None:
       stream = file_contents(root, path, pool)
       try:
-        while 1:
+        while True:
           chunk = _svncore.svn_stream_read(stream, _svncore.SVN_STREAM_CHUNK_SIZE)
           if not chunk:
             break

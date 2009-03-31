@@ -753,8 +753,8 @@ def run_and_verify_info(expected_infos, *args):
                                     "not found" % (key, value))
         if value is not None and not re.search(value, actual[key]):
           raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
-                                           "  Expected: '%s'\n"
-                                           "  Found:    '%s'\n"
+                                           "  Expected: '%s' (regex)\n"
+                                           "  Found:    '%s' (string)\n"
                                            % (key, value, actual[key]))
 
   except:
@@ -1013,7 +1013,7 @@ def run_and_verify_patch(dir, patch_path,
 
   # when the expected output is a list, we want a line-by-line
   # comparison to happen instead of a tree comparison
-  if isinstance(output_tree, type([])):
+  if isinstance(output_tree, list):
     verify.verify_outputs(None, out, err, output_tree, error_re_string)
     output_tree = None
 
@@ -1209,7 +1209,10 @@ def run_and_verify_status(wc_dir_name, output_tree,
   Returns on success, raises on failure."""
 
   if isinstance(output_tree, wc.State):
+    output_state = output_tree
     output_tree = output_tree.old_tree()
+  else:
+    output_state = None
 
   exit_code, output, errput = main.run_svn(None, 'status', '-v', '-u', '-q',
                                            wc_dir_name)
@@ -1226,6 +1229,19 @@ def run_and_verify_status(wc_dir_name, output_tree,
     print("ACTUAL STATUS TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
+
+  # if we have an output State, and we can/are-allowed to create an
+  # entries-based State, then compare the two.
+  if output_state:
+    entries_state = wc.State.from_entries(wc_dir_name)
+    if entries_state:
+      tweaked = output_state.copy()
+      tweaked.tweak_for_entries_compare()
+      try:
+        tweaked.compare_and_display('entries', entries_state)
+      except tree.SVNTreeUnequal:
+        ### do something more
+        raise
 
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us

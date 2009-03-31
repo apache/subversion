@@ -95,7 +95,7 @@ if __name__ == "__main__":
   elif sys.argv[1] == 'parse':
     if len(sys.argv) > 2:
       usage_and_exit()
-    while 1:
+    while True:
       line = sys.stdin.readline()
       if not line:
         break

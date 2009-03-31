@@ -356,7 +356,7 @@ class Template:
 
     # if the value has a 'read' attribute, then it is a stream: copy it
     if hasattr(value, 'read'):
-      while 1:
+      while True:
         chunk = value.read(16384)
         if not chunk:
           break

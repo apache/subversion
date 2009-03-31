@@ -73,7 +73,7 @@ class SVNShell(Cmd):
       return
     ### be nice to get some paging in here.
     stream = fs.file_contents(self.root, catpath)
-    while 1:
+    while True:
       data = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
       sys.stdout.write(data)
       if len(data) < core.SVN_STREAM_CHUNK_SIZE:
