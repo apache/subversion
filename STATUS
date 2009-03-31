@@ -139,17 +139,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36442, r36443
-   On Windows, don't error on access denied errors when creating a tempfile;
-   instead just retry creating a tempfile with a new name.
-   Notes:
-     r36442 is the fix and r36443 updates a comment just below the fix.
-   Justification:
-     This bug just showed up on our corporate SVN server when a post-commit
-     hook didn't exit.
-   Votes:
-     +1: rhuijben, gstein, pburba
-
  * r36149-r36151, r36156
    Fix starting apache httpd in daemon mode from python versions with
    win32process support. (Found after upgrading my python to 2.6.1)
