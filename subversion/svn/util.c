@@ -42,6 +42,7 @@
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_io.h"
@@ -158,7 +159,7 @@ svn_cl__edit_file_externally(const char *path,
   int sys_err;
   apr_status_t apr_err;
 
-  svn_path_split(path, &base_dir, &file_name, pool);
+  svn_dirent_split(path, &base_dir, &file_name, pool);
 
   SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
 
