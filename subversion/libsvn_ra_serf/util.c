@@ -846,6 +846,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
   svn_ra_serf__simple_request_context_t *ctx = baton;
   svn_ra_serf__server_error_t *server_err = &ctx->server_error;
 
+  /* If necessary, initialize our XML parser. */
   if (server_err && !server_err->init)
     {
       serf_bucket_t *hdrs;
@@ -867,21 +868,36 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->parser.cdata = cdata_207;
           server_err->parser.done = &ctx->done;
           server_err->parser.ignore_errors = TRUE;
-
-          status = svn_ra_serf__handle_xml_parser(request, response,
-                                                  &server_err->parser, pool);
-
-          if (ctx->done && server_err->error->apr_err == APR_SUCCESS)
-            {
-              svn_error_clear(server_err->error);
-              server_err->error = SVN_NO_ERROR;
-            }
-        }
+	}
       else
         {
           ctx->done = TRUE;
           server_err->error = SVN_NO_ERROR;
         }
+    }
+
+  /* If server_err->error still contains APR_SUCCESS, it means that we
+     have not successfully parsed the XML yet. */
+  if (server_err && server_err->error
+      && server_err->error->apr_err == APR_SUCCESS)
+    {
+      status = svn_ra_serf__handle_xml_parser(request, response,
+					      &server_err->parser, pool);
+
+      /* APR_EOF will be returned when parsing is complete.  If we see
+	 any other error, return it immediately.  In practice the only
+	 other error we expect to see is APR_EAGAIN, which indicates that
+	 we could not parse the XML because the contents are not yet
+	 available to be read. */
+      if (!APR_STATUS_IS_EOF(status))
+	{
+	  return status;
+	}
+      else if (ctx->done && server_err->error->apr_err == APR_SUCCESS)
+	{
+	  svn_error_clear(server_err->error);
+	  server_err->error = SVN_NO_ERROR;
+	}
     }
 
   status = svn_ra_serf__handle_discard_body(request, response,
