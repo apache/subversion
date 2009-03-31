@@ -13,7 +13,7 @@ Function(s) Affected: svn_wc_entry
 Entries can record copyfrom_url and copyfrom_rev, indicating they are
 the root of a copied subtree. Children of this subtree are marked as
 COPIED, but have null information for the url and rev. These children
-may also have revision values that different from their parent,
+may also have revision values that differ from their parent,
 indicating a copy of a mixed-rev working copy subtree.
 
 The copyfrom information could be attached to a node, written into the
