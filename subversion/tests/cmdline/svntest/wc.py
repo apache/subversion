@@ -18,6 +18,7 @@
 import os
 import sys
 import re
+import urllib
 
 import svntest
 
@@ -222,12 +223,9 @@ class State:
       return self
 
     base = to_relpath(os.path.normpath(self.wc_dir))
-    def join(path):
-      if path == '':
-        return base
-      return base + '/' + path
 
-    desc = dict([(join(path), item) for path, item in self.desc.items()])
+    desc = dict([(repos_join(base, path), item)
+                 for path, item in self.desc.items()])
     return State('', desc)
 
   def compare(self, other):
@@ -483,8 +481,6 @@ class State:
 
     for dirpath, dirs, files in os.walk(base):
       parent = path_to_key(dirpath, base)
-      if parent:
-        parent += '/'
       if ignore_svn and dot_svn in dirs:
         dirs.remove(dot_svn)
       for name in dirs + files:
@@ -493,7 +489,7 @@ class State:
           contents = open(node, 'r').read()
         else:
           contents = None
-        desc['%s%s' % (parent, name)] = StateItem(contents=contents)
+        desc[repos_join(parent, name)] = StateItem(contents=contents)
 
     if load_props:
       paths = [os.path.join(base, to_ospath(p)) for p in desc.keys()]
@@ -518,9 +514,6 @@ class State:
     provided by the old entries API, as accessed via the 'entries-dump'
     program.
     """
-    ### delete the following line to experiment with the new entries testing
-    return None
-
     if not base:
       # we're going to walk the base, and the OS wants "."
       base = '.'
@@ -549,7 +542,13 @@ class State:
 
       entries = svntest.main.run_entriesdump(dirpath)
 
-      parent = to_relpath(dirpath)
+      if dirpath == '.':
+        parent = ''
+      elif dirpath.startswith('./'):
+        parent = to_relpath(dirpath[2:])
+      else:
+        parent = to_relpath(dirpath)
+
       parent_url = entries[''].url
 
       for name, entry in entries.items():
@@ -558,17 +557,25 @@ class State:
         # DELETED node lives.
         if entry.deleted and entry.schedule != 1:
           continue
+        if name and entry.kind == 2:
+          # stub subdirectory. leave a "missing" StateItem in here. note
+          # that we can't put the status as "! " because that gets tweaked
+          # out of our expected tree.
+          item = StateItem(status='  ', wc_rev='?')
+          desc[repos_join(parent, name)] = item
+          continue
         item = StateItem.from_entry(entry)
         if name:
-          desc['%s/%s' % (parent, name)] = item
-          implied_url = '%s/%s' % (parent_url, name)
+          desc[repos_join(parent, name)] = item
+          implied_url = repos_join(parent_url, svn_url_quote(name))
         else:
           item._url = entry.url  # attach URL to directory StateItems
           desc[parent] = item
 
           grandpa, this_name = repos_split(parent)
           if grandpa in desc:
-            implied_url = '%s/%s' % (desc[grandpa]._url, this_name)
+            implied_url = repos_join(desc[grandpa]._url,
+                                     svn_url_quote(this_name))
           else:
             implied_url = None
 
@@ -756,10 +763,26 @@ def path_to_key(path, base):
 
 
 def repos_split(repos_relpath):
+  """Split a repos path into its directory and basename parts."""
   idx = repos_relpath.rfind('/')
   if idx == -1:
     return '', repos_relpath
   return repos_relpath[:idx], repos_relpath[idx+1:]
+
+
+def repos_join(base, path):
+  """Join two repos paths. This generally works for URLs too."""
+  if base == '':
+    return path
+  if path == '':
+    return base
+  return base + '/' + path
+
+
+def svn_url_quote(url):
+  # svn defines a different set of "safe" characters than Python does, so
+  # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
+  return urllib.quote(url, "!$&'()*+,-./:=@_~")
 
 
 # ------------

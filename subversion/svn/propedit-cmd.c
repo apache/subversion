@@ -27,6 +27,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -226,7 +227,7 @@ svn_cl__propedit(apr_getopt_t *os,
                   (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                    _("'%s' does not appear to be a working copy path"), target);
               if (entry->kind == svn_node_file)
-                svn_path_split(target, &base_dir, NULL, subpool);
+                svn_dirent_split(target, &base_dir, NULL, subpool);
             }
 
           /* Run the editor on a temporary file which contains the

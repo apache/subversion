@@ -23,6 +23,7 @@
 #include "client.h"
 #include "svn_client.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -471,7 +472,7 @@ svn_client_info2(const char *path_or_url,
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
-  svn_path_split(url, &parent_url, &base_name, pool);
+  svn_uri_split(url, &parent_url, &base_name, pool);
   base_name = svn_path_uri_decode(base_name, pool);
 
   /* Get the dirent for the URL itself. */
