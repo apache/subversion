@@ -34,6 +34,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_utf.h"
@@ -1144,9 +1145,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   drr->target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool);
+      svn_uri_split(drr->url1, &drr->anchor1, &drr->target1, pool);
       drr->target1 = svn_path_uri_decode(drr->target1, pool);
-      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool);
+      svn_uri_split(drr->url2, &drr->anchor2, &drr->target2, pool);
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
         drr->base_path = svn_path_dirname(drr->base_path, pool);

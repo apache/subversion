@@ -23,6 +23,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_config.h"
@@ -763,7 +764,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
         }
 
       /* Work back to the parent path. */
-      svn_path_split(current_path, &current_path, NULL, pool);
+      svn_dirent_split(current_path, &current_path, NULL, pool);
     }
 
   /* If the caller requested recursive access, we need to walk through

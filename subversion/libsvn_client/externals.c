@@ -29,6 +29,7 @@
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "client.h"
@@ -119,7 +120,7 @@ relegate_dir_external(const char *path,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_path_split(path, &parent_dir, &dirname, pool);
+      svn_dirent_split(path, &parent_dir, &dirname, pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
@@ -813,7 +814,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         case svn_node_dir:
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
-          svn_path_split(path, &parent, NULL, ib->iter_pool);
+          svn_dirent_split(path, &parent, NULL, ib->iter_pool);
           SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
 
           /* If we were handling renames the fancy way, then before
