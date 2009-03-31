@@ -93,7 +93,7 @@ class ExpectedOutput:
   def __str__(self):
     return str(self.output)
 
-  def __eq__(self, other):
+  def __cmp__(self, other):
     """Return whether SELF.output matches OTHER (which may be a list
     of newline-terminated lines, or a single string).  Either value
     may be None."""
@@ -116,12 +116,9 @@ class ExpectedOutput:
       is_match = False
 
     if is_match:
-      return True
+      return 0
     else:
-      return False
-
-  def __ne__(self, other):
-    return not self.__eq__(other)
+      return 1
 
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
@@ -219,6 +216,14 @@ class RegexOutput(ExpectedOutput):
 
 class UnorderedOutput(ExpectedOutput):
   """Marks unordered output, and performs comparisions."""
+
+  def __cmp__(self, other):
+    "Handle ValueError."
+    try:
+      return ExpectedOutput.__cmp__(self, other)
+    except ValueError:
+      return 1
+
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."
     if self.match_all:
