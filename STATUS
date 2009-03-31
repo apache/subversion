@@ -135,8 +135,3 @@ Approved changes:
      clearly wrong.
    Votes:
      +1: pburba, blair, stylesen
-
- * r36860
-   Fix an error leak.
-   Votes:
-     +1: danielsh, cmpilato, stylesen
