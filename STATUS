@@ -42,7 +42,6 @@ Candidate changes:
      The bug is only triggered when using an external merge tool with the
      --accept=launch option. I don't think we need to hold 1.6.0 on this.
    Votes:
-     -0: rhuijben (Looks like a feature enhancement for a patch release)
      +1: stsp (I'd say it's a fix for a feature we already support (merge
                under control of external non-interactive tool), albeit
                the feature is currently so buggy that you can't use it.)
