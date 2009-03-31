@@ -7,13 +7,26 @@ http://svn.collab.net/repos/svn/tags/1.6.1
   * improve performance of 'svn merge --ignore-ancestry' (r36256)
   * improve 'svn merge' performance with subtree mergeinfo (r36444)
   * correctly proxy LOCK and UNLOCK requests (r36159)
+  * prevent a crash when updating old working copies (r36751)
+  * don't let svnmerge.py delete a nonexistent property (r36086, -767, -769)
+  * don't fail when upgrading pre-1.2 repositories (r36851, -7)
+  * allow escaping of separator characters in autoprops (r36763, -84)
+  * improve tempfile creation robustness on Windows (r36442, -3)
+  * fixed: error leak and potential crash (r36860)
   * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
   * fixed: unintialized memory errors (r36252, -3)
   * fixed: potential working copy corruption (r36714)
   * fixed: working copy upgrade error (r36302)
+  * fixed: pointer dereference error (r36783)
 
  Developer-visible changes:
+  * ensure svn_subst_translate_cstring2() properly flushes data (r36747)
+  * make serf report a base checksum to apply_textdelta (r36890)
+  * syntax updates for strict C89 compilers (r36799)
+  * update RPM scripts for RHEL4 (r36834)
+  * allow tests to be run with Python 2.6.1 on Windows (r36149, -50, -51, -56)
   * fixed: warning with Python 2.6 and ctypes bindings (r36559)
+  * fixed: undefined references to svn_fs_path_change2_create() (r36823)
 
 
 Version 1.6.0
