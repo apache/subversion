@@ -28,6 +28,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -127,7 +128,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_path_split(common, &common, &bname, pool);
+      svn_uri_split(common, &common, &bname, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 

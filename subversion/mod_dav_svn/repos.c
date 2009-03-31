@@ -41,6 +41,7 @@
 #include "svn_props.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
+#include "svn_dirent_uri.h"
 #include "private/svn_log.h"
 
 #include "dav_svn.h"
@@ -2258,10 +2259,10 @@ get_parent_path(const char *path, apr_pool_t *pool)
 
   if (len > 0)
     {
-      /* Remove any trailing slash; else svn_path_split() asserts. */
+      /* Remove any trailing slash; else svn_dirent_split() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-      svn_path_split(tmp, &parentpath, &base_name, pool);
+      svn_dirent_split(tmp, &parentpath, &base_name, pool);
 
       return parentpath;
     }
