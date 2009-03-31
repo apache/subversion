@@ -15600,7 +15600,6 @@ test_list = [ None,
                          server_has_mergeinfo),
               tree_conflicts_merge_edit_onto_missing,
               tree_conflicts_merge_del_onto_missing,
-              wip,
              ]
 
 if __name__ == '__main__':
