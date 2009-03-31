@@ -23,6 +23,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 
@@ -208,7 +209,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
 
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
-      svn_path_split(path, &pdir, &bname, iterpool);
+      svn_dirent_split(path, &pdir, &bname, iterpool);
       if (strlen(pdir) > common_len)
         {
           const char *piece = pdir + common_len + 1;
