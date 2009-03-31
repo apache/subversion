@@ -100,16 +100,6 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
- * r36783
-    Dereference a pointer to a svn_revnum_t to check if it's a valid
-    revision.
-   Justification:
-     Thorugh sheer luck it doesn't appear that this can cause any problems,
-     see http://svn.haxx.se/dev/archive-2009-03/0746.shtml, but it is
-     clearly wrong.
-   Votes:
-     +1: pburba, blair
-
  * r36851, r36857
    'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
    'db/format' file.
@@ -119,10 +109,20 @@ Candidate changes for 1.5.7:
    Votes:
      +1: cmpilato, danielsh
 
+Approved changes:
+=================
+
+ * r36783
+    Dereference a pointer to a svn_revnum_t to check if it's a valid
+    revision.
+   Justification:
+     Thorugh sheer luck it doesn't appear that this can cause any problems,
+     see http://svn.haxx.se/dev/archive-2009-03/0746.shtml, but it is
+     clearly wrong.
+   Votes:
+     +1: pburba, blair, stylesen
+
  * r36860
    Fix an error leak.
    Votes:
-     +1: danielsh, cmpilato
-
-Approved changes:
-=================
+     +1: danielsh, cmpilato, stylesen
