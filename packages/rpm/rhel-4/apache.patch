@@ -1,0 +1,17 @@
+Fix the check for APACHE to correctly check APR version.
+
+--- build/ac-macros/apache.m4	2009/03/29 02:32:42	1.1
++++ build/ac-macros/apache.m4	2009/03/29 02:32:52
+@@ -85,10 +85,10 @@
+       AC_MSG_ERROR([unknown APR version])
+       ;;
+   esac
+-  AC_EGREP_CPP([apache_minor_version= *$apache_minor_version_wanted_regex],
++  AC_EGREP_CPP([apache_minor_version=.*$apache_minor_version_wanted_regex],
+                [
+ #include "$APXS_INCLUDE/ap_release.h"
+-apache_minor_version=AP_SERVER_MINORVERSION_NUMBER],
++apache_minor_version=AP_SERVER_MINORVERSION],
+                [AC_MSG_RESULT([yes])],
+                [AC_MSG_RESULT([no])
+                 AC_MSG_ERROR([Apache version incompatible with APR version])])

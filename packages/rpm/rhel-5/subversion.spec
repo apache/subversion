@@ -108,6 +108,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Mar 28 2009 David Summers <david@summersoft.fay.ar.us> r36833
+- [RHEL4] Changes to build 1.7 trunk, backported to 1.6.
+- Added patch to build with with new required non-RHEL4 python-2.4.6.
+- Added patch to fix Subversion APACHE APR version checking.
+
 * Sun Mar 01 2009 David Summers <david@summersoft.fay.ar.us> r36231
 - [RHEL5] Changes to build 1.7 trunk, backported to 1.6.
 
