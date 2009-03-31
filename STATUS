@@ -159,10 +159,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r36823
-   Fix undefined references to svn_fs_path_change2_create().
-   Justification:
-     Regression.
-   Votes:
-     +1: arfrever, hwright, rhuijben
