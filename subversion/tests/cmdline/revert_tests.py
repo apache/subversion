@@ -782,13 +782,22 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
-  expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
-  expected_status.tweak('A/D/G/pi',  status='A ', copied='+', wc_rev='-')
-  expected_status.tweak('A/D/G/tau', status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/rho',
+                        'A/D/G/pi',
+                        'A/D/G/tau',
+                        copied='+', wc_rev='-')
+  if not sbox.using_wc_ng():
+    # see notes/api-errata/wc003.txt. in wc-1 these nodes' individual
+    # copyfrom records come thru intact and appear as distinct additions.
+    expected_status.tweak('A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau', status='A ')
   expected_status.add({
-    'A/D/G/alpha' : Item(status='D ', copied='+', wc_rev='-'),
-    'A/D/G/beta' : Item(status='D ', copied='+', wc_rev='-')
+    'A/D/G/alpha' : Item(status='D ', wc_rev='3'),
+    'A/D/G/beta' : Item(status='D ', wc_rev='3'),
     })
+  ### these nodes are incorrectly reported as COPIED in wc-1. we probably
+  ### have to keep the extra COPIED markers in wc-ng.
+  expected_status.tweak('A/D/G/alpha', 'A/D/G/beta', copied='+', wc_rev='-')
+
   expected_skip = wc.State(wc_dir, { })
   expected_disk   = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
@@ -800,13 +809,18 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  expected_output = svntest.verify.UnorderedOutput(
-   ["Reverted '" + G_path + "'\n",
-    "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
-    "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
-    "Reverted '" + os.path.join(G_path, 'tau') + "'\n",
-    "Reverted '" + os.path.join(G_path, 'alpha') + "'\n",
-    "Reverted '" + os.path.join(G_path, 'beta') + "'\n"])
+  revert_paths = [G_path,
+                  os.path.join(G_path, 'alpha'),
+                  os.path.join(G_path, 'beta')]
+  if not sbox.using_wc_ng():
+    # see notes/api-errata/wc003.txt. in wc-1, these nodes' individual
+    # copyfrom records come thru intact as distinct additions to be reverted
+    revert_paths.extend([os.path.join(G_path, 'pi'),
+                         os.path.join(G_path, 'rho'),
+                         os.path.join(G_path, 'tau')])
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % path for path in revert_paths])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
