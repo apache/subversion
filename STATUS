@@ -163,16 +163,6 @@ Candidate changes:
    Votes:
      +1: dws
 
- * r36851, r36857
-   'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
-   'db/format' file.
-   Justification:
-     'svnadmin upgrade' was designed to allow for this situation, but clearly
-     does not.
-   Votes:
-     +1: kameshj (r36851 only)
-     +1: cmpilato, danielsh
-
  * r36874, r36875
    Fix crash when upgrading to 1.6 format (r36874).
    Modified change-svn-wc-format.py to create or update format file
@@ -187,3 +177,12 @@ Candidate changes:
 
 Approved changes:
 =================
+ * r36851, r36857
+   'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
+   'db/format' file.
+   Justification:
+     'svnadmin upgrade' was designed to allow for this situation, but clearly
+     does not.
+   Votes:
+     +1: kameshj, cmpilato, danielsh
+
