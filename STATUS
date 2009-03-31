@@ -138,15 +138,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r36149-r36151, r36156
-   Fix starting apache httpd in daemon mode from python versions with
-   win32process support. (Found after upgrading my python to 2.6.1)
-   Justification:
-     Without this fix I can't run the testsuite as non-admin after
-     installing 2.6.1.
-   Notes:
-     r36149 and r36150 contain the actual fix and r36151 and r36156 clean up
-     the mess I left after performing only partial commits.
-   Votes:
-     +1: rhuijben, arfrever, pburba
