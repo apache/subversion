@@ -525,6 +525,15 @@ class State:
       # we're going to walk the base, and the OS wants "."
       base = '.'
 
+    if os.path.isfile(base):
+      # a few tests run status on a single file. quick-and-dirty this. we
+      # really should analyze the entry (similar to below) to be general.
+      dirpath, basename = os.path.split(base)
+      entries = svntest.main.run_entriesdump(dirpath)
+      return cls('', {
+          to_relpath(base): StateItem.from_entry(entries[basename]),
+          })
+
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
@@ -538,9 +547,11 @@ class State:
         dirs[:] = []
         continue
 
-      parent = to_relpath(dirpath)
-
       entries = svntest.main.run_entriesdump(dirpath)
+
+      parent = to_relpath(dirpath)
+      parent_url = entries[''].url
+
       for name, entry in entries.items():
         # if the entry is marked as DELETED *and* it is something other than
         # schedule-add, then skip it. we can add a new node "over" where a
@@ -550,8 +561,19 @@ class State:
         item = StateItem.from_entry(entry)
         if name:
           desc['%s/%s' % (parent, name)] = item
+          implied_url = '%s/%s' % (parent_url, name)
         else:
+          item._url = entry.url  # attach URL to directory StateItems
           desc[parent] = item
+
+          grandpa, this_name = repos_split(parent)
+          if grandpa in desc:
+            implied_url = '%s/%s' % (desc[grandpa]._url, this_name)
+          else:
+            implied_url = None
+
+        if implied_url and implied_url != entry.url:
+          item.switched = 'S'
 
       # only recurse into directories found in this entries. remove any
       # which are not mentioned.
@@ -620,8 +642,10 @@ class StateItem:
   def __eq__(self, other):
     if not isinstance(other, StateItem):
       return False
-    v_self = vars(self)
-    v_other = vars(other)
+    v_self = dict([(k, v) for k, v in vars(self).items()
+                   if not k.startswith('_')])
+    v_other = dict([(k, v) for k, v in vars(other).items()
+                    if not k.startswith('_')])
     if self.treeconflict is None:
       v_other = v_other.copy()
       v_other['treeconflict'] = None
@@ -680,7 +704,10 @@ class StateItem:
       wc_rev = '-'
       copied = '+'
     else:
-      wc_rev = entry.revision
+      if entry.revision == -1:
+        wc_rev = '?'
+      else:
+        wc_rev = entry.revision
       copied = None
 
     ### figure out switched
@@ -726,6 +753,13 @@ def path_to_key(path, base):
 
   assert path.startswith(base), "'%s' is not a prefix of '%s'" % (base, path)
   return to_relpath(path[len(base):])
+
+
+def repos_split(repos_relpath):
+  idx = repos_relpath.rfind('/')
+  if idx == -1:
+    return '', repos_relpath
+  return repos_relpath[:idx], repos_relpath[idx+1:]
 
 
 # ------------
