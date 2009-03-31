@@ -1060,8 +1060,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
                   entry->schedule = svn_wc_schedule_normal;
                 }
 
-              /* ### copied nodes need to mirror their copyfrom_rev */
-              entry->revision = original_revision;
+              /* Copied nodes need to mirror their copyfrom_rev, if they
+                 don't have a revision of their own already. */
+              if (!SVN_IS_VALID_REVNUM(entry->revision))
+                entry->revision = original_revision;
             }
 
           /* Does this node have copyfrom_* information?  */
