@@ -114,13 +114,6 @@ Candidate changes:
    Votes:
      +1: steveking, gstein
 
- * r36834
-   Fixes to build Subversion RPM trunk (1.7) and 1.6.x for RHEL4.
-   Justification:
-     Trunk (1.7) and 1.6.x RHEL4 RPM won't build without these changes.
-   Votes:
-     +1: dws, gstein
-
  * r36874, r36875
    Fix crash when upgrading to 1.6 format (r36874).
    Modified change-svn-wc-format.py to create or update format file
@@ -168,3 +161,10 @@ Approved changes:
      the mess I left after performing only partial commits.
    Votes:
      +1: rhuijben, arfrever, pburba
+
+ * r36834
+   Fixes to build Subversion RPM trunk (1.7) and 1.6.x for RHEL4.
+   Justification:
+     Trunk (1.7) and 1.6.x RHEL4 RPM won't build without these changes.
+   Votes:
+     +1: dws, gstein
