@@ -46,18 +46,6 @@ Candidate changes:
                under control of external non-interactive tool), albeit
                the feature is currently so buggy that you can't use it.)
      
- * r36149-r36151, r36156
-   Fix starting apache httpd in daemon mode from python versions with
-   win32process support. (Found after upgrading my python to 2.6.1)
-   Justification:
-     Without this fix I can't run the testsuite as non-admin after
-     installing 2.6.1.
-   Notes:
-     r36149 and r36150 contain the actual fix and r36151 and r36156 clean up
-     the mess I left after performing only partial commits.
-   Votes:
-     +1: rhuijben, arfrever
-
  * r36509
    Don't contact the server asking about implicit mergeinfo when the
    explicit mergeinfo tells us all we need to know about what to merge
@@ -145,6 +133,19 @@ Candidate changes:
    Votes
      +1: stsp
 
+ * r36879
+  Fix a merge bug which can occur when the merge target or a subtree of
+  the target has non-inheritable mergeinfo.
+   Justification:
+     I don't know that anyone has encountered this problem in the wild, but
+     the code is clearly incorrect and r36879 expands an existing merge
+     test to demonstrate how it could result in incorrect mergeinfo.
+   Votes:
+     +1: pburba
+
+Approved changes:
+=================
+
  * r36442, r36443
    On Windows, don't error on access denied errors when creating a tempfile;
    instead just retry creating a tempfile with a new name.
@@ -154,8 +155,16 @@ Candidate changes:
      This bug just showed up on our corporate SVN server when a post-commit
      hook didn't exit.
    Votes:
-     +1: rhuijben, gstein
+     +1: rhuijben, gstein, pburba
 
-
-Approved changes:
-=================
+ * r36149-r36151, r36156
+   Fix starting apache httpd in daemon mode from python versions with
+   win32process support. (Found after upgrading my python to 2.6.1)
+   Justification:
+     Without this fix I can't run the testsuite as non-admin after
+     installing 2.6.1.
+   Notes:
+     r36149 and r36150 contain the actual fix and r36151 and r36156 clean up
+     the mess I left after performing only partial commits.
+   Votes:
+     +1: rhuijben, arfrever, pburba
