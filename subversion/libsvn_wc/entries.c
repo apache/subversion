@@ -1092,8 +1092,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
                  code below looks at the parent to detect if it *also* has
                  copyfrom information, and if the copyfrom_url would align
                  properly. If it *does*, then we omit storing copyfrom_url
-                 and copyfrom_rev, and simply leave the mixed-rev value
-                 that was stored into entry->revision by the code above.  */
+                 and copyfrom_rev (ie. inherit the copyfrom info like a
+                 normal child), and update entry->revision with the
+                 copyfrom_rev in order to (re)create the mixed-rev copied
+                 subtree that was originally presented for storage.  */
 
               /* Get the copyfrom information from our parent.
 
@@ -1125,19 +1127,34 @@ read_entries(svn_wc_adm_access_t *adm_access,
                   const char *entry_repos_relpath = svn_uri_join(
                     parent_repos_relpath, relpath_to_entry, iterpool);
 
-                  /* The copyfrom roots matched. Now we look to see if the
-                     copyfrom path of the parent would align with our own
-                     path (meaning this copyfrom was inserted for mixed-rev
-                     purposes and can be eliminated without changing the
-                     implied copyfrom path).  */
+                  /* The copyfrom repos roots matched.
+
+                     Now we look to see if the copyfrom path of the parent
+                     would align with our own path. If so, then it means
+                     this copyfrom was spontaneously created and inserted
+                     for mixed-rev purposes and can be eliminated without
+                     changing the semantics of a mixed-rev copied subtree.
+
+                     See notes/api-errata/wc003.txt for some additional
+                     detail, and potential issues.  */
                   if (strcmp(entry_repos_relpath, original_repos_relpath) == 0)
                     {
+                      /* Don't set the copyfrom_url and clear out the
+                         copyfrom_rev. Thus, this node becomes a child
+                         of a copied subtree (rather than its own root).  */
                       set_copyfrom = FALSE;
-
-                      /* Reset a couple fields, to their proper states when
-                         no copyfrom information is present.  */
                       entry->copyfrom_rev = SVN_INVALID_REVNUM;
+
+                      /* Children in a copied subtree are schedule normal
+                         since we don't plan to actually *do* anything with
+                         them. Their operation is implied by ancestors.  */
                       entry->schedule = svn_wc_schedule_normal;
+
+                      /* And *finally* we turn this entry into the mixed
+                         revision node that it was intended to be. This
+                         node's revision is taken from the copyfrom record
+                         that we spontaneously constructed.  */
+                      entry->revision = original_revision;
                     }
                 }
 
