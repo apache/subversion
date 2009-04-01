@@ -2293,8 +2293,8 @@ svn_wc_status2(svn_wc_status2_t **status,
   const svn_wc_entry_t *entry = NULL;
   const svn_wc_entry_t *parent_entry = NULL;
 
-  if (adm_access)
-    SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR_ASSERT(adm_access != NULL);
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
   if (entry && ! svn_path_is_empty(path))
     {
