@@ -1695,7 +1695,8 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                                                       scratch_pool), NULL)));
     }
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
+  if (base_node->translated_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
 
   /* ### strictly speaking, changed_rev should be valid for present nodes. */
   if (SVN_IS_VALID_REVNUM(base_node->changed_rev))
@@ -1780,8 +1781,10 @@ insert_working_node(svn_sqlite__db_t *wc_db,
       SVN_ERR(svn_sqlite__bind_text(stmt, 11, apr_pstrcat(scratch_pool,
                     kind_str, svn_checksum_to_cstring(working_node->checksum,
                                                       scratch_pool), NULL)));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->translated_size));
     }
+
+  if (working_node->translated_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->translated_size));
 
   if (SVN_IS_VALID_REVNUM(working_node->changed_rev))
     SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_rev));
