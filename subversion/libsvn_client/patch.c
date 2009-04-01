@@ -536,7 +536,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_file:
-      svn_dirent_split(mine, &parent_path, NULL, subpool);
+      parent_path = svn_dirent_dirname(mine, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
 
@@ -777,7 +777,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
         mdb.ctx = patch_b->ctx;
         mdb.path_skip = path;
 
-        svn_dirent_split(path, &parent_path, NULL, subpool);
+        parent_path = svn_dirent_dirname(path, subpool);
         SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                     subpool));
         err = svn_client__wc_delete(path, parent_access, patch_b->force,
