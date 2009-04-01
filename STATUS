@@ -123,5 +123,16 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
+ * r36919
+   Fix issue #3250 'Repeated merging of conflicting properties fails'.
+   Justification:
+     This issue was introduced in 1.5.x.
+   Notes:
+     The merge, conflicts in subversion/libsvn_wc/props.c, a backport branch
+     resolving it can be found here:
+     http://svn.collab.net/repos/svn/branches/1.5.x-r36919
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
