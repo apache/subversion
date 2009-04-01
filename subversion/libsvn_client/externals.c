@@ -449,9 +449,6 @@ switch_file_external(const char *path,
          be reverted, it needs to be removed forcibly from the wc.. */
       revert_file = FALSE;
       remove_from_revision_control = TRUE;
-
-      if (err)
-        goto cleanup;
   }
 
   if (close_adm_access)
