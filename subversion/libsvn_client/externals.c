@@ -476,12 +476,12 @@ switch_file_external(const char *path,
 
   if (remove_from_revision_control)
     {
-      svn_error_t * e = svn_wc_remove_from_revision_control(target_adm_access,
-                                                            target,
-                                                            TRUE, FALSE,
-                                                            ctx->cancel_func,
-                                                            ctx->cancel_baton,
-                                                            subpool);
+      svn_error_t *e = svn_wc_remove_from_revision_control(target_adm_access,
+                                                           target,
+                                                           TRUE, FALSE,
+                                                           ctx->cancel_func,
+                                                           ctx->cancel_baton,
+                                                           subpool);
       if (e)
         svn_error_clear(e);
     }
