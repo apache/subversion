@@ -144,5 +144,12 @@ Candidate changes:
      +1: sussman (via mail)
      +0: rhuijben (concept; requires better review for a +1)
 
+ * r36919
+   Fix issue #3250 'Repeated merging of conflicting properties fails'.
+   Justification:
+     This issue exists since 1.5.x.
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
