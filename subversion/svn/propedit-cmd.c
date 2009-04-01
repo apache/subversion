@@ -227,7 +227,7 @@ svn_cl__propedit(apr_getopt_t *os,
                   (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                    _("'%s' does not appear to be a working copy path"), target);
               if (entry->kind == svn_node_file)
-                svn_dirent_split(target, &base_dir, NULL, subpool);
+                base_dir = svn_dirent_dirname(target, subpool);
             }
 
           /* Run the editor on a temporary file which contains the

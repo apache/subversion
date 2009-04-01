@@ -814,7 +814,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         case svn_node_dir:
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
-          svn_dirent_split(path, &parent, NULL, ib->iter_pool);
+          parent = svn_dirent_dirname(path, ib->iter_pool);
           SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
 
           /* If we were handling renames the fancy way, then before
