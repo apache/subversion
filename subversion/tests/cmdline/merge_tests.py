@@ -12986,15 +12986,21 @@ def merge_two_edits_to_same_prop(sbox):
   wc_disk.wc_dir = ''
   wc_status.wc_dir = ''
 
+  # Some paths we'll care about
+  A_path           = "A"
+  A_COPY_path      = "A_COPY"
+  mu_path          = os.path.join(A_path, "mu")
+  mu_COPY_path     = os.path.join(A_COPY_path, "mu")
+  
   # In the source, make two successive changes to the same property
-  svn_propset('p', 'new-val-1', 'A/mu')
+  svn_propset('p', 'new-val-1', mu_path)
   rev1 = svn_commit('A/mu')
-  svn_propset('p', 'new-val-2', 'A/mu')
-  rev2 = svn_commit('A/mu')
+  svn_propset('p', 'new-val-2', mu_path)
+  rev2 = svn_commit(mu_path)
 
   # Merge the first change, then the second, to a target branch.
-  svn_merge(rev1, 'A', 'A_COPY')
-  svn_merge(rev2, 'A', 'A_COPY')
+  svn_merge(rev1, A_path, A_COPY_path)
+  svn_merge(rev2, A_path, A_COPY_path)
 
   # Both changes should merge automatically: the second one should not
   # complain about the local mod which the first one caused. The starting
@@ -13005,6 +13011,40 @@ def merge_two_edits_to_same_prop(sbox):
   # algorithm breaks a single requested merge into two phases because of
   # some other target within the same merge requiring only a part of the
   # revision range.
+
+  # We test issue #3250 here
+  # Revert changes to target branch wc
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '--recursive', A_COPY_path)
+
+  # In the target branch, make two successive changes to the same property
+  svn_propset('p', 'new-val-3', mu_COPY_path)
+  rev3 = svn_commit('A_COPY/mu')
+  svn_propset('p', 'new-val-4', mu_COPY_path)
+  rev4 = svn_commit(mu_COPY_path)
+
+  # Merge the two changes together to source.
+  svn_merge('-r'+str(rev3-1)+':'+str(rev4), A_COPY_path, A_path, [
+      "--- Merging r9 through r10 into '%s':\n" % A_path,
+      " C   %s\n" % mu_path,
+      "Summary of conflicts:\n",
+      "  Property conflicts: 1\n"])
+
+  # Revert changes to source wc, to test next scenario of #3250
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '--recursive', A_path)
+
+  # Merge the first change, then the second, to source.
+  svn_merge(rev3, A_COPY_path, A_path, [
+      "--- Merging r9 into '%s':\n" % A_path,
+      " C   %s\n" % mu_path,
+      "Summary of conflicts:\n",
+      "  Property conflicts: 1\n"])
+  svn_merge(rev4, A_COPY_path, A_path, [
+      "--- Merging r10 into '%s':\n" % A_path,
+      " C   %s\n" % mu_path,
+      "Summary of conflicts:\n",
+      "  Property conflicts: 1\n"])
 
   os.chdir(was_cwd)
 
