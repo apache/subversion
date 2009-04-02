@@ -638,6 +638,25 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *scratch_pool);
 
 
+/** Set the wcprops for LOCAL_ABSPATH to PROPS.  Use SCRATCH_POOL for
+    temporary allocations. */
+svn_error_t *
+svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const apr_hash_t *props,
+                            apr_pool_t *scratch_pool);
+
+
+/** Retrieve the wcprops for LOCAL_ABSPATH into *PROPS, allocated in
+    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_base_get_wcprops(apr_hash_t **props,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* ### how to handle depth? empty != absent. thus, record depth on each
    ### directory? empty, files, immediates, infinity. recording depth
    ### doesn't seem to be part of BASE, but instructions on how to maintain

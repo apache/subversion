@@ -167,7 +167,9 @@ enum statement_keys {
   STMT_SELECT_ALL_PROPS,
   STMT_SELECT_PRISTINE_PROPS,
   STMT_INSERT_LOCK,
-  STMT_INSERT_WCROOT
+  STMT_INSERT_WCROOT,
+  STMT_UPDATE_BASE_WCPROPS,
+  STMT_SELECT_BASE_WCPROPS
 };
 
 static const char * const statements[] = {
@@ -261,6 +263,12 @@ static const char * const statements[] = {
 
   "insert into wcroot (local_abspath) "
   "values (?1);",
+
+  "update base_node set wc_props = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select wc_props from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
 };
@@ -1951,6 +1959,65 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
 {
   return gather_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
                          db, local_abspath, result_pool, scratch_pool);
+}
+
+
+svn_error_t *
+svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const apr_hash_t *props,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                    STMT_UPDATE_BASE_WCPROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+
+  return svn_sqlite__step_done(stmt);
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_wcprops(apr_hash_t **props,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                    STMT_SELECT_BASE_WCPROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                        scratch_pool));
+  return svn_sqlite__reset(stmt);
 }
 
 
