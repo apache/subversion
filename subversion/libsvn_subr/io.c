@@ -215,7 +215,11 @@ io_check_path(const char *path,
 
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
-  else if (APR_STATUS_IS_ENOTDIR(apr_err))
+  else if (APR_STATUS_IS_ENOTDIR(apr_err)
+#if WIN32
+           || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
+#endif
+           )
     *kind = svn_node_none;
   else if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),

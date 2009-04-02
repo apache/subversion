@@ -764,7 +764,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
         }
 
       /* Work back to the parent path. */
-      svn_dirent_split(current_path, &current_path, NULL, pool);
+      current_path = svn_dirent_dirname(current_path, pool);
     }
 
   /* If the caller requested recursive access, we need to walk through
