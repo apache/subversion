@@ -874,7 +874,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
-                        apr_hash_t *props,
+                        const apr_hash_t *props,
                         apr_pool_t *scratch_pool);
 
 
