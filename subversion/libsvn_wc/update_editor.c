@@ -1006,15 +1006,20 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window != NULL && !err)
     return SVN_NO_ERROR;
 
+  if (err)
+    {
+      /* We failed to apply the delta; clean up the temporary file.  */
+      svn_error_clear(svn_io_remove_file(hb->work_path, hb->pool));
+    }
+
   if (hb->expected_source_checksum)
     {
       /* Close the stream to calculate the final checksum */
-      svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
+      SVN_ERR(svn_stream_close(hb->source_checksum_stream));
 
-      if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
-                                       hb->actual_source_checksum))
-        {
-          err = svn_error_createf(
+      if (!svn_checksum_match(hb->expected_source_checksum,
+                              hb->actual_source_checksum))
+        err = svn_error_createf(
                     SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
                     _("Checksum mismatch while updating '%s'; "
                       "expected: '%s', actual: '%s'"),
@@ -1023,17 +1028,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
                                             hb->pool),
                     svn_checksum_to_cstring(hb->actual_source_checksum,
                                             hb->pool));
-        }
-  
-      err = svn_error_compose_create(err, err2);
     }
 
-  if (err)
-    {
-      /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file(hb->work_path, hb->pool));
-    }
-  else
+  if (!err)
     {
       /* Tell the file baton about the new text base. */
       fb->new_text_base_path = apr_pstrdup(fb->pool, hb->work_path);
