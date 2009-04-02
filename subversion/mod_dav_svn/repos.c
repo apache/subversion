@@ -2259,10 +2259,10 @@ get_parent_path(const char *path, apr_pool_t *pool)
 
   if (len > 0)
     {
-      /* Remove any trailing slash; else svn_dirent_split() asserts. */
+      /* Remove any trailing slash; else svn_uri_split() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-      svn_dirent_split(tmp, &parentpath, &base_name, pool);
+      svn_uri_split(tmp, &parentpath, &base_name, pool);
 
       return parentpath;
     }

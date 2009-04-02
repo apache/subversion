@@ -79,6 +79,7 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
       SVN_ERR_ASSERT(strcmp(key, entry->name) == 0);
 
       printf("e = Entry()\n");
+      str_value("name", entry->name);
       int_value("revision", entry->revision);
       str_value("url", entry->url);
       str_value("repos", entry->repos);
