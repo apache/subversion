@@ -228,7 +228,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
 #endif
-  textdomain(PACKAGE_NAME);
 #endif
 
   /* Create our top-level pool. */
