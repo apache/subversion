@@ -4,12 +4,12 @@ NOTES on a revamped editor interface
    -- could be: relative to wcroot, or repos, or <what else?>
    -- editor/driver can map into other path spaces as appropriate
 
--- expectations around *what* is being changed
-   1. add into parent REV. nah. you're adding to HEAD. only Q: already exists.
-   2. set props/text/target on REV. oops. there is newer.
-   3. delete REV. woah. edited, or deleted already.
-   4. copy: nah. just like add.
-   5. move REV: source will be like a delete, so could have been edited/deleted
+Terminology:
+  "Driver" -- the code *calling* these APIs to tell the Receiver how
+    to edit a tree into a final state
+
+  "Receiver" -- the code *implementing* the callbacks to receive
+    information on editing its tree
 
 
 API will be like svn_stream_t, RA, and FS
@@ -21,15 +21,29 @@ API will be like svn_stream_t, RA, and FS
      -- enforcement of constraints
      -- printf() for debugging
   -- single baton passed to all callbacks
+     -- no directory or file batons
+     -- only cross-call state that needs to be held is to manage the
+        two-call change operations. state may need to be held for
+        directory children that have not been added via add_*().
   -- no return values, so scratch_pool everywhere
   -- get_info takes a result_pool/scratch_pool
   -- treedit object passed to all calls: used for get_info callback
   -- separate baton for get_info callback
+  -- build cancellation in by default
+     -- notify is too operation specific, so it gets omitted
 
 
 add_directory(path, children, props)
   -- name all children. receiver can put on "pending" list
   -- MUST be followed (at some point) by add_*() calls for each child
+add_directory_streamy(path, children_stream, props)
+  -- receiver reads (streamily) the names of all children
+  -- MUST be followed (at some point) by add_*() calls for each child
+  -- this alternative is to avoid cases where a directory might have
+     100k child names held in memory at once
+     -- not entirely sure about this, since we *already* hold all
+        metadata for a single commit in memory. but maybe this will be
+        able to help us moving forward to reach a more streamy commit
 add_file(path, props)
   -- MUST be followed (at some point) by set_text()
 add_symlink(path, target, props)
@@ -42,6 +56,7 @@ set_props(path, against_rev, props, complete)
 set_text(path, against_rev, checksum, stream)
   -- completes the change for this file (ie. if set_props was called)
   -- stream can be ignored by recipient if it knows the checksum
+     -- for example: optimize away multiple transfers of the same file
   -- include a mime type to help recipient manage stream processing?
 set_target(path, against_rev, target)
   -- completes the change for this symlink (ie. if set_props was called)
@@ -49,15 +64,46 @@ delete(path, in_rev)
 copy(src_path, src_rev, dst_path)
 move(src_path, in_src_rev, dst_path)
 complete()
+  -- all done. edit runs are not intended to be transactional, but
+     this *could* be used for that.
 abort()
+  -- edit runs are not fully transactional. this is not guaranteed to
+     undo everything.
 
 
-callback:
+
+-- expectations around *what* is being changed
+   -- add into parent REV. nah. you're adding to HEAD. only Q: already exists.
+   -- set props/text/target on REV. oops. there is newer.
+   -- delete REV. woah. edited, or deleted already.
+   -- copy: nah. just like add. (rev specifics source, not an expectation)
+   -- move REV: source will be like a delete, so could have been edited/deleted
+
+
+note: all calls complete their change to the node before they return,
+except for the following pairs of functions:
+  -- add_file / set_text
+  -- set_props / set_text
+  -- set_props / set_target
+
+
+callback for more details about the BASE:
 get_info(path, *kind, *revision, *checksum, *children, *target,
                *props, *stream)
+  -- I think we might want to eliminate this, and make it specific to
+     the RA layer. I'm not sure that any other caller needs
+     information about the BASE in order to construct a delta.
+  -- well, maybe mod_dav_svn in order to get BASE info to construct
+     differential data for transmit-over-wire
+  -- in v1, we had the BASE checksum as we attempted to modify a file.
+     this api says "working against REV, here are the new contents".
+     we can verify REV, but how to verify the checksum? thus, the
+     callback to get more information about BASE.
 
 
 other constraints:
+-- one or both of add_directory() and add_directory_streamy() MUST be
+   implemented. the editor layer can remap between drivers and receivers
 -- parent add_directory() MUST be called prior to add_* of any child
 -- set_props() MUST be called before set_text() and set_target() if a
    two-part change is occurring
@@ -75,11 +121,35 @@ other constraints:
    -- anything called after complete() or abort()
 
 
+Q: why specific the entire list of children at add_directory() time?
+A: makes add_directory() an "atomic" operation. if it returns, then
+   the directory is added (no multi-step change). you will have a
+   bunch of incomplete *children* but the directory will be
+   fine. makes it easier to resume.
+   
+   the alternative is a directory that stays "incomplete" until all
+   children have been added. and that isn't known without some kind of
+   "close_directory" call, or possibly a counter passed to the add. in
+   either case, midway failure leaves you in a state where you don't
+   know which children need to be resent. gotta grab them all again.
+
+
 new interface: svn_editor.h
   -- don't try to rev svn_delta_editor_t. creates a huge mess
   -- svn_editor_* prefix
   -- svn_editor_setcb_* to set the various callbacks
      -- svn_editor_setcb_many(vtable) to copy funcs in
+
+  -- provide an svn_delta_editor_t that can drive an svn_editor_t
+     -- driver will need to "peek" around the shim in order to pass
+        the list of all children to add_directory(). otherwise, we'd
+        have to buffer *everything*. not to mention that children
+        aren't really described unless a change is happening, so this
+        shim needs special access to get the list anyways
+  -- provide an svn_editor_t that can drive an svn_delta_editor_t
+  -- note that using the above two shims, we "should" actually be able
+     insert a matched pair "anywhere" between existing drivers/editors
+     and have the code continue to function properly
 
 
 svn_error_t *
@@ -98,3 +168,33 @@ using:
 
 SVN_ERR(my_custom_editor(&editor, get_info, &get_baton, pools));
 SVN_ERR(svn_editor_add_directory(editor, ...));
+
+
+
+EDITORS IN USE TODAY
+
+- export.c: editor passed to RA
+- commit_util.c: debug editor
+- mergeinfo.c: appears to use an editor as a kludge to collect
+               directory names
+- patch.c: has one to describe a patch. unshipped code. we can revamp.
+- repos_diff.c: another one for svnpatch?  ### investigate
+- repos_diff.c: some kind of "diff editor"  ### need to look more
+- repos_diff_summarize.c: another "diff editor" thing
+- cancel.c: cancellation editor. now built-in
+- debug_editor.c: debug the control flow. now built-in.
+- default_editor.c: not needed
+- depth_filter_editor.c: ### investigate
+- ra_neon/commit.c: RA commit editor
+- ra_serf/commit.c: RA commit editor
+- ra_svn/editorp.c: RA commit editor
+- repos/commit.c: commit editor to drive changes into FS
+- dump.c: generate an svn dump
+- diff.c: Yet Another svnpatch editor  ### investigate
+- diff.c: some kind of "diff editor"  ### need to look more
+- status.c: editor for driving status callbacks
+- update_editor.c: passed to RA in order to edit the working copy
+- mod_dav_svn/.../replay.c: ### investigate
+- mod_dav_svn/.../update.c: generate an update report. ### how is this called?
+- svnsync/main.c: ### investigate
+- bindings/...
