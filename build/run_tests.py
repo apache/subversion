@@ -71,8 +71,13 @@ class TestHarness:
     failed = 0
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
-    self._open_log('r')
+
+    # Open the log in binary mode because it can contain binary data
+    # from svn diff --svnpatch and this may cause readlines to
+    # prematurely 
+    self._open_log('rb')
     log_lines = self.log.readlines()
+
     # Print summaries from least interesting to most interesting.
     wimptag = ' [[WIMP: '
     def printxfail(x):
