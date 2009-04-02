@@ -797,6 +797,38 @@ determine_incomplete(svn_boolean_t *incomplete,
 }
 
 
+/* Hit the database to check the file external information for the given
+   entry.  The entry will be modified in place. */
+static svn_error_t *
+check_file_external(svn_wc_entry_t *entry,
+                    svn_sqlite__db_t *wc_db,
+                    apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                    STMT_SELECT_FILE_EXTERNAL));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            (apr_uint64_t)1 /* wc_id */,
+                            entry->name));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!svn_sqlite__column_is_null(stmt, 0))
+    {
+      SVN_ERR(svn_wc__unserialize_file_external(
+                    &entry->file_external_path,
+                    &entry->file_external_peg_rev,
+                    &entry->file_external_rev,
+                    svn_sqlite__column_text(stmt, 0, NULL),
+                    result_pool));
+
+    }
+
+  return svn_sqlite__reset(stmt);
+}
+
+
 /* Fill the entries cache in ADM_ACCESS. The full hash cache will be
    populated.  SCRATCH_POOL is used for local memory allocation, the access
    baton pool is used for the cache. */
@@ -1532,30 +1564,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
          ### right now this is ugly, since we have no good way querying
          ### for a file external OR retrieving properties.  ugh.  */
       if (entry->kind == svn_node_file)
-        {
-          svn_sqlite__stmt_t *stmt;
-          svn_boolean_t have_row;
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
-                                            STMT_SELECT_FILE_EXTERNAL));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                    (apr_uint64_t)1 /* wc_id */,
-                                    entry->name));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-          if (!svn_sqlite__column_is_null(stmt, 0))
-            {
-              SVN_ERR(svn_wc__unserialize_file_external(
-                            &entry->file_external_path,
-                            &entry->file_external_peg_rev,
-                            &entry->file_external_rev,
-                            svn_sqlite__column_text(stmt, 0, NULL),
-                            result_pool));
-
-            }
-
-          SVN_ERR(svn_sqlite__reset(stmt));
-        }
+        SVN_ERR(check_file_external(entry, wc_db, result_pool));
 
       entry->working_size = translated_size;
 
