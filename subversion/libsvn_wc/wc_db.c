@@ -1007,6 +1007,34 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 }
 
 
+/* Get the statement given by STMT_IDX, and bind the appropriate wc_id and
+   local_relpath based upon LOCAL_ABSPATH.  Store it in *STMT, and use
+   SCRATCH_POOL for temporary allocations.
+   
+   Note: WC_ID and LOCAL_RELPATH must be arguments 1 and 2 in the statement. */
+static svn_error_t *
+get_statement_for_path(svn_sqlite__stmt_t **stmt,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       int stmt_idx,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(stmt, pdh->sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(*stmt, "is", pdh->wc_id, local_relpath));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                    svn_wc__db_pdh_t *child_pdh,
@@ -1924,19 +1952,11 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_BASE_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_BASE_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -1968,19 +1988,10 @@ svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
                             const apr_hash_t *props,
                             apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_UPDATE_BASE_WCPROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_BASE_WCPROPS, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
   return svn_sqlite__step_done(stmt);
@@ -1994,20 +2005,11 @@ svn_wc__db_base_get_wcprops(apr_hash_t **props,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_SELECT_BASE_WCPROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_BASE_WCPROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -2225,19 +2227,10 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const apr_hash_t *props,
                         apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_UPDATE_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_ACTUAL_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
   return svn_sqlite__step_done(stmt);
@@ -2733,19 +2726,11 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_ALL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_ALL_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -2775,20 +2760,11 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_SELECT_PRISTINE_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_PRISTINE_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
