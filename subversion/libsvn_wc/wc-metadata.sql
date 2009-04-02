@@ -127,6 +127,10 @@ CREATE TABLE BASE_NODE (
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
+  /* serialized skel of this node's wcprops.  could be NULL if the
+     node does not have any wcprops. */
+  wc_props  BLOB,
+
   /* this node is a directory, and all of its child nodes have not (yet)
      been created [for this revision number]. Note: boolean value. */
   /* ### this will probably disappear in favor of incomplete child

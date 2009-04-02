@@ -19,6 +19,7 @@
 # General modules
 import sys
 import os
+import re
 import warnings
 
 # Our testing module
@@ -1277,6 +1278,53 @@ def update_lose_file_external(sbox):
                                         True)
 
 
+#----------------------------------------------------------------------
+
+# Issue #3351.
+def switch_relative_external(sbox):
+  "switch a relative external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  
+  # Create a relative external in A/D on ../B
+  A_path = os.path.join(wc_dir, 'A')
+  A_copy_path = os.path.join(wc_dir, 'A_copy')
+  A_copy_url = repo_url + '/A_copy'
+  D_path = os.path.join(A_path, 'D')
+  ext_path = os.path.join(D_path, 'ext')
+  externals_prop = "../B ext\n"
+  change_external(D_path, externals_prop)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg',
+                                     '--quiet', wc_dir)
+
+  # Update our working copy, and create a "branch" (A => A_copy)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', 
+                                     '--quiet', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     '--quiet', A_path, A_copy_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg',
+                                     '--quiet', wc_dir)
+
+  # Okay.  We now want to switch A to A_copy, which *should* cause
+  # A/D/ext to point to the URL for A_copy/D/ext.
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', 
+                                     '--quiet', A_copy_url, A_path)
+
+  expected_infos = [
+    { 'Path' : re.escape(D_path),
+      'URL' : sbox.repo_url + '/A_copy/D',
+      },
+    { 'Path' : re.escape(ext_path),
+      'URL' : sbox.repo_url + '/A_copy/B',
+      },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, D_path, ext_path)
+
+  
 ########################################################################
 # Run the tests
 
@@ -1302,6 +1350,7 @@ test_list = [ None,
               external_into_path_with_spaces,
               XFail(binary_file_externals),
               XFail(update_lose_file_external),
+              XFail(switch_relative_external),
              ]
 
 if __name__ == '__main__':
