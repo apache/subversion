@@ -73,8 +73,9 @@ class TestHarness:
       failed = self._run_test(prog, cnt, len(list)) or failed
 
     # Open the log in binary mode because it can contain binary data
-    # from svn diff --svnpatch and this may cause readlines to
-    # prematurely 
+    # from diff_tests.py's testing of svnpatch. This may prevent
+    # readlines() from reading the whole log because it thinks it
+    # has encountered the EOF marker.
     self._open_log('rb')
     log_lines = self.log.readlines()
 
