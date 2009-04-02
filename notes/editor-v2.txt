@@ -1,0 +1,100 @@
+NOTES on a revamped editor interface
+
+-- all paths are relpaths
+   -- could be: relative to wcroot, or repos, or <what else?>
+   -- editor/driver can map into other path spaces as appropriate
+
+-- expectations around *what* is being changed
+   1. add into parent REV. nah. you're adding to HEAD. only Q: already exists.
+   2. set props/text/target on REV. oops. there is newer.
+   3. delete REV. woah. edited, or deleted already.
+   4. copy: nah. just like add.
+   5. move REV: source will be like a delete, so could have been edited/deleted
+
+
+API will be like svn_stream_t, RA, and FS
+  -- functional API to invoke callbacks
+  -- can remap between versions
+  -- implementor can provide vtable-ish thing for quick-load
+     -- svn_editor_setcb_many(...)
+  -- API can debug the control flow
+     -- enforcement of constraints
+     -- printf() for debugging
+  -- single baton passed to all callbacks
+  -- no return values, so scratch_pool everywhere
+  -- get_info takes a result_pool/scratch_pool
+  -- treedit object passed to all calls: used for get_info callback
+  -- separate baton for get_info callback
+
+
+add_directory(path, children, props)
+  -- name all children. receiver can put on "pending" list
+  -- MUST be followed (at some point) by add_*() calls for each child
+add_file(path, props)
+  -- MUST be followed (at some point) by set_text()
+add_symlink(path, target, props)
+add_absent(path, kind)
+set_props(path, against_rev, props, complete)
+  -- 'complete' indicates whether this completes the change to this node
+     -- MUST be TRUE for directories
+     -- if TRUE, then a set_text() MUST follow if node is a file
+     -- if TRUE, then a set_target() MUST follow if node is a symlink
+set_text(path, against_rev, checksum, stream)
+  -- completes the change for this file (ie. if set_props was called)
+  -- stream can be ignored by recipient if it knows the checksum
+  -- include a mime type to help recipient manage stream processing?
+set_target(path, against_rev, target)
+  -- completes the change for this symlink (ie. if set_props was called)
+delete(path, in_rev)
+copy(src_path, src_rev, dst_path)
+move(src_path, in_src_rev, dst_path)
+complete()
+abort()
+
+
+callback:
+get_info(path, *kind, *revision, *checksum, *children, *target,
+               *props, *stream)
+
+
+other constraints:
+-- parent add_directory() MUST be called prior to add_* of any child
+-- set_props() MUST be called before set_text() and set_target() if a
+   two-part change is occurring
+-- add_*() called where a node already exists; must delete() or move()
+   before calling add_*()
+-- set_*(), delete(), copy(), move() called on a non-existent node
+-- call flow errors if:
+   -- at complete() call time:
+      -- add_* not called for a child listed in add_directory's CHILDREN
+      -- set_text() not called after an add_file()
+      -- set_text() not called after a set_props() on a file where
+         COMPLETE=FALSE
+      -- set_target() not called after a set_props() on a symlink where
+         COMPLETE=FALSE
+   -- anything called after complete() or abort()
+
+
+new interface: svn_editor.h
+  -- don't try to rev svn_delta_editor_t. creates a huge mess
+  -- svn_editor_* prefix
+  -- svn_editor_setcb_* to set the various callbacks
+     -- svn_editor_setcb_many(vtable) to copy funcs in
+
+
+svn_error_t *
+my_custom_editor(svn_editor_t **editor, info_cb, info_baton, pools)
+{
+  SVN_ERR(svn_editor_create(editor, info_cb, info_baton,
+                            result_pool, scratch_pool));
+  SVN_ERR(svn_editor_setcb_add_directory(*editor, my_add_directory,
+                                         scratch_pool));
+  ...
+  return SVN_NO_ERROR;
+}
+
+
+using:
+
+SVN_ERR(my_custom_editor(&editor, get_info, &get_baton, pools));
+SVN_ERR(svn_editor_add_directory(editor, ...));
