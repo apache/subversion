@@ -3712,8 +3712,7 @@ remove_element_from_array(apr_array_header_t *arr,
    which have mergeinfo set on them or meet one of the other criteria
    defined in get_mergeinfo_paths().  Remove any paths absent from disk
    or scheduled for deletion from CHILDREN_WITH_MERGEINFO which are equal to
-   or are descendants of TARGET_WCPATH by setting those children to NULL.
-   Also remove the path from the NOTIFY_B->SKIPPED_PATHS hash. */
+   or are descendants of TARGET_WCPATH by setting those children to NULL. */
 static void
 remove_absent_children(const char *target_wcpath,
                        apr_array_header_t *children_with_mergeinfo,
@@ -3731,9 +3730,6 @@ remove_absent_children(const char *target_wcpath,
       if ((child->absent || child->scheduled_for_deletion)
           && svn_path_is_ancestor(target_wcpath, child->path))
         {
-          if (notify_b->skipped_paths)
-            apr_hash_set(notify_b->skipped_paths, child->path,
-              APR_HASH_KEY_STRING, NULL);
           remove_element_from_array(children_with_mergeinfo, i--);
         }
     }
@@ -6315,7 +6311,7 @@ do_directory_merge(const char *url1,
       apr_hash_t *merges;
 
       /* Remove absent children at or under TARGET_WCPATH from
-         NOTIFY_B->SKIPPED_PATHS and NOTIFY_B->CHILDREN_WITH_MERGEINFO
+         NOTIFY_B->CHILDREN_WITH_MERGEINFO
          before we calculate the merges performed. */
       remove_absent_children(merge_b->target,
                              notify_b->children_with_mergeinfo, notify_b);
