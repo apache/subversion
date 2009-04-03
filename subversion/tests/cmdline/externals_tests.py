@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -20,7 +20,7 @@
 import sys
 import os
 import re
-import warnings
+import tempfile
 
 # Our testing module
 import svntest
@@ -154,7 +154,7 @@ def externals_test_setup(sbox):
   externals_desc = \
            external_url_for["A/B/gamma"] + " gamma\n"
 
-  tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=wc_init_dir)[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
@@ -166,7 +166,7 @@ def externals_test_setup(sbox):
            "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
            external_url_for["A/C/exdir_H"] + " exdir_H\n"
 
-  tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=wc_init_dir)[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
@@ -217,7 +217,7 @@ def externals_test_setup(sbox):
 def change_external(path, new_val):
   """Change the value of the externals property on PATH to NEW_VAL,
   and commit the change."""
-  tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=svntest.main.temp_dir)[1]
   svntest.main.file_append(tmp_f, new_val)
   svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', path)
@@ -612,7 +612,7 @@ def modify_and_update_receive_new_external(sbox):
           "exdir_Z      " + external_url_for["A/D/exdir_A/H"] + \
           "\n"
 
-  tmp_f = os.tempnam()
+  tmp_f = tempfile.mkstemp()[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset', '-F', tmp_f,
@@ -642,7 +642,7 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val):
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, val)
     svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                        'pset', '-F', tmp_f,
@@ -883,7 +883,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'arg1 -r1',
                'arg1 -r 1',
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -900,7 +900,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'arg1 -r abc arg2',
                'arg1 -rabc arg2',
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -918,7 +918,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'http://example.com/ -r1 http://example.com/',
                'http://example.com/ -r 1 http://example.com/',
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -935,7 +935,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                '-r1 foo http://example.com/',
                '-r 1 foo http://example.com/'
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -1354,7 +1354,6 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 
