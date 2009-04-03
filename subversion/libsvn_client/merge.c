@@ -5971,7 +5971,7 @@ path_is_subtree(const char *path,
   return FALSE;
 }
 
-/* Return true if PATH is equal to or a subtree of any of th paths in
+/* Return true if PATH is equal to or a subtree of any of the paths in
    NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, NOTIFY_B->ADDED_PATHS,
    or NOTIFY_B->CONFLICTED_PATHS.  Return false otherwise. */
 static svn_boolean_t
