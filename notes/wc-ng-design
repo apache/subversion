@@ -895,6 +895,27 @@ Near-Term Plan
 
 8. replace loggy with sqlite-based work journal
 
+Upgrading Old Working Copies
+----------------------------
+When WC-NG finds a working copy which is pre-wc-ng, it will quit, prompting the
+user to run 'svn cleanup' to upgrade the working copy to a wc-ng state.  The
+reason for not upgrading on-the-fly is two-fold:
+ * We anticipate this process to be irreversable, so we want to ensure the
+   user wants to upgrade (no silent upgrading/breakage).
+ * The upgrade may be I/O and computationally intensive, and keeping with the
+   principle of least surprise, we want to ensure that the upgrade is done
+   intentionally, when the use expects it.
+
+For the implementation, upgrading will consist of the following steps:
+ 1) Upgrade the existing working copy information to the new format.
+    [Note: SQLite 3.6.11 added a method to copy an in-memory database to disk.
+     Because of all the effort involved in upgrading, it may be useful to 
+     do the upgrade in memory, and then just write the database out to disk.]
+
+ 2) Run any old-style logs against the new format.
+
+ 3) Cleanup any old/empty folders
+
 
 Other sections
 ==============
