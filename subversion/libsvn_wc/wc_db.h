@@ -113,12 +113,12 @@ typedef enum {
     svn_wc__db_status_added,
 
     /* This node is no longer present because it was the source of a move. */
-    svn_wc__db_status_moved_src,
+    svn_wc__db_status_moved_away,
 
     /* This node has been added with history, based on the move source.
        Text and property modifications are based on whether changes have
        been made against their pristine versions. */
-    svn_wc__db_status_moved_dst,
+    svn_wc__db_status_moved_here,
 
     /* This node has been added with history, based on the copy source.
        Text and property modifications are based on whether changes have
@@ -1295,7 +1295,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  *     ancestor unshadowed BASE node. ORIGINAL_* will indicate the source
  *     of the copy, and MOVED_TO_ABSPATH will be set to NULL.
  *
- *   svn_wc__db_status_move_dst -- this NODE arrived as a result of a move.
+ *   svn_wc__db_status_moved_here -- this NODE arrived as a result of a move.
  *     The root of the moved nodes will be stored in OP_ROOT_ABSPATH.
  *     Similar to the copied state, its parent may be a WORKING node or a
  *     BASE node. And again, the REPOS_* values are implied by this node's
@@ -1312,7 +1312,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  *     node. The REPOS_*, ORIGINAL_*, and MOVED_TO_ABSPATH (OUT) parameters
  *     will be set to NULL.
  *
- *   svn_wc__db_status_move_src -- this NODE was moved elsewhere. The root
+ *   svn_wc__db_status_moved_away -- this NODE was moved elsewhere. The root
  *     of the moved tree will be set in OP_ROOT_ABSPATH. That node's parent
  *     may be a WORKING or a BASE node. MOVED_TO_ABSPATH will be set to
  *     the destination of the move (note that further operations may have

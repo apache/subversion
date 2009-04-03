@@ -3060,7 +3060,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
 
           if (status)
-            *status = svn_wc__db_status_moved_src;
+            *status = svn_wc__db_status_moved_away;
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (moved_to_abspath)
@@ -3084,7 +3084,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           if (status)
             {
               if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
-                *status = svn_wc__db_status_moved_dst;
+                *status = svn_wc__db_status_moved_here;
               else
                 *status = svn_wc__db_status_copied;
             }

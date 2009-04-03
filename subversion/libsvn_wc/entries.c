@@ -1418,7 +1418,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                       break;
                     }
                   if (parent_status == svn_wc__db_status_copied
-                      || parent_status == svn_wc__db_status_moved_dst)
+                      || parent_status == svn_wc__db_status_moved_here)
                     {
                       /* The parent is copied/moved here, so CURRENT_ABSPATH
                          is the root of a deleted subtree. Our COPIED status
@@ -1430,7 +1430,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                          Normal copies have cmt_* data; copied DELETED nodes
                          are missing this info.
 
-                         Note: MOVED_DST is a concept foreign to this old
+                         Note: MOVED_HERE is a concept foreign to this old
                          interface, but it is best represented as if a copy
                          had occurred, so we'll model it that way to old
                          clients.  */
@@ -1481,7 +1481,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                      is that it has been deleted/moved-away.  */
                   SVN_ERR_ASSERT(
                     parent_status == svn_wc__db_status_deleted
-                    || parent_status == svn_wc__db_status_moved_src);
+                    || parent_status == svn_wc__db_status_moved_away);
 
                   /* OP_ROOT_ABSPATH is the root of the deletion/move. We
                      now need to examine what happened to *its* parent.

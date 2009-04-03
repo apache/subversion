@@ -816,7 +816,7 @@ test_scan_working(apr_pool_t *pool)
             &original_revision, &moved_to_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e", pool),
             pool, pool));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_src);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_away);
   SVN_ERR_ASSERT(strcmp(op_root_abspath,
                         svn_dirent_join(local_abspath, "J/J-e", pool)) == 0);
   SVN_ERR_ASSERT(repos_relpath == NULL);
@@ -838,7 +838,7 @@ test_scan_working(apr_pool_t *pool)
             &original_revision, &moved_to_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
             pool, pool));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_src);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_away);
   SVN_ERR_ASSERT(strcmp(op_root_abspath,
                         svn_dirent_join(local_abspath, "J/J-e", pool)) == 0);
   SVN_ERR_ASSERT(repos_relpath == NULL);
@@ -860,7 +860,7 @@ test_scan_working(apr_pool_t *pool)
             &original_revision, &moved_to_abspath,
             db, svn_dirent_join(local_abspath, "J/J-d", pool),
             pool, pool));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_dst);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_here);
   SVN_ERR_ASSERT(strcmp(op_root_abspath,
                         svn_dirent_join(local_abspath, "J/J-d", pool)) == 0);
   SVN_ERR_ASSERT(strcmp(repos_relpath, "J/J-d") == 0);
