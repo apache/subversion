@@ -825,10 +825,18 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  expected_output = svntest.verify.UnorderedOutput(
-    ["?       " + os.path.join(G_path, "pi") + "\n",
-     "?       " + os.path.join(G_path, "rho") + "\n",
-     "?       " + os.path.join(G_path, "tau") + "\n"])
+  if not sbox.using_wc_ng():
+    expected_output = svntest.verify.UnorderedOutput(
+      ["?       " + os.path.join(G_path, "pi") + "\n",
+       "?       " + os.path.join(G_path, "rho") + "\n",
+       "?       " + os.path.join(G_path, "tau") + "\n"])
+  else:
+    expected_output = svntest.verify.UnorderedOutput(
+      ["A       " + os.path.join(G_path, "pi") + "\n",
+       "A       " + os.path.join(G_path, "rho") + "\n",
+       "A       " + os.path.join(G_path, "alpha") + "\n",
+       "A       " + os.path.join(G_path, "beta") + "\n",
+       "A       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 
