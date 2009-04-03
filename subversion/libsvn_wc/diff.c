@@ -554,7 +554,7 @@ file_diff(struct dir_baton *dir_baton,
 
   /* If the item is schedule-add *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
-     vs. text-base comparision. */
+     vs. text-base comparison. */
   if (copied)
     {
       const svn_wc_entry_t *parent_entry;
@@ -1089,7 +1089,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
-     vs. text-base comparision. */
+     vs. text-base comparison. */
   if (entry->copied)
     {
       /* Don't show anything if we're comparing to BASE, since by
