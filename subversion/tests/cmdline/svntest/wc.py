@@ -47,7 +47,7 @@ import svntest
 #
 #    [three spaces]
 #
-#    - working revision ('wc_rev') (either digits or "-" or " ")
+#    - working revision ('wc_rev') (either digits or "-", "?" or " ")
 #
 #    [one space]
 #
