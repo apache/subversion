@@ -57,7 +57,7 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r36389-r36390, r36412, r36421, r36423
+ * r36389-r36390, r36412, r36421, r36423, r36964
    Instead of verifying the pristine copy of a file before updating it, 
    calculate and verify the used text base (base/revert/copied) stream while
    applying the delta using the new stream checksum api. It also enables the
@@ -78,8 +78,9 @@ Candidate changes:
      NOT cleaned up on a checksum error. One of the code blocks in
      window_handler() should be moved down, I think.
    Votes:
-     +1: rhuijben, arfrever
-     -0: gstein (looks like a fix is needed)
+     +1: arfrever (without r36964)
+     -0: gstein (looks like a fix is needed) (without r36964)
+     +1: rhuijben
 
  * r36741, r36742
    Improve detection of Berkeley DB.
