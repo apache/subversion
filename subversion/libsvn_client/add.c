@@ -663,9 +663,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   for (i = 0; i < urls->nelts; i++)
     {
       const char *url = APR_ARRAY_IDX(urls, i, const char *);
-      if (svn_path_is_url(url))
-        continue;
-      else
+      if (! svn_path_is_url(url))
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("Illegal repository URL '%s'"),
                                  url);
