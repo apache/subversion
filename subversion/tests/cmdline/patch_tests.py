@@ -32,6 +32,7 @@ from svntest.main import SVN_PROP_MERGEINFO
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 ########################################################################
