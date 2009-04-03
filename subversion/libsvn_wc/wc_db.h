@@ -166,7 +166,13 @@ typedef enum {
     /* This node is known, but its information is incomplete. Generally,
        it should be treated similar to the other missing status values
        until some (later) process updates the node with its data. */
-    svn_wc__db_status_incomplete
+    svn_wc__db_status_incomplete,
+
+    /* The BASE node has been marked as deleted.
+       ### is this internal or external to wc_db? we may be able to hide
+       ### behind status_deleted, and this value is only used within the
+       ### scan_deletion function.  */
+    svn_wc__db_status_base_deleted
 
 } svn_wc__db_status_t;
 
@@ -1345,6 +1351,123 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
                         const char *local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+
+/** Scan upwards for additional information about a deleted node.
+ *
+ * When a deleted node is discovered in the WORKING tree, the situation
+ * may be quite complex. This function will provide the information to
+ * resolve the circumstances of the deletion.
+ *
+ * For discussion purposes, we will start with the most complex example
+ * and then demonstrate simplified examples. Consider node B/W/D/N has been
+ * found as deleted. B is an unmodified directory (thus, only in BASE). W is
+ * "replacement" content that exists in WORKING, shadowing a similar B/W
+ * directory in BASE. D is a deleted subtree in the WORKING tree, and N is
+ * the deleted node.
+ *
+ * In this example, BASE_DEL_ABSPATH will bet set to B/W. That is the root of
+ * the BASE tree (implicitly) deleted by the replacement. BASE_REPLACED will
+ * be set to TRUE since B/W replaces the BASE node at B/W. WORK_DEL_ABSPATH
+ * will be set to the subtree deleted within the replacement; in this case,
+ * B/W/D. No move-away took place, so MOVED_TO_ABSPATH is set to NULL.
+ *
+ * In another scenario, B/W was moved-away before W was put into the WORKING
+ * tree through an add/copy/move-here. MOVED_TO_ABSPATH will indicate where
+ * B/W was moved to. Note that further operations may have been performed
+ * post-move, but that is not known or reported by this function.
+ *
+ * If BASE does not have a B/W, then the WORKING B/W is not a replacement,
+ * but a simple add/copy/move-here. BASE_DEL_ABSPATH will be set to NULL,
+ * and BASE_REPLACED will be set to FALSE.
+ *
+ * If B/W/D does not exist in the WORKING tree (we're only talking about a
+ * deletion of nodes of the BASE tree), then deleting B/W/D would have marked
+ * the subtree for deletion. BASE_DEL_ABSPATH will refer to B/W/D,
+ * BASE_REPLACED will be FALSE, MOVED_TO_ABSPATH will be NULL, and
+ * WORK_DEL_ABSPATH will be NULL.
+ *
+ * If the BASE node B/W/D was moved instead of deleted, then MOVED_TO_ABSPATH
+ * would indicate the target location (and other OUT values as above).
+ *
+ * When the user deletes B/W/D from the WORKING tree, there are a few
+ * additional considerations. If B/W is a simple addition (not a copy or
+ * a move-here), then the deletion will simply remove the nodes from WORKING
+ * and possibly leave behind "base-delete" markers in the WORKING tree.
+ * If the source is a copy/moved-here, then the nodes are replaced with
+ * deletion markers.
+ *
+ * If the user moves-away B/W/D from the WORKING tree, then behavior is
+ * again dependent upon the origination of B/W. For a plain add, the nodes
+ * simply move to the destination. For a copy, a deletion is made at B/W/D,
+ * and a new copy (of a subtree of the original source) is made at the
+ * destination. For a move-here, a deletion is made, and a copy is made at
+ * the destination (we do not track multiple moves; the source is moved to
+ * B/W, then B/W/D is deleted; then a copy is made at the destination;
+ * however, note the double-move could have been performed by moving the
+ * subtree first, then moving the source to B/W).
+ *
+ * There are three further considerations when resolving a deleted node:
+ *
+ *   If the BASE B/W/D was moved-away, then BASE_REL_ABSPATH will specify
+ *   B/W/D as the root of the BASE deletion (not necessarily B/W as an
+ *   implicit delete caused by a replacement; only the closest ancestor is
+ *   reported). The other parameters will operate as normal, based on what
+ *   is happening in the WORKING tree. Also note that ancestors of B/W/D
+ *   may report additional, explicit moved-away status.
+ *
+ *   If the BASE B/W/D was deleted explicitly *and* B/W is a replacement,
+ *   then the explicit deletion is subsumed by the implicit deletion that
+ *   occurred with the B/W replacement. Thus, BASE_REL_ABSPATH will point
+ *   to B/W as the root of the BASE deletion. IOW, we can detect the
+ *   explicit move-away, but not an explicit deletion.
+ *
+ *   If B/W/D/N refers to a node present in the BASE tree, and B/W was
+ *   replaced by a shallow subtree, then it is possible for N to be
+ *   reported as deleted (from BASE) yet no deletions occurred in the
+ *   WORKING tree above N. Thus, WORK_DEL_ABSPATH will be set to NULL.
+ *
+ *
+ * Summary of OUT parameters:
+ *
+ * BASE_DEL_ABSPATH will specify the nearest ancestor of the explicit or
+ * implicit deletion (if any) that applies to the BASE tree.
+ *
+ * BASE_REPLACED will specify whether the node at BASE_DEL_ABSPATH has
+ * been replaced (shadowed) by nodes in the WORKING tree. If no BASE
+ * deletion has occurred (BASE_DEL_ABSPATH is NULL, meaning the deletion
+ * is confined to the WORKING TREE), then BASE_REPLACED will be FALSE.
+ *
+ * MOVED_TO_ABSPATH will specify the nearest ancestor that has moved-away,
+ * if any. If no ancestors have been moved-away, then this is set to NULL.
+ *
+ * WORK_DEL_ABSPATH will specify the root of a deleted subtree within
+ * content in the WORKING tree (note there is no concept of layered
+ * delete operations in WORKING, so there is only one deletion root in
+ * the ancestry).
+ *
+ *
+ * NOTE: contrary to some APIs in wc_db.h, ALL of the OUT parameters must
+ *   be received. You may NOT pass NULL for any parameter (otherwise, you
+ *   would lose important information about the deletion).
+ *
+ * If the node given by LOCAL_ABSPATH does not refer to a deleted node,
+ * then SVN_ERR_WC_PATH_NOT_FOUND is returned.
+ * ### we should probably return a special error instead
+ *
+ * All returned data will be allocated in RESULT_POOL. All temporary
+ * allocations will be made in SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__db_scan_deletion(const char **base_del_abspath,
+                         svn_boolean_t *base_replaced,
+                         const char **moved_to_abspath,
+                         const char **work_del_abspath,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+                         
 
 /** @} */
 
