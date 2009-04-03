@@ -17,11 +17,11 @@ print("Repos UUID: %s" % repos.uuid())
 txn = repos.txn()
 
 # You can create a file from a Python string
-file("/tmp/contents.txt", "w").write("Hello world one!")
+open("/tmp/contents.txt", "w").write("Hello world one!")
 txn.upload("file1.txt", local_path="/tmp/contents.txt")
 
 # ... or from a Python file
-file("/tmp/contents.txt", "w").write("Hello world two!")
+open("/tmp/contents.txt", "w").write("Hello world two!")
 txn.upload("file2.txt", local_path="/tmp/contents.txt")
 
 # Create some directories
@@ -47,7 +47,7 @@ txn.copy(src_path="file1.txt", dest_path="file3.txt")
 txn.copy(src_path="file2.txt", dest_path="file4.txt")
 
 # Modify some files while we're at it
-file("/tmp/contents.txt", "w").write("Hello world one and a half!")
+open("/tmp/contents.txt", "w").write("Hello world one and a half!")
 txn.upload("file1.txt", local_path="/tmp/contents.txt")
 
 # Commit our changes

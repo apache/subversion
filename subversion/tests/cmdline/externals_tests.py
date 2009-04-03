@@ -1046,7 +1046,7 @@ def cannot_move_or_remove_file_externals(sbox):
                                      'up',
                                      repo_url, wc_dir)
 
-  file(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
+  open(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
 
 #----------------------------------------------------------------------
 
@@ -1076,12 +1076,12 @@ def can_place_file_external_into_dir_external(sbox):
                                      repo_url, wc_dir)
 
   beta1_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
-  f = file(beta1_path)
+  f = open(beta1_path)
   beta1_contents = f.read()
   f.close()
 
   beta2_path = os.path.join(wc_dir, 'A', 'D-copy', 'G', 'beta')
-  f = file(beta2_path)
+  f = open(beta2_path)
   beta2_contents = f.read()
   f.close()
 

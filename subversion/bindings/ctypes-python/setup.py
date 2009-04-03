@@ -238,8 +238,8 @@ class build(_build):
           sys.exit(2)
 
     if not self.dry_run:
-      out = file("svn_all2.py", "w")
-      for line in file("svn_all.py"):
+      out = open("svn_all2.py", "w")
+      for line in open("svn_all.py"):
         line = line.replace("restype = POINTER(svn_error_t)",
                             "restype = SVN_ERR")
 
