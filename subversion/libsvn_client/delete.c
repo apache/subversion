@@ -266,7 +266,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
           const char *parent_path;
 
           svn_pool_clear(subpool);
-          parent_path = svn_path_dirname(path, subpool);
+          parent_path = svn_dirent_dirname(path, subpool);
 
           /* See if the user wants us to stop. */
           if (ctx->cancel_func)
