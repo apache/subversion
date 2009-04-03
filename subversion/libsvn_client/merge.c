@@ -6305,10 +6305,29 @@ do_directory_merge(const char *url1,
       svn_client__merge_path_t *merge_target =
         APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                       svn_client__merge_path_t *);
+      svn_boolean_t operative_merge = FALSE; 
 
       /* Update the WC mergeinfo here to account for our new
          merges, minus any unresolved conflicts and skips. */
       apr_hash_t *merges;
+
+     /* Regardless of what subtrees in MERGE_B->TARGET might be missing
+        could this merge ever have operative? */
+     if ((notify_b->merged_paths
+          && apr_hash_count(notify_b->merged_paths))
+         || (notify_b->skipped_paths
+             && apr_hash_count(notify_b->skipped_paths))
+         || (notify_b->added_paths
+             && apr_hash_count(notify_b->added_paths))
+         || (notify_b->tree_conflicted_paths
+             && apr_hash_count(notify_b->tree_conflicted_paths)))
+       operative_merge = TRUE;
+
+     /* If this couldn't be an operative merge then don't bother with
+        the added complexity (and user confusion) of non-inheritable ranges.
+        There is no harm in subtrees inheriting inoperative mergeinfo. */
+     if (!operative_merge)
+       range.inheritable = TRUE;
 
       /* Remove absent children at or under TARGET_WCPATH from
          NOTIFY_B->CHILDREN_WITH_MERGEINFO
