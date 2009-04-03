@@ -6367,38 +6367,20 @@ do_directory_merge(const char *url1,
              ### is incorrect. */
           if (!subtree_touched_by_merge(child->path, notify_b, pool))
             {
-              /* Even if CHILD->PATH wasn't touched by the merge, if
-                 CHILD->PATH had no explicit mergeinfo prior to the merge
-                 and has missing children, then we must record mergeinfo.
-                 Otherwise the subtree rooted at CHILD->PATH may inherit
-                 mergeinfo previously recorded by this loop on one of 
-                 CHILD->PATH's parents, making it appear that URL1@REVISION1
-                 URL2@REVISION2 *was* merged to CHILD-PATH.
-                 
-                 ### subtree-mergeinfo-branch: Should we optimize this further
-                 ### to check if the diff between URL1@REVISION1 URL2@REVISION2
-                 ### could have affected CHILD->PATH even if its children were
-                 ### present and if not then skip recording mergeinfo? */
-              if (!child->missing_child
-                  || (child->pre_merge_mergeinfo
-                      && !child->indirect_mergeinfo))
-                {
-                  /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
-                     because it had no explicit mergeinfo of its own at the
-                     start of the merge but is the child of of some path with
-                     non-inheritable mergeinfo, then the explicit mergeinfo it
-                     has *now* was set by get_mergeinfo_paths() -- see criteria
-                     3 in that function's doc string.  So since CHILD->PATH
-                     was not touched by the merge we can remove the
-                     mergeinfo. */
-                  if (child->child_of_noninheritable)
-                    SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
-                                                            NULL,
-                                                            adm_access,
-                                                            iterpool));
-
-                  continue;
-                }
+              /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
+                 because it had no explicit mergeinfo of its own at the
+                 start of the merge but is the child of of some path with
+                 non-inheritable mergeinfo, then the explicit mergeinfo it
+                 has *now* was set by get_mergeinfo_paths() -- see criteria
+                 3 in that function's doc string.  So since CHILD->PATH
+                 was not touched by the merge we can remove the
+                 mergeinfo. */
+              if (child->child_of_noninheritable)
+                SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
+                                                        NULL,
+                                                        adm_access,
+                                                        iterpool));
+              continue;
             }
 
           if (strlen(child->path) == merge_target_len)
