@@ -369,9 +369,12 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(patch_basic, svntest.main.has_patch),
-              SkipUnless(patch_unidiff, svntest.main.has_patch),
-              SkipUnless(patch_copy_and_move, svntest.main.has_patch),
+              Wimp('Broken on platforms with nonstandard diff and/or newline',
+                   SkipUnless(patch_basic, svntest.main.has_patch)),
+              Wimp('Broken on platforms with nonstandard diff and/or newline',
+                   SkipUnless(patch_unidiff, svntest.main.has_patch)),
+              Wimp('Broken on platforms with nonstandard diff and/or newline',
+                   SkipUnless(patch_copy_and_move, svntest.main.has_patch)),
               ]
 
 if __name__ == '__main__':
