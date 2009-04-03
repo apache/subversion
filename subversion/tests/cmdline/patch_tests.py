@@ -18,10 +18,13 @@
 ######################################################################
 
 # General modules
-import sys, re, os
-import zlib, base64 #needed for diff_svnpatch test
+import base64
+import os
+import re
+import sys
+import tempfile
 import textwrap
-import warnings
+import zlib
 
 # Our testing module
 import svntest
@@ -54,8 +57,7 @@ def patch_basic(sbox):
   wc_dir = sbox.wc_dir
 
   # We might want to use The-Merge-Kludge trick here
-  patch_file_path = os.tempnam(os.path.abspath(svntest.main.temp_dir),
-                               'tmp')
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
 
   os.chdir(wc_dir)
 
@@ -150,8 +152,7 @@ def patch_unidiff(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = os.tempnam(os.path.abspath(svntest.main.temp_dir),
-                               'tmp')
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
 
   os.chdir(wc_dir)
 
@@ -211,8 +212,7 @@ def patch_copy_and_move(sbox):
   wc2_dir = sbox.add_wc_path('wc2')
   abs_wc2_dir = os.path.abspath(wc2_dir)
 
-  patch_file_path = os.tempnam(os.path.abspath(svntest.main.temp_dir),
-                               'tmp')
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
 
   mu_path = os.path.join('A', 'mu')
   gamma_path = os.path.join('A', 'D', 'gamma')
@@ -379,7 +379,6 @@ test_list = [ None,
               ]
 
 if __name__ == '__main__':
-  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 
