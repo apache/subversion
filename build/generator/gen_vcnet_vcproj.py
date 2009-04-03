@@ -41,7 +41,7 @@ class Generator(gen_win.WinGeneratorBase):
       #EXE
       config_type=1
     elif isinstance(target, gen_base.TargetJava):
-      config_type=1
+      config_type=10
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
         config_type=4

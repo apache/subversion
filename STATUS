@@ -156,14 +156,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36954
-   Allow building JavaHL with Visual Studio 2008.
-   Justification:
-     Without this fix VS 2008 errors on trying to integrate a manifest in
-     an unexisting file.
-   Votes:
-     +1: rhuijben, markphip
-
  * r36955
    Stop setting the default translation domain from our JavaHL library.
    Justification:
