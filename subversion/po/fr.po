@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-04-03 18:59+0200\n"
-"PO-Revision-Date: 2009-04-03 19:01+0200\n"
+"PO-Revision-Date: 2009-04-03 19:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -9667,15 +9667,15 @@ msgstr "'%s' vers '%s' n'est pas une relocalisation valide"
 
 #: ../svn/tree-conflicts.c:34 ../svn/tree-conflicts.c:50
 msgid "edit"
-msgstr "édite"
+msgstr "édition"
 
 #: ../svn/tree-conflicts.c:36 ../svn/tree-conflicts.c:56
 msgid "add"
-msgstr "ajoute"
+msgstr "addition"
 
 #: ../svn/tree-conflicts.c:38 ../svn/tree-conflicts.c:54
 msgid "delete"
-msgstr "supprime"
+msgstr "suppression"
 
 #: ../svn/tree-conflicts.c:52
 msgid "obstruction"
@@ -9692,7 +9692,7 @@ msgstr "non versionné"
 #: ../svn/tree-conflicts.c:77
 #, c-format
 msgid "local %s, incoming %s upon %s"
-msgstr "local %s, arrivée de %s sur %s"
+msgstr "local %s, %s entrante sur %s"
 
 #: ../svn/util.c:65
 #, c-format
