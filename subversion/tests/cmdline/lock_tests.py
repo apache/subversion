@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2005-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -330,17 +330,11 @@ def enforce_lock(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
-  # Set some binary properties.
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-
   # svn:needs-lock value should be forced to a '*'
-  svntest.actions.set_prop(None, 'svn:needs-lock', 'foo', iota_path,
-                           propval_path)
-  svntest.actions.set_prop(None, 'svn:needs-lock', '*', lambda_path,
-                           propval_path)
+  svntest.actions.set_prop('svn:needs-lock', 'foo', iota_path)
+  svntest.actions.set_prop('svn:needs-lock', '*', lambda_path)
   expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
-  svntest.actions.set_prop(expected_err, 'svn:needs-lock', '      ',
-                           mu_path, propval_path)
+  svntest.actions.set_prop('svn:needs-lock', '      ', mu_path, expected_err)
 
   # Check svn:needs-lock
   svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
