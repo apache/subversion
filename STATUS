@@ -151,5 +151,22 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r36954
+   Allow building JavaHL with Visual Studio 2008.
+   Justification:
+     Without this fix VS 2008 errors on trying to integrate a manifest in
+     an unexisting file.
+   Votes:
+     +1: rhuijben
+
+ * r36955
+   Stop setting the default translation domain from our JavaHL library.
+   Justification:
+     The default translation domain is reserved for the application and
+     shouldn't be changed by shared libraries.
+     (It also fixes a compilation issue in the SlikSVN JavaHL support).
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
