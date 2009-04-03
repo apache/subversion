@@ -6384,7 +6384,8 @@ do_directory_merge(const char *url1,
              ### don't know that child would not have been modified, so
              ### not recording non-inheritable mergeinfo on the path
              ### is incorrect. */
-          if (!subtree_touched_by_merge(child->path, notify_b, pool))
+          if (!operative_merge
+              || !subtree_touched_by_merge(child->path, notify_b, pool))
             {
               /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
                  because it had no explicit mergeinfo of its own at the
