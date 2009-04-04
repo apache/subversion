@@ -108,7 +108,7 @@ try:
   opts, args = getopt.gnu_getopt(sys.argv[1:], "h?", ["archive-type=",
                                                       "num-backups=",
                                                       "help"])
-except getopt.GetoptError, e:
+except getopt.GetoptError as e:
   sys.stderr.write("ERROR: %s\n\n" % e)
   sys.stderr.flush()
   usage(sys.stderr)
@@ -214,7 +214,7 @@ print("Beginning hot backup of '"+ repo_dir + "'.")
 
 try:
   youngest = get_youngest_revision()
-except Exception, e:
+except Exception as e:
   sys.stderr.write("%s\n" % e)
   sys.stderr.flush()
   sys.exit(1)
@@ -272,10 +272,10 @@ if archive_type:
       tar = tarfile.open(archive_path, 'w:' + archive_type)
       tar.add(backup_subdir, os.path.basename(backup_subdir))
       tar.close()
-    except ImportError, e:
+    except ImportError as e:
       err_msg = "Import failed: " + str(e)
       err_code = -2
-    except tarfile.TarError, e:
+    except tarfile.TarError as e:
       err_msg = "Tar failed: " + str(e)
       err_code = -3
 
@@ -298,10 +298,10 @@ if archive_type:
       for dirpath, dirs, files in os.walk(archive_path):
         add_to_zip(zp, backup_dir, dirpath, dirs + files)
       zp.close()
-    except ImportError, e:
+    except ImportError as e:
       err_msg = "Import failed: " + str(e)
       err_code = -4
-    except zipfile.error, e:
+    except zipfile.error as e:
       err_msg = "Zip failed: " + str(e)
       err_code = -5
 

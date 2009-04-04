@@ -85,7 +85,7 @@ def add_single_item(opener, url, headers, data):
     # resulting in the exception, which we catch and go on our merry way.
     try:
         opener.open(request)
-    except urllib2.URLError, e:
+    except urllib2.URLError as e:
         print 'URL open failed: %s, continuing...' % e.reason
 
 

@@ -299,17 +299,17 @@ if __name__ == "__main__":
     fp.write('[users]\nsvnmuccuser = svnmuccpass\n')
     fp.close()
     main()
-  except SystemExit, e:
+  except SystemExit as e:
     raise
-  except svntest.main.SVNCommitFailure, e:
+  except svntest.main.SVNCommitFailure as e:
     die("Error committing via svnmucc: %s" % (str(e)))
-  except svntest.main.SVNLineUnequal, e:
+  except svntest.main.SVNLineUnequal as e:
     die("Unexpected svnmucc output line: %s" % (str(e)))
-  except svntest.main.SVNRepositoryCreateFailure, e:
+  except svntest.main.SVNRepositoryCreateFailure as e:
     die("Error creating test repository: %s" % (str(e)))
-  except svntest.Failure, e:
+  except svntest.Failure as e:
     die("Test failed: %s" % (str(e)))
-  except Exception, e:
+  except Exception as e:
     die("Something bad happened: %s" % (str(e)))
 
   # cleanup the repository on a successful run
