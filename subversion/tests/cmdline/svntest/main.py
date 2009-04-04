@@ -612,7 +612,7 @@ def run_entriesdump(path):
   class Entry(object):
     pass
   entries = { }
-  exec ''.join(stdout_lines)
+  exec(''.join(stdout_lines))
   return entries
 
 
