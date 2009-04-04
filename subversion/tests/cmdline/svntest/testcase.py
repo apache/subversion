@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -81,9 +81,9 @@ class FunctionTestCase(TestCase):
     # docstring on it.
     assert isinstance(func, types.FunctionType)
 
-    name = func.func_name
+    name = func.__name__
 
-    assert func.func_code.co_argcount == 1, \
+    assert func.__code__.co_argcount == 1, \
         '%s must take an sbox argument' % name
 
     doc = func.__doc__.strip()
@@ -107,7 +107,7 @@ class FunctionTestCase(TestCase):
     """Base the sandbox's name on the name of the file in which the
     function was defined."""
 
-    filename = self.func.func_code.co_filename
+    filename = self.func.__code__.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, sandbox):
