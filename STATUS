@@ -142,7 +142,7 @@ Candidate changes:
    Justification:
      Fixes an endless loop triggered by google code when using ra_serf.
    Votes:
-     +1: sussman (via mail)
+     +1: sussman (via mail), lgo
      +0: rhuijben (concept; requires better review for a +1)
 
  * r36919
