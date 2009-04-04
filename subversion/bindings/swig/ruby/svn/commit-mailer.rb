@@ -622,8 +622,12 @@ CONTENT
     end
 
     def x_repository
-      # "X-SVN-Repository: #{@info.path}"
-      "X-SVN-Repository: XXX"
+      if @repository_uri
+        repository = "#{@repository_uri}/"
+      else
+        repository = "XXX"
+      end
+      "X-SVN-Repository: #{repository}"
     end
 
     def x_id
