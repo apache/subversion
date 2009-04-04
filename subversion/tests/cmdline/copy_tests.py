@@ -18,7 +18,6 @@
 
 # General modules
 import stat, os, re, shutil
-from string import lower, upper
 
 # Our testing module
 import svntest
@@ -3996,9 +3995,9 @@ def change_case_of_hostname(input):
   m = re.match(r"^(.*://)([^/]*)(.*)", input)
   if m:
     scheme = m.group(1)
-    host = upper(m.group(2))
+    host = m.group(2).upper()
     if host == m.group(2):
-      host = lower(m.group(2))
+      host = m.group(2).lower()
 
     path = m.group(3)
 
