@@ -268,6 +268,8 @@ def run_and_verify_svn_match_any2(message, expected_stdout, expected_stderr,
 
 def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
+  if not isinstance(dump_file_content, list):
+    raise TypeError("dump_file_content argument should have list type")
   expected_stderr = []
   exit_code, output, errput = main.run_command_stdin(
     main.svnadmin_binary, expected_stderr, 1, dump_file_content,
@@ -296,7 +298,7 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None):
   main.create_repos(sbox.repo_dir)
 
   # Load the mergetracking dumpfile into the repos, and check it out the repo
-  run_and_verify_load(sbox.repo_dir, dump_str)
+  run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True))
   run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
 
   return dump_str
