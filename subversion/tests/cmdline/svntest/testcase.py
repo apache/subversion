@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -38,7 +38,7 @@ class TestCase:
     }
 
   def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
-    assert callable(cond_func)
+    assert hasattr(cond_func, '__call__')
 
     self._delegate = delegate
     self._cond_func = cond_func
