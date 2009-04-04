@@ -454,7 +454,10 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     return stdout_lines, stderr_lines, exit_code
 
 # Run any binary, supplying input text, logging the command line
-def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
+def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
+  if stdin_lines and not isinstance(stdin_lines, list):
+    raise TypeError("stdin_lines should have list type")
+
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
     sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
