@@ -79,44 +79,49 @@ static const char * const data_loading_sql[] = {
    "insert into base_node values ("
    "  1, '', 1, '', null, 'normal', 'dir', "
    "  1, null, null, "
-   "  1, " TIME_1s ", '" AUTHOR_1 "', 'infinity', null, null, '()', 0, null); "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', 'infinity', null, null, '()', null, 0, "
+   "  null); "
    "insert into base_node values ("
    "  1, 'A', null, null, '', 'normal', 'file', "
    "  1, '$md5 $" MD5_1 "', 10, "
-   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null); "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
    "insert into base_node values ("
    "  1, 'B', null, null, '', 'excluded', 'symlink', "
    "  null, null, null, "
-   "  null, null, null, null, null, null, null, null, null); "
+   "  null, null, null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
    "  1, 'C', null, null, '', 'absent', 'unknown', "
    "  null, null, null, "
-   "  null, null, null, null, null, null, null, null, null); "
+   "  null, null, null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
    "  1, 'D', null, null, '', 'not-present', 'unknown', "
    "  null, null, null, "
-   "  null, null, null, null, null, null, null, null, null); "
+   "  null, null, null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
    "  1, 'E', null, null, '', 'incomplete', 'unknown', "
    "  null, null, null, "
-   "  null, null, null, null, null, null, null, null, null); "
+   "  null, null, null, null, null, null, null, null, null, null); "
    "insert into base_node values ("
    "  1, 'F', null, null, '', 'normal', 'file', "
    "  1, '$sha1$" SHA1_1 "', 15, "
-   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null); "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
    "insert into base_node values ("
    "  1, 'G', 2, 'G-alt', '', 'normal', 'file', "
    "  1, '$sha1$" SHA1_1 "', 15, "
-   "  2, " TIME_2s ", '" AUTHOR_2 "', null, null, null, '()', null, null); "
+   "  2, " TIME_2s ", '" AUTHOR_2 "', null, null, null, '()', null, null, "
+   "  null); "
    "insert into base_node values ("
    "  1, 'H', null, null, '', 'normal', 'symlink', "
    "  1, null, null, "
    "  1, " TIME_1s ", '" AUTHOR_1 "', null, 'H-target', null, '()', null, "
-   "  null); "
+   "  null, null); "
    "insert into base_node values ("
    "  1, 'I', null, null, '', 'normal', 'dir', "
    "  1, null, null, "
-   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null); "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
    " "
    "insert into working_node values ("
    "  1, 'I', '', 'normal', 'dir', "
@@ -811,7 +816,7 @@ test_scan_working(apr_pool_t *pool)
             &original_revision, &moved_to_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e", pool),
             pool, pool));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_src);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_away);
   SVN_ERR_ASSERT(strcmp(op_root_abspath,
                         svn_dirent_join(local_abspath, "J/J-e", pool)) == 0);
   SVN_ERR_ASSERT(repos_relpath == NULL);
@@ -833,7 +838,7 @@ test_scan_working(apr_pool_t *pool)
             &original_revision, &moved_to_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
             pool, pool));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_src);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_away);
   SVN_ERR_ASSERT(strcmp(op_root_abspath,
                         svn_dirent_join(local_abspath, "J/J-e", pool)) == 0);
   SVN_ERR_ASSERT(repos_relpath == NULL);
@@ -855,7 +860,7 @@ test_scan_working(apr_pool_t *pool)
             &original_revision, &moved_to_abspath,
             db, svn_dirent_join(local_abspath, "J/J-d", pool),
             pool, pool));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_dst);
+  SVN_ERR_ASSERT(status == svn_wc__db_status_moved_here);
   SVN_ERR_ASSERT(strcmp(op_root_abspath,
                         svn_dirent_join(local_abspath, "J/J-d", pool)) == 0);
   SVN_ERR_ASSERT(strcmp(repos_relpath, "J/J-d") == 0);

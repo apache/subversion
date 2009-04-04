@@ -218,7 +218,7 @@ class RegexOutput(ExpectedOutput):
     display_lines(message, label, self.output, actual, True, False)
 
 class UnorderedOutput(ExpectedOutput):
-  """Marks unordered output, and performs comparisions."""
+  """Marks unordered output, and performs comparisons."""
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."
     if self.match_all:

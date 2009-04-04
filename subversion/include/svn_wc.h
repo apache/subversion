@@ -55,7 +55,6 @@
 #include "svn_delta.h"     /* for svn_stream_t */
 #include "svn_opt.h"
 #include "svn_ra.h"        /* for svn_ra_reporter_t type */
-#include "svn_ra_svn.h"    /* for svn_ra_svn_item_t type */
 #include "svn_version.h"
 
 #ifdef __cplusplus

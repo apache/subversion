@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1838,7 +1838,7 @@ def force_move(sbox):
   file_path = os.path.join(wc_dir, file_name)
 
   # modify the content
-  file_handle = file(file_path, "a")
+  file_handle = open(file_path, "a")
   file_handle.write("Added contents\n")
   file_handle.close()
   expected_file_content = [ "This is the file 'iota'.\n",
@@ -1846,7 +1846,7 @@ def force_move(sbox):
                           ]
 
   # check for the new content
-  file_handle = file(file_path, "r")
+  file_handle = open(file_path, "r")
   modified_file_content = file_handle.readlines()
   file_handle.close()
   if modified_file_content != expected_file_content:
@@ -1866,7 +1866,7 @@ def force_move(sbox):
   os.chdir(was_cwd)
 
   # check for the new content
-  file_handle = file(os.path.join(wc_dir, "dest"), "r")
+  file_handle = open(os.path.join(wc_dir, "dest"), "r")
   modified_file_content = file_handle.readlines()
   file_handle.close()
   # Error if we dont find the modified contents...

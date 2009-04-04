@@ -19,7 +19,7 @@
 # General modules
 import os
 import sys
-import warnings
+import tempfile
 
 # Our testing module
 import svntest
@@ -145,7 +145,7 @@ def dumpfilter_with_targets(sbox):
                                    'greek_tree.dump')
   dumpfile = svntest.main.file_read(dumpfile_location)
 
-  targets_file = os.tempnam(svntest.main.temp_dir, 'tmp')
+  targets_file = tempfile.mkstemp(dir=svntest.main.temp_dir)[1]
   targets = open(targets_file, 'w')
   targets.write('/A/D/H\n')
   targets.write('/A/D/G\n')
@@ -216,7 +216,6 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 

@@ -47,7 +47,7 @@ parser.add_option("-X", "--extra-args ARG", dest="extra_args",
 
 # Read any extra arguments
 if options.extra_args:
-    f = file(options.extra_args)
+    f = open(options.extra_args)
     for line in f:
         args.append(line.strip())
 
@@ -136,7 +136,7 @@ for action, args in actions:
 # Get the log message
 message = options.message
 if options.file:
-    message = file(options.file).read()
+    message = open(options.file).read()
 
 # Finally commit
 txn.commit(message)

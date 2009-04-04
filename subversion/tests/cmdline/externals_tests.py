@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -19,7 +19,8 @@
 # General modules
 import sys
 import os
-import warnings
+import re
+import tempfile
 
 # Our testing module
 import svntest
@@ -153,7 +154,7 @@ def externals_test_setup(sbox):
   externals_desc = \
            external_url_for["A/B/gamma"] + " gamma\n"
 
-  tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=wc_init_dir)[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
@@ -165,7 +166,7 @@ def externals_test_setup(sbox):
            "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
            external_url_for["A/C/exdir_H"] + " exdir_H\n"
 
-  tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=wc_init_dir)[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
@@ -216,7 +217,7 @@ def externals_test_setup(sbox):
 def change_external(path, new_val):
   """Change the value of the externals property on PATH to NEW_VAL,
   and commit the change."""
-  tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=svntest.main.temp_dir)[1]
   svntest.main.file_append(tmp_f, new_val)
   svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', path)
@@ -611,7 +612,7 @@ def modify_and_update_receive_new_external(sbox):
           "exdir_Z      " + external_url_for["A/D/exdir_A/H"] + \
           "\n"
 
-  tmp_f = os.tempnam()
+  tmp_f = tempfile.mkstemp()[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset', '-F', tmp_f,
@@ -641,7 +642,7 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val):
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, val)
     svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                        'pset', '-F', tmp_f,
@@ -882,7 +883,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'arg1 -r1',
                'arg1 -r 1',
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -899,7 +900,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'arg1 -r abc arg2',
                'arg1 -rabc arg2',
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -917,7 +918,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'http://example.com/ -r1 http://example.com/',
                'http://example.com/ -r 1 http://example.com/',
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -934,7 +935,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                '-r1 foo http://example.com/',
                '-r 1 foo http://example.com/'
                ]:
-    tmp_f = os.tempnam()
+    tmp_f = tempfile.mkstemp()[1]
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -1045,7 +1046,7 @@ def cannot_move_or_remove_file_externals(sbox):
                                      'up',
                                      repo_url, wc_dir)
 
-  file(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
+  open(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
 
 #----------------------------------------------------------------------
 
@@ -1075,12 +1076,12 @@ def can_place_file_external_into_dir_external(sbox):
                                      repo_url, wc_dir)
 
   beta1_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
-  f = file(beta1_path)
+  f = open(beta1_path)
   beta1_contents = f.read()
   f.close()
 
   beta2_path = os.path.join(wc_dir, 'A', 'D-copy', 'G', 'beta')
-  f = file(beta2_path)
+  f = open(beta2_path)
   beta2_contents = f.read()
   f.close()
 
@@ -1188,7 +1189,8 @@ def binary_file_externals(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3),
+    'A/theta'      : Item(status='  ', wc_rev=3),
+    'A/C/external' : Item(status='  ', wc_rev=3, switched='X'),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1198,7 +1200,131 @@ def binary_file_externals(sbox):
                                         None, None, None, None, None,
                                         True)
 
+#----------------------------------------------------------------------
 
+# Issue #3351.
+def update_lose_file_external(sbox):
+  "delete a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+
+  # Create a file external in A/C/external on the file A/mu
+  C = os.path.join(wc_dir, 'A', 'C')
+  external = os.path.join(C, 'external')
+  externals_prop = "^/A/mu external\n"
+
+  # Set and commit the property.
+  change_external(C, externals_prop)
+
+
+  # Now, /A/C/external is designated as a file external pointing to
+  # the file /A/mu, but the external file is not there yet.
+  # Try to actually insert the external file via an update:
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/C/external'      : Item(status='E '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/C'          : Item(props={'svn:externals':externals_prop}),
+    'A/C/external' : Item("This is the file 'mu'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/C/external' : Item(status='  ', wc_rev='2', switched='X'),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  # now remove the svn:external prop
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'svn:externals', C)
+
+  # commit the property change
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C' : Item(verb='Sending'),
+    })
+
+  # (re-use above expected_status)
+  expected_status.tweak('A/C', wc_rev = 3)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # try to actually get rid of the external via an update
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  # (re-use above expected_disk)
+  expected_disk.tweak('A/C', props = {})
+  expected_disk.remove('A/C/external')
+
+  # (re-use above expected_status)
+  expected_status.tweak(wc_rev = 3)
+  expected_status.remove('A/C/external')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+
+#----------------------------------------------------------------------
+
+# Issue #3351.
+def switch_relative_external(sbox):
+  "switch a relative external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  
+  # Create a relative external in A/D on ../B
+  A_path = os.path.join(wc_dir, 'A')
+  A_copy_path = os.path.join(wc_dir, 'A_copy')
+  A_copy_url = repo_url + '/A_copy'
+  D_path = os.path.join(A_path, 'D')
+  ext_path = os.path.join(D_path, 'ext')
+  externals_prop = "../B ext\n"
+  change_external(D_path, externals_prop)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg',
+                                     '--quiet', wc_dir)
+
+  # Update our working copy, and create a "branch" (A => A_copy)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', 
+                                     '--quiet', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     '--quiet', A_path, A_copy_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg',
+                                     '--quiet', wc_dir)
+
+  # Okay.  We now want to switch A to A_copy, which *should* cause
+  # A/D/ext to point to the URL for A_copy/D/ext.
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', 
+                                     '--quiet', A_copy_url, A_path)
+
+  expected_infos = [
+    { 'Path' : re.escape(D_path),
+      'URL' : sbox.repo_url + '/A_copy/D',
+      },
+    { 'Path' : re.escape(ext_path),
+      'URL' : sbox.repo_url + '/A_copy/B',
+      },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, D_path, ext_path)
+
+  
 ########################################################################
 # Run the tests
 
@@ -1223,10 +1349,11 @@ test_list = [ None,
               can_place_file_external_into_dir_external,
               external_into_path_with_spaces,
               XFail(binary_file_externals),
+              XFail(update_lose_file_external),
+              XFail(switch_relative_external),
              ]
 
 if __name__ == '__main__':
-  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 

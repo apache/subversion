@@ -22,13 +22,7 @@ post-to-tigris.py <username> <password> <folderId> <release>
     release - the full name of the release, such as 1.5.0-beta1
 '''
 
-import sys, urllib2, urllib, re, socket
-try:
-  # Python >=3.0
-  from http.cookiejar import CookieJar as http_cookiejar_CookieJar
-except ImportError:
-  # Python <3.0
-  from cookielib import CookieJar as http_cookiejar_CookieJar
+import sys, cookielib, urllib2, urllib, re, socket
 
 # Set the socket timeout so that we don't wait all day for tigris.org to
 # respond
@@ -38,7 +32,7 @@ socket.setdefaulttimeout(5)
 def login(username, password, folderId):
     '''Login to tigris.org, using the provided username and password.
        Return the OpenDirector object for future use.'''
-    cj = http_cookiejar_CookieJar()
+    cj = cookielib.CookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 
     folderURL = 'http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=%d' % folderId,

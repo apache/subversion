@@ -373,7 +373,9 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       file_token->norm_offset = file_token->offset;
       if (file_token->length == 0) 
-        file_token->norm_offset += (c - curp); /* move past leading ignored characters */
+        /* move past leading ignored characters */
+        file_token->norm_offset += (c - curp);
+
       file_token->length += length;
 
       *hash = svn_diff__adler32(h, c, length);

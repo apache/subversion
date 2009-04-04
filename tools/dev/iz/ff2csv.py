@@ -75,7 +75,7 @@ manager-speak pictures."""
     if os.system("curl " + DATA_FILE + "> " + args[0]):
         os.system("wget " + DATA_FILE)
 
-    outfile = file(args[1], "w")
+    outfile = open(args[1], "w")
     outfile.write("Date,found,fixed,inval,dup,other,remain\n")
 
     totalsre = re.compile("totals:.*found= +([0-9]+) +"

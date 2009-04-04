@@ -152,6 +152,7 @@ svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
+entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 
 # Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
@@ -594,6 +595,26 @@ def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines."""
   return run_command(svnversion_binary, 1, 0, *varargs)
+
+def run_entriesdump(path):
+  """Run the entries-dump helper, returning a dict of Entry objects."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, None, path)
+  if verbose_mode:
+    ### finish the CMD output
+    print
+  if exit_code or stderr_lines:
+    ### report on this? or continue to just skip it?
+    return None
+
+  class Entry(object):
+    pass
+  entries = { }
+  exec ''.join(stdout_lines)
+  return entries
+
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):

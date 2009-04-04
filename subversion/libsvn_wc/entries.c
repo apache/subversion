@@ -797,6 +797,38 @@ determine_incomplete(svn_boolean_t *incomplete,
 }
 
 
+/* Hit the database to check the file external information for the given
+   entry.  The entry will be modified in place. */
+static svn_error_t *
+check_file_external(svn_wc_entry_t *entry,
+                    svn_sqlite__db_t *wc_db,
+                    apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                                    STMT_SELECT_FILE_EXTERNAL));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            (apr_uint64_t)1 /* wc_id */,
+                            entry->name));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!svn_sqlite__column_is_null(stmt, 0))
+    {
+      SVN_ERR(svn_wc__unserialize_file_external(
+                    &entry->file_external_path,
+                    &entry->file_external_peg_rev,
+                    &entry->file_external_rev,
+                    svn_sqlite__column_text(stmt, 0, NULL),
+                    result_pool));
+
+    }
+
+  return svn_sqlite__reset(stmt);
+}
+
+
 /* Fill the entries cache in ADM_ACCESS. The full hash cache will be
    populated.  SCRATCH_POOL is used for local memory allocation, the access
    baton pool is used for the cache. */
@@ -1060,8 +1092,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
                   entry->schedule = svn_wc_schedule_normal;
                 }
 
-              /* ### copied nodes need to mirror their copyfrom_rev */
-              entry->revision = original_revision;
+              /* Copied nodes need to mirror their copyfrom_rev, if they
+                 don't have a revision of their own already. */
+              if (!SVN_IS_VALID_REVNUM(entry->revision))
+                entry->revision = original_revision;
             }
 
           /* Does this node have copyfrom_* information?  */
@@ -1090,8 +1124,10 @@ read_entries(svn_wc_adm_access_t *adm_access,
                  code below looks at the parent to detect if it *also* has
                  copyfrom information, and if the copyfrom_url would align
                  properly. If it *does*, then we omit storing copyfrom_url
-                 and copyfrom_rev, and simply leave the mixed-rev value
-                 that was stored into entry->revision by the code above.  */
+                 and copyfrom_rev (ie. inherit the copyfrom info like a
+                 normal child), and update entry->revision with the
+                 copyfrom_rev in order to (re)create the mixed-rev copied
+                 subtree that was originally presented for storage.  */
 
               /* Get the copyfrom information from our parent.
 
@@ -1123,19 +1159,34 @@ read_entries(svn_wc_adm_access_t *adm_access,
                   const char *entry_repos_relpath = svn_uri_join(
                     parent_repos_relpath, relpath_to_entry, iterpool);
 
-                  /* The copyfrom roots matched. Now we look to see if the
-                     copyfrom path of the parent would align with our own
-                     path (meaning this copyfrom was inserted for mixed-rev
-                     purposes and can be eliminated without changing the
-                     implied copyfrom path).  */
+                  /* The copyfrom repos roots matched.
+
+                     Now we look to see if the copyfrom path of the parent
+                     would align with our own path. If so, then it means
+                     this copyfrom was spontaneously created and inserted
+                     for mixed-rev purposes and can be eliminated without
+                     changing the semantics of a mixed-rev copied subtree.
+
+                     See notes/api-errata/wc003.txt for some additional
+                     detail, and potential issues.  */
                   if (strcmp(entry_repos_relpath, original_repos_relpath) == 0)
                     {
+                      /* Don't set the copyfrom_url and clear out the
+                         copyfrom_rev. Thus, this node becomes a child
+                         of a copied subtree (rather than its own root).  */
                       set_copyfrom = FALSE;
-
-                      /* Reset a couple fields, to their proper states when
-                         no copyfrom information is present.  */
                       entry->copyfrom_rev = SVN_INVALID_REVNUM;
+
+                      /* Children in a copied subtree are schedule normal
+                         since we don't plan to actually *do* anything with
+                         them. Their operation is implied by ancestors.  */
                       entry->schedule = svn_wc_schedule_normal;
+
+                      /* And *finally* we turn this entry into the mixed
+                         revision node that it was intended to be. This
+                         node's revision is taken from the copyfrom record
+                         that we spontaneously constructed.  */
+                      entry->revision = original_revision;
                     }
                 }
 
@@ -1174,6 +1225,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
       if (entry->schedule == svn_wc_schedule_delete)
         {
           svn_error_t *err;
+          const svn_wc_entry_t *parent_entry;
 
           /* Get the information from the underlying BASE node.  */
           err = svn_wc__db_base_get_info(NULL, &kind,
@@ -1251,39 +1303,83 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                                  iterpool));
             }
 
-          /* For child nodes without a revision, pick up the parent's
-             revision.  */
-          if (!SVN_IS_VALID_REVNUM(entry->revision) && *entry->name != '\0')
+          /* Do some extra work for the child nodes.  */
+          if (*entry->name != '\0')
             {
-              const svn_wc_entry_t *parent_entry;
-
               parent_entry = apr_hash_get(entries, "", 0);
-              entry->revision = parent_entry->revision;
+
+              /* For child nodes without a revision, pick up the parent's
+                 revision.  */
+              if (!SVN_IS_VALID_REVNUM(entry->revision))
+                entry->revision = parent_entry->revision;
             }
 
-          /* Hold on tight. This is where it gets REALLY confusing.
+          /* For deleted nodes, our COPIED flag has a rather complex meaning.
 
-             If we have changed_* information for the node which is being
-             deleted, then it doesn't matter whether we are COPIED or not.
-             Presumably because we know what revision needs to be deleted.
+             In general, COPIED means "an operation on an ancestor took care
+             of me." This typically refers to a copy of an ancestor (and
+             this node just came along for the ride). However, in certain
+             situations the COPIED flag is set for deleted nodes.
 
-             If we do NOT have changed_* information, then if the parent
-             was COPIED, then we are also COPIED. For child nodes, detection
-             is easy -- we dropped off the value into PARENT_COPIED. For
-             "this dir", we have a lot more work to see if any ancestors
-             were copied, and (thus) making us a COPIED child.  */
-          if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
+             First off, COPIED will *never* be set for nodes/subtrees that
+             are simply deleted. The deleted node/subtree *must* be under
+             an ancestor that has been copied. Plain additions do not count;
+             only copies (add-with-history).
+
+             The basic algorithm to determine whether we live within a
+             copied subtree is as follows:
+
+             1) find the root of the deletion operation that affected us
+                (we may be that root, or an ancestor was deleted and took
+                us with it)
+
+             2) look at the root's *parent* and determine whether that was
+                a copy or a simple add.
+
+             It would appear that we would be done at this point. Once we
+             determine that the parent was copied, then we could just set
+             the COPIED flag.
+
+             Not so fast. Back to the general concept of "an ancestor
+             operation took care of me." Further consider two possibilities:
+
+             1) this node is scheduled for deletion from the copied subtree,
+                so at commit time, we copy then delete
+
+             2) this node is scheduled for deletion because a subtree was
+                deleted and then a copied subtree was added (causing a
+                replacement). at commit time, we delete a subtree, and then
+                copy a subtree. we do not need to specifically touch this
+                node -- all operations occur on ancestors.
+
+             Given the "ancestor operation" concept, then in case (1) we
+             must *clear* the COPIED flag since we'll have more work to do.
+             In case (2), we *set* the COPIED flag to indicate that no
+             real work is going to happen on this node.
+
+             Great fun. And maybe the code reading these values has no
+             bugs in interpreting that gobbledygook... but that *is* the
+             expectation of the code. Sigh.
+
+             We can get a little bit of shortcut here if THIS_DIR is
+             also schduled for deletion.
+          */
+          if (*entry->name != '\0'
+              && parent_entry->schedule == svn_wc_schedule_delete)
             {
-              /* Since we have change information, this is not COPIED.  */
-            }
-          else if (*entry->name != '\0')
-            {
+              /* ### not entirely sure that we can rely on the parent. for
+                 ### example, what if we are a deletion of a BASE node, but
+                 ### the parent is a deletion of a copied subtree? sigh.  */
+
               /* Child nodes simply inherit the parent's COPIED flag.  */
               entry->copied = parent_copied;
             }
           else
             {
-              const char *current_abspath = local_abspath;
+              const char *current_abspath = entry_abspath;
+
+              /* ### actually... we only need two scans *at most* here,
+                 ### rather than this loop. save for a future revision.  */
 
               /* As long as CURRENT_ABSPATH refers to a deleted node, we
                  will scan up the tree looking for a copy. We will either
@@ -1322,17 +1418,49 @@ read_entries(svn_wc_adm_access_t *adm_access,
                       break;
                     }
                   if (parent_status == svn_wc__db_status_copied
-                      || parent_status == svn_wc__db_status_moved_dst)
+                      || parent_status == svn_wc__db_status_moved_here)
                     {
                       /* The parent is copied/moved here, so CURRENT_ABSPATH
-                         is the root of a deleted subtree. Mark everything as
-                         COPIED.
+                         is the root of a deleted subtree. Our COPIED status
+                         is now dependent upon whether the copied root is
+                         replacing a BASE tree or not.
 
-                         Note: MOVED_DST is a concept foreign to this old
+                         But: if we are schedule-delete as a result of being
+                         a copied DELETED node, then *always* mark COPIED.
+                         Normal copies have cmt_* data; copied DELETED nodes
+                         are missing this info.
+
+                         Note: MOVED_HERE is a concept foreign to this old
                          interface, but it is best represented as if a copy
                          had occurred, so we'll model it that way to old
                          clients.  */
-                      entry->copied = parent_copied = TRUE;
+                      if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
+                        {
+                          svn_boolean_t root_is_replace;
+
+                          /* Determine if there is a (shadowed) BASE node at
+                             the root of this operation.  */
+                          err = svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                                         NULL, NULL, NULL,
+                                                         NULL, NULL, NULL,
+                                                         NULL, NULL, NULL,
+                                                         NULL, NULL, NULL,
+                                                         db,
+                                                         op_root_abspath,
+                                                         iterpool, iterpool);
+                          root_is_replace = (err == NULL);
+                          svn_error_clear(err);
+
+                          entry->copied = root_is_replace;
+                        }
+                      else
+                        {
+                          entry->copied = TRUE;
+                        }
+
+                      /* Maybe stash this value away for later children.  */
+                      if (*entry->name == '\0')
+                        parent_copied = entry->copied;
                       break;
                     }
                   if (parent_status == svn_wc__db_status_added)
@@ -1353,7 +1481,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                      is that it has been deleted/moved-away.  */
                   SVN_ERR_ASSERT(
                     parent_status == svn_wc__db_status_deleted
-                    || parent_status == svn_wc__db_status_moved_src);
+                    || parent_status == svn_wc__db_status_moved_away);
 
                   /* OP_ROOT_ABSPATH is the root of the deletion/move. We
                      now need to examine what happened to *its* parent.
@@ -1436,30 +1564,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
          ### right now this is ugly, since we have no good way querying
          ### for a file external OR retrieving properties.  ugh.  */
       if (entry->kind == svn_node_file)
-        {
-          svn_sqlite__stmt_t *stmt;
-          svn_boolean_t have_row;
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
-                                            STMT_SELECT_FILE_EXTERNAL));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                    (apr_uint64_t)1 /* wc_id */,
-                                    entry->name));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-          if (!svn_sqlite__column_is_null(stmt, 0))
-            {
-              SVN_ERR(svn_wc__unserialize_file_external(
-                            &entry->file_external_path,
-                            &entry->file_external_peg_rev,
-                            &entry->file_external_rev,
-                            svn_sqlite__column_text(stmt, 0, NULL),
-                            result_pool));
-
-            }
-
-          SVN_ERR(svn_sqlite__reset(stmt));
-        }
+        SVN_ERR(check_file_external(entry, wc_db, result_pool));
 
       entry->working_size = translated_size;
 
@@ -1686,7 +1791,8 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                                                       scratch_pool), NULL)));
     }
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
+  if (base_node->translated_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
 
   /* ### strictly speaking, changed_rev should be valid for present nodes. */
   if (SVN_IS_VALID_REVNUM(base_node->changed_rev))
@@ -1771,8 +1877,10 @@ insert_working_node(svn_sqlite__db_t *wc_db,
       SVN_ERR(svn_sqlite__bind_text(stmt, 11, apr_pstrcat(scratch_pool,
                     kind_str, svn_checksum_to_cstring(working_node->checksum,
                                                       scratch_pool), NULL)));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->translated_size));
     }
+
+  if (working_node->translated_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->translated_size));
 
   if (SVN_IS_VALID_REVNUM(working_node->changed_rev))
     SVN_ERR(svn_sqlite__bind_int64(stmt, 13, working_node->changed_rev));

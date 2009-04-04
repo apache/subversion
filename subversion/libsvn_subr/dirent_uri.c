@@ -195,7 +195,7 @@ dirent_previous_segment(const char *dirent,
   --len;
   while (len > 0 && dirent[len] != '/'
 #if defined(WIN32) || defined(__CYGWIN__)
-                 && dirent[len] != ':'
+                 && (dirent[len] != ':' || len != 1)
 #endif /* WIN32 or Cygwin */
         )
     --len;

@@ -1209,7 +1209,10 @@ def run_and_verify_status(wc_dir_name, output_tree,
   Returns on success, raises on failure."""
 
   if isinstance(output_tree, wc.State):
+    output_state = output_tree
     output_tree = output_tree.old_tree()
+  else:
+    output_state = None
 
   exit_code, output, errput = main.run_svn(None, 'status', '-v', '-u', '-q',
                                            wc_dir_name)
@@ -1226,6 +1229,19 @@ def run_and_verify_status(wc_dir_name, output_tree,
     print("ACTUAL STATUS TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
+
+  # if we have an output State, and we can/are-allowed to create an
+  # entries-based State, then compare the two.
+  if output_state:
+    entries_state = wc.State.from_entries(wc_dir_name)
+    if entries_state:
+      tweaked = output_state.copy()
+      tweaked.tweak_for_entries_compare()
+      try:
+        tweaked.compare_and_display('entries', entries_state)
+      except tree.SVNTreeUnequal:
+        ### do something more
+        raise
 
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us
@@ -1534,16 +1550,21 @@ script which always reports errors."""
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
 
-# set_prop can be used for binary properties are values like '*' which are not
-# handled correctly when specified on the command line.
-def set_prop(expected_err, name, value, path, valp):
-  """Set a property with value from a file"""
-  valf = open(valp, 'wb')
-  valf.seek(0)
-  valf.truncate(0)
-  valf.write(value)
-  valf.flush()
-  main.run_svn(expected_err, 'propset', '-F', valp, name, path)
+# set_prop can be used for properties with NULL characters which are not
+# handled correctly when passed to subprocess.Popen().
+def set_prop(name, value, path, expected_err=None):
+  """Set a property with specified value"""
+  if '\x00' in value:
+    from tempfile import mkstemp
+    value_file_path = mkstemp()[1]
+    value_file = open(value_file_path, 'wb')
+    value_file.write(value)
+    value_file.flush()
+    value_file.close()
+    main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
+    os.remove(value_file_path)
+  else:
+    main.run_svn(expected_err, 'propset', name, value, path)
 
 def check_prop(name, path, exp_out):
   """Verify that property NAME on PATH has a value of EXP_OUT"""

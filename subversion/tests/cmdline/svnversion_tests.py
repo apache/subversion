@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2003 CollabNet.  All rights reserved.
+# Copyright (c) 2003, 2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,7 +18,7 @@
 
 # General modules
 import os.path
-import warnings
+import tempfile
 
 # Our testing module
 import svntest
@@ -150,7 +150,7 @@ def ignore_externals(sbox):
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
   externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
-  tmp_f = os.tempnam(wc_dir, 'tmp')
+  tmp_f = tempfile.mkstemp(dir=wc_dir)[1]
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
@@ -193,7 +193,6 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 

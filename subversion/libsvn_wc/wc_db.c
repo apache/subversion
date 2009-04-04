@@ -167,7 +167,10 @@ enum statement_keys {
   STMT_SELECT_ALL_PROPS,
   STMT_SELECT_PRISTINE_PROPS,
   STMT_INSERT_LOCK,
-  STMT_INSERT_WCROOT
+  STMT_INSERT_WCROOT,
+  STMT_UPDATE_BASE_WCPROPS,
+  STMT_SELECT_BASE_WCPROPS,
+  STMT_SELECT_DELETION_INFO
 };
 
 static const char * const statements[] = {
@@ -261,6 +264,18 @@ static const char * const statements[] = {
 
   "insert into wcroot (local_abspath) "
   "values (?1);",
+
+  "update base_node set wc_props = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select wc_props from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  "select base_node.presence, working_node.presence, moved_to "
+  "from base_node "
+  "left outer join working_node on base_node.wc_id = working_node.wc_id "
+  "  and base_node.local_relpath = working_node.local_relpath "
+  "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
 
   NULL
 };
@@ -356,6 +371,8 @@ word_to_presence(const char *presence)
       return svn_wc__db_status_excluded;
     case 'i':
       return svn_wc__db_status_incomplete;
+    case 'b':
+      return svn_wc__db_status_base_deleted;
     default:
       if (strcmp(presence, "not-present") == 0)
         return svn_wc__db_status_not_present;
@@ -380,6 +397,8 @@ presence_to_word(svn_wc__db_status_t presence)
       return "not-present";
     case svn_wc__db_status_incomplete:
       return "incomplete";
+    case svn_wc__db_status_base_deleted:
+      return "base-delete";
     default:
       SVN_ERR_MALFUNCTION_NO_RETURN();
     }
@@ -999,6 +1018,34 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 }
 
 
+/* Get the statement given by STMT_IDX, and bind the appropriate wc_id and
+   local_relpath based upon LOCAL_ABSPATH.  Store it in *STMT, and use
+   SCRATCH_POOL for temporary allocations.
+   
+   Note: WC_ID and LOCAL_RELPATH must be arguments 1 and 2 in the statement. */
+static svn_error_t *
+get_statement_for_path(svn_sqlite__stmt_t **stmt,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       int stmt_idx,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(stmt, pdh->sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(*stmt, "is", pdh->wc_id, local_relpath));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                    svn_wc__db_pdh_t *child_pdh,
@@ -1356,7 +1403,7 @@ svn_wc__db_init(const char *local_abspath,
   ibb.changed_author = NULL;
 
   ibb.children = NULL;
-  ibb.incomplete_children = TRUE;
+  ibb.incomplete_children = initial_rev > 0;
   ibb.depth = depth;
   
   ibb.scratch_pool = scratch_pool;
@@ -1916,19 +1963,11 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_BASE_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_BASE_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -1951,6 +1990,47 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
 {
   return gather_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
                          db, local_abspath, result_pool, scratch_pool);
+}
+
+
+svn_error_t *
+svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const apr_hash_t *props,
+                            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_BASE_WCPROPS, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+
+  return svn_sqlite__step_done(stmt);
+}
+
+
+svn_error_t *
+svn_wc__db_base_get_wcprops(apr_hash_t **props,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_BASE_WCPROPS, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                        scratch_pool));
+  return svn_sqlite__reset(stmt);
 }
 
 
@@ -2155,22 +2235,13 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
-                        apr_hash_t *props,
+                        const apr_hash_t *props,
                         apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_UPDATE_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_ACTUAL_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
   return svn_sqlite__step_done(stmt);
@@ -2666,19 +2737,11 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb, STMT_SELECT_ALL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_ALL_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -2708,20 +2771,11 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
-                                    STMT_SELECT_PRISTINE_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, local_relpath));
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_PRISTINE_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -3006,7 +3060,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
 
           if (status)
-            *status = svn_wc__db_status_moved_src;
+            *status = svn_wc__db_status_moved_away;
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (moved_to_abspath)
@@ -3030,7 +3084,7 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           if (status)
             {
               if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
-                *status = svn_wc__db_status_moved_dst;
+                *status = svn_wc__db_status_moved_here;
               else
                 *status = svn_wc__db_status_copied;
             }
@@ -3101,6 +3155,170 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
       if (repos_relpath)
         *repos_relpath = svn_dirent_join(base_relpath, build_relpath,
                                          result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_scan_deletion(const char **base_del_abspath,
+                         svn_boolean_t *base_replaced,
+                         const char **moved_to_abspath,
+                         const char **work_del_abspath,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  const char *current_abspath = local_abspath;
+  const char *current_relpath;
+  const char *child_abspath = NULL;
+  svn_wc__db_status_t child_presence;
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT(base_del_abspath != NULL);
+  SVN_ERR_ASSERT(base_replaced != NULL);
+  SVN_ERR_ASSERT(moved_to_abspath != NULL);
+  SVN_ERR_ASSERT(work_del_abspath != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Initialize all the OUT parameters.  */
+  *base_del_abspath = NULL;
+  *base_replaced = FALSE;  /* becomes TRUE when we know for sure.  */
+  *moved_to_abspath = NULL;
+  *work_del_abspath = NULL;
+
+  /* Initialize to something that won't denote an important parent/child
+     transition.  */
+  child_presence = svn_wc__db_status_base_deleted;
+
+  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  while (TRUE)
+    {
+      svn_sqlite__stmt_t *stmt;
+      svn_boolean_t have_base;
+      svn_boolean_t have_work;
+      svn_wc__db_status_t work_presence;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
+                                        STMT_SELECT_DELETION_INFO));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__step_row(stmt));
+
+      have_base = !svn_sqlite__column_is_null(stmt, 0);
+      have_work = !svn_sqlite__column_is_null(stmt, 1);
+
+      if (!have_base && !have_work)
+        {
+          svn_error_clear(svn_sqlite__reset(stmt));
+
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
+
+      /* We need the presence of the WORKING node.  */
+      if (have_work)
+        {
+          work_presence = word_to_presence(svn_sqlite__column_text(stmt, 1,
+                                                                   NULL));
+          /* ### check for allowable presence values for this algorithm.
+             ### LEGAL: normal, not-present, base-deleted.  */
+        }
+
+      /* If we're on the starting node, then we have a bit of extra work.  */
+      if (current_abspath == local_abspath)
+        {
+          /* There MUST be something here to record a deletion.  */
+          SVN_ERR_ASSERT(have_work);
+
+          /* The starting node better be deleted!  */
+          SVN_ERR_ASSERT(work_presence != svn_wc__db_status_normal);
+        }
+
+      if (have_base)
+        {
+          svn_wc__db_status_t base_presence
+            = word_to_presence(svn_sqlite__column_text(stmt, 0, NULL));
+
+          /* ### check for allowable presence values for this algorithm.
+             ### LEGAL: normal, not-present.  */
+
+          /* If a BASE node is marked as not-present, then we'll ignore
+             it within this function. That status is simply a bookkeeping
+             gimmick, not a real node that may have been deleted.  */
+
+          /* If we're looking at a present BASE node, *and* there is a
+             WORKING node (present or deleted), then a replacement has
+             occurred here or in an ancestor.  */
+          if (base_presence == svn_wc__db_status_normal
+              && have_work
+              && work_presence != svn_wc__db_status_base_deleted)
+            {
+              *base_replaced = TRUE;
+            }
+        }
+
+      /* Only grab the nearest ancestor.  */
+      if (*moved_to_abspath == NULL
+          && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
+        {
+          /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
+          *base_del_abspath = apr_pstrdup(result_pool, current_abspath);
+          *moved_to_abspath = svn_dirent_join(
+                                pdh->wcroot_abspath,
+                                svn_sqlite__column_text(stmt, 2, NULL),
+                                result_pool);
+        }
+
+      if (!have_work)
+        {
+          /* Fell off the top of the WORKING tree.
+
+             The child cannot be not-present, as that would imply the
+             root of the (added) WORKING subtree was deleted.  */
+          SVN_ERR_ASSERT(child_presence != svn_wc__db_status_not_present);
+
+          /* If the child was base-deleted, then the whole tree is a
+             simple (explicit) deletion of the BASE tree.
+
+             If the child was normal, then it is the root of a replacement,
+             which implies an (implicit) deletion of the BASE tree.
+
+             In both cases, set the root of the operation (if we have not
+             already set it as part of a moved-away).  */
+          if (*base_del_abspath == NULL)
+            *base_del_abspath = apr_pstrdup(result_pool, child_abspath);
+
+          /* We found whatever roots we needed. This BASE node and its
+             ancestors are unchanged, so we're done.  */
+          break;
+        }
+      else if (work_presence == svn_wc__db_status_normal
+               && child_presence == svn_wc__db_status_deleted)
+        {
+          /* Parent is normal, but child was deleted. Therefore, the child
+             is the root of a WORKING subtree deletion.  */
+          *work_del_abspath = apr_pstrdup(result_pool, child_abspath);
+        }
+
+      /* Move to the parent node. Remember the information about this node
+         for our parent to use.  */
+      child_abspath = current_abspath;
+      child_presence = work_presence;
+      if (strcmp(current_relpath, pdh->local_relpath) == 0)
+        {
+          /* The current node is a directory, so move to the parent dir.  */
+          SVN_ERR(navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readonly,
+                                     scratch_pool));
+        }
+      current_abspath = pdh->local_abspath;
+      current_relpath = pdh->local_relpath;
     }
 
   return SVN_NO_ERROR;

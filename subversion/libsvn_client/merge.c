@@ -4956,10 +4956,16 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     {
                       svn_boolean_t inherited;
                       svn_mergeinfo_t mergeinfo;
+                      const svn_wc_entry_t *child_entry;
+
+                      SVN_ERR(svn_wc__entry_versioned(
+                        &child_entry, child_of_noninheritable->path,
+                        adm_access, FALSE, iterpool));
+
                       SVN_ERR(svn_client__get_wc_mergeinfo
                               (&mergeinfo, &inherited, FALSE,
                                svn_mergeinfo_nearest_ancestor,
-                               entry, child_of_noninheritable->path,
+                               child_entry, child_of_noninheritable->path,
                                merge_cmd_baton->target, NULL, adm_access,
                                merge_cmd_baton->ctx, iterpool));
 
