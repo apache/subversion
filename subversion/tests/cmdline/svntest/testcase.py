@@ -38,7 +38,7 @@ class TestCase:
     }
 
   def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
-    assert callable(cond_func)
+    assert hasattr(cond_func, '__call__')
 
     self._delegate = delegate
     self._cond_func = cond_func

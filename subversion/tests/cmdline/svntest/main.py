@@ -46,6 +46,13 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
+try:
+  # Python >=2.6
+  bytes
+except NameError:
+  # Python <2.6
+  bytes = str
+
 ######################################################################
 #
 #  HOW TO USE THIS MODULE:
@@ -454,7 +461,10 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     return stdout_lines, stderr_lines, exit_code
 
 # Run any binary, supplying input text, logging the command line
-def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
+def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
+  if stdin_lines and not isinstance(stdin_lines, list):
+    raise TypeError("stdin_lines should have list type")
+
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
     sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
@@ -612,7 +622,7 @@ def run_entriesdump(path):
   class Entry(object):
     pass
   entries = { }
-  exec ''.join(stdout_lines)
+  exec(''.join(stdout_lines))
   return entries
 
 
@@ -650,17 +660,25 @@ def safe_rmtree(dirname, retry=0):
 # For making local mods to files
 def file_append(path, new_text):
   "Append NEW_TEXT to file at PATH"
+  if not isinstance(new_text, str):
+    raise TypeError("new_text argument should have str type")
   file_write(path, new_text, 'a')  # open in (a)ppend mode
 
 # Append in binary mode
 def file_append_binary(path, new_text):
   "Append NEW_TEXT to file at PATH in binary mode"
+  if not isinstance(new_text, bytes):
+    raise TypeError("new_text argument should have bytes type")
   file_write(path, new_text, 'ab')  # open in (a)ppend mode
 
 # For creating new files, and making local mods to existing files.
 def file_write(path, contents, mode = 'w'):
   """Write the CONTENTS to the file at PATH, opening file using MODE,
   which is (w)rite by default."""
+  if "b" in mode and not isinstance(contents, bytes):
+    raise TypeError("contents argument should have bytes type when writing in binary mode")
+  if "b" not in mode and not isinstance(contents, str):
+    raise TypeError("contents argument should have str type when writing in text mode")
   fp = open(path, mode)
   fp.write(contents)
   fp.close()
