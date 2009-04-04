@@ -432,6 +432,14 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 
   kid, command = waiter
   stdout, stderr = kid.communicate(stdin)
+  try:
+    stdout = stdout.decode()
+  except UnicodeDecodeError:
+    pass
+  try:
+    stderr = stderr.decode()
+  except UnicodeDecodeError:
+    pass
   exit_code = kid.returncode
 
   # Normalize Windows line endings if in text mode.
@@ -475,6 +483,8 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
 
   if stdin_lines:
     for x in stdin_lines:
+      if isinstance(x, str):
+        x = x.encode()
       infile.write(x)
 
   stdout_lines, stderr_lines, exit_code = wait_on_pipe(kid, binary_mode)

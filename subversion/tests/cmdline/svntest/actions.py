@@ -1560,6 +1560,10 @@ def set_prop(name, value, path, expected_err=None):
     from tempfile import mkstemp
     value_file_path = mkstemp()[1]
     value_file = open(value_file_path, 'wb')
+    if sys.version_info[0] >= 3:
+      # Python >=3.0
+      if isinstance(value, str):
+        value = value.encode()
     value_file.write(value)
     value_file.flush()
     value_file.close()

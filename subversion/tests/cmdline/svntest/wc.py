@@ -206,7 +206,7 @@ class State:
           os.makedirs(dirpath)
 
         # write out the file contents now
-        open(fullpath, 'wb').write(item.contents)
+        open(fullpath, 'wb').write(item.contents.encode())
 
   def normalize(self):
     """Return a "normalized" version of self.
@@ -491,7 +491,11 @@ class State:
       for name in dirs + files:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
-          contents = open(node, 'r').read()
+          contents = open(node, 'rb').read()
+          try:
+            contents = contents.decode()
+          except UnicodeDecodeError:
+            pass
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
@@ -646,9 +650,16 @@ class StateItem:
 
   def tweak(self, **kw):
     for name, value in kw.items():
-      ### refine the revision args (for now) to ensure they are strings
+      # Refine the revision args (for now) to ensure they are strings.
       if value is not None and name == 'wc_rev':
         value = str(value)
+      if sys.version_info[0] >= 3:
+        # Python >=3.0
+        # Property values with invalid UTF-8 characters have bytes type.
+        if value is not None and name == 'props':
+          for prop, prop_value in value.items():
+            if isinstance(prop_value, bytes):
+              value[prop] = str(prop_value)
       setattr(self, name, value)
 
   def __eq__(self, other):
