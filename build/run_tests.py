@@ -80,35 +80,35 @@ class TestHarness:
     log_lines = self.log.readlines()
 
     # Print summaries from least interesting to most interesting.
-    wimptag = ' [[WIMP: '
+    wimptag = b' [[WIMP: '
     def printxfail(x):
-      wip = x.find(wimptag)
+      wip = x.find(wimptag.decode())
       if 0 > wip:
         sys.stdout.write(x)
       else:
         sys.stdout.write('%s\n       [[%s'
                          % (x[:wip], x[wip + len(wimptag):]))
-    passed = [x for x in log_lines if x[:6] == 'PASS: ']
-    skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
+    passed = [x.decode() for x in log_lines if x[:6] == b'PASS: ']
+    skipped = [x.decode() for x in log_lines if x[:6] == b'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
-    xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
-    passwimp = [x for x in log_lines
-                if x[:6] == 'XFAIL:' and 0 <= x.find(wimptag)]
+    xfailed = [x.decode() for x in log_lines if x[:6] == b'XFAIL:']
+    passwimp = [x.decode() for x in log_lines
+                if x[:6] == b'XFAIL:' and 0 <= x.find(wimptag)]
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         printxfail(x)
-    failed_list = [x for x in log_lines if x[:6] == 'FAIL: ']
+    failed_list = [x.decode() for x in log_lines if x[:6] == b'FAIL: ']
     if failed_list:
       print('At least one test FAILED, checking ' + self.logfile)
       for x in failed_list:
         sys.stdout.write(x)
-    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
-    failwimp = [x for x in log_lines
-                if x[:6] == 'XPASS:' and 0 <= x.find(wimptag)]
+    xpassed = [x.decode() for x in log_lines if x[:6] == b'XPASS:']
+    failwimp = [x.decode() for x in log_lines
+                if x[:6] == b'XPASS:' and 0 <= x.find(wimptag)]
     if xpassed:
       print('At least one test XPASSED, checking ' + self.logfile)
       for x in xpassed:
