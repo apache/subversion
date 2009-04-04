@@ -2922,7 +2922,7 @@ def diff_external_diffcmd(sbox):
   # TODO: make the create function return the actual script name, and rename
   # it to something more generic.
   svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
-    'for arg in sys.argv[1:]:\n  print arg\n')
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
   if sys.platform == 'win32':
     diff_script_path = "%s.bat" % diff_script_path
 

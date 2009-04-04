@@ -1520,9 +1520,9 @@ def create_failing_hook(repo_dir, hook_name, text):
   with an error."""
 
   hook_path = os.path.join(repo_dir, 'hooks', hook_name)
-  main.create_python_hook_script(hook_path, 'import sys;\n'
-    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s));\n'
-    'sys.exit(1);\n' % (repr(hook_name), repr(text)))
+  main.create_python_hook_script(hook_path, 'import sys\n'
+    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s))\n'
+    'sys.exit(1)\n' % (repr(hook_name), repr(text)))
 
 def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a
@@ -1538,7 +1538,7 @@ the hook prints "pre-revprop-change" followed by sys.argv"""
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
-                                 'sys.stderr.write("pre-revprop-change %s %s %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]))\n'
+                                 'sys.stderr.write("pre-revprop-change %s" % " ".join(sys.argv[1:6]))\n'
                                  'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
@@ -1546,8 +1546,8 @@ def create_failing_post_commit_hook(repo_dir):
 script which always reports errors."""
 
   hook_path = main.get_post_commit_hook_path(repo_dir)
-  main.create_python_hook_script(hook_path, 'import sys; '
-    'sys.stderr.write("Post-commit hook failed"); '
+  main.create_python_hook_script(hook_path, 'import sys\n'
+    'sys.stderr.write("Post-commit hook failed")\n'
     'sys.exit(1)')
 
 # set_prop can be used for properties with NULL characters which are not
