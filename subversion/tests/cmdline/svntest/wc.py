@@ -18,7 +18,12 @@
 import os
 import sys
 import re
-import urllib
+try:
+  # Python >=3.0
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  from urllib import quote as urllib_parse_quote
 
 import svntest
 
@@ -782,7 +787,7 @@ def repos_join(base, path):
 def svn_url_quote(url):
   # svn defines a different set of "safe" characters than Python does, so
   # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
-  return urllib.quote(url, "!$&'()*+,-./:=@_~")
+  return urllib_parse_quote(url, "!$&'()*+,-./:=@_~")
 
 
 # ------------
