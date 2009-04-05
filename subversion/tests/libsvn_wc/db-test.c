@@ -122,6 +122,26 @@ static const char * const data_loading_sql[] = {
    "  1, null, null, "
    "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
    "  null); "
+   "insert into base_node values ("
+   "  1, 'J', null, null, '', 'normal', 'dir', "
+   "  1, null, null, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
+   "insert into base_node values ("
+   "  1, 'J/J-e', null, null, 'J', 'normal', 'dir', "
+   "  1, null, null, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
+   "insert into base_node values ("
+   "  1, 'J/J-e/J-e-a', null, null, 'J/J-e', 'normal', 'file', "
+   "  1, '$sha1$" SHA1_1 "', 15, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
+   "insert into base_node values ("
+   "  1, 'K', null, null, '', 'normal', 'file', "
+   "  1, '$sha1$" SHA1_1 "', 15, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
    " "
    "insert into working_node values ("
    "  1, 'I', '', 'normal', 'dir', "
@@ -179,7 +199,7 @@ static const char * const data_loading_sql[] = {
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
    "insert into working_node values ("
-   "  1, 'K', '', 'not-present', 'file', "
+   "  1, 'K', '', 'base-deleted', 'file', "
    "  null, null, "
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
@@ -620,7 +640,7 @@ test_base_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
                                        pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 9);
+  SVN_TEST_ASSERT(children->nelts == 11);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -1011,7 +1031,6 @@ test_scan_working(apr_pool_t *pool)
 static svn_error_t *
 test_scan_deletion(apr_pool_t *pool)
 {
-#if 0
   const char *local_abspath;
   svn_wc__db_t *db;
   const char *base_del_abspath;
@@ -1026,6 +1045,38 @@ test_scan_deletion(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           local_abspath, NULL, pool, pool));
 
+  /* Node was moved elsewhere. */
+  SVN_ERR(svn_wc__db_scan_deletion(
+            &base_del_abspath,
+            &base_replaced,
+            &moved_to_abspath,
+            &work_del_abspath,
+            db, svn_dirent_join(local_abspath, "J/J-e", pool),
+            pool, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+                                   base_del_abspath, pool));
+  SVN_TEST_ASSERT(base_replaced);
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
+                                   moved_to_abspath, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+                                   work_del_abspath, pool));
+
+  /* Node was moved elsewhere (child of operation root). */
+  SVN_ERR(svn_wc__db_scan_deletion(
+            &base_del_abspath,
+            &base_replaced,
+            &moved_to_abspath,
+            &work_del_abspath,
+            db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
+            pool, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+                                   base_del_abspath, pool));
+  SVN_TEST_ASSERT(base_replaced);
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
+                                   moved_to_abspath, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+                                   work_del_abspath, pool));
+
   /* Root of delete. Parent is a WORKING node. */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
@@ -1034,8 +1085,43 @@ test_scan_deletion(apr_pool_t *pool)
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-c", pool),
             pool, pool));
-  /* ### */
-#endif
+  /* Implicit delete of "J" (via replacement).  */
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+                                   base_del_abspath, pool));
+  SVN_TEST_ASSERT(base_replaced);
+  SVN_TEST_ASSERT(moved_to_abspath == NULL);
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
+                                   work_del_abspath, pool));
+
+  /* Child of a deleted root. */
+  SVN_ERR(svn_wc__db_scan_deletion(
+            &base_del_abspath,
+            &base_replaced,
+            &moved_to_abspath,
+            &work_del_abspath,
+            db, svn_dirent_join(local_abspath, "J/J-c/J-c-a", pool),
+            pool, pool));
+  /* Implicit delete of "J" (via replacement).  */
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+                                   base_del_abspath, pool));
+  SVN_TEST_ASSERT(base_replaced);
+  SVN_TEST_ASSERT(moved_to_abspath == NULL);
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
+                                   work_del_abspath, pool));
+
+  /* Root of delete. Parent is a BASE node. */
+  SVN_ERR(svn_wc__db_scan_deletion(
+            &base_del_abspath,
+            &base_replaced,
+            &moved_to_abspath,
+            &work_del_abspath,
+            db, svn_dirent_join(local_abspath, "K", pool),
+            pool, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
+                                   base_del_abspath, pool));
+  SVN_TEST_ASSERT(!base_replaced);
+  SVN_TEST_ASSERT(moved_to_abspath == NULL);
+  SVN_TEST_ASSERT(work_del_abspath == NULL);
 
   return SVN_NO_ERROR;
 }
