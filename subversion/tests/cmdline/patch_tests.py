@@ -384,11 +384,11 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Wimp('Broken on platforms with nonstandard diff and/or newline',
+              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
                    SkipUnless(patch_basic, svntest.main.has_patch)),
-              Wimp('Broken on platforms with nonstandard diff and/or newline',
+              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
                    SkipUnless(patch_unidiff, svntest.main.has_patch)),
-              Wimp('Broken on platforms with nonstandard diff and/or newline',
+              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
                    SkipUnless(patch_copy_and_move, svntest.main.has_patch)),
               ]
 
