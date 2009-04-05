@@ -272,10 +272,10 @@ static const char * const statements[] = {
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select base_node.presence, working_node.presence, moved_to "
-  "from base_node "
-  "left outer join working_node on base_node.wc_id = working_node.wc_id "
+  "from working_node "
+  "left outer join base_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
-  "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
+  "where working_node.wc_id = ?1 and working_node.local_relpath = ?2;",
 
   NULL
 };
@@ -3175,6 +3175,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   const char *current_relpath;
   const char *child_abspath = NULL;
   svn_wc__db_status_t child_presence;
+  svn_boolean_t child_has_base = FALSE;
   svn_wc__db_pdh_t *pdh;
 
   SVN_ERR_ASSERT(base_del_abspath != NULL);
@@ -3200,47 +3201,72 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   while (TRUE)
     {
       svn_sqlite__stmt_t *stmt;
+      svn_boolean_t have_row;
       svn_boolean_t have_base;
-      svn_boolean_t have_work;
       svn_wc__db_status_t work_presence;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->sdb,
                                         STMT_SELECT_DELETION_INFO));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__step_row(stmt));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-      have_base = !svn_sqlite__column_is_null(stmt, 0);
-      have_work = !svn_sqlite__column_is_null(stmt, 1);
-
-      if (!have_base && !have_work)
+      if (!have_row)
         {
-          svn_error_clear(svn_sqlite__reset(stmt));
+          /* There better be a row for the starting node!  */
+          if (current_abspath == local_abspath)
+            {
+              svn_error_clear(svn_sqlite__reset(stmt));
 
-          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                   _("The node '%s' was not found."),
-                                   svn_dirent_local_style(local_abspath,
-                                                          scratch_pool));
+              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                       _("The node '%s' was not found."),
+                                       svn_dirent_local_style(local_abspath,
+                                                              scratch_pool));
+            }
+
+          /* There are no values, so go ahead and reset the stmt now.  */
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          /* No row means no WORKING node at this path, which means we just
+             fell off the top of the WORKING tree.
+
+             The child cannot be not-present, as that would imply the
+             root of the (added) WORKING subtree was deleted.  */
+          SVN_ERR_ASSERT(child_presence != svn_wc__db_status_not_present);
+
+          /* If the child did not have a BASE node associated with it, then
+             we're looking at a deletion that occurred within an added tree.
+             There is no root of a deleted/replaced BASE tree.
+
+             If the child was base-deleted, then the whole tree is a
+             simple (explicit) deletion of the BASE tree.
+
+             If the child was normal, then it is the root of a replacement,
+             which means an (implicit) deletion of the BASE tree.
+
+             In both cases, set the root of the operation (if we have not
+             already set it as part of a moved-away).  */
+          if (child_has_base && *base_del_abspath == NULL)
+            *base_del_abspath = apr_pstrdup(result_pool, child_abspath);
+
+          /* We found whatever roots we needed. This BASE node and its
+             ancestors are unchanged, so we're done.  */
+          break;
         }
 
       /* We need the presence of the WORKING node.  */
-      if (have_work)
-        {
-          work_presence = word_to_presence(svn_sqlite__column_text(stmt, 1,
-                                                                   NULL));
-          /* ### check for allowable presence values for this algorithm.
-             ### LEGAL: normal, not-present, base-deleted.  */
-        }
+      work_presence = word_to_presence(svn_sqlite__column_text(stmt, 1, NULL));
+      /* ### check for allowable presence values for this algorithm.
+         ### LEGAL: normal, not-present, base-deleted.  */
 
       /* If we're on the starting node, then we have a bit of extra work.  */
       if (current_abspath == local_abspath)
         {
-          /* There MUST be something here to record a deletion.  */
-          SVN_ERR_ASSERT(have_work);
-
           /* The starting node better be deleted!  */
           SVN_ERR_ASSERT(work_presence != svn_wc__db_status_normal);
         }
 
+      have_base = !svn_sqlite__column_is_null(stmt,
+                                              0 /* BASE_NODE.presence */);
       if (have_base)
         {
           svn_wc__db_status_t base_presence
@@ -3257,7 +3283,6 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
              WORKING node (present or deleted), then a replacement has
              occurred here or in an ancestor.  */
           if (base_presence == svn_wc__db_status_normal
-              && have_work
               && work_presence != svn_wc__db_status_base_deleted)
             {
               *base_replaced = TRUE;
@@ -3268,6 +3293,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       if (*moved_to_abspath == NULL
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
+          /* There better be a BASE_NODE (that was moved-away).  */
+          SVN_ERR_ASSERT(have_base);
+
           /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
           *base_del_abspath = apr_pstrdup(result_pool, current_abspath);
           *moved_to_abspath = svn_dirent_join(
@@ -3276,41 +3304,22 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                                 result_pool);
         }
 
-      if (!have_work)
-        {
-          /* Fell off the top of the WORKING tree.
-
-             The child cannot be not-present, as that would imply the
-             root of the (added) WORKING subtree was deleted.  */
-          SVN_ERR_ASSERT(child_presence != svn_wc__db_status_not_present);
-
-          /* If the child was base-deleted, then the whole tree is a
-             simple (explicit) deletion of the BASE tree.
-
-             If the child was normal, then it is the root of a replacement,
-             which implies an (implicit) deletion of the BASE tree.
-
-             In both cases, set the root of the operation (if we have not
-             already set it as part of a moved-away).  */
-          if (*base_del_abspath == NULL)
-            *base_del_abspath = apr_pstrdup(result_pool, child_abspath);
-
-          /* We found whatever roots we needed. This BASE node and its
-             ancestors are unchanged, so we're done.  */
-          break;
-        }
-      else if (work_presence == svn_wc__db_status_normal
-               && child_presence == svn_wc__db_status_deleted)
+      if (work_presence == svn_wc__db_status_normal
+          && child_presence == svn_wc__db_status_not_present)
         {
           /* Parent is normal, but child was deleted. Therefore, the child
              is the root of a WORKING subtree deletion.  */
           *work_del_abspath = apr_pstrdup(result_pool, child_abspath);
         }
 
+      /* We're all done examining the return values.  */
+      SVN_ERR(svn_sqlite__reset(stmt));
+
       /* Move to the parent node. Remember the information about this node
          for our parent to use.  */
       child_abspath = current_abspath;
       child_presence = work_presence;
+      child_has_base = have_base;
       if (strcmp(current_relpath, pdh->local_relpath) == 0)
         {
           /* The current node is a directory, so move to the parent dir.  */
