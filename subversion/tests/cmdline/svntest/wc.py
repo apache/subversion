@@ -492,6 +492,8 @@ class State:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
           contents = open(node, 'rb').read()
+          if sys.platform == 'win32':
+            contents = contents.replace('\r\n', '\n')
           try:
             contents = contents.decode()
           except UnicodeDecodeError:
