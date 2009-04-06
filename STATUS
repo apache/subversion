@@ -143,11 +143,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r36913
-   Fix race condition in ra_serf which can cause infinite-loop during a commit.
-   Justification:
-     Fixes an endless loop triggered by google code when using ra_serf.
-   Votes:
-     +1: sussman (via mail), lgo, pburba
-     +0: rhuijben (concept; requires better review for a +1)
