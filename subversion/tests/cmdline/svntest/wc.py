@@ -491,13 +491,12 @@ class State:
       for name in dirs + files:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
-          contents = open(node, 'rb').read()
-          if sys.platform == 'win32':
-            contents = contents.replace('\r\n', '\n')
           try:
-            contents = contents.decode()
+            contents = open(node, 'r').read()
           except UnicodeDecodeError:
-            pass
+            contents = open(node, 'rb').read()
+            if sys.platform == 'win32':
+              contents = contents.replace('\r\n', '\n')
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
