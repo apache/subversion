@@ -82,27 +82,6 @@ Candidate changes:
      -0: gstein (looks like a fix is needed) (without r36964)
      +1: rhuijben
 
- * r36741, r36742
-   Improve detection of Berkeley DB.
-   Justification:
-     Regression.
-   Votes:
-     +1: arfrever, gstein
-
- * r36730, r36766, r36775
-   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
-   foreign repos'
-   Justification:
-     At best this mergeinfo refers to non-existent paths in the target's
-     repos.  At worst the mergeinfo intersects with actual path/revisions
-     in the merge target.  The latter might cause real problems, making it
-     appear merges have been done that actually have not or vice-versa.
-   Notes:
-     r36775 is the fix, the other revisions are expansion of an existing
-     merge test to cover this issue.
-   Votes:
-     +1: pburba, arfrever
-
  * r36919, r36937
    Fix issue #3250 'Repeated merging of conflicting properties fails'.
    Justification:
@@ -116,7 +95,7 @@ Candidate changes:
  * r37009
    Recommend SQLite 3.6.12.
    Votes:
-     +1: arfrever
+     +1: arfrever, rhuijben
 
 
 Approved changes:
@@ -141,5 +120,26 @@ Approved changes:
      I don't know that anyone has encountered this problem in the wild, but
      the code is clearly incorrect and r36879 expands an existing merge
      test to demonstrate how it could result in incorrect mergeinfo.
+   Votes:
+     +1: pburba, arfrever, rhuijben
+
+ * r36741, r36742
+   Improve detection of Berkeley DB.
+   Justification:
+     Regression.
+   Votes:
+     +1: arfrever, gstein, rhuijben
+
+ * r36730, r36766, r36775
+   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
+   foreign repos'
+   Justification:
+     At best this mergeinfo refers to non-existent paths in the target's
+     repos.  At worst the mergeinfo intersects with actual path/revisions
+     in the merge target.  The latter might cause real problems, making it
+     appear merges have been done that actually have not or vice-versa.
+   Notes:
+     r36775 is the fix, the other revisions are expansion of an existing
+     merge test to cover this issue.
    Votes:
      +1: pburba, arfrever, rhuijben
