@@ -103,6 +103,7 @@
 ;; P i   - svn-status-property-ignore-file
 ;; P I   - svn-status-property-ignore-file-extension
 ;; P C-i - svn-status-property-edit-svn-ignore
+;; P X e - svn-status-property-edit-svn-externals
 ;; P k   - svn-status-property-set-keyword-list
 ;; P K i - svn-status-property-set-keyword-id
 ;; P K d - svn-status-property-set-keyword-date
@@ -1709,7 +1710,7 @@ The results are used to build the `svn-status-info' variable."
                 svn-property-mark (elt svn-marks 1)     ; 2nd column - M,C (properties)
                 svn-wc-locked-mark (elt svn-marks 2)    ; 3rd column - L or blank
                 svn-with-history-mark (elt svn-marks 3) ; 4th column - + or blank
-                svn-switched-mark (elt svn-marks 4)     ; 5th column - S or blank
+                svn-switched-mark (elt svn-marks 4)     ; 5th column - S,X or blank
                 svn-repo-locked-mark (elt svn-marks 5)) ; 6th column - K,O,T,B or blank
           (when svn-status-remote
               (setq svn-update-mark (elt svn-marks 7))) ; 8th column - * or blank
@@ -1967,6 +1968,7 @@ A and B must be line-info's."
   ;; reducing clutter in `where-is'.
   (define-key svn-status-mode-property-map [(control ?i)] 'svn-status-property-edit-svn-ignore)
   (define-key svn-status-mode-property-map (kbd "TAB") 'svn-status-property-edit-svn-ignore)
+  (define-key svn-status-mode-property-map (kbd "Xe") 'svn-status-property-edit-svn-externals)
   (define-key svn-status-mode-property-map (kbd "k") 'svn-status-property-set-keyword-list)
   (define-key svn-status-mode-property-map (kbd "Ki") 'svn-status-property-set-keyword-id)
   (define-key svn-status-mode-property-map (kbd "Kd") 'svn-status-property-set-keyword-date)
@@ -2057,6 +2059,8 @@ A and B must be line-info's."
      ["svn:ignore File..." svn-status-property-ignore-file t]
      ["svn:ignore File Extension..." svn-status-property-ignore-file-extension t]
      ["Edit svn:ignore Property" svn-status-property-edit-svn-ignore t]
+     "---"
+     ["Edit svn:externals Property" svn-status-property-edit-svn-externals t]
      "---"
      ["Edit svn:keywords List" svn-status-property-set-keyword-list t]
      ["Add/Remove Id to/from svn:keywords" svn-status-property-set-keyword-id t]
@@ -2345,7 +2349,7 @@ history, when it will be \"+\"."
 (defun svn-status-line-info->switched (line-info)
   "Return whether LINE-INFO is switched relative to its parent.
 This is column five of the output from `svn status'.
-The result will be nil or \"S\"."
+The result will be \"S\", \"X\" or nil."
   (nth 10 line-info))
 (defun svn-status-line-info->repo-locked (line-info)
   "Return whether LINE-INFO contains some locking information.
@@ -2872,7 +2876,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                                                           ((eq flag ?B) " [ REPO-LOCK-BROKEN ]")
                                                           (t " [ REPO-LOCK-UNKNOWN ]")))
                                                   'svn-status-locked-face)
-                     (svn-status-maybe-add-string (svn-status-line-info->switched line-info)
+                     (svn-status-maybe-add-string (eq (svn-status-line-info->switched line-info) ?S)
                                                   " (switched)" 'svn-status-switched-face)
                      elide-hint)
              'svn-status-marked-face)
@@ -3201,7 +3205,7 @@ When called from a file buffer provide a structure that contains the filename."
   (cond ((eq major-mode 'svn-status-mode)
          (svn-status-get-line-information))
         (t
-         ;; a fake strukture that contains the buffername for the current buffer
+         ;; a fake structure that contains the buffername for the current buffer
          (svn-status-make-line-info (buffer-file-name (current-buffer))))))
 
 (defun svn-status-select-line ()
@@ -4844,6 +4848,17 @@ When called with a prefix argument, it is possible to enter a new property."
     (svn-status-property-edit
      (list (svn-status-find-info-for-file-name dir)) "svn:ignore")
     (message "Edit svn:ignore on %s" dir)))
+
+
+(defun svn-status-property-edit-svn-externals ()
+  (interactive)
+  (let* ((line-info (svn-status-get-line-information))
+         (dir (if (svn-status-line-info->directory-p line-info)
+                  (svn-status-line-info->filename line-info)
+                (svn-status-get-directory line-info))))
+    (svn-status-property-edit
+     (list (svn-status-find-info-for-file-name dir)) "svn:externals")
+    (message "Edit svn:externals on %s" dir)))
 
 
 (defun svn-status-property-set-keyword-list ()

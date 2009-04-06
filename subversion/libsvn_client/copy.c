@@ -1987,7 +1987,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
             || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
       const char *src_path = APR_ARRAY_IDX(sources, 0,
-                               svn_client_copy_source_t *)->path;
+                                           svn_client_copy_source_t *)->path;
       const char *src_basename;
 
       svn_error_clear(err);

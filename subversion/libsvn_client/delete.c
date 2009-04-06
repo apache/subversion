@@ -64,8 +64,8 @@ find_undeletables(void *baton,
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
     return svn_error_createf(SVN_ERR_CLIENT_MODIFIED, NULL,
-                             _("'%s' has local modifications, commit or revert "
-                               "them first"),
+                             _("'%s' has local modifications -- commit or "
+                               "revert them first"),
                              svn_path_local_style(path, pool));
 
   return SVN_NO_ERROR;

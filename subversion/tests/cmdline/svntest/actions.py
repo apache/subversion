@@ -1553,17 +1553,23 @@ script which always reports errors."""
     'sys.exit(1)')
 
 # set_prop can be used for properties with NULL characters which are not
-# handled correctly when passed to subprocess.Popen().
+# handled correctly when passed to subprocess.Popen() and values like "*"
+# which are not handled correctly on Windows.
 def set_prop(name, value, path, expected_err=None):
   """Set a property with specified value"""
-  if '\x00' in value:
+  if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
-    value_file_path = mkstemp()[1]
+    (fd, value_file_path) = mkstemp()
     value_file = open(value_file_path, 'wb')
+    if sys.version_info[0] >= 3:
+      # Python >=3.0
+      if isinstance(value, str):
+        value = value.encode()
     value_file.write(value)
     value_file.flush()
     value_file.close()
     main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
+    os.close(fd)
     os.remove(value_file_path)
   else:
     main.run_svn(expected_err, 'propset', name, value, path)

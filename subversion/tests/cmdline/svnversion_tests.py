@@ -150,11 +150,12 @@ def ignore_externals(sbox):
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
   externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
-  tmp_f = tempfile.mkstemp(dir=wc_dir)[1]
+  (fd, tmp_f) = tempfile.mkstemp(dir=wc_dir)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
+  os.close(fd)
   os.remove(tmp_f)
   expected_output = svntest.wc.State(wc_dir, {
    'A/C' : Item(verb='Sending'),

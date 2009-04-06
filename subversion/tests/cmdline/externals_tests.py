@@ -154,24 +154,26 @@ def externals_test_setup(sbox):
   externals_desc = \
            external_url_for["A/B/gamma"] + " gamma\n"
 
-  tmp_f = tempfile.mkstemp(dir=wc_init_dir)[1]
+  (fd, tmp_f) = tempfile.mkstemp(dir=wc_init_dir)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', B_path)
 
+  os.close(fd)
   os.remove(tmp_f)
 
   externals_desc = \
            "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
            external_url_for["A/C/exdir_H"] + " exdir_H\n"
 
-  tmp_f = tempfile.mkstemp(dir=wc_init_dir)[1]
+  (fd, tmp_f) = tempfile.mkstemp(dir=wc_init_dir)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
 
+  os.close(fd)
   os.remove(tmp_f)
 
   external_url_for["A/D/exdir_A"]    = "^/../" + other_repo_basename + "/A"
@@ -217,12 +219,13 @@ def externals_test_setup(sbox):
 def change_external(path, new_val):
   """Change the value of the externals property on PATH to NEW_VAL,
   and commit the change."""
-  tmp_f = tempfile.mkstemp(dir=svntest.main.temp_dir)[1]
+  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   svntest.main.file_append(tmp_f, new_val)
   svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'log msg', '--quiet', path)
+  os.close(fd)
   os.remove(tmp_f)
 
 
@@ -612,11 +615,12 @@ def modify_and_update_receive_new_external(sbox):
           "exdir_Z      " + external_url_for["A/D/exdir_A/H"] + \
           "\n"
 
-  tmp_f = tempfile.mkstemp()[1]
+  (fd, tmp_f) = tempfile.mkstemp()
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset', '-F', tmp_f,
                                      'svn:externals', B_path)
+  os.close(fd)
   os.remove(tmp_f)
 
   # Now cd into A/B and try updating
@@ -642,11 +646,12 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val):
-    tmp_f = tempfile.mkstemp()[1]
+    (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, val)
     svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
+    os.close(fd)
     os.remove(tmp_f)
 
   B_path = os.path.join(wc_dir, 'A', 'B')
@@ -883,7 +888,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'arg1 -r1',
                'arg1 -r 1',
                ]:
-    tmp_f = tempfile.mkstemp()[1]
+    (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -893,6 +898,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                                        tmp_f,
                                        'svn:externals',
                                        A_path)
+    os.close(fd)
     os.remove(tmp_f)
 
   for ext in [ '-r abc arg1 arg2',
@@ -900,7 +906,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'arg1 -r abc arg2',
                'arg1 -rabc arg2',
                ]:
-    tmp_f = tempfile.mkstemp()[1]
+    (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -910,6 +916,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                                        tmp_f,
                                        'svn:externals',
                                        A_path)
+    os.close(fd)
     os.remove(tmp_f)
 
   for ext in [ 'http://example.com/ http://example.com/',
@@ -918,7 +925,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                'http://example.com/ -r1 http://example.com/',
                'http://example.com/ -r 1 http://example.com/',
                ]:
-    tmp_f = tempfile.mkstemp()[1]
+    (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -928,6 +935,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                                        tmp_f,
                                        'svn:externals',
                                        A_path)
+    os.close(fd)
     os.remove(tmp_f)
 
   for ext in [ 'http://example.com/ -r1 foo',
@@ -935,7 +943,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                '-r1 foo http://example.com/',
                '-r 1 foo http://example.com/'
                ]:
-    tmp_f = tempfile.mkstemp()[1]
+    (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
@@ -947,6 +955,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
                                        tmp_f,
                                        'svn:externals',
                                        A_path)
+    os.close(fd)
     os.remove(tmp_f)
 
 #----------------------------------------------------------------------
