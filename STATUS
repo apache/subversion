@@ -103,28 +103,6 @@ Candidate changes:
    Votes:
      +1: pburba, arfrever
 
- * r36874, r36875
-   Fix crash when upgrading to 1.6 format (r36874).
-   Modified change-svn-wc-format.py to create or update format file
-   in the .svn folder. (r36875)
-   Justification:
-     r36874 is needed to make the script work reliably.
-     r36875 is a workaround for a bug in 1.6.0, which was fixed in
-     1.6.1. Bit late. But the fix makes sense in 1.6.x only,
-     so let's do it while here! The script won't work with 1.7.
-   Votes
-     +1: stsp, arfrever
-
- * r36879
-   Fix a merge bug which can occur when the merge target or a subtree of
-   the target has non-inheritable mergeinfo.
-   Justification:
-     I don't know that anyone has encountered this problem in the wild, but
-     the code is clearly incorrect and r36879 expands an existing merge
-     test to demonstrate how it could result in incorrect mergeinfo.
-   Votes:
-     +1: pburba, arfrever
-
  * r36919, r36937
    Fix issue #3250 'Repeated merging of conflicting properties fails'.
    Justification:
@@ -143,3 +121,25 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r36874, r36875
+   Fix crash when upgrading to 1.6 format (r36874).
+   Modified change-svn-wc-format.py to create or update format file
+   in the .svn folder. (r36875)
+   Justification:
+     r36874 is needed to make the script work reliably.
+     r36875 is a workaround for a bug in 1.6.0, which was fixed in
+     1.6.1. Bit late. But the fix makes sense in 1.6.x only,
+     so let's do it while here! The script won't work with 1.7.
+   Votes
+     +1: stsp, arfrever, rhuijben
+
+ * r36879
+   Fix a merge bug which can occur when the merge target or a subtree of
+   the target has non-inheritable mergeinfo.
+   Justification:
+     I don't know that anyone has encountered this problem in the wild, but
+     the code is clearly incorrect and r36879 expands an existing merge
+     test to demonstrate how it could result in incorrect mergeinfo.
+   Votes:
+     +1: pburba, arfrever, rhuijben
