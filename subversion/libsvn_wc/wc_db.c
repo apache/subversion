@@ -2439,13 +2439,15 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
               work_status = word_to_presence(presence_str);
               SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
                              || work_status == svn_wc__db_status_not_present
+                             || work_status == svn_wc__db_status_base_deleted
                              || work_status == svn_wc__db_status_incomplete);
 
               if (work_status == svn_wc__db_status_incomplete)
                 {
                   *status = svn_wc__db_status_incomplete;
                 }
-              else if (work_status == svn_wc__db_status_not_present)
+              else if (work_status == svn_wc__db_status_not_present
+                       || work_status == svn_wc__db_status_base_deleted)
                 {
                   /* The caller should scan upwards to detect whether this
                      deletion has occurred because this node has been moved
