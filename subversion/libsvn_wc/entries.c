@@ -1053,17 +1053,15 @@ read_entries(svn_wc_adm_access_t *adm_access,
                 entry->schedule = svn_wc_schedule_add;
             }
 
-          SVN_ERR(svn_wc__db_scan_working(&work_status,
-                                          NULL,
-                                          &repos_relpath,
-                                          &entry->repos,
-                                          &entry->uuid,
-                                          NULL, NULL, NULL, &original_revision,
-                                          NULL,
-                                          db,
-                                          entry_abspath,
-                                          result_pool,
-                                          iterpool));
+          SVN_ERR(svn_wc__db_scan_addition(&work_status,
+                                           NULL,
+                                           &repos_relpath,
+                                           &entry->repos,
+                                           &entry->uuid,
+                                           NULL, NULL, NULL, &original_revision,
+                                           db,
+                                           entry_abspath,
+                                           result_pool, iterpool));
 
           if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
               && original_repos_relpath == NULL)
@@ -1072,7 +1070,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                  author may be unknown, but we can always check the rev).
                  The absence of a revision implies this node was added WITHOUT
                  any history. Avoid the COPIED checks in the else block.  */
-              /* ### scan_working may need to be updated to avoid returning
+              /* ### scan_addition may need to be updated to avoid returning
                  ### status_copied in this case.  */
             }
           else if (work_status == svn_wc__db_status_copied)
@@ -1135,16 +1133,15 @@ read_entries(svn_wc_adm_access_t *adm_access,
                  is no way for it to be deleted/moved-away and have *this*
                  node appear as copied.  */
               parent_abspath = svn_dirent_dirname(entry_abspath, iterpool);
-              err = svn_wc__db_scan_working(NULL,
-                                            &op_root_abspath,
-                                            NULL, NULL, NULL,
-                                            &parent_repos_relpath,
-                                            &parent_root_url,
-                                            NULL, NULL,
-                                            NULL,
-                                            db,
-                                            parent_abspath,
-                                            iterpool, iterpool);
+              err = svn_wc__db_scan_addition(NULL,
+                                             &op_root_abspath,
+                                             NULL, NULL, NULL,
+                                             &parent_repos_relpath,
+                                             &parent_root_url,
+                                             NULL, NULL,
+                                             db,
+                                             parent_abspath,
+                                             iterpool, iterpool);
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -1272,16 +1269,14 @@ read_entries(svn_wc_adm_access_t *adm_access,
               SVN_ERR_ASSERT(work_del_abspath != NULL);
               parent_abspath = svn_dirent_dirname(work_del_abspath, iterpool);
 
-              SVN_ERR(svn_wc__db_scan_working(NULL, NULL,
-                                              &parent_repos_relpath,
-                                              &entry->repos,
-                                              &entry->uuid,
-                                              NULL, NULL, NULL,
-                                              NULL, NULL,
-                                              db,
-                                              parent_abspath,
-                                              result_pool,
-                                              iterpool));
+              SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                               &parent_repos_relpath,
+                                               &entry->repos,
+                                               &entry->uuid,
+                                               NULL, NULL, NULL, NULL,
+                                               db,
+                                               parent_abspath,
+                                               result_pool, iterpool));
 
               /* Now glue it all together */
               repos_relpath = svn_uri_join(
@@ -1403,14 +1398,13 @@ read_entries(svn_wc_adm_access_t *adm_access,
                      would simply remove the whole subtree in that case).  */
                   parent_abspath = svn_dirent_dirname(work_del_abspath,
                                                       iterpool);
-                  SVN_ERR(svn_wc__db_scan_working(&parent_status,
-                                                  NULL,
-                                                  NULL, NULL, NULL,
-                                                  NULL, NULL, NULL, NULL,
-                                                  NULL,
-                                                  db,
-                                                  parent_abspath,
-                                                  iterpool, iterpool));
+                  SVN_ERR(svn_wc__db_scan_addition(&parent_status,
+                                                   NULL,
+                                                   NULL, NULL, NULL,
+                                                   NULL, NULL, NULL, NULL,
+                                                   db,
+                                                   parent_abspath,
+                                                   iterpool, iterpool));
                   if (parent_status == svn_wc__db_status_copied
                       || parent_status == svn_wc__db_status_moved_here)
                     {
@@ -2021,18 +2015,17 @@ write_entry(svn_wc__db_t *db,
              we've been designated as COPIED but do not have our own
              COPYFROM information. Therefore, our parent or a more distant
              ancestor has that information. Grab the data.  */
-          err = svn_wc__db_scan_working(
+          err = svn_wc__db_scan_addition(
                     NULL,
                     &op_root_abspath,
                     NULL, NULL, NULL,
                     &original_repos_relpath, NULL, NULL, &original_revision,
-                    NULL,
                     db,
                     parent_abspath,
                     scratch_pool, scratch_pool);
 
           /* We could be reading the entries while in a transitional state
-             during an add/copy operation. The scan_working *does* throw
+             during an add/copy operation. The scan_addition *does* throw
              errors sometimes. So clear anything that may come out of it,
              and perform the copyfrom construction only when it looks like
              we have a good/real set of return values.  */

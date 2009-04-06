@@ -2925,22 +2925,20 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 
 
 svn_error_t *
-svn_wc__db_scan_working(svn_wc__db_status_t *status,
-                        const char **op_root_abspath,
-                        const char **repos_relpath,
-                        const char **repos_root_url,
-                        const char **repos_uuid,
-                        const char **original_repos_relpath,
-                        const char **original_root_url,
-                        const char **original_uuid,
-                        svn_revnum_t *original_revision,
-                        const char **moved_to_abspath,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+svn_wc__db_scan_addition(svn_wc__db_status_t *status,
+                         const char **op_root_abspath,
+                         const char **repos_relpath,
+                         const char **repos_root_url,
+                         const char **repos_uuid,
+                         const char **original_repos_relpath,
+                         const char **original_root_url,
+                         const char **original_uuid,
+                         svn_revnum_t *original_revision,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t start_status;
   const char *current_abspath = local_abspath;
   const char *current_relpath;
   const char *child_abspath = NULL;
@@ -2970,8 +2968,6 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
     *original_uuid = NULL;
   if (original_revision)
     *original_revision = SVN_INVALID_REVNUM;
-  if (moved_to_abspath)
-    *moved_to_abspath = NULL;
 
   SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, current_abspath,
                               svn_sqlite__mode_readonly,
@@ -3011,15 +3007,9 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
               *op_root_abspath = apr_pstrdup(result_pool, child_abspath);
             }
 
-          /* If the subtree was deleted, then we can exit since there is no
-             need to continue scanning BASE nodes upwards to determine a
-             repository location.  */
-          if (start_status == svn_wc__db_status_deleted)
-            return SVN_NO_ERROR;
-
-          /* Otherwise, this node was added/copied/moved and has an implicit
-             location in the repository. We now need to traverse BASE nodes
-             looking for repository info.  */
+          /* This node was added/copied/moved and has an implicit location
+             in the repository. We now need to traverse BASE nodes looking
+             for repository info.  */
           break;
         }
 
@@ -3029,50 +3019,19 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
       /* Record information from the starting node.  */
       if (current_abspath == local_abspath)
         {
-          start_status = word_to_presence(svn_sqlite__column_text(stmt, 0,
-                                                                  NULL));
-          if (start_status == svn_wc__db_status_normal)
-            start_status = svn_wc__db_status_added;
-          else
-            start_status = svn_wc__db_status_deleted;
-          /* ### assert valid presence values? what if it is (say)
-             ### 'incomplete' ? probably return an error.  */
+          svn_wc__db_status_t presence
+            = word_to_presence(svn_sqlite__column_text(stmt, 0, NULL));
+
+          /* The starting node should exist normally.  */
+          if (presence != svn_wc__db_status_normal)
+            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                     _("Expected node '%s' to be added."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
-            *status = start_status;
-        }
-      else if (start_status == svn_wc__db_status_deleted
-               && presence_is_normal)
-        {
-          /* We have moved upwards at least one node, the start node
-             was deleted, but we have now run into a not-deleted node.
-             Thus, the node we just left was the root of a delete.
-             Record that and exit, as we have no further information
-             to discover.  */
-          if (op_root_abspath)
-            *op_root_abspath = apr_pstrdup(result_pool, child_abspath);
-
-          return svn_sqlite__reset(stmt);
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 13 /* moved_to */))
-        {
-          /* ### assert that presence == not-present ?  */
-          SVN_ERR_ASSERT(start_status == svn_wc__db_status_deleted);
-
-          if (status)
-            *status = svn_wc__db_status_moved_away;
-          if (op_root_abspath)
-            *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
-          if (moved_to_abspath)
-            *moved_to_abspath = svn_dirent_join(
-                                  pdh->wcroot_abspath,
-                                  svn_sqlite__column_text(stmt, 13, NULL),
-                                  result_pool);
-
-          /* There is no other information to retrieve. We're done. */
-          return svn_sqlite__reset(stmt);
+            *status = svn_wc__db_status_added;
         }
 
       /* We want the operation closest to the start node, and then we
@@ -3081,8 +3040,6 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
           && presence_is_normal
           && !svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
         {
-          SVN_ERR_ASSERT(start_status == svn_wc__db_status_added);
-
           if (status)
             {
               if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
@@ -3255,17 +3212,21 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
           break;
         }
 
-      /* We need the presence of the WORKING node.  */
+      /* We need the presence of the WORKING node. Note that legal values
+         are: normal, not-present, base-deleted.  */
       work_presence = word_to_presence(svn_sqlite__column_text(stmt, 1, NULL));
-      /* ### check for allowable presence values for this algorithm.
-         ### LEGAL: normal, not-present, base-deleted.  */
 
-      /* If we're on the starting node, then we have a bit of extra work.  */
-      if (current_abspath == local_abspath)
-        {
-          /* The starting node better be deleted!  */
-          SVN_ERR_ASSERT(work_presence != svn_wc__db_status_normal);
-        }
+      /* The starting node should be deleted.  */
+      if (current_abspath == local_abspath
+          && work_presence != svn_wc__db_status_not_present
+          && work_presence != svn_wc__db_status_base_deleted)
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("Expected node '%s' to be deleted."),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+      SVN_ERR_ASSERT(work_presence == svn_wc__db_status_normal
+                     || work_presence == svn_wc__db_status_not_present
+                     || work_presence == svn_wc__db_status_base_deleted);
 
       have_base = !svn_sqlite__column_is_null(stmt,
                                               0 /* BASE_NODE.presence */);
@@ -3274,8 +3235,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
           svn_wc__db_status_t base_presence
             = word_to_presence(svn_sqlite__column_text(stmt, 0, NULL));
 
-          /* ### check for allowable presence values for this algorithm.
-             ### LEGAL: normal, not-present.  */
+          /* Only "normal" and "not-present" are allowed.  */
+          SVN_ERR_ASSERT(base_presence == svn_wc__db_status_normal
+                         || base_presence == svn_wc__db_status_not_present);
 
           /* If a BASE node is marked as not-present, then we'll ignore
              it within this function. That status is simply a bookkeeping

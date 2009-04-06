@@ -857,7 +857,7 @@ test_pdh(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_scan_working(apr_pool_t *pool)
+test_scan_addition(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
@@ -870,21 +870,20 @@ test_scan_working(apr_pool_t *pool)
   const char *original_root_url;
   const char *original_uuid;
   svn_revnum_t original_revision;
-  const char *moved_to_abspath;
 
-  SVN_ERR(create_fake_wc("test_scan_working", pool));
+  SVN_ERR(create_fake_wc("test_scan_addition", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_scan_working",
+                                  "fake-wc/test_scan_addition",
                                   pool));
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           local_abspath, NULL, pool, pool));
 
   /* Simple addition of a directory. */
-  SVN_ERR(svn_wc__db_scan_working(
+  SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -896,14 +895,13 @@ test_scan_working(apr_pool_t *pool)
   SVN_TEST_ASSERT(original_root_url == NULL);
   SVN_TEST_ASSERT(original_uuid == NULL);
   SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
 
   /* Simple addition of a file (affects how scan-up is started). */
-  SVN_ERR(svn_wc__db_scan_working(
+  SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -915,56 +913,13 @@ test_scan_working(apr_pool_t *pool)
   SVN_TEST_ASSERT(original_root_url == NULL);
   SVN_TEST_ASSERT(original_uuid == NULL);
   SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
-
-  /* Node was moved elsewhere. */
-  SVN_ERR(svn_wc__db_scan_working(
-            &status, &op_root_abspath,
-            &repos_relpath, &repos_root_url, &repos_uuid,
-            &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
-            db, svn_dirent_join(local_abspath, "J/J-e", pool),
-            pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_moved_away);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
-                                   op_root_abspath, pool));
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
-                                   moved_to_abspath, pool));
-
-  /* Node was moved elsewhere (child of operation root). */
-  SVN_ERR(svn_wc__db_scan_working(
-            &status, &op_root_abspath,
-            &repos_relpath, &repos_root_url, &repos_uuid,
-            &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
-            db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
-            pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_moved_away);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
-                                   op_root_abspath, pool));
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
-                                   moved_to_abspath, pool));
 
   /* Node was moved here. */
-  SVN_ERR(svn_wc__db_scan_working(
+  SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-d", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_moved_here);
@@ -977,14 +932,13 @@ test_scan_working(apr_pool_t *pool)
   SVN_TEST_ASSERT(strcmp(original_root_url, ROOT_TWO) == 0);
   SVN_TEST_ASSERT(strcmp(original_uuid, UUID_TWO) == 0);
   SVN_TEST_ASSERT(original_revision == 2);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
 
   /* Check root of a copy. */
-  SVN_ERR(svn_wc__db_scan_working(
+  SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -997,14 +951,13 @@ test_scan_working(apr_pool_t *pool)
   SVN_TEST_ASSERT(strcmp(original_root_url, ROOT_TWO) == 0);
   SVN_TEST_ASSERT(strcmp(original_uuid, UUID_TWO) == 0);
   SVN_TEST_ASSERT(original_revision == 2);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
 
   /* Ignore parent copy. Use copy closest to target.  */
-  SVN_ERR(svn_wc__db_scan_working(
+  SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -1017,14 +970,13 @@ test_scan_working(apr_pool_t *pool)
   SVN_TEST_ASSERT(strcmp(original_root_url, ROOT_TWO) == 0);
   SVN_TEST_ASSERT(strcmp(original_uuid, UUID_TWO) == 0);
   SVN_TEST_ASSERT(original_revision == 2);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
 
   /* Inherit parent copy. */
-  SVN_ERR(svn_wc__db_scan_working(
+  SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -1037,67 +989,6 @@ test_scan_working(apr_pool_t *pool)
   SVN_TEST_ASSERT(strcmp(original_root_url, ROOT_TWO) == 0);
   SVN_TEST_ASSERT(strcmp(original_uuid, UUID_TWO) == 0);
   SVN_TEST_ASSERT(original_revision == 2);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
-
-  /* Root of delete. Parent is a WORKING node. */
-  SVN_ERR(svn_wc__db_scan_working(
-            &status, &op_root_abspath,
-            &repos_relpath, &repos_root_url, &repos_uuid,
-            &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
-            db, svn_dirent_join(local_abspath, "J/J-c", pool),
-            pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_deleted);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
-                                   op_root_abspath, pool));
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
-
-  /* Child of a deleted root. */
-  SVN_ERR(svn_wc__db_scan_working(
-            &status, &op_root_abspath,
-            &repos_relpath, &repos_root_url, &repos_uuid,
-            &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
-            db, svn_dirent_join(local_abspath, "J/J-c/J-c-a", pool),
-            pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_deleted);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
-                                   op_root_abspath, pool));
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
-
-  /* Root of delete. Parent is a BASE node. */
-  SVN_ERR(svn_wc__db_scan_working(
-            &status, &op_root_abspath,
-            &repos_relpath, &repos_root_url, &repos_uuid,
-            &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_to_abspath,
-            db, svn_dirent_join(local_abspath, "K", pool),
-            pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_deleted);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
-                                   op_root_abspath, pool));
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1258,7 +1149,7 @@ test_scan_deletion(apr_pool_t *pool)
                                    moved_to_abspath, pool));
   SVN_TEST_ASSERT(work_del_abspath == NULL);
 
-  /* Subtree deletion an added tree. Start at child.  */
+  /* Subtree deletion of added tree. Start at child.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
             &base_replaced,
@@ -1272,7 +1163,7 @@ test_scan_deletion(apr_pool_t *pool)
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
                                    work_del_abspath, pool));
 
-  /* Subtree deletion an added tree. Start at root.  */
+  /* Subtree deletion of added tree. Start at root.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
             &base_replaced,
@@ -1303,8 +1194,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "reading information about the WORKING tree"),
     SVN_TEST_PASS2(test_pdh,
                    "creation of per-directory handles"),
-    SVN_TEST_PASS2(test_scan_working,
-                   "scanning working nodes"),
+    SVN_TEST_PASS2(test_scan_addition,
+                   "scanning added working nodes"),
     SVN_TEST_PASS2(test_scan_deletion,
                    "deletion introspection functions"),
     SVN_TEST_NULL
