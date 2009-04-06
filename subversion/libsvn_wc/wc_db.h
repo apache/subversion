@@ -1267,7 +1267,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
                            apr_pool_t *scratch_pool);
 
 
-/** Scan upwards for additional information about a WORKING node.
+/** Scan upwards for information about an addition to the WORKING tree.
  *
  * A WORKING node's status, as returned from svn_wc__db_read_info() can be
  * one of three states:
@@ -1285,40 +1285,21 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  *     (implying its parent will be an unshadowed BASE node). The REPOS_*
  *     values will be implied by that ancestor BASE node and this node's
  *     position in the added subtree. ORIGINAL_* will be set to their
- *     NULL values (and SVN_INVALID_REVNUM for ORIGINAL_REVISION). The
- *     MOVED_TO_ABSPATH will be set to NULL.
+ *     NULL values (and SVN_INVALID_REVNUM for ORIGINAL_REVISION).
  *
  *   svn_wc__db_status_copied -- this NODE is the root or child of a copy.
  *     The root of the copy will be stored in OP_ROOT_ABSPATH. Note that
  *     the parent of the operation root could be another WORKING node (from
  *     an add, copy, or move). The REPOS_* values will be implied by the
  *     ancestor unshadowed BASE node. ORIGINAL_* will indicate the source
- *     of the copy, and MOVED_TO_ABSPATH will be set to NULL.
+ *     of the copy.
  *
  *   svn_wc__db_status_moved_here -- this NODE arrived as a result of a move.
  *     The root of the moved nodes will be stored in OP_ROOT_ABSPATH.
  *     Similar to the copied state, its parent may be a WORKING node or a
  *     BASE node. And again, the REPOS_* values are implied by this node's
  *     position in the subtree under the ancestor unshadowed BASE node.
- *     ORIGINAL_* will indicate the source of the move, and MOVED_TO_ABSPATH
- *     will be set to NULL.
- *
- * If the node is in the "deleted" state, then this function can refine
- * the status into one of two possible states:
- *
- *   svn_wc__db_status_deleted -- this NODE is part of a normal delete.
- *     OP_ROOT_ABSPATH will be set to the topmost node in the deleted
- *     subtree. That node's parent may be another WORKING node, or a BASE
- *     node. The REPOS_*, ORIGINAL_*, and MOVED_TO_ABSPATH (OUT) parameters
- *     will be set to NULL.
- *
- *   svn_wc__db_status_moved_away -- this NODE was moved elsewhere. The root
- *     of the moved tree will be set in OP_ROOT_ABSPATH. That node's parent
- *     may be a WORKING or a BASE node. MOVED_TO_ABSPATH will be set to
- *     the destination of the move (note that further operations may have
- *     been performed on it at its new location; it is not a given that the
- *     node is still present in that location). The REPOS_* and ORIGINAL_*
- *     parameters will be set to NULL.
+ *     ORIGINAL_* will indicate the source of the move.
  *
  * All OUT parameters may be set to NULL to indicate a lack of interest in
  * that piece of information.
@@ -1329,28 +1310,28 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  * order to compute the source node which corresponds to LOCAL_ABSPATH.
  *
  * If the node given by LOCAL_ABSPATH does not have changes recorded in
- * the WORKING tree, then SVN_ERR_WC_PATH_NOT_FOUND is returned.
- * ### we should probably return a special error instead
+ * the WORKING tree, then SVN_ERR_WC_PATH_NOT_FOUND is returned. If it
+ * doesn't have an "added" status, then SVN_ERR_WC_PATH_UNEXPECTED_STATUS
+ * will be returned.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.
  */
 /* ### dlr: Again, this is a lot of parameters. Struct? */
 svn_error_t *
-svn_wc__db_scan_working(svn_wc__db_status_t *status,
-                        const char **op_root_abspath,
-                        const char **repos_relpath,
-                        const char **repos_root_url,
-                        const char **repos_uuid,
-                        const char **original_repos_relpath,
-                        const char **original_root_url,
-                        const char **original_uuid,
-                        svn_revnum_t *original_revision,
-                        const char **moved_to_abspath,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
+svn_wc__db_scan_addition(svn_wc__db_status_t *status,
+                         const char **op_root_abspath,
+                         const char **repos_relpath,
+                         const char **repos_root_url,
+                         const char **repos_uuid,
+                         const char **original_repos_relpath,
+                         const char **original_root_url,
+                         const char **original_uuid,
+                         svn_revnum_t *original_revision,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 /** Scan upwards for additional information about a deleted node.
@@ -1451,9 +1432,9 @@ svn_wc__db_scan_working(svn_wc__db_status_t *status,
  *   be received. You may NOT pass NULL for any parameter (otherwise, you
  *   would lose important information about the deletion).
  *
- * If the node given by LOCAL_ABSPATH does not refer to a deleted node,
- * then SVN_ERR_WC_PATH_NOT_FOUND is returned.
- * ### we should probably return a special error instead
+ * If the node given by LOCAL_ABSPATH does not exit, then
+ * SVN_ERR_WC_PATH_NOT_FOUND is returned. If it doesn't have a "deleted"
+ * status, then SVN_ERR_WC_PATH_UNEXPECTED_STATUS will be returned.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.
