@@ -145,7 +145,7 @@ def dumpfilter_with_targets(sbox):
                                    'greek_tree.dump')
   dumpfile = svntest.main.file_read(dumpfile_location)
 
-  targets_file = tempfile.mkstemp(dir=svntest.main.temp_dir)[1]
+  (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   targets = open(targets_file, 'w')
   targets.write('/A/D/H\n')
   targets.write('/A/D/G\n')
@@ -154,6 +154,7 @@ def dumpfilter_with_targets(sbox):
   filtered_output = filter_and_return_output(dumpfile, 'exclude', '/A/B/E',
                                              '--targets', targets_file,
                                              '--quiet')
+  os.close(fd)
   os.remove(targets_file)
 
   # Setup our expectations
