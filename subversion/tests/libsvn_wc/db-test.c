@@ -697,16 +697,16 @@ test_inserting_nodes(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_base_children(apr_pool_t *pool)
+test_children(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
   const apr_array_header_t *children;
   int i;
 
-  SVN_ERR(create_fake_wc("test_base_children", pool));
+  SVN_ERR(create_fake_wc("test_children", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_base_children",
+                                  "fake-wc/test_children",
                                   pool));
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
@@ -727,7 +727,7 @@ test_base_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_read_children(&children,
                                    db, local_abspath,
                                    pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 11);
+  SVN_TEST_ASSERT(children->nelts == 12);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -1297,8 +1297,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "get information from wc.db"),
     SVN_TEST_PASS2(test_inserting_nodes,
                    "insert different nodes into wc.db"),
-    SVN_TEST_PASS2(test_base_children,
-                   "getting the list of BASE children"),
+    SVN_TEST_PASS2(test_children,
+                   "getting the list of BASE or WORKING children"),
     SVN_TEST_PASS2(test_working_info,
                    "reading information about the WORKING tree"),
     SVN_TEST_PASS2(test_pdh,
