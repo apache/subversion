@@ -424,7 +424,7 @@ def diff_ignore_whitespace(sbox):
 
   # Make whitespace-only changes to mu
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_write(mu_path, "This  is   the    file     'mu'.\n", "wb")
+  svntest.main.file_write(mu_path, b"This  is   the    file     'mu'.\n", "wb")
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -465,18 +465,18 @@ def diff_ignore_eolstyle(sbox):
   wc_dir = sbox.wc_dir
 
   if os.name == 'nt':
-    crlf = '\n'
+    crlf = b'\n'
   else:
-    crlf = '\r\n'
+    crlf = b'\r\n'
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   rev = 1
   # do the --ignore-eol-style test for each eol-style
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
-                          [crlf, '\015', '\n', '\012']):
+                          [crlf, b'\015', b'\n', b'\012']):
     # rewrite file mu and set the eol-style property.
-    svntest.main.file_write(mu_path, "This is the file 'mu'." + eolchar, 'wb')
+    svntest.main.file_write(mu_path, b"This is the file 'mu'." + eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
     # Created expected output tree for 'svn ci'

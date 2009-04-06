@@ -2053,8 +2053,8 @@ def commit_inconsistent_eol(sbox):
 
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', iota_path)
   svntest.main.file_append_binary(iota_path,
-                                  "added extra line to file iota\012"
-                                  "added extra line to file iota\015")
+                                  b"added extra line to file iota\012"
+                                  b"added extra line to file iota\015")
   svntest.main.file_append(mu_path, "added extra line to file mu\n"
                                     "added extra line to file mu\n")
 

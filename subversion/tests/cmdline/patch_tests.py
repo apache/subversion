@@ -49,7 +49,7 @@ def convert_svnpatch_line(l):
   return l
 
 def svnpatch_encode(l):
-  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress(b"".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
 
 gnupatch_garbage_re =\
  re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
@@ -89,11 +89,11 @@ def patch_basic(sbox):
     '( open-file ( 4:A/mu 2:d1 2:c8 ) ) ',
     '( change-file-prop ( 2:c8 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
     '( apply-textdelta ( 2:c8 ( ) ) ) ',
-    '( textdelta-chunk ( 2:c8 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 2:c8 5:\000\000\057\0020 ) ) ',
-    '( textdelta-chunk ( 2:c8 2:\001\257 ) ) ',
-    '( textdelta-chunk ( 2:c8 48:/This is the file \'mu\'.\n',
-    'Some\001more\002binary\003bytes\000\n',
+    b'( textdelta-chunk ( 2:c8 4:SVN\001 ) ) ',
+    b'( textdelta-chunk ( 2:c8 5:\000\000\057\0020 ) ) ',
+    b'( textdelta-chunk ( 2:c8 2:\001\257 ) ) ',
+    b'( textdelta-chunk ( 2:c8 48:/This is the file \'mu\'.\n',
+    b'Some\001more\002binary\003bytes\000\n',
     ' ) ) ',
     '( textdelta-end ( 2:c8 ) ) ',
     '( close-file ( 2:c8 ( 32:24bf575dae88ead0eaa0f3863090bd90 ) ) ) ',

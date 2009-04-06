@@ -489,7 +489,7 @@ def verify_incremental_fsfs(sbox):
     raise svntest.Skip
 
   fp = open(r2, 'wb')
-  fp.write("""id: 0-2.0.r2/0
+  fp.write(b"""id: 0-2.0.r2/0
 type: dir
 count: 0
 cpath: /A/B/E/bravo

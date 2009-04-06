@@ -624,7 +624,7 @@ def simple_property_merges(sbox):
                                      alpha_path)
   # A binary, non-UTF8 property value
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'foo', 'foo\201val',
+                                     'propset', 'foo', b'foo\201val',
                                      beta_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val',
@@ -659,9 +659,9 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'bar', 'bar_val', alpha_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'foo', 'mod\201foo', beta_path)
+                                     'propset', 'foo', b'mod\201foo', beta_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'bar', 'bar\201val', beta_path)
+                                     'propset', 'bar', b'bar\201val', beta_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'mod_foo', E_path)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -705,7 +705,7 @@ def simple_property_merges(sbox):
   expected_disk.tweak('E', 'E/alpha',
                       props={'foo' : 'mod_foo', 'bar' : 'bar_val'})
   expected_disk.tweak('E/beta',
-                      props={'foo' : 'mod\201foo', 'bar' : 'bar\201val'})
+                      props={'foo' : b'mod\201foo', 'bar' : b'bar\201val'})
   expected_status = wc.State(B2_path, {
     ''        : Item(status=' M'),
     'E'       : Item(status=' M'),
@@ -751,10 +751,11 @@ def simple_property_merges(sbox):
     'E/alpha.prej'
     : Item(error_message('foo', 'foo_val', 'mod_foo')),
     'E/beta.prej'
-    : Item(error_message('foo', 'foo?\\129val', 'mod?\\129foo')),
+    : Item(error_message('foo', b'foo\x81val' if sys.version_info[0] >= 3 else 'foo?\\129val',
+                         b'mod\x81foo' if sys.version_info[0] >= 3 else 'mod?\\129foo')),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
-  expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
+  expected_disk.tweak('E/beta', props={'bar' : b'bar\201val'})
   expected_status.tweak('', status=' M')
   expected_status.tweak('E', 'E/alpha', 'E/beta', status=' C')
   expected_output.tweak('E', 'E/alpha', 'E/beta', status=' C')
@@ -1495,7 +1496,7 @@ def merge_binary_file(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     ''        : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
-    'A/theta' : Item(theta_contents + "some extra junk",
+    'A/theta' : Item(theta_contents + b"some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
@@ -2120,7 +2121,7 @@ def merge_binary_with_common_ancestry(sbox):
   theta_contents = svntest.main.file_read(
     os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_I_path = os.path.join(I_path, 'theta')
-  svntest.main.file_write(theta_I_path, theta_contents)
+  svntest.main.file_write(theta_I_path, theta_contents, 'wb')
   svntest.main.run_svn(None, 'add', theta_I_path)
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', theta_I_path)
@@ -3611,9 +3612,9 @@ def merge_ignore_eolstyle(sbox):
   file_url = sbox.repo_url + '/iota'
 
   svntest.main.file_write(file_path,
-                          "Aa\r\n"
-                          "Bb\r\n"
-                          "Cc\r\n",
+                          b"Aa\r\n"
+                          b"Bb\r\n"
+                          b"Cc\r\n",
                           "wb")
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -3623,10 +3624,10 @@ def merge_ignore_eolstyle(sbox):
 
   # change the file, mostly eol changes + an extra line
   svntest.main.file_write(file_path,
-                          "Aa\r"
-                          "Bb\n"
-                          "Cc\r"
-                          "New line in iota\n",
+                          b"Aa\r"
+                          b"Bb\n"
+                          b"Cc\r"
+                          b"New line in iota\n",
                           "wb")
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -3643,9 +3644,9 @@ def merge_ignore_eolstyle(sbox):
   # Make some local eol changes, these should not conflict
   # with the remote eol changes as both will be ignored.
   svntest.main.file_write(file_path,
-                          "Aa\n"
-                          "Bb\r"
-                          "Cc\n",
+                          b"Aa\n"
+                          b"Bb\r"
+                          b"Cc\n",
                           "wb")
 
   # Lines changed only by eolstyle - both in local or remote -
@@ -3765,7 +3766,7 @@ def merge_conflict_markers_matching_eol(sbox):
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
     # rewrite file mu and set the eol-style property.
-    svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
+    svntest.main.file_write(mu_path, b"This is the file 'mu'."+ eolchar.encode(), 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
     expected_disk.add({
@@ -3889,7 +3890,7 @@ def merge_eolstyle_handling(sbox):
   svntest.main.run_svn(None,
                        'commit', '-m', 'set eol-style property', wc_dir)
 
-  svntest.main.file_append_binary(path_backup, 'Added new line of text.\012')
+  svntest.main.file_append_binary(path_backup, b'Added new line of text.\012')
 
   expected_backup_disk = svntest.main.greek_state.copy()
   expected_backup_disk.tweak(
@@ -13070,7 +13071,7 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
   wc_disk.wc_dir = ''
   wc_status.wc_dir = ''
 
-  content1 = 'Line1\nLine2\r\n'  # write as 'binary' to get these exact EOLs
+  content1 = b'Line1\nLine2\r\n'  # write as 'binary' to get these exact EOLs
   content2 = 'Line1\nLine2\n'    # write as 'text' to get native EOLs in file
 
   # In the source branch, create initial state and two successive changes.

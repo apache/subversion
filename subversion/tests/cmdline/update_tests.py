@@ -73,7 +73,7 @@ def detect_extra_files(node, extra_files):
                                 len(os.sep) :]
         real_path = os.path.join(wc_dir, real_path)
 
-        real_contents = svntest.main.file_read(real_path)
+        real_contents = svntest.main.file_read(real_path, "rb")
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -120,7 +120,7 @@ def update_binary_file(sbox):
 
   # Make a change to the binary file in the original working copy
   svntest.main.file_append(theta_path, "revision 3 text")
-  theta_contents_r3 = theta_contents + "revision 3 text"
+  theta_contents_r3 = theta_contents + b"revision 3 text"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -141,7 +141,7 @@ def update_binary_file(sbox):
 
   # Make a local mod to theta
   svntest.main.file_append(theta_backup_path, "extra theta text")
-  theta_contents_local = theta_contents + "extra theta text"
+  theta_contents_local = theta_contents + b"extra theta text"
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -238,9 +238,9 @@ def update_binary_file_2(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
   svntest.main.file_append(zeta_path, "foobar")
-  new_zeta_contents = zeta_contents + "foobar"
+  new_zeta_contents = zeta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -1635,7 +1635,7 @@ def conflict_markers_matching_eol(sbox):
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
     # rewrite file mu and set the eol-style property.
-    svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
+    svntest.main.file_write(mu_path, b"This is the file 'mu'."+ eolchar.encode(), 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
     expected_disk.add({
@@ -1757,7 +1757,7 @@ def update_eolstyle_handling(sbox):
   svntest.main.run_svn(None,
                        'commit', '-m', 'set eol-style property', wc_dir)
 
-  svntest.main.file_append_binary(path_backup, 'Added new line of text.\012')
+  svntest.main.file_append_binary(path_backup, b'Added new line of text.\012')
 
   expected_backup_disk = svntest.main.greek_state.copy()
   expected_backup_disk.tweak(
@@ -3333,7 +3333,7 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                                         expected_status, None, wc_dir)
 
   # Make additional edits to glub...
-  svntest.main.file_append_binary(glub_path, "Some new text.\n")
+  svntest.main.file_append_binary(glub_path, b"Some new text.\n")
   svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', glub_path)
 
   # Commit the changes, creating r3.
@@ -3350,7 +3350,7 @@ def update_handles_copyfrom_with_txdeltas(sbox):
   # Make a local edit to rho in the backup working copy.
   rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_write(rho2_path,
-                          "New first line.\nThis is the file 'rho'.\n",
+                          b"New first line.\nThis is the file 'rho'.\n",
                           "wb")
 
   # Now try updating our backup working copy: it should receive glub,

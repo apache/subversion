@@ -245,11 +245,11 @@ def merge_history_repos(sbox):
 
   # Some changes on the branch - r4
   svntest.main.file_append_binary(os.path.join(branch_a, 'iota'),
-                                  "'A' has changed a bit.\n")
+                                  b"'A' has changed a bit.\n")
   svntest.main.file_append_binary(os.path.join(branch_a, 'A', 'mu'),
-                                  "Don't forget to look at 'upsilon', too.")
+                                  b"Don't forget to look at 'upsilon', too.")
   svntest.main.file_write(os.path.join(branch_a, upsilon_path),
-                          "This is the file 'upsilon'.\n", "wb")
+                          b"This is the file 'upsilon'.\n", "wb")
   svntest.main.run_svn(None, 'add',
                        os.path.join(branch_a, upsilon_path))
   svntest.main.run_svn(None, 'ci', '-m',
@@ -298,8 +298,8 @@ def merge_history_repos(sbox):
 
   # Wording change in mu - r9
   svntest.main.file_write(os.path.join('trunk', 'A', 'mu'),
-                          "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.", "wb")
+                          b"This is the file 'mu'.\n" +
+                          b"Don't forget to look at 'upsilon', as well.", "wb")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Wording change in mu.")
 
@@ -314,14 +314,14 @@ def merge_history_repos(sbox):
 
   # Add another file, make some changes on branches/a - r11
   svntest.main.file_append_binary(os.path.join(branch_a, upsilon_path),
-                                  "There is also the file 'xi'.")
+                                  b"There is also the file 'xi'.")
   svntest.main.file_write(os.path.join(branch_a, 'A', 'xi'),
-                          "This is the file 'xi'.\n", "wb")
+                          b"This is the file 'xi'.\n", "wb")
   svntest.main.run_svn(None, 'add',
                        os.path.join(branch_a, 'A', 'xi'))
   svntest.main.file_write(os.path.join(branch_a, 'iota'),
-                          "This is the file 'iota'.\n" +
-                          "'A' has changed a bit, with 'upsilon', and 'xi'.",
+                          b"This is the file 'iota'.\n" +
+                          b"'A' has changed a bit, with 'upsilon', and 'xi'.",
                           "wb")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Added 'xi' to branches/a, made a few other changes.")
@@ -339,7 +339,7 @@ def merge_history_repos(sbox):
 
   # More wording changes - r13
   svntest.main.file_append_binary(os.path.join(branch_b, 'A', 'D', 'gamma'),
-                                  "Watch out for the rays!")
+                                  b"Watch out for the rays!")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'gamma' on branches/b.")
 
@@ -373,7 +373,7 @@ def merge_history_repos(sbox):
 
   # Modify a file on branches/c - r16
   svntest.main.file_append_binary(os.path.join(branch_c, 'A', 'mu'),
-                                  "\nThis is yet more content in 'mu'.")
+                                  b"\nThis is yet more content in 'mu'.")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'mu' on branches/c.")
 
@@ -385,9 +385,9 @@ def merge_history_repos(sbox):
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c) + '@HEAD')
   svntest.main.file_write(os.path.join('A', 'mu'),
-                          "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.\n" +
-                          "This is yet more content in 'mu'.",
+                          b"This is the file 'mu'.\n" +
+                          b"Don't forget to look at 'upsilon', as well.\n" +
+                          b"This is yet more content in 'mu'.",
                           "wb")
   # Resolve conflicts, and commit
   svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),

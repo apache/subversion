@@ -2746,11 +2746,11 @@ def diff_ignore_eolstyle_empty_lines(sbox):
 
   # commit only eol changes
   svntest.main.file_write(file_path,
-                          "Aa\012"
-                          "\012"
-                          "Bb\r"
-                          "\r"
-                          "Cc\012",
+                          b"Aa\012"
+                          b"\012"
+                          b"Bb\r"
+                          b"\r"
+                          b"Cc\012",
                           mode="wb")
 
   svntest.actions.run_and_verify_svn(None, [], [],
@@ -3050,7 +3050,7 @@ def diff_svnpatch(sbox):
     return l
   
   def svnpatch_encode(l):
-    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress(b"".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
 
   def svnpatch_decode(l):
     return zlib.decompress(base64.decodestring("".join([x.rstrip("\n") for x in l]).encode()))
@@ -3092,7 +3092,7 @@ def diff_svnpatch(sbox):
   svntest.main.run_svn(None, 'propdel', 'aprop', beta_path)
 
   # turn iota into a modified binary file
-  svntest.main.file_append_binary('iota', "\nSome more bytes.\n")
+  svntest.main.file_append_binary('iota', b"\nSome more bytes.\n")
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', 'iota')  
 
@@ -3154,9 +3154,9 @@ def diff_svnpatch(sbox):
     '( open-file ( 4:iota 2:d0 3:c10 ) ) ',
     '( change-file-prop ( 3:c10 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
     '( apply-textdelta ( 3:c10 ( ) ) ) ',
-    '( textdelta-chunk ( 3:c10 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 3:c10 5:\000\000+\002, ) ) ',
-    '( textdelta-chunk ( 3:c10 2:\001\253 ) ) ',
+    b'( textdelta-chunk ( 3:c10 4:SVN\001 ) ) ',
+    b'( textdelta-chunk ( 3:c10 5:\000\000+\002, ) ) ',
+    b'( textdelta-chunk ( 3:c10 2:\001\253 ) ) ',
     '( textdelta-chunk ( 3:c10 44:+This is the file \'iota\'.\n',
     '\n',
     'Some more bytes.\n',
@@ -3267,10 +3267,10 @@ def diff_svnpatch(sbox):
     '( open-file ( 4:iota 2:d0 3:c14 ) ) ',
     '( change-file-prop ( 3:c14 13:svn:mime-type ( ) ) ) ',
     '( apply-textdelta ( 3:c14 ( ) ) ) ',
-    '( textdelta-chunk ( 3:c14 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 3:c14 5:\000\000\031\002\032 ) ) ',
-    '( textdelta-chunk ( 3:c14 2:\001\231 ) ) ',
-    '( textdelta-chunk ( 3:c14 26:\031This is the file \'iota\'.\n',
+    b'( textdelta-chunk ( 3:c14 4:SVN\001 ) ) ',
+    b'( textdelta-chunk ( 3:c14 5:\000\000\031\002\032 ) ) ',
+    b'( textdelta-chunk ( 3:c14 2:\001\231 ) ) ',
+    b'( textdelta-chunk ( 3:c14 26:\031This is the file \'iota\'.\n',
     ' ) ) ',
     '( textdelta-end ( 3:c14 ) ) ',
     '( close-file ( 3:c14 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
@@ -3335,10 +3335,10 @@ def diff_svnpatch(sbox):
     '( open-file ( 4:iota 2:d0 3:c18 ) ) ',
     '( change-file-prop ( 3:c18 13:svn:mime-type ( ) ) ) ',
     '( apply-textdelta ( 3:c18 ( ) ) ) ',
-    '( textdelta-chunk ( 3:c18 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 3:c18 5:\000\000\031\002\032 ) ) ',
-    '( textdelta-chunk ( 3:c18 2:\001\231 ) ) ',
-    '( textdelta-chunk ( 3:c18 26:\031This is the file \'iota\'.\n',
+    b'( textdelta-chunk ( 3:c18 4:SVN\001 ) ) ',
+    b'( textdelta-chunk ( 3:c18 5:\000\000\031\002\032 ) ) ',
+    b'( textdelta-chunk ( 3:c18 2:\001\231 ) ) ',
+    b'( textdelta-chunk ( 3:c18 26:\031This is the file \'iota\'.\n',
     ' ) ) ',
     '( textdelta-end ( 3:c18 ) ) ',
     '( close-file ( 3:c18 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
@@ -3410,10 +3410,10 @@ def diff_svnpatch(sbox):
     '( open-file ( 4:iota 2:d0 3:c13 ) ) ',
     '( change-file-prop ( 3:c13 13:svn:mime-type ( ) ) ) ',
     '( apply-textdelta ( 3:c13 ( ) ) ) ',
-    '( textdelta-chunk ( 3:c13 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 3:c13 5:\000\000\031\002\032 ) ) ',
-    '( textdelta-chunk ( 3:c13 2:\001\231 ) ) ',
-    '( textdelta-chunk ( 3:c13 26:\031This is the file \'iota\'.\n',
+    b'( textdelta-chunk ( 3:c13 4:SVN\001 ) ) ',
+    b'( textdelta-chunk ( 3:c13 5:\000\000\031\002\032 ) ) ',
+    b'( textdelta-chunk ( 3:c13 2:\001\231 ) ) ',
+    b'( textdelta-chunk ( 3:c13 26:\031This is the file \'iota\'.\n',
     ' ) ) ',
     '( textdelta-end ( 3:c13 ) ) ',
     '( close-file ( 3:c13 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
