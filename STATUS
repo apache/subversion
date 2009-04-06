@@ -125,14 +125,6 @@ Candidate changes:
    Votes:
      +1: pburba, arfrever
 
- * r36913
-   Fix race condition in ra_serf which can cause infinite-loop during a commit.
-   Justification:
-     Fixes an endless loop triggered by google code when using ra_serf.
-   Votes:
-     +1: sussman (via mail), lgo
-     +0: rhuijben (concept; requires better review for a +1)
-
  * r36919, r36937
    Fix issue #3250 'Repeated merging of conflicting properties fails'.
    Justification:
@@ -163,3 +155,11 @@ Approved changes:
      to understand "why" this patch works.
    Votes:
      +1: steveking, gstein, arfrever
+
+ * r36913
+   Fix race condition in ra_serf which can cause infinite-loop during a commit.
+   Justification:
+     Fixes an endless loop triggered by google code when using ra_serf.
+   Votes:
+     +1: sussman (via mail), lgo, pburba
+     +0: rhuijben (concept; requires better review for a +1)
