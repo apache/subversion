@@ -2504,25 +2504,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             *repos_relpath = svn_sqlite__column_text(stmt_base, 3,
                                                      result_pool);
         }
-      if (lock)
-        {
-          if (svn_sqlite__column_is_null(stmt_base, 15))
-            *lock = NULL;
-          else
-            {
-              *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-              (*lock)->token = svn_sqlite__column_text(stmt_base, 15,
-                                                       result_pool);
-              if (!svn_sqlite__column_is_null(stmt_base, 16))
-                (*lock)->owner = svn_sqlite__column_text(stmt_base, 16,
-                                                         result_pool);
-              if (!svn_sqlite__column_is_null(stmt_base, 17))
-                (*lock)->comment = svn_sqlite__column_text(stmt_base, 17,
-                                                           result_pool);
-              if (!svn_sqlite__column_is_null(stmt_base, 18))
-                (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
-            }
-        }
       if (repos_root_url || repos_uuid)
         {
           /* Fetch repository information via REPOS_ID. If we have a
@@ -2679,6 +2660,25 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       if (base_shadowed)
         {
           *base_shadowed = have_base && have_work;
+        }
+      if (lock)
+        {
+          if (svn_sqlite__column_is_null(stmt_base, 15))
+            *lock = NULL;
+          else
+            {
+              *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
+              (*lock)->token = svn_sqlite__column_text(stmt_base, 15,
+                                                       result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 16))
+                (*lock)->owner = svn_sqlite__column_text(stmt_base, 16,
+                                                         result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 17))
+                (*lock)->comment = svn_sqlite__column_text(stmt_base, 17,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 18))
+                (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
+            }
         }
     }
   else if (have_act)
