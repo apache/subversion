@@ -78,7 +78,7 @@ Candidate changes:
      NOT cleaned up on a checksum error. One of the code blocks in
      window_handler() should be moved down, I think.
    Votes:
-     +1: arfrever (without r36964)
+     +1: arfrever
      -0: gstein (looks like a fix is needed) (without r36964)
      +1: rhuijben
 
@@ -103,18 +103,6 @@ Candidate changes:
    Votes:
      +1: pburba, arfrever
 
- * r36816
-   Correct an issue with diffing large data when whitespaces/eols are ignored.
-   Justification:
-     TortoiseMerge does diffing with EOLs ignored by default, and without this
-     fix there's a diff shown at every 128k boundary even if the line has not
-     changed at all.
-   Notes:
-     The variable naming is kind of wonky in there, making this real hard
-     to understand "why" this patch works.
-   Votes:
-     +1: steveking, gstein
-
  * r36874, r36875
    Fix crash when upgrading to 1.6 format (r36874).
    Modified change-svn-wc-format.py to create or update format file
@@ -125,7 +113,7 @@ Candidate changes:
      1.6.1. Bit late. But the fix makes sense in 1.6.x only,
      so let's do it while here! The script won't work with 1.7.
    Votes
-     +1: stsp
+     +1: stsp, arfrever
 
  * r36879
    Fix a merge bug which can occur when the merge target or a subtree of
@@ -135,7 +123,7 @@ Candidate changes:
      the code is clearly incorrect and r36879 expands an existing merge
      test to demonstrate how it could result in incorrect mergeinfo.
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
 
  * r36913
    Fix race condition in ra_serf which can cause infinite-loop during a commit.
@@ -153,8 +141,25 @@ Candidate changes:
      r36919 if the fix, r36937 is the test.
    Votes:
      +1: stylesen (r36919 only)
-     +1: pburba
+     +1: pburba, arfrever
+
+ * r37009
+   Recommend SQLite 3.6.12.
+   Votes:
+     +1: arfrever
 
 
 Approved changes:
 =================
+
+ * r36816
+   Correct an issue with diffing large data when whitespaces/eols are ignored.
+   Justification:
+     TortoiseMerge does diffing with EOLs ignored by default, and without this
+     fix there's a diff shown at every 128k boundary even if the line has not
+     changed at all.
+   Notes:
+     The variable naming is kind of wonky in there, making this real hard
+     to understand "why" this patch works.
+   Votes:
+     +1: steveking, gstein, arfrever
