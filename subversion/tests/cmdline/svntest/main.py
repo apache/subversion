@@ -632,7 +632,7 @@ def run_entriesdump(path):
   class Entry(object):
     pass
   entries = { }
-  exec(''.join(stdout_lines))
+  exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
   return entries
 
 
