@@ -555,7 +555,7 @@ class State:
 
       if dirpath == '.':
         parent = ''
-      elif dirpath.startswith('./'):
+      elif dirpath.startswith('.' + os.sep):
         parent = to_relpath(dirpath[2:])
       else:
         parent = to_relpath(dirpath)
