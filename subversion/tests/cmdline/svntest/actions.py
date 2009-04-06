@@ -1558,7 +1558,7 @@ def set_prop(name, value, path, expected_err=None):
   """Set a property with specified value"""
   if '\x00' in value:
     from tempfile import mkstemp
-    value_file_path = mkstemp()[1]
+    (fd, value_file_path) = mkstemp()
     value_file = open(value_file_path, 'wb')
     if sys.version_info[0] >= 3:
       # Python >=3.0
@@ -1568,6 +1568,7 @@ def set_prop(name, value, path, expected_err=None):
     value_file.flush()
     value_file.close()
     main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
+    os.close(fd)
     os.remove(value_file_path)
   else:
     main.run_svn(expected_err, 'propset', name, value, path)
