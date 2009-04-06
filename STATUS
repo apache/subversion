@@ -144,18 +144,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36816
-   Correct an issue with diffing large data when whitespaces/eols are ignored.
-   Justification:
-     TortoiseMerge does diffing with EOLs ignored by default, and without this
-     fix there's a diff shown at every 128k boundary even if the line has not
-     changed at all.
-   Notes:
-     The variable naming is kind of wonky in there, making this real hard
-     to understand "why" this patch works.
-   Votes:
-     +1: steveking, gstein, arfrever
-
  * r36913
    Fix race condition in ra_serf which can cause infinite-loop during a commit.
    Justification:
