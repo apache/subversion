@@ -114,53 +114,31 @@ class TreeNode:
     checkout tree."""
     
     def __init__(self, name, depth):
-        self.name = name
-        self.depth = depth
-        self.children = {}
+        self.name = name    # the basename of this tree item
+        self.depth = depth  # its depth (one of the DEPTH_* values)
+        self.children = {}  # its children (basename -> TreeNode)
 
-    def get_name(self):
-        return self.name
-
-    def get_depth(self):
-        return self.depth
-    
     def add_child(self, child_node):
-        child_name = child_node.get_name()
+        child_name = child_node.name
         assert not self.children.has_key(child_node)
         self.children[child_name] = child_node
 
-    def get_child(self, child_name):
-        return self.children.get(child_name, None)
-
-    def list_children(self):
-        child_names = self.children.keys()
-        child_names.sort(svn_path_compare_paths)
-        return child_names
-    
     def dump(self, recurse=False, indent=0):
         sys.stderr.write(" " * indent)
         sys.stderr.write("Path: %s (depth=%s)\n" % (self.name, self.depth))
         if recurse:
-            child_names = self.list_children()
+            child_names = self.children.keys()
+            child_names.sort(svn_path_compare_paths)
             for child_name in child_names:
-                self.get_child(child_name).dump(recurse, indent + 2)
+                self.children[child_name].dump(recurse, indent + 2)
 
 class SubversionViewspec:
     """A representation of a Subversion sparse checkout specification."""
     
     def __init__(self, base_url, revision, tree):
-        self.base_url = base_url
-        self.revision = revision
-        self.tree = tree
-
-    def get_base_url(self):
-        return self.base_url
-
-    def get_revision(self):
-        return self.revision
-
-    def get_tree(self):
-        return self.tree
+        self.base_url = base_url  # base URL of the checkout
+        self.revision = revision  # revision of the checkout (-1 == HEAD)
+        self.tree = tree          # the top-most TreeNode item
 
 def svn_path_compare_paths(path1, path2):
     """Compare PATH1 and PATH2 as paths, sorting depth-first-ily.
@@ -270,7 +248,7 @@ def parse_viewspec(viewspec_fp):
         path_parts = filter(None, path.split('/'))
         tree_ptr = tree
         for part in path_parts[:-1]:
-            child_node = tree_ptr.get_child(part)
+            child_node = tree_ptr.children.get(part, None)
             if not child_node:
                 child_node = TreeNode(part, DEPTH_EMPTY)
                 tree_ptr.add_child(child_node)
@@ -284,7 +262,7 @@ def checkout_tree(base_url, revision, tree_node, target_dir, is_top=True):
     root of the checkout tree.  REVISION is the revision to checkout,
     or -1 if checking out HEAD."""
     
-    depth = tree_node.get_depth()
+    depth = tree_node.depth
     revision_str = ''
     if revision != -1:
         revision_str = "--revision=%d " % (revision)
@@ -294,19 +272,21 @@ def checkout_tree(base_url, revision, tree_node, target_dir, is_top=True):
     else:
         os.system('svn update "%s" --set-depth=%s %s'
                   % (target_dir, depth, revision_str))
-    for child_name in tree_node.list_children():
+    child_names = tree_node.children.keys()
+    child_names.sort(svn_path_compare_paths)
+    for child_name in child_names:
         checkout_tree(base_url + '/' + child_name,
                       revision,
-                      tree_node.get_child(child_name),
+                      tree_node.children[child_name],
                       os.path.join(target_dir, urllib.unquote(child_name)),
                       False)
 
 def checkout_spec(viewspec, target_dir):
     """Checkout the view specification VIEWSPEC into TARGET_DIR."""
     
-    checkout_tree(viewspec.get_base_url(),
-                  viewspec.get_revision(),
-                  viewspec.get_tree(),
+    checkout_tree(viewspec.base_url,
+                  viewspec.revision,
+                  viewspec.tree,
                   target_dir)
 
 def main():
@@ -325,14 +305,14 @@ def main():
     
     viewspec = parse_viewspec(fp)
     if target_dir is None:
-        sys.stderr.write("Url: %s\n" % (viewspec.get_base_url()))
-        revision = viewspec.get_revision()
+        sys.stderr.write("Url: %s\n" % (viewspec.base_url))
+        revision = viewspec.revision
         if revision != -1:
             sys.stderr.write("Revision: %s\n" % (revision))
         else:
             sys.stderr.write("Revision: HEAD\n")
         sys.stderr.write("\n")
-        viewspec.get_tree().dump(True)
+        viewspec.tree.dump(True)
     else:
         checkout_spec(viewspec, target_dir)
     
