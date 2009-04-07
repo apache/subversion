@@ -1956,6 +1956,10 @@ write_entry(svn_wc__db_t *db,
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        if (entry->revision > 0)
+          {
+            base_node = MAYBE_ALLOC(base_node, scratch_pool);
+          }
         break;
 
       case svn_wc_schedule_delete:
@@ -2127,6 +2131,9 @@ write_entry(svn_wc__db_t *db,
         }
       else
         base_node->kind = entry->kind;
+
+      if (entry->revision > 0 && entry->schedule == svn_wc_schedule_add)
+        base_node->presence = svn_wc__db_status_not_present;
 
       if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
