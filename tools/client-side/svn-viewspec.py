@@ -103,17 +103,11 @@ import sys
 import os
 import urllib
 
-DEPTH_EMPTY      = 1
-DEPTH_FILES      = 2
-DEPTH_IMMEDIATES = 3
-DEPTH_INFINITY   = 4
+DEPTH_EMPTY      = 'empty'
+DEPTH_FILES      = 'files'
+DEPTH_IMMEDIATES = 'immediates'
+DEPTH_INFINITY   = 'infinity'
 
-_depth_names = {
-  DEPTH_EMPTY      : 'empty',
-  DEPTH_FILES      : 'files',
-  DEPTH_IMMEDIATES : 'immediates',
-  DEPTH_INFINITY   : 'infinity',
-  }
     
 class TreeNode:
     """A representation of a single node in a Subversion sparse
@@ -145,8 +139,7 @@ class TreeNode:
     
     def dump(self, recurse=False, indent=0):
         sys.stderr.write(" " * indent)
-        sys.stderr.write("Path: %s (depth=%s)\n"
-                         % (self.name, _depth_names[self.depth]))
+        sys.stderr.write("Path: %s (depth=%s)\n" % (self.name, self.depth))
         if recurse:
             child_names = self.list_children()
             for child_name in child_names:
@@ -216,10 +209,10 @@ def parse_viewspec_headers(viewspec_fp):
     
     headers = {}
     while 1:
-        line = viewspec_fp.readline()
-        if not line or line == '\n' or line == '\r\n':
+        line = viewspec_fp.readline().strip()
+        if not line:
             break
-        name, value = map(lambda x: x.strip(), line.split(':', 1))
+        name, value = [x.strip() for x in line.split(':', 1)]
         headers[name] = value
     return headers
 
@@ -297,10 +290,10 @@ def checkout_tree(base_url, revision, tree_node, target_dir, is_top=True):
         revision_str = "--revision=%d " % (revision)
     if is_top:
         os.system('svn checkout "%s" "%s" --depth=%s %s'
-                  % (base_url, target_dir, _depth_names[depth], revision_str))
+                  % (base_url, target_dir, depth, revision_str))
     else:
         os.system('svn update "%s" --set-depth=%s %s'
-                  % (target_dir, _depth_names[depth], revision_str))
+                  % (target_dir, depth, revision_str))
     for child_name in tree_node.list_children():
         checkout_tree(base_url + '/' + child_name,
                       revision,
