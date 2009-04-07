@@ -67,22 +67,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r36389-r36390, r36412, r36421, r36423, r36964
-   Instead of verifying the pristine copy of a file before updating it, 
-   calculate and verify the used text base (base/revert/copied) stream while
-   applying the delta using the new stream checksum api. It also enables the
-   verification of files where the workingcopy has no recorded checksum.
-   Justification:
-     This allows verifying and updating pristine files in a single pass, where
-     we used two separate passes over the pristine file before.
-     This enhances update performance on large files and most likely reduces
-     the amount of work on-access virusscanners do on our files.
-   Notes:
-     r36389 contains the actual change. r36412 is a code cleanup patch.
-     r36421,r36423 re-enable checking pristine files when apply_textdelta
-     doesn't send a base checksum. (neon and serf before r36422).
-     r36390 is a space before paren cleanup of update_editor.c needed for a
-     clean merge.
-   Votes:
-     +1: arfrever, gstein, rhuijben
