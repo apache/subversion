@@ -765,7 +765,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
             svn copy --parents URL/src URL/dst
 
-         where src exists and dst does not.  The svn_path_dirname() call above
+         where src exists and dst does not.  The svn_uri_dirname() call above
          will produce a string equivalent to top_url, which means
          svn_path_is_child() will return NULL.  In this case, do not try to add
          dst to the new_dirs list since it will be added to the commit items
