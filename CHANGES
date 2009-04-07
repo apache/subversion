@@ -12,7 +12,7 @@ http://svn.collab.net/repos/svn/tags/1.6.1
   * don't fail when upgrading pre-1.2 repositories (r36851, -7)
   * allow escaping of separator characters in autoprops (r36763, -84)
   * improve tempfile creation robustness on Windows (r36442, -3)
-  * be more tolerant when upgrading working copies (r36874, -5)
+  * fix change-svn-wc-format.py for 1.6.x working copies (r36874, -5)
   * improve configure's detection of Berkeley DB (r36741, -2)
   * don't allow foriegn merges to add foriegn mergeinfo (issue #3383)
   * improve performance of 'svn update' on large files (r36389, et. al.)
