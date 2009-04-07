@@ -188,7 +188,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
