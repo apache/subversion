@@ -4216,73 +4216,6 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
     }
 }
 
-/* Marks 'inheritable' RANGE to TARGET_WCPATH by wiping off the
-   corresponding 'non-inheritable' RANGE from TARGET_MERGEINFO for the
-   merge source REL_PATH.  It does such marking only for same URLs
-   from same Repository, not a dry run, target having existing
-   mergeinfo(TARGET_MERGEINFO) and target being part of
-   CHILDREN_WITH_MERGEINFO. */
-static svn_error_t *
-mark_mergeinfo_as_inheritable_for_a_range(
-                                   svn_mergeinfo_t target_mergeinfo,
-                                   svn_boolean_t same_urls,
-                                   svn_merge_range_t *range,
-                                   const char *rel_path,
-                                   const char *target_wcpath,
-                                   svn_wc_adm_access_t *adm_access,
-                                   merge_cmd_baton_t *merge_b,
-                                   apr_array_header_t *children_with_mergeinfo,
-                                   int target_index, apr_pool_t *pool)
-{
-  /* Check if we need to make non-inheritable ranges inheritable. */
-  if (target_mergeinfo && same_urls
-      && !merge_b->dry_run
-      && merge_b->same_repos
-      && target_index >= 0)
-    {
-      svn_client__merge_path_t *merge_path =
-        APR_ARRAY_IDX(children_with_mergeinfo,
-                      target_index, svn_client__merge_path_t *);
-
-      /* If a path has no missing children, has non-inheritable ranges,
-         *and* those non-inheritable ranges intersect with the merge being
-         performed (i.e. this is a repeat merge where a previously missing
-         child is now present) then those non-inheritable ranges are made
-         inheritable. */
-      if (merge_path
-          && merge_path->has_noninheritable && !merge_path->missing_child)
-        {
-          svn_boolean_t is_equal;
-          apr_hash_t *merges;
-          apr_hash_t *inheritable_merges = apr_hash_make(pool);
-          apr_array_header_t *inheritable_ranges =
-            apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-
-          APR_ARRAY_PUSH(inheritable_ranges, svn_merge_range_t *) = range;
-          apr_hash_set(inheritable_merges, rel_path, APR_HASH_KEY_STRING,
-                       inheritable_ranges);
-
-          /* Try to remove any non-inheritable ranges bound by the merge
-             being performed. */
-          SVN_ERR(svn_mergeinfo_inheritable(&merges, target_mergeinfo,
-                                            rel_path, range->start,
-                                            range->end, pool));
-          /* If any non-inheritable ranges were removed put them back as
-             inheritable ranges. */
-          SVN_ERR(svn_mergeinfo__equals(&is_equal, merges, target_mergeinfo,
-                                        FALSE, pool));
-          if (!is_equal)
-            {
-              SVN_ERR(svn_mergeinfo_merge(merges, inheritable_merges, pool));
-              SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,
-                                                      adm_access, pool));
-            }
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-
 /* Get a file's content and properties from the repository.
    Set *FILENAME to the local path to a new temporary file holding its text,
    and set *PROPS to a new hash of its properties.
@@ -6457,17 +6390,6 @@ do_directory_merge(const char *url1,
                                       child_merge_src_canon_path,
                                       child_merges, is_rollback,
                                       adm_access, merge_b->ctx, iterpool));
-
-          SVN_ERR(mark_mergeinfo_as_inheritable_for_a_range(
-            child->pre_merge_mergeinfo,
-            TRUE,
-            &range,
-            child_merge_src_canon_path,
-            child->path,
-            adm_access,
-            merge_b,
-            notify_b->children_with_mergeinfo,
-            i, iterpool));
 
           /* Elide explicit subtree mergeinfo. */
           if (i > 0)
