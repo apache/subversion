@@ -1814,3 +1814,14 @@ svn_wc_cleanup(const char *path,
 {
   return svn_wc_cleanup2(path, diff3_cmd, cancel_func, cancel_baton, pool);
 }
+
+svn_error_t *
+svn_wc_cleanup2(const char *path,
+                const char *diff3_cmd,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  return svn_wc_cleanup3(path, diff3_cmd, FALSE, cancel_func, cancel_baton,
+                         pool);
+}
