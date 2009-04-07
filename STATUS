@@ -68,15 +68,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36919, r36937
-   Fix issue #3250 'Repeated merging of conflicting properties fails'.
-   Justification:
-     This issue exists since 1.5.x.
-   Notes:
-     r36919 is the fix, r36937 is the test.
-   Votes:
-     +1: stylesen, pburba, arfrever
-
  * r37045, r37053
    Fix issue #3391 'excluding absent dir segfaults'.
    Justification:
