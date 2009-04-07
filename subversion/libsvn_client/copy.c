@@ -1713,7 +1713,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                                             src_is_url,
                                             TRUE,
                                             iterpool));
-          src_basename = svn_path_basename(pair->src, iterpool);
+          src_basename = svn_uri_basename(pair->src, iterpool);
           if (srcs_are_urls && ! dst_is_url)
             src_basename = svn_path_uri_decode(src_basename, iterpool);
 
@@ -1993,7 +1993,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
-      src_basename = svn_path_basename(src_path, subpool);
+      src_basename = svn_uri_basename(src_path, subpool);
       if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
         src_basename = svn_path_uri_decode(src_basename, subpool);
 
@@ -2080,7 +2080,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
-      src_basename = svn_path_basename(src_path, pool);
+      src_basename = svn_uri_basename(src_path, pool);
 
       err = try_copy(&commit_info, sources,
                      svn_path_join(dst_path, src_basename, pool),
