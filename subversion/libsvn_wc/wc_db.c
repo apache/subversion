@@ -948,11 +948,11 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* We found a PDH with data in it. We can now construct the child
          from this, rather than continuing to scan upwards.  */
 
+      /* Make sure the PDH has an open SDB in it.  */
+      SVN_ERR(ensure_sdb_opened(found_pdh, smode, scratch_pool));
+
       /* The subdirectory uses the same WCROOT as the parent dir.  */
       (*pdh)->wcroot = found_pdh->wcroot;
-
-      /* Make sure the PDH has an open SDB in it.  */
-      SVN_ERR(ensure_sdb_opened(*pdh, smode, scratch_pool));
     }
   else
     {
