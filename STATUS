@@ -57,45 +57,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r36389-r36390, r36412, r36421, r36423, r36964
-   Instead of verifying the pristine copy of a file before updating it, 
-   calculate and verify the used text base (base/revert/copied) stream while
-   applying the delta using the new stream checksum api. It also enables the
-   verification of files where the workingcopy has no recorded checksum.
-   Justification:
-     This allows verifying and updating pristine files in a single pass, where
-     we used two separate passes over the pristine file before.
-     This enhances update performance on large files and most likely reduces
-     the amount of work on-access virusscanners do on our files.
-   Notes:
-     r36389 contains the actual change. r36412 is a code cleanup patch.
-     r36421,r36423 re-enable checking pristine files when apply_textdelta
-     doesn't send a base checksum. (neon and serf before r36422).
-     r36390 is a space before paren cleanup of update_editor.c needed for a
-     clean merge.
-     The reported failure occurs *after* the delta application process now,
-     rather than when we start. However, the (probably-mangled) result is
-     NOT cleaned up on a checksum error. One of the code blocks in
-     window_handler() should be moved down, I think.
-   Votes:
-     +1: arfrever
-     -0: gstein (looks like a fix is needed) (without r36964)
-     +1: rhuijben
-
  * r37009
    Recommend SQLite 3.6.12.
    Votes:
      +1: arfrever, rhuijben
+     -0: gstein (the release is a week old; let's see at least another week
+                 or two behind it before modifying the 1.6.x recommendation)
 
- * r37045, r37053
-   Fix issue #3391 'excluding absent dir segfaults'.
-   Justification:
-     This issue was introduced in 1.6.x.
-   Notes:
-     r37045 is the actual fix. r37053 is a follow up which improves the
-     'if' condition that checks for switched paths.
-   Votes:
-     +1: stylesen, rhuijben
 
 Approved changes:
 =================
@@ -151,3 +119,32 @@ Approved changes:
      r36919 is the fix, r36937 is the test.
    Votes:
      +1: stylesen, pburba, arfrever
+
+ * r37045, r37053
+   Fix issue #3391 'excluding absent dir segfaults'.
+   Justification:
+     This issue was introduced in 1.6.x.
+   Notes:
+     r37045 is the actual fix. r37053 is a follow up which improves the
+     'if' condition that checks for switched paths.
+   Votes:
+     +1: stylesen, rhuijben, gstein
+
+ * r36389-r36390, r36412, r36421, r36423, r36964
+   Instead of verifying the pristine copy of a file before updating it, 
+   calculate and verify the used text base (base/revert/copied) stream while
+   applying the delta using the new stream checksum api. It also enables the
+   verification of files where the workingcopy has no recorded checksum.
+   Justification:
+     This allows verifying and updating pristine files in a single pass, where
+     we used two separate passes over the pristine file before.
+     This enhances update performance on large files and most likely reduces
+     the amount of work on-access virusscanners do on our files.
+   Notes:
+     r36389 contains the actual change. r36412 is a code cleanup patch.
+     r36421,r36423 re-enable checking pristine files when apply_textdelta
+     doesn't send a base checksum. (neon and serf before r36422).
+     r36390 is a space before paren cleanup of update_editor.c needed for a
+     clean merge.
+   Votes:
+     +1: arfrever, gstein, rhuijben
