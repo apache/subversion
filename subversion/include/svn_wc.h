@@ -501,11 +501,34 @@ svn_wc_set_adm_dir(const char *name,
  */
 typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
 
+/** Information about the externals definitions stored on a single
+ * versioned directory. 
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_wc_externals_definition_t svn_wc_externals_definition_t;
 
 /** Return a new, empty traversal info object, allocated in @a pool. */
 svn_wc_traversal_info_t *
 svn_wc_init_traversal_info(apr_pool_t *pool);
 
+/** Return the value of the externals definition property recorded in
+ * @a ext_def.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_wc_externals_definition_propval(svn_wc_externals_definition_t *ext_def);
+                                    
+/** Return the base URL of the directory with which externals
+ * definition @a ext_def is/was associated.  This is useful when
+ * determining how to interpret an externals definition that contains
+ * relative URLs.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_wc_externals_definition_baseurl(svn_wc_externals_definition_t *ext_def);
 
 /** Set @a *externals_old and @a *externals_new to hash tables representing
  * changes to values of the svn:externals property on directories
@@ -517,14 +540,25 @@ svn_wc_init_traversal_info(apr_pool_t *pool);
  * svn_wc_get_switch_editor(), etc.
  *
  * Each hash maps <tt>const char *</tt> directory names onto
- * <tt>const char *</tt> values of the externals property for that directory.
- * The dir names are full paths -- that is, anchor plus target, not target
- * alone. The values are not parsed, they are simply copied raw, and are
- * never NULL: directories that acquired or lost the property are
- * simply omitted from the appropriate table.  Directories whose value
- * of the property did not change show the same value in each hash.
+ * <tt>svn_wc_externals_definition_t *</tt> objects describing the
+ * externals definitions for that directory.  The directory names are
+ * full paths -- anchor plus target -- not target alone.
  *
  * The hashes, keys, and values have the same lifetime as @a traversal_info.
+ *
+ * @since New in 1.7.
+ */
+void
+svn_wc_edited_externals2(apr_hash_t **externals_old,
+                         apr_hash_t **externals_new,
+                         svn_wc_traversal_info_t *traversal_info);
+
+/** Like @a svn_wc_edited_externals2(), except that the returned
+ * hashes map <tt>const char *</tt> directory names onto <tt>const
+ * char *</tt> raw values of the externals property for that
+ * directory.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 void
 svn_wc_edited_externals(apr_hash_t **externals_old,

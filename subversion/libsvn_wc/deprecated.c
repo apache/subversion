@@ -1630,6 +1630,19 @@ svn_wc_add_repos_file(const char *dst_path,
                                 pool);
 }
 
+void
+svn_wc_edited_externals(apr_hash_t **externals_old,
+                        apr_hash_t **externals_new,
+                        svn_wc_traversal_info_t *traversal_info)
+{
+  /* ### FIXME:  This needs to rebuild new hashes that only map 
+     paths to property values. */
+  abort();
+  *externals_old = traversal_info->externals_old;
+  *externals_new = traversal_info->externals_new;
+}
+
+
 /*** From lock.c ***/
 
 /* To preserve API compatibility with Subversion 1.0.0 */

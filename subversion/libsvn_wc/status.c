@@ -875,22 +875,12 @@ get_dir_status(struct edit_baton *eb,
           apr_array_header_t *ext_items;
           int i;
 
+          /* First things first -- we put the externals information
+             into the "global" traversal info structure (if there is one). */
           if (eb->traversal_info)
             {
-              apr_pool_t *dup_pool = eb->traversal_info->pool;
-              const char *dup_path = apr_pstrdup(dup_pool, path);
-              const char *dup_val = apr_pstrmemdup(dup_pool, prop_val->data,
-                                                   prop_val->len);
-
-              /* First things first -- we put the externals information
-                 into the "global" traversal info structure. */
-              apr_hash_set(eb->traversal_info->externals_old,
-                           dup_path, APR_HASH_KEY_STRING, dup_val);
-              apr_hash_set(eb->traversal_info->externals_new,
-                           dup_path, APR_HASH_KEY_STRING, dup_val);
-              apr_hash_set(eb->traversal_info->depths,
-                           dup_path, APR_HASH_KEY_STRING,
-                           svn_depth_to_word(dir_entry->depth));
+              SVN_ERR(svn_wc__add_traversal_info(eb->traversal_info, dir_entry, 
+                                                 path, prop_val, subpool));
             }
 
           /* Now, parse the thing, and copy the parsed results into

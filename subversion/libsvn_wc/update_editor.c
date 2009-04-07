@@ -2780,6 +2780,116 @@ add_prop_deletion(void *baton, const void *key,
   return SVN_NO_ERROR;
 }
 
+/* Maybe add to DB->eb->traversal_info information about a change in
+   the externals definitions on the directory represented by DB.
+   ADM_ACCESS is an access baton for that directory.  REGULAR_PROPS is
+   a set of property changes to regular properties transmitted via the
+   update editor drive.  Use SCRATCH_POOL for temporary allocations,
+   but the pool of the traversal_info for stuff that needs to live as
+   long as it does. */
+static svn_error_t *
+maybe_record_externals_change(struct dir_baton *db,
+                              apr_array_header_t *regular_props,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = db->edit_baton;
+  svn_wc_traversal_info_t *traversal_info = eb->traversal_info;
+  apr_pool_t *pool = traversal_info ? traversal_info->pool : NULL;
+  svn_wc_externals_definition_t *ext_def;
+  const char *path = db->path, *dup_path;
+  const svn_string_t *old_val_s = NULL, *new_val_s = NULL;
+  const char *old_url = NULL, *new_url = NULL;
+  const svn_prop_t *change;
+  const svn_wc_entry_t *dir_entry;
+  
+  /* Not tracking traversal info?  Get outta here. */
+  if (! traversal_info)
+    return SVN_NO_ERROR;
+
+  /* Was there a change in the svn:externals property? */
+  change = externals_prop_changed(regular_props);
+
+  /* If there was an svn:externals property change, we'll want to
+     record the old and new values.  If there was *not*, but this was
+     a switch operation, we may need to record old and new values
+     still (to deal with the fact that the meaning of an externals
+     definition with relative URLs still changes in such a situation
+     even through the property does not. */ 
+  if (change)
+    {
+      SVN_ERR(svn_wc_entry(&dir_entry, path, adm_access,
+                           FALSE, scratch_pool));
+      SVN_ERR(svn_wc_prop_get(&old_val_s, SVN_PROP_EXTERNALS,
+                              path, adm_access, scratch_pool));
+      old_url = dir_entry->url;
+      new_val_s = change->value;
+      new_url = db->new_URL;
+    }
+  else if (eb->switch_url)
+    {
+      SVN_ERR(svn_wc_entry(&dir_entry, path, adm_access,
+                           FALSE, scratch_pool));
+      if (strcmp(dir_entry->url, db->new_URL) != 0)
+        {
+          SVN_ERR(svn_wc_prop_get(&old_val_s, SVN_PROP_EXTERNALS,
+                                  path, adm_access, scratch_pool));
+          if (old_val_s)
+            {
+              new_val_s = old_val_s;
+              old_url = dir_entry->url;
+              new_url = db->new_URL;
+            }
+        }
+    }
+      
+
+  /* No value before, no value after?  Nothing to do. */
+  if ((new_val_s == NULL) && (old_val_s == NULL))
+    return SVN_NO_ERROR;
+
+  /* Values before and after, but no change either to the property
+     value or the directory URL?  Nothing to do. */
+  if (new_val_s && old_val_s
+      && (svn_string_compare(old_val_s, new_val_s))
+      && (strcmp(old_url, new_url) == 0))
+    return SVN_NO_ERROR;
+
+  /* Okay, something changed, so record the change. */
+  dup_path = apr_pstrdup(pool, path);
+  
+  apr_hash_set(traversal_info->depths, dup_path, APR_HASH_KEY_STRING,
+               svn_depth_to_word(db->ambient_depth));
+
+  /* We can't assume that TRAVERSAL_INFO came pre-loaded with the old
+     values of the svn:externals property.  Yes, most callers will
+     have already initialized TRAVERSAL_INFO by sending it through
+     svn_wc_crawl_revisions(), but we shouldn't count on that here --
+     so we set both the old and new values again. */
+  if (old_val_s)
+    {
+      ext_def = apr_pcalloc(pool, sizeof(*ext_def));
+      ext_def->property = apr_pstrmemdup(pool, old_val_s->data,
+                                         old_val_s->len);
+      ext_def->base_url = apr_pstrdup(pool, old_url);
+      ext_def->root_url = apr_pstrdup(pool, eb->repos);
+      apr_hash_set(traversal_info->externals_old, dup_path,
+                   APR_HASH_KEY_STRING, ext_def);
+    }
+  if (new_val_s)
+    {
+      ext_def = apr_pcalloc(pool, sizeof(*ext_def));
+      ext_def->property = apr_pstrmemdup(pool, new_val_s->data,
+                                         new_val_s->len);
+      ext_def->base_url = apr_pstrdup(pool, new_url);
+      ext_def->root_url = apr_pstrdup(pool, eb->repos);
+      apr_hash_set(traversal_info->externals_new, dup_path,
+                   APR_HASH_KEY_STRING, ext_def);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
@@ -2844,56 +2954,8 @@ close_directory(void *dir_baton,
 
       if (regular_props->nelts)
         {
-          /* If recording traversal info, then see if the
-             SVN_PROP_EXTERNALS property on this directory changed,
-             and record before and after for the change. */
-          if (db->edit_baton->traversal_info)
-            {
-              svn_wc_traversal_info_t *ti = db->edit_baton->traversal_info;
-              const svn_prop_t *change = externals_prop_changed(regular_props);
-
-              if (change)
-                {
-                  const svn_string_t *new_val_s = change->value;
-                  const svn_string_t *old_val_s;
-
-                  SVN_ERR(svn_wc_prop_get(
-                           &old_val_s, SVN_PROP_EXTERNALS,
-                           db->path, adm_access, db->pool));
-
-                  if ((new_val_s == NULL) && (old_val_s == NULL))
-                    ; /* No value before, no value after... so do nothing. */
-                  else if (new_val_s && old_val_s
-                           && (svn_string_compare(old_val_s, new_val_s)))
-                    ; /* Value did not change... so do nothing. */
-                  else if (old_val_s || new_val_s)
-                    /* something changed, record the change */
-                    {
-                      const char *d_path = apr_pstrdup(ti->pool, db->path);
-
-                      apr_hash_set(ti->depths, d_path, APR_HASH_KEY_STRING,
-                                   svn_depth_to_word(db->ambient_depth));
-
-                      /* We can't assume that ti came pre-loaded with
-                         the old values of the svn:externals property.
-                         Yes, most callers will have already
-                         initialized ti by sending it through
-                         svn_wc_crawl_revisions, but we shouldn't
-                         count on that here -- so we set both the old
-                         and new values again. */
-                      if (old_val_s)
-                        apr_hash_set(ti->externals_old, d_path,
-                                     APR_HASH_KEY_STRING,
-                                     apr_pstrmemdup(ti->pool, old_val_s->data,
-                                                    old_val_s->len));
-                      if (new_val_s)
-                        apr_hash_set(ti->externals_new, d_path,
-                                     APR_HASH_KEY_STRING,
-                                     apr_pstrmemdup(ti->pool, new_val_s->data,
-                                                    new_val_s->len));
-                    }
-                }
-            }
+          SVN_ERR(maybe_record_externals_change(db, regular_props,
+                                                adm_access, pool));
 
           /* Merge pending properties into temporary files (ignoring
              conflicts). */
@@ -2918,6 +2980,15 @@ close_directory(void *dir_baton,
       /* Add the dirprop loggy entries to the baton's log
          accumulator. */
       svn_stringbuf_appendstr(db->log_accum, dirprop_log);
+    }
+
+  /* Even if this directory has no property changes stored up, if this
+     is a switch, we might have relative externals definitions to
+     update. */
+  else if (db->edit_baton->switch_url)
+    {
+      SVN_ERR(maybe_record_externals_change(db, regular_props,
+                                            adm_access, pool));
     }
 
   /* Flush and run the log. */
@@ -4981,15 +5052,28 @@ svn_wc_init_traversal_info(apr_pool_t *pool)
 }
 
 
+const char *
+svn_wc_externals_definition_propval(svn_wc_externals_definition_t *ext_def)
+{
+  return ext_def->property;
+}
+
+
+const char *
+svn_wc_externals_definition_baseurl(svn_wc_externals_definition_t *ext_def)
+{
+  return ext_def->base_url;
+}
+
+
 void
-svn_wc_edited_externals(apr_hash_t **externals_old,
-                        apr_hash_t **externals_new,
-                        svn_wc_traversal_info_t *traversal_info)
+svn_wc_edited_externals2(apr_hash_t **externals_old,
+                         apr_hash_t **externals_new,
+                         svn_wc_traversal_info_t *traversal_info)
 {
   *externals_old = traversal_info->externals_old;
   *externals_new = traversal_info->externals_new;
 }
-
 
 void
 svn_wc_traversed_depths(apr_hash_t **depths,

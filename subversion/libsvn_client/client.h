@@ -997,6 +997,10 @@ svn_client__do_commit(const char *base_url,
    shallower ambient depth, so changes to svn:externals values will be
    interpreted.
 
+   If IS_SWITCH is set, then FROM_URL (and its telescoped value in
+   accordance with the paths stored in TRAVERSAL_INFO) will override
+   the recorded "new base URL" values in TRAVERSAL_INFO.
+
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
 
    ### todo: AUTH_BATON may not be so useful.  It's almost like we
@@ -1015,6 +1019,7 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
                              const char *to_path,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
+                             svn_boolean_t is_switch,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);

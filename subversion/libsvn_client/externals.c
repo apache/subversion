@@ -45,15 +45,16 @@ struct handle_external_item_change_baton
   apr_hash_t *new_desc;
   apr_hash_t *old_desc;
 
+  /* As returned by svn_wc_externals_definition_baseurl(). */
+  const char *new_base_url;
+  const char *old_base_url;
+
   /* The directory that has this externals property. */
   const char *parent_dir;
 
   /* Access baton for parent_dir.  If the external is an export, this
      this must be NULL, otherwise it must be non-NULL. */
   svn_wc_adm_access_t *adm_access;
-
-  /* The URL for the directory that has this externals property. */
-  const char *parent_dir_url;
 
   /* The URL for the repository root. */
   const char *repos_root_url;
@@ -718,7 +719,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       old_item = apr_hash_get(ib->old_desc, key, klen);
       if (old_item)
         SVN_ERR(resolve_relative_external_url(old_item, ib->repos_root_url,
-                                              ib->parent_dir_url,
+                                              ib->old_base_url,
                                               ib->pool));
     }
   else
@@ -729,7 +730,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       new_item = apr_hash_get(ib->new_desc, key, klen);
       if (new_item)
         SVN_ERR(resolve_relative_external_url(new_item, ib->repos_root_url,
-                                              ib->parent_dir_url,
+                                              ib->new_base_url,
                                               ib->pool));
     }
   else
@@ -1028,7 +1029,7 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
 /* Closure for handle_externals_change. */
 struct handle_externals_desc_change_baton
 {
-  /* As returned by svn_wc_edited_externals(). */
+  /* As returned by svn_wc_edited_externals2(). */
   apr_hash_t *externals_new;
   apr_hash_t *externals_old;
 
@@ -1050,6 +1051,7 @@ struct handle_externals_desc_change_baton
   svn_client_ctx_t *ctx;
   const char *repos_root_url;
   svn_boolean_t *timestamp_sleep;
+  svn_boolean_t is_switch;
   svn_boolean_t is_export;
 
   apr_pool_t *pool;
@@ -1066,10 +1068,11 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 {
   struct handle_externals_desc_change_baton *cb = baton;
   struct handle_external_item_change_baton ib = { 0 };
+  svn_wc_externals_definition_t *old_ext_def, *new_ext_def;
   const char *old_desc_text, *new_desc_text;
+  const char *old_base_url, *new_base_url;
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *old_desc_hash, *new_desc_hash;
-  apr_size_t len;
   int i;
   svn_wc_external_item2_t *item;
   const char *ambient_depth_w;
@@ -1107,17 +1110,36 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
           && cb->requested_depth < svn_depth_infinity))
     return SVN_NO_ERROR;
 
-  if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
-                                                FALSE, cb->pool));
+  if ((old_ext_def = apr_hash_get(cb->externals_old, key, klen)))
+    {
+      old_base_url = svn_wc_externals_definition_baseurl(old_ext_def);
+      old_desc_text = svn_wc_externals_definition_propval(old_ext_def);
+      if (old_desc_text)
+        SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
+                                                    FALSE, cb->pool));
+    }
   else
-    old_desc = NULL;
+    {
+      old_desc = NULL;
+      old_base_url = NULL;
+    }
 
-  if ((new_desc_text = apr_hash_get(cb->externals_new, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key, new_desc_text,
-                                                FALSE, cb->pool));
+  if ((new_ext_def = apr_hash_get(cb->externals_new, key, klen)))
+    {
+      if (cb->is_switch)
+        new_base_url = svn_path_url_add_component2(cb->from_url, key, cb->pool);
+      else
+        new_base_url = svn_wc_externals_definition_baseurl(new_ext_def);
+      new_desc_text = svn_wc_externals_definition_propval(new_ext_def);
+      if (new_desc_text)
+        SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key, new_desc_text,
+                                                    FALSE, cb->pool));
+    }
   else
-    new_desc = NULL;
+    {
+      new_desc = NULL;
+      new_base_url = NULL;
+    }
 
   old_desc_hash = apr_hash_make(cb->pool);
   new_desc_hash = apr_hash_make(cb->pool);
@@ -1142,6 +1164,8 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
   ib.old_desc          = old_desc_hash;
   ib.new_desc          = new_desc_hash;
+  ib.old_base_url      = old_base_url;
+  ib.new_base_url      = new_base_url;
   ib.parent_dir        = (const char *) key;
   ib.repos_root_url    = cb->repos_root_url;
   ib.adm_access        = cb->adm_access;
@@ -1150,19 +1174,6 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = cb->pool;
   ib.iter_pool         = svn_pool_create(cb->pool);
-
-  /* Get the URL of the parent directory by appending a portion of
-     parent_dir to from_url.  from_url is the URL for to_path and
-     to_path is a substring of parent_dir, so append any characters in
-     parent_dir past strlen(to_path) to from_url (making sure to move
-     past a '/' in parent_dir, otherwise svn_path_url_add_component()
-     will error. */
-  len = strlen(cb->to_path);
-  if (ib.parent_dir[len] == '/')
-    ++len;
-  ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
-                                                  ib.parent_dir + len,
-                                                  cb->pool);
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified
@@ -1208,6 +1219,7 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
                              const char *to_path,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
+                             svn_boolean_t is_switch,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
@@ -1215,7 +1227,7 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
   apr_hash_t *externals_old, *externals_new, *ambient_depths;
   struct handle_externals_desc_change_baton cb = { 0 };
 
-  svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
+  svn_wc_edited_externals2(&externals_old, &externals_new, traversal_info);
   svn_wc_traversed_depths(&ambient_depths, traversal_info);
 
   /* Sanity check; see r30124. */
@@ -1233,6 +1245,7 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
   cb.adm_access        = adm_access;
   cb.ctx               = ctx;
   cb.timestamp_sleep   = timestamp_sleep;
+  cb.is_switch         = is_switch;
   cb.is_export         = FALSE;
   cb.pool              = pool;
 
@@ -1264,6 +1277,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.to_path           = to_path;
   cb.repos_root_url    = repos_root_url;
   cb.timestamp_sleep   = timestamp_sleep;
+  cb.is_switch         = FALSE;
   cb.is_export         = is_export;
   cb.pool              = pool;
 
@@ -1288,7 +1302,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Get the values of the svn:externals properties. */
-  svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
+  svn_wc_edited_externals2(&externals_old, &externals_new, traversal_info);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
@@ -1301,6 +1315,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
       const void *key;
       void *val;
       const char *path;
+      svn_wc_externals_definition_t *ext_def;
       const char *propval;
       apr_pool_t *iterpool;
       int i;
@@ -1310,10 +1325,11 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
-      propval = val;
-
+      ext_def = val;
+      
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
+      propval = svn_wc_externals_definition_propval(ext_def);
       SVN_ERR(svn_wc_parse_externals_description3(&exts, path, propval,
                                                   FALSE, subpool));
 

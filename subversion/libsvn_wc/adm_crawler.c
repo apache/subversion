@@ -154,6 +154,33 @@ restore_file(const char *file_path,
 }
 
 
+svn_error_t *
+svn_wc__add_traversal_info(svn_wc_traversal_info_t *traversal_info,
+                           const svn_wc_entry_t *entry,
+                           const char *path,
+                           const svn_string_t *ext_prop_val,
+                           apr_pool_t *scratch_pool)
+{
+  apr_pool_t *pool = traversal_info->pool;
+  const char *dup_path = apr_pstrdup(pool, path);
+  struct svn_wc_externals_definition_t *ext_def = 
+    apr_pcalloc(pool, sizeof(*ext_def));
+
+  ext_def->property = apr_pstrmemdup(pool, ext_prop_val->data, 
+                                     ext_prop_val->len);
+  ext_def->base_url = apr_pstrdup(pool, entry->url);
+  ext_def->root_url = apr_pstrdup(pool, entry->repos);
+          
+  apr_hash_set(traversal_info->externals_old, dup_path,
+               APR_HASH_KEY_STRING, ext_def);
+  apr_hash_set(traversal_info->externals_new, dup_path,
+               APR_HASH_KEY_STRING, ext_def);
+  apr_hash_set(traversal_info->depths, dup_path,
+               APR_HASH_KEY_STRING, svn_depth_to_word(entry->depth));
+  return SVN_NO_ERROR;
+}
+
+
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
@@ -252,16 +279,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                               subpool));
       if (val)
         {
-          apr_pool_t *dup_pool = traversal_info->pool;
-          const char *dup_path = apr_pstrdup(dup_pool, full_path);
-          const char *dup_val = apr_pstrmemdup(dup_pool, val->data, val->len);
-          apr_hash_set(traversal_info->externals_old,
-                       dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set(traversal_info->externals_new,
-                       dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set(traversal_info->depths,
-                       dup_path, APR_HASH_KEY_STRING,
-                       svn_depth_to_word(dot_entry->depth));
+          SVN_ERR(svn_wc__add_traversal_info(traversal_info, dot_entry, 
+                                             full_path, val, pool));
         }
     }
 

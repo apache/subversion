@@ -105,8 +105,16 @@ extern "C" {
 
 /* A version < this is pre-wc-ng. */
 #define SVN_WC__WC_NG_VERSION 12
+
 
 /*** Update traversals. ***/
+
+struct svn_wc_externals_definition_t
+{
+  const char *property; /* raw svn:externals property value */
+  const char *base_url; /* URL of property owner */
+  const char *root_url; /* repos root URL of property owner */
+};
 
 struct svn_wc_traversal_info_t
 {
@@ -115,8 +123,10 @@ struct svn_wc_traversal_info_t
   apr_pool_t *pool;
 
   /* The before and after values of the SVN_PROP_EXTERNALS property,
-   * for each directory on which that property changed.  These have
-   * the same layout as those returned by svn_wc_edited_externals().
+   * for each directory on which that property (or its interpretation)
+   * changed.  These hashes map `const char *' paths (as for
+   * svn_wc_edited_externals) to `struct svn_wc_externals_definition_t
+   * *' objects.
    *
    * The hashes, their keys, and their values are allocated in the
    * above pool.
@@ -129,6 +139,18 @@ struct svn_wc_traversal_info_t
      are the result of svn_depth_to_word(depth_of_each_dir). */
   apr_hash_t *depths;
 };
+
+/* Add to TRAVERSAL_INFO (which results from svn_wc_init_traversal_info())
+   the struct svn_wc_externals_definition_t's and depths derived from
+   SVN_PROP_EXTERNALS property value EXT_PROP_VAL, which is set on
+   directory PATH with ENTRY.  Use SCRATCH_POOL for temporary
+   allocations, but allocate all the good stuff in TRAVERSAL_INFO's pool. */
+svn_error_t *
+svn_wc__add_traversal_info(svn_wc_traversal_info_t *traversal_info,
+                           const svn_wc_entry_t *entry,
+                           const char *path,
+                           const svn_string_t *ext_prop_val,
+                           apr_pool_t *scratch_pool);
 
 
 
