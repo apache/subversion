@@ -7122,6 +7122,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # merge target when the merge target has non-inheritable mergeinfo
   # and is also the current working directory, see
   # http://svn.haxx.se/dev/archive-2008-12/0133.shtml.
+  #
+  # Test for issue #3392 'Parsing error with reverse merges and
+  # non-inheritable mergeinfo.  This test if marked as XFail until this
+  # issue is fixed.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -7136,7 +7140,9 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   nu_path     = os.path.join(wc_dir, "A", "nu")
   mu_path     = os.path.join(wc_dir, "A", "mu")
   mu_2_path   = os.path.join(wc_dir, "A_COPY_2", "mu")
-  
+  D_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D")
+  H_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D", "H")
+
   # Make a change to directory A/D/H and commit as r8.
   svntest.actions.run_and_verify_svn(None, ['At revision 7.\n'], [],
                                      'update', wc_dir)
@@ -7395,6 +7401,59 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        False) # No dry-run.
   os.chdir(saved_cwd)
 
+  # Test for issue #3392
+  #
+  # Revert local changes and update.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Merge r8 from A/D/H to A_COPY_D/H at depth empty, creating non-inheritable
+  # mergeinfo on the target.  Commit this merge as r13.
+  expected_output = wc.State(H_COPY_2_path, {
+    ''    : Item(status=' U'),
+    })
+  expected_status = wc.State(H_COPY_2_path, {
+    ''      : Item(status=' M', wc_rev=12),
+    'psi'   : Item(status='  ', wc_rev=12),
+    'omega' : Item(status='  ', wc_rev=12),
+    'chi'   : Item(status='  ', wc_rev=12),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8*',
+                          "prop:name" : "propval"}),
+    'psi'   : Item("This is the file 'psi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(H_COPY_2_path, {})
+  svntest.actions.run_and_verify_merge(H_COPY_2_path, '7', '8',
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
+                                     'log msg', wc_dir);
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  # Now reverse the prior merge.  Issue #3392 manifests itself here with
+  # a mergeinfo parsing error:
+  #   >svn merge %url%/A/D/H merge_tests-62\A_COPY_2\D\H -c-8
+  #   --- Reverse-merging r8 into 'merge_tests-62\A_COPY_2\D\H':
+  #    U   merge_tests-62\A_COPY_2\D\H
+  #   ..\..\..\subversion\libsvn_subr\mergeinfo.c:590: (apr_err=200020)
+  #   svn: Could not parse mergeinfo string '-8'
+  #   ..\..\..\subversion\libsvn_subr\kitchensink.c:52: (apr_err=200022)
+  #   svn: Negative revision number found parsing '-8'
+  #
+  # Status is identical but for the working revision.
+  expected_status.tweak(wc_rev=13)
+  # The mergeinfo and prop:name props should disappear.
+  expected_disk.remove('')
+  svntest.actions.run_and_verify_merge(H_COPY_2_path, '8', '7',
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
   # Test for issue #2827
   # Handle merge info for sparsely-populated directories
 def merge_to_sparse_directories(sbox):
@@ -15535,8 +15594,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
                          server_has_mergeinfo),
-              SkipUnless(merge_away_subtrees_noninheritable_ranges,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_away_subtrees_noninheritable_ranges,
+                               server_has_mergeinfo)),
               SkipUnless(merge_to_sparse_directories,
                          server_has_mergeinfo),
               SkipUnless(merge_old_and_new_revs_from_renamed_dir,
