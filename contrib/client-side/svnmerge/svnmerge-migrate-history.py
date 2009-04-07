@@ -4,7 +4,7 @@
 #                              format to Subversion 1.5's format.
 #
 # ====================================================================
-# Copyright (c) 2007 CollabNet.  All rights reserved.
+# Copyright (c) 2007-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -360,7 +360,7 @@ class Migrator:
     return mergeinfo
 
   def set_path_prefixes(self, prefixes):
-    "Decompose path prefixes into something meaningful for comparision."
+    "Decompose path prefixes into something meaningful for comparison."
     self.path_prefixes = []
     for prefix in prefixes:
       prefix_components = []

@@ -24,6 +24,7 @@
 
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "cl.h"
 
@@ -65,7 +66,7 @@ svn_cl__export(apr_getopt_t *os,
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1)
-    to = svn_path_uri_decode(svn_path_basename(truefrom, pool), pool);
+    to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
   else
     to = APR_ARRAY_IDX(targets, 1, const char *);
 

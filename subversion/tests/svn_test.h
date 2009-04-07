@@ -23,18 +23,30 @@
 #endif /* ! SVN_ENABLE_DEPRECATION_WARNINGS_IN_TESTS */
 
 #include <apr_pools.h>
+
 #include "svn_delta.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
+
+/** Handy macro to test a condition, returning SVN_ERR_TEST_FAILED if FALSE
+ *
+ * This macro should be used in place of SVN_ERR_ASSERT() since we don't
+ * want to core-dump the test.
+ */
+#define SVN_TEST_ASSERT(expr)                                  \
+  do {                                                         \
+    if (!(expr))                                               \
+      return svn_error_create(SVN_ERR_TEST_FAILED, 0, #expr);  \
+  } while (0)
+
+
 /* Baton for any arguments that need to be passed from main() to svn
  * test functions.
  */
@@ -143,11 +155,10 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_OPTS_WIMP_COND(func, p, msg, wip) \
   {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
 
-/* Obsolete versions of work-in-progress macros. */
+/* Obsolete version of work-in-progress macros. */
 #define SVN_TEST_WIMP0(func, wip) \
   {func, svn_test_xfail, NULL, NULL, NULL, wip}
-#define SVN_TEST_WIMP_COND0(func, p, NULL, wip) \
-  {func, (p) ? svn_test_xfail : svn_test_pass, NULL, NULL, NULL, wip}
+
 
 
 /* Return a pseudo-random number based on SEED, and modify SEED.

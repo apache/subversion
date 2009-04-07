@@ -476,6 +476,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 34,
              "The specified node is not a symlink")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+             SVN_ERR_WC_CATEGORY_START + 35,
+             "The specified path has an unexpected status")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

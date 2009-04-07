@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -843,61 +843,42 @@ def prop_value_conversions(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
-  # We'll use a file to set the prop values, so that weird characters
-  # in the props don't confuse the shell.
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-  propval_file = open(propval_path, 'wb')
-
-  def set_prop(name, value, path, valf=propval_file, valp=propval_path,
-               expected_error=None):
-    valf.seek(0)
-    valf.truncate(0)
-    valf.write(value)
-    valf.flush()
-    svntest.main.run_svn(expected_error, 'propset', '-F', valp, name, path)
+  # Leading and trailing whitespace should be stripped
+  svntest.actions.set_prop('svn:mime-type', ' text/html\n\n', iota_path)
+  svntest.actions.set_prop('svn:mime-type', 'text/html', mu_path)
 
   # Leading and trailing whitespace should be stripped
-  set_prop('svn:mime-type', ' text/html\n\n', iota_path)
-  set_prop('svn:mime-type', 'text/html', mu_path)
-
-  # Leading and trailing whitespace should be stripped
-  set_prop('svn:eol-style', '\nnative\n', iota_path)
-  set_prop('svn:eol-style', 'native', mu_path)
+  svntest.actions.set_prop('svn:eol-style', '\nnative\n', iota_path)
+  svntest.actions.set_prop('svn:eol-style', 'native', mu_path)
 
   # A trailing newline should be added
-  set_prop('svn:ignore', '*.o\nfoo.c', A_path)
-  set_prop('svn:ignore', '*.o\nfoo.c\n', B_path)
+  svntest.actions.set_prop('svn:ignore', '*.o\nfoo.c', A_path)
+  svntest.actions.set_prop('svn:ignore', '*.o\nfoo.c\n', B_path)
 
   # A trailing newline should be added
-  set_prop('svn:externals', 'foo http://foo.com/repos', A_path)
-  set_prop('svn:externals', 'foo http://foo.com/repos\n', B_path)
+  svntest.actions.set_prop('svn:externals', 'foo http://foo.com/repos', A_path)
+  svntest.actions.set_prop('svn:externals', 'foo http://foo.com/repos\n', B_path)
 
   # Leading and trailing whitespace should be stripped, but not internal
   # whitespace
-  set_prop('svn:keywords', ' Rev Date \n', iota_path)
-  set_prop('svn:keywords', 'Rev  Date', mu_path)
+  svntest.actions.set_prop('svn:keywords', ' Rev Date \n', iota_path)
+  svntest.actions.set_prop('svn:keywords', 'Rev  Date', mu_path)
 
   # svn:executable value should be forced to a '*'
-  set_prop('svn:executable', 'foo', iota_path)
-  set_prop('svn:executable', '*', lambda_path)
+  svntest.actions.set_prop('svn:executable', 'foo', iota_path)
+  svntest.actions.set_prop('svn:executable', '*', lambda_path)
   for pval in ('      ', '', 'no', 'off', 'false'):
-    set_prop('svn:executable', pval, mu_path, propval_file, propval_path,
-             ["svn: warning: To turn off the svn:executable property, "
-              "use 'svn propdel';\n",
-              "setting the property to '" + pval +
-              "' will not turn it off.\n"])
+    svntest.actions.set_prop('svn:executable', pval, mu_path,
+                             ["svn: warning: To turn off the svn:executable property, use 'svn propdel';\n",
+                              "setting the property to '" + pval + "' will not turn it off.\n"])
 
   # Anything else should be untouched
-  set_prop('svn:some-prop', 'bar', lambda_path)
-  set_prop('svn:some-prop', ' bar baz', mu_path)
-  set_prop('svn:some-prop', 'bar\n', iota_path)
-  set_prop('some-prop', 'bar', lambda_path)
-  set_prop('some-prop', ' bar baz', mu_path)
-  set_prop('some-prop', 'bar\n', iota_path)
-
-  # Close and remove the prop value file
-  propval_file.close()
-  os.unlink(propval_path)
+  svntest.actions.set_prop('svn:some-prop', 'bar', lambda_path)
+  svntest.actions.set_prop('svn:some-prop', ' bar baz', mu_path)
+  svntest.actions.set_prop('svn:some-prop', 'bar\n', iota_path)
+  svntest.actions.set_prop('some-prop', 'bar', lambda_path)
+  svntest.actions.set_prop('some-prop', ' bar baz', mu_path)
+  svntest.actions.set_prop('some-prop', 'bar\n', iota_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
   # client converts to local encoding and local eoln style.
@@ -976,21 +957,11 @@ def binary_props(sbox):
   prop_binx = "This property has an <xml> tag and a zer\000 byte."
 
   # Set some binary properties.
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-  propval_file = open(propval_path, 'wb')
-
-  def set_prop(name, value, path, valf=propval_file, valp=propval_path):
-    valf.seek(0)
-    valf.truncate(0)
-    valf.write(value)
-    valf.flush()
-    svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
-
-  set_prop('prop_zb', prop_zb, B_path)
-  set_prop('prop_ff', prop_ff, iota_path)
-  set_prop('prop_xml', prop_xml, lambda_path)
-  set_prop('prop_binx', prop_binx, mu_path)
-  set_prop('prop_binx', prop_binx, A_path)
+  svntest.actions.set_prop('prop_zb', prop_zb, B_path, )
+  svntest.actions.set_prop('prop_ff', prop_ff, iota_path)
+  svntest.actions.set_prop('prop_xml', prop_xml, lambda_path)
+  svntest.actions.set_prop('prop_binx', prop_binx, mu_path)
+  svntest.actions.set_prop('prop_binx', prop_binx, A_path)
 
   # Create expected output and status trees.
   expected_output = svntest.wc.State(wc_dir, {

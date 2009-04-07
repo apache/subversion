@@ -30,6 +30,7 @@
  *   "excluded" -- administratively excluded
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
+ *   "base-deleted" -- node represents a delete of a BASE node
  */
 
 
@@ -87,7 +88,8 @@ CREATE TABLE BASE_NODE (
      wcroot node. */
   parent_relpath  TEXT,
 
-  /* is this node "present" or has it been excluded for some reason? */
+  /* Is this node "present" or has it been excluded for some reason?
+     The "base-deleted" presence value is not allowed.  */
   presence  TEXT NOT NULL,
 
   /* what kind of node is this? may be "unknown" if the node is not present */
@@ -186,19 +188,30 @@ CREATE TABLE WORKING_NODE (
      this will be "" if the parent is the wcroot. */
   parent_relpath  TEXT NOT NULL,
 
-  /* is this node "present" or has it been excluded for some reason?
-     only allowed values: normal, not-present, incomplete. (the others
-     do not make sense for the WORKING tree)
+  /* Is this node "present" or has it been excluded for some reason?
+     Only allowed values: normal, not-present, incomplete, base-deleted.
+     (the others do not make sense for the WORKING tree)
 
-     presence=not-present means this node has been deleted or moved
-     (see moved_to). for presence=normal: if a BASE_NODE exists at
-     the same local_relpath, then this is a replaced item (possibly
-     copied or moved here), which implies the base node should be
-     deleted or moved (see moved_to).
+     normal: this node has been added/copied/moved-here. There may be an
+       underlying BASE node at this location, implying this is a replace.
+       Scan upwards from here looking for copyfrom or moved_here values
+       to detect the type of operation constructing this node.
 
-     beware: a "not-present" value could refer to the deletion of the
-     BASE node, or it could refer to the deletion of a child of a
-     copied/moved tree (scan upwards for copyfrom data). */
+     not-present: the node (or parent) was originally copied or moved-here.
+       A subtree of that source has since been deleted. There may be
+       underlying BASE node to replace. For an add-without-history, the
+       records are simply removed rather than switched to not-present.
+       Note this reflects a deletion only. It is not possible move-away
+       nodes from the WORKING tree. The purported destination would receive
+       a copy from the original source of a copy-here/move-here, or if the
+       nodes were plain adds, those nodes would be shifted to that target
+       for addition.
+
+     incomplete: nodes are being added into the WORKING tree, and the full
+       information about this node is not (yet) present.
+
+     base-delete: the underlying BASE node has been marked for deletion due
+       to a delete or a move-away (see the moved_to column to determine).  */
   presence  TEXT NOT NULL,
 
   /* the kind of the new node. may be "unknown" if the node is not present. */
@@ -243,6 +256,7 @@ CREATE TABLE WORKING_NODE (
   /* If the underlying node was moved (rather than just deleted), this
      specifies the local_relpath of where the BASE node was moved to.
      This is set only on the root of a move, and implied for all children.
+     The whole moved subtree is marked with presence=base-deleted
 
      Note that moved_to never refers to *this* node. It always refers
      to the "underlying" node, whether that is BASE or a child node

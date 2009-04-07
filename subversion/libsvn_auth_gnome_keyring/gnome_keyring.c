@@ -248,19 +248,13 @@ password_get_gnome_keyring(const char **password,
   char *default_keyring = NULL;
 
   if (non_interactive)
-    {
-      return FALSE;
-    }
+    return FALSE;
 
   if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
-    {
-      return FALSE;
-    }
+    return FALSE;
 
   if (! gnome_keyring_is_available())
-    {
-      return FALSE;
-    }
+    return FALSE;
 
   default_keyring = get_default_keyring_name(pool);
 
@@ -327,19 +321,13 @@ password_set_gnome_keyring(apr_hash_t *creds,
   char *default_keyring = NULL;
 
   if (non_interactive)
-    {
-      return FALSE;
-    }
+    return FALSE;
 
   if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
-    {
-      return FALSE;
-    }
+    return FALSE;
 
   if (! gnome_keyring_is_available())
-    {
-      return FALSE;
-    }
+    return FALSE;
 
   default_keyring = get_default_keyring_name(pool);
 

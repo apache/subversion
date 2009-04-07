@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2005-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -133,7 +133,7 @@ or another dump file."""
   svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnsync_tests_data')
   # Load the specified dump file into the master repository.
-  master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
+  master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
                                                dump_file_name)).readlines()
   svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
@@ -173,7 +173,7 @@ or another dump file."""
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
-    exp_master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
+    exp_master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
                                         exp_dump_file_name)).readlines()
   else:
     exp_master_dumpfile_contents = master_dumpfile_contents

@@ -375,7 +375,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                  But there's no reason to limit ourselves to just that case;
                  given everything else that's going on in this function, a
                  strcmp() is pretty cheap, and the result we're trying to
-                 prevent is an infinite loop if svn_path_dirname() returns
+                 prevent is an infinite loop if svn_dirent_dirname() returns
                  its input unchanged. */
               return svn_error_createf
                 (SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,

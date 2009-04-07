@@ -739,19 +739,19 @@ def simple_property_merges(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1)
 
+  def error_message(property, old_value, new_value):
+    return "Trying to change property '%s' from '%s' to '%s',\n" \
+           "but it has been locally deleted.\n" % (property, old_value, new_value)
+
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
     '' : Item(props={SVN_PROP_MERGEINFO : '/A/B:4'}),
     'E/dir_conflicts.prej'
-    : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but it has been locally deleted.\n"),
+    : Item(error_message('foo', 'foo_val', 'mod_foo')),
     'E/alpha.prej'
-    : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but it has been locally deleted.\n"),
+    : Item(error_message('foo', 'foo_val', 'mod_foo')),
     'E/beta.prej'
-    : Item("Trying to change property 'foo' from 'foo?\\129val' to"
-           + " 'mod?\\129foo',\n"
-           + "but it has been locally deleted.\n"),
+    : Item(error_message('foo', 'foo?\\129val', 'mod?\\129foo')),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
