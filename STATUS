@@ -64,6 +64,16 @@ Candidate changes:
      -0: gstein (the release is a week old; let's see at least another week
                  or two behind it before modifying the 1.6.x recommendation)
 
+  * r37072, r37083
+    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
+    mergeinfo'
+    Justification:
+      Can cause repeat merges to break in the presence of non-inheritable
+      mergeinfo.
+    Notes:
+      r37072 is a test for the issue, r37083 is the fix.
+    Votes:
+      +1: pburba
 
 Approved changes:
 =================
