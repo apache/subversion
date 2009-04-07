@@ -7124,8 +7124,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # http://svn.haxx.se/dev/archive-2008-12/0133.shtml.
   #
   # Test for issue #3392 'Parsing error with reverse merges and
-  # non-inheritable mergeinfo.  This test if marked as XFail until this
-  # issue is fixed.
+  # non-inheritable mergeinfo.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -15594,8 +15593,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_away_subtrees_noninheritable_ranges,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_away_subtrees_noninheritable_ranges,
+                         server_has_mergeinfo),
               SkipUnless(merge_to_sparse_directories,
                          server_has_mergeinfo),
               SkipUnless(merge_old_and_new_revs_from_renamed_dir,
