@@ -42,13 +42,22 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
               sbox.wc_dir)
 
 
+def check_format(sbox, expected_format):
+  format_file = open(os.path.join(sbox.wc_dir, '.svn', 'entries'))
+  found_format = int(format_file.readline())
+
+  if found_format != expected_format:
+    raise svntest.Failure("found format '%d'; expected '%d'" %
+                          (found_format, expected_format))
+
+
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 
   replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*working copy version is to old run 'svn cleanup' "
+  expected_stderr = (".*Working copy format is to old; run 'svn cleanup' "
                      "to upgrade")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
@@ -58,16 +67,38 @@ def basic_upgrade(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cleanup', sbox.wc_dir)
 
-  # TODO: Actually check the sanity of the upgraded working copy
+  # Actually check the sanity of the upgraded working copy
+  check_format(sbox, 11)
 
-  
+
+def upgrade_1_5(sbox):
+  "test upgrading from a 1.5-era working copy"
+
+  replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = (".*Working copy format is to old; run 'svn cleanup' "
+                     "to upgrade")
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'info', sbox.wc_dir)
+
+
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cleanup', sbox.wc_dir)
+
+  # Check the format of the working copy, we currently expect format 11
+  check_format(sbox, 11)
+
+
 
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(basic_upgrade),
+              basic_upgrade,
+              upgrade_1_5,
              ]
 
 

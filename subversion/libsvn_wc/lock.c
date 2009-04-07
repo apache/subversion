@@ -179,45 +179,31 @@ convert_wcprops(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
-/* Maybe upgrade the working copy directory represented by ADM_ACCESS
-   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
-   lock.  Use POOL for all temporary allocation.
 
-   Not all upgrade paths are necessarily supported.  For example,
-   upgrading a version 1 working copy results in an error.
-
-   Sometimes the format file can contain "0" while the administrative
-   directory is being constructed; calling this on a format 0 working
-   copy has no effect and returns no error. */
-static svn_error_t *
-maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_error_t *
+svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__check_format(adm_access->wc_format,
                                adm_access->path,
-                               pool));
+                               scratch_pool));
 
   /* We can upgrade all formats that are accepted by
      svn_wc__check_format. */
   if (adm_access->wc_format < SVN_WC__VERSION)
     {
-      svn_boolean_t cleanup_required;
-      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-
-      /* Don't try to mess with the WC if there are old log files left. */
-      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                              adm_access, pool));
-      if (cleanup_required)
-        return SVN_NO_ERROR;
+      svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
 
       /* First, loggily upgrade the format file. */
-      SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION, pool));
+      SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
+                                           scratch_pool));
 
       /* If the WC uses one file per entry for wcprops, give back some inodes
          to the poor user. */
       if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-        SVN_ERR(convert_wcprops(log_accum, adm_access, pool));
+        SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
 
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
 
       if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         {
@@ -227,21 +213,24 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
              not catastrophic. */
 
           svn_error_clear(svn_io_remove_dir2(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS, pool),
-              FALSE, NULL, NULL, pool));
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
+                                scratch_pool),
+              FALSE, NULL, NULL, scratch_pool));
           svn_error_clear(svn_io_remove_file(
               svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
-                                pool),
-              pool));
+                                scratch_pool),
+              scratch_pool));
           svn_error_clear(svn_io_remove_file(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE, pool),
-              pool));
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
+                                scratch_pool),
+              scratch_pool));
           svn_error_clear(svn_io_remove_file(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README, pool),
-              pool));
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
+                                scratch_pool),
+              scratch_pool));
         }
 
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -251,9 +240,9 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 /* Create a physical lock file in the admin directory for ADM_ACCESS.
 
    Note: most callers of this function determine the wc_format for the
-   lock soon afterwards.  We recommend calling maybe_upgrade_format()
-   as soon as you have the wc_format for a lock, since that's a good
-   opportunity to drag old working directories into the modern era. */
+   lock soon afterwards.  We recommend calling check_format_upgrade()
+   as soon as you have the wc_format for a lock, to ensure you've got
+   a reasonably modern working copy. */
 static svn_error_t *
 create_lock(const char *path, apr_pool_t *pool)
 {
@@ -423,6 +412,28 @@ probe(const char **dir,
 }
 
 
+/* Check the format of adm_access, and make sure it's new enough.  If it
+   isn't, throw an error explaining how to upgrade. */
+static svn_error_t *
+check_format_upgrade(svn_wc_adm_access_t *adm_access,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__check_format(adm_access->wc_format,
+                               adm_access->path,
+                               scratch_pool));
+
+  if (adm_access->wc_format != SVN_WC__VERSION)
+    {
+      return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                               "Working copy format is to old; run "
+                               "'svn cleanup' to upgrade");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              const char *path,
@@ -443,10 +454,10 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
         return err;
     }
 
-  /* We have a write lock.  If the working copy has an old
-     format, this is the time to upgrade it. */
   SVN_ERR(svn_wc_check_wc(path, &lock->wc_format, pool));
-  SVN_ERR(maybe_upgrade_format(lock, pool));
+  /* We used to attempt to upgrade the working copy here, but now we let
+     it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
+     worry about upgrading.  */
 
   *adm_access = lock;
   return SVN_NO_ERROR;
@@ -488,8 +499,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                              : svn_wc__adm_access_unlocked,
                            path, pool));
   lock->wc_format = wc_format;
-  if (write_lock)
-    SVN_ERR(maybe_upgrade_format(lock, subpool));
+  SVN_ERR(check_format_upgrade(lock, subpool));
 
   if (levels_to_lock != 0)
     {
