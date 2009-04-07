@@ -108,6 +108,10 @@ typedef struct {
   /* The WCROOT.id for this directory (and all its children).  */
   apr_int64_t wc_id;
 
+  /* The format of this wcroot's metadata storage (see wc.h). If the format
+     is unknown, this is 0.  */
+  int format;
+
 } wcroot_t;
 
 /**
@@ -430,6 +434,7 @@ create_wcroot(const char *wcroot_abspath,
   wcroot->abspath = wcroot_abspath;
   wcroot->sdb = sdb;
   wcroot->wc_id = wc_id;
+  wcroot->format = 0;
 
   return wcroot;
 }
@@ -597,9 +602,8 @@ fetch_repos_info(const char **repos_root_url,
 static svn_error_t *
 scan_upwards_for_repos(apr_int64_t *repos_id,
                        const char **repos_relpath,
-                       apr_int64_t wc_id,
+                       const wcroot_t *wcroot,
                        const char *relpath,
-                       svn_sqlite__db_t *sdb,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -607,10 +611,12 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
   const char *current_relpath = relpath;
   svn_sqlite__stmt_t *stmt;
 
+  SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
   SVN_ERR_ASSERT(repos_id != NULL || repos_relpath != NULL);
 
   /* ### is it faster to fetch fewer columns? */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
 
   while (TRUE)
     {
@@ -629,7 +635,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
          ### but we happen to know the parent is *always* in the same db. */
 
       /* Rebind the statement to fetch parent information. */
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (!have_row)
@@ -728,6 +734,51 @@ compute_pdh_relpath(const svn_wc__db_pdh_t *pdh,
   if (relpath == NULL)
     return "";
   return relpath;
+}
+
+
+/* The filesystem has a directory at LOCAL_RELPATH. Examine the metadata
+   to determine if a *file* was supposed to be there.
+
+   ### this function is only required for per-dir .svn support. once all
+   ### metadata is collected in a single wcroot, then we won't need to
+   ### look in subdirs for other metadata.  */
+static svn_error_t *
+determine_obstructed_file(svn_boolean_t *obstructed_file,
+                          const wcroot_t *wcroot,
+                          const char *local_relpath,
+                          apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_IS_FILE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            wcroot->wc_id,
+                            local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      *obstructed_file = svn_sqlite__column_boolean(stmt, 0);
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_BASE_IS_FILE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                wcroot->wc_id,
+                                local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        *obstructed_file = svn_sqlite__column_boolean(stmt, 0);
+    }
+
+  return svn_sqlite__reset(stmt);
 }
 
 
@@ -1007,33 +1058,12 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         {
           const char *lookfor_relpath = svn_dirent_basename(local_abspath,
                                                             scratch_pool);
-          svn_sqlite__stmt_t *stmt;
-          svn_boolean_t have_row;
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt, parent_pdh->wcroot->sdb,
-                                            STMT_SELECT_WORKING_IS_FILE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                    parent_pdh->wcroot->wc_id,
-                                    lookfor_relpath));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-          if (have_row)
-            {
-              (*pdh)->obstructed_file = svn_sqlite__column_boolean(stmt, 0);
-            }
-          else
-            {
-              SVN_ERR(svn_sqlite__reset(stmt));
-
-              SVN_ERR(svn_sqlite__get_statement(&stmt, parent_pdh->wcroot->sdb,
-                                                STMT_SELECT_BASE_IS_FILE));
-              SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                        parent_pdh->wcroot->wc_id,
-                                        lookfor_relpath));
-              SVN_ERR(svn_sqlite__step(&have_row, stmt));
-              if (have_row)
-                (*pdh)->obstructed_file = svn_sqlite__column_boolean(stmt, 0);
-            }
-          SVN_ERR(svn_sqlite__reset(stmt));
+          /* Was there supposed to be a file sitting here?  */
+          SVN_ERR(determine_obstructed_file(&(*pdh)->obstructed_file,
+                                            parent_pdh->wcroot,
+                                            lookfor_relpath,
+                                            scratch_pool));
 
           /* If we determined that a file was supposed to be at the
              LOCAL_ABSPATH requested, then return the PDH and LOCAL_RELPATH
@@ -1117,7 +1147,7 @@ static svn_error_t *
 get_statement_for_path(svn_sqlite__stmt_t **stmt,
                        svn_wc__db_t *db,
                        const char *local_abspath,
-                       int stmt_idx,
+                       enum statement_keys stmt_idx,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -1277,30 +1307,26 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb)
 
 static svn_error_t *
 gather_children(const apr_array_header_t **children,
-                enum statement_keys key,
+                enum statement_keys stmt_idx,
                 svn_wc__db_t *db,
                 const char *local_abspath,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   apr_array_header_t *child_names;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+  /* ### this will open the SDB as read/write. we want r/o. maybe fix?  */
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath, stmt_idx,
+                                 scratch_pool));
 
   /* ### should test the node to ensure it is a directory */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb, key));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-
-  child_names = apr_array_make(result_pool, 20, sizeof(const char *));
+  /* ### 10 is based on Subversion's average of 8.5 files per versioned
+     ### directory in its repository. maybe use a different value? or
+     ### count rows first?  */
+  child_names = apr_array_make(result_pool, 10, sizeof(const char *));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
@@ -1400,13 +1426,13 @@ svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *sdbs = apr_hash_make(scratch_pool);
+  apr_hash_t *roots = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
 
-  /* We may have sdbs shared between pdhs, so put them all in a hash to
+  /* We may have WCROOTs shared between PDHs, so put them all in a hash to
      collapse them, validating along the way. */
   for (hi = apr_hash_first(scratch_pool, db->dir_data); hi;
-        hi = apr_hash_next(hi))
+       hi = apr_hash_next(hi))
     {
       void *val;
       svn_wc__db_pdh_t *pdh;
@@ -1416,19 +1442,18 @@ svn_wc__db_close(svn_wc__db_t *db,
 
 #ifdef SVN_DEBUG
       /* If two PDH records have the same wcroot_abspath, then they should
-         be using the same SDB handle.  */
+         be using the same WCROOT handle.  */
       {
-        svn_sqlite__db_t *existing_sdb
-          = apr_hash_get(sdbs,
-                         pdh->wcroot->abspath,
-                         APR_HASH_KEY_STRING);
-        if (existing_sdb)
-          SVN_ERR_ASSERT(existing_sdb == pdh->wcroot->sdb);
+        wcroot_t *existing_wcroot = apr_hash_get(roots,
+                                                 pdh->wcroot->abspath,
+                                                 APR_HASH_KEY_STRING);
+        if (existing_wcroot)
+          SVN_ERR_ASSERT(existing_wcroot == pdh->wcroot);
       }
 #endif
 
-      apr_hash_set(sdbs, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
-                   pdh->wcroot->sdb);
+      apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
+                   pdh->wcroot);
     }
 
   /* ### it would also be nice to assert that two different wcroot_abspath
@@ -1437,13 +1462,20 @@ svn_wc__db_close(svn_wc__db_t *db,
      ### represent an internal consistency error.  */
 
   /* Now close all of the non-duplicate databases. */
-  for (hi = apr_hash_first(scratch_pool, sdbs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
       void *val;
+      wcroot_t *wcroot;
 
       apr_hash_this(hi, NULL, NULL, &val);
+      wcroot = val;
 
-      SVN_ERR(svn_sqlite__close(val));
+      if (wcroot->sdb != NULL)
+        {
+          SVN_ERR(svn_sqlite__close(wcroot->sdb));
+          wcroot->sdb = NULL;
+          wcroot->wc_id = UNKNOWN_WC_ID;
+       }
     }
 
   return SVN_NO_ERROR;
@@ -3013,8 +3045,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath,
-                                 pdh->wcroot->wc_id, local_relpath,
-                                 pdh->wcroot->sdb,
+                                 pdh->wcroot, local_relpath,
                                  result_pool, scratch_pool));
 
   if (repos_root_url || repos_uuid)
@@ -3409,6 +3440,8 @@ svn_wc__db_temp_get_format(int *format,
                            apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Note: LOCAL_ABSPATH will always be a directory.  */
 
   NOT_IMPLEMENTED();
 }
