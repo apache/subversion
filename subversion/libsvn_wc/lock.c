@@ -116,12 +116,6 @@ static void join_batons(svn_wc__adm_shared_t *dst_shared,
                         apr_pool_t *pool);
 
 
-/* Defining this conditional will result in a client that will refuse to
-   upgrade working copies.  This can be useful if you want to avoid
-   problems caused by accidentally running a development version of SVN
-   on a working copy that you typically use with an older version. */
-#ifndef SVN_DISABLE_WC_UPGRADE
-
 /* Write, to LOG_ACCUM, log entries to convert an old WC that did not have
    propcaching into a WC that uses propcaching.  Do this conversion for
    the directory of ADM_ACCESS and its file children.  Use POOL for
@@ -301,34 +295,6 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
-#else
-
-/* Alternate version of the above for use when working copy upgrades
-   are disabled.  Return an error if the working copy described by
-   ADM_ACCESS is not at the latest 'SVN_WC__VERSION'.  Use POOL for all
-   temporary allocation.  */
-static svn_error_t *
-maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
-{
-  SVN_ERR(svn_wc__check_format(adm_access->wc_format,
-                               adm_access->path,
-                               pool));
-
-  if (adm_access->wc_format != SVN_WC__VERSION)
-    {
-      return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                               "Would upgrade working copy '%s' from old "
-                               "format (%d) to current format (%d), "
-                               "but automatic upgrade has been disabled",
-                               svn_path_local_style(adm_access->path, pool),
-                               adm_access->wc_format, SVN_WC__VERSION);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-#endif
 
 
 /* Create a physical lock file in the admin directory for ADM_ACCESS.
