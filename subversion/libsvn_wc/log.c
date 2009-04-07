@@ -2504,17 +2504,6 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
 /*** Recursively do log things. ***/
 
 svn_error_t *
-svn_wc_cleanup(const char *path,
-               svn_wc_adm_access_t *optional_adm_access,
-               const char *diff3_cmd,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *pool)
-{
-  return svn_wc_cleanup2(path, diff3_cmd, cancel_func, cancel_baton, pool);
-}
-
-svn_error_t *
 svn_wc_cleanup2(const char *path,
                 const char *diff3_cmd,
                 svn_cancel_func_t cancel_func,
