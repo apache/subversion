@@ -223,7 +223,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
     {
-      svn_boolean_t switched, entry_in_repos;
+      svn_boolean_t entry_in_repos;
       const svn_wc_entry_t *parent_entry = NULL;
       svn_wc_adm_access_t *p_access;
 
@@ -255,21 +255,19 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
           if (err)
             svn_error_clear(err);
 
-          if (entry->url)
+          /* The server simply do not accept excluded link_path and thus
+             switched path cannot be excluded. Just completely prohibit
+             this situation. */
+          if (entry->url
+              && parent_entry
+              && (strcmp(entry->url,
+                         svn_path_url_add_component2(parent_entry->url, bname,
+                                                     pool))))
             {
-              switched
-                = parent_entry && strcmp(entry->url,
-                                         svn_path_url_add_component2
-                                         (parent_entry->url, bname, pool));
-
-              /* The server simply do not accept excluded link_path and thus
-                 switched path cannot be excluded. Just completely prohibit
-                 this situation. */
-              if (switched)
-                return svn_error_createf
-                  (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                   _("Cannot crop '%s': it is a switched path"),
-                   svn_path_local_style(full_path, pool));
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                 _("Cannot crop '%s': it is a switched path"),
+                 svn_path_local_style(full_path, pool));
             }
         }
 
