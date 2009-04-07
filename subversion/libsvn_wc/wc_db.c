@@ -111,6 +111,7 @@ struct svn_wc__db_pdh_t {
   const char *local_abspath;
 
   /* The relative path from the wcroot to this directory. */
+  /* ### compute based on wcroot_abspath instead?  */
   const char *local_relpath;
 
   /* The SQLite database containing the metadata for everything in
@@ -125,6 +126,7 @@ struct svn_wc__db_pdh_t {
 
   /* Root of the TEXT-BASE directory structure for the WORKING/ACTUAL files
      in this directory. */
+  /* ### compute on-the-fly rather than stash?  */
   const char *base_dir;
 
   /* The parent directory's per-dir information. */
@@ -648,6 +650,32 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 }
 
 
+static svn_error_t *
+ensure_sdb_opened(svn_wc__db_pdh_t *pdh,
+                  svn_sqlite__mode_t smode,
+                  apr_pool_t *scratch_pool)
+{
+  /* Bah. Easy case.  */
+  if (pdh->sdb != NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR_ASSERT(pdh->local_abspath != NULL);
+
+  /* ### we should be navigating upwards to find the database. for now,
+     ### there are per-dir databases. open the one in this directory.  */
+  SVN_ERR(svn_sqlite__open(&pdh->sdb,
+                           svn_wc__adm_child(pdh->local_abspath, "wc.db",
+                                             scratch_pool),
+                           smode, statements,
+                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                           pdh->db->state_pool, scratch_pool));
+
+  /* ### query things like wc_id out of the database? */
+
+  return SVN_NO_ERROR;
+}
+
+
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (SDB) to use,
    what WC_ID is implied, and the RELPATH within that wcroot.  If a sqlite
    database needs to be opened, then use SMODE for it. */
@@ -691,7 +719,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* ### what if the whole structure is not (yet) filled in? */
 
       *local_relpath = apr_pstrdup(result_pool, (*pdh)->local_relpath);
-      return SVN_NO_ERROR;
+      return ensure_sdb_opened(*pdh, smode, scratch_pool);
     }
 
   /* ### at some point in the future, we may need to find a way to get
@@ -721,7 +749,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
           *local_relpath = svn_dirent_join((*pdh)->local_relpath,
                                            build_relpath,
                                            result_pool);
-          return SVN_NO_ERROR;
+          return ensure_sdb_opened(*pdh, smode, scratch_pool);
         }
     }
   else
@@ -820,6 +848,9 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       *local_relpath = svn_dirent_join(found_pdh->local_relpath,
                                        build_relpath,
                                        result_pool);
+
+      /* Make sure the PDH has an open SDB in it.  */
+      SVN_ERR(ensure_sdb_opened(*pdh, smode, scratch_pool));
 
       /* The subdirectory uses the same SDB and WC_ID as the parent dir.  */
       (*pdh)->sdb = found_pdh->sdb;
