@@ -68,13 +68,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36741, r36742
-   Improve detection of Berkeley DB.
-   Justification:
-     Regression.
-   Votes:
-     +1: arfrever, gstein, rhuijben
-
  * r36730, r36766, r36775
    Fix issue #3383 'Foreign repository merge can add mergeinfo from the
    foreign repos'
