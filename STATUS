@@ -68,16 +68,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r37045, r37053
-   Fix issue #3391 'excluding absent dir segfaults'.
-   Justification:
-     This issue was introduced in 1.6.x.
-   Notes:
-     r37045 is the actual fix. r37053 is a follow up which improves the
-     'if' condition that checks for switched paths.
-   Votes:
-     +1: stylesen, rhuijben, gstein
-
  * r36389-r36390, r36412, r36421, r36423, r36964
    Instead of verifying the pristine copy of a file before updating it, 
    calculate and verify the used text base (base/revert/copied) stream while
