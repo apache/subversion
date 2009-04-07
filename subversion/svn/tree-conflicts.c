@@ -18,6 +18,7 @@
 
 #include "tree-conflicts.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "cl.h"
@@ -69,7 +70,7 @@ svn_cl__get_human_readable_tree_conflict_description(
   apr_pool_t *pool)
 {
   const char *victim_name, *action, *reason, *operation;
-  victim_name = svn_path_basename(conflict->path, pool);
+  victim_name = svn_dirent_basename(conflict->path, pool);
   reason = reason_str(conflict);
   action = action_str(conflict);
   operation = svn_cl__operation_str_human_readable(conflict->operation, pool);
@@ -127,7 +128,7 @@ svn_cl__append_tree_conflict_info_xml(
   const char *tmp;
 
   apr_hash_set(att_hash, "victim", APR_HASH_KEY_STRING,
-               svn_path_basename(conflict->path, pool));
+               svn_dirent_basename(conflict->path, pool));
 
   apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
                svn_cl__node_kind_str_xml(conflict->node_kind));

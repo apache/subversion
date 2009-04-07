@@ -603,13 +603,9 @@ proppatch_walker(void *baton,
   char *prop_name;
 
   if (svn_xml_is_xml_safe(val->data, val->len))
-    {
-      binary_prop = FALSE;
-    }
+    binary_prop = FALSE;
   else
-    {
-      binary_prop = TRUE;
-    }
+    binary_prop = TRUE;
 
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */

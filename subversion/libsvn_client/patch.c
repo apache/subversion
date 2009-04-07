@@ -315,7 +315,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   int i;
   apr_hash_t *new_props;
-  const char *path_basename = svn_path_basename(mine, subpool);
+  const char *path_basename = svn_dirent_basename(mine, subpool);
 
   /* This new file can't have any original prop in this offline context. */
   original_props = apr_hash_make(subpool);

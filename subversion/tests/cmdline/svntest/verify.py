@@ -215,7 +215,7 @@ class RegexOutput(ExpectedOutput):
     display_lines(message, label, self.output, actual, True, False)
 
 class UnorderedOutput(ExpectedOutput):
-  """Marks unordered output, and performs comparisions."""
+  """Marks unordered output, and performs comparisons."""
 
   def __cmp__(self, other):
     "Handle ValueError."

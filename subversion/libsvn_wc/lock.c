@@ -481,12 +481,11 @@ probe(const char **dir,
   /* a "version" of 0 means a non-wc directory */
   if (kind != svn_node_dir || *wc_format == 0)
     {
-      /* Passing a path ending in "." or ".." to svn_path_dirname() is
+      /* Passing a path ending in "." or ".." to svn_dirent_dirname() is
          probably always a bad idea; certainly it is in this case.
-         Unfortunately, svn_path_dirname()'s current signature can't
+         Unfortunately, svn_dirent_dirname()'s current signature can't
          return an error, so we have to insert the protection in this
-         caller, as making the larger API change would be very
-         destabilizing right now (just before 1.0).  See issue #1617. */
+         caller, ideally the API needs a change.  See issue #1617. */
       const char *base_name = svn_dirent_basename(path, pool);
       if ((strcmp(base_name, "..") == 0)
           || (strcmp(base_name, ".") == 0))

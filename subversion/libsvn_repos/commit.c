@@ -24,6 +24,7 @@
 #include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
@@ -837,8 +838,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->base_path = apr_pstrdup(subpool, base_path);
   eb->repos = repos;
   eb->repos_url = repos_url;
-  eb->repos_name = svn_path_basename(svn_repos_path(repos, subpool),
-                                     subpool);
+  eb->repos_name = svn_uri_basename(svn_repos_path(repos, subpool),
+                                    subpool);
   eb->fs = svn_repos_fs(repos);
   eb->txn = txn;
   eb->txn_owner = txn == NULL;

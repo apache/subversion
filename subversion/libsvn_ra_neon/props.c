@@ -25,6 +25,7 @@
 #include <apr_want.h>
 
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
@@ -715,7 +716,7 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
 
       /* else... lop off the basename and try again. */
       svn_stringbuf_set(lopped_path,
-                        svn_path_join(svn_path_basename(path_s->data, iterpool),
+                        svn_path_join(svn_uri_basename(path_s->data, iterpool),
                                       lopped_path->data, iterpool));
 
       len = path_s->len;

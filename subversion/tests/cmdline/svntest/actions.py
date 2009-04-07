@@ -268,6 +268,8 @@ def run_and_verify_svn_match_any2(message, expected_stdout, expected_stderr,
 
 def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
+  if not isinstance(dump_file_content, list):
+    raise TypeError("dump_file_content argument should have list type")
   expected_stderr = []
   exit_code, output, errput = main.run_command_stdin(
     main.svnadmin_binary, expected_stderr, 1, dump_file_content,
@@ -296,7 +298,7 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None):
   main.create_repos(sbox.repo_dir)
 
   # Load the mergetracking dumpfile into the repos, and check it out the repo
-  run_and_verify_load(sbox.repo_dir, dump_str)
+  run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True))
   run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
 
   return dump_str
@@ -1520,9 +1522,9 @@ def create_failing_hook(repo_dir, hook_name, text):
   with an error."""
 
   hook_path = os.path.join(repo_dir, 'hooks', hook_name)
-  main.create_python_hook_script(hook_path, 'import sys;\n'
-    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s));\n'
-    'sys.exit(1);\n' % (repr(hook_name), repr(text)))
+  main.create_python_hook_script(hook_path, 'import sys\n'
+    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s))\n'
+    'sys.exit(1)\n' % (repr(hook_name), repr(text)))
 
 def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a
@@ -1538,7 +1540,7 @@ the hook prints "pre-revprop-change" followed by sys.argv"""
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
-                                 'sys.stderr.write("pre-revprop-change %s %s %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]))\n'
+                                 'sys.stderr.write("pre-revprop-change %s" % " ".join(sys.argv[1:6]))\n'
                                  'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
@@ -1546,20 +1548,31 @@ def create_failing_post_commit_hook(repo_dir):
 script which always reports errors."""
 
   hook_path = main.get_post_commit_hook_path(repo_dir)
-  main.create_python_hook_script(hook_path, 'import sys; '
-    'sys.stderr.write("Post-commit hook failed"); '
+  main.create_python_hook_script(hook_path, 'import sys\n'
+    'sys.stderr.write("Post-commit hook failed")\n'
     'sys.exit(1)')
 
-# set_prop can be used for binary properties are values like '*' which are not
-# handled correctly when specified on the command line.
-def set_prop(expected_err, name, value, path, valp):
-  """Set a property with value from a file"""
-  valf = open(valp, 'wb')
-  valf.seek(0)
-  valf.truncate(0)
-  valf.write(value)
-  valf.flush()
-  main.run_svn(expected_err, 'propset', '-F', valp, name, path)
+# set_prop can be used for properties with NULL characters which are not
+# handled correctly when passed to subprocess.Popen() and values like "*"
+# which are not handled correctly on Windows.
+def set_prop(name, value, path, expected_err=None):
+  """Set a property with specified value"""
+  if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
+    from tempfile import mkstemp
+    (fd, value_file_path) = mkstemp()
+    value_file = open(value_file_path, 'wb')
+    if sys.version_info[0] >= 3:
+      # Python >=3.0
+      if isinstance(value, str):
+        value = value.encode()
+    value_file.write(value)
+    value_file.flush()
+    value_file.close()
+    main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
+    os.close(fd)
+    os.remove(value_file_path)
+  else:
+    main.run_svn(expected_err, 'propset', name, value, path)
 
 def check_prop(name, path, exp_out):
   """Verify that property NAME on PATH has a value of EXP_OUT"""

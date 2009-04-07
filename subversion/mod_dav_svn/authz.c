@@ -20,6 +20,7 @@
 #include <http_log.h>
 
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "mod_authz_svn.h"
@@ -150,7 +151,7 @@ authz_read(svn_boolean_t *allowed,
             }
 
           /* Lop off the basename and try again. */
-          lopped_path = svn_path_join(svn_path_basename
+          lopped_path = svn_path_join(svn_uri_basename
                                       (path_s->data, pool), lopped_path, pool);
           svn_path_remove_component(path_s);
         }

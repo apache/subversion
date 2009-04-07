@@ -30,6 +30,7 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_props.h"
@@ -1529,7 +1530,7 @@ absent_directory(const char *path,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(svn_path_join(pb->wcpath,
-                                             svn_path_basename(path, pool),
+                                             svn_uri_basename(path, pool),
                                              pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_dir;
@@ -1557,7 +1558,7 @@ absent_file(const char *path,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(svn_path_join(pb->wcpath,
-                                             svn_path_basename(path, pool),
+                                             svn_uri_basename(path, pool),
                                              pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_file;
