@@ -479,28 +479,6 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 svn_wc__db_status_t status,
                                 apr_pool_t *scratch_pool);
 
-/**
- * A temporary API similar to svn_wc__db_base_add_directory() and
- * svn_wc__db_base_add_file(), in that it adds a subdirectory to the given
- * DB.  * Arguments are the same as those to svn_wc__db_base_add_directory().
- *
- * Note: Since the subdir node type is a fiction created to satisfy our
- * current backward-compat hacks, this is a temporary API expected to
- * disappear with that node type does.
- */
-svn_error_t *
-svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                const apr_hash_t *props,
-                                svn_revnum_t changed_rev,
-                                apr_time_t changed_date,
-                                const char *changed_author,
-                                svn_depth_t depth,
-                                apr_pool_t *scratch_pool);
 
 /** Remove a node from the BASE tree.
  *
@@ -1449,6 +1427,51 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
                          
+
+/** @} */
+
+
+/**
+ * @defgroup svn_wc__db_temp Various temporary functions during transition
+ *
+ * ### These functions SHOULD be completely removed before 1.7
+ *
+ * @{
+ */
+
+/**
+ * A temporary API similar to svn_wc__db_base_add_directory() and
+ * svn_wc__db_base_add_file(), in that it adds a subdirectory to the given
+ * DB.  * Arguments are the same as those to svn_wc__db_base_add_directory().
+ *
+ * Note: Since the subdir node type is a fiction created to satisfy our
+ * current backward-compat hacks, this is a temporary API expected to
+ * disappear with that node type does.
+ */
+svn_error_t *
+svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *repos_relpath,
+                                const char *repos_root_url,
+                                const char *repos_uuid,
+                                svn_revnum_t revision,
+                                const apr_hash_t *props,
+                                svn_revnum_t changed_rev,
+                                apr_time_t changed_date,
+                                const char *changed_author,
+                                svn_depth_t depth,
+                                apr_pool_t *scratch_pool);
+
+
+/* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.
+   ### if LOCAL_ABSPATH is a file, then ...?  */
+svn_error_t *
+svn_wc__db_temp_get_format(int *format,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
+
 
 /** @} */
 

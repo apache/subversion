@@ -3296,3 +3296,16 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
   return SVN_NO_ERROR;
 }
+
+
+/* ### temporary API. remove before release.  */
+svn_error_t *
+svn_wc__db_temp_get_format(int *format,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
