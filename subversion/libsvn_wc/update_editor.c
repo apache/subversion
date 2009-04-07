@@ -395,6 +395,17 @@ struct handler_baton
   /* Where we are assembling the new file. */
   const char *work_path;
 
+    /* The expected checksum of the text source or NULL if no base
+     checksum is available */
+  svn_checksum_t *expected_source_checksum;
+
+  /* The calculated checksum of the text source or NULL if the acual
+     checksum is not being calculated */
+  svn_checksum_t *actual_source_checksum;
+
+  /* The stream used to calculate the source checksum */
+  svn_stream_t *source_checksum_stream;
+
   /* This is initialized to all zeroes when the baton is created, then
      populated with the MD5 digest of the resultant fulltext after the
      last window is handled by the handler returned from
@@ -661,8 +672,8 @@ complete_directory(struct edit_baton *eb,
                  repository.  If so, we should get rid of the entry
                  (and thus get rid of the exclude flag) now. */
               full_target = svn_path_join(eb->anchor, eb->target, pool);
-              SVN_ERR(svn_wc__adm_retrieve_internal
-                      (&target_access, eb->adm_access, full_target, pool));
+              SVN_ERR(svn_wc__adm_retrieve_internal(
+                       &target_access, eb->adm_access, full_target, pool));
               if (!target_access && entry->kind == svn_node_dir)
                 {
                   int log_number = 0;
@@ -971,6 +982,28 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window != NULL && !err)
     return SVN_NO_ERROR;
 
+  if (hb->expected_source_checksum)
+    {
+      /* Close the stream to calculate the final checksum */
+      svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
+
+      if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
+                                       hb->actual_source_checksum))
+        {
+          err = svn_error_createf(
+                    SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
+                    _("Checksum mismatch while updating '%s'; "
+                      "expected: '%s', actual: '%s'"),
+                    svn_dirent_local_style(fb->path, hb->pool),
+                    svn_checksum_to_cstring(hb->expected_source_checksum,
+                                            hb->pool),
+                    svn_checksum_to_cstring(hb->actual_source_checksum,
+                                            hb->pool));
+        }
+  
+      err = svn_error_compose_create(err, err2);
+    }
+
   if (err)
     {
       /* We failed to apply the delta; clean up the temporary file.  */
@@ -1087,8 +1120,8 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_ERR(svn_wc__loggy_delete_lock
-                  (&log_accum, adm_access, path, pool));
+          SVN_ERR(svn_wc__loggy_delete_lock(
+                  &log_accum, adm_access, path, pool));
 
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
@@ -1151,8 +1184,8 @@ accumulate_wcprops(svn_stringbuf_t *log_accum,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(wcprops, i, svn_prop_t);
 
-      SVN_ERR(svn_wc__loggy_modify_wcprop
-              (&log_accum, adm_access, path,
+      SVN_ERR(svn_wc__loggy_modify_wcprop(
+               &log_accum, adm_access, path,
                prop->name, prop->value ? prop->value->data : NULL, pool));
     }
 
@@ -1179,15 +1212,15 @@ check_path_under_root(const char *base_path,
   char *full_path;
   apr_status_t path_status;
 
-  path_status = apr_filepath_merge
-    (&full_path, base_path, add_path,
+  path_status = apr_filepath_merge(
+     &full_path, base_path, add_path,
      APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
      pool);
 
   if (path_status != APR_SUCCESS)
     {
-      return svn_error_createf
-        (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+      return svn_error_createf(
+          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Path '%s' is not in the working copy"),
          /* Not using full_path here because it might be NULL or
             undefined, since apr_filepath_merge() returned error.
@@ -2101,13 +2134,13 @@ do_entry_deletion(struct edit_baton *eb,
                                 svn_wc__logfile_path(*log_number, pool),
                                 pool);
 
-          SVN_ERR(svn_wc_adm_retrieve
-                  (&child_access, eb->adm_access,
+          SVN_ERR(svn_wc_adm_retrieve(
+                   &child_access, eb->adm_access,
                    full_path, pool));
 
-          SVN_ERR(leftmod_error_chain
-                  (svn_wc_remove_from_revision_control
-                   (child_access,
+          SVN_ERR(leftmod_error_chain(
+                   svn_wc_remove_from_revision_control(
+                    child_access,
                     SVN_WC_ENTRY_THIS_DIR,
                     TRUE, /* destroy */
                     FALSE, /* instant error */
@@ -2237,8 +2270,8 @@ add_directory(const char *path,
   /* The path can exist, but it must be a directory... */
   if (kind == svn_node_file || kind == svn_node_unknown)
     {
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+    return svn_error_createf(
+       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': a non-directory object of the "
          "same name already exists"),
        svn_path_local_style(db->path, pool));
@@ -2269,8 +2302,8 @@ add_directory(const char *path,
             }
           else
             {
-              return svn_error_createf
-                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+              return svn_error_createf(
+                 SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': an unversioned "
                    "directory of the same name already exists"),
                  svn_path_local_style(db->path, pool));
@@ -2325,16 +2358,16 @@ add_directory(const char *path,
 
           if (!eb->switch_url
               && strcmp(db->new_URL, entry->url) != 0)
-            return svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+            return svn_error_createf(
+               SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("URL '%s' of existing directory '%s' does not match "
                  "expected URL '%s'"),
                entry->url, svn_path_local_style(db->path, pool),
                db->new_URL);
 
           if (! entry_in_parent)
-              return svn_error_createf
-                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+              return svn_error_createf(
+                 SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': a versioned "
                    "directory of the same name already exists"),
                  svn_path_local_style(db->path, pool));
@@ -2365,8 +2398,8 @@ add_directory(const char *path,
 
                   if (eb->notify_func)
                     (*eb->notify_func)(eb->notify_baton,
-                                       svn_wc_create_notify
-                                       (full_path,
+                                       svn_wc_create_notify(
+                                        full_path,
                                         svn_wc_notify_tree_conflict,
                                         pool),
                                        pool);
@@ -2379,8 +2412,8 @@ add_directory(const char *path,
 
   /* It may not be named the same as the administrative directory. */
   if (svn_wc_is_adm_dir(svn_path_basename(path, pool), pool))
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+    return svn_error_createf(
+       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': object of the same name as the "
          "administrative directory"),
        svn_path_local_style(db->path, pool));
@@ -2413,8 +2446,8 @@ add_directory(const char *path,
       Message-ID: <1ea387f60804041447q3aea0bbds10c2db3eacaf73e@mail.gmail.com>
 
       */
-      return svn_error_createf
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      return svn_error_createf(
+         SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Failed to add directory '%s': "
            "copyfrom arguments not yet supported"),
          svn_path_local_style(db->path, pool));
@@ -2811,8 +2844,8 @@ close_directory(void *dir_baton,
                   const svn_string_t *new_val_s = change->value;
                   const svn_string_t *old_val_s;
 
-                  SVN_ERR(svn_wc_prop_get
-                          (&old_val_s, SVN_PROP_EXTERNALS,
+                  SVN_ERR(svn_wc_prop_get(
+                           &old_val_s, SVN_PROP_EXTERNALS,
                            db->path, adm_access, db->pool));
 
                   if ((new_val_s == NULL) && (old_val_s == NULL))
@@ -2937,8 +2970,8 @@ absent_file_or_dir(const char *path,
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
   ent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   if (ent && (ent->schedule == svn_wc_schedule_add))
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+    return svn_error_createf(
+       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to mark '%s' absent: item of the same name is already "
          "scheduled for addition"),
        svn_path_local_style(path, pool));
@@ -3431,8 +3464,8 @@ add_file(const char *path,
 
   /* An obstructing dir (or unknown, just to be paranoid) is an error. */
   if (kind == svn_node_dir || kind == svn_node_unknown)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+    return svn_error_createf(
+       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add file '%s': a non-file object of the "
          "same name already exists"),
        svn_path_local_style(full_path, subpool));
@@ -3443,8 +3476,8 @@ add_file(const char *path,
       if (eb->allow_unver_obstructions)
         fb->existed = TRUE;
       else
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+        return svn_error_createf(
+           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("Failed to add file '%s': an unversioned "
              "file of the same name already exists"),
            svn_path_local_style(full_path, subpool));
@@ -3479,16 +3512,16 @@ add_file(const char *path,
 
       if (entry->uuid /* UUID is optional for file entries. */
           && strcmp(entry->uuid, parent_entry->uuid) != 0)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+        return svn_error_createf(
+           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("UUID mismatch: existing file '%s' was checked out "
              "from a different repository"),
            svn_path_local_style(full_path, pool));
 
       if (!eb->switch_url
           && strcmp(fb->new_URL, entry->url) != 0)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+        return svn_error_createf(
+           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("URL '%s' of existing file '%s' does not match "
              "expected URL '%s'"),
            entry->url, svn_path_local_style(full_path, pool),
@@ -3520,8 +3553,8 @@ add_file(const char *path,
 
               if (eb->notify_func)
                 (*eb->notify_func)(eb->notify_baton,
-                                   svn_wc_create_notify
-                                   (full_path,
+                                   svn_wc_create_notify(
+                                    full_path,
                                     svn_wc_notify_tree_conflict,
                                     subpool),
                                    subpool);
@@ -3723,7 +3756,7 @@ apply_textdelta(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->pool);
-  struct handler_baton *hb = apr_palloc(handler_pool, sizeof(*hb));
+  struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   svn_error_t *err;
   const char *checksum;
   svn_boolean_t replaced;
@@ -3748,44 +3781,16 @@ apply_textdelta(void *file_baton,
                             fb->edit_baton->adm_access, fb->path,
                             fb->pool, pool));
 
-  /* Only compare checksums if this file has an entry, and the entry has
-     a checksum.  If there's no entry, it just means the file is
-     created in this update, so there won't be any previously recorded
-     checksum to compare against.  If no checksum, well, for backwards
-     compatibility we assume that no checksum always matches. */
-  if (checksum)
+  /* The incoming delta is targeted against BASE_CHECKSUM. Make sure that
+     it matches our recorded checksum. We cannot do this test for replaced
+     nodes -- that checksum is missing or the checksum of the replacement.  */
+  if (!replaced && checksum && base_checksum
+      && strcmp(base_checksum, checksum) != 0)
     {
-      svn_checksum_t *digest;
-      const char *hex_digest;
-
-      SVN_ERR(svn_io_file_checksum2(&digest, fb->text_base_path,
-                                    svn_checksum_md5, pool));
-
-      /* ### screw hex_digest. use svn_checksum_match() */
-
-      hex_digest = svn_checksum_to_cstring_display(digest, pool);
-
-      /* Compare the base_checksum here, rather than in the window
-         handler, because there's no guarantee that the handler will
-         see every byte of the base file. */
-      if (base_checksum)
-        {
-          if (strcmp(hex_digest, base_checksum) != 0)
-            return svn_error_createf
-              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-               _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
-               svn_path_local_style(fb->text_base_path, pool), base_checksum,
-               hex_digest);
-        }
-
-      if (! replaced && strcmp(hex_digest, checksum) != 0)
-        {
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-             svn_path_local_style(fb->text_base_path, pool), checksum,
-             hex_digest);
-        }
+      return svn_error_createf(
+        SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+        _("Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"),
+        svn_path_local_style(fb->path, pool), base_checksum, checksum);
     }
 
   /* Open the text base for reading, unless this is an added file. */
@@ -3821,8 +3826,26 @@ apply_textdelta(void *file_baton,
         source = svn_stream_empty(handler_pool);
     }
 
-  /* Open the text base for writing (this will get us a temporary file).  */
+  /* If we don't have a local checksum, use the ra provided checksum */
+  if (replaced || !checksum)
+    checksum = base_checksum;
 
+  /* Checksum the text base while applying deltas */
+  if (checksum)
+    {
+      SVN_ERR(svn_checksum_parse_hex(&hb->expected_source_checksum,
+                                     svn_checksum_md5, checksum,
+                                     handler_pool));
+
+      /* Wrap stream and store reference to allow calculating */
+      hb->source_checksum_stream =
+                 source = svn_stream_checksummed2(source,
+                                                  &hb->actual_source_checksum,
+                                                  NULL, svn_checksum_md5,
+                                                  TRUE, handler_pool);
+    }
+
+  /* Open the text base for writing (this will get us a temporary file).  */
   {
     err = svn_wc__open_writable_base(&target, &hb->work_path, fb->path,
                                      replaced /* need_revert_base */,
@@ -4263,8 +4286,8 @@ merge_file(svn_wc_notify_state_t *content_state,
                  textbase into the file we're updating.
                  Remember that this function wants full paths! */
               /* ### TODO: Pass version info here. */
-              SVN_ERR(svn_wc__merge_internal
-                      (&log_accum, &merge_outcome,
+              SVN_ERR(svn_wc__merge_internal(
+                       &log_accum, &merge_outcome,
                        merge_left, NULL,
                        new_text_base_path, NULL,
                        fb->path,
@@ -4369,11 +4392,13 @@ merge_file(svn_wc_notify_state_t *content_state,
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
-          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                  (&log_accum, adm_access, fb->path, pool));
+          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(&log_accum,
+                                                            adm_access,
+                                                            fb->path, pool));
         }
-      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-              (&log_accum, adm_access, fb->path, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(&log_accum,
+                                                           adm_access,
+                                                           fb->path, pool));
     }
 
   /* Clean up add-with-history temp file. */
@@ -4461,8 +4486,8 @@ close_file(void *file_baton,
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (new_base_path && expected_checksum
       && !svn_checksum_match(expected_checksum, actual_checksum))
-    return svn_error_createf
-      (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+    return svn_error_createf(
+       SVN_ERR_CHECKSUM_MISMATCH, NULL,
        _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
        svn_path_local_style(fb->path, pool), expected_hex_digest,
        svn_checksum_to_cstring_display(actual_checksum, pool));
@@ -4654,8 +4679,8 @@ make_editor(svn_revnum_t *target_revision,
      if that is known. */
   if (switch_url && entry && entry->repos &&
       ! svn_path_is_ancestor(entry->repos, switch_url))
-    return svn_error_createf
-      (SVN_ERR_WC_INVALID_SWITCH, NULL,
+    return svn_error_createf(
+       SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
          "'%s'"), switch_url, entry->repos);
@@ -5119,8 +5144,8 @@ check_wc_root(svn_boolean_t *wc_root,
   /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
   if (! p_entry->url)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, NULL,
+    return svn_error_createf(
+       SVN_ERR_ENTRY_MISSING_URL, NULL,
        _("'%s' has no ancestry information"),
        svn_path_local_style(parent, pool));
 
@@ -5438,10 +5463,12 @@ svn_wc_add_repos_file3(const char *dst_path,
       SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
                                  tmp_text_base_path, dst_path,
                                  pool));
-      SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-              (&log_accum, adm_access, dst_path, pool));
-      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-              (&log_accum, adm_access, dst_path, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(&log_accum,
+                                                        adm_access,
+                                                        dst_path, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(&log_accum,
+                                                           adm_access,
+                                                           dst_path, pool));
     }
 
   /* Install new text base. */
