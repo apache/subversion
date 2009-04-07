@@ -82,16 +82,6 @@ Candidate changes:
      -0: gstein (looks like a fix is needed) (without r36964)
      +1: rhuijben
 
- * r36919, r36937
-   Fix issue #3250 'Repeated merging of conflicting properties fails'.
-   Justification:
-     This issue exists since 1.5.x.
-   Notes:
-     r36919 if the fix, r36937 is the test.
-   Votes:
-     +1: stylesen (r36919 only)
-     +1: pburba, arfrever
-
  * r37009
    Recommend SQLite 3.6.12.
    Votes:
@@ -143,3 +133,12 @@ Approved changes:
      merge test to cover this issue.
    Votes:
      +1: pburba, arfrever, rhuijben
+
+ * r36919, r36937
+   Fix issue #3250 'Repeated merging of conflicting properties fails'.
+   Justification:
+     This issue exists since 1.5.x.
+   Notes:
+     r36919 if the fix, r36937 is the test.
+   Votes:
+     +1: stylesen, pburba, arfrever
