@@ -87,12 +87,15 @@ Candidate changes:
    Votes:
      +1: arfrever, rhuijben
 
- * r37045
+ * r37045, r37053
    Fix issue #3391 'excluding absent dir segfaults'.
    Justification:
      This issue was introduced in 1.6.x.
+   Notes:
+     r37045 is the actual fix. r37053 is a follow up which improves the
+     'if' condition that checks for switched paths.
    Votes:
-     +1: stylesen
+     +1: stylesen, rhuijben
 
 Approved changes:
 =================
