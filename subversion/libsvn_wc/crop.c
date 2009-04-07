@@ -255,19 +255,22 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
           if (err)
             svn_error_clear(err);
 
-          switched
-            = parent_entry && strcmp(entry->url,
-                                     svn_path_url_add_component2
-                                     (parent_entry->url, bname, pool));
+          if (entry->url)
+            {
+              switched
+                = parent_entry && strcmp(entry->url,
+                                         svn_path_url_add_component2
+                                         (parent_entry->url, bname, pool));
 
-          /* The server simply do not accept excluded link_path and thus
-             switched path can not be excluede. Just completely prohibit this
-             situation. */
-          if (switched)
-            return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot crop '%s': it is a switched path"),
-               svn_path_local_style(full_path, pool));
+              /* The server simply do not accept excluded link_path and thus
+                 switched path cannot be excluded. Just completely prohibit
+                 this situation. */
+              if (switched)
+                return svn_error_createf
+                  (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                   _("Cannot crop '%s': it is a switched path"),
+                   svn_path_local_style(full_path, pool));
+            }
         }
 
       /* If the target entry is just added without history, it does not exist
