@@ -1716,14 +1716,19 @@ handle_killme(svn_wc_adm_access_t *adm_access,
 
 /*** Using the parser to run the log file. ***/
 
-/* Determine the log file that should be used for a given number. */
-const char *
-svn_wc__logfile_path(int log_number,
-                     apr_pool_t *pool)
+/* Return the filename (with no path components) to use for logfile number
+   LOG_NUMBER.  The returned string will be allocated from POOL.
+
+   For log number 0, this will just be SVN_WC__ADM_LOG to maintain
+   compatibility with 1.0.x.  Higher numbers have the digits of the
+   number appended to SVN_WC__ADM_LOG so that they look like "log.1",
+   "log.2", etc. */
+static const char *
+compute_logfile_path(int log_number, apr_pool_t *pool)
 {
-  return apr_psprintf(pool, SVN_WC__ADM_LOG "%s",
-                      (log_number == 0) ? ""
-                      : apr_psprintf(pool, ".%d", log_number));
+  if (log_number == 0)
+    return SVN_WC__ADM_LOG;
+  return apr_psprintf(pool, SVN_WC__ADM_LOG ".%d", log_number);
 }
 
 /* Run a series of log-instructions from a memory block of length BUF_LEN
@@ -1834,7 +1839,7 @@ run_log(svn_wc_adm_access_t *adm_access,
       apr_size_t len = SVN__STREAM_CHUNK_SIZE;
 
       svn_pool_clear(iterpool);
-      logfile_path = svn_wc__logfile_path(log_number, iterpool);
+      logfile_path = compute_logfile_path(log_number, iterpool);
 
       /* Parse the log file's contents. */
       err = svn_wc__open_adm_stream(&stream,
@@ -1915,7 +1920,7 @@ run_log(svn_wc_adm_access_t *adm_access,
       for (log_number--; log_number >= 0; log_number--)
         {
           svn_pool_clear(iterpool);
-          logfile_path = svn_wc__logfile_path(log_number, iterpool);
+          logfile_path = compute_logfile_path(log_number, iterpool);
 
           /* No 'killme'?  Remove the logfile; its commands have been
              executed. */
@@ -1934,14 +1939,6 @@ svn_wc__run_log(svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
   return run_log(adm_access, FALSE, diff3_cmd, pool);
-}
-
-svn_error_t *
-svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
-                  const char *diff3_cmd,
-                  apr_pool_t *pool)
-{
-  return run_log(adm_access, TRUE, diff3_cmd, pool);
 }
 
 
@@ -2488,7 +2485,7 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
 {
   svn_stream_t *stream;
   const char *temp_file_path;
-  const char *logfile_name = svn_wc__logfile_path(log_number, pool);
+  const char *logfile_name = compute_logfile_path(log_number, pool);
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   apr_size_t len = log_content->len;
 
@@ -2604,7 +2601,10 @@ svn_wc_cleanup2(const char *path,
          we use the same test as the lock-removal code. */
       SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup, adm_access, pool));
       if (cleanup)
-        SVN_ERR(svn_wc__rerun_log(adm_access, diff3_cmd, pool));
+        {
+          /* ### rerun the log. why? dunno. missing commentary... */
+          SVN_ERR(run_log(adm_access, TRUE, diff3_cmd, pool));
+        }
     }
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
