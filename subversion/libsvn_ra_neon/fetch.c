@@ -37,6 +37,7 @@
 #include "svn_base64.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
@@ -1057,7 +1058,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
             }
 
           apr_hash_set(*dirents,
-                       svn_path_uri_decode(svn_path_basename(childname, pool),
+                       svn_path_uri_decode(svn_uri_basename(childname, pool),
                                            pool),
                        APR_HASH_KEY_STRING, entry);
         }

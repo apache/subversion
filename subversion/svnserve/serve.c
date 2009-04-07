@@ -37,6 +37,7 @@
 #include "svn_ra.h"              /* for SVN_RA_CAPABILITY_* */
 #include "svn_ra_svn.h"
 #include "svn_repos.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_config.h"
@@ -2859,7 +2860,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   b->repos_url = url_buf->data;
   b->authz_repos_name = svn_path_is_child(root, repos_root, pool);
   if (b->authz_repos_name == NULL)
-    b->repos_name = svn_path_basename(repos_root, pool);
+    b->repos_name = svn_uri_basename(repos_root, pool);
   else
     b->repos_name = b->authz_repos_name;
   b->repos_name = svn_path_uri_encode(b->repos_name, pool);

@@ -32,6 +32,7 @@
 #include "svn_io.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
@@ -690,7 +691,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                          apr_pool_t *pool)
 {
   resource_baton_t *parent = parent_baton;
-  const char *name = svn_path_basename(path, pool);
+  const char *name = svn_uri_basename(path, pool);
   apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
@@ -838,7 +839,7 @@ static svn_error_t * commit_add_dir(const char *path,
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child;
   int code;
-  const char *name = svn_path_basename(path, dir_pool);
+  const char *name = svn_uri_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -918,7 +919,7 @@ static svn_error_t * commit_open_dir(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
-  const char *name = svn_path_basename(path, dir_pool);
+  const char *name = svn_uri_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -983,7 +984,7 @@ static svn_error_t * commit_add_file(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
-  const char *name = svn_path_basename(path, file_pool);
+  const char *name = svn_uri_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -1114,7 +1115,7 @@ static svn_error_t * commit_open_file(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
-  const char *name = svn_path_basename(path, file_pool);
+  const char *name = svn_uri_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
   version_rsrc_t *rsrc = NULL;
 
