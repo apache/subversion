@@ -68,16 +68,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r36879
-   Fix a merge bug which can occur when the merge target or a subtree of
-   the target has non-inheritable mergeinfo.
-   Justification:
-     I don't know that anyone has encountered this problem in the wild, but
-     the code is clearly incorrect and r36879 expands an existing merge
-     test to demonstrate how it could result in incorrect mergeinfo.
-   Votes:
-     +1: pburba, arfrever, rhuijben
-
  * r36741, r36742
    Improve detection of Berkeley DB.
    Justification:
