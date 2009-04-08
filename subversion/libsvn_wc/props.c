@@ -463,16 +463,19 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
    allocations. */
 static svn_error_t *
 read_wcprops(apr_hash_t **all_wcprops,
-             const svn_wc_adm_access_t *adm_access,
+             svn_wc_adm_access_t *adm_access,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
+  int wc_format;
   apr_hash_t *proplist;
   svn_stream_t *stream;
   svn_error_t *err;
 
-  /* If the WC format is too old, there is nothing to cache. */
-  if (svn_wc__adm_wc_format(adm_access) <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
+
+  /* If the WC format is too old, there is no 'all_wcprops' file.  */
+  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
       *all_wcprops = NULL;
       return SVN_NO_ERROR;
@@ -626,11 +629,12 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
 
 static svn_error_t *
-wcprops_modify_allowed(const svn_wc_adm_access_t *adm_access,
+wcprops_modify_allowed(svn_wc_adm_access_t *adm_access,
                        apr_pool_t *scratch_pool)
 {
-  int wc_format = svn_wc__adm_wc_format(adm_access);
+  int wc_format;
 
+  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
   if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
       const char *path = svn_wc_adm_access_path(adm_access);

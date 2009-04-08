@@ -3404,7 +3404,8 @@ svn_wc__db_temp_get_format(int *format,
 
 /* ### temporary API. remove before release.  */
 svn_error_t *
-svn_wc__db_temp_reset_format(svn_wc__db_t *db,
+svn_wc__db_temp_reset_format(int format,
+                             svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              apr_pool_t *scratch_pool)
 {
@@ -3414,7 +3415,12 @@ svn_wc__db_temp_reset_format(svn_wc__db_t *db,
   /* ### assert that we were passed a directory?  */
 
   pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
-  pdh->wcroot->format = UNKNOWN_FORMAT;
+
+  /* ### ideally, we would reset this to UNKNOWN, and then read the working
+     ### copy to see what format it is in. however, we typically *write*
+     ### whatever we *read*. so to break the cycle and write a different
+     ### version (during upgrade), then we have to force a new format.  */
+  pdh->wcroot->format = format;
 
   return SVN_NO_ERROR;
 }

@@ -93,11 +93,17 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                                            apr_pool_t *pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
-int svn_wc__adm_wc_format(const svn_wc_adm_access_t *adm_access);
+svn_error_t *
+svn_wc__adm_wc_format(int *wc_format,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *scratch_pool);
+
 
 /* Set the WC FORMAT of this access baton. */
-void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
-                               int format);
+svn_error_t *
+svn_wc__adm_set_wc_format(int wc_format,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *scratch_pool);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
  * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to
