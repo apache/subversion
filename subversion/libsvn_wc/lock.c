@@ -560,7 +560,6 @@ do_open(svn_wc_adm_access_t **adm_access,
             {
               if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
                 {
-                  /* See comment above regarding this assignment. */
                   svn_error_clear(svn_wc_adm_close2(lock, subpool));
                   svn_pool_destroy(subpool);
                   return err;
@@ -956,6 +955,49 @@ static void join_batons(svn_wc__adm_shared_t *dst_shared,
   t_access->set_owner = FALSE;
 }
 
+static svn_error_t *
+child_is_disjoint(svn_boolean_t *disjoint,
+                  const char *parent_path,
+                  const char *child_path,
+                  svn_wc_adm_access_t *parent_access,
+                  svn_wc_adm_access_t *child_access,
+                  apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *t_entry;
+  const svn_wc_entry_t *p_entry;
+  const svn_wc_entry_t *t_entry_in_p;
+  const char *expected_url;
+
+  SVN_ERR(svn_wc_entry(&t_entry_in_p, child_path, parent_access, FALSE,
+                       scratch_pool));
+  if (t_entry_in_p == NULL)
+    {
+      /* Parent doesn't know about the child.  */
+      *disjoint = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc_entry(&p_entry, parent_path, parent_access, FALSE,
+                       scratch_pool));
+  if (p_entry->url == NULL)
+    {
+      *disjoint = FALSE;
+      return SVN_NO_ERROR;
+    }
+  expected_url = svn_path_url_add_component2(p_entry->url,
+                                             t_entry_in_p->name,
+                                             scratch_pool);
+
+  SVN_ERR(svn_wc_entry(&t_entry, child_path, child_access, FALSE,
+                       scratch_pool));
+
+  /* Is the child switched?  */
+  *disjoint = t_entry->url && (strcmp(t_entry->url, expected_url) != 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        svn_wc_adm_access_t **target_access,
@@ -1019,7 +1061,14 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                     cancel_func, cancel_baton, pool);
       if (err)
         {
-          if (! p_access || err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+          if (p_access == NULL)
+            {
+              /* Couldn't open the parent or the target. Bail out.  */
+              svn_error_clear(p_access_err);
+              return err;
+            }
+
+          if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
             {
               if (p_access)
                 svn_error_clear(svn_wc_adm_close2(p_access, pool));
@@ -1027,6 +1076,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
               return err;
             }
 
+          /* This directory is not under version control. Ignore it.  */
           svn_error_clear(err);
           t_access = NULL;
         }
@@ -1036,13 +1086,10 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
       /* Check for switched or disjoint P_ACCESS and T_ACCESS */
       if (p_access && t_access)
         {
-          const svn_wc_entry_t *t_entry, *p_entry, *t_entry_in_p;
+          svn_boolean_t disjoint;
 
-          err = svn_wc_entry(&t_entry_in_p, path, p_access, FALSE, pool);
-          if (! err)
-            err = svn_wc_entry(&t_entry, path, t_access, FALSE, pool);
-          if (! err)
-            err = svn_wc_entry(&p_entry, parent, p_access, FALSE, pool);
+          err = child_is_disjoint(&disjoint, parent, path, p_access, t_access,
+                                  pool);
           if (err)
             {
               svn_error_clear(p_access_err);
@@ -1050,15 +1097,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
               svn_error_clear(svn_wc_adm_close2(t_access, pool));
               return err;
             }
-
-          /* Disjoint won't have PATH in P_ACCESS, switched will have
-             incompatible URLs */
-          if (! t_entry_in_p
-              ||
-              (p_entry->url && t_entry->url
-               && (strcmp(svn_uri_dirname(t_entry->url, pool), p_entry->url)
-                   || strcmp(svn_path_uri_encode(base_name, pool),
-                             svn_uri_basename(t_entry->url, pool)))))
+          if (disjoint)
             {
               /* Switched or disjoint, so drop P_ACCESS */
               err = svn_wc_adm_close2(p_access, pool);
