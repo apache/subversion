@@ -185,7 +185,13 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
      svn_wc__check_format. */
   if (wc_format < SVN_WC__VERSION)
     {
+      svn_boolean_t cleanup_required;
       svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
+
+      /* Don't try to mess with the WC if there are old log files left. */
+      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
+                                              adm_access, scratch_pool));
+      SVN_ERR_ASSERT(cleanup_required == FALSE);
 
       /* First, loggily upgrade the format file. */
       SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
