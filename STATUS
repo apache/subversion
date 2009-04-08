@@ -147,5 +147,8 @@ Approved changes:
    Justification:
      'svnadmin upgrade' was designed to allow for this situation, but clearly
      does not.
+   Notes:
+     Backport branch needed, the function in question has seen a lot of churn.
    Votes:
      +1: cmpilato, danielsh, rhuijben
+     -0: hwright (until such time as a backport branch exists)
