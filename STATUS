@@ -53,7 +53,7 @@ Candidate changes for 1.5.7:
      With the fix, each slave server tries to field the lock/unlock, resulting
      in competing ideas of what is and isn't locked.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r36256
    Fix potentially awful performance of --ignore-ancestry merges.
@@ -65,7 +65,7 @@ Candidate changes for 1.5.7:
      There is a minor conflict while merging, so use backport branch
      at http://svn.collab.net/repos/svn/branches/1.5.x-r36256.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
   * r36613, r36615, r36631, r36641
     Avoid potential segfault when dealing with subtree mergeinfo.
@@ -100,16 +100,7 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
- * r36851, r36857
-   'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
-   'db/format' file.
-   Justification:
-     'svnadmin upgrade' was designed to allow for this situation, but clearly
-     does not.
-   Votes:
-     +1: cmpilato, danielsh
-
- * r36879
+  * r36879
    Fix a merge bug which can occur when the merge target or a subtree of
    the target has non-inheritable mergeinfo.
    Justification:
@@ -121,7 +112,7 @@ Candidate changes for 1.5.7:
      resolving these can be found here:
      http://svn.collab.net/repos/svn/branches/1.5.x-r36879
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r36919
    Fix issue #3250 'Repeated merging of conflicting properties fails'.
@@ -132,7 +123,7 @@ Candidate changes for 1.5.7:
      resolving it can be found here:
      http://svn.collab.net/repos/svn/branches/1.5.x-r36919
    Votes:
-     +1: stylesen
+     +1: stylesen, rhuijben
 
   * r37072, r37083
     Fix issue #3392 'Parsing error with reverse merges and non-inheritable
@@ -150,3 +141,12 @@ Candidate changes for 1.5.7:
 
 Approved changes:
 =================
+
+* r36851, r36857
+   'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
+   'db/format' file.
+   Justification:
+     'svnadmin upgrade' was designed to allow for this situation, but clearly
+     does not.
+   Votes:
+     +1: cmpilato, danielsh, rhuijben
