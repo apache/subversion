@@ -15,22 +15,22 @@ Status of 1.6.1:
 
 Candidate changes:
 
-  * r36613, r36615, r36631, r36641
-    Avoid potential segfault when dealing with subtree mergeinfo.
-    Justification:
-      One user reported a segfault due to the way, prior to this change, that
-      we set children_with_mergeinfo elements to NULL rather than removing
-      the elements from the array, see
-      http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
-    Notes:
-      While segfaults are serious, this one is not sufficient by itself to
-      hold up 1.6.0 given that it is not a regression from 1.5.x, no one has
-      been able to produce a reproduction recipe, and only one user has
-      reported it (and they were able to work around it).  The fix itself is
-      r36613, r36631, and r36641.  r36615 is a variable renaming change that
-      is necessary to avoid a conflict.
-    Votes:
-      +1: pburba, rhuijben
+ * r36613, r36615, r36631, r36641
+   Avoid potential segfault when dealing with subtree mergeinfo.
+   Justification:
+     One user reported a segfault due to the way, prior to this change, that
+     we set children_with_mergeinfo elements to NULL rather than removing
+     the elements from the array, see
+     http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
+   Notes:
+     While segfaults are serious, this one is not sufficient by itself to
+     hold up 1.6.0 given that it is not a regression from 1.5.x, no one has
+     been able to produce a reproduction recipe, and only one user has
+     reported it (and they were able to work around it).  The fix itself is
+     r36613, r36631, and r36641.  r36615 is a variable renaming change that
+     is necessary to avoid a conflict.
+   Votes:
+     +1: pburba, rhuijben
 
  * r36178
    External merge-tool improvements.
@@ -64,16 +64,27 @@ Candidate changes:
      -0: gstein (the release is a week old; let's see at least another week
                  or two behind it before modifying the 1.6.x recommendation)
 
-  * r37072, r37083
-    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
-    mergeinfo'
-    Justification:
-      Can cause repeat merges to break in the presence of non-inheritable
-      mergeinfo.
-    Notes:
-      r37072 is a test for the issue, r37083 is the fix.
-    Votes:
-      +1: pburba
+ * r37072, r37083
+   Fix issue #3392 'Parsing error with reverse merges and non-inheritable
+   mergeinfo'
+   Justification:
+     Can cause repeat merges to break in the presence of non-inheritable
+     mergeinfo.
+   Notes:
+     r37072 is a test for the issue, r37083 is the fix.
+   Votes:
+     +1: pburba
 
+ * r37117
+   Fix issue #3393 'Merge consuming too much memory'.
+   Justification:
+     A merge which targets a WC with thousands of subtrees with mergeinfo
+     can consume multiple GB of memory in a hurry.
+   Notes:
+     This is as simple a fix to review as you've ever seen with the
+     word 'merge' in the title!
+   Votes:
+     +1: pburba
+      
 Approved changes:
 =================
