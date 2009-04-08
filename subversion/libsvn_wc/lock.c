@@ -89,13 +89,6 @@ struct svn_wc_adm_access_t
      state deleted or state absent. It may be NULL. */
   apr_hash_t *entries_all;
 
-  /* A hash mapping const char * entry names to hashes of wcprops.
-     These hashes map const char * names to svn_string_t * values.
-     NULL of the wcprops hasn't been read into memory.
-     ### Since there are typically just one or two wcprops per entry,
-     ### we could use a more compact way of storing them. */
-  apr_hash_t *wcprops;
-
   /* POOL is used to allocate cached items, they need to persist for the
      lifetime of this access baton */
   apr_pool_t *pool;
@@ -322,7 +315,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   lock->type = type;
   lock->entries_all = NULL;
-  lock->wcprops = NULL;
   lock->wc_format = 0;
   lock->shared = NULL;
   lock->lock_exists = FALSE;
@@ -1350,19 +1342,6 @@ svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool)
 {
   return adm_access->entries_all;
-}
-
-void
-svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
-                        apr_hash_t *wcprops)
-{
-  adm_access->wcprops = wcprops;
-}
-
-apr_hash_t *
-svn_wc__adm_access_wcprops(const svn_wc_adm_access_t *adm_access)
-{
-  return adm_access->wcprops;
 }
 
 

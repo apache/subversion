@@ -195,7 +195,6 @@ struct log_runner
   apr_pool_t *result_pool;
   svn_xml_parser_t *parser;
   svn_boolean_t entries_modified;
-  svn_boolean_t wcprops_modified;
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
   const char *diff3_cmd;            /* external diff3 cmd, or null if none */
@@ -1476,9 +1475,7 @@ log_do_modify_wcprop(struct log_runner *loggy,
     }
 
   SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
-                             path, loggy->adm_access, FALSE, loggy->pool));
-
-  loggy->wcprops_modified = TRUE;
+                             path, loggy->adm_access, loggy->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1760,7 +1757,6 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
   loggy->parser = svn_xml_make_parser(loggy, start_handler,
                                       NULL, NULL, pool);
   loggy->entries_modified = FALSE;
-  loggy->wcprops_modified = FALSE;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
@@ -1814,7 +1810,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->result_pool = svn_pool_create(pool);
   loggy->parser = parser;
   loggy->entries_modified = FALSE;
-  loggy->wcprops_modified = FALSE;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
@@ -1906,8 +1901,6 @@ run_log(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
       SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
     }
-  if (loggy->wcprops_modified)
-    SVN_ERR(svn_wc__wcprops_flush(adm_access, pool));
 
   /* Check for a 'killme' file in the administrative area. */
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only, pool));
