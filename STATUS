@@ -10,7 +10,7 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.6.1:
+Status of 1.6.2:
 ================
 
 Candidate changes:
@@ -85,6 +85,15 @@ Candidate changes:
      word 'merge' in the title!
    Votes:
      +1: pburba
-      
+
+ * r37121
+   Fix test_dirent_get_absolute for the case where the current directory
+   on C: is C:/.
+   Justification:
+     The dirent code should not rely on svn_path rules, especially when the
+     dirent functions were added to resolve these issues.
+   Votes:
+      +1: rhuijben
+
 Approved changes:
 =================
