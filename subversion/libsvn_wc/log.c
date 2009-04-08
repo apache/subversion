@@ -1500,9 +1500,10 @@ log_do_upgrade_format(struct log_runner *loggy,
   /* The nice thing is that, just by setting this flag, the entries file will
      be rewritten in the desired format. */
   loggy->entries_modified = TRUE;
+
   /* Reading the entries file will support old formats, even if this number
      is updated. */
-  svn_wc__adm_set_wc_format(loggy->adm_access, fmt);
+  SVN_ERR(svn_wc__adm_set_wc_format(fmt, loggy->adm_access, loggy->pool));
 
   return SVN_NO_ERROR;
 }

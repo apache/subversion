@@ -53,9 +53,6 @@ typedef struct
 
 struct svn_wc_adm_access_t
 {
-  /* The working copy format version number for the directory */
-  int wc_format;
-
   /* PATH to directory which contains the administrative area */
   const char *path;
 
@@ -177,8 +174,9 @@ svn_error_t *
 svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                        apr_pool_t *scratch_pool)
 {
-  int wc_format = svn_wc__adm_wc_format(adm_access);
+  int wc_format;
 
+  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
   SVN_ERR(svn_wc__check_format(wc_format,
                                adm_access->path,
                                scratch_pool));
@@ -315,7 +313,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   lock->type = type;
   lock->entries_all = NULL;
-  lock->wc_format = 0;
   lock->shared = NULL;
   lock->lock_exists = FALSE;
   lock->set_owner = FALSE;
@@ -410,8 +407,9 @@ static svn_error_t *
 check_format_upgrade(svn_wc_adm_access_t *adm_access,
                      apr_pool_t *scratch_pool)
 {
-  int wc_format = svn_wc__adm_wc_format(adm_access);
+  int wc_format;
 
+  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
   SVN_ERR(svn_wc__check_format(wc_format,
                                adm_access->path,
                                scratch_pool));
@@ -438,6 +436,7 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
 {
   svn_error_t *err;
   svn_wc_adm_access_t *lock;
+  int wc_format;
 
   err = adm_access_alloc(&lock, svn_wc__adm_access_write_lock, path, pool);
   if (err)
@@ -451,7 +450,8 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
         return err;
     }
 
-  SVN_ERR(svn_wc_check_wc(path, &lock->wc_format, pool));
+  SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
+
   /* We used to attempt to upgrade the working copy here, but now we let
      it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
      worry about upgrading.  */
@@ -495,7 +495,6 @@ do_open(svn_wc_adm_access_t **adm_access,
                              ? svn_wc__adm_access_write_lock
                              : svn_wc__adm_access_unlocked,
                            path, pool));
-  lock->wc_format = wc_format;
   SVN_ERR(check_format_upgrade(lock, subpool));
 
   if (levels_to_lock != 0)
@@ -699,8 +698,6 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       return err;
     }
-
-  SVN_ERR_ASSERT((*adm_access)->wc_format != 0);
 
   return SVN_NO_ERROR;
 }
@@ -1345,17 +1342,36 @@ svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
 }
 
 
-int
-svn_wc__adm_wc_format(const svn_wc_adm_access_t *adm_access)
+svn_error_t *
+svn_wc__adm_wc_format(int *wc_format,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *scratch_pool)
 {
-  return adm_access->wc_format;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  scratch_pool));
+  return svn_wc__db_temp_get_format(wc_format, db, local_abspath,
+                                    scratch_pool);
 }
 
-void
-svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
-                          int format)
+svn_error_t *
+svn_wc__adm_set_wc_format(int wc_format,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *scratch_pool)
 {
-  adm_access->wc_format = format;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  scratch_pool));
+  return svn_wc__db_temp_reset_format(wc_format, db, local_abspath,
+                                      scratch_pool);
 }
 
 svn_error_t *
