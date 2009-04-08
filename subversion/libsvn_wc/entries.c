@@ -2413,7 +2413,7 @@ svn_wc__entries_write(apr_hash_t *entries,
   SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
                                      scratch_pool));
   if (wc_format < SVN_WC__WC_NG_VERSION)
-    return svn_wc__entries_write_old(entries, adm_access, pool);
+    return svn_wc__entries_write_old(entries, adm_access, wc_format, pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
