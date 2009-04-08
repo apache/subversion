@@ -134,5 +134,19 @@ Candidate changes for 1.5.7:
    Votes:
      +1: stylesen
 
+  * r37072, r37083
+    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
+    mergeinfo'
+    Justification:
+      Can cause repeat merges to break in the presence of non-inheritable
+      mergeinfo.
+    Notes:
+      r37072 is a test for the issue, r37083 is the fix.  There is a backport
+      branch at http://svn.collab.net/repos/svn/branches/1.5.x-issue3392, but
+      it is dependent on r36879 being merged first.  (If this change *must* be
+      merged before r36879 I'll create a branch to do so - pburba)
+    Votes:
+      +1: pburba
+
 Approved changes:
 =================
