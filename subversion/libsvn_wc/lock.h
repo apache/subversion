@@ -66,14 +66,6 @@ void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
 apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
                                        apr_pool_t *pool);
 
-/* Store the WCPROPS in the cache in ADM_ACCESS. */
-void svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
-                                    apr_hash_t *wcprops);
-
-/* Retrieve the wcprops cached in ADM_ACCESS, if any. */
-apr_hash_t *svn_wc__adm_access_wcprops(const svn_wc_adm_access_t *adm_access);
-
-
 
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
    to lock the working copy during construction of the admin area, it
