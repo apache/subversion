@@ -209,51 +209,48 @@ typedef struct {
 
 /* ### update docstrings: all paths should be internal/canonical */
 
+/**
+ * ### KFF: Would be good to state, here or in an introductory comment
+ * ### at the top of this file, whether subsequent 'path' parameters
+ * ### are absolute, or relative to the root at which @a *db was
+ * ### opened, or perhaps that both are acceptable.
+ */
+/* ### all paths in this API are absolute, and internal/canonical form.  */
 
-/* ### some kind of _create() call to set things up? */
 
 /**
  * @defgroup svn_wc__db_admin  General administractive functions
  * @{
  */
 
-/**
- * Open the administrative database for the working copy identified by the
- * (absolute) @a path. The (opaque) handle for interacting with the database
- * will be returned in @a *db. Note that the database MAY NOT be specific
- * to this working copy. The path is merely used to locate the database, but
- * the administrative database could be global, or it could be per-WC.
+/** Open a working copy administrative database context.
  *
- * ### KFF: Would be good to state, here or in an introductory comment
- * ### at the top of this file, whether subsequent 'path' parameters
- * ### are absolute, or relative to the root at which @a *db was
- * ### opened, or perhaps that both are acceptable.
- * ###
- * ### Also, suppose @a path is some subdirectory deep inside a
- * ### working copy.  Is it okay to pass it, or do we need to pass the
- * ### root of that working copy?  Perhaps there needs to be an output
- * ### parameter 'const char **wc_root_path', so a person can tell if
- * ### they opened the root or some subdir?
+ * This context is (initially) not associated with any particular working
+ * copy directory or working copy root (wcroot). As operations are performed,
+ * this context will load the appropriate wcroot information.
  *
- * ### HKW: How are transactions handled?  Do the db_open* APIs automatically
- * ### create db transactions, or do we need explicit APIs for that?  Would
- * ### it be possible to automatically create/commit transactions as part
- * ### of the existing APIs?
- * ###
- * ### Also, do we need an explicit svn_wc__db_close() function, or will that
- * ### be handled on pool cleanup?  Does this close function commit any
- * ### outstanding work, or will that need to be manual committed?  (See above.)
+ * The context is returned in DB. The MODE parameter indicates whether the
+ * caller knows all interactions will be read-only, whether writing will
+ * definitely happen, or whether a default should be chosen.
  *
- * The configuration options are provided by @a config, and must live at
- * least as long as the database.
+ * CONFIG should hold the various configuration options that may apply to
+ * the administrative operation. It should live at least as long as the
+ * RESULT_POOL parameter.
  *
- * Intermediate allocations will be performed in @a scratch_pool, and the
- * resulting context will be allocated in @a result_pool.
+ * The DB will be closed when RESULT_POOL is cleared. It may also be closed
+ * manually using svn_wc__db_close(). In particular, this will close any
+ * SQLite databases that have been opened and cached.
+ *
+ * The context is allocated in RESULT_POOL. This pool is *retained* and used
+ * for future allocations within the DB. Be forewarned about unbounded
+ * memory growth if this DB is used across an unbounded number of wcroots
+ * and versioned directories.
+ *
+ * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                const char *local_abspath,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
@@ -1463,12 +1460,11 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
-/* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.
-   ### if LOCAL_ABSPATH is a file, then ...?  */
+/* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__db_temp_get_format(int *format,
                            svn_wc__db_t *db,
-                           const char *local_abspath,
+                           const char *local_dir_abspath,
                            apr_pool_t *scratch_pool);
 
 

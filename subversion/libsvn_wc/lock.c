@@ -1390,19 +1390,17 @@ svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
 
   if (adm_access->shared->db == NULL)
     {
-      const char *abspath;
       svn_wc__db_openmode_t mode;
 
       /* ### need to determine mode based on callers' needs. */
       mode = svn_wc__db_openmode_default;
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, adm_access->path,
-                                      scratch_pool));
       SVN_ERR(svn_wc__db_open(&adm_access->shared->db,
                               mode,
-                              abspath,
                               NULL /* ### need the config */,
                               adm_access->pool, scratch_pool));
+
+      /* ### do anything to prime for adm_access->path?  */
     }
 
   *db = adm_access->shared->db;

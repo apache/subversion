@@ -76,6 +76,7 @@
  */
 
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
+#define UNKNOWN_FORMAT (-1)
 
 
 struct svn_wc__db_t {
@@ -108,8 +109,8 @@ typedef struct {
   /* The WCROOT.id for this directory (and all its children).  */
   apr_int64_t wc_id;
 
-  /* The format of this wcroot's metadata storage (see wc.h). If the format
-     is unknown, this is 0.  */
+  /* The format of this wcroot's metadata storage (see wc.h). If the
+     format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
 } wcroot_t;
@@ -434,7 +435,7 @@ create_wcroot(const char *wcroot_abspath,
   wcroot->abspath = wcroot_abspath;
   wcroot->sdb = sdb;
   wcroot->wc_id = wc_id;
-  wcroot->format = 0;
+  wcroot->format = UNKNOWN_FORMAT;
 
   return wcroot;
 }
@@ -496,75 +497,6 @@ get_pristine_fname(const char **path,
                                hexdigest,
                                NULL);
   return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-open_one_directory(svn_wc__db_t *db,
-                   const char *path,
-                   apr_pool_t *scratch_pool)
-{
-  svn_node_kind_t kind;
-  svn_boolean_t special;
-  svn_wc__db_pdh_t *pdh;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(path));
-
-  /* If the file is special, then we need to refer to the encapsulating
-     directory instead, rather than resolving through a symlink to a
-     file or directory. */
-  SVN_ERR(svn_io_check_special_path(path, &kind, &special, scratch_pool));
-
-  /* ### skip unknown and/or not-found paths? need to examine typical
-     ### caller usage. */
-
-  if (kind != svn_node_dir)
-    {
-      /* ### doesn't seem that we need to keep the original path */
-      path = svn_dirent_dirname(path, scratch_pool);
-    }
-
-  pdh = apr_hash_get(db->dir_data, path, APR_HASH_KEY_STRING);
-  if (pdh != NULL)
-    return SVN_NO_ERROR;  /* seen this directory already! */
-
-  pdh = apr_palloc(db->state_pool, sizeof(*pdh));
-  pdh->db = db;
-
-  /* Make sure the key lasts as long as the hash. Note that if we did
-     not call dirname(), then this path is the provided path, but we
-     do not know its lifetime (nor does our API contract specify a
-     requirement for the lifetime). */
-  pdh->local_abspath = apr_pstrdup(db->state_pool, path);
-
-  /* ### for now, every directory still has a .svn subdir, and a
-     ### "pristine" subdir in there. later on, we'll alter the
-     ### storage location/strategy */
-
-  pdh->wcroot = create_wcroot(pdh->local_abspath, NULL, UNKNOWN_WC_ID,
-                              db->state_pool);
-
-  /* ### parent */
-
-  apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_wc__db_t *
-new_db_state(svn_wc__db_openmode_t mode,
-             svn_config_t *config,
-             apr_pool_t *result_pool)
-{
-  svn_wc__db_t *db = apr_palloc(result_pool, sizeof(*db));
-
-  db->mode = mode;
-  db->config = config;
-  db->dir_data = apr_hash_make(result_pool);
-  db->state_pool = result_pool;
-
-  return db;
 }
 
 
@@ -676,6 +608,37 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 
       /* Loop to move further upwards. */
     }
+}
+
+
+static svn_wc__db_pdh_t *
+get_or_create_pdh(svn_wc__db_t *db,
+                  const char *local_dir_abspath,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh = apr_hash_get(db->dir_data,
+                                       local_dir_abspath, APR_HASH_KEY_STRING);
+
+  if (pdh != NULL)
+    {
+      pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
+      pdh->db = db;
+
+      /* Copy the path for the proper lifetime.  */
+      pdh->local_abspath = apr_pstrdup(db->state_pool, local_dir_abspath);
+
+      /* ### for now, every directory is its own WCROOT. go ahead and
+         ### create one for this directory. at some point, we'll have to
+         ### alter this strategy.  */
+      pdh->wcroot = create_wcroot(pdh->local_abspath, NULL, UNKNOWN_WC_ID,
+                                  db->state_pool);
+
+      /* ### parent */
+
+      apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
+    }
+
+  return pdh;
 }
 
 
@@ -1348,21 +1311,17 @@ gather_children(const apr_array_header_t **children,
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                const char *local_abspath,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  *db = new_db_state(mode, config, result_pool);
+  *db = apr_pcalloc(result_pool, sizeof(**db));
+  (*db)->mode = mode;
+  (*db)->config = config;
+  (*db)->dir_data = apr_hash_make(result_pool);
+  (*db)->state_pool = result_pool;
 
-  /* ### open_one_directory() doesn't fill in SDB and other data. for now,
-     ### we want that in all structures, so we don't have to do on-demand
-     ### searching/opening when we already have a PDH.  */
-#if 0
-  return open_one_directory(*db, local_abspath, scratch_pool);
-#else
   return SVN_NO_ERROR;
-#endif
 }
 
 
@@ -2168,24 +2127,9 @@ svn_wc__db_pristine_get_handle(svn_wc__db_pdh_t **pdh,
                                apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
 
-  /* ### need to fix this up. we'll probably get called with a subdirectory
-     ### of the path that we opened originally. that means we probably
-     ### won't have the subdir in the hash table. need to be able to
-     ### incrementally grow the hash of per-dir structures. */
-
-  *pdh = apr_hash_get(db->dir_data, local_dir_abspath, APR_HASH_KEY_STRING);
-
-  if (*pdh == NULL)
-    {
-      /* Oops. We haven't seen this WC directory before. Let's get it into
-         our hash of per-directory information. */
-      SVN_ERR(open_one_directory(db, local_dir_abspath, scratch_pool));
-
-      *pdh = apr_hash_get(db->dir_data, local_dir_abspath, APR_HASH_KEY_STRING);
-
-      SVN_ERR_ASSERT(*pdh != NULL);
-    }
+  *pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2949,6 +2893,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
 
   NOT_IMPLEMENTED();
 }
@@ -3436,12 +3381,17 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 svn_error_t *
 svn_wc__db_temp_get_format(int *format,
                            svn_wc__db_t *db,
-                           const char *local_abspath,
+                           const char *local_dir_abspath,
                            apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  svn_wc__db_pdh_t *pdh;
 
-  /* Note: LOCAL_ABSPATH will always be a directory.  */
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
 
-  NOT_IMPLEMENTED();
+  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+
+  *format = pdh->wcroot->format;
+
+  return SVN_NO_ERROR;
 }
