@@ -2587,23 +2587,18 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
 
 
 static svn_error_t *
-upgrade_working_copy(const char *path,
+upgrade_working_copy(svn_wc_adm_access_t *adm_access,
+                     const char *path,
                      const char *diff3_cmd,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;
-
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, path, scratch_pool));
-
   /* Run any existing logs. */
   SVN_ERR(run_existing_logs(adm_access, path, diff3_cmd, FALSE,
                             cancel_func, cancel_baton, scratch_pool));
 
-  SVN_ERR(svn_wc__upgrade_format(adm_access, scratch_pool));
-  return svn_wc_adm_close2(adm_access, scratch_pool);
+  return svn_wc__upgrade_format(adm_access, scratch_pool);
 }
 
 
@@ -2639,12 +2634,12 @@ cleanup_internal(const char *path,
        _("'%s' is not a working copy directory"),
        svn_path_local_style(path, scratch_pool));
 
-  if (upgrade_format && wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(path, diff3_cmd, cancel_func, cancel_baton,
-                                 scratch_pool));
-
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, path, scratch_pool));
+
+  if (upgrade_format && wc_format_version < SVN_WC__VERSION)
+    SVN_ERR(upgrade_working_copy(adm_access, path, diff3_cmd, cancel_func,
+                                 cancel_baton, scratch_pool));
 
   /* Recurse and run any existing logs. */
   SVN_ERR(run_existing_logs(adm_access, path, diff3_cmd, upgrade_format,
