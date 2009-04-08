@@ -2499,7 +2499,6 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 cleanup_internal(const char *path,
                  const char *diff3_cmd,
-                 svn_boolean_t upgrade_format,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
@@ -2508,7 +2507,6 @@ static svn_error_t *
 run_existing_logs(svn_wc_adm_access_t *adm_access,
                   const char *path,
                   const char *diff3_cmd,
-                  svn_boolean_t upgrade_format,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
@@ -2540,7 +2538,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
           /* Sub-directories */
           SVN_ERR(svn_io_check_path(entry_path, &kind, iterpool));
           if (kind == svn_node_dir)
-            SVN_ERR(cleanup_internal(entry_path, diff3_cmd, upgrade_format,
+            SVN_ERR(cleanup_internal(entry_path, diff3_cmd,
                                      cancel_func, cancel_baton, iterpool));
         }
       else
@@ -2587,62 +2585,73 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
 
 
 static svn_error_t *
-upgrade_working_copy(svn_wc_adm_access_t *adm_access,
-                     const char *path,
+upgrade_working_copy(const char *path,
                      const char *diff3_cmd,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool)
 {
-  /* Run any existing logs. */
-  SVN_ERR(run_existing_logs(adm_access, path, diff3_cmd, FALSE,
-                            cancel_func, cancel_baton, scratch_pool));
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *entries = NULL;
 
-  return svn_wc__upgrade_format(adm_access, scratch_pool);
-}
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
+  /* Lock this working copy directory, or steal an existing lock */
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, path, scratch_pool));
 
-static svn_error_t *
-post_upgrade_cleanup(const char *path,
-                     apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
+  /* Upgrade this directory first. */
+  SVN_ERR(svn_wc__upgrade_format(adm_access, scratch_pool));
+
+  /* Now recurse. */
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const svn_wc_entry_t *entry;
+      const char *entry_path;
+
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      entry = val;
+      entry_path = svn_dirent_join(path, key, iterpool);
+
+      if (entry->kind != svn_node_dir
+            || strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      SVN_ERR(upgrade_working_copy(entry_path, diff3_cmd, cancel_func,
+                                   cancel_baton, scratch_pool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return svn_wc_adm_close2(adm_access, scratch_pool);
+
 }
 
 
 static svn_error_t *
 cleanup_internal(const char *path,
                  const char *diff3_cmd,
-                 svn_boolean_t upgrade_format,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
   svn_wc_adm_access_t *adm_access;
-  int wc_format_version;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc_check_wc(path, &wc_format_version, scratch_pool));
-
-  /* a "version" of 0 means a non-wc directory */
-  if (wc_format_version == 0)
-    return svn_error_createf
-      (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       _("'%s' is not a working copy directory"),
-       svn_path_local_style(path, scratch_pool));
-
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, path, scratch_pool));
 
-  if (upgrade_format && wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(adm_access, path, diff3_cmd, cancel_func,
-                                 cancel_baton, scratch_pool));
-
   /* Recurse and run any existing logs. */
-  SVN_ERR(run_existing_logs(adm_access, path, diff3_cmd, upgrade_format,
+  SVN_ERR(run_existing_logs(adm_access, path, diff3_cmd,
                             cancel_func, cancel_baton, scratch_pool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
@@ -2650,12 +2659,7 @@ cleanup_internal(const char *path,
      of being useful. */
   SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, scratch_pool));
 
-  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
-
-  if (upgrade_format)
-    SVN_ERR(post_upgrade_cleanup(path, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
 svn_error_t *
@@ -2666,6 +2670,31 @@ svn_wc_cleanup3(const char *path,
                 void *cancel_baton,
                 apr_pool_t *scratch_pool)
 {
-  return cleanup_internal(path, diff3_cmd, upgrade_wc, cancel_func,
-                          cancel_baton, scratch_pool);
+  int wc_format_version;
+
+  SVN_ERR(svn_wc_check_wc(path, &wc_format_version, scratch_pool));
+
+  /* a "version" of 0 means a non-wc directory */
+  if (wc_format_version == 0)
+    return svn_error_createf
+      (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+       _("'%s' is not a working copy directory"),
+       svn_path_local_style(path, scratch_pool));
+
+  /* First step, run any existing logs. */
+  SVN_ERR(cleanup_internal(path, diff3_cmd, cancel_func, cancel_baton,
+                           scratch_pool));
+
+  if (upgrade_wc && wc_format_version < SVN_WC__VERSION)
+    {
+      /* Second, do the upgrade. */
+      SVN_ERR(upgrade_working_copy(path, diff3_cmd, cancel_func,
+                                   cancel_baton, scratch_pool));
+
+      /* Third, run logs again. */
+      SVN_ERR(cleanup_internal(path, diff3_cmd, cancel_func, cancel_baton,
+                               scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }

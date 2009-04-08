@@ -45,12 +45,16 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 
 def check_format(sbox, expected_format):
-  format_file = open(os.path.join(sbox.wc_dir, '.svn', 'entries'))
-  found_format = int(format_file.readline())
+  for root, dirs, files in os.walk(sbox.wc_dir):
+    format_file = open(os.path.join(root, '.svn', 'entries'))
+    found_format = int(format_file.readline())
 
-  if found_format != expected_format:
-    raise svntest.Failure("found format '%d'; expected '%d'" %
-                          (found_format, expected_format))
+    if found_format != expected_format:
+      raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
+                            (found_format, expected_format, root))
+
+    if '.svn' in dirs:
+      dirs.remove('.svn')
 
 
 def basic_upgrade(sbox):
