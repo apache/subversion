@@ -21,7 +21,7 @@
 # moves working copies between wc-1 and wc-ng.
 #
 
-import os, tarfile, shutil
+import os, sys, tarfile, shutil
 
 import svntest
 
@@ -34,7 +34,8 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
   except OSError, e:
     pass
 
-  tarpath = os.path.join('upgrade_tests_data', tar_filename)
+  tarpath = os.path.join(os.path.dirname(sys.argv[0]), 'upgrade_tests_data',
+                         tar_filename)
   t = tarfile.open(tarpath, 'r:bz2')
   for member in t.getmembers():
     t.extract(member, svntest.main.temp_dir)
