@@ -410,12 +410,10 @@ probe(const char **dir,
 /* Check the format of adm_access, and make sure it's new enough.  If it
    isn't, throw an error explaining how to upgrade. */
 static svn_error_t *
-check_format_upgrade(svn_wc_adm_access_t *adm_access,
+check_format_upgrade(const svn_wc_adm_access_t *adm_access,
+                     int wc_format,
                      apr_pool_t *scratch_pool)
 {
-  int wc_format;
-
-  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
   SVN_ERR(svn_wc__check_format(wc_format,
                                adm_access->path,
                                scratch_pool));
@@ -463,6 +461,111 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+open_single(svn_wc_adm_access_t **adm_access,
+            const char *path,
+            svn_boolean_t write_lock,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  int wc_format = 0;
+  svn_error_t *err;
+  svn_wc_adm_access_t *lock;
+
+  err = svn_wc_check_wc(path, &wc_format, scratch_pool);
+  if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
+    {
+      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
+                               _("'%s' is not a working copy"),
+                               svn_path_local_style(path, scratch_pool));
+    }
+  svn_error_clear(err);
+
+  /* Need to create a new lock */
+  SVN_ERR(adm_access_alloc(&lock,
+                           write_lock
+                             ? svn_wc__adm_access_write_lock
+                             : svn_wc__adm_access_unlocked,
+                           path, result_pool));
+  SVN_ERR(check_format_upgrade(lock, wc_format, scratch_pool));
+
+  /* ### recurse was here */
+
+  /* ### does this utf8 thing really/still apply??  */
+  /* It's important that the cleanup handler is registered *after* at least
+     one UTF8 conversion has been done, since such a conversion may create
+     the apr_xlate_t object in the pool, and that object must be around
+     when the cleanup handler runs.  If the apr_xlate_t cleanup handler
+     were to run *before* the access baton cleanup handler, then the access
+     baton's handler won't work. */
+  apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
+                            pool_cleanup_child);
+  *adm_access = lock;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_single(svn_wc_adm_access_t *adm_access,
+             svn_boolean_t preserve_lock,
+             apr_pool_t *scratch_pool)
+{
+  if (adm_access->type == svn_wc__adm_access_closed)
+    return SVN_NO_ERROR;
+
+  /* Physically unlock if required */
+  if (adm_access->type == svn_wc__adm_access_write_lock)
+    {
+      if (adm_access->lock_exists && !preserve_lock)
+        {
+          /* Remove the physical lock in the admin directory for
+             PATH. It is acceptable for the administrative area to
+             have disappeared, such as when the directory is removed
+             from the working copy.  It is an error for the lock to
+             have disappeared if the administrative area still exists. */
+
+          svn_error_t *err = svn_wc__remove_adm_file(adm_access,
+                                                     SVN_WC__ADM_LOCK,
+                                                     scratch_pool);
+          if (err)
+            {
+              if (svn_wc__adm_area_exists(adm_access, scratch_pool))
+                return err;
+              svn_error_clear(err);
+            }
+
+          adm_access->lock_exists = FALSE;
+        }
+    }
+
+  /* Reset to prevent further use of the lock. */
+  adm_access->type = svn_wc__adm_access_closed;
+
+  /* Detach from set */
+  if (adm_access->shared && adm_access->shared->set)
+    {
+      apr_hash_set(adm_access->shared->set,
+                   adm_access->path, APR_HASH_KEY_STRING,
+                   NULL);
+
+      SVN_ERR_ASSERT(!adm_access->set_owner
+                     || apr_hash_count(adm_access->shared->set) == 0);
+    }
+
+  /* Close the underlying wc_db. */
+  if (adm_access->set_owner)
+    {
+      SVN_ERR_ASSERT(apr_hash_count(adm_access->shared->set) == 0);
+      if (adm_access->shared->db)
+        SVN_ERR(svn_wc__db_close(adm_access->shared->db, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This is essentially the guts of svn_wc_adm_open3.
  *
  * If the working copy is already locked, return SVN_ERR_WC_LOCKED; if
@@ -478,27 +581,10 @@ do_open(svn_wc_adm_access_t **adm_access,
         apr_pool_t *pool)
 {
   svn_wc_adm_access_t *lock;
-  int wc_format;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  err = svn_wc_check_wc(path, &wc_format, subpool);
-
-  if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
-    {
-      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
-                               _("'%s' is not a working copy"),
-                               svn_path_local_style(path, pool));
-    }
-  svn_error_clear(err);
-
-  /* Need to create a new lock */
-  SVN_ERR(adm_access_alloc(&lock,
-                           write_lock
-                             ? svn_wc__adm_access_write_lock
-                             : svn_wc__adm_access_unlocked,
-                           path, pool));
-  SVN_ERR(check_format_upgrade(lock, subpool));
+  SVN_ERR(open_single(&lock, path, write_lock, pool, subpool));
 
   if (levels_to_lock != 0)
     {
@@ -578,14 +664,6 @@ do_open(svn_wc_adm_access_t **adm_access,
         }
     }
 
-  /* It's important that the cleanup handler is registered *after* at least
-     one UTF8 conversion has been done, since such a conversion may create
-     the apr_xlate_t object in the pool, and that object must be around
-     when the cleanup handler runs.  If the apr_xlate_t cleanup handler
-     were to run *before* the access baton cleanup handler, then the access
-     baton's handler won't work. */
-  apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
-                            pool_cleanup_child);
   *adm_access = lock;
 
   svn_pool_destroy(subpool);
@@ -1164,10 +1242,6 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
    are left if PRESERVE_LOCK is TRUE.  Any associated access batons that
    are direct descendants will also be closed.
-
-   ### FIXME: If the set has a "hole", say it contains locks for the
-   ### directories A, A/B, A/B/C/X but not A/B/C then closing A/B will not
-   ### reach A/B/C/X .
  */
 static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access,
@@ -1209,58 +1283,11 @@ do_close(svn_wc_adm_access_t *adm_access,
               || strcmp(adm_access->path, path) == 0)
             continue;
 
-          SVN_ERR(do_close(child, preserve_lock, FALSE, scratch_pool));
+          SVN_ERR(close_single(child, preserve_lock, scratch_pool));
         }
     }
 
-  /* Physically unlock if required */
-  if (adm_access->type == svn_wc__adm_access_write_lock)
-    {
-      if (adm_access->lock_exists && ! preserve_lock)
-        {
-          /* Remove the physical lock in the admin directory for
-             PATH. It is acceptable for the administrative area to
-             have disappeared, such as when the directory is removed
-             from the working copy.  It is an error for the lock to
-             have disappeared if the administrative area still exists. */
-
-          svn_error_t *err = svn_wc__remove_adm_file(adm_access,
-                                                     SVN_WC__ADM_LOCK,
-                                                     scratch_pool);
-          if (err)
-            {
-              if (svn_wc__adm_area_exists(adm_access, scratch_pool))
-                return err;
-              svn_error_clear(err);
-            }
-
-          adm_access->lock_exists = FALSE;
-        }
-    }
-
-  /* Reset to prevent further use of the lock. */
-  adm_access->type = svn_wc__adm_access_closed;
-
-  /* Detach from set */
-  if (adm_access->shared && adm_access->shared->set)
-    {
-      apr_hash_set(adm_access->shared->set,
-                   adm_access->path, APR_HASH_KEY_STRING,
-                   NULL);
-
-      SVN_ERR_ASSERT(! adm_access->set_owner
-                     || apr_hash_count(adm_access->shared->set) == 0);
-    }
-
-  /* Close the underlying wc_db. */
-  if (adm_access->set_owner)
-    {
-      SVN_ERR_ASSERT(apr_hash_count(adm_access->shared->set) == 0);
-      if (adm_access->shared->db)
-        SVN_ERR(svn_wc__db_close(adm_access->shared->db, scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
+  return close_single(adm_access, preserve_lock, scratch_pool);
 }
 
 svn_error_t *
