@@ -59,7 +59,7 @@ def basic_upgrade(sbox):
   replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is to old; run 'svn cleanup' "
+  expected_stderr = (".*Working copy format is too old; run 'svn cleanup' "
                      "to upgrade")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
@@ -79,7 +79,7 @@ def upgrade_1_5(sbox):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is to old; run 'svn cleanup' "
+  expected_stderr = (".*Working copy format is too old; run 'svn cleanup' "
                      "to upgrade")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)

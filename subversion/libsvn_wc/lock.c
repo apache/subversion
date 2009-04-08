@@ -420,7 +420,7 @@ check_format_upgrade(svn_wc_adm_access_t *adm_access,
       && wc_format != SVN_WC__VERSION_EXPERIMENTAL)
     {
       return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                               "Working copy format is to old; run "
+                               "Working copy format is too old; run "
                                "'svn cleanup' to upgrade");
     }
 
