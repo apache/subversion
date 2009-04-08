@@ -619,7 +619,7 @@ get_or_create_pdh(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh = apr_hash_get(db->dir_data,
                                        local_dir_abspath, APR_HASH_KEY_STRING);
 
-  if (pdh != NULL)
+  if (pdh == NULL)
     {
       pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
       pdh->db = db;
@@ -3390,8 +3390,31 @@ svn_wc__db_temp_get_format(int *format,
   /* ### assert that we were passed a directory?  */
 
   pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  if (pdh->wcroot->format == UNKNOWN_FORMAT)
+    {
+      SVN_ERR(svn_wc__db_version(&pdh->wcroot->format, local_dir_abspath,
+                                 scratch_pool));
+    }
 
   *format = pdh->wcroot->format;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ### temporary API. remove before release.  */
+svn_error_t *
+svn_wc__db_temp_reset_format(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  pdh->wcroot->format = UNKNOWN_FORMAT;
 
   return SVN_NO_ERROR;
 }

@@ -20,6 +20,7 @@
 
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
 #include "svn_pools.h"
@@ -1550,9 +1551,11 @@ svn_wc__entries_write_old(apr_hash_t *entries,
   svn_stringbuf_t *bigstr = NULL;
   svn_stream_t *stream;
   const char *temp_file_path;
-  apr_hash_index_t *hi;
   const svn_wc_entry_t *this_dir;
   apr_size_t len;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  int wc_format;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -1566,6 +1569,13 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                              _("No default entry in directory '%s'"),
                              svn_path_local_style
                              (svn_wc_adm_access_path(adm_access), pool));
+
+  /* Maintain whatever format this directory is at. Figure that out.  */
+  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  pool));
+  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath, pool));
 
   /* Open entries file for writing.  It's important we don't use APR_EXCL
    * here.  Consider what happens if a log file is interrupted, it may
@@ -1581,12 +1591,12 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                                     SVN_WC__ADM_ENTRIES,
                                     pool, pool));
 
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
+  if (wc_format > SVN_WC__XML_ENTRIES_VERSION)
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_hash_index_t *hi;
 
-      bigstr = svn_stringbuf_createf(pool, "%d\n",
-                                     svn_wc__adm_wc_format(adm_access));
+      bigstr = svn_stringbuf_createf(pool, "%d\n", wc_format);
 
       /* Write out "this dir" */
       SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,

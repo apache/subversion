@@ -836,6 +836,7 @@ static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
              apr_pool_t *scratch_pool)
 {
+  int wc_format;
   apr_hash_t *actual_nodes;
   svn_sqlite__db_t *wc_db;
   apr_pool_t *result_pool;
@@ -848,10 +849,14 @@ read_entries(svn_wc_adm_access_t *adm_access,
   int i;
   svn_boolean_t parent_copied = FALSE;
   
-  if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
-    return svn_wc__read_entries_old(adm_access, scratch_pool);
-
   SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
+                                     scratch_pool));
+  if (wc_format < SVN_WC__WC_NG_VERSION)
+    return svn_wc__read_entries_old(adm_access, scratch_pool);
 
   result_pool = svn_wc_adm_access_pool(adm_access);
   entries = apr_hash_make(result_pool);
@@ -868,10 +873,6 @@ read_entries(svn_wc_adm_access_t *adm_access,
   /* ### some of the data is not in the wc_db interface. grab it manually.
      ### trim back the columns fetched?  */
   SVN_ERR(fetch_actual_nodes(&actual_nodes, wc_db, scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
@@ -2290,7 +2291,9 @@ write_entry(svn_wc__db_t *db,
 /* Actually do the sqlite work within a transaction.
    This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-entries_write_body(svn_sqlite__db_t *wc_db,
+entries_write_body(svn_wc__db_t *db,
+                   const char *local_abspath,
+                   svn_sqlite__db_t *wc_db,
                    apr_hash_t *entries,
                    svn_wc_adm_access_t *adm_access,
                    const svn_wc_entry_t *this_dir,
@@ -2303,13 +2306,6 @@ entries_write_body(svn_sqlite__db_t *wc_db,
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
-  const char *local_abspath;
-  svn_wc__db_t *db;
-
-  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  scratch_pool));
 
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
@@ -2403,11 +2399,20 @@ svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  int wc_format;
   svn_sqlite__db_t *wc_db;
   const svn_wc_entry_t *this_dir;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  if (svn_wc__adm_wc_format(adm_access) < SVN_WC__WC_NG_VERSION)
+  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
+                                     scratch_pool));
+  if (wc_format < SVN_WC__WC_NG_VERSION)
     return svn_wc__entries_write_old(entries, adm_access, pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
@@ -2432,8 +2437,8 @@ svn_wc__entries_write(apr_hash_t *entries,
                            scratch_pool, scratch_pool));
 
   /* Write the entries. */
-  SVN_ERR(entries_write_body(wc_db, entries, adm_access, this_dir,
-                             scratch_pool));
+  SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, adm_access,
+                             this_dir, scratch_pool));
 
   svn_wc__adm_access_set_entries(adm_access, entries);
 
