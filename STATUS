@@ -30,7 +30,7 @@ Candidate changes:
       r36613, r36631, and r36641.  r36615 is a variable renaming change that
       is necessary to avoid a conflict.
     Votes:
-      +1: pburba
+      +1: pburba, rhuijben
 
  * r36178
    External merge-tool improvements.
