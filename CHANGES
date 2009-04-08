@@ -14,7 +14,7 @@ http://svn.collab.net/repos/svn/tags/1.6.1
   * improve tempfile creation robustness on Windows (r36442, -3)
   * fix change-svn-wc-format.py for 1.6.x working copies (r36874, -5)
   * improve configure's detection of Berkeley DB (r36741, -2)
-  * don't allow foriegn merges to add foriegn mergeinfo (issue #3383)
+  * don't allow foreign merges to add foreign mergeinfo (issue #3383)
   * improve performance of 'svn update' on large files (r36389, et. al.)
   * fixed: error leak and potential crash (r36860)
   * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
