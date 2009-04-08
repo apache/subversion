@@ -80,9 +80,8 @@ Candidate changes for 1.5.7:
       merge cleanly due to text conflicts and the lack of SVN_ERR_ASSERT in
       1.5.x.  A backport branch can be found at
       http://svn.collab.net/repos/svn/branches/1.5.x-r36613.
-      
     Votes:
-      +1: pburba
+      +1: pburba, rhuijben
 
  * r36730, r36766, r36775
    Fix issue #3383 'Foreign repository merge can add mergeinfo from the
@@ -100,7 +99,7 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
-  * r36879
+ * r36879
    Fix a merge bug which can occur when the merge target or a subtree of
    the target has non-inheritable mergeinfo.
    Justification:
@@ -125,19 +124,19 @@ Candidate changes for 1.5.7:
    Votes:
      +1: stylesen, rhuijben
 
-  * r37072, r37083
-    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
-    mergeinfo'
-    Justification:
-      Can cause repeat merges to break in the presence of non-inheritable
-      mergeinfo.
-    Notes:
-      r37072 is a test for the issue, r37083 is the fix.  There is a backport
-      branch at http://svn.collab.net/repos/svn/branches/1.5.x-issue3392, but
-      it is dependent on r36879 being merged first.  (If this change *must* be
-      merged before r36879 I'll create a branch to do so - pburba)
-    Votes:
-      +1: pburba
+ * r37072, r37083
+   Fix issue #3392 'Parsing error with reverse merges and non-inheritable
+   mergeinfo'
+   Justification:
+     Can cause repeat merges to break in the presence of non-inheritable
+     mergeinfo.
+   Notes:
+     r37072 is a test for the issue, r37083 is the fix.  There is a backport
+     branch at http://svn.collab.net/repos/svn/branches/1.5.x-issue3392, but
+     it is dependent on r36879 being merged first.  (If this change *must* be
+     merged before r36879 I'll create a branch to do so - pburba)
+   Votes:
+     +1: pburba
 
 Approved changes:
 =================
