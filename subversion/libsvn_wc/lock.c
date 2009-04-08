@@ -436,7 +436,6 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
 {
   svn_error_t *err;
   svn_wc_adm_access_t *lock;
-  int wc_format;
 
   err = adm_access_alloc(&lock, svn_wc__adm_access_write_lock, path, pool);
   if (err)
@@ -449,8 +448,6 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
       else
         return err;
     }
-
-  SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
 
   /* We used to attempt to upgrade the working copy here, but now we let
      it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
