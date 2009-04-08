@@ -1545,6 +1545,7 @@ write_entries_xml(svn_stringbuf_t **output,
 svn_error_t *
 svn_wc__entries_write_old(apr_hash_t *entries,
                           svn_wc_adm_access_t *adm_access,
+                          int wc_format,
                           apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -1553,9 +1554,6 @@ svn_wc__entries_write_old(apr_hash_t *entries,
   const char *temp_file_path;
   const svn_wc_entry_t *this_dir;
   apr_size_t len;
-  svn_wc__db_t *db;
-  const char *local_abspath;
-  int wc_format;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -1569,13 +1567,6 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                              _("No default entry in directory '%s'"),
                              svn_path_local_style
                              (svn_wc_adm_access_path(adm_access), pool));
-
-  /* Maintain whatever format this directory is at. Figure that out.  */
-  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  pool));
-  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath, pool));
 
   /* Open entries file for writing.  It's important we don't use APR_EXCL
    * here.  Consider what happens if a log file is interrupted, it may
