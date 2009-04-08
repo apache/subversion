@@ -618,46 +618,14 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool)
 {
+  const svn_wc_entry_t *entry;
   const char *props_file;
 
-  if (props_kind == svn_wc__props_wcprop)
-    {
-      /* We use 1 file for all wcprops in a directory,
-         use a helper to remove them from that file */
-      apr_hash_t *props;
-      apr_pool_t *iterpool = svn_pool_create(pool);
-      apr_hash_index_t *hi;
+  SVN_ERR_ASSERT(props_kind != svn_wc__props_wcprop);
 
-      SVN_ERR(svn_wc__wcprop_list(&props, path, adm_access, pool));
-      /* ### TODO: There's no log command to delete all wcprops
-         from a file at once. Removing all props should do it though. */
-
-      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          const char *name;
-
-          svn_pool_clear(iterpool);
-
-          apr_hash_this(hi, &key, NULL, NULL);
-          name = key;
-
-          SVN_ERR(svn_wc__loggy_modify_wcprop(log_accum,
-                                              adm_access, path,
-                                              name, NULL, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-  else
-    {
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
-                                pool));
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
-    }
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
+  SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
 
   return SVN_NO_ERROR;
 }
