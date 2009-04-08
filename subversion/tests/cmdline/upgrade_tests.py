@@ -36,7 +36,8 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
   tarpath = os.path.join('upgrade_tests_data', tar_filename)
   t = tarfile.open(tarpath, 'r:bz2')
-  t.extractall(svntest.main.temp_dir)
+  for member in t.getmembers():
+    t.extract(member, svntest.main.temp_dir)
 
   shutil.move(os.path.join(svntest.main.temp_dir, tar_filename.split('.')[0]),
               sbox.wc_dir)
