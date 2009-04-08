@@ -1467,6 +1467,11 @@ svn_wc__db_temp_get_format(int *format,
                            const char *local_dir_abspath,
                            apr_pool_t *scratch_pool);
 
+/* ### reset any cached format version. it has probably changed.  */
+svn_error_t *
+svn_wc__db_temp_reset_format(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             apr_pool_t *scratch_pool);
 
 
 /** @} */

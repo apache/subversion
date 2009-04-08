@@ -184,13 +184,15 @@ svn_error_t *
 svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                        apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__check_format(adm_access->wc_format,
+  int wc_format = svn_wc__adm_wc_format(adm_access);
+
+  SVN_ERR(svn_wc__check_format(wc_format,
                                adm_access->path,
                                scratch_pool));
 
   /* We can upgrade all formats that are accepted by
      svn_wc__check_format. */
-  if (adm_access->wc_format < SVN_WC__VERSION)
+  if (wc_format < SVN_WC__VERSION)
     {
       svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
 
@@ -200,12 +202,12 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
 
       /* If the WC uses one file per entry for wcprops, give back some inodes
          to the poor user. */
-      if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+      if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
 
-      if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+      if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         {
           /* Remove wcprops directory, dir-props, README.txt and empty-file
              files.
@@ -373,19 +375,17 @@ adm_ensure_set(svn_wc_adm_access_t *adm_access)
 static svn_error_t *
 probe(const char **dir,
       const char *path,
-      int *wc_format,
       apr_pool_t *pool)
 {
   svn_node_kind_t kind;
+  int wc_format = 0;
 
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_check_wc(path, wc_format, pool));
-  else
-    *wc_format = 0;
+    SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
 
   /* a "version" of 0 means a non-wc directory */
-  if (kind != svn_node_dir || *wc_format == 0)
+  if (kind != svn_node_dir || wc_format == 0)
     {
       /* Passing a path ending in "." or ".." to svn_dirent_dirname() is
          probably always a bad idea; certainly it is in this case.
@@ -418,14 +418,16 @@ static svn_error_t *
 check_format_upgrade(svn_wc_adm_access_t *adm_access,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__check_format(adm_access->wc_format,
+  int wc_format = svn_wc__adm_wc_format(adm_access);
+
+  SVN_ERR(svn_wc__check_format(wc_format,
                                adm_access->path,
                                scratch_pool));
 
   /* ### we'll need to update this conditional when _EXPERIMENTAL
      ### goes away */
-  if (adm_access->wc_format != SVN_WC__VERSION
-      && adm_access->wc_format != SVN_WC__VERSION_EXPERIMENTAL)
+  if (wc_format != SVN_WC__VERSION
+      && wc_format != SVN_WC__VERSION_EXPERIMENTAL)
     {
       return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                                "Working copy format is to old; run "
@@ -665,9 +667,8 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 {
   svn_error_t *err;
   const char *dir;
-  int wc_format;
 
-  SVN_ERR(probe(&dir, path, &wc_format, pool));
+  SVN_ERR(probe(&dir, path, pool));
 
   /* If we moved up a directory, then the path is not a directory, or it
      is not under version control. In either case, the notion of
@@ -703,14 +704,11 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
                                    _("'%s' is not a working copy"),
                                    svn_path_local_style(path, pool));
         }
-      else
-        {
-          return err;
-        }
+
+      return err;
     }
 
-  if (wc_format && ! (*adm_access)->wc_format)
-    (*adm_access)->wc_format = wc_format;
+  SVN_ERR_ASSERT((*adm_access)->wc_format != 0);
 
   return SVN_NO_ERROR;
 }
@@ -855,14 +853,13 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
 {
   const char *dir;
   const svn_wc_entry_t *entry;
-  int wc_format;
   svn_error_t *err;
 
   SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
   if (! entry)
     /* Not a versioned item, probe it */
-    SVN_ERR(probe(&dir, path, &wc_format, pool));
+    SVN_ERR(probe(&dir, path, pool));
   else if (entry->kind != svn_node_dir)
     dir = svn_dirent_dirname(path, pool);
   else
@@ -877,7 +874,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
          we want its parent's adm_access (which holds minimal data
          on the child) */
       svn_error_clear(err);
-      SVN_ERR(probe(&dir, path, &wc_format, pool));
+      SVN_ERR(probe(&dir, path, pool));
       SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
     }
   else
