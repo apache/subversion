@@ -1738,13 +1738,13 @@ test_dirent_get_absolute(const char **msg,
   if (! getcwd(buf, sizeof(buf)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
 
-  curdir = svn_path_internal_style(buf, pool);
+  curdir = svn_dirent_internal_style(buf, pool);
 
 #if defined(WIN32) || defined(__CYGWIN__)
   if (! getdcwd(3, buf, sizeof(buf))) /* 3 stands for drive C: */
     return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
 
-  curdironc = svn_path_internal_style(buf, pool);
+  curdironc = svn_dirent_internal_style(buf, pool);
   curdrive[0] = curdir[0];
 #endif /* WIN32 */
 
@@ -1763,6 +1763,9 @@ test_dirent_get_absolute(const char **msg,
 
       if (*expect == '$')
         expect_abs = apr_pstrcat(pool, curdrive, expect + 1, NULL);
+
+      /* Remove double '/' when CWD was the root dir (E.g. C:/) */
+      expect_abs = svn_dirent_canonicalize(expect_abs, pool);
 #endif /* WIN32 */
 
       SVN_ERR(svn_dirent_get_absolute(&result, path, pool));
