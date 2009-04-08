@@ -1,3 +1,45 @@
+Version 1.6.1
+(10 Apr 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.1
+
+ User-visible changes:
+  * recommend Neon 0.28.4. (r36388)
+  * improve performance of 'svn merge --ignore-ancestry' (r36256)
+  * improve 'svn merge' performance with subtree mergeinfo (r36444)
+  * correctly proxy LOCK and UNLOCK requests (r36159)
+  * prevent a crash when updating old working copies (r36751)
+  * don't let svnmerge.py delete a nonexistent property (r36086, -767, -769)
+  * don't fail when upgrading pre-1.2 repositories (r36851, -7)
+  * allow escaping of separator characters in autoprops (r36763, -84)
+  * improve tempfile creation robustness on Windows (r36442, -3)
+  * fix change-svn-wc-format.py for 1.6.x working copies (r36874, -5)
+  * improve configure's detection of Berkeley DB (r36741, -2)
+  * don't allow foriegn merges to add foriegn mergeinfo (issue #3383)
+  * improve performance of 'svn update' on large files (r36389, et. al.)
+  * fixed: error leak and potential crash (r36860)
+  * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
+  * fixed: unintialized memory errors (r36252, -3)
+  * fixed: potential working copy corruption (r36714)
+  * fixed: working copy upgrade error (r36302)
+  * fixed: pointer dereference error (r36783)
+  * fixed: error diff'ing large data with ignored whitespace (r36816)
+  * fixed: potential hang in ra_serf (r36913)
+  * fixed: problem with merge and non-inheritable mergeinfo (r36879)
+  * fixed: repeated merging of conflicted properties fails (issue #3250)
+  * fixed: excluding an absent directory segfaults (issue #3391)
+
+ Developer-visible changes:
+  * ensure svn_subst_translate_cstring2() properly flushes data (r36747)
+  * make serf report a base checksum to apply_textdelta (r36890)
+  * syntax updates for strict C89 compilers (r36799)
+  * update RPM scripts for RHEL4 (r36834)
+  * allow tests to be run with Python 2.6.1 on Windows (r36149, -50, -51, -56)
+  * allow building JavaHL with Visual Studio 2008 (r36954)
+  * stop setting default translation domain in JavaHL (r36955)
+  * fixed: warning with Python 2.6 and ctypes bindings (r36559)
+  * fixed: undefined references to svn_fs_path_change2_create() (r36823)
+
+
 Version 1.6.0
 (20 Mar 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.0
@@ -17,7 +59,6 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * svnmucc: support '--with-revprop' (r29492)
     * merge: log include-descendants in operational log (r30426, r30428)
     * improved operational logging for 'svn switch' (r30517)
-    * PKCS#11 (smartcard) support in libsvn_ra_neon (r29512)
     * new 'Header' keyword, similar to 'Id' but with full URL (r35386)
     * warn/disallow when storing plain-text passwords (r31046)
     * support KWallet and GNOME keyring for password storage (r31241, -337)
@@ -25,12 +66,11 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
     * add '--ignore-externals' option to 'svn cp' (issue #3365)
     * add '--with-no-revprops' to 'svn log' (issue #3286)
-    * Improved Python 3 compatibility
     * new 'svnadmin pack' command to compress FSFS filesystems
     * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
     * new public mod_dav_svn URI syntax:  path?[p=PEG][&r=REV] (r34076)
     * new 'svnsync info' command to show synchronization information (r35053)
-    * conflict resolver supports mine-conflict and theirs-conflict
+    * conflict resolver supports display-conflict, mine-conflict and theirs-conflict
 
   - Client-side bugfixes:
     * faulty reflexive merges (issue #2897)
@@ -100,6 +140,8 @@ http://svn.collab.net/repos/svn/tags/1.6.0
   - Bindings:
     * new: ctypes python bindings
     * many improvements to all bindings (Java, Perl, Python, and Ruby)
+    * respect CFLAGS in SWIG bindings (r35879)
+    * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
 
 
 Version 1.5.6
@@ -216,7 +258,7 @@ http://svn.collab.net/repos/svn/tags/1.5.2
 
  Developer-visible changes:
   * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
-  * respect LDFLAGS in Swig bindings (r32416, r32421, r32442)
+  * respect LDFLAGS in SWIG bindings (r32416, r32421, r32442)
   * fixed: test failures in non-English locales (r32491)
 
 
