@@ -6337,6 +6337,8 @@ do_directory_merge(const char *url1,
           if (child->absent)
             continue;
 
+          svn_pool_clear(iterpool);
+
           if (strlen(child->path) == merge_target_len)
             child_repos_path = "";
           else
