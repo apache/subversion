@@ -206,7 +206,12 @@ class State:
           os.makedirs(dirpath)
 
         # write out the file contents now
-        open(fullpath, 'wb').write(item.contents.encode())
+        if sys.version_info[0] >= 3:
+          # Python >=3.0
+          open(fullpath, 'wb').write(item.contents.encode())
+        else:
+          # Python <3.0
+          open(fullpath, 'wb').write(item.contents)
 
   def normalize(self):
     """Return a "normalized" version of self.
@@ -491,12 +496,18 @@ class State:
       for name in dirs + files:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
-          try:
-            contents = open(node, 'r').read()
-          except UnicodeDecodeError:
+          if sys.version_info[0] >= 3:
+            # Python >=3.0
             contents = open(node, 'rb').read()
             if sys.platform == 'win32':
               contents = contents.replace('\r\n', '\n')
+            try:
+              contents = contents.decode()
+            except UnicodeDecodeError:
+              pass
+          else:
+            # Python <3.0
+            contents = open(node, 'r').read()
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
