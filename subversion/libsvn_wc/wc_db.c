@@ -3102,10 +3102,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
           /* The starting node should exist normally.  */
           if (presence != svn_wc__db_status_normal)
-            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                                     _("Expected node '%s' to be added."),
-                                     svn_dirent_local_style(local_abspath,
-                                                            scratch_pool));
+            {
+              svn_error_clear(svn_sqlite__reset(stmt));
+              return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                       _("Expected node '%s' to be added."),
+                                       svn_dirent_local_style(local_abspath,
+                                                              scratch_pool));
+            }
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
