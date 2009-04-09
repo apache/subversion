@@ -15,6 +15,7 @@
  * ====================================================================
  */
 
+#include "svn_pools.h"
 #include "fs.h"
 #include "trail.h"
 #include "err.h"
@@ -59,13 +60,22 @@ svn_fs_base__get_uuid(svn_fs_t *fs,
   else
     {
       struct get_uuid_args args;
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+
       args.idx = 1;
       args.uuid = uuid;
-      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_uuid, &args, pool));
-
-      /* Toss what we find into the cache. */
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_uuid, &args,
+                                     FALSE, scratch_pool));
+      
       if (*uuid)
-        bfd->uuid = apr_pstrdup(fs->pool, *uuid);
+        {
+          *uuid = apr_pstrdup(pool, *uuid);
+
+          /* Toss what we find into the cache. */
+          bfd->uuid = apr_pstrdup(fs->pool, *uuid);
+        }
+
+      svn_pool_destroy(scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -103,7 +113,7 @@ svn_fs_base__set_uuid(svn_fs_t *fs,
 
   args.idx = 1;
   args.uuid = uuid;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_set_uuid, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_set_uuid, &args, TRUE, pool));
 
   /* Toss our value into the cache. */
   if (uuid)
