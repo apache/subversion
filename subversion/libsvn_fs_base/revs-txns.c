@@ -162,7 +162,7 @@ svn_fs_base__youngest_rev(svn_revnum_t *youngest_p,
   svn_revnum_t youngest;
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_youngest_rev, &youngest,
-                                 pool));
+                                 TRUE, pool));
   *youngest_p = youngest;
   return SVN_NO_ERROR;
 }
@@ -200,7 +200,7 @@ svn_fs_base__revision_proplist(apr_hash_t **table_p,
   args.table_p = &table;
   args.rev = rev;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_revision_proplist, &args,
-                                 pool));
+                                 FALSE, pool));
 
   *table_p = table ? table : apr_hash_make(pool);
   return SVN_NO_ERROR;
@@ -223,7 +223,7 @@ svn_fs_base__revision_prop(svn_string_t **value_p,
   args.table_p = &table;
   args.rev = rev;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_revision_proplist, &args,
-                                 pool));
+                                 FALSE, pool));
 
   /* And then the prop from that list (if there was a list). */
   *value_p = NULL;
@@ -297,7 +297,8 @@ svn_fs_base__change_rev_prop(svn_fs_t *fs,
   args.rev = rev;
   args.name = name;
   args.value = value;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args,
+                                 TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -491,7 +492,8 @@ svn_fs_base__txn_proplist(apr_hash_t **table_p,
 
   args.table_p = &table;
   args.id = txn->id;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_proplist, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_proplist, &args,
+                                 FALSE, pool));
 
   *table_p = table ? table : apr_hash_make(pool);
   return SVN_NO_ERROR;
@@ -513,7 +515,8 @@ svn_fs_base__txn_prop(svn_string_t **value_p,
   /* Get the proplist. */
   args.table_p = &table;
   args.id = txn->id;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_proplist, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_proplist, &args,
+                                 FALSE, pool));
 
   /* And then the prop from that list (if there was a list). */
   *value_p = NULL;
@@ -585,7 +588,8 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   args.id = txn->id;
   args.name = name;
   args.value = value;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_change_txn_prop, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_change_txn_prop, &args,
+                                 TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -714,7 +718,7 @@ svn_fs_base__begin_txn(svn_fs_txn_t **txn_p,
   args.txn_p = &txn;
   args.rev   = rev;
   args.flags = flags;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_begin_txn, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_begin_txn, &args, FALSE, pool));
 
   *txn_p = txn;
 
@@ -773,7 +777,7 @@ svn_fs_base__open_txn(svn_fs_txn_t **txn_p,
 
   args.txn_p = &txn;
   args.name = name;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_open_txn, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_open_txn, &args, FALSE, pool));
 
   *txn_p = txn;
   return SVN_NO_ERROR;
@@ -890,7 +894,8 @@ delete_txn_tree(svn_fs_t *fs,
   dirent_args.dirents = &dirents;
   dirent_args.id = id;
   dirent_args.txn_id = txn_id;
-  err = svn_fs_base__retry_txn(fs, txn_body_get_dirents, &dirent_args, pool);
+  err = svn_fs_base__retry_txn(fs, txn_body_get_dirents, &dirent_args,
+                               FALSE, pool);
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
     {
       svn_error_clear(err);
@@ -920,7 +925,8 @@ delete_txn_tree(svn_fs_t *fs,
   /* Remove the node. */
   rm_args.id = id;
   rm_args.txn_id = txn_id;
-  return svn_fs_base__retry_txn(fs, txn_body_remove_node, &rm_args, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_remove_node, &rm_args,
+                                TRUE, pool);
 }
 
 
@@ -945,7 +951,8 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
   /* Open the transaction, expecting it to be dead. */
   args.txn_p = &txn;
   args.name = txn_id;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_cleanup_txn, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_cleanup_txn, &args,
+                                 FALSE, pool));
 
   /* Delete the mutable portion of the tree hanging from the
      transaction (which should gracefully recover if we've already
@@ -955,7 +962,7 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
   /* Kill the transaction's changes (which should gracefully recover
      if...). */
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_cleanup_txn_changes,
-                                 (void *)txn_id, pool));
+                                 (void *)txn_id, TRUE, pool));
 
   /* Kill the transaction's copies (which should gracefully...). */
   if (txn->copies)
@@ -965,14 +972,14 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
           SVN_ERR(svn_fs_base__retry_txn
                   (fs, txn_body_cleanup_txn_copy,
                    (void *)APR_ARRAY_IDX(txn->copies, i, const char *),
-                   pool));
+                   TRUE, pool));
         }
     }
 
   /* Kill the transaction itself (which ... just kidding -- this has
      no graceful failure mode). */
   return svn_fs_base__retry_txn(fs, txn_body_delete_txn, (void *)txn_id,
-                                pool);
+                                TRUE, pool);
 }
 
 
@@ -1000,7 +1007,8 @@ svn_fs_base__abort_txn(svn_fs_txn_t *txn,
   SVN_ERR(svn_fs__check_fs(txn->fs, TRUE));
 
   /* Set the transaction to "dead". */
-  SVN_ERR(svn_fs_base__retry_txn(txn->fs, txn_body_abort_txn, txn, pool));
+  SVN_ERR(svn_fs_base__retry_txn(txn->fs, txn_body_abort_txn, txn,
+                                 TRUE, pool));
 
   /* Now, purge it. */
   SVN_ERR_W(svn_fs_base__purge_txn(txn->fs, txn->id, pool),
@@ -1036,7 +1044,8 @@ svn_fs_base__list_transactions(apr_array_header_t **names_p,
 
   args.names_p = &names;
   args.pool = pool;
-  SVN_ERR(svn_fs_base__retry(fs, txn_body_list_transactions, &args, pool));
+  SVN_ERR(svn_fs_base__retry(fs, txn_body_list_transactions, &args,
+                             FALSE, pool));
 
   *names_p = names;
   return SVN_NO_ERROR;

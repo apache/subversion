@@ -191,6 +191,7 @@ do_retry(svn_fs_t *fs,
          svn_error_t *(*txn_body)(void *baton, trail_t *trail),
          void *baton,
          svn_boolean_t use_txn,
+         svn_boolean_t destroy_trail_pool,
          apr_pool_t *pool,
          const char *txn_body_fn_name,
          const char *filename,
@@ -214,6 +215,11 @@ do_retry(svn_fs_t *fs,
 
           if (use_txn)
             print_trail_debug(trail, txn_body_fn_name, filename, line);
+
+          /* If our caller doesn't want us to keep trail memory
+             around, destroy our subpool. */
+          if (destroy_trail_pool)
+            svn_pool_destroy(trail->pool);
 
           return SVN_NO_ERROR;
         }
@@ -243,12 +249,13 @@ svn_error_t *
 svn_fs_base__retry_debug(svn_fs_t *fs,
                          svn_error_t *(*txn_body)(void *baton, trail_t *trail),
                          void *baton,
+                         svn_boolean_t destroy_trail_pool,
                          apr_pool_t *pool,
                          const char *txn_body_fn_name,
                          const char *filename,
                          int line)
 {
-  return do_retry(fs, txn_body, baton, TRUE, pool,
+  return do_retry(fs, txn_body, baton, TRUE, destroy_trail_pool, pool,
                   txn_body_fn_name, filename, line);
 }
 
@@ -261,9 +268,10 @@ svn_error_t *
 svn_fs_base__retry_txn(svn_fs_t *fs,
                        svn_error_t *(*txn_body)(void *baton, trail_t *trail),
                        void *baton,
+                       svn_boolean_t destroy_trail_pool,
                        apr_pool_t *pool)
 {
-  return do_retry(fs, txn_body, baton, TRUE, pool,
+  return do_retry(fs, txn_body, baton, TRUE, destroy_trail_pool, pool,
                   "unknown", "", 0);
 }
 
@@ -272,8 +280,9 @@ svn_error_t *
 svn_fs_base__retry(svn_fs_t *fs,
                    svn_error_t *(*txn_body)(void *baton, trail_t *trail),
                    void *baton,
+                   svn_boolean_t destroy_trail_pool,
                    apr_pool_t *pool)
 {
-  return do_retry(fs, txn_body, baton, FALSE, pool,
+  return do_retry(fs, txn_body, baton, FALSE, destroy_trail_pool, pool,
                   NULL, NULL, 0);
 }

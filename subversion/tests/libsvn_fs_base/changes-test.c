@@ -123,7 +123,7 @@ add_standard_changes(svn_fs_t *fs,
 
       /* Write new changes to the changes table. */
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_add, &args,
-                                     pool));
+                                     TRUE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -208,8 +208,8 @@ changes_fetch_raw(const char **msg,
      without error. */
   args.fs = fs;
   args.key = "blahbliggityblah";
-  SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw,
-                                 &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw, &args,
+                                 FALSE, pool));
   if ((! args.raw_changes) || (args.raw_changes->nelts))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected empty changes array");
@@ -232,7 +232,7 @@ changes_fetch_raw(const char **msg,
 
       /* And get those changes. */
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw,
-                                     &args, pool));
+                                     &args, FALSE, pool));
       if (! args.raw_changes)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "got no changes for key '%s'", txn_id);
@@ -321,10 +321,10 @@ changes_delete(const char **msg,
       args.fs = fs;
       args.key = standard_txns[i];
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_delete,
-                                     &args, pool));
+                                     &args, FALSE, pool));
       args.changes = 0;
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw,
-                                     &args, pool));
+                                     &args, FALSE, pool));
       if ((! args.raw_changes) || (args.raw_changes->nelts))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -512,7 +512,8 @@ changes_fetch(const char **msg,
      without error. */
   args.fs = fs;
   args.key = "blahbliggityblah";
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
+                                 FALSE, pool));
   if ((! args.changes) || (apr_hash_count(args.changes)))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected empty changes hash");
@@ -538,7 +539,7 @@ changes_fetch(const char **msg,
       /* And get those changes via in the internal interface, and
          verify that they are accurate. */
       SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
-                                     pool));
+                                     FALSE, pool));
       if (! args.changes)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -620,7 +621,7 @@ changes_fetch_ordering(const char **msg,
   args.fs = fs;
   args.key = txn_name;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
-                                 subpool));
+                                 FALSE, subpool));
   if ((! args.changes) || (apr_hash_count(args.changes) != 3))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected changes");
@@ -692,7 +693,7 @@ changes_fetch_ordering(const char **msg,
   args.fs = fs;
   args.key = txn_name;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
-                                 subpool));
+                                 FALSE, subpool));
   if ((! args.changes) || (apr_hash_count(args.changes) != 3))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected changes");

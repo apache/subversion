@@ -113,8 +113,8 @@ extern "C" {
    If, heavens forbid, your function actually succeeds, returning
    SVN_NO_ERROR, `svn_fs_base__retry_txn' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
-   trail's pool alone, so all the objects it contains are still
-   around, and returns SVN_NO_ERROR.  */
+   trail's pool alone so all the objects it contains are still
+   around (unless you request otherwise), and returns SVN_NO_ERROR.  */
 
 struct trail_t
 {
@@ -150,7 +150,7 @@ typedef struct trail_t trail_t;
      svn_error_t, E.
    - If TXN_BODY returns SVN_NO_ERROR, then commit the transaction,
      run any completion functions, and return SVN_NO_ERROR.  Do *not*
-     free TXN_POOL.
+     free TXN_POOL (unless DESTROY_TRAIL_POOL is set).
    - If E is a Berkeley DB error indicating that a deadlock occurred,
      abort the DB transaction and free TXN_POOL.  Then retry the whole
      thing from the top.
@@ -160,37 +160,41 @@ typedef struct trail_t trail_t;
    ensure that whatever transactions a filesystem function starts, it
    either aborts or commits before it returns.  If we don't somehow
    complete all our transactions, later operations could deadlock.  */
-svn_error_t *svn_fs_base__retry_txn(svn_fs_t *fs,
-                                    svn_error_t *(*txn_body)(void *baton,
-                                                             trail_t *trail),
-                                    void *baton,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_fs_base__retry_txn(svn_fs_t *fs,
+                       svn_error_t *(*txn_body)(void *baton,
+                                                trail_t *trail),
+                       void *baton,
+                       svn_boolean_t destroy_trail_pool,
+                       apr_pool_t *pool);
 
 svn_error_t *
 svn_fs_base__retry_debug(svn_fs_t *fs,
                          svn_error_t *(*txn_body)(void *baton,
                                                   trail_t *trail),
                          void *baton,
+                         svn_boolean_t destroy_trail_pool,
                          apr_pool_t *pool,
                          const char *txn_body_fn_name,
                          const char *filename,
                          int line);
 
 #if defined(SVN_FS__TRAIL_DEBUG)
-#define svn_fs_base__retry_txn(fs, txn_body, baton, pool) \
-  svn_fs_base__retry_debug(fs, txn_body, baton, pool, #txn_body,
-                           __FILE__, __LINE__)
+#define svn_fs_base__retry_txn(fs, txn_body, baton, destroy, pool) \
+  svn_fs_base__retry_debug(fs, txn_body, baton, destroy, pool,     \
+                           #txn_body, __FILE__, __LINE__)
 #endif
 
 
 /* Try an action repeatedly until it doesn't deadlock.  This is
    exactly like svn_fs_base__retry_txn() (whose documentation you really
    should read) except that no Berkeley DB transaction is created. */
-  svn_error_t *svn_fs_base__retry(svn_fs_t *fs,
-                                  svn_error_t *(*txn_body)(void *baton,
-                                                           trail_t *trail),
-                                  void *baton,
-                                  apr_pool_t *pool);
+svn_error_t *svn_fs_base__retry(svn_fs_t *fs,
+                                svn_error_t *(*txn_body)(void *baton,
+                                                         trail_t *trail),
+                                void *baton,
+                                svn_boolean_t destroy_trail_pool,
+                                apr_pool_t *pool);
 
 
 /* Record that OPeration is being done on TABLE in the TRAIL. */
