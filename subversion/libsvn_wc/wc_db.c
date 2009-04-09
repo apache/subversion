@@ -34,6 +34,7 @@
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
+#include "private/svn_debug.h"
 
 
 #define NOT_IMPLEMENTED() \
@@ -139,6 +140,9 @@ struct svn_wc__db_pdh_t {
 
   /* The parent directory's per-dir information. */
   svn_wc__db_pdh_t *parent;
+
+  /* Hold onto the old-style access baton that corresponds to this PDH.  */
+  svn_wc_adm_access_t *adm_access;
 };
 
 /* ### since we're putting the pristine files per-dir, then we don't need
@@ -3426,4 +3430,78 @@ svn_wc__db_temp_reset_format(int format,
   pdh->wcroot->format = format;
 
   return SVN_NO_ERROR;
+}
+
+
+/* ### temporary API. remove before release.  */
+svn_wc_adm_access_t *
+svn_wc__db_temp_get_access(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+
+  return pdh->adm_access;
+}
+
+
+/* ### temporary API. remove before release.  */
+void
+svn_wc__db_temp_set_access(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           svn_wc_adm_access_t *adm_access,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+
+  /* Better not override something already there.  */
+  SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == NULL);
+  pdh->adm_access = adm_access;
+}
+
+
+/* ### temporary API. remove before release.  */
+void
+svn_wc__db_temp_close_access(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+
+  /* We should be closing the correct one, *or* we've closed it already.  */
+  SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == adm_access
+                           || pdh->adm_access == NULL);
+  pdh->adm_access = NULL;
+}
+
+
+/* ### temporary API. remove before release.  */
+void
+svn_wc__db_temp_clear_access(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  pdh->adm_access = NULL;
 }
