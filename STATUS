@@ -84,5 +84,13 @@ Candidate changes:
    Votes:
       +1: rhuijben
 
+ * r37137
+   Make some sweeping pool lifetime fixes in the BDB backend.
+   Justification:
+     Bringing 'svn ls -v' over HTTP on a directory with 10000 files
+     from 2Gb+ of RAM to under 400Mb is a very good thing.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
