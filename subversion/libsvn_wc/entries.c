@@ -737,7 +737,7 @@ fetch_actual_nodes(apr_hash_t **nodes,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
-  return SVN_NO_ERROR;
+  return svn_sqlite__reset(stmt);
 }
 
 static svn_error_t *
