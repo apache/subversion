@@ -1475,6 +1475,26 @@ svn_wc__db_temp_reset_format(int format,
                              apr_pool_t *scratch_pool);
 
 
+/* ### temp functions to manage/store access batons within the DB.  */
+svn_wc_adm_access_t *
+svn_wc__db_temp_get_access(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           apr_pool_t *scratch_pool);
+void
+svn_wc__db_temp_set_access(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           svn_wc_adm_access_t *adm_access,
+                           apr_pool_t *scratch_pool);
+void
+svn_wc__db_temp_close_access(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *scratch_pool);
+void
+svn_wc__db_temp_clear_access(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             apr_pool_t *scratch_pool);
+
 /** @} */
 
 
