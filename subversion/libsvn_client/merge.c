@@ -6286,7 +6286,6 @@ do_directory_merge(const char *url1,
     }
 
   /* Record mergeinfo where appropriate.*/
-  iterpool = svn_pool_create(pool);
   if (record_mergeinfo)
     {
       apr_array_header_t *filtered_rangelist;
@@ -6297,6 +6296,9 @@ do_directory_merge(const char *url1,
       /* Update the WC mergeinfo here to account for our new
          merges, minus any unresolved conflicts and skips. */
       apr_hash_t *merges;
+
+      /* We need a scratch pool for iterations below. */
+      iterpool = svn_pool_create(pool);
 
       /* Remove absent children at or under TARGET_WCPATH from
          NOTIFY_B->SKIPPED_PATHS and NOTIFY_B->CHILDREN_WITH_MERGEINFO
@@ -6544,9 +6546,11 @@ do_directory_merge(const char *url1,
                 }
             }
         }
-    } /* (!merge_b->dry_run && merge_b->same_repos) */
 
-  svn_pool_destroy(iterpool);
+      svn_pool_destroy(iterpool);
+
+    } /* (record_mergeinfo) */
+
   return err;
 }
 
