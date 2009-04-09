@@ -1702,7 +1702,7 @@ extract_svnpatch(const char *original_patch_path,
                                   SVNPATCH_DELETE_WHEN, pool));
   SVN_ERR(svn_stream_copy3(svn_stream_disown(original_patch_stream, pool),
                            svn_base64_decode(
-                             svn_stream_from_aprfile2(compressed_file, FALSE,
+                             svn_stream_from_aprfile2(compressed_file, TRUE,
                                                       pool), pool),
                            cancel_func, cancel_baton, pool));
 
