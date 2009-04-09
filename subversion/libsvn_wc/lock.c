@@ -36,6 +36,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_debug.h"
 
 
 
@@ -98,12 +99,17 @@ struct svn_wc_adm_access_t
 static const svn_wc_adm_access_t missing;
 
 
+/* ### these functions are here for forward references. generally, they're
+   ### here to avoid the code churn from moving the definitions.  */
+
 static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
          apr_pool_t *scratch_pool);
-static void join_batons(svn_wc__adm_shared_t *dst_shared,
-                        svn_wc_adm_access_t *t_access,
-                        apr_pool_t *pool);
+
+static void
+add_to_shared(const char *path,
+              svn_wc_adm_access_t *lock,
+              svn_wc__adm_shared_t *shared);
 
 
 /* Write, to LOG_ACCUM, commands to convert a WC that has wcprops in individual
@@ -307,23 +313,29 @@ pool_cleanup_child(void *p)
   return APR_SUCCESS;
 }
 
+
 /* Allocate from POOL, initialise and return an access baton. TYPE and PATH
    are used to initialise the baton.  */
 static svn_error_t *
 adm_access_alloc(svn_wc_adm_access_t **adm_access,
                  enum svn_wc__adm_access_type type,
                  const char *path,
+                 svn_wc__adm_shared_t *shared,
                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *lock = apr_palloc(pool, sizeof(*lock));
 
   lock->type = type;
   lock->entries_all = NULL;
-  lock->shared = NULL;
+  lock->shared = shared;
   lock->lock_exists = FALSE;
-  lock->set_owner = FALSE;
   lock->path = apr_pstrdup(pool, path);
   lock->pool = pool;
+
+  add_to_shared(lock->path, lock, shared);
+
+  /* We own the set if we're the only baton in it.  */
+  lock->set_owner = apr_hash_count(shared->set) == 1;
 
   *adm_access = lock;
 
@@ -334,6 +346,27 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
     }
   else
     lock->lock_exists = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+alloc_shared(svn_wc__adm_shared_t **shared,
+             svn_config_t *config,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_openmode_t mode;
+
+  *shared = apr_palloc(result_pool, sizeof(**shared));
+
+  /* ### need to determine MODE based on callers' needs.  */
+  mode = svn_wc__db_openmode_default;
+  SVN_ERR(svn_wc__db_open(&(*shared)->db, mode, config,
+                          result_pool, scratch_pool));
+
+  (*shared)->set = apr_hash_make(result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -361,21 +394,6 @@ get_from_shared(const char *path,
   return NULL;
 }
 
-static void
-adm_ensure_set(svn_wc_adm_access_t *adm_access)
-{
-  if (adm_access->shared == NULL)
-    adm_access->shared = apr_pcalloc(adm_access->pool,
-                                     sizeof(*adm_access->shared));
-
-  if (adm_access->shared->set == NULL)
-    {
-      adm_access->set_owner = TRUE;
-      adm_access->shared->set = apr_hash_make(adm_access->pool);
-
-      add_to_shared(adm_access->path, adm_access, adm_access->shared);
-    }
-}
 
 static svn_error_t *
 probe(const char **dir,
@@ -449,15 +467,21 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc_adm_access_t *lock;
+  svn_wc__adm_shared_t *shared;
 
-  err = adm_access_alloc(&lock, svn_wc__adm_access_write_lock, path, pool);
+  /* ### would be nice to *actually* share this... */
+  SVN_ERR(alloc_shared(&shared, NULL /* ### config. need! */, pool, pool));
+
+  err = adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
+                         shared, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_LOCKED)
         {
-          svn_error_clear(err);  /* Steal existing lock */
-          lock->lock_exists = TRUE;  /* Seriously. We have the lock. */
+          svn_error_clear(err);
+
+          /* Note the presence of the lock. Effectively, we own it now.  */
+          (*adm_access)->lock_exists = TRUE;
         }
       else
         return err;
@@ -467,7 +491,6 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
      it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
      worry about upgrading.  */
 
-  *adm_access = lock;
   return SVN_NO_ERROR;
 }
 
@@ -476,6 +499,7 @@ static svn_error_t *
 open_single(svn_wc_adm_access_t **adm_access,
             const char *path,
             svn_boolean_t write_lock,
+            svn_wc__adm_shared_t *shared,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
@@ -497,7 +521,7 @@ open_single(svn_wc_adm_access_t **adm_access,
                            write_lock
                              ? svn_wc__adm_access_write_lock
                              : svn_wc__adm_access_unlocked,
-                           path, result_pool));
+                           path, shared, result_pool));
   SVN_ERR(check_format_upgrade(lock, wc_format, scratch_pool));
 
   /* ### recurse was here */
@@ -554,22 +578,19 @@ close_single(svn_wc_adm_access_t *adm_access,
   adm_access->type = svn_wc__adm_access_closed;
 
   /* Detach from set */
-  if (adm_access->shared && adm_access->shared->set)
-    {
-      apr_hash_set(adm_access->shared->set,
-                   adm_access->path, APR_HASH_KEY_STRING,
-                   NULL);
+  apr_hash_set(adm_access->shared->set,
+               adm_access->path, APR_HASH_KEY_STRING,
+               NULL);
 
-      SVN_ERR_ASSERT(!adm_access->set_owner
-                     || apr_hash_count(adm_access->shared->set) == 0);
-    }
+  SVN_ERR_ASSERT(!adm_access->set_owner
+                 || apr_hash_count(adm_access->shared->set) == 0);
 
   /* Close the underlying wc_db. */
   if (adm_access->set_owner)
     {
       SVN_ERR_ASSERT(apr_hash_count(adm_access->shared->set) == 0);
-      if (adm_access->shared->db)
-        SVN_ERR(svn_wc__db_close(adm_access->shared->db, scratch_pool));
+
+      SVN_ERR(svn_wc__db_close(adm_access->shared->db, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -584,6 +605,8 @@ close_single(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 do_open(svn_wc_adm_access_t **adm_access,
         const char *path,
+        svn_wc__adm_shared_t *shared,
+        apr_array_header_t *rollback,
         svn_boolean_t write_lock,
         int levels_to_lock,
         svn_cancel_func_t cancel_func,
@@ -594,7 +617,10 @@ do_open(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(open_single(&lock, path, write_lock, pool, subpool));
+  SVN_ERR(open_single(&lock, path, write_lock, shared, pool, subpool));
+
+  /* Add self to the rollback list in case of error.  */
+  APR_ARRAY_PUSH(rollback, svn_wc_adm_access_t *) = lock;
 
   if (levels_to_lock != 0)
     {
@@ -606,12 +632,6 @@ do_open(svn_wc_adm_access_t **adm_access,
         levels_to_lock--;
 
       SVN_ERR(svn_wc_entries_read(&entries, lock, FALSE, subpool));
-
-      if (apr_hash_count(entries) > 0)
-        {
-          /* All the batons will accumulate on <lock>. */
-          adm_ensure_set(lock);
-        }
 
       /* Open the tree */
       for (hi = apr_hash_first(subpool, entries); hi; hi = apr_hash_next(hi))
@@ -646,11 +666,9 @@ do_open(svn_wc_adm_access_t **adm_access,
           entry_path = svn_dirent_join(path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */
-          err = do_open(&entry_access, entry_path, write_lock,
-                        levels_to_lock, cancel_func, cancel_baton,
+          err = do_open(&entry_access, entry_path, shared, rollback,
+                        write_lock, levels_to_lock, cancel_func, cancel_baton,
                         lock->pool);
-          if (err == NULL)
-            join_batons(lock->shared, entry_access, subpool);
 
           if (err)
             {
@@ -681,6 +699,43 @@ do_open(svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+open_all(svn_wc_adm_access_t **adm_access,
+         const char *path,
+         svn_wc__adm_shared_t *shared,
+         svn_boolean_t write_lock,
+         int levels_to_lock,
+         svn_cancel_func_t cancel_func,
+         void *cancel_baton,
+         apr_pool_t *pool)
+{
+  apr_array_header_t *rollback;
+  svn_error_t *err;
+
+  rollback = apr_array_make(pool, 10, sizeof(svn_wc_adm_access_t *));
+
+  err = do_open(adm_access, path, shared, rollback,
+                write_lock, levels_to_lock,
+                cancel_func, cancel_baton, pool);
+  if (err)
+    {
+      int i;
+
+      for (i = rollback->nelts; i--; )
+        {
+          svn_wc_adm_access_t *lock = APR_ARRAY_IDX(rollback, i,
+                                                    svn_wc_adm_access_t *);
+          SVN_ERR_ASSERT(lock != &missing);
+
+          svn_error_clear(close_single(lock, FALSE /* preserve_lock */, pool));
+        }
+    }
+
+  return err;
+}
+
+
 svn_error_t *
 svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
@@ -691,7 +746,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_wc__adm_shared_t *shared;
 
   /* Make sure that ASSOCIATED has a set of access batons, so that we can
      glom a reference to self into it. */
@@ -699,7 +754,6 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
     {
       svn_wc_adm_access_t *lock;
 
-      adm_ensure_set(associated);
       lock = get_from_shared(path, associated->shared);
       if (lock && lock != &missing)
         /* Already locked.  The reason we don't return the existing baton
@@ -709,15 +763,21 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
         return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                  _("Working copy '%s' locked"),
                                  svn_path_local_style(path, pool));
+
+      shared = associated->shared;
+    }
+  else
+    {
+      /* Any baton creation is going to need a shared structure for holding
+         data across the entire set. The caller isn't providing one, so we
+         do it here.  */
+      /* ### we could optimize around levels_to_lock==0, but much of this
+         ### is going to be simplified soon anyways.  */
+      SVN_ERR(alloc_shared(&shared, NULL /* ### config. need! */, pool, pool));
     }
 
-  err = do_open(adm_access, path,
-                write_lock, levels_to_lock, cancel_func, cancel_baton, pool);
-
-  if (err == NULL && associated != NULL)
-    join_batons(associated->shared, *adm_access, pool);
-
-  return err;
+  return open_all(adm_access, path, shared,
+                  write_lock, levels_to_lock, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *
@@ -725,13 +785,16 @@ svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
                      const char *path,
                      apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *lock;
+  svn_wc__adm_shared_t *shared;
 
-  SVN_ERR(adm_access_alloc(&lock, svn_wc__adm_access_write_lock, path, pool));
+  /* ### would be nice to *actually* share this... */
+  SVN_ERR(alloc_shared(&shared, NULL /* ### config. need! */, pool, pool));
 
-  apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
-                            pool_cleanup_child);
-  *adm_access = lock;
+  SVN_ERR(adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
+                           shared, pool));
+
+  apr_pool_cleanup_register((*adm_access)->pool, *adm_access,
+                            pool_cleanup, pool_cleanup_child);
 
   return SVN_NO_ERROR;
 }
@@ -1016,37 +1079,6 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
   return err;
 }
 
-/* A helper for svn_wc_adm_open_anchor.  Add all the access batons in the
-   T_ACCESS set, including T_ACCESS, into the DST_SHARED set.
-
-   NOTE: always shove batons in the PARENT'S set. the parent will become
-   the "owner" of the set. thus, he will be the last one closed, and can
-   then perform certain assertions on the control flow.
-*/
-static void join_batons(svn_wc__adm_shared_t *dst_shared,
-                        svn_wc_adm_access_t *t_access,
-                        apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  if (t_access->shared == NULL || t_access->shared->set == NULL)
-    {
-      add_to_shared(t_access->path, t_access, dst_shared);
-      return;
-    }
-
-  for (hi = apr_hash_first(pool, t_access->shared->set);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      add_to_shared(key, val, dst_shared);
-    }
-  t_access->set_owner = FALSE;
-}
 
 static svn_error_t *
 child_is_disjoint(svn_boolean_t *disjoint,
@@ -1078,7 +1110,8 @@ child_is_disjoint(svn_boolean_t *disjoint,
       return SVN_NO_ERROR;
     }
   expected_url = svn_path_url_add_component2(p_entry->url,
-                                             t_entry_in_p->name,
+                                             svn_dirent_basename(child_path,
+                                                                 scratch_pool),
                                              scratch_pool);
 
   SVN_ERR(svn_wc_entry(&t_entry, child_path, child_access, FALSE,
@@ -1103,13 +1136,22 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        apr_pool_t *pool)
 {
   const char *base_name = svn_dirent_basename(path, pool);
+  svn_wc__adm_shared_t *shared;
+
+  /* Any baton creation is going to need a shared structure for holding
+     data across the entire set. The caller isn't providing one, so we
+     do it here.  */
+  /* ### we could maybe skip the shared struct for levels_to_lock==0, but
+     ### given that we need DB for format detection, may as well keep this.
+     ### in any case, much of this is going to be simplified soon anyways.  */
+  SVN_ERR(alloc_shared(&shared, NULL /* ### config. need! */, pool, pool));
 
   if (svn_path_is_empty(path)
       || svn_dirent_is_root(path, strlen(path))
       || ! strcmp(base_name, ".."))
     {
-      SVN_ERR(do_open(anchor_access, path, write_lock, levels_to_lock,
-                      cancel_func, cancel_baton, pool));
+      SVN_ERR(open_all(anchor_access, path, shared, write_lock, levels_to_lock,
+                       cancel_func, cancel_baton, pool));
       *target_access = *anchor_access;
       *target = "";
     }
@@ -1122,10 +1164,12 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
       svn_error_t *p_access_err = SVN_NO_ERROR;
 
       /* Try to open parent of PATH to setup P_ACCESS */
-      err = do_open(&p_access, parent, write_lock, 0,
-                    cancel_func, cancel_baton, pool);
+      err = open_single(&p_access, parent, write_lock, shared, pool, pool);
       if (err)
         {
+          /* ### make sure the parent is not present in SHARED.  */
+          apr_hash_set(shared->set, parent, APR_HASH_KEY_STRING, NULL);
+
           if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
             {
               svn_error_clear(err);
@@ -1136,8 +1180,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             {
               /* If P_ACCESS isn't to be returned then a read-only baton
                  will do for now, but keep the error in case we need it. */
-              svn_error_t *err2 = do_open(&p_access, parent, FALSE, 0,
-                                          cancel_func, cancel_baton, pool);
+              svn_error_t *err2 = open_single(&p_access, parent, FALSE,
+                                              shared, pool, pool);
               if (err2)
                 {
                   svn_error_clear(err2);
@@ -1150,8 +1194,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
         }
 
       /* Try to open PATH to setup T_ACCESS */
-      err = do_open(&t_access, path, write_lock, levels_to_lock,
-                    cancel_func, cancel_baton, pool);
+      err = open_all(&t_access, path, shared, write_lock, levels_to_lock,
+                     cancel_func, cancel_baton, pool);
       if (err)
         {
           if (p_access == NULL)
@@ -1181,6 +1225,17 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
         {
           svn_boolean_t disjoint;
 
+          /* We need to do a little judo around the SHARED set. The disjoint
+             computation requires that the parent and child batons are *not*
+             associated. To accomplish this, we'll temporarily remove the
+             child from the set. The parent will remain as the owner, and
+             the set of batons includes the parent and any of the child's
+             subdir batons (as indicated by LEVELS_TO_LOCK).
+
+             ### maybe this will be easier in the future. possibly a new
+             ### disjoint algorithm?  */
+          apr_hash_set(shared->set, path, APR_HASH_KEY_STRING, NULL);
+
           err = child_is_disjoint(&disjoint, parent, path, p_access, t_access,
                                   pool);
           if (err)
@@ -1190,8 +1245,21 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
               svn_error_clear(svn_wc_adm_close2(t_access, pool));
               return err;
             }
+
+          /* Done with the computation. Put the child back into SHARED.  */
+          add_to_shared(path, t_access, shared);
+
           if (disjoint)
             {
+              /* We're about the close the parent baton. It was the first
+                 thing placed into the SHARED set, so it is the "owner".
+                 Shift the ownership over to the child baton, then remove
+                 the parent from the shared set, so do_close() won't close
+                 any descendents (ie. t_access).  */
+              t_access->set_owner = TRUE;
+              p_access->set_owner = FALSE;
+              apr_hash_set(shared->set, parent, APR_HASH_KEY_STRING, NULL);
+
               /* Switched or disjoint, so drop P_ACCESS */
               err = svn_wc_adm_close2(p_access, pool);
               if (err)
@@ -1204,26 +1272,21 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             }
         }
 
-      if (p_access)
+      /* We have a parent baton *and* we have an error related to opening
+         the baton. That means we have a readonly baton, but that isn't
+         going to work for us. (p_access would have been set to NULL if
+         a writable parent baton is not required)  */
+      if (p_access && p_access_err)
         {
-          if (p_access_err)
-            {
-              /* Need P_ACCESS, so the read-only temporary won't do */
-              if (t_access)
-                svn_error_clear(svn_wc_adm_close2(t_access, pool));
-              svn_error_clear(svn_wc_adm_close2(p_access, pool));
-              return p_access_err;
-            }
-          else if (t_access)
-            {
-              adm_ensure_set(p_access);
-              join_batons(p_access->shared, t_access, pool);
-            }
+          if (t_access)
+            svn_error_clear(svn_wc_adm_close2(t_access, pool));
+          svn_error_clear(svn_wc_adm_close2(p_access, pool));
+          return p_access_err;
         }
       svn_error_clear(p_access_err);
 
       if (! t_access)
-         {
+        {
           const svn_wc_entry_t *t_entry;
           err = svn_wc_entry(&t_entry, path, p_access, FALSE, pool);
           if (err)
@@ -1233,7 +1296,6 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             }
           if (t_entry && t_entry->kind == svn_node_dir)
             {
-              adm_ensure_set(p_access);
               add_to_shared(apr_pstrdup(p_access->pool, path),
                             (svn_wc_adm_access_t *)&missing,
                             p_access->shared);
@@ -1263,11 +1325,14 @@ do_close(svn_wc_adm_access_t *adm_access,
          svn_boolean_t preserve_lock,
          apr_pool_t *scratch_pool)
 {
+  svn_wc_adm_access_t *look;
+
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
-  /* Close descendant batons */
-  if (adm_access->shared && adm_access->shared->set)
+  /* If we are part of the shared set, then close descendant batons.  */
+  look = get_from_shared(adm_access->path, adm_access->shared);
+  if (look != NULL)
     {
       apr_hash_index_t *hi;
 
@@ -1463,23 +1528,6 @@ svn_error_t *
 svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
                    apr_pool_t *scratch_pool)
 {
-  adm_ensure_set(adm_access);
-
-  if (adm_access->shared->db == NULL)
-    {
-      svn_wc__db_openmode_t mode;
-
-      /* ### need to determine mode based on callers' needs. */
-      mode = svn_wc__db_openmode_default;
-
-      SVN_ERR(svn_wc__db_open(&adm_access->shared->db,
-                              mode,
-                              NULL /* ### need the config */,
-                              adm_access->pool, scratch_pool));
-
-      /* ### do anything to prime for adm_access->path?  */
-    }
-
   *db = adm_access->shared->db;
   return SVN_NO_ERROR;
 }
