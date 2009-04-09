@@ -75,17 +75,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r37117
-   Fix issue #3393 'Merge consuming too much memory'.
-   Justification:
-     A merge which targets a WC with thousands of subtrees with mergeinfo
-     can consume multiple GB of memory in a hurry.
-   Notes:
-     This is as simple a fix to review as you've ever seen with the
-     word 'merge' in the title!
-   Votes:
-     +1: pburba, rhuijben, stylesen
-
  * r37121
    Fix test_dirent_get_absolute for the case where the current directory
    on C: is C:/.
