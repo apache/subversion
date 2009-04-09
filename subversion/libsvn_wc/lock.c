@@ -100,7 +100,7 @@ static const svn_wc_adm_access_t missing;
 
 static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
-         svn_boolean_t recurse, apr_pool_t *scratch_pool);
+         apr_pool_t *scratch_pool);
 static void join_batons(svn_wc__adm_shared_t *dst_shared,
                         svn_wc_adm_access_t *t_access,
                         apr_pool_t *pool);
@@ -284,7 +284,7 @@ pool_cleanup(void *p)
 
   err = svn_wc__adm_is_cleanup_required(&cleanup, lock, lock->pool);
   if (!err)
-    err = do_close(lock, cleanup, TRUE, lock->pool);
+    err = do_close(lock, cleanup /* preserve_lock */, lock->pool);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -349,6 +349,16 @@ add_to_shared(const char *path,
 
   if (lock != &missing)
     lock->shared = shared;
+}
+
+
+static svn_wc_adm_access_t *
+get_from_shared(const char *path,
+                const svn_wc__adm_shared_t *shared)
+{
+  if (shared && shared->set)
+    return apr_hash_get(shared->set, path, APR_HASH_KEY_STRING);
+  return NULL;
 }
 
 static void
@@ -690,7 +700,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
       svn_wc_adm_access_t *lock;
 
       adm_ensure_set(associated);
-      lock = apr_hash_get(associated->shared->set, path, APR_HASH_KEY_STRING);
+      lock = get_from_shared(path, associated->shared);
       if (lock && lock != &missing)
         /* Already locked.  The reason we don't return the existing baton
            here is that the user is supposed to know whether a directory is
@@ -789,16 +799,16 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                               const char *path,
                               apr_pool_t *pool)
 {
-  if (associated->shared && associated->shared->set)
-    *adm_access = apr_hash_get(associated->shared->set,
-                               path, APR_HASH_KEY_STRING);
-  else if (! strcmp(associated->path, path))
-    *adm_access = associated;
+  if (strcmp(associated->path, path) == 0)
+    {
+      *adm_access = associated;
+    }
   else
-    *adm_access = NULL;
-
-  if (*adm_access == &missing)
-    *adm_access = NULL;
+    {
+      *adm_access = get_from_shared(path, associated->shared);
+      if (*adm_access == &missing)
+        *adm_access = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1007,7 +1017,12 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
 }
 
 /* A helper for svn_wc_adm_open_anchor.  Add all the access batons in the
-   T_ACCESS set, including T_ACCESS, into the DST_SHARED set. */
+   T_ACCESS set, including T_ACCESS, into the DST_SHARED set.
+
+   NOTE: always shove batons in the PARENT'S set. the parent will become
+   the "owner" of the set. thus, he will be the last one closed, and can
+   then perform certain assertions on the control flow.
+*/
 static void join_batons(svn_wc__adm_shared_t *dst_shared,
                         svn_wc_adm_access_t *t_access,
                         apr_pool_t *pool)
@@ -1246,29 +1261,30 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
 static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access,
          svn_boolean_t preserve_lock,
-         svn_boolean_t recurse,
          apr_pool_t *scratch_pool)
 {
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
   /* Close descendant batons */
-  if (recurse && adm_access->shared && adm_access->shared->set)
+  if (adm_access->shared && adm_access->shared->set)
     {
-      int i;
-      apr_array_header_t *children
-        = svn_sort__hash(adm_access->shared->set,
-                         svn_sort_compare_items_as_paths,
-                         scratch_pool);
+      apr_hash_index_t *hi;
 
-      /* Go backwards through the list to close children before their
-         parents. */
-      for (i = children->nelts - 1; i >= 0; --i)
+      /* Examine all children in the associated set. Close any that
+         are descendents of this baton.  */
+      for (hi = apr_hash_first(scratch_pool, adm_access->shared->set);
+           hi;
+           hi = apr_hash_next(hi))
         {
-          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i,
-                                                  svn_sort__item_t);
-          const char *path = item->key;
-          svn_wc_adm_access_t *child = item->value;
+          const void *key;
+          void *val;
+          const char *path;
+          svn_wc_adm_access_t *child;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          path = key;
+          child = val;
 
           if (child == &missing)
             {
@@ -1293,7 +1309,7 @@ do_close(svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 {
-  return do_close(adm_access, FALSE, TRUE, scratch_pool);
+  return do_close(adm_access, FALSE, scratch_pool);
 }
 
 svn_boolean_t
@@ -1472,13 +1488,9 @@ svn_boolean_t
 svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
                     const char *path)
 {
-  if (adm_access->shared
-      && adm_access->shared->set
-      && apr_hash_get(adm_access->shared->set,
-                      path, APR_HASH_KEY_STRING) == &missing)
-    return TRUE;
+  const svn_wc_adm_access_t *look = get_from_shared(path, adm_access->shared);
 
-  return FALSE;
+  return look == &missing;
 }
 
 
