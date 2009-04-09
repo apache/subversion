@@ -2625,7 +2625,7 @@ upgrade_working_copy(const char *path,
         continue;
 
       SVN_ERR(upgrade_working_copy(entry_path, diff3_cmd, cancel_func,
-                                   cancel_baton, scratch_pool));
+                                   cancel_baton, iterpool));
     }
   svn_pool_destroy(iterpool);
 
