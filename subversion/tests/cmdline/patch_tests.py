@@ -41,15 +41,21 @@ Item = svntest.wc.StateItem
 ########################################################################
 #Tools
 
-def convert_svnpatch_line(l):
-  if sys.version_info[0] >= 3:
-    # Python >=3.0
-    if isinstance(l, str):
-      return l.encode()
-  return l
 
 def svnpatch_encode(l):
-  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+  if sys.version_info[0] >= 3:
+    # Python >=3.0
+
+    def convert_svnpatch_line(l):
+      if isinstance(l, str):
+        return l.encode()
+      else:
+        return l
+
+    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+  else:
+    # Python <3.0
+    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
 gnupatch_garbage_re =\
  re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
@@ -105,10 +111,6 @@ def patch_basic(sbox):
   ]
 
   svnpatch = svnpatch_encode(svnpatch)
-  if sys.version_info[0] < 3:
-    # Python <3.0
-    svnpatch = [x.encode() for x in svnpatch]
-
   svntest.main.file_write(patch_file_path,\
   '========================= SVNPATCH1 BLOCK =========================\n')
   svntest.main.file_append(patch_file_path, ''.join(svnpatch))
@@ -299,10 +301,6 @@ def patch_copy_and_move(sbox):
   ]
 
   svnpatch = svnpatch_encode(svnpatch)
-  if sys.version_info[0] < 3:
-    # Python <3.0
-    svnpatch = [x.encode() for x in svnpatch]
-
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
   svntest.main.file_append(patch_file_path,
     '========================= SVNPATCH1 BLOCK =========================\n')

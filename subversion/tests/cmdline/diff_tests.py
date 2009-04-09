@@ -3042,18 +3042,29 @@ def diff_svnpatch(sbox):
     ll = l[i+1:]
     return ll
 
-  def convert_svnpatch_line(l):
-    if sys.version_info[0] >= 3:
-      # Python >=3.0
-      if isinstance(l, str):
-        return l.encode()
-    return l
   
   def svnpatch_encode(l):
-    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+    if sys.version_info[0] >= 3:
+      # Python >=3.0
+
+      def convert_svnpatch_line(l):
+        if isinstance(l, str):
+          return l.encode()
+        else:
+          return l
+
+      return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+    else:
+      # Python <3.0
+      return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
   def svnpatch_decode(l):
-    return zlib.decompress(base64.decodestring("".join([x.rstrip("\n") for x in l]).encode()))
+    if sys.version_info[0] >= 3:
+      # Python >=3.0
+      return zlib.decompress(base64.decodestring("".join([x.rstrip("\n") for x in l]).encode()))
+    else:
+      # Python <3.0
+      return zlib.decompress(base64.decodestring("".join([x.rstrip("\n") for x in l])))
 
   def verify_svnpatch(actual, expected):
     if svntest.main.verbose_mode:
