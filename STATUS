@@ -84,7 +84,7 @@ Candidate changes:
      This is as simple a fix to review as you've ever seen with the
      word 'merge' in the title!
    Votes:
-     +1: pburba, rhuijben
+     +1: pburba, rhuijben, stylesen
 
  * r37121
    Fix test_dirent_get_absolute for the case where the current directory
