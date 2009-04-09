@@ -138,6 +138,19 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
+ * r37137
+   Make some sweeping pool lifetime fixes in the BDB backend.
+   Justification:
+     Bringing 'svn ls -v' over HTTP on a directory with 10000 files
+     from 2Gb+ of RAM to under 400Mb is a very good thing.
+   Notes
+     The merge conflicts in a few places due to some minor cleanups
+     performed post-1.5.x.  A backport branch resolving it can be
+     found here:
+     http://svn.collab.net/repos/svn/branches/1.5.x-r36919
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
 
