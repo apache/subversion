@@ -1954,7 +1954,7 @@ write_entry(svn_wc__db_t *db,
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
         if (entry->revision > 0
-              && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+              && entry->revision != this_dir->revision)
           {
             base_node = MAYBE_ALLOC(base_node, scratch_pool);
           }
