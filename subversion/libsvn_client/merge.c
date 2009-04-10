@@ -140,10 +140,6 @@
 
 /*** Utilities ***/
 
-/* Sanity check -- ensure that we have valid revisions to look at. */
-#define ENSURE_VALID_REVISION_KINDS(rev1_kind, rev2_kind) \
-
-
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
    match the scheme of the url for ADM_ACCESS's path; return
    SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
