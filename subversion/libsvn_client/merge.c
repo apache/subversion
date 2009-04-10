@@ -6663,7 +6663,7 @@ do_merge(apr_array_header_t *merge_sources,
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
-    depth = target_entry->depth;
+    depth = svn_depth_infinity;
 
   /* Set up the diff3 command, so various callers don't have to. */
   cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
