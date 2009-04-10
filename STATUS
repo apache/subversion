@@ -115,5 +115,13 @@ Candidate changes:
    Votes:
      +1: stsp, arfrever
 
+ * r37169
+   Update --set-depth infinity should expand shallow subtrees.
+   Justification:
+     update --set-depth infinity won't actually update the target's
+     shallow subtrees without this change. 
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
