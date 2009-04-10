@@ -876,6 +876,10 @@ def merge_catches_nonexistent_target(sbox):
     })
   expected_status.tweak(wc_rev=1)
 
+  expected_status.add({
+    'newfile': Item(status='! ', treeconflict='C' )
+    })
+
   expected_status.tweak('', status=' M')
 
   expected_disk = wc.State('', {
@@ -951,6 +955,9 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item(status='M '),
     })
   expected_status.tweak(wc_rev=4)
+  expected_status.add({
+    'E'       : Item(status='! ', treeconflict='C' )
+    })
   expected_skip = wc.State(I_path, {
     })
   svntest.actions.run_and_verify_merge(I_path, '2', '3', B_url,
@@ -7550,13 +7557,11 @@ def merge_to_sparse_directories(sbox):
   expected_status = wc.State(immediates_dir, {
     ''          : Item(status=' M', wc_rev=9),
     'B'         : Item(status=' M', wc_rev=9),
+    'B/E'       : Item(status='! ', treeconflict='C'),
     'mu'        : Item(status='M ', wc_rev=9),
     'C'         : Item(status=' M', wc_rev=9),
     'D'         : Item(status=' M', wc_rev=9),
-    # run_and_verify_merge uses svn st -q which suppresses tree
-    # conflicts so don't expect any.
-    # 'D/H'       : Item(status='! ', treeconflict='C'),
-    # 'B/E'       : Item(status='! ', treeconflict='C'),
+    'D/H'       : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9',
@@ -7606,10 +7611,8 @@ def merge_to_sparse_directories(sbox):
   expected_status = wc.State(files_dir, {
     ''          : Item(status=' M', wc_rev=9),
     'mu'        : Item(status='MM', wc_rev=9),
-    # run_and_verify_merge uses svn st -q which suppresses tree
-    # conflicts so don't expect any.
-    # 'B'       : Item(status='! ', treeconflict='C'),
-    # 'D'       : Item(status='! ', treeconflict='C'),
+    'B'         : Item(status='! ', treeconflict='C'),
+    'D'         : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
@@ -7650,7 +7653,9 @@ def merge_to_sparse_directories(sbox):
     })
   expected_status = wc.State(empty_dir, {
     ''          : Item(status=' M', wc_rev=9),
-    # As before don't expect tree conflicts in quiet status.
+    'mu'        : Item(status='! ', treeconflict='C'),
+    'B'         : Item(status='! ', treeconflict='C'),
+    'D'         : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
