@@ -1495,6 +1495,11 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              apr_pool_t *scratch_pool);
 
+/* ### shallow hash: abspath -> svn_wc_adm_access_t *  */
+apr_hash_t *
+svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
+                               apr_pool_t *result_pool);
+
 /** @} */
 
 
