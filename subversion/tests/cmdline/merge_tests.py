@@ -7538,12 +7538,14 @@ def merge_to_sparse_directories(sbox):
   # the one file present 'mu'.  The three directory children present, 'B',
   # 'C', and 'D' are checked out at depth empty, so get non-inheritable
   # mergeinfo for r4:9.  The root and 'D' do should also get the changes
-  # that affect them directly (the prop adds from r8 and r9).  Any changes
-  # deeper than the immediates should be skipped.
+  # that affect them directly (the prop adds from r8 and r9).  Changes
+  # deeper than the immediate children raise tree conflicts.
   expected_output = wc.State(immediates_dir, {
-    'D'  : Item(status=' U'),
-    'mu' : Item(status='U '),
-    ''   : Item(status=' U'),
+    'D'   : Item(status=' U'),
+    'D/H' : Item(status='  ', treeconflict='C'),
+    'mu'  : Item(status='U '),
+    ''    : Item(status=' U'),
+    'B/E' : Item(status='  ', treeconflict='C'),
     })
   expected_status = wc.State(immediates_dir, {
     ''          : Item(status=' M', wc_rev=9),
@@ -7551,6 +7553,10 @@ def merge_to_sparse_directories(sbox):
     'mu'        : Item(status='M ', wc_rev=9),
     'C'         : Item(status=' M', wc_rev=9),
     'D'         : Item(status=' M', wc_rev=9),
+    # run_and_verify_merge uses svn st -q which suppresses tree
+    # conflicts so don't expect any.
+    # 'D/H'       : Item(status='! ', treeconflict='C'),
+    # 'B/E'       : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9',
@@ -7590,14 +7596,20 @@ def merge_to_sparse_directories(sbox):
   # The root of the files WC should get non-inheritable r4:9 and its one
   # present child 'mu' should get the same but inheritable.  The root
   # should also get the change that affects it directly (the prop add
-  # from r9).
+  # from r9).  Changes into shallow subtrees should raise tree conflicts.
   expected_output = wc.State(files_dir, {
     'mu' : Item(status='U '),
     ''   : Item(status=' U'),
+    'B'  : Item(status='  ', treeconflict='C'),
+    'D'  : Item(status='  ', treeconflict='C'),
     })
   expected_status = wc.State(files_dir, {
     ''          : Item(status=' M', wc_rev=9),
     'mu'        : Item(status='MM', wc_rev=9),
+    # run_and_verify_merge uses svn st -q which suppresses tree
+    # conflicts so don't expect any.
+    # 'B'       : Item(status='! ', treeconflict='C'),
+    # 'D'       : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
@@ -7629,11 +7641,16 @@ def merge_to_sparse_directories(sbox):
   # Merge r4:9 into the empty WC.
   # The root of the files WC should get non-inheritable r4:9 and also get
   # the one change that affects it directly (the prop add from r9).
+  # Changes into the missing subtrees should raise tree conflicts.
   expected_output = wc.State(empty_dir, {
     ''   : Item(status=' U'),
+    'mu' : Item(status='  ', treeconflict='C'),
+    'B'  : Item(status='  ', treeconflict='C'),
+    'D'  : Item(status='  ', treeconflict='C'),
     })
   expected_status = wc.State(empty_dir, {
     ''          : Item(status=' M', wc_rev=9),
+    # As before don't expect tree conflicts in quiet status.
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
@@ -7641,6 +7658,64 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = wc.State(empty_dir, {})
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  # Check that default depth for merge is infinity.
+  #
+  # Revert the previous changes to the immediates WC and update one
+  # child in that WC to depth infinity.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R',
+                                     immediates_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '--set-depth',
+                                     'infinity',
+                                     os.path.join(immediates_dir, 'D'))
+  # Now merge r6 into the immediates WC, even though the root of the
+  # is at depth immediates, the subtree rooted at child 'D' is fully
+  # present, so a merge of r6 should affect 'D/H/omega'.
+  expected_output = wc.State(immediates_dir, {
+    'D/H/omega'  : Item(status='U '),
+    })
+  expected_status = wc.State(immediates_dir, {
+    ''          : Item(status=' M', wc_rev=9),
+    'B'         : Item(status=' M', wc_rev=9),
+    'mu'        : Item(status='  ', wc_rev=9),
+    'C'         : Item(status=' M', wc_rev=9),
+    'D'         : Item(status='  ', wc_rev=9),
+    'D/gamma'   : Item(status='  ', wc_rev=9),
+    'D/G'       : Item(status='  ', wc_rev=9),
+    'D/G/pi'    : Item(status='  ', wc_rev=9),
+    'D/G/rho'   : Item(status='  ', wc_rev=9),
+    'D/G/tau'   : Item(status='  ', wc_rev=9),
+    'D/H'       : Item(status='  ', wc_rev=9),
+    'D/H/chi'   : Item(status='  ', wc_rev=9),
+    'D/H/omega' : Item(status='M ', wc_rev=9),
+    'D/H/psi'   : Item(status='  ', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:6'}),
+    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:6*'}),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'C'         : Item(props={SVN_PROP_MERGEINFO : '/A/C:6*'}),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("New content"), 
+    })
+  expected_skip = wc.State(immediates_dir, {})
+  svntest.actions.run_and_verify_merge(immediates_dir, '5', '6',
                                        sbox.repo_url + \
                                        '/A',
                                        expected_output,
