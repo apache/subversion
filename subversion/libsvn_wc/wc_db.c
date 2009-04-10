@@ -3505,3 +3505,30 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
   pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
   pdh->adm_access = NULL;
 }
+
+
+apr_hash_t *
+svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
+                               apr_pool_t *result_pool)
+{
+  apr_hash_t *result = apr_hash_make(result_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(result_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const svn_wc__db_pdh_t *pdh;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      pdh = val;
+
+      if (pdh->adm_access != NULL)
+        apr_hash_set(result, key, APR_HASH_KEY_STRING, pdh->adm_access);
+    }
+
+  return result;
+}
+
