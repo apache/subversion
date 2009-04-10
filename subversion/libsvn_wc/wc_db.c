@@ -1329,10 +1329,18 @@ svn_wc__db_open(svn_wc__db_t **db,
 }
 
 
-svn_error_t *
-svn_wc__db_version(int *version,
-                   const char *path,
-                   apr_pool_t *scratch_pool)
+/* ### this docstring is a bit out of date...
+
+   This function answers a simple question: what format version of the wc
+   exists at PATH.  The reason it takes a PATH instead of an existing db
+   handle is because it may need to use legacy, pre-wc-ng methods to determine
+   what that version is, and such versions don't have any db to open. 
+   
+   If no working copy exists at PATH, return SVN_ERR_WC_MISSING. */
+static svn_error_t *
+db_version(int *version,
+           const char *path,
+           apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const char *format_file_path;
@@ -3399,8 +3407,8 @@ svn_wc__db_temp_get_format(int *format,
   pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
   if (pdh->wcroot->format == UNKNOWN_FORMAT)
     {
-      SVN_ERR(svn_wc__db_version(&pdh->wcroot->format, local_dir_abspath,
-                                 scratch_pool));
+      SVN_ERR(db_version(&pdh->wcroot->format, local_dir_abspath,
+                         scratch_pool));
     }
 
   *format = pdh->wcroot->format;
