@@ -168,6 +168,8 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                        apr_pool_t *scratch_pool)
 {
   int wc_format;
+  svn_boolean_t cleanup_required;
+  svn_stringbuf_t *log_accum;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
   SVN_ERR(svn_wc__check_format(wc_format,
@@ -176,56 +178,53 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
 
   /* We can upgrade all formats that are accepted by
      svn_wc__check_format. */
-  if (wc_format < SVN_WC__VERSION)
+  if (wc_format >= SVN_WC__VERSION)
+    return SVN_NO_ERROR;
+
+  log_accum = svn_stringbuf_create("", scratch_pool);
+
+  /* Don't try to mess with the WC if there are old log files left. */
+  SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
+                                          adm_access, scratch_pool));
+  SVN_ERR_ASSERT(cleanup_required == FALSE);
+
+  /* First, loggily upgrade the format file. */
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
+                                       scratch_pool));
+
+  /* If the WC uses one file per entry for wcprops, give back some inodes
+     to the poor user. */
+  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+    SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
+
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
+
+  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
-      svn_boolean_t cleanup_required;
-      svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
+      /* Remove wcprops directory, dir-props, README.txt and empty-file
+         files.
+         We just silently ignore errors, because keeping these files is
+         not catastrophic. */
 
-      /* Don't try to mess with the WC if there are old log files left. */
-      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                              adm_access, scratch_pool));
-      SVN_ERR_ASSERT(cleanup_required == FALSE);
-
-      /* First, loggily upgrade the format file. */
-      SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
-                                           scratch_pool));
-
-      /* If the WC uses one file per entry for wcprops, give back some inodes
-         to the poor user. */
-      if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-        SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
-
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
-
-      if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-        {
-          /* Remove wcprops directory, dir-props, README.txt and empty-file
-             files.
-             We just silently ignore errors, because keeping these files is
-             not catastrophic. */
-
-          svn_error_clear(svn_io_remove_dir2(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
-                                scratch_pool),
-              FALSE, NULL, NULL, scratch_pool));
-          svn_error_clear(svn_io_remove_file(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
-                                scratch_pool),
-              scratch_pool));
-          svn_error_clear(svn_io_remove_file(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
-                                scratch_pool),
-              scratch_pool));
-          svn_error_clear(svn_io_remove_file(
-              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
-                                scratch_pool),
-              scratch_pool));
-        }
-
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, scratch_pool));
+      svn_error_clear(svn_io_remove_dir2(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
+                            scratch_pool),
+          FALSE, NULL, NULL, scratch_pool));
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
+                            scratch_pool),
+          scratch_pool));
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
+                            scratch_pool),
+          scratch_pool));
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
+                            scratch_pool),
+          scratch_pool));
     }
 
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, scratch_pool);
 }
 
 
