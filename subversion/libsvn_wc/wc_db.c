@@ -618,12 +618,13 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 static svn_wc__db_pdh_t *
 get_or_create_pdh(svn_wc__db_t *db,
                   const char *local_dir_abspath,
+                  svn_boolean_t create_allowed,
                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh = apr_hash_get(db->dir_data,
                                        local_dir_abspath, APR_HASH_KEY_STRING);
 
-  if (pdh == NULL)
+  if (pdh == NULL && create_allowed)
     {
       pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
       pdh->db = db;
@@ -2141,7 +2142,7 @@ svn_wc__db_pristine_get_handle(svn_wc__db_pdh_t **pdh,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  *pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  *pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -3404,7 +3405,7 @@ svn_wc__db_temp_get_format(int *format,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
   if (pdh->wcroot->format == UNKNOWN_FORMAT)
     {
       SVN_ERR(db_version(&pdh->wcroot->format, local_dir_abspath,
@@ -3429,13 +3430,17 @@ svn_wc__db_temp_reset_format(int format,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
-
-  /* ### ideally, we would reset this to UNKNOWN, and then read the working
-     ### copy to see what format it is in. however, we typically *write*
-     ### whatever we *read*. so to break the cycle and write a different
-     ### version (during upgrade), then we have to force a new format.  */
-  pdh->wcroot->format = format;
+  /* Do not create a PDH. If we don't have one, then we don't have any
+     cached version information.  */
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  if (pdh != NULL)
+    {
+      /* ### ideally, we would reset this to UNKNOWN, and then read the working
+         ### copy to see what format it is in. however, we typically *write*
+         ### whatever we *read*. so to break the cycle and write a different
+         ### version (during upgrade), then we have to force a new format.  */
+      pdh->wcroot->format = format;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3450,11 +3455,17 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
-  /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  /* ### we really need to assert that we were passed a directory. sometimes
+     ### adm_retrieve_internal is asked about a file, and then it asks us
+     ### for an access baton for it. we should definitely return NULL, but
+     ### ideally: the caller would never ask us about a non-directory.  */
 
-  return pdh->adm_access;
+  /* Do not create a PDH. If we don't have one, then we don't have an
+     access baton.  */
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+
+  return pdh ? pdh->adm_access : NULL;
 }
 
 
@@ -3470,7 +3481,7 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
+  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
 
   /* Better not override something already there.  */
   SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == NULL);
@@ -3490,12 +3501,16 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
-
-  /* We should be closing the correct one, *or* we've closed it already.  */
-  SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == adm_access
-                           || pdh->adm_access == NULL);
-  pdh->adm_access = NULL;
+  /* Do not create a PDH. If we don't have one, then we don't have an
+     access baton to close.  */
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  if (pdh != NULL)
+    {
+      /* We should be closing the correct one, *or* it's already closed.  */
+      SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == adm_access
+                               || pdh->adm_access == NULL);
+      pdh->adm_access = NULL;
+    }
 }
 
 
@@ -3510,8 +3525,11 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, scratch_pool);
-  pdh->adm_access = NULL;
+  /* Do not create a PDH. If we don't have one, then we don't have an
+     access baton to clear out.  */
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  if (pdh != NULL)
+    pdh->adm_access = NULL;
 }
 
 
