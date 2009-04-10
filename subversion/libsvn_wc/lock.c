@@ -455,17 +455,15 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
 
 svn_error_t *
 svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
+                             svn_wc__db_t *db,
                              const char *path,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  svn_wc__db_t *db;
-
-  /* ### would be nice to *actually* share this... */
-  SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
 
   err = adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
-                         db, pool, pool);
+                         db, result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_LOCKED)
@@ -1466,6 +1464,13 @@ svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access)
 }
 
 
+const char *
+svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->abspath;
+}
+
+
 apr_pool_t *
 svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
 {
@@ -1513,43 +1518,30 @@ svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
 
 svn_error_t *
 svn_wc__adm_wc_format(int *wc_format,
-                      svn_wc_adm_access_t *adm_access,
+                      const svn_wc_adm_access_t *adm_access,
                       apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
-
-  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  scratch_pool));
-  return svn_wc__db_temp_get_format(wc_format, db, local_abspath,
-                                    scratch_pool);
+  return svn_wc__db_temp_get_format(wc_format, adm_access->db,
+                                    adm_access->abspath, scratch_pool);
 }
+
 
 svn_error_t *
 svn_wc__adm_set_wc_format(int wc_format,
-                          svn_wc_adm_access_t *adm_access,
+                          const svn_wc_adm_access_t *adm_access,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
-
-  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  scratch_pool));
-  return svn_wc__db_temp_reset_format(wc_format, db, local_abspath,
-                                      scratch_pool);
+  return svn_wc__db_temp_reset_format(wc_format, adm_access->db,
+                                      adm_access->abspath, scratch_pool);
 }
 
-svn_error_t *
-svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *scratch_pool)
+
+svn_wc__db_t *
+svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access)
 {
-  *db = adm_access->db;
-  return SVN_NO_ERROR;
+  return adm_access->db;
 }
+
 
 svn_boolean_t
 svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
