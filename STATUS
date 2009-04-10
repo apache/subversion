@@ -92,5 +92,15 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r37156
+   Make default depth of merge infinity, rather than the depth of target.
+   Justification:
+     Is it technically a bug?  Dunno, but there is nothing but confusion
+     regarding the old behavior, see
+     http://svn.haxx.se/dev/archive-2009-04/0328.shtml and
+     http://svn.haxx.se/dev/archive-2009-03/0701.shtml.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
