@@ -148,7 +148,7 @@ Candidate changes for 1.5.7:
      word 'merge' in the title (though as gstein points out, the
      function this change is in desperately needs a dose of clarity).
    Votes:
-     +1: pburba
+     +1: pburba, hwright
 
  * r37137
    Make some sweeping pool lifetime fixes in the BDB backend.
