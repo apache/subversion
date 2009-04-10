@@ -256,18 +256,6 @@ svn_wc__db_open(svn_wc__db_t **db,
                 apr_pool_t *scratch_pool);
 
 
-/* This function answers a simple question: what format version of the wc
-   exists at PATH.  The reason it takes a PATH instead of an existing db
-   handle is because it may need to use legacy, pre-wc-ng methods to determine
-   what that version is, and such versions don't have any db to open. 
-   
-   If no working copy exists at PATH, return SVN_ERR_WC_MISSING. */
-svn_error_t *
-svn_wc__db_version(int *version,
-                   const char *path,
-                   apr_pool_t *scratch_pool);
-
-
 /**
  * Close DB.
  *
