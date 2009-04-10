@@ -71,6 +71,9 @@ struct svn_wc_adm_access_t
   /* Handle to the administrative database. */
   svn_wc__db_t *db;
 
+  /* Was the DB provided to us? If so, then we'll never close it.  */
+  svn_boolean_t db_provided;
+
   /* ENTRIES_HIDDEN is all cached entries including those in
      state deleted or state absent. It may be NULL. */
   apr_hash_t *entries_all;
@@ -308,6 +311,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
                  enum svn_wc__adm_access_type type,
                  const char *path,
                  svn_wc__db_t *db,
+                 svn_boolean_t db_provided,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -316,6 +320,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   lock->type = type;
   lock->entries_all = NULL;
   lock->db = db;
+  lock->db_provided = db_provided;
   lock->lock_exists = FALSE;
   lock->path = apr_pstrdup(result_pool, path);
   lock->pool = result_pool;
@@ -462,7 +467,7 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
 
   err = adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
-                         db, result_pool, scratch_pool);
+                         db, TRUE, result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_LOCKED)
@@ -489,6 +494,7 @@ open_single(svn_wc_adm_access_t **adm_access,
             const char *path,
             svn_boolean_t write_lock,
             svn_wc__db_t *db,
+            svn_boolean_t db_provided,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
@@ -510,7 +516,7 @@ open_single(svn_wc_adm_access_t **adm_access,
                            write_lock
                              ? svn_wc__adm_access_write_lock
                              : svn_wc__adm_access_unlocked,
-                           path, db, result_pool, scratch_pool));
+                           path, db, db_provided, result_pool, scratch_pool));
   SVN_ERR(check_format_upgrade(lock, wc_format, scratch_pool));
 
   /* ### recurse was here */
@@ -535,8 +541,6 @@ close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
              apr_pool_t *scratch_pool)
 {
-  apr_hash_t *opened;
-
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
@@ -572,12 +576,16 @@ close_single(svn_wc_adm_access_t *adm_access,
   svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath, adm_access,
                                scratch_pool);
 
-  /* Close the underlying wc_db. */
-  opened = svn_wc__db_temp_get_all_access(adm_access->db, scratch_pool);
-  if (apr_hash_count(opened) == 0)
+  /* Possibly close the underlying wc_db. */
+  if (!adm_access->db_provided)
     {
-      SVN_ERR(svn_wc__db_close(adm_access->db, scratch_pool));
-      adm_access->db = NULL;
+      apr_hash_t *opened = svn_wc__db_temp_get_all_access(adm_access->db,
+                                                          scratch_pool);
+      if (apr_hash_count(opened) == 0)
+        {
+          SVN_ERR(svn_wc__db_close(adm_access->db, scratch_pool));
+          adm_access->db = NULL;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -593,6 +601,7 @@ static svn_error_t *
 do_open(svn_wc_adm_access_t **adm_access,
         const char *path,
         svn_wc__db_t *db,
+        svn_boolean_t db_provided,
         apr_array_header_t *rollback,
         svn_boolean_t write_lock,
         int levels_to_lock,
@@ -604,7 +613,8 @@ do_open(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(open_single(&lock, path, write_lock, db, pool, subpool));
+  SVN_ERR(open_single(&lock, path, write_lock, db, db_provided,
+                      pool, subpool));
 
   /* Add self to the rollback list in case of error.  */
   APR_ARRAY_PUSH(rollback, svn_wc_adm_access_t *) = lock;
@@ -653,7 +663,7 @@ do_open(svn_wc_adm_access_t **adm_access,
           entry_path = svn_dirent_join(path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */
-          err = do_open(&entry_access, entry_path, db, rollback,
+          err = do_open(&entry_access, entry_path, db, db_provided, rollback,
                         write_lock, levels_to_lock, cancel_func, cancel_baton,
                         lock->pool);
 
@@ -695,6 +705,7 @@ static svn_error_t *
 open_all(svn_wc_adm_access_t **adm_access,
          const char *path,
          svn_wc__db_t *db,
+         svn_boolean_t db_provided,
          svn_boolean_t write_lock,
          int levels_to_lock,
          svn_cancel_func_t cancel_func,
@@ -706,7 +717,7 @@ open_all(svn_wc_adm_access_t **adm_access,
 
   rollback = apr_array_make(pool, 10, sizeof(svn_wc_adm_access_t *));
 
-  err = do_open(adm_access, path, db, rollback,
+  err = do_open(adm_access, path, db, db_provided, rollback,
                 write_lock, levels_to_lock,
                 cancel_func, cancel_baton, pool);
   if (err)
@@ -738,6 +749,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  apr_pool_t *pool)
 {
   svn_wc__db_t *db;
+  svn_boolean_t db_provided;
 
   /* Make sure that ASSOCIATED has a set of access batons, so that we can
      glom a reference to self into it. */
@@ -757,6 +769,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                                  _("Working copy '%s' locked"),
                                  svn_path_local_style(path, pool));
       db = associated->db;
+      db_provided = associated->db_provided;
     }
   else
     {
@@ -766,9 +779,10 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
       /* ### we could optimize around levels_to_lock==0, but much of this
          ### is going to be simplified soon anyways.  */
       SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
+      db_provided = FALSE;
     }
 
-  return open_all(adm_access, path, db,
+  return open_all(adm_access, path, db, db_provided,
                   write_lock, levels_to_lock, cancel_func, cancel_baton, pool);
 }
 
@@ -783,7 +797,7 @@ svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
   SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
 
   SVN_ERR(adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
-                           db, pool, pool));
+                           db, FALSE, pool, pool));
 
   apr_pool_cleanup_register((*adm_access)->pool, *adm_access,
                             pool_cleanup, pool_cleanup_child);
@@ -1161,7 +1175,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
       || svn_dirent_is_root(path, strlen(path))
       || ! strcmp(base_name, ".."))
     {
-      SVN_ERR(open_all(anchor_access, path, db, write_lock, levels_to_lock,
+      SVN_ERR(open_all(anchor_access, path, db, FALSE,
+                       write_lock, levels_to_lock,
                        cancel_func, cancel_baton, pool));
       *target_access = *anchor_access;
       *target = "";
@@ -1175,7 +1190,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
       svn_error_t *p_access_err = SVN_NO_ERROR;
 
       /* Try to open parent of PATH to setup P_ACCESS */
-      err = open_single(&p_access, parent, write_lock, db, pool, pool);
+      err = open_single(&p_access, parent, write_lock, db, FALSE, pool, pool);
       if (err)
         {
           const char *abspath;
@@ -1196,7 +1211,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
               /* If P_ACCESS isn't to be returned then a read-only baton
                  will do for now, but keep the error in case we need it. */
               svn_error_t *err2 = open_single(&p_access, parent, FALSE,
-                                              db, pool, pool);
+                                              db, FALSE, pool, pool);
               if (err2)
                 {
                   svn_error_clear(err2);
@@ -1209,7 +1224,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
         }
 
       /* Try to open PATH to setup T_ACCESS */
-      err = open_all(&t_access, path, db, write_lock, levels_to_lock,
+      err = open_all(&t_access, path, db, FALSE, write_lock, levels_to_lock,
                      cancel_func, cancel_baton, pool);
       if (err)
         {
