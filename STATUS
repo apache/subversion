@@ -67,21 +67,21 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba, rhuijben
 
-  * r36613, r36615, r36631, r36641
-    Avoid potential segfault when dealing with subtree mergeinfo.
-    Justification:
-      One user reported a segfault due to the way, prior to this change, that
-      we set children_with_mergeinfo elements to NULL rather than removing
-      the elements from the array, see
-      http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
-    Notes:
-      The fix itself is r36613, r36631, and r36641.  r36615 is a variable
-      renaming change that is necessary to avoid a conflict.  r36613 doesn't
-      merge cleanly due to text conflicts and the lack of SVN_ERR_ASSERT in
-      1.5.x.  A backport branch can be found at
-      http://svn.collab.net/repos/svn/branches/1.5.x-r36613.
-    Votes:
-      +1: pburba, rhuijben
+ * r36613, r36615, r36631, r36641
+   Avoid potential segfault when dealing with subtree mergeinfo.
+   Justification:
+     One user reported a segfault due to the way, prior to this change, that
+     we set children_with_mergeinfo elements to NULL rather than removing
+     the elements from the array, see
+     http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
+   Notes:
+     The fix itself is r36613, r36631, and r36641.  r36615 is a variable
+     renaming change that is necessary to avoid a conflict.  r36613 doesn't
+     merge cleanly due to text conflicts and the lack of SVN_ERR_ASSERT in
+     1.5.x.  A backport branch can be found at
+     http://svn.collab.net/repos/svn/branches/1.5.x-r36613.
+   Votes:
+     +1: pburba, rhuijben
 
  * r36730, r36766, r36775
    Fix issue #3383 'Foreign repository merge can add mergeinfo from the
@@ -135,6 +135,18 @@ Candidate changes for 1.5.7:
      branch at http://svn.collab.net/repos/svn/branches/1.5.x-issue3392, but
      it is dependent on r36879 being merged first.  (If this change *must* be
      merged before r36879 I'll create a branch to do so - pburba)
+   Votes:
+     +1: pburba
+
+ * r37117
+   Fix issue #3393 'Merge consuming too much memory'.
+   Justification:
+     A merge which targets a WC with thousands of subtrees with mergeinfo
+     can consume multiple GB of memory in a hurry.
+   Notes:
+     This is as simple a fix to review as you've ever seen with the
+     word 'merge' in the title (though as gstein points out, the
+     function this change is in desperately needs a dose of clarity).
    Votes:
      +1: pburba
 
