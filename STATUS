@@ -102,5 +102,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r37160
+   Fix issue #3396, "status --quiet doesn't show tree conflicts".
+   Justification:
+     Tree conflict victims are not shown in status output even though
+     they should be.
+   Votes:
+     +1: stsp, arfrever
+
 Approved changes:
 =================
