@@ -842,17 +842,13 @@ read_entries(svn_wc_adm_access_t *adm_access,
   apr_pool_t *result_pool;
   apr_hash_t *entries;
   const char *wc_db_path;
-  svn_wc__db_t *db;
-  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   svn_boolean_t parent_copied = FALSE;
   
-  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  scratch_pool));
   SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
                                      scratch_pool));
   if (wc_format < SVN_WC__WC_NG_VERSION)
@@ -2399,17 +2395,13 @@ svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
   int wc_format;
   svn_sqlite__db_t *wc_db;
   const svn_wc_entry_t *this_dir;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_wc__adm_get_db(&db, adm_access, scratch_pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  scratch_pool));
   SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
                                      scratch_pool));
   if (wc_format < SVN_WC__WC_NG_VERSION)

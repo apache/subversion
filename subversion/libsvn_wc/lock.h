@@ -46,8 +46,12 @@ extern "C" {
    PATH is the directory to lock, and the lock is returned in
    *ADM_ACCESS.
 */
-svn_error_t *svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
-                                          const char *path, apr_pool_t *pool);
+svn_error_t *
+svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
+                             svn_wc__db_t *db,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
 /* Set *CLEANUP to TRUE if the directory ADM_ACCESS requires cleanup
@@ -95,14 +99,14 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
 /* Return the working copy format version number for ADM_ACCESS. */
 svn_error_t *
 svn_wc__adm_wc_format(int *wc_format,
-                      svn_wc_adm_access_t *adm_access,
+                      const svn_wc_adm_access_t *adm_access,
                       apr_pool_t *scratch_pool);
 
 
 /* Set the WC FORMAT of this access baton. */
 svn_error_t *
 svn_wc__adm_set_wc_format(int wc_format,
-                          svn_wc_adm_access_t *adm_access,
+                          const svn_wc_adm_access_t *adm_access,
                           apr_pool_t *scratch_pool);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
@@ -125,9 +129,14 @@ svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
 
 
 /* Return the working copy database associated with this access baton. */
-svn_error_t *
-svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *scratch_pool);
+svn_wc__db_t *
+svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
+
+
+/* Get a reference to the baton's internal ABSPATH.  */
+const char *
+svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access);
+
 
 /* Upgrade the working copy directory represented by ADM_ACCESS
    to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
