@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_xml.h"
@@ -239,7 +240,7 @@ print_info(void *baton,
      compatibility with svn 1.1 and older.  */
   if (info->kind != svn_node_dir)
     SVN_ERR(svn_cmdline_printf(pool, _("Name: %s\n"),
-                               svn_path_basename(target, pool)));
+                               svn_dirent_basename(target, pool)));
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));

@@ -499,14 +499,17 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           /* ... or perhaps just a differing revision, lock token, incomplete
              subdir, the mere presence of the directory in a depth-empty or
              depth-files dir, or if the parent dir is at depth-immediates but
-             the child is not at depth-empty. */
+             the child is not at depth-empty.  Also describe shallow subdirs
+             if we are trying to set depth to infinity. */
           else if (subdir_entry->revision != dir_rev
                    || subdir_entry->lock_token
                    || subdir_entry->incomplete
                    || dot_entry->depth == svn_depth_empty
                    || dot_entry->depth == svn_depth_files
                    || (dot_entry->depth == svn_depth_immediates
-                       && subdir_entry->depth != svn_depth_empty))
+                       && subdir_entry->depth != svn_depth_empty)
+                   || (subdir_entry->depth < svn_depth_infinity
+                       && depth == svn_depth_infinity))
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        subdir_entry->revision,

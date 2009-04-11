@@ -209,66 +209,51 @@ typedef struct {
 
 /* ### update docstrings: all paths should be internal/canonical */
 
+/**
+ * ### KFF: Would be good to state, here or in an introductory comment
+ * ### at the top of this file, whether subsequent 'path' parameters
+ * ### are absolute, or relative to the root at which @a *db was
+ * ### opened, or perhaps that both are acceptable.
+ */
+/* ### all paths in this API are absolute, and internal/canonical form.  */
 
-/* ### some kind of _create() call to set things up? */
 
 /**
  * @defgroup svn_wc__db_admin  General administractive functions
  * @{
  */
 
-/**
- * Open the administrative database for the working copy identified by the
- * (absolute) @a path. The (opaque) handle for interacting with the database
- * will be returned in @a *db. Note that the database MAY NOT be specific
- * to this working copy. The path is merely used to locate the database, but
- * the administrative database could be global, or it could be per-WC.
+/** Open a working copy administrative database context.
  *
- * ### KFF: Would be good to state, here or in an introductory comment
- * ### at the top of this file, whether subsequent 'path' parameters
- * ### are absolute, or relative to the root at which @a *db was
- * ### opened, or perhaps that both are acceptable.
- * ###
- * ### Also, suppose @a path is some subdirectory deep inside a
- * ### working copy.  Is it okay to pass it, or do we need to pass the
- * ### root of that working copy?  Perhaps there needs to be an output
- * ### parameter 'const char **wc_root_path', so a person can tell if
- * ### they opened the root or some subdir?
+ * This context is (initially) not associated with any particular working
+ * copy directory or working copy root (wcroot). As operations are performed,
+ * this context will load the appropriate wcroot information.
  *
- * ### HKW: How are transactions handled?  Do the db_open* APIs automatically
- * ### create db transactions, or do we need explicit APIs for that?  Would
- * ### it be possible to automatically create/commit transactions as part
- * ### of the existing APIs?
- * ###
- * ### Also, do we need an explicit svn_wc__db_close() function, or will that
- * ### be handled on pool cleanup?  Does this close function commit any
- * ### outstanding work, or will that need to be manual committed?  (See above.)
+ * The context is returned in DB. The MODE parameter indicates whether the
+ * caller knows all interactions will be read-only, whether writing will
+ * definitely happen, or whether a default should be chosen.
  *
- * The configuration options are provided by @a config, and must live at
- * least as long as the database.
+ * CONFIG should hold the various configuration options that may apply to
+ * the administrative operation. It should live at least as long as the
+ * RESULT_POOL parameter.
  *
- * Intermediate allocations will be performed in @a scratch_pool, and the
- * resulting context will be allocated in @a result_pool.
+ * The DB will be closed when RESULT_POOL is cleared. It may also be closed
+ * manually using svn_wc__db_close(). In particular, this will close any
+ * SQLite databases that have been opened and cached.
+ *
+ * The context is allocated in RESULT_POOL. This pool is *retained* and used
+ * for future allocations within the DB. Be forewarned about unbounded
+ * memory growth if this DB is used across an unbounded number of wcroots
+ * and versioned directories.
+ *
+ * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                const char *local_abspath,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
-
-
-/* This function answers a simple question: what format version of the wc
-   exists at PATH.  The reason it takes a PATH instead of an existing db
-   handle is because it may need to use legacy, pre-wc-ng methods to determine
-   what that version is, and such versions don't have any db to open. 
-   
-   If no working copy exists at PATH, return SVN_ERR_WC_MISSING. */
-svn_error_t *
-svn_wc__db_version(int *version,
-                   const char *path,
-                   apr_pool_t *scratch_pool);
 
 
 /**
@@ -479,28 +464,6 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 svn_wc__db_status_t status,
                                 apr_pool_t *scratch_pool);
 
-/**
- * A temporary API similar to svn_wc__db_base_add_directory() and
- * svn_wc__db_base_add_file(), in that it adds a subdirectory to the given
- * DB.  * Arguments are the same as those to svn_wc__db_base_add_directory().
- *
- * Note: Since the subdir node type is a fiction created to satisfy our
- * current backward-compat hacks, this is a temporary API expected to
- * disappear with that node type does.
- */
-svn_error_t *
-svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                const apr_hash_t *props,
-                                svn_revnum_t changed_rev,
-                                apr_time_t changed_date,
-                                const char *changed_author,
-                                svn_depth_t depth,
-                                apr_pool_t *scratch_pool);
 
 /** Remove a node from the BASE tree.
  *
@@ -1449,6 +1412,81 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
                          
+
+/** @} */
+
+
+/**
+ * @defgroup svn_wc__db_temp Various temporary functions during transition
+ *
+ * ### These functions SHOULD be completely removed before 1.7
+ *
+ * @{
+ */
+
+/**
+ * A temporary API similar to svn_wc__db_base_add_directory() and
+ * svn_wc__db_base_add_file(), in that it adds a subdirectory to the given
+ * DB.  * Arguments are the same as those to svn_wc__db_base_add_directory().
+ *
+ * Note: Since the subdir node type is a fiction created to satisfy our
+ * current backward-compat hacks, this is a temporary API expected to
+ * disappear with that node type does.
+ */
+svn_error_t *
+svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *repos_relpath,
+                                const char *repos_root_url,
+                                const char *repos_uuid,
+                                svn_revnum_t revision,
+                                const apr_hash_t *props,
+                                svn_revnum_t changed_rev,
+                                apr_time_t changed_date,
+                                const char *changed_author,
+                                svn_depth_t depth,
+                                apr_pool_t *scratch_pool);
+
+
+/* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__db_temp_get_format(int *format,
+                           svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           apr_pool_t *scratch_pool);
+
+/* ### reset any cached format version. it has probably changed.  */
+svn_error_t *
+svn_wc__db_temp_reset_format(int format,
+                             svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             apr_pool_t *scratch_pool);
+
+
+/* ### temp functions to manage/store access batons within the DB.  */
+svn_wc_adm_access_t *
+svn_wc__db_temp_get_access(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           apr_pool_t *scratch_pool);
+void
+svn_wc__db_temp_set_access(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           svn_wc_adm_access_t *adm_access,
+                           apr_pool_t *scratch_pool);
+void
+svn_wc__db_temp_close_access(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *scratch_pool);
+void
+svn_wc__db_temp_clear_access(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             apr_pool_t *scratch_pool);
+
+/* ### shallow hash: abspath -> svn_wc_adm_access_t *  */
+apr_hash_t *
+svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
+                               apr_pool_t *result_pool);
 
 /** @} */
 

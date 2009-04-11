@@ -16,6 +16,7 @@
  * ====================================================================
  */
 
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_error.h"
@@ -606,7 +607,7 @@ fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
   else
     {
       ent = apr_palloc(pool, sizeof(**entry));
-      ent->name = svn_path_basename(path, pool);
+      ent->name = svn_uri_basename(path, pool);
       SVN_ERR(svn_fs_node_id(&ent->id, root, path, pool));
       ent->kind = kind;
       *entry = ent;

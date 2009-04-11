@@ -232,25 +232,6 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
                                   svn_stream_close(to));
 }
 
-svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *scratch_pool)
-{
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          cancel_func, cancel_baton, scratch_pool);
-}
-
-svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
-                             apr_pool_t *scratch_pool)
-{
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          NULL, NULL, scratch_pool);
-}
-
-
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,

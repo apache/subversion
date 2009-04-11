@@ -46,8 +46,12 @@ extern "C" {
    PATH is the directory to lock, and the lock is returned in
    *ADM_ACCESS.
 */
-svn_error_t *svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
-                                          const char *path, apr_pool_t *pool);
+svn_error_t *
+svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
+                             svn_wc__db_t *db,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
 /* Set *CLEANUP to TRUE if the directory ADM_ACCESS requires cleanup
@@ -65,14 +69,6 @@ void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
    be NULL.  POOL is used for local, short term, memory allocations. */
 apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
                                        apr_pool_t *pool);
-
-/* Store the WCPROPS in the cache in ADM_ACCESS. */
-void svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
-                                    apr_hash_t *wcprops);
-
-/* Retrieve the wcprops cached in ADM_ACCESS, if any. */
-apr_hash_t *svn_wc__adm_access_wcprops(const svn_wc_adm_access_t *adm_access);
-
 
 
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
@@ -101,11 +97,17 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                                            apr_pool_t *pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
-int svn_wc__adm_wc_format(const svn_wc_adm_access_t *adm_access);
+svn_error_t *
+svn_wc__adm_wc_format(int *wc_format,
+                      const svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *scratch_pool);
+
 
 /* Set the WC FORMAT of this access baton. */
-void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
-                               int format);
+svn_error_t *
+svn_wc__adm_set_wc_format(int wc_format,
+                          const svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *scratch_pool);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
  * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to
@@ -127,9 +129,28 @@ svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
 
 
 /* Return the working copy database associated with this access baton. */
+svn_wc__db_t *
+svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
+
+
+/* Get a reference to the baton's internal ABSPATH.  */
+const char *
+svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access);
+
+
+/* Upgrade the working copy directory represented by ADM_ACCESS
+   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
+   lock.  Use SCRATCH_POOL for all temporary allocation.
+
+   Not all upgrade paths are necessarily supported.  For example,
+   upgrading a version 1 working copy results in an error.
+
+   Sometimes the format file can contain "0" while the administrative
+   directory is being constructed; calling this on a format 0 working
+   copy has no effect and returns no error. */
 svn_error_t *
-svn_wc__adm_get_db(svn_wc__db_t **db, svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *scratch_pool);
+svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

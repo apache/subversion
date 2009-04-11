@@ -52,10 +52,15 @@ svn_wc_check_wc(const char *path,
                 int *wc_format,
                 apr_pool_t *pool)
 {
+  const char *abspath;
+  svn_wc__db_t *db;
   svn_error_t *err;
   svn_node_kind_t kind;
 
-  err = svn_wc__db_version(wc_format, path, pool);
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          NULL /* ### config */, pool, pool));
+  err = svn_wc__db_temp_get_format(wc_format, db, abspath, pool);
   if (err && err->apr_err != SVN_ERR_WC_MISSING)
     return err;
 

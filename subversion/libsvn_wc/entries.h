@@ -255,6 +255,7 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc__entries_write_old(apr_hash_t *entries,
                           svn_wc_adm_access_t *adm_access,
+                          int wc_format,
                           apr_pool_t *pool);
 
 svn_error_t *

@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_types.h"
@@ -230,8 +231,8 @@ svn_cl__merge(apr_getopt_t *os,
       if (svn_path_is_url(sourcepath1))
         {
           char *sp1_basename, *sp2_basename;
-          sp1_basename = svn_path_basename(sourcepath1, pool);
-          sp2_basename = svn_path_basename(sourcepath2, pool);
+          sp1_basename = svn_uri_basename(sourcepath1, pool);
+          sp2_basename = svn_uri_basename(sourcepath2, pool);
 
           if (strcmp(sp1_basename, sp2_basename) == 0)
             {

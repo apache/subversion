@@ -4631,6 +4631,105 @@ def tree_conflict_uc2_schedule_re_add(sbox):
 
   ### Do we need to do more to confirm we got what we want here?
 
+#----------------------------------------------------------------------
+def set_deep_depth_on_target_with_shallow_children(sbox):
+  "infinite --set-depth adds shallow children"
+
+  # Regardless of what depth the update target is at, if it has shallow
+  # subtrees and we update --set-depth infinity, these shallow subtrees
+  # should be populated.
+  #
+  # See http://svn.haxx.se/dev/archive-2009-04/0344.shtml.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_path = os.path.join(wc_dir, "A")
+  B_path = os.path.join(wc_dir, "A", "B")
+  D_path = os.path.join(wc_dir, "A", "D")
+
+  # Trim the tree: Set A/B to depth empty and A/D to depth immediates.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='D '),
+    'A/B/lambda'  : Item(status='D '),
+    'A/B/F'       : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/F',
+                       'A/B/lambda',
+                       'A/B/E',
+                       'A/B/E/alpha',
+                       'A/B/E/beta')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/F',
+                         'A/B/lambda',
+                         'A/B/E',
+                         'A/B/E/alpha',
+                         'A/B/E/beta')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '--set-depth', 'empty',
+                                        B_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi'    : Item(status='D '),
+    'A/D/G/rho'   : Item(status='D '),
+    'A/D/G/tau'   : Item(status='D '),
+    'A/D/H/chi'   : Item(status='D '),
+    'A/D/H/omega' : Item(status='D '),
+    'A/D/H/psi'   : Item(status='D '),
+    })
+  expected_status.remove('A/D/G/pi',
+                         'A/D/G/rho',
+                         'A/D/G/tau',
+                         'A/D/H/chi',
+                         'A/D/H/omega',
+                         'A/D/H/psi')
+  expected_disk.remove('A/D/G/pi',
+                       'A/D/G/rho',
+                       'A/D/G/tau',
+                       'A/D/H/chi',
+                       'A/D/H/omega',
+                       'A/D/H/psi')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '--set-depth', 'immediates',
+                                        D_path)
+
+  # Now update A with --set-depth infinity.  All the subtrees we
+  # removed above should come back.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/lambda'  : Item(status='A '),
+    'A/B/F'       : Item(status='A '),
+    'A/B/E'       : Item(status='A '),
+    'A/B/E/alpha' : Item(status='A '),
+    'A/B/E/beta'  : Item(status='A '),
+    'A/D/G/pi'    : Item(status='A '),
+    'A/D/G/rho'   : Item(status='A '),
+    'A/D/G/tau'   : Item(status='A '),
+    'A/D/H/chi'   : Item(status='A '),
+    'A/D/H/omega' : Item(status='A '),
+    'A/D/H/psi'   : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '--set-depth', 'infinity',
+                                        A_path)
+
 #######################################################################
 # Run the tests
 
@@ -4694,6 +4793,7 @@ test_list = [ None,
               update_moves_and_modifies_an_edited_file,
               tree_conflict_uc1_update_deleted_tree,
               tree_conflict_uc2_schedule_re_add,
+              set_deep_depth_on_target_with_shallow_children,
              ]
 
 if __name__ == '__main__':

@@ -375,7 +375,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                  But there's no reason to limit ourselves to just that case;
                  given everything else that's going on in this function, a
                  strcmp() is pretty cheap, and the result we're trying to
-                 prevent is an infinite loop if svn_path_dirname() returns
+                 prevent is an infinite loop if svn_dirent_dirname() returns
                  its input unchanged. */
               return svn_error_createf
                 (SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
@@ -823,7 +823,8 @@ copy_dir_administratively(const char *src_path,
      because the source directory was locked.  Running cleanup will remove
      the locks, even though this directory has not yet been added to the
      parent. */
-  SVN_ERR(svn_wc_cleanup2(dst_path, NULL, cancel_func, cancel_baton, pool));
+  SVN_ERR(svn_wc_cleanup3(dst_path, NULL, FALSE, cancel_func, cancel_baton,
+                          pool));
 
   /* We've got some post-copy cleanup to do now. */
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_path, TRUE, -1,

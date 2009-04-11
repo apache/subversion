@@ -95,18 +95,11 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH.
    If VALUE is null, remove property NAME.  ADM_ACCESS is an access
-   baton set that contains PATH.
-
-   If FORCE_WRITE is true, then the change will be written to disk
-   immediately.  Else, only the in-memory cache (if that is used) will
-   be updated and the caller is expected to use
-   svn_wc__wcprops_write() later, on the correct access baton, to store
-   the change persistently. */
+   baton set that contains PATH.  */
 svn_error_t *svn_wc__wcprop_set(const char *name,
                                 const svn_string_t *value,
                                 const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_boolean_t force_write,
                                 apr_pool_t *pool);
 
 /* Returns TRUE if PROPS contains the svn:special property */

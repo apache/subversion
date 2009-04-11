@@ -214,9 +214,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
           /* No explicit mergeinfo on this path.  Look higher up the
              directory tree while keeping track of what we've walked. */
-          walk_path = svn_path_join(svn_path_basename(wcpath, pool),
+          walk_path = svn_path_join(svn_dirent_basename(wcpath, pool),
                                     walk_path, pool);
-          wcpath = svn_path_dirname(wcpath, pool);
+          wcpath = svn_dirent_dirname(wcpath, pool);
 
           err = svn_wc_adm_open3(&adm_access, NULL, wcpath,
                                  FALSE, 0, NULL, NULL, pool);
@@ -691,10 +691,10 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                                         iterpool));
           if (!switched)
             {
-              const char *path_prefix = svn_path_dirname(child->path,
-                                                         iterpool);
-              const char *path_suffix = svn_path_basename(child->path,
-                                                          iterpool);
+              const char *path_prefix = svn_dirent_dirname(child->path,
+                                                           iterpool);
+              const char *path_suffix = svn_dirent_basename(child->path,
+                                                            iterpool);
 
               SVN_ERR(svn_client__parse_mergeinfo(&child_mergeinfo, entry,
                                                   child->path, FALSE,
@@ -702,10 +702,10 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
 
               while (strcmp(path_prefix, target_wcpath) != 0)
                 {
-                  path_suffix = svn_path_join(svn_path_basename(path_prefix,
-                                                                iterpool),
+                  path_suffix = svn_path_join(svn_dirent_basename(path_prefix,
+                                                                  iterpool),
                                               path_suffix, iterpool);
-                  path_prefix = svn_path_dirname(path_prefix, iterpool);
+                  path_prefix = svn_dirent_dirname(path_prefix, iterpool);
                 }
 
               SVN_ERR(elide_mergeinfo(target_mergeinfo, child_mergeinfo,
