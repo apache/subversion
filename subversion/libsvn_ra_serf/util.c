@@ -1174,32 +1174,6 @@ handle_response(serf_request_t *request,
         }
     }
 
-  /* Validate this response message. */
-  if (ctx->session->auth_protocol ||
-      ctx->session->proxy_auth_protocol)
-    {
-      svn_error_t *err;
-
-      if (ctx->session->auth_protocol)
-	{
-	  err = ctx->session->auth_protocol->validate_response_func(ctx, 
-		   request, response, pool);
-	}
-      else
-	{
-	  err = ctx->session->proxy_auth_protocol->validate_response_func(ctx, 
-		   request, response, pool);
-	}
-
-      if (err)
-	{
-	  svn_ra_serf__handle_discard_body(request, response, NULL, pool);
-	  ctx->session->pending_error = err;
-	  status = ctx->session->pending_error->apr_err;
-	  goto cleanup;
-	}
-    }
-
   if (ctx->conn->last_status_code == 401 && sl.code < 400)
     {
       svn_auth_save_credentials(ctx->session->auth_state, ctx->session->pool);
@@ -1257,6 +1231,28 @@ handle_response(serf_request_t *request,
     }
   else
     {
+      /* Validate this response message. */
+      if (ctx->session->auth_protocol ||
+          ctx->session->proxy_auth_protocol)
+        {
+          svn_error_t *err;
+          const svn_ra_serf__auth_protocol_t *prot;
+
+          if (ctx->session->auth_protocol)
+            prot = ctx->session->auth_protocol;
+          else
+            prot = ctx->session->proxy_auth_protocol;
+
+          err = prot->validate_response_func(ctx, request, response, pool);
+          if (err)
+            {
+              svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+              ctx->session->pending_error = err;
+              status = ctx->session->pending_error->apr_err;
+              goto cleanup;
+            }
+        }
+
       status = ctx->response_handler(request, response, ctx->response_baton,
                                      pool);
     }
