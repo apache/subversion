@@ -500,7 +500,7 @@ class State:
             # Python >=3.0
             contents = open(node, 'rb').read()
             if sys.platform == 'win32':
-              contents = contents.replace('\r\n', '\n')
+              contents = contents.replace(b'\r\n', b'\n')
             try:
               contents = contents.decode()
             except UnicodeDecodeError:
