@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+#ifdef SVN_RA_SERF_GSSAPI_ENABLED
+
 #include <string.h>
 
 #include <apr.h>
@@ -41,8 +43,6 @@
  **   are never used.
  ** - test
  **/
-
-#ifdef SVN_RA_SERF_GSSAPI_ENABLED
 
 typedef enum
 {
