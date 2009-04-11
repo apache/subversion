@@ -102,18 +102,19 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r37160, r37163
+ * r37160, r37163, r37175
    Fix issue #3396, "status --quiet doesn't show tree conflicts".
    Justification:
      Tree conflict victims are not shown in status output even though
      they should be.
    Notes:
-     r37160 fixes the bug, r37163 fixes tests.
+     r37160 fixes the bug, r37163 and r37175 fix tests.
      IMPORTANT: r37163 depends on r37156 to be merged first to merge
      without conflicts, *and* for the tests to pass!
      So don't bother merging this group before r37156.
    Votes:
-     +1: stsp, arfrever
+     +1: lgo, arfrever
+     +1: stsp (r37160 and r37163 only) 
 
  * r37169
    Update --set-depth infinity should expand shallow subtrees.
