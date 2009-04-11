@@ -102,6 +102,17 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r37169
+   Update --set-depth infinity should expand shallow subtrees.
+   Justification:
+     update --set-depth infinity won't actually update the target's
+     shallow subtrees without this change. 
+   Votes:
+     +1: pburba
+
+Approved changes:
+=================
+
  * r37160, r37163, r37175
    Fix issue #3396, "status --quiet doesn't show tree conflicts".
    Justification:
@@ -113,16 +124,5 @@ Candidate changes:
      without conflicts, *and* for the tests to pass!
      So don't bother merging this group before r37156.
    Votes:
-     +1: lgo, arfrever
-     +1: stsp (r37160 and r37163 only) 
+     +1: lgo, arfrever, stsp
 
- * r37169
-   Update --set-depth infinity should expand shallow subtrees.
-   Justification:
-     update --set-depth infinity won't actually update the target's
-     shallow subtrees without this change. 
-   Votes:
-     +1: pburba
-
-Approved changes:
-=================
