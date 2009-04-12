@@ -597,8 +597,12 @@ init_sqlite(apr_pool_t *pool)
                               "thread-safe mode"));
 #endif
 #if SQLITE_VERSION_AT_LEAST(3,6,0)
-  SQLITE_ERR_MSG(sqlite3_config(SQLITE_CONFIG_MULTITHREAD),
-                 "Could not configure SQLite");
+  /* If SQLite has been already initialized, sqlite3_config() returns
+     SQLITE_MISUSE. */
+  int err = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
+  if (err != SQLITE_OK && err != SQLITE_MISUSE)
+    return svn_error_create(SQLITE_ERROR_CODE(err), NULL,
+                            "Could not configure SQLite");
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
 
