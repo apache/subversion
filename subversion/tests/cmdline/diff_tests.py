@@ -3042,7 +3042,6 @@ def diff_svnpatch(sbox):
     ll = l[i+1:]
     return ll
 
-  
   def svnpatch_encode(l):
     if sys.version_info[0] >= 3:
       # Python >=3.0
