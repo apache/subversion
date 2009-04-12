@@ -43,19 +43,7 @@ Item = svntest.wc.StateItem
 
 
 def svnpatch_encode(l):
-  if sys.version_info[0] >= 3:
-    # Python >=3.0
-
-    def convert_svnpatch_line(l):
-      if isinstance(l, str):
-        return l.encode()
-      else:
-        return l
-
-    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
-  else:
-    # Python <3.0
-    return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
+  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
 gnupatch_garbage_re =\
  re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
