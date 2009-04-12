@@ -45,6 +45,7 @@ Candidate changes:
      +1: stsp (I'd say it's a fix for a feature we already support (merge
                under control of external non-interactive tool), albeit
                the feature is currently so buggy that you can't use it.)
+     +1: arfrever
      
  * r36509
    Don't contact the server asking about implicit mergeinfo when the
@@ -73,7 +74,7 @@ Candidate changes:
    Notes:
      r37072 is a test for the issue, r37083 is the fix.
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
 
  * r37121
    Fix test_dirent_get_absolute for the case where the current directory
@@ -100,7 +101,7 @@ Candidate changes:
      http://svn.haxx.se/dev/archive-2009-04/0328.shtml and
      http://svn.haxx.se/dev/archive-2009-03/0701.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
 
  * r37169
    Update --set-depth infinity should expand shallow subtrees.
@@ -108,7 +109,13 @@ Candidate changes:
      update --set-depth infinity won't actually update the target's
      shallow subtrees without this change. 
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
+
+ * r37185
+   Fix Issue #3387: SQLite configuration fails since client application has
+   already configured SQLite.
+   Votes:
+     +1: arfrever
 
 Approved changes:
 =================
