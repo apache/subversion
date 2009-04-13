@@ -695,8 +695,8 @@ use-commit-times = yes
   if (fmt[:19] != iota_ts[:19]
       or fmt[19:22] != iota_ts[20:23]
       or fmt[23:25] != iota_ts[23:25]):
-    # NOTE: the two strings below *exactly* match, but the *numeric*
-    #   portions of them should.
+    # NOTE: the two strings below won't *exactly* match (see just above),
+    #   but the *numeric* portions of them should.
     print("File timestamp on 'iota' does not match.")
     print("  EXPECTED: %s" % iota_ts)
     print("    ACTUAL: %s" % fmt)
