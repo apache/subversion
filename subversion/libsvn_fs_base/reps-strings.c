@@ -966,18 +966,16 @@ rep_read_contents(void *baton, char *buf, apr_size_t *len)
     SVN_ERR(txn_body_read_rep(&args, rb->trail));
   else
     {
-      /* Hey, guess what?  trails don't clear their own subpools.  In
-         the case of reading from the db, any returned data should
+      /* In the case of reading from the db, any returned data should
          live in our pre-allocated buffer, so the whole operation can
          happen within a single malloc/free cycle.  This prevents us
          from creating millions of unnecessary trail subpools when
-         reading a big file. */
-      apr_pool_t *subpool = svn_pool_create(rb->pool);
+         reading a big file.  */
       SVN_ERR(svn_fs_base__retry_txn(rb->fs,
                                      txn_body_read_rep,
                                      &args,
-                                     subpool));
-      svn_pool_destroy(subpool);
+                                     TRUE,
+                                     rb->pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1136,19 +1134,17 @@ rep_write_contents(void *baton,
     SVN_ERR(txn_body_write_rep(&args, wb->trail));
   else
     {
-      /* Hey, guess what?  trails don't clear their own subpools.  In
-         the case of simply writing the rep to the db, we're *certain*
-         that there's no data coming back to us that needs to be
-         preserved... so the whole operation can happen within a
+      /* In the case of simply writing the rep to the db, we're
+         *certain* that there's no data coming back to us that needs
+         to be preserved... so the whole operation can happen within a
          single malloc/free cycle.  This prevents us from creating
          millions of unnecessary trail subpools when writing a big
          file. */
-      apr_pool_t *subpool = svn_pool_create(wb->pool);
       SVN_ERR(svn_fs_base__retry_txn(wb->fs,
                                      txn_body_write_rep,
                                      &args,
-                                     subpool));
-      svn_pool_destroy(subpool);
+                                     TRUE,
+                                     wb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1203,8 +1199,10 @@ rep_write_close_contents(void *baton)
   if (wb->trail)
     return txn_body_write_close_rep(wb, wb->trail);
   else
+    /* We need to keep our trail pool around this time so the
+       checksums we've calculated survive. */
     return svn_fs_base__retry_txn(wb->fs, txn_body_write_close_rep,
-                                  wb, wb->pool);
+                                  wb, FALSE, wb->pool);
 }
 
 

@@ -20,6 +20,7 @@
 
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
 #include "svn_pools.h"
@@ -1544,13 +1545,13 @@ write_entries_xml(svn_stringbuf_t **output,
 svn_error_t *
 svn_wc__entries_write_old(apr_hash_t *entries,
                           svn_wc_adm_access_t *adm_access,
+                          int wc_format,
                           apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *bigstr = NULL;
   svn_stream_t *stream;
   const char *temp_file_path;
-  apr_hash_index_t *hi;
   const svn_wc_entry_t *this_dir;
   apr_size_t len;
 
@@ -1581,12 +1582,12 @@ svn_wc__entries_write_old(apr_hash_t *entries,
                                     SVN_WC__ADM_ENTRIES,
                                     pool, pool));
 
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
+  if (wc_format > SVN_WC__XML_ENTRIES_VERSION)
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_hash_index_t *hi;
 
-      bigstr = svn_stringbuf_createf(pool, "%d\n",
-                                     svn_wc__adm_wc_format(adm_access));
+      bigstr = svn_stringbuf_createf(pool, "%d\n", wc_format);
 
       /* Write out "this dir" */
       SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
@@ -1688,4 +1689,89 @@ svn_wc__entries_init_old(const char *path,
      for this dir.  Close the file and sync it up. */
   return svn_wc__close_adm_stream(stream, temp_file_path, path,
                                   SVN_WC__ADM_ENTRIES, pool);
+}
+
+
+svn_error_t *
+svn_wc__read_info_old(svn_wc__db_status_t *status,
+                      svn_wc__db_kind_t *kind,
+                      svn_revnum_t *revision,
+                      const char **repos_relpath,
+                      const char **repos_root_url,
+                      const char **repos_uuid,
+                      svn_revnum_t *changed_rev,
+                      apr_time_t *changed_date,
+                      const char **changed_author,
+                      apr_time_t *last_mod_time,
+                      svn_depth_t *depth,
+                      svn_checksum_t **checksum,
+                      svn_filesize_t *translated_size,
+                      const char **target,
+                      const char **changelist,
+                      const char **original_repos_relpath,
+                      const char **original_root_url,
+                      const char **original_uuid,
+                      svn_revnum_t *original_revision,
+                      svn_boolean_t *text_mod,
+                      svn_boolean_t *props_mod,
+                      svn_boolean_t *base_shadowed,
+                      svn_wc__db_lock_t **lock,
+                      svn_wc__db_t *db,
+                      const char *wcroot_abspath,
+                      const char *local_relpath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+  const svn_wc_entry_t *entry;
+
+  /* Oops. Can't fetch that kind of value with this old working copy.  */
+  if (status || kind || revision || repos_relpath || repos_root_url
+      || repos_uuid
+      || last_mod_time || depth || translated_size || target || changelist
+      || original_repos_relpath || original_root_url || original_uuid
+      || original_revision || text_mod || props_mod || base_shadowed
+      || lock)
+    return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                             _("Unable to return data because the working "
+                               "copy at '%s' needs to be upgraded."),
+                             svn_path_local_style(wcroot_abspath,
+                                                  scratch_pool));
+
+  SVN_ERR(svn_wc__adm_retrieve_internal2(&adm_access, db, wcroot_abspath,
+                                         scratch_pool));
+
+  /* The caller should have created an adm_access for the directory before
+     calling read_info.  */
+  /* ### we can loosen this up, and just not cache an entries file if there
+     ### is no access baton.  */
+  SVN_ERR_ASSERT(adm_access != NULL);
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+  entry = apr_hash_get(entries, local_relpath, APR_HASH_KEY_STRING);
+  if (entry == NULL)
+    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                             _("Entry '%s' in '%s' is not under version "
+                               "control"),
+                             svn_path_local_style(local_relpath, scratch_pool),
+                             svn_path_local_style(wcroot_abspath,
+                                                  scratch_pool));
+
+  if (changed_rev)
+    *changed_rev = entry->cmt_rev;
+  if (changed_date)
+    *changed_date = entry->cmt_date;
+  if (changed_author)
+    *changed_author = apr_pstrdup(result_pool, entry->cmt_author);
+  if (checksum)
+    {
+      if (entry->checksum)
+        SVN_ERR(svn_checksum_parse_hex(checksum, svn_checksum_md5,
+                                       entry->checksum, result_pool));
+      else
+        *checksum = NULL;
+    }
+
+  return SVN_NO_ERROR;
 }

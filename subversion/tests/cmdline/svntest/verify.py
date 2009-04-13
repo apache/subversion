@@ -63,7 +63,7 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
 ######################################################################
 # Comparison of expected vs. actual output
 
-def createExpectedOutput(expected, match_all=True):
+def createExpectedOutput(expected, output_type, match_all=True):
   """Return EXPECTED, promoted to an ExpectedOutput instance if not
   None.  Raise SVNIncorrectDatatype if the data type of EXPECTED is
   not handled."""
@@ -338,8 +338,8 @@ def verify_outputs(message, actual_stdout, actual_stderr,
   ACTUAL_STDOUT to match, every line in ACTUAL_STDOUT must match the
   EXPECTED_STDOUT regex, unless ALL_STDOUT is false.  For
   EXPECTED_STDERR regexes only one line in ACTUAL_STDERR need match."""
-  expected_stderr = createExpectedOutput(expected_stderr, False)
-  expected_stdout = createExpectedOutput(expected_stdout, all_stdout)
+  expected_stderr = createExpectedOutput(expected_stderr, 'stderr', False)
+  expected_stdout = createExpectedOutput(expected_stdout, 'stdout', all_stdout)
 
   for (actual, expected, label, raisable) in (
       (actual_stderr, expected_stderr, 'STDERR', SVNExpectedStderr),
@@ -347,7 +347,6 @@ def verify_outputs(message, actual_stdout, actual_stderr,
     if expected is None:
       continue
 
-    expected = createExpectedOutput(expected)
     if isinstance(expected, RegexOutput):
       raisable = svntest.main.SVNUnmatchedError
     elif not isinstance(expected, AnyOutput):

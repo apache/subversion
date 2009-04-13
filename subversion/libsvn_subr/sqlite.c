@@ -533,8 +533,10 @@ upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-get_schema(int *version, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+svn_error_t *
+svn_sqlite__read_schema_version(int *version,
+                                svn_sqlite__db_t *db,
+                                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
@@ -558,7 +560,7 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
   int current_schema;
 
   /* Validate that the schema exists as expected. */
-  SVN_ERR(get_schema(&current_schema, db, scratch_pool));
+  SVN_ERR(svn_sqlite__read_schema_version(&current_schema, db, scratch_pool));
 
   if (current_schema == latest_schema)
     return SVN_NO_ERROR;
@@ -597,8 +599,14 @@ init_sqlite(apr_pool_t *pool)
                               "thread-safe mode"));
 #endif
 #if SQLITE_VERSION_AT_LEAST(3,6,0)
-  SQLITE_ERR_MSG(sqlite3_config(SQLITE_CONFIG_MULTITHREAD),
-                 "Could not configure SQLite");
+  /* If SQLite has been already initialized, sqlite3_config() returns
+     SQLITE_MISUSE. */
+  {
+    int err = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
+    if (err != SQLITE_OK && err != SQLITE_MISUSE)
+      return svn_error_create(SQLITE_ERROR_CODE(err), NULL,
+                              "Could not configure SQLite");
+  }
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
 
@@ -713,7 +721,7 @@ svn_sqlite__get_schema_version(int *version,
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
   SVN_ERR(internal_open(&db.db3, path, svn_sqlite__mode_readonly,
                         scratch_pool));
-  SVN_ERR(get_schema(version, &db, scratch_pool));
+  SVN_ERR(svn_sqlite__read_schema_version(version, &db, scratch_pool));
   SQLITE_ERR(sqlite3_close(db.db3), &db);
 
   return SVN_NO_ERROR;
@@ -767,7 +775,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
 
-  *db = apr_palloc(result_pool, sizeof(**db));
+  *db = apr_pcalloc(result_pool, sizeof(**db));
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
 

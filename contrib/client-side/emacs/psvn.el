@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
-;; freebsd5, red hat el4, ubuntu edgy with svn 1.4.0
+;; freebsd5, red hat el4, ubuntu intrepid with svn 1.5.1
 
 ;; psvn.el needs at least svn 1.1.0
 ;; if you upgrade to a higher version, you need to do a fresh checkout
@@ -246,6 +246,7 @@
 (eval-when-compile (require 'dired))
 (eval-when-compile (require 'ediff-util))
 (eval-when-compile (require 'ediff-wind))
+(eval-when-compile (require 'vc-hooks))
 (eval-when-compile (require 'elp))
 (eval-when-compile (require 'pp))
 
@@ -1638,6 +1639,15 @@ the usual parsing functionality in `svn-parse-status-result'."
         (save-excursion
           (while (re-search-forward search-string (point-max) t)
             (replace-match (replace-regexp-in-string " " "-" (match-string 1)) nil nil nil 1)))))))
+
+(defun svn-status-parse-fixup-tramp-exit ()
+  "Helper function to handle tramp connections stopping with an exit output.
+Add this function to the `svn-pre-parse-status-hook'."
+  (goto-char (point-max))
+  (beginning-of-line)
+  (when (looking-at "exit")
+    (delete-region (point) (svn-point-at-eol))))
+;;(add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-tramp-exit)
 
 (defun svn-parse-status-result ()
   "Parse the `svn-process-buffer-name' buffer.

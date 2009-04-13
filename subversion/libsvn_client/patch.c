@@ -1356,7 +1356,7 @@ apply_textdelta(void *file_baton,
    * don't need any source stream here as bytes are written directly to
    * the target stream. */
   svn_txdelta_apply(NULL,
-                    svn_stream_from_aprfile(b->file_incoming, b->pool),
+                    svn_stream_from_aprfile2(b->file_incoming, TRUE, b->pool),
                     NULL, b->path, b->pool,
                     &(b->apply_handler), &(b->apply_baton));
 
@@ -1633,15 +1633,19 @@ static svn_error_t *
 extract_svnpatch(const char *original_patch_path,
                  apr_file_t **patch_file,
                  svn_wc_adm_access_t *adm_access,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
                  apr_pool_t *pool)
 {
   apr_file_t *original_patch_file; /* gzip-base64'ed */
+  svn_stringbuf_t *original_patch_stringbuf; /* gzip-base64'ed */
   svn_stream_t *original_patch_stream;
   apr_file_t *compressed_file; /* base64-decoded, gzip-compressed */
-  svn_stream_t *compressed_stream;
   svn_stream_t *svnpatch_stream; /* clear-text, attached to @a patch_file */
   svn_string_t *svnpatch_header;
   svn_stringbuf_t *patch_line;
+  int i;
+  svn_boolean_t svnpatch_header_found = FALSE;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* We assume both clients have the same version for now. */
@@ -1653,30 +1657,49 @@ extract_svnpatch(const char *original_patch_path,
 
   SVN_ERR(svn_io_file_open(&original_patch_file, original_patch_path,
                            APR_READ, APR_OS_DEFAULT, pool));
-  original_patch_stream = svn_stream_from_aprfile2(original_patch_file,
-                                          FALSE, pool);
+  SVN_ERR(svn_stringbuf_from_aprfile(&original_patch_stringbuf,
+                                     original_patch_file, pool));
 
-  while (1)
+  for (i = 0; i <= 1; i++)
     {
-      svn_boolean_t eof;
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line, "\n",
-                                  &eof, subpool));
-      /* No need to go deeper down the stack when the first char isn't
-       * even '='. */
-      if (*patch_line->data == '='
-          && svn_string_compare_stringbuf(svnpatch_header, patch_line))
-        break;
+      original_patch_stream = svn_stream_from_stringbuf(original_patch_stringbuf,
+                                                        pool);
 
-      /* @a original_patch_path doesn't contain the svnpatch block
-       * we're looking for. */
-      if (eof)
+      while (1)
         {
-          *patch_file = NULL;
-          return SVN_NO_ERROR;
+          svn_boolean_t eof;
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line,
+                                      i == 0 ? "\n" : "\r\n", &eof, subpool));
+          /* No need to go deeper down the stack when the first char isn't
+           * even '='. */
+          if (*patch_line->data == '='
+              && svn_string_compare_stringbuf(svnpatch_header, patch_line))
+            {
+              svnpatch_header_found = TRUE;
+              break;
+            }
+
+          /* @a original_patch_path doesn't contain the svnpatch block
+           * we're looking for. */
+          if (eof)
+            {
+              *patch_file = NULL;
+              break;
+            }
+        }
+
+      if (svnpatch_header_found == TRUE)
+        {
+          break;
         }
     }
   svn_pool_destroy(subpool);
+
+  if (! svnpatch_header_found)
+    {
+      return SVN_NO_ERROR;
+    }
 
   /* At this point, original_patch_stream's cursor points right after the
    * svnpatch header, that is, the bytes we're interested in,
@@ -1699,10 +1722,11 @@ extract_svnpatch(const char *original_patch_path,
   SVN_ERR(svn_wc_create_tmp_file2(&compressed_file, NULL,
                                   svn_wc_adm_access_path(adm_access),
                                   SVNPATCH_DELETE_WHEN, pool));
-  compressed_stream = svn_base64_decode
-                      (svn_stream_from_aprfile2
-                       (compressed_file, FALSE, pool), pool);
-  SVN_ERR(svn_stream_copy(original_patch_stream, compressed_stream, pool));
+  SVN_ERR(svn_stream_copy3(svn_stream_disown(original_patch_stream, pool),
+                           svn_base64_decode(
+                             svn_stream_from_aprfile2(compressed_file, TRUE,
+                                                      pool), pool),
+                           cancel_func, cancel_baton, pool));
 
   {
     /* Rewind. */
@@ -1711,11 +1735,11 @@ extract_svnpatch(const char *original_patch_path,
                              APR_SET, &offset, pool));
   }
 
-  compressed_stream = svn_stream_compressed
-                      (svn_stream_from_aprfile2
-                       (compressed_file, FALSE, pool), pool);
-  SVN_ERR(svn_stream_copy(compressed_stream, svnpatch_stream, pool));
-  SVN_ERR(svn_stream_close(svnpatch_stream));
+  SVN_ERR(svn_stream_copy3(svn_stream_compressed(
+                            svn_stream_from_aprfile2(compressed_file, FALSE,
+                                                     pool),
+                            pool),
+                           svnpatch_stream, cancel_func, cancel_baton, pool));
 
   /* TODO: wrap errors? */
 
@@ -1749,7 +1773,8 @@ svn_client_patch(const char *patch_path,
                            TRUE, -1, NULL, NULL, pool));
 
   /* Pull out the svnpatch block. */
-  SVN_ERR(extract_svnpatch(patch_path, &decoded_patch_file, adm_access, pool));
+  SVN_ERR(extract_svnpatch(patch_path, &decoded_patch_file, adm_access,
+                           ctx->cancel_func, ctx->cancel_baton, pool));
 
   if (decoded_patch_file)
     {
