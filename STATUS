@@ -163,6 +163,21 @@ Candidate changes for 1.5.7:
    Votes:
      +1: cmpilato
 
+ * r37169
+   Update --set-depth infinity should expand shallow subtrees.
+   Justification:
+     update --set-depth infinity won't actually update the target's
+     shallow subtrees without this change.
+   Notes:
+     The test added in r37169 uses update --set-depth to make subtrees
+     in a WC shallow, but 1.5.x does not support shallowing of WC depths.
+     A backport branch can be found at
+     http://svn.collab.net/repos/svn/branches/1.5.x-r37169 which makes
+     minor adjustments to the test to work around this limitation.  These
+     adjusments affect *only* the setup of the test.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
