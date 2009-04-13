@@ -35,21 +35,14 @@ from svntest.main import SVN_PROP_MERGEINFO
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 ########################################################################
 #Tools
 
-def convert_svnpatch_line(l):
-  if sys.version_info[0] >= 3:
-    # Python >=3.0
-    if isinstance(l, str):
-      return l.encode()
-  return l
 
 def svnpatch_encode(l):
-  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join([convert_svnpatch_line(x) for x in l]))).decode(), 76)]
+  return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
 gnupatch_garbage_re =\
  re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
@@ -105,10 +98,6 @@ def patch_basic(sbox):
   ]
 
   svnpatch = svnpatch_encode(svnpatch)
-  if sys.version_info[0] < 3:
-    # Python <3.0
-    svnpatch = [x.encode() for x in svnpatch]
-
   svntest.main.file_write(patch_file_path,\
   '========================= SVNPATCH1 BLOCK =========================\n')
   svntest.main.file_append(patch_file_path, ''.join(svnpatch))
@@ -299,10 +288,6 @@ def patch_copy_and_move(sbox):
   ]
 
   svnpatch = svnpatch_encode(svnpatch)
-  if sys.version_info[0] < 3:
-    # Python <3.0
-    svnpatch = [x.encode() for x in svnpatch]
-
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
   svntest.main.file_append(patch_file_path,
     '========================= SVNPATCH1 BLOCK =========================\n')
@@ -384,12 +369,9 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_basic, svntest.main.has_patch)),
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_unidiff, svntest.main.has_patch)),
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_copy_and_move, svntest.main.has_patch)),
+              SkipUnless(patch_basic, svntest.main.has_patch),
+              SkipUnless(patch_unidiff, svntest.main.has_patch),
+              SkipUnless(patch_copy_and_move, svntest.main.has_patch),
               ]
 
 if __name__ == '__main__':

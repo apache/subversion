@@ -22,6 +22,7 @@
 
 #include "ra_serf.h"
 #include "auth_digest.h"
+#include "auth_kerb.h"
 #include "win32_auth_sspi.h"
 #include "svn_private_config.h"
 
@@ -118,6 +119,16 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     svn_ra_serf__setup_request_digest_auth,
     svn_ra_serf__validate_response_digest_auth,
   },
+#if SVN_RA_SERF_GSSAPI_ENABLED
+  {
+    401,
+    "Negotiate",
+    svn_ra_serf__init_kerb_connection,
+    svn_ra_serf__handle_kerb_auth,
+    svn_ra_serf__setup_request_kerb_auth,
+    svn_ra_serf__validate_response_kerb_auth,    
+  },
+#endif /* SVN_RA_SERF_GSSAPI_ENABLED */
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 

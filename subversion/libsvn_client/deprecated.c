@@ -1672,3 +1672,12 @@ svn_client_revert(const apr_array_header_t *paths,
   return svn_client_revert2(paths, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                             NULL, ctx, pool);
 }
+
+/*** From cleanup.c ***/
+svn_error_t *
+svn_client_cleanup(const char *dir,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_cleanup2(dir, FALSE, ctx, pool);
+}

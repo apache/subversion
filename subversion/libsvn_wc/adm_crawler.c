@@ -44,6 +44,7 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
+#include "private/svn_debug.h"
 
 
 /* Helper for report_revisions_and_depths().
@@ -131,15 +132,25 @@ restore_file(const char *file_path,
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
-      const svn_wc_entry_t *entry;
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+      const char *abspath;
+      apr_time_t changed_date;
 
-      SVN_ERR(svn_wc_entry(&entry, file_path, adm_access, FALSE, pool));
-      SVN_ERR_ASSERT(entry != NULL);
+      SVN_ERR(svn_dirent_get_absolute(&abspath, file_path, pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, &changed_date, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, abspath,
+                                   pool, pool));
 
-      SVN_ERR(svn_io_set_file_affected_time(entry->cmt_date,
-                                            file_path, pool));
+      SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));
 
-      newentry.text_time = entry->cmt_date;
+      newentry.text_time = changed_date;
     }
   else
     {
@@ -499,14 +510,17 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           /* ... or perhaps just a differing revision, lock token, incomplete
              subdir, the mere presence of the directory in a depth-empty or
              depth-files dir, or if the parent dir is at depth-immediates but
-             the child is not at depth-empty. */
+             the child is not at depth-empty.  Also describe shallow subdirs
+             if we are trying to set depth to infinity. */
           else if (subdir_entry->revision != dir_rev
                    || subdir_entry->lock_token
                    || subdir_entry->incomplete
                    || dot_entry->depth == svn_depth_empty
                    || dot_entry->depth == svn_depth_files
                    || (dot_entry->depth == svn_depth_immediates
-                       && subdir_entry->depth != svn_depth_empty))
+                       && subdir_entry->depth != svn_depth_empty)
+                   || (subdir_entry->depth < svn_depth_infinity
+                       && depth == svn_depth_infinity))
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        subdir_entry->revision,
@@ -867,23 +881,30 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   if (! fulltext)
     {
-      const svn_wc_entry_t *ent;
+      const char *abspath;
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
       /* Compute delta against the pristine contents */
       SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
 
-      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL,
+                                   &expected_checksum, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, abspath,
+                                   pool, pool));
 
-      /* ### We want ent->checksum to ALWAYS be present, but on old
+      /* ### We want expected_checksum to ALWAYS be present, but on old
          ### working copies maybe it won't be (unclear?). If it is there,
          ### then we can use it as an expected value. If it is NOT there,
          ### then we must compute it for the apply_textdelta() call. */
-      if (ent->checksum)
+      if (expected_checksum)
         {
-          /* Convert MD5 hex checksum to a checksum structure */
-          SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
-                                         ent->checksum, pool));
-
           /* Compute a checksum for what is *actually* found */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
                                                 NULL, svn_checksum_md5, TRUE,

@@ -46,12 +46,6 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-try:
-  # Python >=2.6
-  bytes
-except NameError:
-  # Python <2.6
-  bytes = str
 
 ######################################################################
 #
@@ -432,14 +426,6 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 
   kid, command = waiter
   stdout, stderr = kid.communicate(stdin)
-  try:
-    stdout = stdout.decode()
-  except UnicodeDecodeError:
-    pass
-  try:
-    stderr = stderr.decode()
-  except UnicodeDecodeError:
-    pass
   exit_code = kid.returncode
 
   # Normalize Windows line endings if in text mode.
@@ -483,8 +469,6 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
 
   if stdin_lines:
     for x in stdin_lines:
-      if isinstance(x, str):
-        x = x.encode()
       infile.write(x)
 
   stdout_lines, stderr_lines, exit_code = wait_on_pipe(kid, binary_mode)
@@ -670,28 +654,18 @@ def safe_rmtree(dirname, retry=0):
 # For making local mods to files
 def file_append(path, new_text):
   "Append NEW_TEXT to file at PATH"
-  if not isinstance(new_text, str):
-    raise TypeError("new_text argument should have str type")
-  file_write(path, new_text, 'a')  # open in (a)ppend mode
+  open(path, 'a').write(new_text)
 
 # Append in binary mode
 def file_append_binary(path, new_text):
   "Append NEW_TEXT to file at PATH in binary mode"
-  if not isinstance(new_text, bytes):
-    raise TypeError("new_text argument should have bytes type")
-  file_write(path, new_text, 'ab')  # open in (a)ppend mode
+  open(path, 'ab').write(new_text)
 
 # For creating new files, and making local mods to existing files.
-def file_write(path, contents, mode = 'w'):
+def file_write(path, contents, mode='w'):
   """Write the CONTENTS to the file at PATH, opening file using MODE,
   which is (w)rite by default."""
-  if "b" in mode and not isinstance(contents, bytes):
-    raise TypeError("contents argument should have bytes type when writing in binary mode")
-  if "b" not in mode and not isinstance(contents, str):
-    raise TypeError("contents argument should have str type when writing in text mode")
-  fp = open(path, mode)
-  fp.write(contents)
-  fp.close()
+  open(path, mode).write(contents)
 
 # For reading the contents of a file
 def file_read(path, mode = 'r'):
@@ -1054,8 +1028,11 @@ def server_enforces_date_syntax():
 
 def has_patch():
   try:
-    subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return True
+    p = subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if "Free Software Foundation" in p.stdout.read():
+      return True
+    else:
+      return False
   except OSError:
     return False
 

@@ -56,6 +56,11 @@ extern "C" {
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
  *
+ * == 1.0.x shipped with format 4
+ * == 1.1.x shipped with format 4
+ * == 1.2.x shipped with format 4
+ * == 1.3.x shipped with format 4
+ *
  * The change from 4 to 5 was the addition of support for replacing files
  * with history.
  *
@@ -66,11 +71,17 @@ extern "C" {
  *
  * The change from 7 to 8 was putting wcprops in one file per directory.
  *
+ * == 1.4.x shipped with format 8
+ *
  * The change from 8 to 9 was the addition of changelists, keep-local,
  * and sticky depth (for selective/sparse checkouts).
  *
+ * == 1.5.x shipped with format 9
+ *
  * The change from 9 to 10 was the addition of tree-conflicts, file
- * externals and a different canonicalization of urls. Shipped in 1.6.
+ * externals and a different canonicalization of urls.
+ *
+ * == 1.6.x shipped with format 10
  *
  * The change from 10 to 11 was clearing the has_props, has_prop_mods,
  * cachable_props, and present_props values in the entries file. Older
