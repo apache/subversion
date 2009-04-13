@@ -20,6 +20,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_editor.h"
 
 
@@ -31,6 +32,8 @@ struct svn_editor_t
      just use that.  */
   svn_editor_cb_many_t funcs;
 
+  /* This pool is used as the scratch_pool for all callbacks.  */
+  apr_pool_t *scratch_pool;
 };
 
 
@@ -42,6 +45,8 @@ svn_editor_create(svn_editor_t **editor,
 {
   *editor = apr_pcalloc(result_pool, sizeof(**editor));
   (*editor)->baton = baton;
+  (*editor)->scratch_pool = svn_pool_create(result_pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -208,11 +213,11 @@ svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
-                         apr_hash_t *props,
-                         apr_pool_t *scratch_pool)
+                         apr_hash_t *props)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_add_directory)(editor->baton, relpath, children,
-                                           props, scratch_pool);
+                                           props, editor->scratch_pool);
 }
 
 
@@ -220,23 +225,23 @@ svn_error_t *
 svn_editor_add_directory_streamy(svn_editor_t *editor,
                                  const char *relpath,
                                  svn_stream_t *children,
-                                 apr_hash_t *props,
-                                 apr_pool_t *scratch_pool)
+                                 apr_hash_t *props)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_add_directory_streamy)(editor->baton, relpath,
                                                    children, props,
-                                                   scratch_pool);
+                                                   editor->scratch_pool);
 }
 
 
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
-                    apr_hash_t *props,
-                    apr_pool_t *scratch_pool)
+                    apr_hash_t *props)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_add_file)(editor->baton, relpath, props,
-                                      scratch_pool);
+                                      editor->scratch_pool);
 }
 
 
@@ -244,22 +249,22 @@ svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
                        const char *relpath,
                        const char *target,
-                       apr_hash_t *props,
-                       apr_pool_t *scratch_pool)
+                       apr_hash_t *props)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_add_symlink)(editor->baton, relpath, target, props,
-                                         scratch_pool);
+                                         editor->scratch_pool);
 }
 
 
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind,
-                      apr_pool_t *scratch_pool)
+                      svn_node_kind_t kind)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_add_absent)(editor->baton, relpath, kind,
-                                        scratch_pool);
+                                        editor->scratch_pool);
 }
 
 
@@ -268,11 +273,11 @@ svn_editor_set_props(svn_editor_t *editor,
                      const char *relpath,
                      svn_revnum_t revision,
                      apr_hash_t *props,
-                     svn_boolean_t complete,
-                     apr_pool_t *scratch_pool)
+                     svn_boolean_t complete)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_set_props)(editor->baton, relpath, revision, props,
-                                       complete, scratch_pool);
+                                       complete, editor->scratch_pool);
 }
 
 
@@ -281,11 +286,12 @@ svn_editor_set_text(svn_editor_t *editor,
                     const char *relpath,
                     svn_revnum_t revision,
                     const svn_checksum_t *checksum,
-                    svn_stream_t *contents,
-                    apr_pool_t *scratch_pool)
+                    svn_stream_t *contents)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_set_text)(editor->baton, relpath, revision,
-                                      checksum, contents, scratch_pool);
+                                      checksum, contents,
+                                      editor->scratch_pool);
 }
 
 
@@ -293,22 +299,22 @@ svn_error_t *
 svn_editor_set_target(svn_editor_t *editor,
                       const char *relpath,
                       svn_revnum_t revision,
-                      const char *target,
-                      apr_pool_t *scratch_pool)
+                      const char *target)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_set_target)(editor->baton, relpath, revision,
-                                        target, scratch_pool);
+                                        target, editor->scratch_pool);
 }
 
 
 svn_error_t *
 svn_editor_delete(svn_editor_t *editor,
                   const char *relpath,
-                  svn_revnum_t revision,
-                  apr_pool_t *scratch_pool)
+                  svn_revnum_t revision)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_delete)(editor->baton, relpath, revision,
-                                    scratch_pool);
+                                    editor->scratch_pool);
 }
 
 
@@ -316,11 +322,11 @@ svn_error_t *
 svn_editor_copy(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath,
-                apr_pool_t *scratch_pool)
+                const char *dst_relpath)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_copy)(editor->baton, src_relpath, src_revision,
-                                  dst_relpath, scratch_pool);
+                                  dst_relpath, editor->scratch_pool);
 }
 
 
@@ -328,25 +334,25 @@ svn_error_t *
 svn_editor_move(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath,
-                apr_pool_t *scratch_pool)
+                const char *dst_relpath)
 {
+  svn_pool_clear(editor->scratch_pool);
   return (*editor->funcs.cb_move)(editor->baton, src_relpath, src_revision,
-                                  dst_relpath, scratch_pool);
+                                  dst_relpath, editor->scratch_pool);
 }
 
 
 svn_error_t *
-svn_editor_complete(svn_editor_t *editor,
-                    apr_pool_t *scratch_pool)
+svn_editor_complete(svn_editor_t *editor)
 {
-  return (*editor->funcs.cb_complete)(editor->baton, scratch_pool);
+  svn_pool_clear(editor->scratch_pool);
+  return (*editor->funcs.cb_complete)(editor->baton, editor->scratch_pool);
 }
 
 
 svn_error_t *
-svn_editor_abort(svn_editor_t *editor,
-                 apr_pool_t *scratch_pool)
+svn_editor_abort(svn_editor_t *editor)
 {
-  return (*editor->funcs.cb_abort)(editor->baton, scratch_pool);
+  svn_pool_clear(editor->scratch_pool);
+  return (*editor->funcs.cb_abort)(editor->baton, editor->scratch_pool);
 }

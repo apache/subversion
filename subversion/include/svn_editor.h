@@ -216,96 +216,84 @@ typedef struct
 
 } svn_editor_cb_many_t;
 
-
 svn_error_t *
 svn_editor_setcb_many(svn_editor_t *editor,
                       const svn_editor_cb_many_t *many,
                       apr_pool_t *scratch_pool);
 
 
+/* ### driving the editor  */
+
 svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
-                         apr_hash_t *props,
-                         apr_pool_t *scratch_pool);
+                         apr_hash_t *props);
 
 svn_error_t *
 svn_editor_add_directory_streamy(svn_editor_t *editor,
                                  const char *relpath,
                                  svn_stream_t *children,
-                                 apr_hash_t *props,
-                                 apr_pool_t *scratch_pool);
+                                 apr_hash_t *props);
 
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
-                    apr_hash_t *props,
-                    apr_pool_t *scratch_pool);
+                    apr_hash_t *props);
 
 svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
                        const char *relpath,
                        const char *target,
-                       apr_hash_t *props,
-                       apr_pool_t *scratch_pool);
+                       apr_hash_t *props);
 
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind,
-                      apr_pool_t *scratch_pool);
+                      svn_node_kind_t kind);
 
 svn_error_t *
 svn_editor_set_props(svn_editor_t *editor,
                      const char *relpath,
                      svn_revnum_t revision,
                      apr_hash_t *props,
-                     svn_boolean_t complete,
-                     apr_pool_t *scratch_pool);
+                     svn_boolean_t complete);
 
 svn_error_t *
 svn_editor_set_text(svn_editor_t *editor,
                     const char *relpath,
                     svn_revnum_t revision,
                     const svn_checksum_t *checksum,
-                    svn_stream_t *contents,
-                    apr_pool_t *scratch_pool);
+                    svn_stream_t *contents);
 
 svn_error_t *
 svn_editor_set_target(svn_editor_t *editor,
                       const char *relpath,
                       svn_revnum_t revision,
-                      const char *target,
-                      apr_pool_t *scratch_pool);
+                      const char *target);
 
 svn_error_t *
 svn_editor_delete(svn_editor_t *editor,
                   const char *relpath,
-                  svn_revnum_t revision,
-                  apr_pool_t *scratch_pool);
+                  svn_revnum_t revision);
 
 svn_error_t *
 svn_editor_copy(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath,
-                apr_pool_t *scratch_pool);
+                const char *dst_relpath);
 
 svn_error_t *
 svn_editor_move(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath,
-                apr_pool_t *scratch_pool);
+                const char *dst_relpath);
 
 svn_error_t *
-svn_editor_complete(svn_editor_t *editor,
-                    apr_pool_t *scratch_pool);
+svn_editor_complete(svn_editor_t *editor);
 
 svn_error_t *
-svn_editor_abort(svn_editor_t *editor,
-                 apr_pool_t *scratch_pool);
+svn_editor_abort(svn_editor_t *editor);
 
 
 #ifdef __cplusplus
