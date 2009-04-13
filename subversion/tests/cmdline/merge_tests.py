@@ -7661,7 +7661,12 @@ def merge_to_sparse_directories(sbox):
     'D'         : Item(props={SVN_PROP_MERGEINFO : '/A/D:5-9*',
                               "prop:name" : "propval"}),
     })
-  expected_skip = wc.State(short_immediates_dir, {})
+  expected_skip = wc.State(short_immediates_dir, {
+    'D/H'       : Item(),
+    'D/H/omega' : Item(),
+    'B/E'       : Item(),
+    'B/E/beta'  : Item(),
+    })
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_immediates_dir, '4', '9',
@@ -7672,7 +7677,7 @@ def merge_to_sparse_directories(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1)
+                                       None, 1, 0)
   os.chdir(saved_cwd)
 
   # Do a --files checkout of A_COPY
@@ -7709,7 +7714,14 @@ def merge_to_sparse_directories(sbox):
     'mu'        : Item("New content",
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
-  expected_skip = wc.State(short_files_dir, {})
+  expected_skip = wc.State(short_files_dir, {
+    'D'         : Item(),
+    'D/H'       : Item(),
+    'D/H/omega' : Item(),
+    'B'         : Item(),
+    'B/E'       : Item(),
+    'B/E/beta'  : Item(),
+    })
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_files_dir, '4', '9',
                                        sbox.repo_url + \
@@ -7719,7 +7731,7 @@ def merge_to_sparse_directories(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1)
+                                       None, 1, 0)
   os.chdir(saved_cwd)
 
   # Do an --empty checkout of A_COPY
@@ -7734,7 +7746,8 @@ def merge_to_sparse_directories(sbox):
 
   # Merge r4:9 into the empty WC.
   # The root of the files WC should get non-inheritable r4:9 and also get
-  # the one change that affects it directly (the prop add from r9).
+  # the one change that affects it directly (the prop add from r9).  Changes
+  # deeper than the immediate children show as skips.
   short_empty_dir = shorten_path_kludge(empty_dir)
   expected_output = wc.State(short_empty_dir, {
     ''   : Item(status=' U'),
@@ -7746,7 +7759,15 @@ def merge_to_sparse_directories(sbox):
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
                               "prop:name" : "propval"}),
     })
-  expected_skip = wc.State(short_empty_dir, {})
+  expected_skip = wc.State(short_empty_dir, {
+    'D'         : Item(),
+    'D/H'       : Item(),
+    'D/H/omega' : Item(),
+    'B'         : Item(),
+    'B/E'       : Item(),
+    'B/E/beta'  : Item(),
+    'mu'        : Item(),
+    })
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_empty_dir, '4', '9',
                                        sbox.repo_url + \
@@ -7756,8 +7777,66 @@ def merge_to_sparse_directories(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1)
+                                       None, 1, 0)
   os.chdir(saved_cwd)
+
+  # Check that default depth for merge is infinity.
+  #
+  # Revert the previous changes to the immediates WC and update one
+  # child in that WC to depth infinity.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R',
+                                     immediates_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '--set-depth',
+                                     'infinity',
+                                     os.path.join(immediates_dir, 'D'))
+  # Now merge r6 into the immediates WC, even though the root of the
+  # is at depth immediates, the subtree rooted at child 'D' is fully
+  # present, so a merge of r6 should affect 'D/H/omega'.
+  expected_output = wc.State(immediates_dir, {
+    'D/H/omega'  : Item(status='U '),
+    })
+  expected_status = wc.State(immediates_dir, {
+    ''          : Item(status=' M', wc_rev=9),
+    'B'         : Item(status=' M', wc_rev=9),
+    'mu'        : Item(status='  ', wc_rev=9),
+    'C'         : Item(status=' M', wc_rev=9),
+    'D'         : Item(status='  ', wc_rev=9),
+    'D/gamma'   : Item(status='  ', wc_rev=9),
+    'D/G'       : Item(status='  ', wc_rev=9),
+    'D/G/pi'    : Item(status='  ', wc_rev=9),
+    'D/G/rho'   : Item(status='  ', wc_rev=9),
+    'D/G/tau'   : Item(status='  ', wc_rev=9),
+    'D/H'       : Item(status='  ', wc_rev=9),
+    'D/H/chi'   : Item(status='  ', wc_rev=9),
+    'D/H/omega' : Item(status='M ', wc_rev=9),
+    'D/H/psi'   : Item(status='  ', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:6'}),
+    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:6*'}),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'C'         : Item(props={SVN_PROP_MERGEINFO : '/A/C:6*'}),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("New content"), 
+    })
+  expected_skip = wc.State(immediates_dir, {})
+  svntest.actions.run_and_verify_merge(immediates_dir, '5', '6',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
 
 def merge_old_and_new_revs_from_renamed_dir(sbox):
   "merge -rold(before rename):head renamed dir"
