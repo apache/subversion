@@ -45,9 +45,20 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 
 def check_format(sbox, expected_format):
+  if not svntest.main.is_not_ng():
+    import sqlite3
+
   for root, dirs, files in os.walk(sbox.wc_dir):
-    format_file = open(os.path.join(root, '.svn', 'entries'))
-    found_format = int(format_file.readline())
+    if svntest.main.is_not_ng():
+      format_file = open(os.path.join(root, '.svn', 'entries'))
+      found_format = int(format_file.readline())
+    else:
+      # WC-NG
+      db = sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
+      c = db.cursor()
+      c.execute('pragma user_version;')
+      found_format = c.fetchone()[0]
+      db.close()
 
     if found_format != expected_format:
       raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
@@ -74,7 +85,10 @@ def basic_upgrade(sbox):
                                      'cleanup', sbox.wc_dir)
 
   # Actually check the sanity of the upgraded working copy
-  check_format(sbox, 11)
+  if svntest.main.is_not_ng():
+    check_format(sbox, 11)
+  else:
+    check_format(sbox, 12)
 
 
 def upgrade_1_5(sbox):
@@ -93,8 +107,11 @@ def upgrade_1_5(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cleanup', sbox.wc_dir)
 
-  # Check the format of the working copy, we currently expect format 11
-  check_format(sbox, 11)
+  # Check the format of the working copy
+  if svntest.main.is_not_ng():
+    check_format(sbox, 11)
+  else:
+    check_format(sbox, 12)
 
 
 
