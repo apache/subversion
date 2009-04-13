@@ -114,6 +114,18 @@ def upgrade_1_5(sbox):
     check_format(sbox, 12)
 
 
+def logs_left_1_5(sbox):
+  "test upgrading from a 1.5-era wc with stale logs"
+
+  replace_sbox_with_tarfile(sbox, 'logs_left_1_5.tar.bz2')
+
+  # Try to upgrade, this should give an error
+  expected_stderr = (".*Cannot upgrade with existing logs; please "
+                     "run 'svn cleanup' with Subversion 1.6")
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'cleanup', sbox.wc_dir)
+
+
 
 ########################################################################
 # Run the tests
@@ -122,6 +134,7 @@ def upgrade_1_5(sbox):
 test_list = [ None,
               basic_upgrade,
               upgrade_1_5,
+              XFail(logs_left_1_5),
              ]
 
 
