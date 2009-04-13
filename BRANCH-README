@@ -1,0 +1,20 @@
+PURPOSE:
+--------
+
+This branch explores the ramifications of not setting mergeinfo on
+subtrees unaffected by a merge.  For specifics see
+notes/subtree-mergeinfo/overview.txt
+
+WHY A BRANCH?
+-------------
+
+This work is living on a branch for now because it may prove fruitless
+if it cripples merge performance and because it changes mergeinfo recording
+behavior in such a way as to make *many* tests fail (and I'd rather get the
+new behavior dialed-in before spending a lot of time tweaking test
+expectations).
+
+BRANCH STYLE:
+-------------
+
+I am keeping this branch in sync with trunk in the event it is reintegrated.

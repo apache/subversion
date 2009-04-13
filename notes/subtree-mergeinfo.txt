@@ -1,0 +1,138 @@
+This branch explores the ramifications of not setting mergeinfo on subtrees unaffected by a merge.
+
+A NOTE ON TERMINOLOGY
+---------------------
+
+Subtree Mergeinfo - Any path under the merge target which has the
+svn:mergeinfo property set.
+
+Subtree Merges - A merge directly targeting the subtree of a branch.
+
+SWMI - Subtrees With MergeInfo, the set of paths excluding the merge target
+which have subtree mergeinfo.
+
+HISTORY
+-------
+
+There was a short time pre-1.5.0 when no-op merges didn't update any
+mergeinfo, but we eventually decided to always set mergeinfo as discussed
+here: 'RFC: Allow no-op merges to modify mergeinfo:'
+http://svn.haxx.se/dev/archive-2008-03/0914.shtml.
+
+Note: This branch is *not* about whether to record mergeinfo *at all* for
+no-op merges, I still plan for no-op merges to record mergeinfo on the merge
+target.  Rather this is about whether to modify subtree mergeinfo when the
+subtree is unaffected by the merge.
+
+Recording mergeinfo on SWMI unaffected by the merge has not, to put it
+charitably, proven very popular or very well understood.  The major
+complaints are of the "I just merged rN from trunk which changes one file
+on trunk, but my branch WC has hundreds of local mods (mergeinfo)!."  Even
+where users understand what is going on there is the complaint that the
+"signal" of merged changes gets lost in the "noise" of subtree mergeinfo
+prop changes.  The following is just a sample of the complaints (simply
+search the users list for 'mergeinfo' and you'll find no shortage of similar
+complaints):
+
+  Merge tracking implementation issue.
+  http://svn.haxx.se/users/archive-2009-04/0459.shtml
+
+  svn:mergeinfo on 1,300 files when only a few changed?
+  http://svn.haxx.se/users/archive-2009-04/0437.shtml
+
+  After a merge some files are (erroneously?)shown as modifed
+  http://subversion.tigris.org/ds/viewMessage.do?dsForumId=1065&dsMessageId
+  =1219898
+
+  Useless explicit mergeinfo records:
+  http://svn.haxx.se/dev/archive-2008-08/0793.shtml
+
+  Proposal: don't modify any unrelated mergeinfos during 'svn merge':
+  http://svn.haxx.se/dev/archive-2008-09/0443.shtml
+
+OPEN QUESTIONS AND TODOS:
+-------------------------
+
+1) PERFORMANCE HIT
+
+Generally, will the changes made on this branch adversely affect merge
+performance?  More specifically, what is the impact on current merge logic
+for determining what has already been merged to a given subtree and what
+needs to be merged.  It's obviously quite quick when merging rM:N from SRC
+to check a subtree's mergeinfo propery and see that that revision range has
+already been merged (even if it is a no-op).  If we stop setting subtree
+mergeinfo will that prompt more communication with the server to determine
+a subtree's natural history on subsequent merges?
+
+This is really the primary question for this branch.  If performance is not
+adversely affected then everything the follows are just minor details.
+
+2) ELISION.
+
+Mergeinfo elision is currently quite simplistic.  If a child path has
+explicit mergeinfo and it has a parent path with identical mergeinfo
+(adjusted for the path-wise difference between the child and the parent)
+then the child's mergeinfo elides to the parent.  E.g. If a merge produced
+the following mergeinfo on a merge target and the target is at a uniform
+working revision:
+
+  PATH                         MERGEINFO
+  ====                         =========
+  branches/mybranch:           '/trunk:757-1002'
+  branches/mybranch/CHANGES:   '/trunk/CHANGES:757-1002'
+  branches/mybranch/src:       '/trunk/src:757-1002,1005'
+  branches/mybranch/notes:     '/trunk/notes:'
+
+Then mergeinfo on 'CHANGES' would elide to 'mybranch' because the former's
+mergeinfo is redundant with what it would inherit.  This is not the case
+for 'src' and 'notes' so the mergeinfo on those paths would not elide.
+If we stop recording mergeinfo on untouched SWMI then simple path based
+elision will rapidly become useless...but so what?  Since we no longer
+record empty mergeinfo during WC-to-WC copies, the primary source of *new*
+subtree mergeinfo is subtree merges.  And if you are performing subtree
+merges you wouldn't expect elision to work since you are not uniformly
+merging revisions into your branch.
+
+Even if you have historical subtree mergeinfo from WC-to-WC copies and
+elision stops working, so what?  Does anyone really care?  I don't see any
+evidence that they do.  Plus, if we allow --record-only merges to keep
+setting subtree mergeinfo, then we have a way to allow simple path-based
+elision to work (see 3).
+
+3) --RECORD-ONLY MERGES
+
+If we don't change the current behavior for --record-only merges and continue
+to record mergeinfo on all the SWMIs then simple elision still has a chance to
+work and we have a convenient way to cleanup subtree mergeinfo.
+
+4) PERFORMANCE IMPROVEMENTS
+
+Can more merge performance improvements be piggy-backed on this work, e.g.
+stopping *all* communication with the repos during the initial walk for
+explicit subtree mergeinfo (applies even with WCNG).
+
+5) MERGEINFO2: MERGEINFO DIFF
+
+Mike Pilato has floated the idea that the subtree mergeinfo problem could be
+solved by using a new property that records only the difference between a
+subtree's "mergeinfo" and its parents "mergeinfo".  I mention this here only
+to keep it in mind as an alternative.  Making things work with the existing
+mergeinfo property would be preferable(?).
+
+6) REINTEGRATE MERGES
+
+How will --reintegrate merges be impacted?
+
+7) MIXED-REV WCS
+
+How do mixed-revision WCs impact this?
+
+8) LOG -G
+
+Will svn log -g be impacted?
+
+9) NO-OP MERGES
+
+If the merge is a no-op should the merge target get mergeinfo set recording
+the merge?  I mentioned earlier that it isn't even under consideration, and
+it isn't...yet.
