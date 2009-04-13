@@ -968,7 +968,6 @@ svn_stream_readline(svn_stream_t *stream,
  * the two streams). If the closure is not desired, then you can use
  * svn_stream_disown() to protect either or both of the streams from
  * being closed.
- * ### TODO: should close the streams ALWAYS, even on error exit
  *
  * @since New in 1.6.
  */
