@@ -1002,20 +1002,12 @@ create_empty_file(apr_file_t **file,
                   apr_pool_t *pool)
 {
   if (adm_access && svn_wc_adm_locked(adm_access))
-    SVN_ERR(svn_wc_create_tmp_file2(file, empty_file_path,
-                                    svn_wc_adm_access_path(adm_access),
-                                    delete_when, pool));
+    return svn_wc_create_tmp_file2(file, empty_file_path,
+                                   svn_wc_adm_access_path(adm_access),
+                                   delete_when, pool);
   else
-    {
-      const char *temp_dir;
-
-      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_io_open_unique_file2(file, empty_file_path,
-                                       svn_path_join(temp_dir, "tmp", pool),
-                                       "", delete_when, pool));
-    }
-
-  return SVN_NO_ERROR;
+    return svn_io_open_uniquely_named(file, empty_file_path, NULL, NULL, NULL,
+                                      delete_when, pool, pool);
 }
 
 /* Return in *PATH_ACCESS the access baton for the directory PATH by
@@ -1062,7 +1054,7 @@ get_parent_access(svn_wc_adm_access_t **parent_access,
     *parent_access = NULL;  /* Avoid messing around with paths */
   else
     {
-      const char *parent_path = svn_path_dirname(path, pool);
+      const char *parent_path = svn_dirent_dirname(path, pool);
       SVN_ERR(get_path_access(parent_access, adm_access, parent_path,
                               lenient, pool));
     }
