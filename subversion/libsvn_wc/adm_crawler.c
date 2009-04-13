@@ -44,6 +44,7 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
+#include "private/svn_debug.h"
 
 
 /* Helper for report_revisions_and_depths().
@@ -870,23 +871,30 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   if (! fulltext)
     {
-      const svn_wc_entry_t *ent;
+      const char *abspath;
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
       /* Compute delta against the pristine contents */
       SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
 
-      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL,
+                                   &expected_checksum, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, abspath,
+                                   pool, pool));
 
-      /* ### We want ent->checksum to ALWAYS be present, but on old
+      /* ### We want expected_checksum to ALWAYS be present, but on old
          ### working copies maybe it won't be (unclear?). If it is there,
          ### then we can use it as an expected value. If it is NOT there,
          ### then we must compute it for the apply_textdelta() call. */
-      if (ent->checksum)
+      if (expected_checksum)
         {
-          /* Convert MD5 hex checksum to a checksum structure */
-          SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
-                                         ent->checksum, pool));
-
           /* Compute a checksum for what is *actually* found */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
                                                 NULL, svn_checksum_md5, TRUE,

@@ -30,6 +30,7 @@
 #include "wc_db.h"
 #include "adm_files.h"
 #include "wc-metadata.h"
+#include "entries.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
@@ -432,7 +433,8 @@ static wcroot_t *
 create_wcroot(const char *wcroot_abspath,
               svn_sqlite__db_t *sdb,
               apr_int64_t wc_id,
-              apr_pool_t *result_pool)
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   wcroot_t *wcroot = apr_palloc(result_pool, sizeof(*wcroot));
 
@@ -440,6 +442,10 @@ create_wcroot(const char *wcroot_abspath,
   wcroot->sdb = sdb;
   wcroot->wc_id = wc_id;
   wcroot->format = UNKNOWN_FORMAT;
+
+  if (sdb != NULL)
+    svn_error_clear(svn_sqlite__read_schema_version(&wcroot->format,
+                                                    sdb, scratch_pool));
 
   return wcroot;
 }
@@ -615,6 +621,48 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 }
 
 
+/* Get the format version from a wc-1 directory. If it is not a working copy
+   directory, then it sets VERSION to zero and returns no error.  */
+static svn_error_t *
+get_old_version(int *version,
+                const char *path,
+                apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  const char *format_file_path;
+
+  /* Try reading the format number from the entries file.  */
+  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, scratch_pool);
+  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
+  if (err == NULL)
+    return SVN_NO_ERROR;
+  if (err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT
+      && !APR_STATUS_IS_ENOENT(err->apr_err)
+      && !APR_STATUS_IS_ENOTDIR(err->apr_err))
+    return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
+                             svn_dirent_local_style(path, scratch_pool));
+  svn_error_clear(err);
+
+  /* This must be a really old working copy!  Fall back to reading the
+     format file.
+     
+     Note that the format file might not exist in newer working copies
+     (format 7 and higher), but in that case, the entries file should
+     have contained the format number. */
+  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, scratch_pool);
+  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
+  if (err == NULL)
+    return SVN_NO_ERROR;
+
+  /* Whatever error may have occurred... we can just ignore. This is not
+     a working copy directory. Signal the caller.  */
+  svn_error_clear(err);
+
+  *version = 0;
+  return SVN_NO_ERROR;
+}
+
+
 static svn_wc__db_pdh_t *
 get_or_create_pdh(svn_wc__db_t *db,
                   const char *local_dir_abspath,
@@ -636,9 +684,10 @@ get_or_create_pdh(svn_wc__db_t *db,
          ### create one for this directory. at some point, we'll have to
          ### alter this strategy.  */
       pdh->wcroot = create_wcroot(pdh->local_abspath, NULL, UNKNOWN_WC_ID,
-                                  db->state_pool);
+                                  db->state_pool, scratch_pool);
 
       /* ### parent */
+      /* ### wcroot->format */
 
       apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
     }
@@ -652,6 +701,8 @@ ensure_sdb_opened(svn_wc__db_pdh_t *pdh,
                   svn_sqlite__mode_t smode,
                   apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
+
   /* Bah. Easy case.  */
   if (pdh->wcroot != NULL && pdh->wcroot->sdb != NULL)
     return SVN_NO_ERROR;
@@ -663,7 +714,7 @@ ensure_sdb_opened(svn_wc__db_pdh_t *pdh,
   if (pdh->wcroot == NULL)
     {
       pdh->wcroot = create_wcroot(pdh->local_abspath, NULL, UNKNOWN_WC_ID,
-                                  pdh->db->state_pool);
+                                  pdh->db->state_pool, scratch_pool);
     }
   else
     {
@@ -674,18 +725,47 @@ ensure_sdb_opened(svn_wc__db_pdh_t *pdh,
           /* These have the same lifetime (db->state_pool).  */
           pdh->wcroot->abspath = pdh->local_abspath;
         }
+
+      if (pdh->wcroot->format != UNKNOWN_FORMAT
+          && pdh->wcroot->format < SVN_WC__WC_NG_VERSION)
+        return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_sqlite__open(&pdh->wcroot->sdb,
-                           svn_wc__adm_child(pdh->wcroot->abspath, "wc.db",
-                                             scratch_pool),
-                           smode, statements,
-                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                           pdh->db->state_pool, scratch_pool));
+  err = svn_sqlite__open(&pdh->wcroot->sdb,
+                         svn_wc__adm_child(pdh->wcroot->abspath, "wc.db",
+                                           scratch_pool),
+                         smode, statements,
+                         SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
+                         pdh->db->state_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_t *err2;
+
+      if (pdh->wcroot->format >= SVN_WC__WC_NG_VERSION
+          || (err->apr_err != SVN_ERR_SQLITE_ERROR
+              && !APR_STATUS_IS_ENOENT(err->apr_err)))
+        return err;
+
+      err2 = get_old_version(&pdh->wcroot->format, pdh->wcroot->abspath,
+                             scratch_pool);
+      if (err2 == NULL && pdh->wcroot->format == 0)
+        {
+          /* Return the original "not found" error.  */
+          pdh->wcroot->format = UNKNOWN_FORMAT;
+          return err;
+        }
+      svn_error_clear(err);
+      return err2;
+    }
 
   /* ### query things like wc_id out of the database? for now, we know the
      ### value is always 1 for the per-dir layout.  */
   pdh->wcroot->wc_id = 1;
+
+  if (pdh->wcroot->format == UNKNOWN_FORMAT)
+    return svn_sqlite__read_schema_version(&pdh->wcroot->format,
+                                           pdh->wcroot->sdb,
+                                           scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -770,6 +850,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   svn_wc__db_pdh_t *child_pdh;
   svn_boolean_t obstruction_possible = FALSE;
   svn_sqlite__db_t *sdb;
+  svn_boolean_t moved_upwards = FALSE;
+  int wc_format = 0;
 
   /* ### we need more logic for finding the database (if it is located
      ### outside of the wcroot) and then managing all of that within DB.
@@ -865,7 +947,6 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   while (TRUE)
     {
       svn_error_t *err;
-      const char *base;
 
       err = svn_sqlite__open(&sdb,
                              svn_wc__adm_child(local_abspath, "wc.db",
@@ -880,10 +961,20 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         return err;
       svn_error_clear(err);
 
+      /* If we have not moved upwards, then check for a wc-1 working copy.
+         Since wc-1 has a .svn in every directory, and we didn't find one
+         in the original directory, then we don't have to bother looking
+         for more.  */
+      if (!moved_upwards)
+        {
+          SVN_ERR(get_old_version(&wc_format, local_abspath, scratch_pool));
+          if (wc_format != 0)
+            break;
+        }
+
       /* We couldn't open the SDB within the specified directory, so
          move up one more directory. */
-      base = svn_dirent_basename(local_abspath, scratch_pool);
-      if (*base == '\0')
+      if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
         {
           /* Hit the root without finding a wcroot. */
           return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
@@ -893,6 +984,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         }
 
       local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+      moved_upwards = TRUE;
 
       /* An obstruction is no longer possible.
 
@@ -922,7 +1015,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* The subdirectory uses the same WCROOT as the parent dir.  */
       (*pdh)->wcroot = found_pdh->wcroot;
     }
-  else
+  else if (wc_format == 0)
     {
       /* We finally found the database. Construct the PDH record.  */
 
@@ -952,7 +1045,20 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                                  local_abspath),
                                      sdb,
                                      wc_id,
-                                     db->state_pool);
+                                     db->state_pool, scratch_pool);
+    }
+  else
+    {
+      /* We found a wc-1 working copy directory.  */
+      (*pdh)->wcroot = create_wcroot(apr_pstrdup(db->state_pool,
+                                                 local_abspath),
+                                     NULL, UNKNOWN_WC_ID,
+                                     db->state_pool, scratch_pool);
+      (*pdh)->wcroot->format = wc_format;
+
+      /* Don't test for a directory obstructing a versioned file. The wc-1
+         code can manage that itself.  */
+      obstruction_possible = FALSE;
     }
 
   {
@@ -976,8 +1082,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       svn_wc__db_pdh_t *parent_pdh;
 
       /* We should NOT have moved up a directory.  */
-      assert(strcmp((*pdh)->local_abspath, local_abspath) == 0);
-      assert(original_abspath == local_abspath);
+      assert(!moved_upwards);
 
       /* Get/make a PDH for the parent.  */
       parent_dir = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -1012,7 +1117,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
               parent_pdh->wcroot = create_wcroot(parent_pdh->local_abspath,
                                                  sdb,
                                                  1 /* ### hack.  */,
-                                                 db->state_pool);
+                                                 db->state_pool, scratch_pool);
 
               apr_hash_set(db->dir_data,
                            parent_pdh->local_abspath, APR_HASH_KEY_STRING,
@@ -1050,14 +1155,10 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                (*pdh)->local_abspath, APR_HASH_KEY_STRING,
                *pdh);
 
-  /* Did we traverse up to parent directories?
-
-     Note that if found_pdh is non-NULL, then the second part of this
-     condition is also true -- found_pdh is just a quick way to avoid
-     a string compare.  */
-  if (found_pdh == NULL && strcmp(local_abspath, (*pdh)->local_abspath) == 0)
+  /* Did we traverse up to parent directories?  */
+  if (!moved_upwards)
     {
-      /* We did not move to a parent of the original requested directory.
+      /* We did NOT move to a parent of the original requested directory.
          We've constructed and filled in a PDH for the request, so we
          are done.  */
       return SVN_NO_ERROR;
@@ -1344,7 +1445,6 @@ db_version(int *version,
            apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  const char *format_file_path;
 
   /* First, try reading the wc.db file.  Instead of stat'ing the file to
      see if it exists, and then opening it, we just try opening it.  If we
@@ -1360,37 +1460,25 @@ db_version(int *version,
     return err;
   svn_error_clear(err);
 
-  /* Hmm, that didn't work.  Now try reading the format number from the
-     entries file. */
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, scratch_pool);
-  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
-  if (err == NULL)
-    return SVN_NO_ERROR;
-  if (err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT)
-    return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
+  /* Hmm, that didn't work.  Now try reading the format number from an
+     old-style working copy.  */
+  SVN_ERR(get_old_version(version, path, scratch_pool));
+  if (*version == 0)
+    return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                             _("'%s' is not a working copy"),
                              svn_dirent_local_style(path, scratch_pool));
-  svn_error_clear(err);
 
-  /* Wow, another error; this must be a really old working copy!  Fall back
-     to reading the format file. */
-  /* Note that the format file might not exist in newer working copies
-     (format 7 and higher), but in that case, the entries file should
-     have contained the format number. */
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, scratch_pool);
-  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
-  if (err == NULL)
-    return SVN_NO_ERROR;
-  if (APR_STATUS_IS_ENOENT(err->apr_err)
-      || APR_STATUS_IS_ENOTDIR(err->apr_err))
-    return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
-                             svn_dirent_local_style(path, scratch_pool));
-  svn_error_clear(err);
+  return SVN_NO_ERROR;
+}
 
-  /* If we've gotten this far, all of the above checks have failed, so just
-     bail. */
-  return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
-                           _("'%s' is not a working copy"),
-                           svn_dirent_local_style(path, scratch_pool));
+
+static svn_error_t *
+ensure_format_avail(wcroot_t *wcroot, apr_pool_t *scratch_pool)
+{
+  if (wcroot->format == UNKNOWN_FORMAT)
+    SVN_ERR(db_version(&wcroot->format, wcroot->abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2457,6 +2545,19 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
+  /* If this is an old working copy, then delegate to grab this info.  */
+  if (pdh->wcroot->format < SVN_WC__VERSION_EXPERIMENTAL)
+    return svn_wc__read_info_old(status, kind, revision,
+                                 repos_relpath, repos_root_url, repos_uuid,
+                                 changed_rev, changed_date, changed_author,
+                                 last_mod_time, depth, checksum,
+                                 translated_size, target, changelist,
+                                 original_repos_relpath, original_root_url,
+                                 original_uuid, original_revision,
+                                 text_mod, props_mod, base_shadowed, lock,
+                                 db, pdh->wcroot->abspath, local_relpath,
+                                 result_pool, scratch_pool);
+
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
                                          : STMT_SELECT_BASE_NODE));
@@ -3406,11 +3507,8 @@ svn_wc__db_temp_get_format(int *format,
   /* ### assert that we were passed a directory?  */
 
   pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
-  if (pdh->wcroot->format == UNKNOWN_FORMAT)
-    {
-      SVN_ERR(db_version(&pdh->wcroot->format, local_dir_abspath,
-                         scratch_pool));
-    }
+  SVN_ERR_ASSERT(strcmp(local_dir_abspath, pdh->wcroot->abspath) == 0);
+  SVN_ERR(ensure_format_avail(pdh->wcroot, scratch_pool));
 
   *format = pdh->wcroot->format;
 
