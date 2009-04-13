@@ -356,7 +356,7 @@ svn_client_uuid_from_path(const char **uuid,
 
   if (!is_root)
     {
-      /* Workingcopies have a single uuid, as all contents is from a single
+      /* Working copies have a single uuid, as all contents is from a single
          repository */
 
       svn_error_t *err;
@@ -377,7 +377,7 @@ svn_client_uuid_from_path(const char **uuid,
       return err;
     }
 
-  /* We may have a workingcopy without uuid */
+  /* We may have a working copy without uuid */
   if (entry->url)
     {
       /* You can enter this case by copying a new subdirectory with 1.0-1.5
