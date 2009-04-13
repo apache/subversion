@@ -96,6 +96,14 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                                            const char *path,
                                            apr_pool_t *pool);
 
+/* Same as svn_wc__adm_retrieve_internal, but takes a DB and an absolute
+   directory path.  */
+svn_error_t *
+svn_wc__adm_retrieve_internal2(svn_wc_adm_access_t **adm_access,
+                               svn_wc__db_t *db,
+                               const char *abspath,
+                               apr_pool_t *scratch_pool);
+
 /* Return the working copy format version number for ADM_ACCESS. */
 svn_error_t *
 svn_wc__adm_wc_format(int *wc_format,
