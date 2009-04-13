@@ -1638,7 +1638,6 @@ extract_svnpatch(const char *original_patch_path,
                  apr_pool_t *pool)
 {
   apr_file_t *original_patch_file; /* gzip-base64'ed */
-  svn_stringbuf_t *original_patch_stringbuf; /* gzip-base64'ed */
   svn_stream_t *original_patch_stream;
   apr_file_t *compressed_file; /* base64-decoded, gzip-compressed */
   svn_stream_t *svnpatch_stream; /* clear-text, attached to @a patch_file */
@@ -1655,15 +1654,12 @@ extract_svnpatch(const char *original_patch_path,
                                        SVN_CLIENT_SVNPATCH_VERSION,
                                        equal_string);
 
-  SVN_ERR(svn_io_file_open(&original_patch_file, original_patch_path,
-                           APR_READ, APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_stringbuf_from_aprfile(&original_patch_stringbuf,
-                                     original_patch_file, pool));
-
   for (i = 0; i <= 1; i++)
     {
-      original_patch_stream = svn_stream_from_stringbuf(original_patch_stringbuf,
-                                                        pool);
+      SVN_ERR(svn_io_file_open(&original_patch_file, original_patch_path,
+                               APR_READ, APR_OS_DEFAULT, pool));
+      original_patch_stream = svn_stream_from_aprfile2(original_patch_file,
+                                                       FALSE, pool);
 
       while (1)
         {
