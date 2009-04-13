@@ -21,7 +21,11 @@
 #define SVN_LIBSVN_WC_ENTRIES_H
 
 #include <apr_pools.h>
+
 #include "svn_types.h"
+
+#include "wc_db.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -266,6 +270,39 @@ svn_wc__entries_init_old(const char *path,
                          svn_revnum_t initial_rev,
                          svn_depth_t depth,
                          apr_pool_t *pool);
+
+/* Fulfill a svn_wc__db_read_info() invocation by reading an old-style
+   entry structure. Limited fields are available.  */
+svn_error_t *
+svn_wc__read_info_old(svn_wc__db_status_t *status,
+                      svn_wc__db_kind_t *kind,
+                      svn_revnum_t *revision,
+                      const char **repos_relpath,
+                      const char **repos_root_url,
+                      const char **repos_uuid,
+                      svn_revnum_t *changed_rev,
+                      apr_time_t *changed_date,
+                      const char **changed_author,
+                      apr_time_t *last_mod_time,
+                      svn_depth_t *depth,
+                      svn_checksum_t **checksum,
+                      svn_filesize_t *translated_size,
+                      const char **target,
+                      const char **changelist,
+                      const char **original_repos_relpath,
+                      const char **original_root_url,
+                      const char **original_uuid,
+                      svn_revnum_t *original_revision,
+                      svn_boolean_t *text_mod,
+                      svn_boolean_t *props_mod,
+                      svn_boolean_t *base_shadowed,
+                      svn_wc__db_lock_t **lock,
+                      svn_wc__db_t *db,
+                      const char *wcroot_abspath,
+                      const char *local_relpath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 
 /* Parse a file external specification in the NULL terminated STR and
    place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
