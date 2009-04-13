@@ -1657,7 +1657,6 @@ extract_svnpatch(const char *original_patch_path,
 
   SVN_ERR(svn_io_file_open(&original_patch_file, original_patch_path,
                            APR_READ, APR_OS_DEFAULT, pool));
-  original_patch_stringbuf = svn_stringbuf_create_ensure(1024, pool);
   SVN_ERR(svn_stringbuf_from_aprfile(&original_patch_stringbuf,
                                      original_patch_file, pool));
 
