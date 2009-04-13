@@ -3853,6 +3853,64 @@ def update_uuid_changed(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+def set_deep_depth_on_target_with_shallow_children(sbox):
+  "infinite --set-depth adds shallow children"
+
+  # Regardless of what depth the update target is at, if it has shallow
+  # subtrees and we update --set-depth infinity, these shallow subtrees
+  # should be populated.
+  #
+  # See http://svn.haxx.se/dev/archive-2009-04/0344.shtml.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_path = os.path.join(wc_dir, "A")
+  B_path = os.path.join(wc_dir, "A", "B")
+  D_path = os.path.join(wc_dir, "A", "D")
+
+  # Trim the tree: Set A/B to depth empty and A/D to depth immediates.
+  #
+  # 1.5.x branch note: 1.5.x does not support shallowing of working copy
+  # depths so instead we remove A/B and A/D and then re-checkout those
+  # subtrees at the desired depths.
+  svntest.main.safe_rmtree(B_path)
+  svntest.actions.run_and_verify_svn("Shallow co of missing A/B subtree failed",
+                                     None, [], 'co', sbox.repo_url + '/A/B',
+                                     '--depth', 'empty', B_path)
+  svntest.main.safe_rmtree(D_path)
+  svntest.actions.run_and_verify_svn("Shallow co of missing A/D subtree failed",
+                                     None, [], 'co', sbox.repo_url + '/A/D',
+                                     '--depth', 'immediates', D_path)
+
+  # Now update A with --set-depth infinity.  All the subtrees we
+  # removed above should come back.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/lambda'  : Item(status='A '),
+    'A/B/F'       : Item(status='A '),
+    'A/B/E'       : Item(status='A '),
+    'A/B/E/alpha' : Item(status='A '),
+    'A/B/E/beta'  : Item(status='A '),
+    'A/D/G/pi'    : Item(status='A '),
+    'A/D/G/rho'   : Item(status='A '),
+    'A/D/G/tau'   : Item(status='A '),
+    'A/D/H/chi'   : Item(status='A '),
+    'A/D/H/omega' : Item(status='A '),
+    'A/D/H/psi'   : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '--set-depth', 'infinity',
+                                        A_path)
+
 #######################################################################
 # Run the tests
 
@@ -3906,6 +3964,7 @@ test_list = [ None,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
+              set_deep_depth_on_target_with_shallow_children,
              ]
 
 if __name__ == '__main__':
