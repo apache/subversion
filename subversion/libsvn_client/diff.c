@@ -366,6 +366,8 @@ struct diff_cmd_baton {
  * from clear-text @c callback_baton->svnpatch_file. */
 static svn_error_t *
 dump_svnpatch(struct diff_cmd_baton *callback_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *pool)
 {
   svn_stream_t *svnpatch_stream;
@@ -404,21 +406,16 @@ dump_svnpatch(struct diff_cmd_baton *callback_baton,
    * zlib's.  In other words, the copy operation invokes these two
    * functions in a streamy way: read(svnpatch_file),
    * write(zlib(base64(outfile))).  */
-  svnpatch_stream = svn_stream_from_aprfile2
-                     (callback_baton->svnpatch_file,
-                      FALSE, pool);
-  out_stream = svn_stream_compressed
-                (svn_base64_encode(
-                 svn_stream_from_aprfile2
-                  (callback_baton->outfile,
-                   FALSE, pool),
-                 pool), pool);
-  SVN_ERR(svn_stream_copy(svnpatch_stream, out_stream, pool));
-
-  /* Squeeze out. */
-  SVN_ERR(svn_stream_close(out_stream));
-
-  return SVN_NO_ERROR;
+  svnpatch_stream = svn_stream_from_aprfile2(callback_baton->svnpatch_file,
+                                             TRUE, pool);
+  out_stream = svn_stream_compressed(
+                 svn_base64_encode(
+                   svn_stream_from_aprfile2(callback_baton->outfile,
+                                            FALSE, pool),
+                   pool),
+                 pool);
+  return svn_stream_copy3(svnpatch_stream, out_stream,
+                          cancel_func, cancel_baton, pool);
 }
 
 
@@ -1516,7 +1513,8 @@ do_diff(const struct diff_parameters *diff_param,
     }
 
   if (callback_baton->svnpatch_file)
-    SVN_ERR(dump_svnpatch(callback_baton, pool));
+    SVN_ERR(dump_svnpatch(callback_baton, ctx->cancel_func, ctx->cancel_baton,
+                          pool));
 
   return SVN_NO_ERROR;
 }
