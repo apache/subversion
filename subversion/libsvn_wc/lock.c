@@ -863,6 +863,22 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
 
 svn_error_t *
+svn_wc__adm_retrieve_internal2(svn_wc_adm_access_t **adm_access,
+                               svn_wc__db_t *db,
+                               const char *abspath,
+                               apr_pool_t *scratch_pool)
+{
+  *adm_access = get_from_shared(abspath, db, scratch_pool);
+
+  /* If the entry is marked as "missing", then return nothing.  */
+  if (IS_MISSING(*adm_access))
+    *adm_access = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
                               const char *path,
@@ -877,12 +893,10 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
       const char *abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+      SVN_ERR(svn_wc__adm_retrieve_internal2(adm_access, associated->db,
+                                             abspath, pool));
 
-      *adm_access = get_from_shared(abspath, associated->db, pool);
-
-      /* If the entry is marked as "missing", then return nothing.
-
-         Relative paths can play stupid games with the lookup, and we might
+      /* Relative paths can play stupid games with the lookup, and we might
          try to return the wrong baton. Look for that case, and zap it.
 
          The specific case observed happened during "svn status .. -u -v".
@@ -892,9 +906,8 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
          is to not find "" in the set of batons.
 
          Sigh.  */
-      if (IS_MISSING(*adm_access)
-          || (*adm_access != NULL
-              && strcmp(path, (*adm_access)->path) != 0))
+      if (*adm_access != NULL
+          && strcmp(path, (*adm_access)->path) != 0)
         *adm_access = NULL;
     }
 
