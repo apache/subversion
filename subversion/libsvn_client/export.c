@@ -28,6 +28,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
@@ -206,7 +207,7 @@ copy_one_versioned_file(const char *from,
   /* For atomicity, we translate to a tmp file and then rename the tmp file
      over the real destination. */
   SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
-                                 svn_path_dirname(to, pool),
+                                 svn_dirent_dirname(to, pool),
                                  svn_io_file_del_none, pool, pool));
 
   /* If some translation is needed, then wrap the output stream (this is
@@ -390,7 +391,7 @@ copy_versioned_files(const char *from,
                       the path leading down to the last component. */
                   if (svn_path_component_count(ext_item->target_dir) > 1)
                     {
-                      const char *parent = svn_path_dirname(new_to, iterpool);
+                      const char *parent = svn_dirent_dirname(new_to, iterpool);
                       SVN_ERR(svn_io_make_dir_recursively(parent, iterpool));
                     }
 
@@ -664,7 +665,7 @@ apply_textdelta(void *file_baton,
   /* Create a temporary file in the same directory as the file. We're going
      to rename the thing into place when we're done. */
   SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                 svn_path_dirname(fb->path, pool),
+                                 svn_dirent_dirname(fb->path, pool),
                                  svn_io_file_del_none, fb->pool, fb->pool));
 
   hb->pool = pool;
@@ -895,7 +896,7 @@ svn_client_export4(svn_revnum_t *result_rev,
 
           /* Copied from apply_textdelta(). */
           SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                         svn_path_dirname(fb->path, pool),
+                                         svn_dirent_dirname(fb->path, pool),
                                          svn_io_file_del_none,
                                          fb->pool, fb->pool));
 

@@ -26,6 +26,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
@@ -66,7 +67,7 @@ svn_client_resolve(const char *path,
       if (adm_lock_level >= 0)
         adm_lock_level++;
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
-                                     svn_path_dirname(path, pool),
+                                     svn_dirent_dirname(path, pool),
                                      TRUE, adm_lock_level,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));

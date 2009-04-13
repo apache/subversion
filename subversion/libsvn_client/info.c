@@ -312,7 +312,7 @@ info_error_handler(const char *path,
       svn_wc_conflict_description_t *tree_conflict;
 
       SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
-                                    svn_path_dirname(path, pool),
+                                    svn_dirent_dirname(path, pool),
                                     FALSE, 0, NULL, NULL, pool));
       SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access,
                                         pool));
