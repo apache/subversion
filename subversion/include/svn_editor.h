@@ -49,7 +49,11 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
 typedef svn_error_t *(*svn_editor_cb_add_directory_streamy_t)(
   void *baton,
   const char *relpath,
-  svn_stream_t *children,
+  svn_error_t *(*child_cb)(
+    const char **child,
+    void *baton,
+    apr_pool_t *scratch_pool),
+  void *child_baton,
   apr_hash_t *props,
   apr_pool_t *scratch_pool);
 
@@ -233,7 +237,11 @@ svn_editor_add_directory(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_directory_streamy(svn_editor_t *editor,
                                  const char *relpath,
-                                 svn_stream_t *children,
+                                 svn_error_t *(*child_cb)(
+                                   const char **child,
+                                   void *baton,
+                                   apr_pool_t *scratch_pool),
+                                 void *child_baton,
                                  apr_hash_t *props);
 
 svn_error_t *
