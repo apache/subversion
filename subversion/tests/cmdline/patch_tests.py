@@ -47,6 +47,14 @@ def svnpatch_encode(l):
 gnupatch_garbage_re =\
  re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
 
+if sys.platform == 'win32':
+  initial_quotation_mark = "`"
+  final_quotation_mark = "'"
+else:
+  initial_quotation_mark = ""
+  final_quotation_mark = ""
+  
+
 ########################################################################
 #Tests
 
@@ -176,8 +184,8 @@ def patch_unidiff(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'patching file A/D/gamma\n',
-    'patching file iota\n',
+    'patching file %sA/D/gamma%s\n' % (initial_quotation_mark, final_quotation_mark),
+    'patching file %siota%s\n' % (initial_quotation_mark, final_quotation_mark),
   ]
 
   gamma_contents = "It is the file 'gamma'.\n"
@@ -297,8 +305,8 @@ def patch_copy_and_move(sbox):
     'A    A/C/gamma\n',
     'D    A/mu\n',
     'A    mu-ng\n',
-    'patching file A/C/gamma\n',
-    'patching file A/D/gamma\n',
+    'patching file %sA/C/gamma%s\n' % (initial_quotation_mark, final_quotation_mark),
+    'patching file %sA/D/gamma%s\n' % (initial_quotation_mark, final_quotation_mark),
   ]
 
   gamma_contents = "This is the file 'gamma'.\nsome more bytes to 'gamma'\n"
