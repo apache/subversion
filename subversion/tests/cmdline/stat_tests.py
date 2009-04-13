@@ -17,7 +17,10 @@
 ######################################################################
 
 # General modules
-import os, re, time
+import os
+import re
+import time
+import datetime
 
 # Our testing module
 import svntest
@@ -653,7 +656,43 @@ use-commit-times = yes
       iota_text_timestamp[17:] != iota_last_changed[17:]):
     raise svntest.Failure
 
-  ### FIXME: check the working file's timestamp as well
+  # remove iota, run an update to restore it, and check the times
+  os.remove(other_iota_path)
+  expected_output = svntest.wc.State(other_wc, {
+    'iota': Item(verb='Restored'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(other_wc, 1)
+  svntest.actions.run_and_verify_update(other_wc, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, False,
+                                        other_wc, '--config-dir', config_dir)
+  iota_text_timestamp = get_text_timestamp(other_iota_path)
+  if (iota_text_timestamp[17] != ':' or
+      iota_text_timestamp[17:] != iota_last_changed[17:]):
+    raise svntest.Failure
+
+  iota_ts = iota_text_timestamp[19:44]
+
+  class TZ(datetime.tzinfo):
+    "A tzinfo to convert a time to iota's timezone."
+    def utcoffset(self, dt):
+      offset = (int(iota_ts[21:23]) * 60 + int(iota_ts[23:25]))
+      if iota_text_timestamp[20] == '-':
+        return datetime.timedelta(minutes=-offset)
+      return datetime.timedelta(minutes=offset)
+    def dst(self, dt):
+      return datetime.timedelta(0)
+
+  mtime = datetime.datetime.fromtimestamp(os.path.getmtime(other_iota_path),
+                                          TZ())
+  fmt = mtime.isoformat(' ')
+  # iota_ts looks like: 2009-04-13 14:30:57 +0200
+  #     fmt looks like: 2009-04-13 14:30:57+02:00
+  if (fmt[:19] != iota_ts[:19]
+      or fmt[19:22] != iota_ts[20:23]
+      or fmt[23:25] != iota_ts[23:25]):
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 

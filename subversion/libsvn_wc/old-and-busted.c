@@ -1728,7 +1728,7 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
 
   /* Oops. Can't fetch that kind of value with this old working copy.  */
   if (status || kind || revision || repos_relpath || repos_root_url
-      || repos_uuid || changed_rev || changed_date || changed_author
+      || repos_uuid
       || last_mod_time || depth || translated_size || target || changelist
       || original_repos_relpath || original_root_url || original_uuid
       || original_revision || text_mod || props_mod || base_shadowed
@@ -1758,6 +1758,12 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
                              svn_path_local_style(wcroot_abspath,
                                                   scratch_pool));
 
+  if (changed_rev)
+    *changed_rev = entry->cmt_rev;
+  if (changed_date)
+    *changed_date = entry->cmt_date;
+  if (changed_author)
+    *changed_author = apr_pstrdup(result_pool, entry->cmt_author);
   if (checksum)
     {
       if (entry->checksum)
