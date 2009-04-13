@@ -1028,8 +1028,11 @@ def server_enforces_date_syntax():
 
 def has_patch():
   try:
-    subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return True
+    p = subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if "Free Software Foundation" in p.stdout.read():
+      return True
+    else:
+      return False
   except OSError:
     return False
 

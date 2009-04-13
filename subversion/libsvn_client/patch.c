@@ -1638,11 +1638,14 @@ extract_svnpatch(const char *original_patch_path,
                  apr_pool_t *pool)
 {
   apr_file_t *original_patch_file; /* gzip-base64'ed */
+  svn_stringbuf_t *original_patch_stringbuf; /* gzip-base64'ed */
   svn_stream_t *original_patch_stream;
   apr_file_t *compressed_file; /* base64-decoded, gzip-compressed */
   svn_stream_t *svnpatch_stream; /* clear-text, attached to @a patch_file */
   svn_string_t *svnpatch_header;
   svn_stringbuf_t *patch_line;
+  int i;
+  svn_boolean_t svnpatch_header_found = FALSE;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* We assume both clients have the same version for now. */
@@ -1654,30 +1657,50 @@ extract_svnpatch(const char *original_patch_path,
 
   SVN_ERR(svn_io_file_open(&original_patch_file, original_patch_path,
                            APR_READ, APR_OS_DEFAULT, pool));
-  original_patch_stream = svn_stream_from_aprfile2(original_patch_file,
-                                          FALSE, pool);
+  original_patch_stringbuf = svn_stringbuf_create_ensure(1024, pool);
+  SVN_ERR(svn_stringbuf_from_aprfile(&original_patch_stringbuf,
+                                     original_patch_file, pool));
 
-  while (1)
+  for (i = 0; i <= 1; i++)
     {
-      svn_boolean_t eof;
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line, "\n",
-                                  &eof, subpool));
-      /* No need to go deeper down the stack when the first char isn't
-       * even '='. */
-      if (*patch_line->data == '='
-          && svn_string_compare_stringbuf(svnpatch_header, patch_line))
-        break;
+      original_patch_stream = svn_stream_from_stringbuf(original_patch_stringbuf,
+                                                        pool);
 
-      /* @a original_patch_path doesn't contain the svnpatch block
-       * we're looking for. */
-      if (eof)
+      while (1)
         {
-          *patch_file = NULL;
-          return SVN_NO_ERROR;
+          svn_boolean_t eof;
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line,
+                                      i == 0 ? "\n" : "\r\n", &eof, subpool));
+          /* No need to go deeper down the stack when the first char isn't
+           * even '='. */
+          if (*patch_line->data == '='
+              && svn_string_compare_stringbuf(svnpatch_header, patch_line))
+            {
+              svnpatch_header_found = TRUE;
+              break;
+            }
+
+          /* @a original_patch_path doesn't contain the svnpatch block
+           * we're looking for. */
+          if (eof)
+            {
+              *patch_file = NULL;
+              break;
+            }
+        }
+
+      if (svnpatch_header_found == TRUE)
+        {
+          break;
         }
     }
   svn_pool_destroy(subpool);
+
+  if (! svnpatch_header_found)
+    {
+      return SVN_NO_ERROR;
+    }
 
   /* At this point, original_patch_stream's cursor points right after the
    * svnpatch header, that is, the bytes we're interested in,
