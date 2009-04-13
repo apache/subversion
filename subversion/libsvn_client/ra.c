@@ -26,6 +26,7 @@
 #include "svn_sorts.h"
 #include "svn_ra.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
@@ -196,7 +197,7 @@ invalidate_wcprop_for_entry(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&entry_access, wb->base_access,
                               ((entry->kind == svn_node_dir)
                                ? path
-                               : svn_path_dirname(path, pool)),
+                               : svn_dirent_dirname(path, pool)),
                               pool));
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
@@ -361,7 +362,7 @@ svn_client_uuid_from_path(const char **uuid,
 
       svn_error_t *err;
       svn_wc_adm_access_t *parent_access;
-      const char *parent = svn_path_dirname(path, pool);
+      const char *parent = svn_dirent_dirname(path, pool);
 
       /* Open the parents administrative area to fetch the uuid.
          Subversion 1.0 and later have the uuid in every checkout root */
@@ -369,7 +370,7 @@ svn_client_uuid_from_path(const char **uuid,
       SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
                                ctx->cancel_func, ctx->cancel_baton, pool));
 
-      err = svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
+      err = svn_client_uuid_from_path(uuid, svn_dirent_dirname(path, pool),
                                       parent_access, ctx, pool);
 
       svn_error_clear(svn_wc_adm_close2(parent_access, pool));
