@@ -731,7 +731,7 @@ svn_cl__get_log_message(const char **log_msg,
           else if (! *path)
             path = ".";
 
-          if (path && lmb->base_dir)
+          if (! svn_path_is_url(path) && lmb->base_dir)
             path = svn_path_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
