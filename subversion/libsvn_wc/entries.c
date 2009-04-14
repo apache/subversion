@@ -2677,21 +2677,14 @@ svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
                      svn_wc_adm_access_t *adm_access,
                      const char *name,
-                     svn_boolean_t write_to_disk,
                      apr_pool_t *scratch_pool)
 {
   if (entries == NULL)
-    {
-      assert(write_to_disk);
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
-    }
+    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
-  if (write_to_disk)
-    SVN_ERR(svn_wc__entries_write(entries, adm_access, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entries_write(entries, adm_access, scratch_pool);
 }
 
 
