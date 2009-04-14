@@ -739,7 +739,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
          change the entry. */
       if (flags != SVN_WC__ENTRY_MODIFY_FORCE)
         SVN_ERR(svn_wc__entry_modify(adm_access, key, entry,
-                                     flags, TRUE, subpool));
+                                     flags, subpool));
 
       /* If a dir, not deleted, and not "this dir", recurse. */
       if ((! deleted)
@@ -854,8 +854,7 @@ copy_dir_administratively(const char *src_path,
         tmp_entry.url = apr_pstrdup(pool, copyfrom_url);
         SVN_ERR(svn_wc__entry_modify(adm_access, NULL, /* This Dir */
                                      &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_URL, TRUE,
-                                     pool));
+                                     SVN_WC__ENTRY_MODIFY_URL, pool));
       }
     else
       {

@@ -914,7 +914,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
               (adm_access, base_name, &tmp_entry,
                modify_flags & (SVN_WC__ENTRY_MODIFY_SCHEDULE
                                | SVN_WC__ENTRY_MODIFY_COPIED),
-               TRUE, subpool));
+               subpool));
 
       if (copied)
         /* Remove now obsolete wcprops */
@@ -961,7 +961,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
   /* Modify this_dir entry if requested. */
   if (this_dir_flags)
     SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry, this_dir_flags,
-                                 TRUE, subpool));
+                                 subpool));
 
   /* Destroy our per-iteration pool. */
   svn_pool_destroy(subpool);
@@ -1473,7 +1473,7 @@ svn_wc_add3(const char *path,
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
   SVN_ERR(svn_wc__entry_modify(parent_access, base_name, &tmp_entry,
-                               modify_flags, TRUE, pool));
+                               modify_flags, pool));
 
 
   /* If this is a replacement without history, we need to reset the
@@ -1565,7 +1565,7 @@ svn_wc_add3(const char *path,
                            : svn_wc_schedule_add;
       tmp_entry.incomplete = FALSE;
       SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry,
-                                   modify_flags, TRUE, pool));
+                                   modify_flags, pool));
 
       if (copyfrom_url)
         {
@@ -2100,12 +2100,12 @@ revert_entry(svn_depth_t *depth,
             SVN_ERR(svn_wc__entry_modify(parent_access, basey, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
-                                         TRUE, pool));
+                                         pool));
           else
             SVN_ERR(svn_wc__entry_modify(parent_access, bname, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
-                                         TRUE, pool));
+                                         pool));
         }
     }
   /* Regular prop and text edit. */
@@ -2491,7 +2491,6 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                    SVN_WC_ENTRY_THIS_DIR,
                                    &incomplete_entry,
                                    SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                                   TRUE, /* sync to disk immediately */
                                    pool));
 
       /* Get rid of all the wcprops in this directory.  This avoids rewriting
@@ -2842,7 +2841,7 @@ resolve_conflict_on_entry(const char *path,
       SVN_ERR(svn_wc__entry_modify
               (conflict_dir,
                (entry->kind == svn_node_dir ? NULL : base_name),
-               entry, modify_flags, TRUE, pool));
+               entry, modify_flags, pool));
 
       /* No feedback if no files were deleted and all we did was change the
          entry, such a file did not appear as a conflict */
@@ -3067,7 +3066,7 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
                                | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                                | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
                                | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                               TRUE, pool));
+                               pool));
 
   { /* if svn:needs-lock is present, then make the file read-write. */
     const svn_string_t *needs_lock;
@@ -3096,7 +3095,7 @@ svn_error_t *svn_wc_remove_lock(const char *path,
                                | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                                | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
                                | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                               TRUE, pool));
+                               pool));
 
   { /* if svn:needs-lock is present, then make the file read-only. */
     const svn_string_t *needs_lock;
@@ -3168,7 +3167,7 @@ svn_wc_set_changelist(const char *path,
   /* Tweak the entry. */
   newentry.changelist = changelist;
   SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                               SVN_WC__ENTRY_MODIFY_CHANGELIST, TRUE, pool));
+                               SVN_WC__ENTRY_MODIFY_CHANGELIST, pool));
 
   /* And tell someone what we've done. */
   if (notify_func)
@@ -3216,8 +3215,7 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
     }
 
   SVN_ERR(svn_wc__entry_modify(adm_access, name, &entry,
-                               SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL, TRUE,
-                               pool));
+                               SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL, pool));
 
   return SVN_NO_ERROR;
 }
