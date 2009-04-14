@@ -113,7 +113,6 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
   SVN_ERR(svn_wc__tweak_entry(dir_access, entries, SVN_WC_ENTRY_THIS_DIR,
                               base_url, repos, new_rev,
                               FALSE /* allow_removal */,
-                              FALSE /* write_to_disk */,
                               pool));
 
   if (depth == svn_depth_unknown)
@@ -160,7 +159,6 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
                 SVN_ERR(svn_wc__tweak_entry(dir_access, entries, name,
                                             child_url, repos, new_rev,
                                             TRUE /* allow_removal */,
-                                            FALSE /* write_to_disk */,
                                             pool));
             }
 
@@ -278,7 +276,6 @@ svn_wc__do_update_cleanup(const char *path,
       SVN_ERR(svn_wc__tweak_entry(dir_access, NULL, base_name,
                                   base_url, repos, new_revision,
                                   FALSE /* allow_removal */,
-                                  TRUE /* write_to_disk */,
                                   pool));
     }
 
@@ -333,7 +330,6 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
     SVN_ERR(svn_wc__tweak_entry(dir_access, NULL, base_name,
                                 NULL, repos, SVN_INVALID_REVNUM,
                                 FALSE /* allow_removal */,
-                                TRUE /* write_to_disk */,
                                 pool));
 
   return SVN_NO_ERROR;
