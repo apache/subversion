@@ -46,7 +46,7 @@ Candidate changes:
                under control of external non-interactive tool), albeit
                the feature is currently so buggy that you can't use it.)
      +1: arfrever
-     
+
  * r36509
    Don't contact the server asking about implicit mergeinfo when the
    explicit mergeinfo tells us all we need to know about what to merge
@@ -57,13 +57,6 @@ Candidate changes:
      the performance improvement should be quite significant.
    Votes:
      +1: pburba
-
- * r37009
-   Recommend SQLite 3.6.12.
-   Votes:
-     +1: arfrever, rhuijben
-     -0: gstein (the release is a week old; let's see at least another week
-                 or two behind it before modifying the 1.6.x recommendation)
 
  * r37072, r37083
    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
@@ -107,7 +100,7 @@ Candidate changes:
    Update --set-depth infinity should expand shallow subtrees.
    Justification:
      update --set-depth infinity won't actually update the target's
-     shallow subtrees without this change. 
+     shallow subtrees without this change.
    Votes:
      +1: pburba, arfrever
 
@@ -117,12 +110,10 @@ Candidate changes:
    Votes:
      +1: arfrever
 
- * r37230
-   Fix issue #3399: commit log message template missing paths
-   Justification:
-     Regression introduced in 1.6.x
+ * r37245
+   Recommend SQLite 3.6.13.
    Votes:
-     +1: stylesen, rhuijben
+     +1: arfrever
 
 Approved changes:
 =================
@@ -140,3 +131,9 @@ Approved changes:
    Votes:
      +1: lgo, arfrever, stsp
 
+ * r37230
+   Fix issue #3399: commit log message template missing paths
+   Justification:
+     Regression introduced in 1.6.x
+   Votes:
+     +1: stylesen, rhuijben, arfrever
