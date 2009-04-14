@@ -183,8 +183,8 @@ enum statement_keys {
   STMT_SELECT_PRISTINE_PROPS,
   STMT_INSERT_LOCK,
   STMT_INSERT_WCROOT,
-  STMT_UPDATE_BASE_WCPROPS,
-  STMT_SELECT_BASE_WCPROPS,
+  STMT_UPDATE_BASE_DAV_CACHE,
+  STMT_SELECT_BASE_DAV_CACHE,
   STMT_SELECT_DELETION_INFO
 };
 
@@ -280,10 +280,10 @@ static const char * const statements[] = {
   "insert into wcroot (local_abspath) "
   "values (?1);",
 
-  "update base_node set wc_props = ?3 "
+  "update base_node set dav_cache = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
-  "select wc_props from base_node "
+  "select dav_cache from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
   "select base_node.presence, working_node.presence, moved_to "
@@ -2180,15 +2180,15 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
 
 
 svn_error_t *
-svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const apr_hash_t *props,
-                            apr_pool_t *scratch_pool)
+svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const apr_hash_t *props,
+                              apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_UPDATE_BASE_WCPROPS, scratch_pool));
+                                 STMT_UPDATE_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
   return svn_sqlite__step_done(stmt);
@@ -2196,17 +2196,17 @@ svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_base_get_wcprops(apr_hash_t **props,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_wc__db_base_get_dav_cache(apr_hash_t **props,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_BASE_WCPROPS, scratch_pool));
+                                 STMT_SELECT_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
