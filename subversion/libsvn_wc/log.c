@@ -1775,7 +1775,6 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
 }
 
 
-/* #define RERUN_LOG_FILES */
 /* Run a sequence of log files. */
 static svn_error_t *
 run_log(svn_wc_adm_access_t *adm_access,
@@ -1797,12 +1796,6 @@ run_log(svn_wc_adm_access_t *adm_access,
     = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
   const char *log_end
     = "</wc-log>\n";
-
-  /* #define RERUN_LOG_FILES to test that rerunning log files works */
-#ifdef RERUN_LOG_FILES
-  int rerun_counter = 2;
- rerun:
-#endif
 
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
   loggy->adm_access = adm_access;
@@ -1888,12 +1881,6 @@ run_log(svn_wc_adm_access_t *adm_access,
 
       loggy->entries_modified = TRUE;
     }
-
-#ifdef RERUN_LOG_FILES
-  rerun = TRUE;
-  if (--rerun_counter)
-    goto rerun;
-#endif
 
   if (loggy->entries_modified)
     {
