@@ -744,8 +744,6 @@ complete_directory(struct edit_baton *eb,
         {
           if (current_entry->schedule != svn_wc_schedule_add)
             {
-              /* WRITE_TO_DISK is FALSE since we'll write the entries
-                 as a batch later.  */
               SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
                                            subpool));
             }
@@ -767,8 +765,6 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          /* WRITE_TO_DISK is FALSE since we'll write the entries
-             as a batch later.  */
           SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, subpool));
         }
       else if (current_entry->kind == svn_node_dir)
@@ -786,8 +782,6 @@ complete_directory(struct edit_baton *eb,
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
-              /* WRITE_TO_DISK is FALSE since we'll write the entries
-                 as a batch later.  */
               SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
                                            subpool));
               if (eb->notify_func)

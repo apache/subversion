@@ -2550,14 +2550,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                 {
                   /* The directory is either missing or excluded,
                      so don't try to recurse, just delete the
-                     entry in the parent directory.
-
-                     WRITE_TO_DISK is FALSE because we're just going to
-                     blow away the administrative data anyways.
-
-                     ### tho maybe we should write it out in case our
-                     ### removal is interrupted? get the partial state
-                     ### written to disk.  */
+                     entry in the parent directory. */
                   SVN_ERR(svn_wc__entry_remove(entries, adm_access,
                                                current_entry_name, subpool));
                 }
