@@ -203,9 +203,7 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
 
 /* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
    the access baton for the directory which contains the .svn administrative
-   directory containing NAME.
-
-   If WRITE_TO_DISK is TRUE, then the modified ENTRIES will we written out
+   directory containing NAME.  The modified ENTRIES will be written out
    to disk.
 
    If ENTRIES is NULL, then the entries will be read from disk, modified,
@@ -216,7 +214,6 @@ svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
                      svn_wc_adm_access_t *adm_access,
                      const char *name,
-                     svn_boolean_t write_to_disk,
                      apr_pool_t *scratch_pool);
 
 

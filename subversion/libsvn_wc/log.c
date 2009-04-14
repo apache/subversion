@@ -975,7 +975,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
 
               if (entry->schedule != svn_wc_schedule_add)
                 SVN_ERR(svn_wc__entry_remove(NULL, loggy->adm_access,
-                                             name, TRUE, loggy->pool));
+                                             name, loggy->pool));
             }
           else
             {

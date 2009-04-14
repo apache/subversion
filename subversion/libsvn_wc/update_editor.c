@@ -746,7 +746,7 @@ complete_directory(struct edit_baton *eb,
             {
               /* WRITE_TO_DISK is FALSE since we'll write the entries
                  as a batch later.  */
-              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, FALSE,
+              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
                                            subpool));
             }
           else
@@ -769,8 +769,7 @@ complete_directory(struct edit_baton *eb,
         {
           /* WRITE_TO_DISK is FALSE since we'll write the entries
              as a batch later.  */
-          SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, FALSE,
-                                       subpool));
+          SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, subpool));
         }
       else if (current_entry->kind == svn_node_dir)
         {
@@ -790,7 +789,7 @@ complete_directory(struct edit_baton *eb,
               /* WRITE_TO_DISK is FALSE since we'll write the entries
                  as a batch later.  */
               SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
-                                           FALSE, subpool));
+                                           subpool));
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
@@ -2004,8 +2003,7 @@ do_entry_deletion(struct edit_baton *eb,
     {
       const char *base_name = svn_dirent_basename(full_path, pool);
 
-      SVN_ERR(svn_wc__entry_remove(NULL, parent_adm_access, base_name,
-                                   TRUE, pool));
+      SVN_ERR(svn_wc__entry_remove(NULL, parent_adm_access, base_name, pool));
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
       return SVN_NO_ERROR;
