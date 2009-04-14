@@ -2924,7 +2924,6 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      svn_wc_entry_t *entry,
                      apr_uint64_t modify_flags,
-                     svn_boolean_t do_sync,
                      apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -2972,10 +2971,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
     }
 
   /* Sync changes to disk. */
-  if (do_sync)
-    SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entries_write(entries, adm_access, pool);
 }
 
 
@@ -3620,7 +3616,7 @@ svn_wc_mark_missing_deleted(const char *path,
                                    (SVN_WC__ENTRY_MODIFY_DELETED
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   TRUE, /* sync right away */ pool);
+                                   pool);
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,

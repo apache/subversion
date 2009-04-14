@@ -199,7 +199,6 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   const char *name,
                                   svn_wc_entry_t *entry,
                                   apr_uint64_t modify_flags,
-                                  svn_boolean_t do_sync,
                                   apr_pool_t *pool);
 
 /* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
