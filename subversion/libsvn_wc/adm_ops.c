@@ -211,9 +211,6 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
         }
     }
 
-  /* Write a shiny new entries file to disk. */
-  SVN_ERR(svn_wc__entries_write(entries, dir_access, subpool));
-
   /* Cleanup */
   svn_pool_destroy(subpool);
 
