@@ -690,6 +690,8 @@ svn_patch__get_next_hunk(svn_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   svn_stringbuf_t *diff_text;
+  svn_stringbuf_t *original_text;
+  svn_stringbuf_t *modified_text;
   svn_stream_t *s;
   apr_pool_t *iterpool;
 
@@ -700,7 +702,12 @@ svn_patch__get_next_hunk(svn_hunk_t **hunk,
       return SVN_NO_ERROR;
     }
 
-  diff_text = svn_stringbuf_create("", scratch_pool);
+  /* With 4096 characters, we probably won't have to realloc
+   * for averagely small hunks. */
+  diff_text = svn_stringbuf_create_ensure(4096, scratch_pool);
+  original_text = svn_stringbuf_create_ensure(4096, scratch_pool);
+  modified_text = svn_stringbuf_create_ensure(4096, scratch_pool);
+
   in_hunk = FALSE;
   hunk_seen = FALSE;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
@@ -733,10 +740,42 @@ svn_patch__get_next_hunk(svn_hunk_t **hunk,
           char c = line->data[0];
           if (c == ' ' || c == '-' || c == '+')
             {
+              hunk_seen = TRUE;
+
+              /* Every line of the hunk is part of the diff text. */
               svn_stringbuf_appendbytes(diff_text, line->data, line->len);
               svn_stringbuf_appendbytes(diff_text, patch->eol_str,
                                         strlen(patch->eol_str));
-              hunk_seen = TRUE;
+
+              /* Grab original/modified texts. */
+              switch (c)
+                {
+                  case ' ':
+                    /* Line occurs in both. */
+                    svn_stringbuf_appendbytes(original_text, line->data + 1,
+                                              line->len - 1);
+                    svn_stringbuf_appendbytes(original_text, patch->eol_str,
+                                              strlen(patch->eol_str));
+                    svn_stringbuf_appendbytes(modified_text, line->data + 1,
+                                              line->len - 1);
+                    svn_stringbuf_appendbytes(modified_text, patch->eol_str,
+                                              strlen(patch->eol_str));
+                    break;
+                  case '-':
+                    /* Line occurs in original. */
+                    svn_stringbuf_appendbytes(original_text, line->data + 1,
+                                              line->len - 1);
+                    svn_stringbuf_appendbytes(original_text, patch->eol_str,
+                                              strlen(patch->eol_str));
+                    break;
+                  case '+':
+                    /* Line occurs in modified. */
+                    svn_stringbuf_appendbytes(modified_text, line->data + 1,
+                                              line->len - 1);
+                    svn_stringbuf_appendbytes(modified_text, patch->eol_str,
+                                              strlen(patch->eol_str));
+                    break;
+                }
             }
           else
             {
@@ -794,8 +833,11 @@ svn_patch__get_next_hunk(svn_hunk_t **hunk,
 
           /* Check for trailing @@ */
           p++;
-          if (strcmp(p, atat) != 0)
+          if (strncmp(p, atat, strlen(atat)) != 0)
             continue;
+
+          /* There may be stuff like C-function names after the trailing @@,
+           * but we ignore that. */
 
           /* Try to parse the second range. */
           if (! parse_range(&(*hunk)->modified_start, &(*hunk)->modified_length,
@@ -819,11 +861,12 @@ svn_patch__get_next_hunk(svn_hunk_t **hunk,
 
   if (hunk_seen)
     {
-      /* Set the hunk's diff text. */
+      /* Set the hunk's texts. */
       (*hunk)->diff_text = svn_string_create(diff_text->data, result_pool);
-
-      /* Compute original and modified texts. */
-      /* TODO */
+      (*hunk)->original_text = svn_string_create(original_text->data,
+                                                 result_pool);
+      (*hunk)->modified_text = svn_string_create(modified_text->data,
+                                                 result_pool);
     }
   else
     /* Something went wrong, just discard the result. */
