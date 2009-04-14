@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-03-27 17:35+0800\n"
-"PO-Revision-Date: 2009-03-27 17:36+0800\n"
+"POT-Creation-Date: 2009-04-14 10:50+0800\n"
+"PO-Revision-Date: 2009-04-14 11:18+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5177,6 +5177,10 @@ msgid "No '.' entry in: '%s'"
 msgstr "“%s” 中不存在条目 “.”"
 
 #, c-format
+msgid "Checksum mismatch while updating '%s'; expected: '%s', actual: '%s'"
+msgstr "更新 “%s” 时，校验和不匹配；期望: “%s”，实际: “%s”"
+
+#, c-format
 msgid "Path '%s' is not in the working copy"
 msgstr "路径 “%s” 不在工作副本中"
 
@@ -5263,8 +5267,8 @@ msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "文件 “%s” 不是版本控制资源，在目录 “%s” 中"
 
 #, c-format
-msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
-msgstr "“%s” 的校验和不匹配；记录: “%s”，实际: “%s”"
+msgid "Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"
+msgstr "“%s” 的校验和不匹配；期望值: “%s”，记录值: “%s”"
 
 #, c-format
 msgid "'%s' has no ancestry information"
