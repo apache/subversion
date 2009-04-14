@@ -626,7 +626,7 @@ svn_patch__get_next_patch(svn_patch_t **patch,
 }
 
 static svn_boolean_t
-parse_offset_t(apr_off_t *offset, const char *number)
+parse_offset_t(svn_filesize_t *offset, const char *number)
 {
   apr_int64_t parsed_offset;
   
@@ -635,18 +635,13 @@ parse_offset_t(apr_off_t *offset, const char *number)
   if (errno == ERANGE)
     return FALSE;
 
-  /* apr_off_t is not the same size on all platforms.
-   * We assume it is either 4 or 8 bytes. */
-  if (sizeof(*offset) < sizeof(parsed_offset) && parsed_offset > APR_UINT32_MAX)
-    /* will overflow */
-    return FALSE;
-
+  /* svn_filesize_t is 64 bit. */
   *offset = parsed_offset;
   return TRUE;
 }
 
 static svn_boolean_t
-parse_range(apr_off_t *start, apr_off_t *length, char *range)
+parse_range(svn_filesize_t *start, svn_filesize_t *length, char *range)
 {
   char *comma;
 
