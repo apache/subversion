@@ -130,10 +130,3 @@ Approved changes:
      So don't bother merging this group before r37156.
    Votes:
      +1: lgo, arfrever, stsp
-
- * r37230
-   Fix issue #3399: commit log message template missing paths
-   Justification:
-     Regression introduced in 1.6.x
-   Votes:
-     +1: stylesen, rhuijben, arfrever
