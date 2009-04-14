@@ -300,37 +300,28 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
               hunk_seen = TRUE;
 
               /* Every line of the hunk is part of the diff text. */
-              svn_stringbuf_appendbytes(diff_text, line->data, line->len);
-              svn_stringbuf_appendbytes(diff_text, patch->eol_str,
-                                        strlen(patch->eol_str));
+              svn_stringbuf_appendcstr(diff_text, line->data);
+              svn_stringbuf_appendcstr(diff_text, patch->eol_str);
 
               /* Grab original/modified texts. */
               switch (c)
                 {
                   case ' ':
                     /* Line occurs in both. */
-                    svn_stringbuf_appendbytes(original_text, line->data + 1,
-                                              line->len - 1);
-                    svn_stringbuf_appendbytes(original_text, patch->eol_str,
-                                              strlen(patch->eol_str));
-                    svn_stringbuf_appendbytes(modified_text, line->data + 1,
-                                              line->len - 1);
-                    svn_stringbuf_appendbytes(modified_text, patch->eol_str,
-                                              strlen(patch->eol_str));
+                    svn_stringbuf_appendcstr(original_text, line->data + 1);
+                    svn_stringbuf_appendcstr(original_text, patch->eol_str);
+                    svn_stringbuf_appendcstr(modified_text, line->data + 1);
+                    svn_stringbuf_appendcstr(modified_text, patch->eol_str);
                     break;
                   case '-':
                     /* Line occurs in original. */
-                    svn_stringbuf_appendbytes(original_text, line->data + 1,
-                                              line->len - 1);
-                    svn_stringbuf_appendbytes(original_text, patch->eol_str,
-                                              strlen(patch->eol_str));
+                    svn_stringbuf_appendcstr(original_text, line->data + 1);
+                    svn_stringbuf_appendcstr(original_text, patch->eol_str);
                     break;
                   case '+':
                     /* Line occurs in modified. */
-                    svn_stringbuf_appendbytes(modified_text, line->data + 1,
-                                              line->len - 1);
-                    svn_stringbuf_appendbytes(modified_text, patch->eol_str,
-                                              strlen(patch->eol_str));
+                    svn_stringbuf_appendcstr(modified_text, line->data + 1);
+                    svn_stringbuf_appendcstr(modified_text, patch->eol_str);
                     break;
                 }
             }
