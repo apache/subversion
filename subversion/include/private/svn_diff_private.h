@@ -19,6 +19,10 @@
 #ifndef SVN_DIFF_PRIVATE_H
 #define SVN_DIFF_PRIVATE_H
 
+#include "svn_io.h"
+#include "svn_string.h"
+#include "svn_error.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
