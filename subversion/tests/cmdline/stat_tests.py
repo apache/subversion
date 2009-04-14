@@ -678,7 +678,7 @@ use-commit-times = yes
     "A tzinfo to convert a time to iota's timezone."
     def utcoffset(self, dt):
       offset = (int(iota_ts[21:23]) * 60 + int(iota_ts[23:25]))
-      if iota_text_timestamp[20] == '-':
+      if iota_ts[20] == '-':
         return datetime.timedelta(minutes=-offset)
       return datetime.timedelta(minutes=offset)
     def dst(self, dt):
@@ -690,6 +690,7 @@ use-commit-times = yes
   mtime = datetime.datetime.fromtimestamp(os.path.getmtime(other_iota_path),
                                           TZ()).replace(microsecond=0)
   fmt = mtime.isoformat(' ')
+
   # iota_ts looks like: 2009-04-13 14:30:57 +0200
   #     fmt looks like: 2009-04-13 14:30:57+02:00
   if (fmt[:19] != iota_ts[:19]
