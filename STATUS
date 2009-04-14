@@ -76,7 +76,7 @@ Candidate changes:
      The dirent code should not rely on svn_path rules, especially when the
      dirent functions were added to resolve these issues.
    Votes:
-      +1: rhuijben
+      +1: rhuijben, lgo
 
  * r37137
    Make some sweeping pool lifetime fixes in the BDB backend.
