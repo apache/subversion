@@ -137,7 +137,8 @@ parse_offset(svn_filesize_t *offset, const char *number)
 
 /* Try to parse a hunk range specification from the string RANGE.
  * Return parsed information in *START and *LENGTH, and return TRUE
- * if the range parsed correctly. */
+ * if the range parsed correctly. Note: This function may modify the
+ * input value RANGE. */
 static svn_boolean_t
 parse_range(svn_filesize_t *start, svn_filesize_t *length, char *range)
 {
