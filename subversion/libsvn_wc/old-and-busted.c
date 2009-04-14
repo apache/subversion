@@ -1737,16 +1737,28 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
                              svn_path_local_style(wcroot_abspath,
                                                   scratch_pool));
 
+  /* Grab the entries file from an access baton if we can, or just read
+     the sucker in (and later forget it).  */
   SVN_ERR(svn_wc__adm_retrieve_internal2(&adm_access, db, wcroot_abspath,
                                          scratch_pool));
+  if (adm_access == NULL)
+    {
+      SVN_ERR(svn_wc__read_entries_old(&entries, wcroot_abspath,
+                                       scratch_pool, scratch_pool));
+    }
+  else
+    {
+      apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
 
-  /* The caller should have created an adm_access for the directory before
-     calling read_info.  */
-  /* ### we can loosen this up, and just not cache an entries file if there
-     ### is no access baton.  */
-  SVN_ERR_ASSERT(adm_access != NULL);
+      entries = svn_wc__adm_access_entries(adm_access, access_pool);
+      if (entries == NULL)
+        {
+          SVN_ERR(svn_wc__read_entries_old(&entries, wcroot_abspath,
+                                           access_pool, scratch_pool));
+          svn_wc__adm_access_set_entries(adm_access, entries);
+        }
+    }
 
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
   entry = apr_hash_get(entries, local_relpath, APR_HASH_KEY_STRING);
   if (entry == NULL)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
