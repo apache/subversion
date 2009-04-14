@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-03-17 21:28+0800\n"
-"PO-Revision-Date: 2009-03-17 21:25+0800\n"
+"POT-Creation-Date: 2009-04-14 10:52+0800\n"
+"PO-Revision-Date: 2009-04-14 11:11+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -328,6 +328,12 @@ msgstr "工作副本丢失"
 msgid "The specified node is not a symlink"
 msgstr "指定的节点不是符号连接"
 
+msgid "The specified path has an unexpected status"
+msgstr "指定的路径有不期望的状态"
+
+msgid "The working copy needs to be upgraded"
+msgstr "工作副本需要升级"
+
 msgid "General filesystem error"
 msgstr "普通文件系统错误"
 
@@ -604,6 +610,9 @@ msgstr "初始化 SSPI 库失败"
 msgid "Server SSL certificate untrusted"
 msgstr "服务器的 SSL 证书不被信任"
 
+msgid "Initialization of the GSSAPI context failed"
+msgstr "初始化 GSSAPI 失败"
+
 msgid "Credential data unavailable"
 msgstr "无法取得凭证数据"
 
@@ -875,6 +884,10 @@ msgid "'%s' ends in a reserved name"
 msgstr "“%s”以保留名称结束"
 
 #, c-format
+msgid "Illegal repository URL '%s'"
+msgstr "非法版本库 URL “%s”"
+
+#, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "无法为二进制文件 “%s” 计算追溯信息"
 
@@ -1117,8 +1130,8 @@ msgid "'%s' is not under version control"
 msgstr "“%s” 尚未纳入版本控制"
 
 #, c-format
-msgid "'%s' has local modifications"
-msgstr "“%s” 已有本地修改"
+msgid "'%s' has local modifications -- commit or revert them first"
+msgstr "“%s” 已有本地修改 -- 请先提交或撤销"
 
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移动操作不能指定版本"
@@ -2522,10 +2535,6 @@ msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "“%s” 的 RA 版本不匹配: 找到 %d.%d.%d%s，期望 %d.%d.%d%s"
 
 #, c-format
-msgid "Illegal repository URL '%s'"
-msgstr "非法版本库 URL “%s”"
-
-#, c-format
 msgid "Invalid config: unknown HTTP library '%s'"
 msgstr "无效配置: 未知的 HTTP 库“%s”"
 
@@ -2982,6 +2991,10 @@ msgstr "授权头丢失属性 “realm”"
 
 msgid "Incorrect response-digest in Authentication-Info header."
 msgstr "认证信息头中的 response-digest 错误"
+
+#, c-format
+msgid "Initialization of GSS-API context failed."
+msgstr "初始化 GSS-API 失败"
 
 #, c-format
 msgid "Directory '%s' is out of date; try updating"
@@ -4601,14 +4614,6 @@ msgid ""
 msgstr "你的 .svn/tmp 目录可能丢失或损坏；请执行“svn cleanup”，然后重试"
 
 #, c-format
-msgid "'%s' is not a working copy"
-msgstr "“%s”不是工作副本"
-
-#, c-format
-msgid "Cannot write property hash for '%s'"
-msgstr "无法写入“%s”的属性哈系"
-
-#, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "版本 %ld 不匹配现有版本 %ld 于 “%s”"
 
@@ -4814,6 +4819,11 @@ msgstr "“%s”有无法识别的节点种类"
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "意外发现“%s”: 路径被标记为“丢失”"
 
+msgid ""
+"Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion "
+"1.6"
+msgstr "有日志存在时无法升级；请使用 Subversion 1.6 执行“svn cleanup”"
+
 #, c-format
 msgid "Working copy '%s' locked"
 msgstr "工作副本“%s”已经锁定"
@@ -4821,6 +4831,10 @@ msgstr "工作副本“%s”已经锁定"
 #, c-format
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路径“%s”以“%s”结束，此操作不支持"
+
+#, c-format
+msgid "'%s' is not a working copy"
+msgstr "“%s”不是工作副本"
 
 #, c-format
 msgid "Unable to check path existence for '%s'"
@@ -5038,12 +5052,25 @@ msgid "Error writing entries file for '%s'"
 msgstr "写入“%s”的入口文件出错"
 
 #, c-format
+msgid ""
+"Unable to return data because the working copy at '%s' needs to be upgraded."
+msgstr "由于位于“%s”的工作副本需要升级，所以不能返回数据。"
+
+#, c-format
+msgid "Entry '%s' in '%s' is not under version control"
+msgstr "条目“%s”(位于“%s”)尚未纳入版本控制"
+
+#, c-format
 msgid "'%s' returned error exitcode %d"
 msgstr "“%s”返回错误退出码 %d"
 
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
 msgstr "wcprops文件“%s”丢失了行结束符"
+
+#, c-format
+msgid "Cannot write wcprops for '%s'; format %d is too old"
+msgstr "无法为“%s”写入 wcprops；格式 %d 太旧"
 
 msgid "Conflict callback violated API: returned no results."
 msgstr "冲突的回调函数违反 API：没有返回结果。"
@@ -5368,6 +5395,14 @@ msgstr "找不到节点 '%s'。"
 #, c-format
 msgid "Corrupt data for '%s'"
 msgstr "'%s' 的数据损坏"
+
+#, c-format
+msgid "Expected node '%s' to be added."
+msgstr "期望节点“%s”被增加。"
+
+#, c-format
+msgid "Expected node '%s' to be deleted."
+msgstr "期望节点“%s”被删除。"
 
 msgid "'verbose' option invalid in XML mode"
 msgstr "在XML模式中“verbose”选项无效"
@@ -7960,8 +7995,9 @@ msgstr ""
 "日志信息未修改，或未指定\n"
 "a)终止，c)继续，e)编辑：\n"
 
-msgid "Use --force to override this restriction"
-msgstr "请使用 --force 选项强制执行"
+msgid ""
+"Use --force to override this restriction (local modifications may be lost)"
+msgstr "请使用 --force 选项强制执行(可能会丢失本地修改)"
 
 msgid "none"
 msgstr "无"
