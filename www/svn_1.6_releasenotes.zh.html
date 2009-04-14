@@ -18,7 +18,7 @@
 
 <h1 style="text-align: center">Subversion 1.6发布说明</h1>
 
-<p>本文根据原文r36726，由<a href="http://www.subversion.org.cn">Subversion中文站</a>的中文化翻译小组翻译，欢迎各位参与翻译工作，加入地址：<a href="http://code.google.com/p/svncndoc/">http://code.google.com/p/svncndoc/</a>，参与翻译的志愿者包括<a href="http://rocksun.cn">rocksun</a>。
+<p>本文根据原文r36726，由<a href="http://www.subversion.org.cn">Subversion中文站</a>的中文化翻译小组翻译，欢迎各位参与翻译工作，加入地址：<a href="http://code.google.com/p/svncndoc/">http://code.google.com/p/svncndoc/</a>，参与翻译的志愿者包括<a href="http://rocksun.cn">rocksun</a>。</p>
 
 <div class="h2" id="news" title="news">
 <h2>Subversion 1.6的新东西</h2>
@@ -500,7 +500,7 @@ update</code>的<code>--set-depth</code>参数有了新的值&mdash;<em>exclude<
 
 <p>mod_dav_svn现在支持一个新的公共URI语法来检查较早版本的文件和目录。这样可以让用户无需Subversion客户端就可以访问历史，并让第三方工具更加简单（例如代码评审服务），直接与版本库交互而无需svn库。</p>
 
-    <pre>http://host/repos/path?[p=PEG][&r=REV]</pre>
+    <pre>http://host/repos/path?[p=PEG][&amp;r=REV]</pre>
 
 <p>新的语法与svn命令行客户端的语法类似。简单的<b>http://host/repos/path</b>请求获取路径上的HEAD修订版本，而添加“p”查询参数，可以指明另外的peg修订版本，例如：</p>
 
@@ -508,7 +508,7 @@ update</code>的<code>--set-depth</code>参数有了新的值&mdash;<em>exclude<
 
 <p>...这与在命令行指明“path@38”类似。添加“r”查询参数则类似于命令行中的“-r”选项，让版本库从peg修订版本回溯到较早的操作修订版本：</p>
 
-    <pre>http://host/repos/path?p=38&r=20</pre>
+    <pre>http://host/repos/path?p=38&amp;r=20</pre>
 
 <p>同命令行一样，peg修订版本缺省与HEAD相同，而操作修订版本则默认与peg修订版本相同。在线图书<a href="http://svnbook.red-bean.com/en/1.5/svn.advanced.pegrevs.html">这个小节</a>详细介绍了这些东西。</p>
 
@@ -634,5 +634,6 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>的1.6.0部分�
 </div>  <!-- sqlite -->
 
 </div>  <!-- app -->
+
 </body>
 </html>
