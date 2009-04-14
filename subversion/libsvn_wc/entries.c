@@ -3031,17 +3031,13 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
                     const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
-                    svn_boolean_t write_to_disk,
                     apr_pool_t *scratch_pool)
 {
   apr_pool_t *state_pool = svn_wc_adm_access_pool(adm_access);
   svn_wc_entry_t *entry;
 
   if (entries == NULL)
-    {
-      assert(write_to_disk);
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
-    }
+    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
 
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   if (! entry)
@@ -3122,10 +3118,7 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
     }
 
-  if (write_to_disk)
-    SVN_ERR(svn_wc__entries_write(entries, adm_access, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entries_write(entries, adm_access, scratch_pool);
 }
 
 
