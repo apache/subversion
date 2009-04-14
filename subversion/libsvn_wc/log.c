@@ -194,7 +194,6 @@ struct log_runner
   apr_pool_t *pool; /* cleared before processing each log element */
   apr_pool_t *result_pool;
   svn_xml_parser_t *parser;
-  svn_boolean_t entries_modified;
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
   const char *diff3_cmd;            /* external diff3 cmd, or null if none */
@@ -870,7 +869,6 @@ log_do_modify_entry(struct log_runner *loggy,
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error modifying entry for '%s'"), name);
-  loggy->entries_modified = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -897,7 +895,6 @@ log_do_delete_lock(struct log_runner *loggy,
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing lock from entry for '%s'"),
                              name);
-  loggy->entries_modified = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -919,7 +916,6 @@ log_do_delete_changelist(struct log_runner *loggy,
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing changelist from entry '%s'"),
                              name);
-  loggy->entries_modified = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -1149,7 +1145,6 @@ log_do_committed(struct log_runner *loggy,
                   (loggy->adm_access, NULL, &tmpentry,
                    SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_KIND,
                    pool));
-          loggy->entries_modified = TRUE;
 
           /* Drop the 'killme' file. */
           err = svn_wc__make_killme(loggy->adm_access, entry->keep_local,
@@ -1201,7 +1196,6 @@ log_do_committed(struct log_runner *loggy,
                        | SVN_WC__ENTRY_MODIFY_KIND
                        | SVN_WC__ENTRY_MODIFY_DELETED,
                        pool));
-              loggy->entries_modified = TRUE;
             }
 
           return SVN_NO_ERROR;
@@ -1390,7 +1384,6 @@ log_do_committed(struct log_runner *loggy,
     return svn_error_createf
       (pick_error_code(loggy), err,
        _("Error modifying entry of '%s'"), name);
-  loggy->entries_modified = TRUE;
 
   /* If we aren't looking at "this dir" (meaning we are looking at a
      file), we are finished.  From here on out, it's all about a
@@ -1485,6 +1478,7 @@ log_do_upgrade_format(struct log_runner *loggy,
 {
   const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
   int fmt;
+  apr_hash_t *entries;
   const char *path
     = svn_wc__adm_child(svn_wc_adm_access_path(loggy->adm_access),
                         SVN_WC__ADM_FORMAT, loggy->pool);
@@ -1496,13 +1490,12 @@ log_do_upgrade_format(struct log_runner *loggy,
   /* Remove the .svn/format file, if it exists. */
   svn_error_clear(svn_io_remove_file(path, loggy->pool));
 
-  /* The nice thing is that, just by setting this flag, the entries file will
-     be rewritten in the desired format. */
-  loggy->entries_modified = TRUE;
-
   /* Reading the entries file will support old formats, even if this number
      is updated. */
   SVN_ERR(svn_wc__adm_set_wc_format(fmt, loggy->adm_access, loggy->pool));
+
+  SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, loggy->pool));
+  SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, loggy->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1756,7 +1749,6 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
   loggy->result_pool = svn_pool_create(pool);
   loggy->parser = svn_xml_make_parser(loggy, start_handler,
                                       NULL, NULL, pool);
-  loggy->entries_modified = FALSE;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
@@ -1802,7 +1794,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->pool = svn_pool_create(pool);
   loggy->result_pool = svn_pool_create(pool);
   loggy->parser = parser;
-  loggy->entries_modified = FALSE;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
@@ -1878,15 +1869,6 @@ run_log(svn_wc_adm_access_t *adm_access,
         return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error recording tree conflicts in '%s'"),
                                  svn_wc_adm_access_path(adm_access));
-
-      loggy->entries_modified = TRUE;
-    }
-
-  if (loggy->entries_modified)
-    {
-      apr_hash_t *entries;
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
     }
 
   /* Check for a 'killme' file in the administrative area. */
