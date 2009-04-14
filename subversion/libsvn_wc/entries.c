@@ -849,12 +849,19 @@ read_entries(svn_wc_adm_access_t *adm_access,
   int i;
   svn_boolean_t parent_copied = FALSE;
   
+  result_pool = svn_wc_adm_access_pool(adm_access);
+
   SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
                                      scratch_pool));
   if (wc_format < SVN_WC__WC_NG_VERSION)
-    return svn_wc__read_entries_old(adm_access, scratch_pool);
+    {
+      SVN_ERR(svn_wc__read_entries_old(&entries,
+                                       svn_wc_adm_access_path(adm_access),
+                                       result_pool, scratch_pool));
+      svn_wc__adm_access_set_entries(adm_access, entries);
+      return SVN_NO_ERROR;
+    }
 
-  result_pool = svn_wc_adm_access_pool(adm_access);
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
