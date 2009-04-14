@@ -1725,9 +1725,9 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
   const svn_wc_entry_t *entry;
 
   /* Oops. Can't fetch that kind of value with this old working copy.  */
-  if (status || kind || revision || repos_relpath || repos_root_url
+  if (status || revision || repos_relpath || repos_root_url
       || repos_uuid
-      || last_mod_time || depth || translated_size || target || changelist
+      || last_mod_time || translated_size || target || changelist
       || original_repos_relpath || original_root_url || original_uuid
       || original_revision || text_mod || props_mod || base_shadowed
       || lock)
@@ -1761,12 +1761,30 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
 
   entry = apr_hash_get(entries, local_relpath, APR_HASH_KEY_STRING);
   if (entry == NULL)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("Entry '%s' in '%s' is not under version "
                                "control"),
                              svn_path_local_style(local_relpath, scratch_pool),
                              svn_path_local_style(wcroot_abspath,
                                                   scratch_pool));
+  /* ### status */
+
+  if (kind)
+    {
+      if (entry->kind == svn_node_file)
+        {
+          *kind = svn_wc__db_kind_file;
+        }
+      else
+        {
+          SVN_ERR_ASSERT(entry->kind == svn_node_dir);
+          *kind = svn_wc__db_kind_dir;
+        }
+      /* ### no kind_symlink, or kind_unknown  */
+    }
+
+  /* ### revision  */
+  /* ### repos_relpath, repos_root_url, repos_uuid  */
 
   if (changed_rev)
     *changed_rev = entry->cmt_rev;
@@ -1774,6 +1792,16 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
     *changed_date = entry->cmt_date;
   if (changed_author)
     *changed_author = apr_pstrdup(result_pool, entry->cmt_author);
+
+  /* ### last_mod_time  */
+
+  if (depth)
+    {
+      if (entry->kind == svn_node_dir)
+        *depth = entry->depth;
+      else
+        *depth = svn_depth_unknown;
+    }
   if (checksum)
     {
       if (entry->checksum)
@@ -1782,6 +1810,15 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
       else
         *checksum = NULL;
     }
+
+  /* ### translated_size  */
+  /* ### target  */
+  /* ### changelist  */
+  /* ### original_repos_relpath, original_root_url, original_uuid,
+     ### original_revision  */
+  /* ### text_mod, props_mod  */
+  /* ### base_shadowed  */
+  /* ### lock  */
 
   return SVN_NO_ERROR;
 }

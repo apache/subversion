@@ -3312,41 +3312,68 @@ svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
-                     svn_depth_t depth,
+                     svn_depth_t walk_depth,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
+  const char *abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  svn_error_t *err;
+  svn_wc__db_kind_t kind;
+  svn_depth_t depth;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, show_hidden, pool));
-
-  if (! entry)
-    return walk_callbacks->handle_error
-      (path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                               _("'%s' is not under version control"),
-                               svn_path_local_style(path, pool)),
-       walk_baton, pool);
-
-  if (entry->kind == svn_node_file || entry->depth == svn_depth_exclude)
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+  err = svn_wc__db_read_info(NULL, &kind, NULL,
+                             NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             NULL, &depth,
+                             NULL, NULL,
+                             NULL, NULL,
+                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
+                             db, abspath,
+                             pool, pool);
+  if (err)
     {
-      svn_error_t *err = walk_callbacks->found_entry(path, entry, walk_baton,
-                                                     pool);
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return err;
+      /* Remap into SVN_ERR_UNVERSIONED_RESOURCE.  */
+      svn_error_clear(err);
+      return walk_callbacks->handle_error(
+        path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                _("'%s' is not under version control"),
+                                svn_path_local_style(path, pool)),
+        walk_baton, pool);
+    }
 
+  if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
+    {
+      const svn_wc_entry_t *entry;
+
+      /* ### we should stop passing out entry structures.
+         ###
+         ### we should not call handle_error for an error the *callback*
+         ###   gave us. let it deal with the problem before returning.  */
+
+      /* This entry should be present.  */
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, show_hidden, pool));
+      SVN_ERR_ASSERT(entry != NULL);
+      err = walk_callbacks->found_entry(path, entry, walk_baton, pool);
       if (err)
         return walk_callbacks->handle_error(path, err, walk_baton, pool);
 
       return SVN_NO_ERROR;
     }
 
-  else if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
-                         depth, show_hidden, cancel_func, cancel_baton, pool);
+                         walk_depth, show_hidden, cancel_func, cancel_baton,
+                         pool);
 
-  else
-    return walk_callbacks->handle_error
-      (path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+  return walk_callbacks->handle_error(
+       path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("'%s' has an unrecognized node kind"),
                                svn_path_local_style(path, pool)),
        walk_baton, pool);
