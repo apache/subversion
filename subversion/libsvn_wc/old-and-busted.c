@@ -725,29 +725,30 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
 }
 
 /* Parse BUF of size SIZE as an entries file in XML format, storing the parsed
-   entries in ENTRIES.  Use pool for temporary allocations and the pool of
-   ADM_ACCESS for the returned entries. */
+   entries in ENTRIES.  Use SCRATCH_POOL for temporary allocations and
+   RESULT_POOL for the returned entries.  */
 static svn_error_t *
-parse_entries_xml(svn_wc_adm_access_t *adm_access,
+parse_entries_xml(const char *path,
                   apr_hash_t *entries,
                   const char *buf,
                   apr_size_t size,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_xml_parser_t *svn_parser;
   struct entries_accumulator accum;
 
   /* Set up userData for the XML parser. */
   accum.entries = entries;
-  accum.pool = svn_wc_adm_access_pool(adm_access);
-  accum.scratch_pool = svn_pool_create(pool);
+  accum.pool = result_pool;
+  accum.scratch_pool = svn_pool_create(scratch_pool);
 
   /* Create the XML parser */
   svn_parser = svn_xml_make_parser(&accum,
                                    handle_start_tag,
                                    NULL,
                                    NULL,
-                                   pool);
+                                   scratch_pool);
 
   /* Store parser in its own userdata, so callbacks can call
      svn_xml_signal_bailout() */
@@ -755,10 +756,9 @@ parse_entries_xml(svn_wc_adm_access_t *adm_access,
 
   /* Parse. */
   SVN_ERR_W(svn_xml_parse(svn_parser, buf, size, TRUE),
-            apr_psprintf(pool,
+            apr_psprintf(scratch_pool,
                          _("XML parser failed in '%s'"),
-                         svn_path_local_style
-                         (svn_wc_adm_access_path(adm_access), pool)));
+                         svn_path_local_style(path, scratch_pool)));
 
   svn_pool_destroy(accum.scratch_pool);
 
@@ -861,22 +861,24 @@ resolve_to_defaults(apr_hash_t *entries,
 
 
 
-/* Fill the entries cache in ADM_ACCESS. The full hash cache will be
-   populated.  POOL is used for local memory allocation, the access baton
-   pool is used for the cache. */
+/* Read and parse an old-style 'entries' file in the administrative area
+   of PATH, filling in ENTRIES with the contents. The results will be
+   allocated in RESULT_POOL, and temporary allocations will be made in
+   SCRATCH_POOL.  */
 svn_error_t *
-svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
+svn_wc__read_entries_old(apr_hash_t **entries,
+                         const char *path,
+                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
-  const char *path = svn_wc_adm_access_path(adm_access);
-  apr_hash_t *entries = apr_hash_make(result_pool);
   char *curp;
   const char *endp;
   svn_wc_entry_t *entry;
   int entryno, entries_format;
   svn_stream_t *stream;
   svn_string_t *buf;
+
+  *entries = apr_hash_make(result_pool);
 
   /* Open the entries file. */
   SVN_ERR(svn_wc__open_adm_stream(&stream, path, SVN_WC__ADM_ENTRIES,
@@ -890,8 +892,8 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
   /* If the first byte of the file is not a digit, then it is probably in XML
      format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
-    SVN_ERR(parse_entries_xml(adm_access, entries, buf->data, buf->len,
-                              scratch_pool));
+    SVN_ERR(parse_entries_xml(path, *entries, buf->data, buf->len,
+                              result_pool, scratch_pool));
   else
     {
       const char *val;
@@ -935,16 +937,12 @@ svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
           ++curp;
           ++entryno;
 
-          apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+          apr_hash_set(*entries, entry->name, APR_HASH_KEY_STRING, entry);
         }
     }
 
   /* Fill in any implied fields. */
-  SVN_ERR(resolve_to_defaults(entries, result_pool));
-
-  svn_wc__adm_access_set_entries(adm_access, entries);
-
-  return SVN_NO_ERROR;
+  return resolve_to_defaults(*entries, result_pool);
 }
 
 
