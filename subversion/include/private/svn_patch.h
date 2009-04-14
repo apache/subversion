@@ -41,10 +41,10 @@ typedef struct svn_hunk_t {
   const svn_string_t *modified_text;
 
   /* Hunk ranges as they appeared in the patch file. */
-  apr_off_t original_start;
-  apr_off_t original_length;
-  apr_off_t modified_start;
-  apr_off_t modified_length;
+  svn_filesize_t original_start;
+  svn_filesize_t original_length;
+  svn_filesize_t modified_start;
+  svn_filesize_t modified_length;
 } svn_hunk_t;
 
 /* Data type to manage parsing of patches. */
