@@ -681,6 +681,73 @@ parse_range(svn_filesize_t *start, svn_filesize_t *length, char *range)
   return parse_offset(start, range);
 }
 
+/* Try to parse a hunk header in string HEADER, putting parsed information
+ * into HUNK. Return TRUE if the header parsed correctly.
+ * Do all allocations in POOL. */
+static svn_boolean_t
+parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
+{
+  static const char *atat = "@@";
+  const char *p;
+  svn_stringbuf_t *range;
+  
+  p = header + strlen(atat);
+  if (*p != ' ')
+    /* No. */
+    return FALSE;
+  p++;
+  if (*p != '-')
+    /* Nah... */
+    return FALSE;
+  /* OK, this may be worth allocating some memory for... */
+  range = svn_stringbuf_create_ensure(31, pool);
+  p++;
+  while (*p && *p != ' ')
+    {
+      svn_stringbuf_appendbytes(range, p, 1);
+      p++;
+    }
+  if (*p != ' ')
+    /* No no no... */
+    return FALSE;
+
+  /* Try to parse the first range. */
+  if (! parse_range(&hunk->original_start, &hunk->original_length, range->data))
+    return FALSE;
+
+  /* Clear the stringbuf so we can reuse it for the second range. */
+  svn_stringbuf_setempty(range);
+  p++;
+  if (*p != '+')
+    /* Eeek! */
+    return FALSE;
+  /* OK, this may be worth copying... */
+  p++;
+  while (*p && *p != ' ')
+    {
+      svn_stringbuf_appendbytes(range, p, 1);
+      p++;
+    }
+  if (*p != ' ')
+    /* No no no... */
+    return FALSE;
+
+  /* Check for trailing @@ */
+  p++;
+  if (strncmp(p, atat, strlen(atat)) != 0)
+    return FALSE;
+
+  /* There may be stuff like C-function names after the trailing @@,
+   * but we ignore that. */
+
+  /* Try to parse the second range. */
+  if (! parse_range(&hunk->modified_start, &hunk->modified_length, range->data))
+    return FALSE;
+
+  /* Hunk header is good. */
+  return TRUE;
+}
+
 svn_error_t *
 svn_patch__get_next_hunk(svn_hunk_t **hunk,
                          svn_patch_t *patch,
@@ -785,69 +852,8 @@ svn_patch__get_next_hunk(svn_hunk_t **hunk,
             }
         }
       else if ((! in_hunk) && strncmp(line->data, atat, strlen(atat)) == 0)
-        {
-          /* Looks like we have a hunk header, let's try to rip it apart. */
-          char *p;
-          svn_stringbuf_t *range;
-          
-          p = line->data + strlen(atat);
-          if (*p != ' ')
-            /* No. */
-            continue;
-          p++;
-          if (*p != '-')
-            /* Nah... */
-            continue;
-          /* OK, this may be worth allocating some memory for... */
-          range = svn_stringbuf_create_ensure(31, iterpool);
-          p++;
-          while (*p && *p != ' ')
-            {
-              svn_stringbuf_appendbytes(range, p, 1);
-              p++;
-            }
-          if (*p != ' ')
-            /* No no no... */
-            continue;
-
-          /* Try to parse the first range. */
-          if (! parse_range(&(*hunk)->original_start, &(*hunk)->original_length,
-                            range->data))
-            continue;
-
-          /* Clear the stringbuf so we can reuse it for the second range. */
-          svn_stringbuf_setempty(range);
-          p++;
-          if (*p != '+')
-            /* Eeek! */
-            continue;
-          /* OK, this may be worth copying... */
-          p++;
-          while (*p && *p != ' ')
-            {
-              svn_stringbuf_appendbytes(range, p, 1);
-              p++;
-            }
-          if (*p != ' ')
-            /* No no no... */
-            continue;
-
-          /* Check for trailing @@ */
-          p++;
-          if (strncmp(p, atat, strlen(atat)) != 0)
-            continue;
-
-          /* There may be stuff like C-function names after the trailing @@,
-           * but we ignore that. */
-
-          /* Try to parse the second range. */
-          if (! parse_range(&(*hunk)->modified_start, &(*hunk)->modified_length,
-                            range->data))
-            continue;
-
-          /* Hunk header is good. */
-          in_hunk = TRUE;
-        }
+        /* Looks like we have a hunk header, let's try to rip it apart. */
+        in_hunk = parse_hunk_header(line->data, *hunk, iterpool);
     }
   while (! eof);
   svn_pool_destroy(iterpool);
