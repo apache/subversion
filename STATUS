@@ -117,6 +117,13 @@ Candidate changes:
    Votes:
      +1: arfrever
 
+ * r37230
+   Fix issue #3399: commit log message template missing paths
+   Justification:
+     Regression introduced in 1.6.x
+   Votes:
+     +1: stylesen, rhuijben
+
 Approved changes:
 =================
 
