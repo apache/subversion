@@ -130,7 +130,9 @@ typedef svn_error_t *(*svn_editor_cb_abort_t)(
 
 svn_error_t *
 svn_editor_create(svn_editor_t **editor,
-                  void *baton,
+                  void *editor_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
