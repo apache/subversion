@@ -124,11 +124,21 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
 
 <li><b>Medium-term Goals:</b>
   <ul>
-    <li>1.6
+    <li>1.7
       <ul>
-        <li>Augmented diff representation (svnpatch)</li>
+        <li>Streamline HTTP transport to reduce the DeltaV overhead and
+        increase performance (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=3371">issue
+        #3371)</li>
 
-        <li>Python C-types bindings</li>
+        <li>Rewrite the working-copy library to feature centralized metadata
+        storage and beter future extensibility (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=3357">issue
+        #3357)</li>
+
+        <li>Augmented diff representation (svnpatch) (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=511">issue
+        #511)</li>
       </ul>
     </li>
 
@@ -146,9 +156,6 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
 
         <li>Inherited properties (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=326933"
         >discussion thread</a>)</li>
-
-        <li>Rewrite the working-copy library to feature centralized metadata
-        storage</li>
       </ul>
     </li>
   </ul>
@@ -158,7 +165,7 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
   <ul>
     <li><p>hybrid distributed/centralized VC model</p></li>
     <li><p>repository-level ACLs</p></li>
-    <li><p>broader WebDAV/deltaV compatibility</p></li>
+    <li><p>broader WebDAV compatibility (autoversioning)</p></li>
     <li><p>improved pluggable client-side diff (see <a
     href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044">issue
     #2044</a>)</p></li>
