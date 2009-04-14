@@ -22,9 +22,11 @@
 #include "svn_pools.h"
 #include "private/svn_diff_private.h"
 
+
 /* Helper macro for readability */
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
+
 
 svn_error_t *
 svn_diff__parse_next_patch(svn_patch_t **patch,
@@ -33,8 +35,8 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  static const char *minus = "--- ";
-  static const char *plus = "+++ ";
+  static const char * const minus = "--- ";
+  static const char * const plus = "+++ ";
   const char *indicator;
   svn_stream_t *s;
   apr_off_t pos;
@@ -180,7 +182,7 @@ parse_range(svn_filesize_t *start, svn_filesize_t *length, char *range)
 static svn_boolean_t
 parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
 {
-  static const char *atat = "@@";
+  static const char * const atat = "@@";
   const char *p;
   svn_stringbuf_t *range;
   
@@ -247,7 +249,7 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  static const char *atat = "@@";
+  static const char * const atat = "@@";
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   svn_stringbuf_t *diff_text;
@@ -308,7 +310,7 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
               hunk_seen = TRUE;
 
               /* Every line of the hunk is part of the diff text. */
-              svn_stringbuf_appendcstr(diff_text, line->data);
+              svn_stringbuf_appendbytes(diff_text, line->data, line->len);
               svn_stringbuf_appendcstr(diff_text, patch->eol_str);
 
               /* Grab original/modified texts. */
@@ -316,19 +318,23 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                 {
                   case ' ':
                     /* Line occurs in both. */
-                    svn_stringbuf_appendcstr(original_text, line->data + 1);
+                    svn_stringbuf_appendbytes(original_text,
+                                              line->data + 1, line->len - 1);
                     svn_stringbuf_appendcstr(original_text, patch->eol_str);
-                    svn_stringbuf_appendcstr(modified_text, line->data + 1);
+                    svn_stringbuf_appendbytes(modified_text,
+                                              line->data + 1, line->len - 1);
                     svn_stringbuf_appendcstr(modified_text, patch->eol_str);
                     break;
                   case '-':
                     /* Line occurs in original. */
-                    svn_stringbuf_appendcstr(original_text, line->data + 1);
+                    svn_stringbuf_appendbytes(original_text,
+                                              line->data + 1, line->len - 1);
                     svn_stringbuf_appendcstr(original_text, patch->eol_str);
                     break;
                   case '+':
                     /* Line occurs in modified. */
-                    svn_stringbuf_appendcstr(modified_text, line->data + 1);
+                    svn_stringbuf_appendbytes(modified_text,
+                                              line->data + 1, line->len - 1);
                     svn_stringbuf_appendcstr(modified_text, patch->eol_str);
                     break;
                 }
