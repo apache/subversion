@@ -625,14 +625,17 @@ svn_patch__get_next_patch(svn_patch_t **patch,
   return SVN_NO_ERROR;
 }
 
+/* Try to parse a positive number from a decimal number encoded
+ * in the string NUMBER. Return parsed number in OFFSET, and return
+ * TRUE if parsing was successful. */
 static svn_boolean_t
-parse_offset_t(svn_filesize_t *offset, const char *number)
+parse_offset(svn_filesize_t *offset, const char *number)
 {
   apr_int64_t parsed_offset;
   
   errno = 0; /* clear errno for safety */
   parsed_offset = apr_atoi64(number);
-  if (errno == ERANGE)
+  if (errno == ERANGE || parsed_offset < 0)
     return FALSE;
 
   /* svn_filesize_t is 64 bit. */
@@ -654,7 +657,7 @@ parse_range(svn_filesize_t *start, svn_filesize_t *length, char *range)
       if (strlen(comma + 1) > 0)
         {
           /* Try to parse the length. */
-          if (! parse_offset_t(length, comma + 1))
+          if (! parse_offset(length, comma + 1))
             return FALSE;
 
           /* Snip off the end of the string,
@@ -672,7 +675,7 @@ parse_range(svn_filesize_t *start, svn_filesize_t *length, char *range)
     }
 
   /* Try to parse the line number the hunk starts at. */
-  return parse_offset_t(start, range);
+  return parse_offset(start, range);
 }
 
 svn_error_t *
