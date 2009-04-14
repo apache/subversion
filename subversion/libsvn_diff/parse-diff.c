@@ -22,6 +22,10 @@
 #include "svn_pools.h"
 #include "private/svn_diff_private.h"
 
+/* Helper macro for readability */
+#define starts_with(str, start)  \
+  (strncmp((str), (start), strlen(start)) == 0)
+
 svn_error_t *
 svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_file_t *patch_file,
@@ -71,8 +75,7 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
       SVN_ERR(svn_stream_readline(s, &line, eol_str, &eof, iterpool));
 
       /* See if we have a diff header. */
-      if (line->len > strlen(indicator) &&
-          strncmp(line->data, indicator, strlen(indicator)) == 0)
+      if (line->len > strlen(indicator) && starts_with(line->data, indicator))
         {
           /* Looks like it, try to find the filename. */
           apr_size_t tab = svn_stringbuf_find_char_backward(line, '\t');
@@ -223,7 +226,7 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
 
   /* Check for trailing @@ */
   p++;
-  if (strncmp(p, atat, strlen(atat)) != 0)
+  if (! starts_with(p, atat))
     return FALSE;
 
   /* There may be stuff like C-function names after the trailing @@,
@@ -331,7 +334,7 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
               break; /* Hunk was empty or has been read. */
             }
         }
-      else if ((! in_hunk) && strncmp(line->data, atat, strlen(atat)) == 0)
+      else if ((! in_hunk) && starts_with(line->data, atat))
         /* Looks like we have a hunk header, let's try to rip it apart. */
         in_hunk = parse_hunk_header(line->data, *hunk, iterpool);
     }
