@@ -300,8 +300,8 @@ def patch_copy_and_move(sbox):
   svntest.main.file_append(patch_file_path, ''.join(svnpatch))
 
   expected_output = [
-    'A    A/C/gamma\n',
-    'D    A/mu\n',
+    'A    %s\n' % os.path.join('A', 'C', 'gamma'),
+    'D    %s\n' % os.path.join('A', 'mu'),
     'A    mu-ng\n',
     'patching file A/C/gamma\n',
     'patching file A/D/gamma\n',
