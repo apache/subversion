@@ -273,6 +273,10 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
   hunk_seen = FALSE;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
+  /* Get current seek position -- APR has no ftell() :( */
+  pos = 0;
+  apr_file_seek(patch->patch_file, APR_CUR, &pos);
+
   /* Get a stream to read lines from the patch file.
    * The file should not be closed when we close the stream so
    * make sure it is disowned. */
