@@ -20,6 +20,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_utf.h"
 #include "private/svn_diff_private.h"
 
 
@@ -79,27 +80,33 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
       /* See if we have a diff header. */
       if (line->len > strlen(indicator) && starts_with(line->data, indicator))
         {
+          const char *utf8_name;
+
           /* Looks like it, try to find the filename. */
           apr_size_t tab = svn_stringbuf_find_char_backward(line, '\t');
           if (tab >= line->len)
             /* Not found... */
             continue;
 
+          /* Grab the filename and encode it in UTF-8. */
+          /* TODO: Allow specifying the patch file's encoding.
+           *       For now, we assume its encoding is native. */
           line->data[tab] = '\0';
+          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_name,
+                                          line->data + strlen(indicator),
+                                          iterpool));
 
           if ((! in_header) && strcmp(indicator, minus) == 0)
             {
-              /* First line of header. */
-              (*patch)->old_filename =
-                apr_pstrdup(result_pool, line->data + strlen(indicator));
+              /* First line of header, grab old filename. */
+              (*patch)->old_filename = apr_pstrdup(result_pool, utf8_name);
               indicator = plus;
               in_header = TRUE;
             }
           else if (in_header && strcmp(indicator, plus) == 0)
             {
-              /* Second line of header. */
-              (*patch)->new_filename =
-                apr_pstrdup(result_pool, line->data + strlen(indicator));
+              /* Second line of header, grab new filename. */
+              (*patch)->new_filename = apr_pstrdup(result_pool, utf8_name);
               in_header = FALSE;
               break; /* All good! */
             }
