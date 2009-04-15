@@ -2239,7 +2239,10 @@ write_entry(svn_wc__db_t *db,
     {
       working_node->wc_id = wc_id;
       working_node->local_relpath = name;
-      working_node->parent_relpath = "";
+      if (*name == '\0')
+        working_node->parent_relpath = NULL;
+      else
+        working_node->parent_relpath = "";
       working_node->depth = entry->depth;
       working_node->changed_rev = SVN_INVALID_REVNUM;
       working_node->last_mod_time = entry->text_time;
@@ -2288,7 +2291,10 @@ write_entry(svn_wc__db_t *db,
     {
       actual_node->wc_id = wc_id;
       actual_node->local_relpath = name;
-      actual_node->parent_relpath = "";
+      if (*name == '\0')
+        actual_node->parent_relpath = NULL;
+      else
+        actual_node->parent_relpath = "";
 
       SVN_ERR(insert_actual_node(wc_db, actual_node, scratch_pool));
     }

@@ -185,8 +185,9 @@ CREATE TABLE WORKING_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. */
-  parent_relpath  TEXT NOT NULL,
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
      Only allowed values: normal, not-present, incomplete, base-deleted.
@@ -297,8 +298,9 @@ CREATE TABLE ACTUAL_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. */
-  parent_relpath  TEXT NOT NULL,
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
 
   /* serialized skel of this node's properties. NULL implies no change to
      the properties, relative to WORKING/BASE as appropriate. */
