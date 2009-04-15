@@ -19,9 +19,6 @@
  * @brief Common exception handling for Subversion.
  */
 
-
-
-
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
@@ -39,6 +36,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+/* For the Subversion developers, this #define turns on extended "stack
+   traces" of any errors that get thrown. See the SVN_ERR() macro.  */
+#ifdef SVN_DEBUG
+#define SVN_ERR_TRACING
+#endif
+
 
 /** the best kind of (@c svn_error_t *) ! */
 #define SVN_NO_ERROR   0
@@ -264,20 +269,28 @@ svn_handle_warning(FILE *stream,
  *
  * @code
  *   if (a)
- *     SVN_ERR (some operation);
+ *     SVN_ERR(some operation);
  *   else
  *     foo;
  * @endcode
  *
  * would not mean what they appear to.
  */
+#ifdef SVN_ERR_TRACING
+#define SVN_ERR(expr)                                            \
+  do {                                                           \
+    svn_error_t *svn_err__temp = (expr);                         \
+    if (svn_err__temp)                                           \
+      return svn_error_quick_wrap(svn_err__temp, "traced call"); \
+  } while (0)
+#else
 #define SVN_ERR(expr)                           \
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
       return svn_err__temp;                     \
   } while (0)
-
+#endif
 
 /** A statement macro, very similar to @c SVN_ERR.
  *
