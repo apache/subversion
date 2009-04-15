@@ -458,9 +458,9 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 }
 
 
-/* If wcprops are stored in a single file in this working copy, read that file
-   and store it in the cache of ADM_ACCESS.   Use POOL for temporary
-   allocations. */
+/* If wcprops are stored in a single file in this working copy, read that
+   file and return it in *ALL_WCPROPS, allocated in RESULT_POOL.   Use
+   SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 read_wcprops(apr_hash_t **all_wcprops,
              svn_wc_adm_access_t *adm_access,
