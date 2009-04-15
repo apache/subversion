@@ -635,8 +635,16 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 static svn_boolean_t
 entry_is_hidden(const svn_wc_entry_t *entry)
 {
-  return ((entry->deleted && entry->schedule != svn_wc_schedule_add)
-          || entry->absent);
+  /* Note: the condition below may allow certain combinations that the
+     rest of the system will never reach (eg. absent/add).
+
+     In English, the condition is: "the entry is not present, and I haven't
+     scheduled something over the top of it."  */
+  return ((entry->deleted
+           || entry->absent
+           || entry->depth == svn_depth_exclude)
+          && entry->schedule != svn_wc_schedule_add
+          && entry->schedule != svn_wc_schedule_replace);
 }
 
 
@@ -1587,8 +1595,13 @@ svn_wc_entry(const svn_wc_entry_t **entry,
   if (dir_access)
     {
       apr_hash_t *entries;
-      SVN_ERR(svn_wc_entries_read(&entries, dir_access, show_hidden, pool));
+
+      /* Fetch all the entries. We'll prune the entry ourself.  */
+      SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
+
       *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
+      if (!show_hidden && *entry != NULL && entry_is_hidden(*entry))
+        *entry = NULL;
     }
   else
     *entry = NULL;
@@ -1645,13 +1658,9 @@ prune_deleted(apr_hash_t *entries_all,
        hi = apr_hash_next(hi))
     {
       void *val;
-      const svn_wc_entry_t *entry;
+
       apr_hash_this(hi, NULL, NULL, &val);
-      entry = val;
-      if ((entry->deleted
-           && (entry->schedule != svn_wc_schedule_add)
-           && (entry->schedule != svn_wc_schedule_replace))
-          || entry->absent || (entry->depth == svn_depth_exclude))
+      if (entry_is_hidden(val))
         break;
     }
 
@@ -1673,10 +1682,7 @@ prune_deleted(apr_hash_t *entries_all,
 
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
-      if (((entry->deleted == FALSE) && (entry->absent == FALSE)
-           && (entry->depth != svn_depth_exclude))
-          || (entry->schedule == svn_wc_schedule_add)
-          || (entry->schedule == svn_wc_schedule_replace))
+      if (!entry_is_hidden(entry))
         {
           apr_hash_set(entries, key, APR_HASH_KEY_STRING, entry);
         }
@@ -3351,8 +3357,24 @@ svn_wc_walk_entries3(const char *path,
          ###   gave us. let it deal with the problem before returning.  */
 
       /* This entry should be present.  */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, show_hidden, pool));
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
       SVN_ERR_ASSERT(entry != NULL);
+      if (!show_hidden && entry_is_hidden(entry))
+        {
+          /* The fool asked to walk a "hidden" node. Report the node as
+             unversioned.
+
+             ### this is incorrect behavior. see depth_test 36. the walk
+             ### API will be revamped to avoid entry structures. we should
+             ### be able to solve the problem with the new API. (since we
+             ### shouldn't return a hidden entry here)  */
+          return walk_callbacks->handle_error(
+            path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                    _("'%s' is not under version control"),
+                                    svn_path_local_style(path, pool)),
+            walk_baton, pool);
+        }
+
       err = walk_callbacks->found_entry(path, entry, walk_baton, pool);
       if (err)
         return walk_callbacks->handle_error(path, err, walk_baton, pool);
