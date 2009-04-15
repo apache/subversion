@@ -2033,10 +2033,22 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
   /* Check if the patch target file exists. */
   /* TODO: strip count, make sure CWD is sane */
   SVN_ERR(svn_io_check_path(patch->new_filename, &kind, pool));
-
   if (kind != svn_node_file)
-    /* TODO: Warn about missing patch target file. */
-    return SVN_NO_ERROR;
+    {
+      /* Report file as skipped. */
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(patch->new_filename,
+                                        svn_wc_notify_skip, pool);
+          notify->kind = svn_node_file;
+          notify->content_state = svn_wc_notify_state_missing;
+
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(init_patch_target(&target, patch, pool));
 
