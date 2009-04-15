@@ -41,7 +41,7 @@ extern "C" {
 /* For the Subversion developers, this #define turns on extended "stack
    traces" of any errors that get thrown. See the SVN_ERR() macro.  */
 #ifdef SVN_DEBUG
-#define SVN_ERR_TRACING
+#define SVN_ERR__TRACING
 #endif
 
 
@@ -276,12 +276,13 @@ svn_handle_warning(FILE *stream,
  *
  * would not mean what they appear to.
  */
-#ifdef SVN_ERR_TRACING
+#ifdef SVN_ERR__TRACING
+#define SVN_ERR__TRACED "traced call"
 #define SVN_ERR(expr)                                            \
   do {                                                           \
     svn_error_t *svn_err__temp = (expr);                         \
     if (svn_err__temp)                                           \
-      return svn_error_quick_wrap(svn_err__temp, "traced call"); \
+      return svn_error_quick_wrap(svn_err__temp, SVN_ERR__TRACED); \
   } while (0)
 #else
 #define SVN_ERR(expr)                           \
