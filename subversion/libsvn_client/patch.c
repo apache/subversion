@@ -1838,6 +1838,7 @@ static svn_error_t *
 init_patch_target(patch_target_t **target, svn_patch_t *patch, apr_pool_t *pool)
 {
   patch_target_t *new_target;
+  const char *temp_dir_path;
 
   new_target = apr_pcalloc(pool, sizeof(*new_target));
 
@@ -1845,14 +1846,19 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch, apr_pool_t *pool)
   SVN_ERR(svn_io_file_open(&new_target->file, patch->new_filename,
                            APR_READ | APR_BINARY, 0644, pool));
 
-  /* Get a temporary file to write the patched result to. */
+  /* Create a temporary file to write the patched result to,
+   * in the same directory as the target file.
+   * We want them to be on the same filesytem so we can rename
+   * the temporary file to the target file later. */
+  temp_dir_path = svn_dirent_dirname(patch->new_filename, pool);
   SVN_ERR(svn_stream_open_unique(&new_target->result, &new_target->result_path,
-                                 NULL, svn_io_file_del_none, pool, pool));
-  
+                                 temp_dir_path, svn_io_file_del_none, pool,
+                                 pool));
   new_target->current_line = 1;
   new_target->eol_str = APR_EOL_STR; /* TODO: determine actual EOL-style. */
   new_target->patch_eol_str = patch->eol_str;
   new_target->modified = FALSE;
+  new_target->conflicted = FALSE;
 
   *target = new_target;
   return SVN_NO_ERROR;
@@ -2013,6 +2019,9 @@ apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Apply a PATCH. CTX is a client context used to send notifications.
+ * Use client context CTX to send notifiations.
+ * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
@@ -2079,6 +2088,9 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Apply all diffs in the patch file at PATH_PATH.
+ * Use client context CTX to send notifiations.
+ * Do all allocations in POOL.  */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
