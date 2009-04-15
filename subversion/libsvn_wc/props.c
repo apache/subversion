@@ -655,6 +655,48 @@ wcprops_modify_allowed(svn_wc_adm_access_t *adm_access,
 }
 
 
+static svn_error_t *
+delete_wcprops(const char *path,
+               svn_wc_adm_access_t *adm_access,
+               apr_pool_t *pool)
+{
+  /* We use 1 file for all wcprops in a directory,
+     use a helper to remove them from that file */
+
+  svn_wc_adm_access_t *path_access;
+  const char *filename;
+  apr_hash_t *all_wcprops;
+
+  SVN_ERR(svn_wc_adm_probe_retrieve(&path_access, adm_access, path, pool));
+  SVN_ERR(wcprops_modify_allowed(path_access, pool));
+
+  SVN_ERR(read_wcprops(&all_wcprops, path_access, pool, pool));
+
+  /* If PATH is a directory, then FILENAME will be NULL.
+     If PATH is a file, then FILENAME will be the BASE_NAME of PATH. */
+  filename = svn_dirent_is_child(svn_wc_adm_access_path(path_access), path,
+                                 NULL);
+  if (! filename)
+    {
+      /* There is no point in reading the props just to determine if we
+         need to rewrite them:-), so assume a write is needed if the props
+         aren't already cached. */
+      if (! all_wcprops || apr_hash_count(all_wcprops) > 0)
+        all_wcprops = apr_hash_make(pool);
+    }
+  else if (all_wcprops)
+    {
+      apr_hash_t *wcprops;
+
+      wcprops = apr_hash_get(all_wcprops, filename, APR_HASH_KEY_STRING);
+      if (wcprops && apr_hash_count(wcprops) > 0)
+        apr_hash_set(all_wcprops, filename, APR_HASH_KEY_STRING, NULL);
+    }
+
+  return write_wcprops(all_wcprops, path_access, pool);
+}
+
+
 svn_error_t *
 svn_wc__props_delete(const char *path,
                      svn_wc__props_kind_t props_kind,
@@ -662,64 +704,14 @@ svn_wc__props_delete(const char *path,
                      apr_pool_t *pool)
 {
   const char *props_file;
+  const svn_wc_entry_t *entry;
 
   if (props_kind == svn_wc__props_wcprop)
-    {
-      /* We use 1 file for all wcprops in a directory,
-         use a helper to remove them from that file */
+    return delete_wcprops(path, adm_access, pool);
 
-      svn_wc_adm_access_t *path_access;
-      const char *filename;
-      svn_boolean_t write_needed = FALSE;
-      apr_hash_t *all_wcprops;
-
-      SVN_ERR(svn_wc_adm_probe_retrieve(&path_access, adm_access,
-                                        path, pool));
-      SVN_ERR(wcprops_modify_allowed(path_access, pool));
-
-      SVN_ERR(read_wcprops(&all_wcprops, path_access, pool, pool));
-
-      /* If PATH is a directory, then FILENAME will be NULL.
-         If PATH is a file, then FILENAME will be the BASE_NAME of PATH. */
-      filename = svn_dirent_is_child(svn_wc_adm_access_path(path_access),
-                                     path, NULL);
-      if (! filename)
-        {
-          /* There is no point in reading the props just to determine if we
-             need to rewrite them:-), so assume a write is needed if the props
-             aren't already cached. */
-          if (! all_wcprops || apr_hash_count(all_wcprops) > 0)
-            {
-              all_wcprops = apr_hash_make(pool);
-
-              write_needed = TRUE;
-            }
-        }
-      else if (all_wcprops)
-        {
-          apr_hash_t *wcprops;
-
-          wcprops = apr_hash_get(all_wcprops, filename, APR_HASH_KEY_STRING);
-          if (wcprops && apr_hash_count(wcprops) > 0)
-            {
-              apr_hash_set(all_wcprops, filename, APR_HASH_KEY_STRING, NULL);
-              write_needed = TRUE;
-            }
-        }
-      if (write_needed)
-        SVN_ERR(write_wcprops(all_wcprops, path_access, pool));
-    }
-  else
-    {
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind,
-                                pool));
-      SVN_ERR(remove_file_if_present(props_file, pool));
-    }
-
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
+  return remove_file_if_present(props_file, pool);
 }
 
 svn_error_t *
