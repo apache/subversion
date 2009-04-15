@@ -2304,6 +2304,17 @@ add_directory(const char *path,
             }
           else
             {
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify = 
+                        svn_wc_create_notify(db->path,
+                                             svn_wc_notify_update_obstruction,
+                                             pool);
+
+                  notify->kind = svn_node_dir;
+                  (*eb->notify_func)(eb->notify_baton, notify, pool);
+                }
+
               return svn_error_createf(
                  SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': an unversioned "
@@ -3476,11 +3487,23 @@ add_file(const char *path,
       if (eb->allow_unver_obstructions)
         fb->existed = TRUE;
       else
-        return svn_error_createf(
-           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Failed to add file '%s': an unversioned "
-             "file of the same name already exists"),
-           svn_path_local_style(full_path, subpool));
+        {
+          if (eb->notify_func)
+            {
+              svn_wc_notify_t *notify = 
+                      svn_wc_create_notify(full_path,
+                                           svn_wc_notify_update_obstruction,
+                                           pool);
+
+              notify->kind = svn_node_file;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+          return svn_error_createf(
+             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+             _("Failed to add file '%s': an unversioned "
+               "file of the same name already exists"),
+             svn_path_local_style(full_path, subpool));
+        }
     }
 
   /* What to do with a versioned or schedule-add file:
