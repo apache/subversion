@@ -300,6 +300,16 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
                       apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__gather_children_old(const apr_array_header_t **children,
+                            svn_boolean_t base_only,
+                            svn_wc__db_t *db,
+                            const char *wcroot_abspath,
+                            const char *local_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* Parse a file external specification in the NULL terminated STR and
    place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
    and revision number in REV_RESULT.  STR may be NULL, in which case

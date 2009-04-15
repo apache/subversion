@@ -1376,19 +1376,35 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb)
 
 static svn_error_t *
 gather_children(const apr_array_header_t **children,
-                enum statement_keys stmt_idx,
+                svn_boolean_t base_only,
                 svn_wc__db_t *db,
                 const char *local_abspath,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   apr_array_header_t *child_names;
   svn_boolean_t have_row;
 
-  /* ### this will open the SDB as read/write. we want r/o. maybe fix?  */
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath, stmt_idx,
-                                 scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* If this is an old working copy, then delegate to grab this info.  */
+  if (pdh->wcroot->format < SVN_WC__VERSION_EXPERIMENTAL)
+    return svn_wc__gather_children_old(children, base_only,
+                                       db, pdh->wcroot->abspath, local_relpath,
+                                       result_pool, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    base_only
+                                      ? STMT_SELECT_BASE_NODE_CHILDREN
+                                      : STMT_SELECT_WORKING_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
 
   /* ### should test the node to ensure it is a directory */
 
@@ -2174,7 +2190,7 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return gather_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
+  return gather_children(children, TRUE,
                          db, local_abspath, result_pool, scratch_pool);
 }
 
@@ -2993,7 +3009,7 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  return gather_children(children, STMT_SELECT_WORKING_CHILDREN,
+  return gather_children(children, FALSE,
                          db, local_abspath, result_pool, scratch_pool);
 }
 

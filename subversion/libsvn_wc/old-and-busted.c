@@ -1690,6 +1690,44 @@ svn_wc__entries_init_old(const char *path,
 }
 
 
+static svn_error_t *
+get_entries(apr_hash_t **entries,
+            svn_wc__db_t *db,
+            const char *wcroot_abspath,
+            apr_pool_t *scratch_pool)
+{
+  svn_wc_adm_access_t *adm_access;
+
+  /* Is there an existing access baton for this path?  */
+  SVN_ERR(svn_wc__adm_retrieve_internal2(&adm_access, db, wcroot_abspath,
+                                         scratch_pool));
+  if (adm_access == NULL)
+    {
+      /* No access baton. Read the entries into SCRATCH_POOL, and we'll
+         just drop them on the floor.  */
+      SVN_ERR(svn_wc__read_entries_old(entries, wcroot_abspath,
+                                       scratch_pool, scratch_pool));
+    }
+  else
+    {
+      /* If we need to create entries, they'll go into ACCESS_POOL.  */
+      apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
+
+      /* Already cached?  */
+      *entries = svn_wc__adm_access_entries(adm_access, access_pool);
+      if (*entries == NULL)
+        {
+          /* Read and cache the entries.  */
+          SVN_ERR(svn_wc__read_entries_old(entries, wcroot_abspath,
+                                           access_pool, scratch_pool));
+          svn_wc__adm_access_set_entries(adm_access, *entries);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__read_info_old(svn_wc__db_status_t *status,
                       svn_wc__db_kind_t *kind,
@@ -1720,7 +1758,6 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   const svn_wc_entry_t *entry;
 
@@ -1739,25 +1776,7 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
 
   /* Grab the entries file from an access baton if we can, or just read
      the sucker in (and later forget it).  */
-  SVN_ERR(svn_wc__adm_retrieve_internal2(&adm_access, db, wcroot_abspath,
-                                         scratch_pool));
-  if (adm_access == NULL)
-    {
-      SVN_ERR(svn_wc__read_entries_old(&entries, wcroot_abspath,
-                                       scratch_pool, scratch_pool));
-    }
-  else
-    {
-      apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
-
-      entries = svn_wc__adm_access_entries(adm_access, access_pool);
-      if (entries == NULL)
-        {
-          SVN_ERR(svn_wc__read_entries_old(&entries, wcroot_abspath,
-                                           access_pool, scratch_pool));
-          svn_wc__adm_access_set_entries(adm_access, entries);
-        }
-    }
+  SVN_ERR(get_entries(&entries, db, wcroot_abspath, scratch_pool));
 
   entry = apr_hash_get(entries, local_relpath, APR_HASH_KEY_STRING);
   if (entry == NULL)
@@ -1819,6 +1838,59 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
   /* ### text_mod, props_mod  */
   /* ### base_shadowed  */
   /* ### lock  */
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__gather_children_old(const apr_array_header_t **children,
+                            svn_boolean_t base_only,
+                            svn_wc__db_t *db,
+                            const char *wcroot_abspath,
+                            const char *local_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  apr_array_header_t *child_names;
+  apr_hash_index_t *hi;
+
+  /* ### we don't have the filtering done for BASE_ONLY yet.  */
+  if (base_only)
+    return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                             _("Unable to return data because the working "
+                               "copy at '%s' needs to be upgraded."),
+                             svn_path_local_style(wcroot_abspath,
+                                                  scratch_pool));
+
+  /* Grab the entries file from an access baton if we can, or just read
+     the sucker in (and later forget it).  */
+  SVN_ERR(get_entries(&entries, db, wcroot_abspath, scratch_pool));
+
+  /* The returned array will contain the same count as ENTRIES, less one
+     for the omitted "this-dir".  */
+  child_names = apr_array_make(result_pool,
+                               apr_hash_count(entries) - 1,
+                               sizeof(const char *));
+
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *name;
+
+      apr_hash_this(hi, &key, NULL, NULL);
+      name = key;
+
+      /* Don't insert "this-dir".  */
+      if (*name == '\0')
+        continue;
+
+      APR_ARRAY_PUSH(child_names, const char *) = apr_pstrdup(result_pool,
+                                                              name);
+    }
+
+  *children = child_names;
 
   return SVN_NO_ERROR;
 }
