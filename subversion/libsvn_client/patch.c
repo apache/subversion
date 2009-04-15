@@ -38,6 +38,7 @@
 #include <assert.h>
 
 #include "svn_private_config.h"
+#include "private/svn_diff_private.h"
 
 
 /*** Code. ***/
@@ -1738,6 +1739,11 @@ extract_svnpatch(const char *original_patch_path,
   return SVN_NO_ERROR;
 }
 
+/* ### forward-declaration */
+static svn_error_t *
+apply_textdiffs(const char *patch_path, svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *wc_path,
@@ -1784,9 +1790,323 @@ svn_client_patch(const char *patch_path,
 
     }
 
-  /* Now proceed with the unidiff bytes. */
-  SVN_ERR(svn_wc_apply_unidiff(patch_path, force, outfile, errfile,
-                               ctx->config, pool));
+  /* Now proceed with the text-diff bytes. */
+
+  /* ### Temporary run-time check to switch between "internal" and
+   * "external" patch implementations. */
+  if (getenv("SVN_INTERNAL_PATCH") != NULL)
+    SVN_ERR(apply_textdiffs(patch_path, ctx, pool));
+  else
+    SVN_ERR(svn_wc_apply_unidiff(patch_path, force, outfile, errfile,
+                                 ctx->config, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* --- Text-diff application routines --- */
+
+typedef struct patch_target_t {
+  /* The target file, read-only, seekable. */
+  apr_file_t *file;
+  
+  /* The result stream, write-only, not seekable.
+   * This is where we write the patched result to. */
+  svn_stream_t *result;
+
+  /* Path to the temporary file underlying the result stream. */
+  const char *result_path;
+
+  /* The line last read from the target file. */
+  svn_filesize_t current_line;
+
+  /* EOL-marker used by target file. */
+  const char *eol_str;
+
+  /* EOL-marker used by patch file. */
+  const char *patch_eol_str;
+
+  /* True if at least one hunk was applied to the target. */
+  svn_boolean_t modified;
+
+  /* True if at least one hunk application resulted in a conflict. */
+  svn_boolean_t conflicted;
+} patch_target_t;
+
+/* Initialize a patch TARGET structure for a target file described by PATCH.
+ * Allocate the patch target structure in POOL. */
+static svn_error_t *
+init_patch_target(patch_target_t **target, svn_patch_t *patch, apr_pool_t *pool)
+{
+  patch_target_t *new_target;
+
+  new_target = apr_pcalloc(pool, sizeof(*new_target));
+
+  /* Try to open the target file */
+  SVN_ERR(svn_io_file_open(&new_target->file, patch->new_filename,
+                           APR_FOPEN_READ | APR_FOPEN_BINARY, 0644, pool));
+
+  /* Get a temporary file to write the patched result to. */
+  SVN_ERR(svn_stream_open_unique(&new_target->result, &new_target->result_path,
+                                 NULL, svn_io_file_del_none, pool, pool));
+  
+  new_target->current_line = 1;
+  new_target->eol_str = APR_EOL_STR; /* TODO: determine actual EOL-style. */
+  new_target->patch_eol_str = patch->eol_str;
+  new_target->modified = FALSE;
+
+  *target = new_target;
+  return SVN_NO_ERROR;
+}
+
+/* Determine the line at which a HUNK applies to the TARGET file.
+ * If no correct line can be determined, fall back to the original
+ * line offset specified in HUNK -- the user will have to resolve
+ * conflicts in this case. */
+static svn_filesize_t
+determine_hunk_line(svn_hunk_t *hunk, patch_target_t *target)
+{
+  /* TODO: For now, just apply the hunk wherever it thinks it should go.
+   * We can add line offset searching here later. */
+  return hunk->original_start;
+}
+
+/* Copy lines to the result stream of TARGET until the specified
+ * LINE has been reached. Indicate in *EOF whether end-of-file was
+ * encountered while reading from the target. Do all allocations in POOL. */
+static svn_error_t *
+copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
+                     svn_boolean_t *eof, apr_pool_t *pool)
+{
+  svn_stream_t *s;
+  apr_pool_t *iterpool;
+
+  s = svn_stream_from_aprfile2(target->file, TRUE, pool);
+  *eof = FALSE;
+
+  iterpool = svn_pool_create(pool);
+  while (target->current_line < line && ! *eof)
+    {
+      svn_stringbuf_t *buf;
+      apr_size_t len;
+      
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_stream_readline(s, &buf, target->eol_str, eof, pool));
+      svn_stringbuf_appendcstr(buf, target->eol_str);
+      target->current_line++;
+
+      len = buf->len;
+      SVN_ERR(svn_stream_write(target->result, buf->data, &len));
+      if (len < buf->len)
+        {
+          /* ### Treat this as EOF for now. */
+          *eof = TRUE;
+          break;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  svn_stream_close(s);
+
+  return SVN_NO_ERROR;
+}
+
+/* Read at most NLINES from the TARGET file, returning lines read in *LINES,
+ * separated by the EOL sequence specified in TARGET->patch_eol_str.
+ * Allocate *LINES in result_pool.
+ * Use SCRATCH_POOL for all other allocations. */
+static svn_error_t *
+read_lines_from_target(svn_string_t **lines, svn_filesize_t nlines,
+                       patch_target_t *target, apr_pool_t *scratch_pool,
+                       apr_pool_t *result_pool)
+{
+  svn_stringbuf_t *buf;
+  svn_stream_t *s;
+  apr_pool_t *iterpool;
+  svn_filesize_t i;
+
+  buf = svn_stringbuf_create_ensure(1024, scratch_pool);
+  s = svn_stream_from_aprfile2(target->file, TRUE, scratch_pool);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < nlines; i++)
+    {
+      svn_stringbuf_t *line;
+      svn_boolean_t eof;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_stream_readline(s, &line, target->eol_str, &eof, iterpool));
+      svn_stringbuf_appendcstr(buf, line->data);
+      svn_stringbuf_appendcstr(buf, target->patch_eol_str);
+
+      if (eof)
+          break;
+    }
+  svn_pool_destroy(iterpool);
+
+  svn_stream_close(s);
+
+  target->current_line += i;
+  *lines = svn_string_create_from_buf(buf, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Apply a HUNK to a patch TARGET. Do all allocations in POOL. */
+static svn_error_t *
+apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
+{
+  svn_filesize_t line;
+  svn_boolean_t eof;
+  svn_string_t *latest_text;
+  svn_diff_t *diff;
+  svn_diff_file_options_t *opts;
+
+  /* Determine the line the hunk should be applied at. */
+  line = determine_hunk_line(hunk, target);
+
+  if (target->current_line > line)
+    /* If we already passed the line that the hunk should be applied to,
+     * the hunks in the patch file are out of order. */
+    /* TODO: Warn, create reject file? */
+    return SVN_NO_ERROR;
+
+  /* Move forward to the hunk's line, copying data as we go. */
+  eof = FALSE;
+  if (target->current_line < line)
+    SVN_ERR(copy_lines_to_target(target, line, &eof, pool));
+  if (eof)
+    /* File is shorter than it should be. */
+    /* TODO: Warn, create reject file? */
+    return SVN_NO_ERROR;
+
+  /* Target file is at the hunk's line.
+   * Read the target's version of the hunk.
+   * We assume the target hunk has the same length as the original hunk.
+   * If that's not the case, we'll get merge conflicts. */
+  SVN_ERR(read_lines_from_target(&latest_text, hunk->original_length,
+                                 target, pool, pool));
+  /* Diff the hunks. */
+  opts = svn_diff_file_options_create(pool);
+  SVN_ERR(svn_diff_mem_string_diff3(&diff, hunk->original_text,
+                                    hunk->modified_text,
+                                    latest_text, opts, pool));
+  if (svn_diff_contains_diffs(diff))
+    {
+      svn_diff_conflict_display_style_t conflict_style;
+
+      /* TODO: Make conflict style configurable? */
+      conflict_style = svn_diff_conflict_display_modified_original_latest;
+
+      /* Merge the hunks. */
+      SVN_ERR(svn_diff_mem_string_output_merge2(target->result, diff,
+                                                hunk->original_text,
+                                                hunk->modified_text,
+                                                latest_text,
+                                                NULL, NULL, NULL, NULL,
+                                                conflict_style, pool));
+      target->modified = TRUE;
+      target->conflicted = svn_diff_contains_conflicts(diff);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  apr_pool_t *iterpool;
+  patch_target_t *target;
+  svn_hunk_t *hunk;
+
+  /* Check if the patch target file exists. */
+  /* TODO: strip count, make sure CWD is sane */
+  SVN_ERR(svn_io_check_path(patch->new_filename, &kind, pool));
+
+  if (kind != svn_node_file)
+    /* TODO: Warn about missing patch target file. */
+    return SVN_NO_ERROR;
+
+  SVN_ERR(init_patch_target(&target, patch, pool));
+
+  /* TODO: Make sure target EOL-style matches patch, if not, normalise. */
+
+  /* Apply hunks. */
+  iterpool = svn_pool_create(pool);
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_diff__parse_next_hunk(&hunk, patch, iterpool, iterpool));
+      if (hunk)
+        SVN_ERR(apply_one_hunk(hunk, target, iterpool));
+    }
+  while (hunk);
+  svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_stream_close(target->result));
+  SVN_ERR(svn_io_file_close(target->file, pool));
+
+  if (target->modified)
+    {
+      /* Install the patched temporary file over the working file.
+       * ### Should this rather be done in a loggy fashion? */
+      SVN_ERR(svn_io_file_rename(target->result_path, patch->new_filename,
+                                 pool));
+
+      /* Be nice! Send a notification. */
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(patch->new_filename,
+                                        svn_wc_notify_update_update, pool);
+          notify->kind = svn_node_file;
+          if (target->conflicted)
+            notify->content_state = svn_wc_notify_state_conflicted;
+          else
+            notify->content_state = svn_wc_notify_state_changed;
+
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
+    }
+  else
+    /* Nothing happened, just remove the temporary file. */
+    SVN_ERR(svn_io_remove_file(target->result_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+apply_textdiffs(const char *patch_path, svn_client_ctx_t *ctx, apr_pool_t *pool)
+{
+  svn_patch_t *patch;
+  apr_file_t *patch_file;
+  apr_pool_t *iterpool;
+  const char *patch_eol_str = APR_EOL_STR;
+
+  /* Try to open the patch file. */
+  SVN_ERR(svn_io_file_open(&patch_file, patch_path,
+                           APR_READ | APR_BINARY, 0, pool));
+
+  /* TODO: Determine EOL-style of patch file.
+   * patch_eol_str = ? */
+
+  /* Apply patches. */
+  iterpool = svn_pool_create(pool);
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
+                                         iterpool, iterpool));
+      if (patch)
+          SVN_ERR(apply_one_patch(patch, ctx, iterpool));
+    }
+  while (patch);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
