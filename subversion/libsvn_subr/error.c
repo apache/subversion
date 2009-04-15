@@ -453,6 +453,12 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 {
   char buf[256];
 
+#ifdef SVN_ERR__TRACING
+  /* Skip over any trace records.  */
+  while (err->message != NULL && strcmp(err->message, SVN_ERR__TRACED) == 0)
+    err = err->child;
+#endif
+
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
                    _("%swarning: %s\n"),
