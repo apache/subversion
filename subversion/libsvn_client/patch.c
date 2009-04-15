@@ -2035,7 +2035,7 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
   SVN_ERR(svn_io_check_path(patch->new_filename, &kind, pool));
   if (kind != svn_node_file)
     {
-      /* Report file as skipped. */
+      /* Report file as missing or obstructed. */
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
@@ -2043,7 +2043,10 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
           notify = svn_wc_create_notify(patch->new_filename,
                                         svn_wc_notify_skip, pool);
           notify->kind = svn_node_file;
-          notify->content_state = svn_wc_notify_state_missing;
+          if (kind == svn_node_none)
+            notify->content_state = svn_wc_notify_state_missing;
+          else
+            notify->content_state = svn_wc_notify_state_obstructed;
 
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
