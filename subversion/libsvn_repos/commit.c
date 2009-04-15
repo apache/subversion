@@ -671,7 +671,16 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           if (err->child && err->child->message)
-            post_commit_err = apr_pstrdup(pool, err->child->message);
+            {
+              svn_error_t *warning_err = err->child;
+#ifdef SVN_ERR__TRACING
+              /* Skip over any trace records.  */
+              while (warning_err->message != NULL
+                     && strcmp(warning_err->message, SVN_ERR__TRACED) == 0)
+                warning_err = warning_err->child;
+#endif
+              post_commit_err = apr_pstrdup(pool, warning_err->message);
+            }
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
