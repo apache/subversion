@@ -634,8 +634,8 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
        All svn objects are single-threaded, so we can already guarantee that
        our use of the SQLite handle will be serialized properly.
        Note: in 3.6.x, we've already config'd SQLite into MULTITHREAD mode,
-       so this is probably redundant... */
-    /* ### yeah. remove when autoconf magic is done for init/config. */
+       so this is probably redundant, but if we are running in a process where
+       somebody initialized SQLite before us it is needed anyway. */
 #ifdef SQLITE_OPEN_NOMUTEX
     flags |= SQLITE_OPEN_NOMUTEX;
 #endif
