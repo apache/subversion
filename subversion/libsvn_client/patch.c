@@ -1843,7 +1843,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch, apr_pool_t *pool)
 
   /* Try to open the target file */
   SVN_ERR(svn_io_file_open(&new_target->file, patch->new_filename,
-                           APR_FOPEN_READ | APR_FOPEN_BINARY, 0644, pool));
+                           APR_READ | APR_BINARY, 0644, pool));
 
   /* Get a temporary file to write the patched result to. */
   SVN_ERR(svn_stream_open_unique(&new_target->result, &new_target->result_path,
