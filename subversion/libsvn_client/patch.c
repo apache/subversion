@@ -1829,27 +1829,29 @@ typedef struct patch_target_t {
 } patch_target_t;
 
 /* Initialize a patch TARGET structure for a target file described by PATCH.
- * Allocate the patch target structure in POOL. */
+ * Allocate the patch target structure in RESULT_POOL.
+ * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-init_patch_target(patch_target_t **target, svn_patch_t *patch, apr_pool_t *pool)
+init_patch_target(patch_target_t **target, svn_patch_t *patch,
+                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *new_target;
   const char *temp_dir_path;
 
-  new_target = apr_pcalloc(pool, sizeof(*new_target));
+  new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
   /* Try to open the target file */
   SVN_ERR(svn_io_file_open(&new_target->file, patch->new_filename,
-                           APR_READ | APR_BINARY, 0644, pool));
+                           APR_READ | APR_BINARY, 0644, result_pool));
 
   /* Create a temporary file to write the patched result to,
    * in the same directory as the target file.
    * We want them to be on the same filesystem so we can rename
    * the temporary file to the target file later. */
-  temp_dir_path = svn_dirent_dirname(patch->new_filename, pool);
+  temp_dir_path = svn_dirent_dirname(patch->new_filename, scratch_pool);
   SVN_ERR(svn_stream_open_unique(&new_target->result, &new_target->result_path,
-                                 temp_dir_path, svn_io_file_del_none, pool,
-                                 pool));
+                                 temp_dir_path, svn_io_file_del_none,
+                                 result_pool, scratch_pool));
   new_target->current_line = 1;
   new_target->eol_str = APR_EOL_STR; /* TODO: determine actual EOL-style. */
   new_target->patch_eol_str = patch->eol_str;
@@ -1896,7 +1898,7 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_stream_readline(s, &buf, target->eol_str, &target->eof,
-                                  pool));
+                                  iterpool));
       if (! target->eof)
         svn_stringbuf_appendcstr(buf, target->eol_str);
       target->current_line++;
@@ -1919,12 +1921,12 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
 
 /* Read at most NLINES from the TARGET file, returning lines read in *LINES,
  * separated by the EOL sequence specified in TARGET->patch_eol_str.
- * Allocate *LINES in result_pool.
+ * Allocate *LINES in RESULT_POOL.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 read_lines_from_target(svn_string_t **lines, svn_filesize_t nlines,
-                       patch_target_t *target, apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
+                       patch_target_t *target, apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *buf;
   svn_stream_t *s;
@@ -2050,7 +2052,7 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(init_patch_target(&target, patch, pool));
+  SVN_ERR(init_patch_target(&target, patch, pool, pool));
 
   /* TODO: Make sure target EOL-style matches patch, if not, normalise. */
 
