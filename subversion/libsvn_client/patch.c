@@ -2015,8 +2015,7 @@ apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Apply a PATCH. CTX is a client context used to send notifications.
- * Use client context CTX to send notifiations.
+/* Apply a PATCH. Use client context CTX to send notifiations.
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
