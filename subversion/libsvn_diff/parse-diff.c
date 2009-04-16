@@ -262,6 +262,7 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  static const char * const minus = "--- ";
   static const char * const atat = "@@";
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
@@ -358,9 +359,15 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
               break; /* Hunk was empty or has been read. */
             }
         }
-      else if ((! in_hunk) && starts_with(line->data, atat))
-        /* Looks like we have a hunk header, let's try to rip it apart. */
-        in_hunk = parse_hunk_header(line->data, *hunk, iterpool);
+      else
+        { 
+          if (starts_with(line->data, atat))
+            /* Looks like we have a hunk header, let's try to rip it apart. */
+            in_hunk = parse_hunk_header(line->data, *hunk, iterpool);
+          else if (starts_with(line->data, minus))
+            /* This could be a header of another patch. Bail out. */
+            break;
+        }
     }
   while (! eof);
   svn_pool_destroy(iterpool);
