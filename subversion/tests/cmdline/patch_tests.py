@@ -308,13 +308,22 @@ def patch_copy_and_move(sbox):
     '========================= SVNPATCH1 BLOCK =========================\n')
   svntest.main.file_append(patch_file_path, ''.join(svnpatch))
 
-  expected_output = [
-    'A    %s\n' % os.path.join('A', 'C', 'gamma'),
-    'D    %s\n' % os.path.join('A', 'mu'),
-    'A    mu-ng\n',
-    'patching file A/C/gamma\n',
-    'patching file A/D/gamma\n',
-  ]
+  if os.getenv("SVN_INTERNAL_PATCH"):
+    expected_output = [
+      'A    %s\n' % os.path.join('A', 'C', 'gamma'),
+      'D    %s\n' % os.path.join('A', 'mu'),
+      'A    mu-ng\n',
+      'U    A/C/gamma\n',
+      'U    A/D/gamma\n',
+    ]
+  else: 
+    expected_output = [
+      'A    %s\n' % os.path.join('A', 'C', 'gamma'),
+      'D    %s\n' % os.path.join('A', 'mu'),
+      'A    mu-ng\n',
+      'patching file A/C/gamma\n',
+      'patching file A/D/gamma\n',
+    ]
 
   gamma_contents = "This is the file 'gamma'.\nsome more bytes to 'gamma'\n"
   mu_contents="This is the file 'mu'.\n"
