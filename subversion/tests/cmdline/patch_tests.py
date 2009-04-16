@@ -50,8 +50,11 @@ else:
 def svnpatch_encode(l):
   return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
-gnupatch_garbage_re =\
- re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
+def gnupatch_garbage_re():
+  if os.getenv("SVN_INTERNAL_PATCH"):
+    return None
+  else:
+    re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
 
 ########################################################################
 #Tests
@@ -148,7 +151,7 @@ def patch_basic(sbox):
                                        expected_disk,
                                        None,
                                        expected_skip,
-                                       gnupatch_garbage_re, # expected err
+                                       gnupatch_garbage_re(), # expected err
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
