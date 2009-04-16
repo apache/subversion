@@ -16,15 +16,15 @@
  * ====================================================================
  */
 
-#ifdef SVN_RA_SERF_GSSAPI_ENABLED
+#include "svn_private_config.h"
+
+#ifdef SVN_RA_SERF_HAVE_GSSAPI
 
 #include <string.h>
-
 #include <apr.h>
 #include <apr_base64.h>
 #include <gssapi/gssapi.h>
 #include "svn_error.h"
-#include "svn_private_config.h"
 #include "ra_serf.h"
 #include "auth_kerb.h"
 
@@ -301,4 +301,4 @@ svn_ra_serf__validate_response_kerb_auth(svn_ra_serf__handler_t *ctx,
   return SVN_NO_ERROR;
 }
 
-#endif /* SVN_RA_SERF_GSSAPI_ENABLED */
+#endif /* SVN_RA_SERF_HAVE_GSSAPI */
