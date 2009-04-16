@@ -110,6 +110,14 @@ if test "$svn_lib_serf" = "yes"; then
             [Defined if support for Serf is enabled])
 fi
 
+dnl Search for GSSAPI
+SVN_LIB_RA_SERF_GSSAPI
+
+if test "$svn_lib_gssapi" = "yes"; then
+  AC_DEFINE([SVN_RA_SERF_HAVE_GSSAPI], 1,
+            [Defined if support for GSSAPI is enabled])
+fi
+
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
 
