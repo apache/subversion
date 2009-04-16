@@ -132,6 +132,10 @@ typedef enum {
     /* The information for this directory node is obstructed by something
        in the local filesystem. Full details are not available.
 
+       This is only returned by an unshadowed BASE node. If a WORKING node
+       is present, then obstructed_delete or obstructed_add is returned as
+       appropriate.
+
        ### only used with per-dir .svn subdirectories.  */
     svn_wc__db_status_obstructed,
 
