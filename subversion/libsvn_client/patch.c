@@ -1841,7 +1841,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch, apr_pool_t *pool)
 
   /* Create a temporary file to write the patched result to,
    * in the same directory as the target file.
-   * We want them to be on the same filesytem so we can rename
+   * We want them to be on the same filesystem so we can rename
    * the temporary file to the target file later. */
   temp_dir_path = svn_dirent_dirname(patch->new_filename, pool);
   SVN_ERR(svn_stream_open_unique(&new_target->result, &new_target->result_path,
