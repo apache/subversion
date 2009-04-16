@@ -84,6 +84,7 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
         {
           const char *utf8_path;
           const char *canon_path;
+          const char *path;
 
           /* Looks like it, try to find the filename. */
           apr_size_t tab = svn_stringbuf_find_char_backward(line, '\t');
@@ -102,17 +103,23 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
           /* Canonicalize the path name. */
           canon_path = svn_dirent_canonicalize(utf8_path, iterpool);
 
+          /* Strip leading slash, if any. */
+          if (svn_dirent_is_absolute(canon_path))
+            path = canon_path + 1;
+          else
+            path = canon_path;
+
           if ((! in_header) && strcmp(indicator, minus) == 0)
             {
               /* First line of header contains old filename. */
-              (*patch)->old_filename = apr_pstrdup(result_pool, canon_path);
+              (*patch)->old_filename = apr_pstrdup(result_pool, path);
               indicator = plus;
               in_header = TRUE;
             }
           else if (in_header && strcmp(indicator, plus) == 0)
             {
               /* Second line of header contains new filename. */
-              (*patch)->new_filename = apr_pstrdup(result_pool, canon_path);
+              (*patch)->new_filename = apr_pstrdup(result_pool, path);
               in_header = FALSE;
               break; /* All good! */
             }
