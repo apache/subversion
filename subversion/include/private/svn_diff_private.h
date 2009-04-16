@@ -40,7 +40,8 @@ typedef struct svn_hunk_t {
   const svn_string_t *original_text;
   const svn_string_t *modified_text;
 
-  /* Hunk ranges as they appeared in the patch file. */
+  /* Hunk ranges as they appeared in the patch file.
+   * All numbers are lines, not bytes. */
   svn_filesize_t original_start;
   svn_filesize_t original_length;
   svn_filesize_t modified_start;
@@ -48,12 +49,12 @@ typedef struct svn_hunk_t {
 } svn_hunk_t;
 
 /* Data type to manage parsing of patches. */
-/* TODO: Should be made opaque when done with testing. */
 typedef struct svn_patch_t {
   /* The patch file itself. */
   apr_file_t *patch_file;
 
-  /* The old and new file names as retreived from the patch file. */
+  /* The old and new file names as retreived from the patch file.
+   * These are canonicalized relative paths. */
   const char *old_filename;
   const char *new_filename;
 
