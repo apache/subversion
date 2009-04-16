@@ -403,6 +403,7 @@ svn_uri_get_longest_ancestor(const char *path1,
 
 /** Convert @a relative canonicalized dirent to an absolute dirent and
  * return the results in @a *pabsolute, allocated in @a pool.
+ * Raise SVN_ERR_BAD_FILENAME if the absolute dirent cannot be determined.
  *
  * @since New in 1.6.
  */
