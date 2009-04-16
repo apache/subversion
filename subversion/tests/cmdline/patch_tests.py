@@ -50,12 +50,6 @@ else:
 def svnpatch_encode(l):
   return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
 
-def gnupatch_garbage_re():
-  if os.getenv("SVN_INTERNAL_PATCH"):
-    return None
-  else:
-    re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
-
 ########################################################################
 #Tests
 
@@ -151,7 +145,7 @@ def patch_basic(sbox):
                                        expected_disk,
                                        None,
                                        expected_skip,
-                                       gnupatch_garbage_re(), # expected err
+                                       None, # expected err
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
@@ -184,16 +178,10 @@ def patch_unidiff(sbox):
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  if os.getenv("SVN_INTERNAL_PATCH"):
-    expected_output = [
-      'U    A/D/gamma\n',
-      'U    iota\n',
-    ]
-  else:
-    expected_output = [
-      'patching file A/D/gamma\n',
-      'patching file iota\n',
-    ]
+  expected_output = [
+    'U    A/D/gamma\n',
+    'U    iota\n',
+  ]
 
   gamma_contents = "It is the file 'gamma'.\n"
   iota_contents = "This is the file 'iota'.\nSome more bytes\n"
@@ -308,22 +296,13 @@ def patch_copy_and_move(sbox):
     '========================= SVNPATCH1 BLOCK =========================\n')
   svntest.main.file_append(patch_file_path, ''.join(svnpatch))
 
-  if os.getenv("SVN_INTERNAL_PATCH"):
-    expected_output = [
-      'A    %s\n' % os.path.join('A', 'C', 'gamma'),
-      'D    %s\n' % os.path.join('A', 'mu'),
-      'A    mu-ng\n',
-      'U    A/C/gamma\n',
-      'U    A/D/gamma\n',
-    ]
-  else: 
-    expected_output = [
-      'A    %s\n' % os.path.join('A', 'C', 'gamma'),
-      'D    %s\n' % os.path.join('A', 'mu'),
-      'A    mu-ng\n',
-      'patching file A/C/gamma\n',
-      'patching file A/D/gamma\n',
-    ]
+  expected_output = [
+    'A    %s\n' % os.path.join('A', 'C', 'gamma'),
+    'D    %s\n' % os.path.join('A', 'mu'),
+    'A    mu-ng\n',
+    'U    A/C/gamma\n',
+    'U    A/D/gamma\n',
+  ]
 
   gamma_contents = "This is the file 'gamma'.\nsome more bytes to 'gamma'\n"
   mu_contents="This is the file 'mu'.\n"
@@ -393,12 +372,9 @@ def patch_copy_and_move(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_basic, svntest.main.has_patch)),
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_unidiff, svntest.main.has_patch)),
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_copy_and_move, svntest.main.has_patch)),
+              patch_basic,
+              patch_unidiff,
+              patch_copy_and_move,
               ]
 
 if __name__ == '__main__':

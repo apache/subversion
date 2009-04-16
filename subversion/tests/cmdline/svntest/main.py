@@ -1026,19 +1026,6 @@ def server_enforces_date_syntax():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
-def has_patch():
-  if os.getenv("SVN_INTERNAL_PATCH"):
-    return True
-  try:
-    p = subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if "Free Software Foundation" in p.stdout.read():
-      return True
-    else:
-      return False
-  except OSError:
-    return False
-
-
 ######################################################################
 
 
