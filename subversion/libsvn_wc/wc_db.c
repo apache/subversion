@@ -78,7 +78,7 @@
  */
 
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
-#define UNKNOWN_FORMAT (-1)
+#define FORMAT_FROM_SDB (-1)
 
 
 struct svn_wc__db_t {
@@ -429,25 +429,34 @@ get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
 }
 
 
-static wcroot_t *
-create_wcroot(const char *wcroot_abspath,
+/* Construct a new wcroot_t. The WCROOT_ABSPATH and SDB parameters must
+   have lifetime of at least RESULT_POOL.  */
+static svn_error_t *
+create_wcroot(wcroot_t **wcroot,
+              const char *wcroot_abspath,
               svn_sqlite__db_t *sdb,
               apr_int64_t wc_id,
+              int format,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  wcroot_t *wcroot = apr_palloc(result_pool, sizeof(*wcroot));
+  *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
-  wcroot->abspath = wcroot_abspath;
-  wcroot->sdb = sdb;
-  wcroot->wc_id = wc_id;
-  wcroot->format = UNKNOWN_FORMAT;
+  (*wcroot)->abspath = wcroot_abspath;
+  (*wcroot)->sdb = sdb;
+  (*wcroot)->wc_id = wc_id;
+  (*wcroot)->format = format;
 
   if (sdb != NULL)
-    svn_error_clear(svn_sqlite__read_schema_version(&wcroot->format,
-                                                    sdb, scratch_pool));
+    {
+      SVN_ERR(svn_sqlite__read_schema_version(&(*wcroot)->format,
+                                              sdb, scratch_pool));
+    }
 
-  return wcroot;
+  /* If we construct a wcroot, then we better have a format.  */
+  SVN_ERR_ASSERT((*wcroot)->format >= 1);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -680,94 +689,15 @@ get_or_create_pdh(svn_wc__db_t *db,
       /* Copy the path for the proper lifetime.  */
       pdh->local_abspath = apr_pstrdup(db->state_pool, local_dir_abspath);
 
-      /* ### for now, every directory is its own WCROOT. go ahead and
-         ### create one for this directory. at some point, we'll have to
-         ### alter this strategy.  */
-      pdh->wcroot = create_wcroot(pdh->local_abspath, NULL, UNKNOWN_WC_ID,
-                                  db->state_pool, scratch_pool);
+      /* We don't know anything about this directory, so we cannot construct
+         a wcroot_t for it (yet).  */
 
       /* ### parent */
-      /* ### wcroot->format */
 
       apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
     }
 
   return pdh;
-}
-
-
-static svn_error_t *
-ensure_sdb_opened(svn_wc__db_pdh_t *pdh,
-                  svn_sqlite__mode_t smode,
-                  apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  /* Bah. Easy case.  */
-  if (pdh->wcroot != NULL && pdh->wcroot->sdb != NULL)
-    return SVN_NO_ERROR;
-
-  SVN_ERR_ASSERT(pdh->local_abspath != NULL);
-
-  /* ### we should be navigating upwards to find the database. for now,
-     ### there are per-dir databases. open the one in this directory.  */
-  if (pdh->wcroot == NULL)
-    {
-      pdh->wcroot = create_wcroot(pdh->local_abspath, NULL, UNKNOWN_WC_ID,
-                                  pdh->db->state_pool, scratch_pool);
-    }
-  else
-    {
-      /* Make sure that other fields in wcroot are correct.  */
-
-      if (pdh->wcroot->abspath == NULL)
-        {
-          /* These have the same lifetime (db->state_pool).  */
-          pdh->wcroot->abspath = pdh->local_abspath;
-        }
-
-      if (pdh->wcroot->format != UNKNOWN_FORMAT
-          && pdh->wcroot->format < SVN_WC__WC_NG_VERSION)
-        return SVN_NO_ERROR;
-    }
-
-  err = svn_sqlite__open(&pdh->wcroot->sdb,
-                         svn_wc__adm_child(pdh->wcroot->abspath, "wc.db",
-                                           scratch_pool),
-                         smode, statements,
-                         SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                         pdh->db->state_pool, scratch_pool);
-  if (err)
-    {
-      svn_error_t *err2;
-
-      if (pdh->wcroot->format >= SVN_WC__WC_NG_VERSION
-          || (err->apr_err != SVN_ERR_SQLITE_ERROR
-              && !APR_STATUS_IS_ENOENT(err->apr_err)))
-        return err;
-
-      err2 = get_old_version(&pdh->wcroot->format, pdh->wcroot->abspath,
-                             scratch_pool);
-      if (err2 == NULL && pdh->wcroot->format == 0)
-        {
-          /* Return the original "not found" error.  */
-          pdh->wcroot->format = UNKNOWN_FORMAT;
-          return err;
-        }
-      svn_error_clear(err);
-      return err2;
-    }
-
-  /* ### query things like wc_id out of the database? for now, we know the
-     ### value is always 1 for the per-dir layout.  */
-  pdh->wcroot->wc_id = 1;
-
-  if (pdh->wcroot->format == UNKNOWN_FORMAT)
-    return svn_sqlite__read_schema_version(&pdh->wcroot->format,
-                                           pdh->wcroot->sdb,
-                                           scratch_pool);
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -851,6 +781,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   svn_boolean_t obstruction_possible = FALSE;
   svn_sqlite__db_t *sdb;
   svn_boolean_t moved_upwards = FALSE;
+  svn_boolean_t always_check = FALSE;
   int wc_format = 0;
 
   /* ### we need more logic for finding the database (if it is located
@@ -867,13 +798,11 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   smode = svn_sqlite__mode_readwrite;
 
   *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
-  if (*pdh != NULL)
+  if (*pdh != NULL && (*pdh)->wcroot != NULL)
     {
       /* We got lucky. Just return the thing BEFORE performing any I/O.  */
       /* ### validate SMODE against how we opened wcroot->sdb? and against
          ### DB->mode? (will we record per-dir mode?)  */
-
-      SVN_ERR(ensure_sdb_opened(*pdh, smode, scratch_pool));
 
       /* ### for most callers, we could pass NULL for result_pool.  */
       *local_relpath = compute_pdh_relpath(*pdh, result_pool);
@@ -900,13 +829,15 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       svn_dirent_split(local_abspath, &local_abspath, &build_relpath,
                        scratch_pool);
 
+      /* ### if *pdh != NULL (from further above), then there is (quite
+         ### probably) a bogus value in the DIR_DATA hash table. maybe
+         ### clear it out? but what if there is an access baton?  */
+
       /* Is this directory in our hash?  */
       *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
-      if (*pdh != NULL)
+      if (*pdh != NULL && (*pdh)->wcroot != NULL)
         {
           const char *dir_relpath;
-
-          SVN_ERR(ensure_sdb_opened(*pdh, smode, scratch_pool));
 
           /* Stashed directory's local_relpath + basename. */
           dir_relpath = compute_pdh_relpath(*pdh, NULL);
@@ -915,6 +846,13 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                            result_pool);
           return SVN_NO_ERROR;
         }
+
+      /* If the requested path is not on the disk, then we don't know how
+         many ancestors need to be scanned until we start hitting content
+         on the disk. Set ALWAYS_CHECK to keep looking for .svn/entries
+         rather than bailing out after the first check.  */
+      if (kind == svn_node_none)
+        always_check = TRUE;
     }
   else
     {
@@ -933,12 +871,22 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
   /* LOCAL_ABSPATH refers to a directory at this point. The PDH corresponding
      to that directory is what we need to return. At this point, we've
-     determined that it is NOT in the DB's hash table of wcdirs. Let's create
-     it, and begin to populate it.  */
-     
-  *pdh = apr_pcalloc(db->state_pool, sizeof(**pdh));
-  (*pdh)->db = db;
-  (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
+     determined that a PDH with a discovered WCROOT is NOT in the DB's hash
+     table of wcdirs. Let's fill in an existing one, or create one. Then
+     go figure out where the WCROOT is.  */
+
+  if (*pdh == NULL)
+    {
+      *pdh = apr_pcalloc(db->state_pool, sizeof(**pdh));
+      (*pdh)->db = db;
+      (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
+    }
+  else
+    {
+      /* The PDH should have been built correctly (so far).  */
+      SVN_ERR_ASSERT((*pdh)->db == db);
+      SVN_ERR_ASSERT(strcmp((*pdh)->local_abspath, local_abspath) == 0);
+    }
 
   /* Assume that LOCAL_ABSPATH is a directory, and look for the SQLite
      database in the right place. If we find it... great! If not, then
@@ -964,8 +912,14 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* If we have not moved upwards, then check for a wc-1 working copy.
          Since wc-1 has a .svn in every directory, and we didn't find one
          in the original directory, then we don't have to bother looking
-         for more.  */
-      if (!moved_upwards)
+         for more.
+
+         If the original path is not present, then we have to check on every
+         iteration. The content may be the immediate parent, or possibly
+         five ancetors higher. We don't test for directory presence (just
+         for the presence of subdirs/files), so we don't know when we can
+         stop checking ... so just check always.  */
+      if (!moved_upwards || always_check)
         {
           SVN_ERR(get_old_version(&wc_format, local_abspath, scratch_pool));
           if (wc_format != 0)
@@ -1001,16 +955,17 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       found_pdh = apr_hash_get(db->dir_data,
                                local_abspath, APR_HASH_KEY_STRING);
       if (found_pdh != NULL)
-        break;
+        {
+          if (found_pdh->wcroot != NULL)
+            break;
+          found_pdh = NULL;
+        }
     }
 
   if (found_pdh != NULL)
     {
       /* We found a PDH with data in it. We can now construct the child
          from this, rather than continuing to scan upwards.  */
-
-      /* Make sure the PDH has an open SDB in it.  */
-      SVN_ERR(ensure_sdb_opened(found_pdh, smode, scratch_pool));
 
       /* The subdirectory uses the same WCROOT as the parent dir.  */
       (*pdh)->wcroot = found_pdh->wcroot;
@@ -1041,20 +996,19 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* WCROOT.local_abspath may be NULL when the database is stored
          inside the wcroot, but we know the abspath is this directory
          (ie. where we found it).  */
-      (*pdh)->wcroot = create_wcroot(apr_pstrdup(db->state_pool,
-                                                 local_abspath),
-                                     sdb,
-                                     wc_id,
-                                     db->state_pool, scratch_pool);
+
+      SVN_ERR(create_wcroot(&(*pdh)->wcroot,
+                            apr_pstrdup(db->state_pool, local_abspath),
+                            sdb, wc_id, FORMAT_FROM_SDB,
+                            db->state_pool, scratch_pool));
     }
   else
     {
       /* We found a wc-1 working copy directory.  */
-      (*pdh)->wcroot = create_wcroot(apr_pstrdup(db->state_pool,
-                                                 local_abspath),
-                                     NULL, UNKNOWN_WC_ID,
-                                     db->state_pool, scratch_pool);
-      (*pdh)->wcroot->format = wc_format;
+      SVN_ERR(create_wcroot(&(*pdh)->wcroot,
+                            apr_pstrdup(db->state_pool, local_abspath),
+                            NULL, UNKNOWN_WC_ID, wc_format,
+                            db->state_pool, scratch_pool));
 
       /* Don't test for a directory obstructing a versioned file. The wc-1
          code can manage that itself.  */
@@ -1087,7 +1041,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* Get/make a PDH for the parent.  */
       parent_dir = svn_dirent_dirname(local_abspath, scratch_pool);
       parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
-      if (parent_pdh == NULL)
+      if (parent_pdh == NULL || parent_pdh->wcroot == NULL)
         {
           svn_error_t *err = svn_sqlite__open(&sdb,
                                               svn_wc__adm_child(parent_dir,
@@ -1106,18 +1060,33 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
               /* No parent, so we're at a wcroot apparently. An obstruction
                  is (therefore) not possible.  */
+              parent_pdh = NULL;
             }
           else
             {
               /* ### construct this according to per-dir semantics.  */
-              parent_pdh = apr_pcalloc(db->state_pool, sizeof(*parent_pdh));
-              parent_pdh->db = db;
-              parent_pdh->local_abspath = apr_pstrdup(db->state_pool,
-                                                      parent_dir);
-              parent_pdh->wcroot = create_wcroot(parent_pdh->local_abspath,
-                                                 sdb,
-                                                 1 /* ### hack.  */,
-                                                 db->state_pool, scratch_pool);
+              if (parent_pdh == NULL)
+                {
+                  parent_pdh = apr_pcalloc(db->state_pool,
+                                           sizeof(*parent_pdh));
+                  parent_pdh->db = db;
+                  parent_pdh->local_abspath = apr_pstrdup(db->state_pool,
+                                                          parent_dir);
+                }
+              else
+                {
+                  /* The PDH should have been built correctly (so far).  */
+                  SVN_ERR_ASSERT(parent_pdh->db == db);
+                  SVN_ERR_ASSERT(strcmp(parent_pdh->local_abspath,
+                                        parent_dir) == 0);
+                }
+
+              SVN_ERR(create_wcroot(&parent_pdh->wcroot,
+                                    parent_pdh->local_abspath,
+                                    sdb,
+                                    1 /* ### hack.  */,
+                                    FORMAT_FROM_SDB,
+                                    db->state_pool, scratch_pool));
 
               apr_hash_set(db->dir_data,
                            parent_pdh->local_abspath, APR_HASH_KEY_STRING,
@@ -1191,6 +1160,10 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                        parent_pdh->local_abspath, APR_HASH_KEY_STRING,
                        parent_pdh);
         }
+      else if (parent_pdh->wcroot == NULL)
+        {
+          parent_pdh->wcroot = (*pdh)->wcroot;
+        }
 
       /* Point the child PDH at this (new) parent PDH. This will allow for
          easy traversals without path munging.  */
@@ -1198,7 +1171,9 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       child_pdh = parent_pdh;
 
       /* Loop if we haven't reached the PDH we found, or the abspath
-         where we terminated the search (when we found wc.db).  */
+         where we terminated the search (when we found wc.db). Note that
+         if we never located a PDH in our ancestry, then FOUND_PDH will
+         be NULL and that portion of the test will always be TRUE.  */
     }
   while (child_pdh != found_pdh
          && strcmp(child_pdh->local_abspath, local_abspath) != 0);
@@ -1244,7 +1219,8 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
   const char *parent_abspath;
   const char *local_relpath;
 
-  if ((*parent_pdh = child_pdh->parent) != NULL)
+  if ((*parent_pdh = child_pdh->parent) != NULL
+      && (*parent_pdh)->wcroot != NULL)
     return SVN_NO_ERROR;
 
   parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
@@ -1447,57 +1423,6 @@ svn_wc__db_open(svn_wc__db_t **db,
 }
 
 
-/* ### this docstring is a bit out of date...
-
-   This function answers a simple question: what format version of the wc
-   exists at PATH.  The reason it takes a PATH instead of an existing db
-   handle is because it may need to use legacy, pre-wc-ng methods to determine
-   what that version is, and such versions don't have any db to open. 
-   
-   If no working copy exists at PATH, return SVN_ERR_WC_MISSING. */
-static svn_error_t *
-db_version(int *version,
-           const char *path,
-           apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  /* First, try reading the wc.db file.  Instead of stat'ing the file to
-     see if it exists, and then opening it, we just try opening it.  If we
-     get any kind of an error, wrap that eith an ENOENT error and return. */
-  err = svn_sqlite__get_schema_version(version,
-                                       svn_wc__adm_child(path, "wc.db",
-                                                         scratch_pool),
-                                       scratch_pool);
-  if (err == NULL)
-    return SVN_NO_ERROR;
-  if (err->apr_err != SVN_ERR_SQLITE_ERROR
-      && !APR_STATUS_IS_ENOENT(err->apr_err))
-    return err;
-  svn_error_clear(err);
-
-  /* Hmm, that didn't work.  Now try reading the format number from an
-     old-style working copy.  */
-  SVN_ERR(get_old_version(version, path, scratch_pool));
-  if (*version == 0)
-    return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
-                             _("'%s' is not a working copy"),
-                             svn_dirent_local_style(path, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-ensure_format_avail(wcroot_t *wcroot, apr_pool_t *scratch_pool)
-{
-  if (wcroot->format == UNKNOWN_FORMAT)
-    SVN_ERR(db_version(&wcroot->format, wcroot->abspath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
@@ -1515,6 +1440,8 @@ svn_wc__db_close(svn_wc__db_t *db,
 
       apr_hash_this(hi, NULL, NULL, &val);
       pdh = val;
+      if (pdh->wcroot == NULL)
+        continue;
 
 #ifdef SVN_DEBUG
       /* If two PDH records have the same wcroot_abspath, then they should
@@ -3522,9 +3449,38 @@ svn_wc__db_temp_get_format(int *format,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
+  /* Grab a PDH for this directory. If it isn't present, or have wcroot
+     information, then do a full upward traversal to find the wcroot.  */
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  if (pdh == NULL || pdh->wcroot == NULL)
+    {
+      const char *local_relpath;
+      svn_error_t *err;
+
+      err = parse_local_abspath(&pdh, &local_relpath, db, local_dir_abspath,
+                                svn_sqlite__mode_readonly,
+                                scratch_pool, scratch_pool);
+
+      /* If we hit an error examining this directory, or if the information
+         returned is not for THIS directory, then bail out.  */
+      if (err || *local_relpath != '\0')
+        {
+          if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            return err;
+          svn_error_clear(err);
+
+          /* Remap the returned error.  */
+          *format = 0;
+          return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                                   _("'%s' is not a working copy"),
+                                   svn_dirent_local_style(local_dir_abspath,
+                                                          scratch_pool));
+        }
+
+      SVN_ERR_ASSERT(pdh->wcroot != NULL);
+    }
   SVN_ERR_ASSERT(strcmp(local_dir_abspath, pdh->wcroot->abspath) == 0);
-  SVN_ERR(ensure_format_avail(pdh->wcroot, scratch_pool));
+  SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
 
   *format = pdh->wcroot->format;
 
@@ -3542,6 +3498,7 @@ svn_wc__db_temp_reset_format(int format,
   svn_wc__db_pdh_t *pdh;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  SVN_ERR_ASSERT(format >= 1);
   /* ### assert that we were passed a directory?  */
 
   /* Do not create a PDH. If we don't have one, then we don't have any
