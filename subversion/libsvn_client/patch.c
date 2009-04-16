@@ -1791,14 +1791,7 @@ svn_client_patch(const char *patch_path,
     }
 
   /* Now proceed with the text-diff bytes. */
-
-  /* ### Temporary run-time check to switch between "internal" and
-   * "external" patch implementations. */
-  if (getenv("SVN_INTERNAL_PATCH") != NULL)
-    SVN_ERR(apply_textdiffs(patch_path, ctx, pool));
-  else
-    SVN_ERR(svn_wc_apply_unidiff(patch_path, force, outfile, errfile,
-                                 ctx->config, pool));
+  SVN_ERR(apply_textdiffs(patch_path, ctx, pool));
 
   return SVN_NO_ERROR;
 }

@@ -5870,28 +5870,6 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
                       void *diff_edit_baton,
                       apr_pool_t *pool);
 
-/**
- * Run an external patch program against @a patch_path patch file.  @a
- * outfile and @a errfile are respectively connected to the external
- * program's stdout and stderr pipes when executed.  @a config is looked
- * up for the SVN_CONFIG_OPTION_PATCH_CMD entry to use as the patch
- * program.  If missing or @a config is @c NULL, the function tries to
- * execute 'patch' literally, which should work on most *NIX systems at
- * least.  This involves searching into $PATH.  The external program is
- * given the patch file via its stdin pipe.
- *
- * The program is passed the '--force' argument when @a force is set.
- *
- * @since New in 1.7
- */
-svn_error_t *
-svn_wc_apply_unidiff(const char *patch_path,
-                     svn_boolean_t force,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
-                     apr_hash_t *config,
-                     apr_pool_t *pool);
-
 /** @} */
 
 /** @} */
