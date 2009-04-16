@@ -304,11 +304,11 @@ msgstr "Błędna blokada"
 
 #: ../include/svn_error_codes.h:355
 msgid "Path is not a working copy directory"
-msgstr "Ścieżka nie wskazuje na katalog w ramach kopii roboczej"
+msgstr "Ścieżka nie wskazuje na katalog w obrębie kopii roboczej"
 
 #: ../include/svn_error_codes.h:362
 msgid "Path is not a working copy file"
-msgstr "Ścieżka nie wskazuje na plik w ramach kopii roboczej"
+msgstr "Ścieżka nie wskazuje na plik w obrębie kopii roboczej"
 
 #: ../include/svn_error_codes.h:366
 msgid "Problem running log"
@@ -779,7 +779,7 @@ msgstr "Niezgodność wersji klienta i serwera"
 
 #: ../include/svn_error_codes.h:920
 msgid "Cannot negotiate authentication mechanism"
-msgstr "Nie można określić sposobu autoryzacji"
+msgstr "Nie można określić sposobu uwierzytelniania"
 
 #: ../include/svn_error_codes.h:926
 msgid "Initialization of SSPI library failed"
@@ -863,7 +863,7 @@ msgstr "Apache nie zna ścieżki do systemu plików Subversion"
 
 #: ../include/svn_error_codes.h:1022
 msgid "Apache got a malformed URI"
-msgstr "Apache otrzymał błędny URI"
+msgstr "Apache otrzymał niepoprawny URI"
 
 #: ../include/svn_error_codes.h:1026
 msgid "Activity not found"
@@ -887,7 +887,7 @@ msgstr "To polecenie wymaga dostępu do repozytorium"
 
 #: ../include/svn_error_codes.h:1048
 msgid "Bogus revision information given"
-msgstr "Błędne informacje o wersji"
+msgstr "Niepoprawne informacje o wersji"
 
 #: ../include/svn_error_codes.h:1052
 msgid "Attempting to commit to a URL more than once"
@@ -959,7 +959,7 @@ msgstr "Błąd ładowania plugina."
 
 #: ../include/svn_error_codes.h:1130
 msgid "Malformed file"
-msgstr "Błędny plik"
+msgstr "Niepoprawny plik"
 
 #: ../include/svn_error_codes.h:1134
 msgid "Incomplete data"
@@ -987,11 +987,11 @@ msgstr "Nieoczekiwany lub nieznany typ atrybutu"
 
 #: ../include/svn_error_codes.h:1158
 msgid "Illegal target for the requested operation"
-msgstr "Nielegalny obiekt dla podanej operacji"
+msgstr "Niedozwolony obiekt dla podanej operacji"
 
 #: ../include/svn_error_codes.h:1162
 msgid "MD5 checksum is missing"
-msgstr "Niezgodność sumy kontrolnej MD5"
+msgstr "Brak sumy kontrolnej MD5"
 
 #: ../include/svn_error_codes.h:1166
 msgid "Directory needs to be empty but is not"
@@ -1584,7 +1584,7 @@ msgstr "'%s' już istnieje"
 #: ../libsvn_wc/update_editor.c:4508
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
-msgstr "Błąd sumy kontrolnej dla '%s'; oczekiwana: '%s', faktyczna: '%s'"
+msgstr "Niezgodność sumy kontrolnej dla '%s'; oczekiwana: '%s', rzeczywista: '%s'"
 
 #: ../libsvn_client/externals.c:340
 #, c-format
@@ -1604,7 +1604,7 @@ msgstr "Plikowy eksternał z '%s' nie może być zapisany do '%s', gdy '%s' pozo
 #: ../libsvn_client/externals.c:524
 #, c-format
 msgid "URL '%s' does not begin with a scheme"
-msgstr "URL '%s' nie zaczyna się od schematu"
+msgstr "URL '%s' nie zaczyna się od protokołu"
 
 #: ../libsvn_client/externals.c:573
 #, c-format
@@ -1710,17 +1710,17 @@ msgstr "Element '%s' nie ma URL-u"
 #: ../libsvn_client/merge.c:169
 #, c-format
 msgid "URLs have no scheme ('%s' and '%s')"
-msgstr "URL-e nie zawierają schematu ('%s' i '%s')"
+msgstr "URL-e nie zawierają protokołu ('%s' i '%s')"
 
 #: ../libsvn_client/merge.c:175 ../libsvn_client/merge.c:181
 #, c-format
 msgid "URL has no scheme: '%s'"
-msgstr "URL nie zawiera schematu: '%s'"
+msgstr "URL nie zawiera protokołu: '%s'"
 
 #: ../libsvn_client/merge.c:188
 #, c-format
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
-msgstr "Łączenie różnych schematów dostępu nie jest obsługiwane ('%s' i '%s')"
+msgstr "Łączenie różnych protokołów dostępu nie jest obsługiwane ('%s' i '%s')"
 
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
@@ -2369,9 +2369,9 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Błąd weryfikacji sumy kontrolnej dla reprezentacji '%s':\n"
-"   oczekiwano:     %s\n"
-"    wyliczono:     %s\n"
+"Niezgodność sumy kontrolnej dla reprezentacji '%s':\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_fs_base/dag.c:1376
 #, c-format
@@ -2746,7 +2746,7 @@ msgstr "Node-revision '%s' twierdzi, że znajduje się na szczycie drzewa zawier
 
 #: ../libsvn_fs_fs/caching.c:70
 msgid "Bad ID in cache"
-msgstr "Niepoprawny ID w schowku pamięciowym"
+msgstr "Niepoprawny ID w pamięci podręcznej"
 
 #: ../libsvn_fs_fs/dag.c:426 ../libsvn_ra_serf/serf.c:756
 msgid "Can't get entries of non-directory"
@@ -2769,31 +2769,31 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Błąd weryfikacji sumy kontrolnej dla pliku '%s':\n"
-"   oczekiwano:     %s\n"
-"    wyliczono:     %s\n"
+"Niezgodność sumy kontrolnej dla pliku '%s':\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_fs_fs/dag.c:1122
 msgid "Empty noderev in cache"
-msgstr "Pusty rodzaj węzła w schowku pamięciowym"
+msgstr "Pusty rodzaj węzła w pamięci podręcznej"
 
 #: ../libsvn_fs_fs/dag.c:1132
 msgid "Kindless noderev in cache"
-msgstr "Nieprawidłowy rodzaj węzła w schowku pamięciowym"
+msgstr "Nieprawidłowy rodzaj węzła w pamięci podręcznej"
 
 #: ../libsvn_fs_fs/dag.c:1139
 #, c-format
 msgid "Unknown kind for noderev in cache: '%c'"
-msgstr "Nieznany rodzaj węzła w schowku pamięciowym: '%c'"
+msgstr "Nieznany rodzaj węzła w pamięci podręcznej: '%c'"
 
 #: ../libsvn_fs_fs/dag.c:1146
 msgid "Unterminated ID in cache"
-msgstr "Niezakończony ID w schowku pamięciowym"
+msgstr "Niezakończony ID w pamięci podręcznej"
 
 #: ../libsvn_fs_fs/dag.c:1151
 #, c-format
 msgid "Bogus ID '%s' in cache"
-msgstr "Niepoprawny ID '%s' w schowku pamięciowym"
+msgstr "Niepoprawny ID '%s' w pamięci podręcznej"
 
 #: ../libsvn_fs_fs/dag.c:1158
 msgid "No created path"
@@ -2802,7 +2802,7 @@ msgstr "Brak utworzonej ścieżki"
 #: ../libsvn_fs_fs/dag.c:1184
 #, c-format
 msgid "Unknown node type in cache: '%c'"
-msgstr "Nieznany rodzaj obiektu w schowku pamięciowym: '%c'"
+msgstr "Nieznany rodzaj obiektu w pamięci podręcznej: '%c'"
 
 #: ../libsvn_fs_fs/err.c:52
 #, c-format
@@ -3023,9 +3023,9 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Błąd sumy kontrolnej podczas czytania reprezentacji:\n"
-"   oczekiwano:  %s\n"
-"   znaleziono:  %s\n"
+"Niezgodność sumy kontrolnej podczas czytania reprezentacji:\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_fs_fs/fs_fs.c:3452 ../libsvn_fs_fs/fs_fs.c:3465
 #: ../libsvn_fs_fs/fs_fs.c:3471 ../libsvn_fs_fs/fs_fs.c:6204
@@ -3228,7 +3228,7 @@ msgstr "Błąd konfiguracji: nieznana biblioteka HTTP '%s'"
 #: ../libsvn_ra/ra_loader.c:471
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
-msgstr "Nierozpoznany schemat URL: '%s'"
+msgstr "Nierozpoznany protokół URL: '%s'"
 
 #: ../libsvn_ra/ra_loader.c:493
 #, c-format
@@ -3243,12 +3243,12 @@ msgstr "'%s' nie jest tym samym repozytorium co '%s'"
 #: ../libsvn_ra/ra_loader.c:1124
 #, c-format
 msgid "  - handles '%s' scheme\n"
-msgstr "  - obsługuje schemat '%s'\n"
+msgstr "  - obsługuje protokół '%s'\n"
 
 #: ../libsvn_ra/ra_loader.c:1208
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
-msgstr "Nierozpoznany schemat URL: '%s'"
+msgstr "Nierozpoznany protokół URL: '%s'"
 
 #: ../libsvn_ra/util.c:60
 #, c-format
@@ -3303,7 +3303,7 @@ msgstr "Nie zdołano otworzyć repozytorium '%s'"
 
 #: ../libsvn_ra_neon/commit.c:242
 msgid "Could not fetch the Version Resource URL (needed during an import or when it is missing from the local, cached props)"
-msgstr "Nie można pobrać URL-a zasobów (potrzebnego podczas importu lub, gdy nie zawierają go lokalne atrybuty ze schowka pamięciowego)"
+msgstr "Nie można pobrać URL-a zasobów (potrzebnego podczas importu lub, gdy nie zawierają go lokalne atrybuty z pamięci podręcznej)"
 
 #: ../libsvn_ra_neon/commit.c:494
 #, c-format
@@ -3350,9 +3350,9 @@ msgid ""
 "   expected checksum:  %s\n"
 "   actual checksum:    %s\n"
 msgstr ""
-"Błąd weryfikacji sumy kontrolnej dla '%s':\n"
-"   oczekiwano:     %s\n"
-"   wyliczono:      %s\n"
+"Niezgodność sumy kontrolnej dla '%s':\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_ra_neon/fetch.c:1001
 msgid "Server response missing the expected deadprop-count property"
@@ -3593,7 +3593,7 @@ msgstr "'%s' nie występuje w obiekcie"
 #: ../libsvn_ra_neon/props.c:694
 #, c-format
 msgid "Neon was unable to parse URL '%s'"
-msgstr "Biblioteka neon nie potrafi parsować URL '%s'"
+msgstr "Biblioteka neon nie potrafi parsować URL-u '%s'"
 
 #: ../libsvn_ra_neon/props.c:727
 msgid "The path was not part of a repository"
@@ -3688,7 +3688,7 @@ msgstr "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu We
 #: ../libsvn_ra_neon/session.c:715
 #, c-format
 msgid "URL '%s' is malformed or the scheme or host or path is missing"
-msgstr "URL '%s' jest niepoprawny lub brak schematu lub hostu lub ścieżki"
+msgstr "URL '%s' jest niepoprawny lub brak protokołu, hosta lub ścieżki"
 
 #: ../libsvn_ra_neon/session.c:731
 msgid "Network socket initialization failed"
@@ -3966,7 +3966,7 @@ msgstr "Element zbioru różnic atrybutów nie jest listą"
 #: ../libsvn_ra_svn/client.c:365
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "Niezdefiniowany schemat tunelu '%s'"
+msgstr "Niezdefiniowany protokół tunelu '%s'"
 
 #: ../libsvn_ra_svn/client.c:382
 #, c-format
@@ -4275,10 +4275,10 @@ msgid ""
 "   expected checksum:  %s\n"
 "   actual checksum:    %s\n"
 msgstr ""
-"Błąd weryfikacji sumy kontrolnej dla tekstu\n"
+"Niezgodność sumy kontrolnej dla tekstu\n"
 "'%s':\n"
-"   oczekiwano:     %s\n"
-"    wyliczono:     %s\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_repos/delta.c:186
 msgid "Unable to open root of edit"
@@ -4765,17 +4765,17 @@ msgstr "Błąd konfiguracji: nieznane miejsce przechowywania haseł '%s'"
 #: ../libsvn_subr/cache-inprocess.c:179
 #, c-format
 msgid "Can't lock cache mutex"
-msgstr "Nie można zablokować muteksu schowka pamięciowego"
+msgstr "Nie można zablokować muteksu pamięci podręcznej"
 
 #: ../libsvn_subr/cache-inprocess.c:197
 #, c-format
 msgid "Can't unlock cache mutex"
-msgstr "Nie można odblokować muteksu schowka pamięciowego"
+msgstr "Nie można odblokować muteksu pamięci podręcznej"
 
 #: ../libsvn_subr/cache-inprocess.c:449
 #, c-format
 msgid "Can't create cache mutex"
-msgstr "Nie można utworzyć muteksu schowka pamięciowego"
+msgstr "Nie można utworzyć muteksu pamięci podręcznej"
 
 #: ../libsvn_subr/cache-memcache.c:152
 #, c-format
@@ -4789,7 +4789,7 @@ msgstr "Nieznany błąd memcached podczas zapisywania"
 
 #: ../libsvn_subr/cache-memcache.c:217
 msgid "Can't iterate a memcached cache"
-msgstr "Nie można iterować schowka pamięciowego memcached"
+msgstr "Nie można iterować pamięci podręcznej memcached"
 
 #: ../libsvn_subr/cache-memcache.c:281
 #, c-format
@@ -5758,12 +5758,12 @@ msgstr "Nie można dokonać konwersji ciągu znaków z '%s' do '%s'"
 #: ../libsvn_subr/utf.c:549
 #, c-format
 msgid "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from UTF-8"
-msgstr "Bezpieczne dane '%s' następują przed znakiem nie-ASCII %d: nie można przeprowadzić konwersji do/z UTF-8"
+msgstr "Bezpieczne dane '%s' następują przed znakiem spoza ASCII %d: nie można przeprowadzić konwersji do/z UTF-8"
 
 #: ../libsvn_subr/utf.c:557
 #, c-format
 msgid "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
-msgstr "Wykryto znak nie-ASCII o kodzie %d, nie można przeprowadzić konwersji do/z UTF-8"
+msgstr "Wykryto znak spoza ASCII o kodzie %d, nie można przeprowadzić konwersji do/z UTF-8"
 
 #: ../libsvn_subr/utf.c:599
 #, c-format
@@ -5867,7 +5867,7 @@ msgstr "Nie znaleziono '%s'"
 #: ../libsvn_wc/adm_ops.c:1408
 #, c-format
 msgid "Can't replace '%s' with a node of a differing type; the deletion must be committed and the parent updated before adding '%s'"
-msgstr "Zastąpienie '%s' przez obiekt innego rodzaju nie jest możliwe.Usunięcie musi być zatwierdzone i kopia robocza zaktualizowana przed dodaniem '%s'"
+msgstr "Zastąpienie '%s' przez obiekt innego rodzaju nie jest możliwe. Usunięcie musi być zatwierdzone i kopia robocza zaktualizowana przed dodaniem '%s'"
 
 #: ../libsvn_wc/adm_ops.c:1425
 #, c-format
@@ -5906,7 +5906,7 @@ msgstr "Nie można wycofać operacji dodania bieżącego katalogu. Spróbuj pono
 #: ../libsvn_wc/adm_ops.c:2078
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
-msgstr "Nieznany lub niespodziewany rodzaj obiektu dla ścieżki '%s'"
+msgstr "Nieznany lub nieoczekiwany rodzaj obiektu dla ścieżki '%s'"
 
 #: ../libsvn_wc/adm_ops.c:2200
 #, c-format
@@ -5970,7 +5970,7 @@ msgstr "Nie można skopiować lub przenieść '%s': obiekt jeszcze nie znajduje 
 #: ../libsvn_wc/copy.c:911
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
-msgstr "Nie można skopiować obiektu do '%s', gdyż nie pochodzi on z repozytorium '%s', ale z repozytorium '%s'"
+msgstr "Nie można skopiować obiektu do '%s', gdyż nie pochodzi on z repozytorium '%s', a z repozytorium '%s'"
 
 #: ../libsvn_wc/copy.c:918
 #, c-format
@@ -6541,9 +6541,9 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Błąd sumy kontrolnej wskazuje na uszkodzony plik bazowy '%s'\n"
-"   oczekiwano:  %s\n"
-"   znaleziono:  %s\n"
+"Niezgodność sumy kontrolnej wskazuje na uszkodzony plik bazowy '%s'\n"
+"   oczekiwana:  %s\n"
+"  rzeczywista:  %s\n"
 
 #: ../libsvn_wc/relocate.c:79
 msgid "Relocate can only change the repository part of an URL"
@@ -6680,7 +6680,7 @@ msgstr "Plik '%s' w katalogu '%s' nie podlega zarządzaniu wersjami"
 #: ../libsvn_wc/update_editor.c:3808
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"
-msgstr "Błąd sumy kontrolnej dla '%s'; oczekiwana: '%s', zapisana: '%s'"
+msgstr "Niezgodność sumy kontrolnej dla '%s'; oczekiwana: '%s', zapisana: '%s'"
 
 #: ../libsvn_wc/update_editor.c:5169
 #, c-format
@@ -8657,7 +8657,7 @@ msgstr ""
 "      się URL-u jednym z następujących ciągów znaków\n"
 "        ../  do katalogu nadrzędnego wyekstrahowanej definicji zewnętrznej\n"
 "        ^/   do katalogu głównego repozytorium\n"
-"        //   do schematu\n"
+"        //   do protokołu\n"
 "        /    do katalogu głównego serwera\n"
 "      Niejednoznaczny format 'względna_ścieżka względna_ścieżka' jest traktowany\n"
 "      jako 'względny_URL względna_ścieżka' z obsługą wersji wieszakowej.\n"
@@ -11135,7 +11135,7 @@ msgstr "Nie można otrzymać listy mechanizmów SASL"
 
 #: ../svnserve/cyrus_auth.c:366
 msgid "Couldn't obtain the authenticated username"
-msgstr "Nie można otrzymać zautentyfikowanej nazwy użytkownika"
+msgstr "Nie można otrzymać nazwy uwierzytelnionego użytkownika"
 
 #: ../svnserve/main.c:143
 msgid "daemon mode"
@@ -11147,15 +11147,15 @@ msgstr "tryb inetd"
 
 #: ../svnserve/main.c:145
 msgid "tunnel mode"
-msgstr "tryb tunel"
+msgstr "tryb tunelu"
 
 #: ../svnserve/main.c:146
 msgid "listen-once mode (useful for debugging)"
-msgstr "tryb nasłuchiwania tylko raz (użyteczne przy poszukiwaniu błędów)"
+msgstr "tryb jednorazowego nasłuchu (przydatne przy poszukiwaniu błędów)"
 
 #: ../svnserve/main.c:149
 msgid "Windows service mode (Service Control Manager)"
-msgstr "try usługi Windows (Menedżer Usług)"
+msgstr "tryb usługi Windows (Menedżer Usług)"
 
 #: ../svnserve/main.c:151
 msgid "root of directory to serve"
@@ -11174,32 +11174,32 @@ msgid ""
 "listen port\n"
 "                             [mode: daemon, service, listen-once]"
 msgstr ""
-"nasłuchuj port\n"
-"                             [tryb: demon, usługa, nasłuchiwanie tylko raz]"
+"port nasłuchu\n"
+"                             [tryb: demon, usługa, jednorazowy nasłuch]"
 
 #: ../svnserve/main.c:162
 msgid ""
 "listen port\n"
 "                             [mode: daemon, listen-once]"
 msgstr ""
-"nasłuchuj port\n"
-"                             [tryb: demon, nasłuchiwanie tylko raz]"
+"port nasłuchu\n"
+"                             [tryb: demon, jednorazowy nasłuch]"
 
 #: ../svnserve/main.c:168
 msgid ""
 "listen hostname or IP address\n"
 "                             [mode: daemon, service, listen-once]"
 msgstr ""
-"nasłuchuj nazwę hosta lub adres IP\n"
-"                             [tryb: demon, usługa, nasłuchiwanie tylko raz]"
+"nazwa hosta lub adres IP nasłuchu\n"
+"                             [tryb: demon, usługa, jednorazowy nasłuch]"
 
 #: ../svnserve/main.c:172
 msgid ""
 "listen hostname or IP address\n"
 "                             [mode: daemon, listen-once]"
 msgstr ""
-"nasłuchuj nazwę hosta lub adres IP\n"
-"                             [tryb: demon, nasłuchiwanie tylko raz]"
+"nazwa hosta lub adres IP nasłuchu\n"
+"                             [tryb: demon, jednorazowy nasłuch]"
 
 #. ### Making the assumption here that WIN32 never has fork and so
 #. * ### this option never exists when --service exists.
@@ -11225,7 +11225,7 @@ msgid ""
 "                             [mode: daemon, listen-once, service]"
 msgstr ""
 "zapisz ID procesu serwera do pliku ARG\n"
-"                             [tryb: demon, nasłuchiwanie tylko raz, usługa]"
+"                             [tryb: demon, jednorazowy nasłuch, usługa]"
 
 #: ../svnserve/main.c:194
 msgid ""
@@ -11233,14 +11233,14 @@ msgid ""
 "                             [mode: daemon, listen-once]"
 msgstr ""
 "zapisz ID procesu serwera do pliku ARG\n"
-"                             [tryb: demon, nasłuchiwanie tylko raz]"
+"                             [tryb: demon, jednorazowy nasłuch]"
 
 #: ../svnserve/main.c:199
 msgid ""
 "tunnel username (default is current uid's name)\n"
 "                             [mode: tunnel]"
 msgstr ""
-"nazwa użytkownika dla trybu tunel (domyślnie jest to bieżąca nazwa uid)\n"
+"nazwa użytkownika dla trybu tunelu (domyślnie jest to nazwa bieżącego użytkownika)\n"
 "                             [tryb: tunel]"
 
 #: ../svnserve/main.c:202 ../svnversion/main.c:125
@@ -11296,7 +11296,7 @@ msgstr "Musisz podać dokładnie jedną z opcji -d, -i, -t lub -X.\n"
 #: ../svnserve/main.c:579
 #, c-format
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
-msgstr "Opcja --tunnel-user jest poprawna jedynie w trybie tunnel.\n"
+msgstr "Opcja --tunnel-user jest poprawna jedynie w trybie tunelu.\n"
 
 #: ../svnserve/main.c:644
 #, c-format
@@ -11565,7 +11565,7 @@ msgstr "Docelowe repozytorium nie zostało zainicjalizowane"
 #: ../svnsync/main.c:1451
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
-msgstr "Zatwierdzanie zmian stworzyło wersję o numerze %ld, a powinno stworzyć %ld"
+msgstr "Zatwierdzanie zmian utworzyło wersję o numerze %ld, a powinno utworzyć %ld"
 
 #: ../svnsync/main.c:1557
 #, c-format
