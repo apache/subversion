@@ -1922,9 +1922,6 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
-  if (opt_state.patch_cmd)
-    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
-                   SVN_CONFIG_OPTION_PATCH_CMD, opt_state.patch_cmd);
 
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
   if (opt_state.autoprops && opt_state.no_autoprops)
