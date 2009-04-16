@@ -1762,12 +1762,12 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
   const svn_wc_entry_t *entry;
 
   /* Oops. Can't fetch that kind of value with this old working copy.  */
-  if (status || revision || repos_relpath || repos_root_url
+  if (revision || repos_relpath || repos_root_url
       || repos_uuid
       || last_mod_time || translated_size || target || changelist
       || original_repos_relpath || original_root_url || original_uuid
       || original_revision || text_mod || props_mod || base_shadowed
-      || lock)
+      )
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                              _("Unable to return data because the working "
                                "copy at '%s' needs to be upgraded."),
@@ -1786,8 +1786,75 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
                              svn_path_local_style(local_relpath, scratch_pool),
                              svn_path_local_style(wcroot_abspath,
                                                   scratch_pool));
-  /* ### status */
+  if (status)
+    {
+      svn_boolean_t obstructed;
 
+      /* Some status values are not returned by this function:
+
+         MOVED_AWAY and MOVED_HERE are not returned since that information
+         is not stored in a wc-1 working copy.
+
+         COPIED is a status returned by scan_addition after reviewing the
+         hierarchy looking for copyfrom information.
+
+         INCOMPLETE cannot be modeled by wc-1. Directories can be marked
+         as "incomplete" as a reference to their children, but it is unknown
+         *which* children should be marked INCOMPLETE.
+
+         EXCLUDED is not (yet) used within wc library.
+
+         BASE_DELETED is a wc_db internal representation that gets mapped
+         into a standard DELETED or MOVED_AWAY status.  */
+
+      /* We're looking at the entry in the parent if this is a directory
+         and its name is not "".  */
+      obstructed = entry->kind == svn_node_dir && *entry->name != '\0';
+
+      if (entry->absent)
+        {
+          /* You can't add/delete/replace over an abent node.  */
+          SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_normal);
+
+          /* Better be an absent file, or an obstructed subdir (because the
+             subdir should not be on the disk).  */
+          SVN_ERR_ASSERT(entry->kind == svn_node_file || obstructed);
+
+          *status = svn_wc__db_status_absent;
+        }
+      else if (entry->schedule == svn_wc_schedule_add
+               || entry->schedule == svn_wc_schedule_replace
+               || entry->copied)
+        {
+          *status = obstructed ? svn_wc__db_status_obstructed_add
+                               : svn_wc__db_status_added;
+        }
+      else if (entry->schedule == svn_wc_schedule_delete)
+        {
+          *status = obstructed ? svn_wc__db_status_obstructed_delete
+                               : svn_wc__db_status_deleted;
+        }
+      else
+        {
+          SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_normal);
+          if (entry->copied)
+            {
+              /* This must be a child of a copied subtree. It better not be
+                 obstructed.  */
+              SVN_ERR_ASSERT(!obstructed);
+              *status = svn_wc__db_status_added;
+            }
+          else if (entry->deleted)
+            {
+              *status = svn_wc__db_status_not_present;
+            }
+          else
+            {
+              *status = obstructed ? svn_wc__db_status_obstructed
+                                   : svn_wc__db_status_normal;
+            }
+        }
+    }
   if (kind)
     {
       if (entry->kind == svn_node_file)
@@ -1837,7 +1904,22 @@ svn_wc__read_info_old(svn_wc__db_status_t *status,
      ### original_revision  */
   /* ### text_mod, props_mod  */
   /* ### base_shadowed  */
-  /* ### lock  */
+
+  if (lock)
+    {
+      if (entry->lock_token)
+        {
+          *lock = apr_palloc(result_pool, sizeof(**lock));
+          (*lock)->token = apr_pstrdup(result_pool, entry->lock_token);
+          (*lock)->owner = apr_pstrdup(result_pool, entry->lock_owner);
+          (*lock)->comment = apr_pstrdup(result_pool, entry->lock_comment);
+          (*lock)->date = entry->lock_creation_date;
+        }
+      else
+        {
+          *lock = NULL;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
