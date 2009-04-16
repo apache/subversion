@@ -36,7 +36,6 @@
 /** NOTE: this code is WIP and doesn't work, at all! **/
 /******************************************************/
 /** TODO:
- ** - free gssapi objects
  ** - add comments.
  ** - add better error reporting
  ** - fix authn status, as the COMPLETE/CONTINUE status values
@@ -85,6 +84,7 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
   OM_uint32 min_stat, maj_stat;
   gss_name_t host_gss_name;
   gss_buffer_desc bufdesc;
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* XXXX */
   bufdesc.value = apr_psprintf(gss_api_ctx->pool, KRB_HTTP_SERVICE "@%s",
@@ -134,10 +134,11 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
           case GSS_S_CONTINUE_NEEDED:
             gss_api_ctx->state = gss_api_auth_in_progress;
             break;
-        default:
-          return svn_error_createf
-            (SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED, NULL,
-             _("Initialization of GSS-API context failed."));
+          default:
+            err = svn_error_createf
+              (SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED, NULL,
+               _("Initialization of GSS-API context failed."));
+            goto cleanup;
         }
     }
 
@@ -145,7 +146,12 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
   *buf = apr_pmemdup(gss_api_ctx->pool, output_buf.value, output_buf.length);
   *buf_len = output_buf.length;
 
-  return SVN_NO_ERROR;
+  gss_release_buffer(&min_stat, &output_buf);
+
+cleanup:
+  gss_release_name(&min_stat, &host_gss_name);
+
+  return err;
 }
 
 /* Read the header sent by the server (if any), invoke the gssapi authn
@@ -209,6 +215,24 @@ do_auth(serf_gss_api_context_t *gss_api_ctx,
   return SVN_NO_ERROR;
 }
 
+/* Cleans the gssapi context object, when the pool used to create it gets
+   cleared or destroyed. */
+static apr_status_t
+cleanup_gss_ctx(void *data)
+{
+  gss_ctx_id_t gss_ctx = data;
+  OM_uint32 min_stat;
+
+  if (gss_ctx != GSS_C_NO_CONTEXT)
+    {
+      if (gss_delete_sec_context(&min_stat, &gss_ctx,
+                                 GSS_C_NO_BUFFER) == GSS_S_FAILURE)
+        return APR_EGENERAL;
+    }
+
+  return APR_SUCCESS;
+}
+
 /* A new connection is created to a server that's known to use
    Kerberos. */
 svn_error_t *
@@ -223,6 +247,10 @@ svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
   gss_api_ctx->state = gss_api_auth_not_started;
   gss_api_ctx->gss_ctx = GSS_C_NO_CONTEXT;
   conn->auth_context = gss_api_ctx;
+
+  apr_pool_cleanup_register(gss_api_ctx->pool, gss_api_ctx->gss_ctx,
+                            cleanup_gss_ctx,
+                            apr_pool_cleanup_null);
 
   /* Make serf send the initial requests one by one */
   serf_connection_set_max_outstanding_requests(conn->conn, 1);
