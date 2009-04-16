@@ -723,8 +723,11 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access), NULL,
                            scratch_pool);
+  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
-  return svn_wc_adm_close2(adm_access, scratch_pool);
+
+  return SVN_NO_ERROR;
 }
 
 
