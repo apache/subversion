@@ -6286,7 +6286,8 @@ do_directory_merge(const char *url1,
                                       iterpool));
         }
 
-      /* Record mergeinfo on any subtree affected by the merge. */
+      /* Record mergeinfo on any subtree affected by the merge or for
+         every subtree if this is a --record-only merge. */
       for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
         {
           const char *child_repos_path;
@@ -6317,8 +6318,10 @@ do_directory_merge(const char *url1,
              ### don't know that child would not have been modified, so
              ### not recording non-inheritable mergeinfo on the path
              ### is incorrect. */
-          if (!operative_merge
-              || !subtree_touched_by_merge(child->path, notify_b, pool))
+          if (!merge_b->record_only
+              && (!operative_merge
+                  || !subtree_touched_by_merge(child->path, notify_b,
+                                               iterpool)))
             {
               /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
                  because it had no explicit mergeinfo of its own at the
