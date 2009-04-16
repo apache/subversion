@@ -1878,7 +1878,9 @@ determine_hunk_line(svn_hunk_t *hunk, patch_target_t *target)
 
 /* Copy lines to the result stream of TARGET until the specified
  * LINE has been reached. Indicate in *EOF whether end-of-file was
- * encountered while reading from the target. Do all allocations in POOL. */
+ * encountered while reading from the target.
+ * If LINE is zero, copy lines until end-of-file has been reached.
+ * Do all allocations in POOL. */
 static svn_error_t *
 copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
                      svn_boolean_t *eof, apr_pool_t *pool)
@@ -1890,7 +1892,7 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
   *eof = FALSE;
 
   iterpool = svn_pool_create(pool);
-  while (target->current_line < line && ! *eof)
+  while ((target->current_line < line || line == 0) && ! *eof)
     {
       svn_stringbuf_t *buf;
       apr_size_t len;
@@ -1898,7 +1900,8 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_stream_readline(s, &buf, target->eol_str, eof, pool));
-      svn_stringbuf_appendcstr(buf, target->eol_str);
+      if (! *eof)
+        svn_stringbuf_appendcstr(buf, target->eol_str);
       target->current_line++;
 
       len = buf->len;
@@ -1944,10 +1947,10 @@ read_lines_from_target(svn_string_t **lines, svn_filesize_t nlines,
 
       SVN_ERR(svn_stream_readline(s, &line, target->eol_str, &eof, iterpool));
       svn_stringbuf_appendcstr(buf, line->data);
-      svn_stringbuf_appendcstr(buf, target->patch_eol_str);
-
-      if (eof)
-          break;
+      if (! eof)
+        svn_stringbuf_appendcstr(buf, target->patch_eol_str);
+      else
+        break;
     }
   svn_pool_destroy(iterpool);
 
@@ -2029,6 +2032,7 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
   apr_pool_t *iterpool;
   patch_target_t *target;
   svn_hunk_t *hunk;
+  svn_boolean_t eof;
 
   /* Check if the patch target file exists. */
   /* TODO: strip count, make sure CWD is sane */
@@ -2070,17 +2074,21 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
   while (hunk);
   svn_pool_destroy(iterpool);
 
+  /* Copy remaining lines to target. */
+  SVN_ERR(copy_lines_to_target(target, 0, &eof, pool));
+
+  /* Close both files. */
   SVN_ERR(svn_stream_close(target->result));
   SVN_ERR(svn_io_file_close(target->file, pool));
 
-  if (target->modified)
+  if (eof && target->modified)
     {
       /* Install the patched temporary file over the working file.
        * ### Should this rather be done in a loggy fashion? */
       SVN_ERR(svn_io_file_rename(target->result_path, patch->new_filename,
                                  pool));
 
-      /* Be nice! Send a notification. */
+      /* Send a notification. */
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
@@ -2096,8 +2104,14 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
     }
+  else if (! eof)
+    /* We could not copy the entire target file to the temporary file,
+     * and would truncate the target if we moved the temporary file
+     * on top of it. Remove the temporary file.
+     * TODO: Dump hunks into reject file? */
+    SVN_ERR(svn_io_remove_file(target->result_path, pool));
   else
-    /* Nothing happened, just remove the temporary file. */
+    /* No hunks were applied. Just remove the temporary file. */
     SVN_ERR(svn_io_remove_file(target->result_path, pool));
 
   return SVN_NO_ERROR;
