@@ -179,7 +179,7 @@ def patch_unidiff(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'U    A/D/gamma\n',
+    'U    %s\n' % os.path.join('A', 'D', 'gamma'),
     'U    iota\n',
   ]
 
@@ -300,8 +300,8 @@ def patch_copy_and_move(sbox):
     'A    %s\n' % os.path.join('A', 'C', 'gamma'),
     'D    %s\n' % os.path.join('A', 'mu'),
     'A    mu-ng\n',
-    'U    A/C/gamma\n',
-    'U    A/D/gamma\n',
+    'U    %s\n' % os.path.join('A', 'C', 'gamma'),
+    'U    %s\n' % os.path.join('A', 'D', 'gamma'),
   ]
 
   gamma_contents = "This is the file 'gamma'.\nsome more bytes to 'gamma'\n"
