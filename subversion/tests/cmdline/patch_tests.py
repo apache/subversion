@@ -37,12 +37,6 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-if sys.platform == 'win32':
-  Wimp = svntest.testcase.Wimp
-else:
-  def Wimp(msg, test): 
-    return test
-
 ########################################################################
 #Tools
 
@@ -150,7 +144,7 @@ def patch_basic(sbox):
                                        0) # no dry-run, outputs differ
 
 def patch_unidiff(sbox):
-  "apply a unidiff patch -- test external tool"
+  "apply a unidiff patch"
 
   sbox.build()
   wc_dir = sbox.wc_dir
