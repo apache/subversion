@@ -184,10 +184,16 @@ def patch_unidiff(sbox):
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  expected_output = [
-    'patching file A/D/gamma\n',
-    'patching file iota\n',
-  ]
+  if os.getenv("SVN_INTERNAL_PATCH"):
+    expected_output = [
+      'U    A/D/gamma\n',
+      'U    iota\n',
+    ]
+  else:
+    expected_output = [
+      'patching file A/D/gamma\n',
+      'patching file iota\n',
+    ]
 
   gamma_contents = "It is the file 'gamma'.\n"
   iota_contents = "This is the file 'iota'.\nSome more bytes\n"
