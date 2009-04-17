@@ -632,8 +632,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
 /* Is the entry in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
-static svn_boolean_t
-entry_is_hidden(const svn_wc_entry_t *entry)
+svn_boolean_t
+svn_wc__entry_is_hidden(const svn_wc_entry_t *entry)
 {
   /* Note: the condition below may allow certain combinations that the
      rest of the system will never reach (eg. absent/add).
@@ -1770,7 +1770,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
       SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
 
       *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
-      if (!show_hidden && *entry != NULL && entry_is_hidden(*entry))
+      if (!show_hidden && *entry != NULL && svn_wc__entry_is_hidden(*entry))
         *entry = NULL;
     }
   else
@@ -1830,7 +1830,7 @@ prune_deleted(apr_hash_t *entries_all,
       void *val;
 
       apr_hash_this(hi, NULL, NULL, &val);
-      if (entry_is_hidden(val))
+      if (svn_wc__entry_is_hidden(val))
         break;
     }
 
@@ -1852,7 +1852,7 @@ prune_deleted(apr_hash_t *entries_all,
 
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
-      if (!entry_is_hidden(entry))
+      if (!svn_wc__entry_is_hidden(entry))
         {
           apr_hash_set(entries, key, APR_HASH_KEY_STRING, entry);
         }
@@ -3444,7 +3444,7 @@ walker_helper(const char *dirpath,
 
       /* Recurse into this entry if appropriate. */
       if (current_entry->kind == svn_node_dir
-          && !entry_is_hidden(current_entry)
+          && !svn_wc__entry_is_hidden(current_entry)
           && depth >= svn_depth_immediates)
         {
           svn_wc_adm_access_t *entry_access;
@@ -3537,7 +3537,7 @@ svn_wc_walk_entries3(const char *path,
       /* This entry should be present.  */
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
       SVN_ERR_ASSERT(entry != NULL);
-      if (!show_hidden && entry_is_hidden(entry))
+      if (!show_hidden && svn_wc__entry_is_hidden(entry))
         {
           /* The fool asked to walk a "hidden" node. Report the node as
              unversioned.
@@ -3603,7 +3603,7 @@ visit_tc_too_found_entry(const char *path,
   /* Call the entry callback for this entry. */
   SVN_ERR(baton->callbacks->found_entry(path, entry, baton->baton, pool));
 
-  if (entry->kind != svn_node_dir || entry_is_hidden(entry))
+  if (entry->kind != svn_node_dir || svn_wc__entry_is_hidden(entry))
     return SVN_NO_ERROR;
 
   /* If this is a directory, we may need to also visit any unversioned
