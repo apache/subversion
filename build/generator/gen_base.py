@@ -534,12 +534,12 @@ class TargetSWIG(TargetLib):
 
     assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
+    oname = iname[:-2] + self.gen_obj._extension_map['pyd', 'object']
 
     # Extract SWIG module name from .i file name
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
-    lib_extension = self.gen_obj._extension_map['lib', 'target']
+    lib_extension = self.gen_obj._extension_map['pyd', 'target']
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
