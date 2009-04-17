@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1816,7 +1816,7 @@ public interface SVNClientInterface
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
      * @param changelists   if non-null, filter paths using changelists
-     * @param callback      a callback to receive the infos retreived
+     * @param callback      a callback to receive the infos retrieved
      * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,

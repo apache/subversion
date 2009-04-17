@@ -53,7 +53,7 @@ typedef struct svn_patch_t {
   /* The patch file itself. */
   apr_file_t *patch_file;
 
-  /* The old and new file names as retreived from the patch file.
+  /* The old and new file names as retrieved from the patch file.
    * These paths are UTF-8 encoded and canonicalized, but otherwise
    * left unchanged from how they appeared in the patch file. */
   const char *old_filename;
