@@ -1835,6 +1835,10 @@ typedef struct patch_target_t {
 
   /* True if end-of-file was reached while reading from the target. */
   svn_boolean_t eof;
+
+  /* True if the target file had local modifications before the
+   * patch was applied to it. */
+  svn_boolean_t local_mods;
 } patch_target_t;
 
 /* Using client context CTX, report a target at PATH as skipped
@@ -1970,6 +1974,8 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
   patch_target_t *new_target;
   svn_boolean_t resolved;
   const char *dirname;
+  svn_wc_adm_access_t *target_adm_access;
+  svn_error_t *err;
 
   *target = NULL;
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
@@ -2002,6 +2008,21 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
   new_target->modified = FALSE;
   new_target->conflicted = FALSE;
   new_target->eof = FALSE;
+
+  /* Check whether the target file has local modifications. */
+  dirname = svn_dirent_dirname(new_target->path, scratch_pool);
+  SVN_ERR(svn_wc_adm_retrieve(&target_adm_access, adm_access, dirname,
+                              scratch_pool));
+  err = svn_wc_text_modified_p(&new_target->local_mods, new_target->path,
+                               FALSE, target_adm_access, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        /* The target file is unversioned, that's OK. */
+        svn_error_clear(err);
+      else
+        return err;
+    }
 
   *target = new_target;
   return SVN_NO_ERROR;
@@ -2219,6 +2240,8 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
           notify->kind = svn_node_file;
           if (target->conflicted)
             notify->content_state = svn_wc_notify_state_conflicted;
+          else if (target->local_mods)
+            notify->content_state = svn_wc_notify_state_merged;
           else
             notify->content_state = svn_wc_notify_state_changed;
 
