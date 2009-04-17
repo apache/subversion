@@ -1715,7 +1715,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
       /* The actual (directory) information was wanted, but we got a stub.  */
       if (!need_parent_stub
           && (*entry)->kind == svn_node_dir
-          && (*entry)->name != '\0')
+          && *(*entry)->name != '\0')
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is not the right kind"),
                                  svn_path_local_style(local_abspath,
