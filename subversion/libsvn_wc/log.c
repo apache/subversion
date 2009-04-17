@@ -1490,11 +1490,8 @@ log_do_upgrade_format(struct log_runner *loggy,
   /* Remove the .svn/format file, if it exists. */
   svn_error_clear(svn_io_remove_file(path, loggy->pool));
 
-  /* Reading the entries file will support old formats, even if this number
-     is updated. */
-  SVN_ERR(svn_wc__adm_set_wc_format(fmt, loggy->adm_access, loggy->pool));
-
   SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, loggy->pool));
+  SVN_ERR(svn_wc__adm_set_wc_format(fmt, loggy->adm_access, loggy->pool));
   SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, loggy->pool));
 
   return SVN_NO_ERROR;
