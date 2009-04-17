@@ -664,7 +664,7 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * and don't care about the parsed result, pass NULL for @a externals_p.
  *
  * The format of @a desc is the same as for values of the directory
- * property @c SVN_PROP_EXTERNALS, which see.
+ * property @c SVN_PROP_EXTERNALS, look there for more details.
  *
  * Allocate the table, keys, and values in @a pool.
  *
