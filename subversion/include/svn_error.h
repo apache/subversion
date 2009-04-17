@@ -306,7 +306,8 @@ svn_handle_warning(FILE *stream,
   do {                                                      \
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
-      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
+      return svn_error_return(svn_error_quick_wrap(         \
+                                 svn_err__temp, wrap_msg)); \
   } while (0)
 
 
@@ -369,7 +370,8 @@ svn_handle_warning(FILE *stream,
  */
 #define SVN_ERR_MALFUNCTION()                                      \
   do {                                                             \
-    return svn_error__malfunction(TRUE, __FILE__, __LINE__, NULL); \
+    return svn_error_return(svn_error__malfunction(                \
+                                 TRUE, __FILE__, __LINE__, NULL)); \
   } while (0)
 
 /** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning
