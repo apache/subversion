@@ -510,7 +510,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                         stderr, TRUE /* fatal */, "svn: ");
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -800,7 +800,7 @@ svn_cl__get_log_message(const char **log_msg,
               (err, _("Could not use external editor to fetch log message; "
                       "consider setting the $SVN_EDITOR environment variable "
                       "or using the --message (-m) or --file (-F) options"));
-          return err;
+          return svn_error_return(err);
         }
 
       if (msg_string)
@@ -890,7 +890,7 @@ svn_cl__may_need_force(svn_error_t *err)
          "may be lost)"));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -950,7 +950,7 @@ svn_cl__try(svn_error_t *err,
       *success = TRUE;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -1108,7 +1108,7 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
           svn_error_clear(err);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
   return SVN_NO_ERROR;
 }
@@ -1192,7 +1192,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   *human_cstring = svn_time_to_human_cstring(when, pool);
 
