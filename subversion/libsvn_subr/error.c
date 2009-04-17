@@ -541,11 +541,16 @@ svn_error_abort_on_malfunction(svn_boolean_t can_return,
                                const char *file, int line,
                                const char *expr)
 {
+#ifndef SVN_ERR__TRACING
   svn_error_t *err = svn_error_raise_on_malfunction(TRUE, file, line, expr);
 
   svn_handle_error2(err, stderr, FALSE, "svn: ");
   abort();
   return err;  /* Not reached. */
+#else
+  return svn_error_return(svn_error_raise_on_malfunction(TRUE, file,
+                                                         line, expr));
+#endif
 }
 
 /* The current handler for reporting malfunctions, and its default setting. */
