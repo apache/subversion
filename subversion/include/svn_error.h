@@ -276,21 +276,32 @@ svn_handle_warning(FILE *stream,
  *
  * would not mean what they appear to.
  */
-#ifdef SVN_ERR__TRACING
-#define SVN_ERR__TRACED "traced call"
-#define SVN_ERR(expr)                                            \
-  do {                                                           \
-    svn_error_t *svn_err__temp = (expr);                         \
-    if (svn_err__temp)                                           \
-      return svn_error_quick_wrap(svn_err__temp, SVN_ERR__TRACED); \
-  } while (0)
-#else
 #define SVN_ERR(expr)                           \
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
-      return svn_err__temp;                     \
+      SVN_ERR_RETURN(svn_err__temp);            \
   } while (0)
+
+/**
+ * A statement macro for returning error values, very similar to @c SVN_ERR.
+ * 
+ * This macro can be used in place of directly returning an error to ensure
+ * that the call stack is recorded correctly.
+ */
+#ifdef SVN_ERR__TRACING
+#define SVN_ERR__TRACED "traced call"
+
+#define SVN_ERR_RETURN(svn_err__temp2)                              \
+  do {                                                              \
+    if (svn_err__temp2)                                             \
+      return svn_error_quick_wrap(svn_err__temp2, SVN_ERR__TRACED); \
+    else                                                            \
+      return (svn_err__temp2);                                      \
+  } while (0)
+#else
+#define SVN_ERR_RETURN(svn_err__temp2)                              \
+  return (svn_err__temp2)
 #endif
 
 /** A statement macro, very similar to @c SVN_ERR.
