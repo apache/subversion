@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005, 2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -134,7 +134,7 @@ public class PropertyData
 
     /**
      * this contructor is used when building a thin wrapper around other
-     * property retreival methods
+     * property retrieval methods
      * @param p     the path of the item owning this property
      * @param n     the name of the property
      * @param v     the string value of the property
