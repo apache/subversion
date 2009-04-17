@@ -1741,8 +1741,8 @@ extract_svnpatch(const char *original_patch_path,
 
 /* ### forward-declaration */
 static svn_error_t *
-apply_textdiffs(const char *patch_path, svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
+                svn_client_ctx_t *ctx, apr_pool_t *pool);
 
 svn_error_t *
 svn_client_patch(const char *patch_path,
@@ -1791,7 +1791,9 @@ svn_client_patch(const char *patch_path,
     }
 
   /* Now proceed with the text-diff bytes. */
-  SVN_ERR(apply_textdiffs(patch_path, ctx, pool));
+  SVN_ERR(apply_textdiffs(patch_path, adm_access, ctx, pool));
+
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1799,6 +1801,13 @@ svn_client_patch(const char *patch_path,
 /* --- Text-diff application routines --- */
 
 typedef struct patch_target_t {
+  /* The target path, relative to the working copy directory the
+   * patch is being applied to. */
+  const char *path;
+
+  /* The absolute path of the target */
+  const char *abs_path;
+
   /* The target file, read-only, seekable. */
   apr_file_t *file;
   
@@ -1828,29 +1837,164 @@ typedef struct patch_target_t {
   svn_boolean_t eof;
 } patch_target_t;
 
-/* Initialize a patch TARGET structure for a target file described by PATCH.
- * Allocate the patch target structure in RESULT_POOL.
+/* Using client context CTX, report a target at PATH as skipped
+ * because of the target's STATE. Use POOL for all allocations. */
+static void
+report_skipped_target(svn_client_ctx_t *ctx, const char *path,
+                      svn_wc_notify_lock_state_t state,
+                      apr_pool_t *pool)
+{
+  svn_wc_notify_t *notify;
+
+  if (ctx->notify_func2)
+    {
+      notify = svn_wc_create_notify(path, svn_wc_notify_skip, pool);
+      notify->kind = svn_node_file;
+      notify->content_state = state;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+}
+
+/* Resolve the exact path for a patch TARGET at path TARGET_PATH,
+ * and set the 'path' and 'abs_path' members of TARGET accordingly.
+ * If TARGET_PATH is absolute, resolve symlinks it might contain,
+ * and make sure that it points somewhere inside of the working copy
+ * directory WC_PATH. Use client context CTX to send notifiations.
+ * Indicate success in *RESOLVED. Use RESULT_POOL for allocations of
+ * fields in TARGET.
+ * */
+static svn_error_t *
+resolve_target_path(patch_target_t *target, const char *target_path,
+                    const char *wc_path, svn_client_ctx_t *ctx,
+                    svn_boolean_t *resolved, apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  const char *abs_wc_path;
+  const char *abs_path;
+  const char *check_path;
+  const char *child_path;
+  svn_error_t *err;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
+
+  /* If the target path is relative, we don't have much to do. */
+  if (! svn_dirent_is_absolute(target_path))
+    {
+      target->path = apr_pstrdup(result_pool, target_path);
+      target->abs_path = svn_dirent_join(abs_wc_path, target_path, result_pool);
+      *resolved = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Absolute paths are tricky, we don't want to modify files outside
+   * of a working copy. First, let's find out if it's likely that the
+   * path can be used at all. */
+  SVN_ERR(svn_io_check_path(target_path, &kind, scratch_pool));
+  switch (kind)
+    {
+      case svn_node_file:
+        /* Path can probably be used. Use the target itself in check below. */
+        check_path = target_path;
+        break;
+      case svn_node_none:
+        /* Path can probably be used. Use the containing directory in check
+         * below. */
+        check_path = svn_dirent_dirname(target_path, scratch_pool);
+        break;
+      default:
+        /* The target is something other than a text file. Skip it. */
+        report_skipped_target(ctx, target_path,
+                              svn_wc_notify_state_obstructed, scratch_pool);
+        *resolved = FALSE;
+        return SVN_NO_ERROR;
+    }
+
+  /* Get the absolute path of the target itself or its containing
+   * directory, so we can check whether it is a child of the absolute
+   * path of the working copy directory. Even though the path is
+   * already absolute, we must ask the OS to resolve it because it
+   * may contain symlinks. */
+  err = svn_dirent_get_absolute(&abs_path, check_path, result_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_BAD_FILENAME)
+        {
+          svn_error_clear(err);
+
+          /* The absolute path could not be resolved.
+           * Maybe the containing directory does not exist.
+           * Skip this target. */
+          report_skipped_target(ctx, target_path,
+                                svn_wc_notify_state_inapplicable, scratch_pool);
+          *resolved = FALSE;
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
+
+  /* Check for parent/child relationship. */
+  child_path = svn_dirent_is_child(abs_wc_path, abs_path, result_pool);
+  if (child_path)
+    {
+      /* The target path is inside the working copy and thus safe to use. */
+      target->path = child_path;
+      target->abs_path = abs_path;
+      *resolved = TRUE;
+    }
+  else
+    {
+      /* The target path is not inside the working copy. Skip it. */
+      report_skipped_target(ctx, target_path,
+                            svn_wc_notify_state_inapplicable, scratch_pool);
+      *resolved = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Attempt to initialize a patch TARGET structure for a target file
+ * described by PATCH.
+ * ADM_ACCESS should hold a write lock to the working copy
+ * the patch is being applied to.
+ * Use client context CTX to send notifiations.
+ * Upon success, allocate the patch target structure in RESULT_POOL.
+ * Else, set *target to NULL.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 init_patch_target(patch_target_t **target, svn_patch_t *patch,
+                  svn_wc_adm_access_t *adm_access, svn_client_ctx_t *ctx,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *new_target;
-  const char *temp_dir_path;
+  svn_boolean_t resolved;
+  const char *dirname;
 
+  *target = NULL;
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
+  /* TODO: strip count */
+
+  SVN_ERR(resolve_target_path(new_target, patch->new_filename,
+                              svn_wc_adm_access_path(adm_access), ctx,
+                              &resolved, result_pool, scratch_pool)); 
+  if (! resolved)
+    return SVN_NO_ERROR;
+
   /* Try to open the target file */
-  SVN_ERR(svn_io_file_open(&new_target->file, patch->new_filename,
+  /* TODO: If a patch just adds lines to a file, the file might not
+   * exist and that is OK. */
+  SVN_ERR(svn_io_file_open(&new_target->file, new_target->path,
                            APR_READ | APR_BINARY, 0644, result_pool));
 
   /* Create a temporary file to write the patched result to,
    * in the same directory as the target file.
    * We want them to be on the same filesystem so we can rename
    * the temporary file to the target file later. */
-  temp_dir_path = svn_dirent_dirname(patch->new_filename, scratch_pool);
+  dirname = svn_dirent_dirname(new_target->abs_path, scratch_pool);
   SVN_ERR(svn_stream_open_unique(&new_target->result, &new_target->result_path,
-                                 temp_dir_path, svn_io_file_del_none,
+                                 dirname, svn_io_file_del_none,
                                  result_pool, scratch_pool));
   new_target->current_line = 1;
   new_target->eol_str = APR_EOL_STR; /* TODO: determine actual EOL-style. */
@@ -2020,39 +2164,21 @@ apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 }
 
 /* Apply a PATCH. Use client context CTX to send notifiations.
+ * ADM_ACCESS should hold a write lock to the working copy
+ * the patch is being applied to.
  * Do all allocations in POOL. */
 static svn_error_t *
-apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
+apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
+                svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   apr_pool_t *iterpool;
   patch_target_t *target;
   svn_hunk_t *hunk;
 
-  /* Check if the patch target file exists. */
-  /* TODO: strip count, make sure CWD is sane */
-  SVN_ERR(svn_io_check_path(patch->new_filename, &kind, pool));
-  if (kind != svn_node_file)
-    {
-      /* Report file as missing or obstructed. */
-      if (ctx->notify_func2)
-        {
-          svn_wc_notify_t *notify;
-
-          notify = svn_wc_create_notify(patch->new_filename,
-                                        svn_wc_notify_skip, pool);
-          notify->kind = svn_node_file;
-          if (kind == svn_node_none)
-            notify->content_state = svn_wc_notify_state_missing;
-          else
-            notify->content_state = svn_wc_notify_state_obstructed;
-
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
-        }
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(init_patch_target(&target, patch, pool, pool));
+  SVN_ERR(init_patch_target(&target, patch, adm_access, ctx, pool, pool));
+  if (target == NULL)
+    /* Can't apply the patch. */
+    return SVN_NO_ERROR;
 
   /* TODO: Make sure target EOL-style matches patch, if not, normalise. */
 
@@ -2088,7 +2214,7 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
         {
           svn_wc_notify_t *notify;
 
-          notify = svn_wc_create_notify(patch->new_filename,
+          notify = svn_wc_create_notify(target->path,
                                         svn_wc_notify_update_update, pool);
           notify->kind = svn_node_file;
           if (target->conflicted)
@@ -2113,10 +2239,13 @@ apply_one_patch(svn_patch_t *patch, svn_client_ctx_t *ctx, apr_pool_t *pool)
 }
 
 /* Apply all diffs in the patch file at PATH_PATH.
+ * ADM_ACCESS should hold a write lock to the working copy
+ * the patch is being applied to.
  * Use client context CTX to send notifiations.
  * Do all allocations in POOL.  */
 static svn_error_t *
-apply_textdiffs(const char *patch_path, svn_client_ctx_t *ctx, apr_pool_t *pool)
+apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
+                svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_patch_t *patch;
   apr_file_t *patch_file;
@@ -2139,7 +2268,7 @@ apply_textdiffs(const char *patch_path, svn_client_ctx_t *ctx, apr_pool_t *pool)
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
-          SVN_ERR(apply_one_patch(patch, ctx, iterpool));
+          SVN_ERR(apply_one_patch(patch, adm_access, ctx, iterpool));
     }
   while (patch);
   svn_pool_destroy(iterpool);

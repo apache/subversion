@@ -361,6 +361,66 @@ def patch_copy_and_move(sbox):
                                        1, # check-props
                                        0) # dry-run
 
+def patch_unidiff_absolute_paths(sbox):
+  "apply a unidiff patch containing absolute paths"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir = os.path.abspath(svntest.main.temp_dir)
+  patch_file_path = tempfile.mkstemp(dir=dir)[1]
+
+  os.chdir(wc_dir)
+
+  # A patch with absolute paths.
+  # The first diff points inside the working copy and should apply.
+  # The second diff does not point inside the working copy so application
+  # should fail.
+  abs = os.path.abspath('.')
+  unidiff_patch = [
+    "diff -ur A/B/E/alpha.orig A/B/E/alpha\n"
+    "--- %s/A/B/E/alpha.orig\tThu Apr 16 19:49:53 2009\n" % abs,
+    "+++ %s/A/B/E/alpha\tThu Apr 16 19:50:30 2009\n" % abs,
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+Whoooo whooooo whoooooooo!\n",
+    "diff -ur A/B/lambda.orig A/B/lambda\n"
+    "--- /A/B/lambda.orig\tThu Apr 16 19:49:53 2009\n",
+    "+++ /A/B/lambda\tThu Apr 16 19:51:25 2009\n",
+    "@@ -1 +1 @@\n",
+    "-This is the file 'lambda'.\n",
+    "+It's the file 'lambda', who would have thought!\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  
+  lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
+  expected_output = [
+    'U    %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
+    'Skipped \'%s\'\n' % lambda_path
+  ]
+
+  alpha_contents = "This is the file 'alpha'.\nWhoooo whooooo whoooooooo!\n"
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', contents=alpha_contents)
+
+  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status.tweak('A/B/E/alpha', status='M ')
+
+  expected_skip = wc.State('', {
+    lambda_path:  Item(),
+  })
+
+  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -369,6 +429,7 @@ test_list = [ None,
               patch_basic,
               patch_unidiff,
               patch_copy_and_move,
+              patch_unidiff_absolute_paths,
               ]
 
 if __name__ == '__main__':
