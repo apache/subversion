@@ -245,6 +245,51 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool);
 
+
+/** Get an ENTRY for the given LOCAL_ABSPATH.
+ *
+ * This API does not require an access baton, just a wc_db handle (DB).
+ * The requested entry MUST be present and version-controlled.
+ *
+ * If you know the entry is a FILE or DIR, then specify that in KIND. If you
+ * are unsure, then specific 'svn_node_unknown' for KIND. This value will be
+ * used to optimize the access to the entry, so it is best to know the kind.
+ * If you specify FILE/DIR, and the entry is *something else*, then
+ * SVN_ERR_NODE_UNEXPECTED_KIND will be returned.
+ *
+ * For directory nodes, sometimes the caller may want the "stub" from the
+ * parent directory. This is usually to examine the DELETED flag. When
+ * this is desired, pass TRUE for NEED_PARENT_STUB. It is illegal to pass
+ * TRUE if KIND == FILE.
+ *
+ * If KIND == UNKNOWN, and you request the parent stub, and the node turns
+ * out to NOT be a directory, then SVN_ERR_NODE_UNEXPECTED_KIND is returned.
+ *
+ * If KIND == UNKNOWN, and you request the actual file/dir data (by setting
+ * NEED_PARENT_STUB to FALSE), and the node turns out to be a DIR (as
+ * specified by the parent), but the subdirectory is NOT present (obstructed
+ * or missing), then SVN_ERR_NODE_UNEXPECTED_KIND is returned.
+ *
+ * NOTE: if SVN_ERR_NODE_UNEXPECTED_KIND is returned, then the ENTRY *IS*
+ * valid and may be examined. For any other error, ENTRY *IS NOT* valid.
+ *
+ * NOTE: if an access baton is available, then it will be examined for
+ * cached entries (and this routine may even cache them for you). It is
+ * not required, however, to do any access baton management for this API.
+ *
+ * ENTRY will be allocated in RESULT_POOL, and all temporary allocations
+ * will be performed in SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__get_entry(const svn_wc_entry_t **entry,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  svn_node_kind_t kind,
+                  svn_boolean_t need_parent_stub,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
