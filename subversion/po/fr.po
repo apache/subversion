@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-04-16 11:34+0200\n"
-"PO-Revision-Date: 2009-04-16 11:41+0200\n"
+"POT-Creation-Date: 2009-04-17 21:50+0200\n"
+"PO-Revision-Date: 2009-04-17 21:50+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1179,55 +1179,51 @@ msgstr "Tentative d'écriture vers base SQLite en lecture seule"
 msgid "Unsupported schema found in SQLite db"
 msgstr "Schema non supporté dans une base SQLite"
 
-#: ../include/svn_error_codes.h:1278
-msgid "External program is missing"
-msgstr "Programme externe manquant"
-
-#: ../include/svn_error_codes.h:1284
+#: ../include/svn_error_codes.h:1279
 msgid "Error parsing arguments"
 msgstr "Erreur lors de l'analyse des arguments"
 
-#: ../include/svn_error_codes.h:1288
+#: ../include/svn_error_codes.h:1283
 msgid "Not enough arguments provided"
 msgstr "Nombre d'arguments insuffisant"
 
-#: ../include/svn_error_codes.h:1292
+#: ../include/svn_error_codes.h:1287
 msgid "Mutually exclusive arguments specified"
 msgstr "Arguments mutuellement exclusifs fournis"
 
-#: ../include/svn_error_codes.h:1296
+#: ../include/svn_error_codes.h:1291
 msgid "Attempted command in administrative dir"
 msgstr "Commande essayée sur un répertoire d'administration"
 
-#: ../include/svn_error_codes.h:1300
+#: ../include/svn_error_codes.h:1295
 msgid "The log message file is under version control"
 msgstr "Le fichier pour l'entrée du journal est sous gestionnaire de version"
 
-#: ../include/svn_error_codes.h:1304
+#: ../include/svn_error_codes.h:1299
 msgid "The log message is a pathname"
 msgstr "L'entrée du journal est un chemin de fichier"
 
-#: ../include/svn_error_codes.h:1308
+#: ../include/svn_error_codes.h:1303
 msgid "Committing in directory scheduled for addition"
 msgstr "Propagation dans un répertoire qui doit être ajouté"
 
-#: ../include/svn_error_codes.h:1312
+#: ../include/svn_error_codes.h:1307
 msgid "No external editor available"
 msgstr "Pas d'éditeur externe disponible"
 
-#: ../include/svn_error_codes.h:1316
+#: ../include/svn_error_codes.h:1311
 msgid "Something is wrong with the log message's contents"
 msgstr "Quelque chose ne va pas dans l'entrée du journal"
 
-#: ../include/svn_error_codes.h:1320
+#: ../include/svn_error_codes.h:1315
 msgid "A log message was given where none was necessary"
 msgstr "Message de journal fourni alors qu'aucun n'était nécessaire"
 
-#: ../include/svn_error_codes.h:1324
+#: ../include/svn_error_codes.h:1319
 msgid "No external merge tool available"
 msgstr "Aucun éditeur externe de fusion disponible"
 
-#: ../include/svn_error_codes.h:1330
+#: ../include/svn_error_codes.h:1325
 msgid "Assertion failure"
 msgstr "Échec de la vérification"
 
@@ -1320,7 +1316,7 @@ msgid "New entry name required when importing a file"
 msgstr "Nouveau nom d'entrée requis lors de l'importation d'un fichier"
 
 #: ../libsvn_client/commit.c:576 ../libsvn_wc/adm_ops.c:1002
-#: ../libsvn_wc/questions.c:81 ../libsvn_wc/wc_db.c:651 ../svn/patch-cmd.c:63
+#: ../libsvn_wc/questions.c:81 ../libsvn_wc/wc_db.c:651 ../svn/patch-cmd.c:62
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' n'existe pas"
@@ -1554,9 +1550,9 @@ msgid "'%s' is in the way of the resource actually under version control"
 msgstr "'%s' obstrue le chemin de la ressource actuellement sous contrôle de version"
 
 #: ../libsvn_client/delete.c:57 ../libsvn_wc/adm_ops.c:3116
-#: ../libsvn_wc/entries.c:1628 ../libsvn_wc/entries.c:2748
-#: ../libsvn_wc/entries.c:3351 ../libsvn_wc/entries.c:3379
-#: ../libsvn_wc/update_editor.c:4137
+#: ../libsvn_wc/entries.c:1691 ../libsvn_wc/entries.c:1798
+#: ../libsvn_wc/entries.c:2920 ../libsvn_wc/entries.c:3523
+#: ../libsvn_wc/entries.c:3551 ../libsvn_wc/update_editor.c:4138
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' n'est pas versionné"
@@ -1628,8 +1624,8 @@ msgstr "Impossible d'afficher : fichier considéré comme binaire.%s"
 #. -----------------------------------------------------------------------
 #. ** Utilities. **
 #. Sanity check -- ensure that we have valid revisions to look at.
-#: ../libsvn_client/diff.c:996 ../libsvn_client/merge.c:5230
-#: ../libsvn_client/merge.c:6966 ../libsvn_client/patch.c:64
+#: ../libsvn_client/diff.c:996 ../libsvn_client/merge.c:5239
+#: ../libsvn_client/merge.c:6975 ../libsvn_client/patch.c:64
 msgid "Not all required revisions are specified"
 msgstr "Toutes les révisions requises ne sont pas précisées"
 
@@ -1679,7 +1675,7 @@ msgid "'%s' already exists"
 msgstr "'%s' existe déjà"
 
 #: ../libsvn_client/export.c:769 ../libsvn_wc/adm_crawler.c:1006
-#: ../libsvn_wc/update_editor.c:4516
+#: ../libsvn_wc/update_editor.c:4517
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Sommes de contrôle différentes pour '%s' ; '%s' attendu, '%s' obtenu"
@@ -1744,13 +1740,13 @@ msgstr "Traversée de '%s' sans profondeur dans le contexte"
 msgid "'%s' is not a URL"
 msgstr "'%s' n'est pas une URL"
 
-#: ../libsvn_client/info.c:502
+#: ../libsvn_client/info.c:498
 #, c-format
 msgid "Server does not support retrieving information about the repository root"
 msgstr "Le serveur ne supporte pas la récupération d'information sur la racine du dépôt"
 
-#: ../libsvn_client/info.c:509 ../libsvn_client/info.c:524
-#: ../libsvn_client/info.c:534
+#: ../libsvn_client/info.c:505 ../libsvn_client/info.c:520
+#: ../libsvn_client/info.c:530
 #, c-format
 msgid "URL '%s' non-existent in revision %ld"
 msgstr "L'URL '%s' n'existe pas à la révision %ld"
@@ -1764,9 +1760,9 @@ msgstr "L'URL '%s' n'existe pas à cette révision"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Aucun parent commun trouvé, impossible de travailler avec des arguments disjoints"
 
-#: ../libsvn_client/locking_commands.c:268 ../libsvn_client/merge.c:6983
-#: ../libsvn_client/merge.c:6989 ../libsvn_client/merge.c:7904
-#: ../libsvn_client/merge.c:8089 ../libsvn_client/ra.c:402
+#: ../libsvn_client/locking_commands.c:268 ../libsvn_client/merge.c:6992
+#: ../libsvn_client/merge.c:6998 ../libsvn_client/merge.c:7913
+#: ../libsvn_client/merge.c:8098 ../libsvn_client/ra.c:402
 #: ../libsvn_client/ra.c:434 ../libsvn_client/ra.c:637
 #, c-format
 msgid "'%s' has no URL"
@@ -1854,50 +1850,50 @@ msgstr ""
 "résoudre tous les conflits et ré-exécuter la fusion (merge) pour \n"
 "appliquer les révisions non-fusionnées restantes"
 
-#: ../libsvn_client/merge.c:6649
+#: ../libsvn_client/merge.c:6658
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "L'utilisation de deux URLs n'est pas compatible avec la modification des informations de fusion 'mergeinfo'"
 
-#: ../libsvn_client/merge.c:6656 ../libsvn_client/merge.c:6902
+#: ../libsvn_client/merge.c:6665 ../libsvn_client/merge.c:6911
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "La fusion à partir d'un autre dépôt n'est pas compatible avec la modification des informations de fusion 'mergeinfo'"
 
-#: ../libsvn_client/merge.c:7195
+#: ../libsvn_client/merge.c:7204
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "Impossible de réintégrer dans une copie de travail avec un sous-arbre ré-aiguillé"
 
-#: ../libsvn_client/merge.c:7200
+#: ../libsvn_client/merge.c:7209
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "Impossible de reintégrer dans une copie de travail de profondeur partielle"
 
-#: ../libsvn_client/merge.c:7205
+#: ../libsvn_client/merge.c:7214
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "Impossible de réintégrer dans une copie de travail avec des modifications locales"
 
-#: ../libsvn_client/merge.c:7211
+#: ../libsvn_client/merge.c:7220
 msgid "Cannot determine revision of working copy"
 msgstr "Impossible de déterminer la révision de la copie de travail"
 
-#: ../libsvn_client/merge.c:7215
+#: ../libsvn_client/merge.c:7224
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "Impossible de reintégrer dans un copie de travail avec des révisions multiples ; Faire une mise à jour (update) d'abord"
 
-#: ../libsvn_client/merge.c:7294
+#: ../libsvn_client/merge.c:7303
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "Au moins une révision (r%ld) non encore fusionnée à partir de '%s'"
 
-#: ../libsvn_client/merge.c:7769 ../libsvn_client/merge.c:7975
+#: ../libsvn_client/merge.c:7778 ../libsvn_client/merge.c:7984
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "'%s@%ld' doit un ancêtre de '%s@%ld'"
 
-#: ../libsvn_client/merge.c:7922
+#: ../libsvn_client/merge.c:7931
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s' doit être dans le même dépôt que '%s'"
 
-#: ../libsvn_client/merge.c:7999
+#: ../libsvn_client/merge.c:8008
 #, c-format
 msgid ""
 "Reintegrate can only be used if revisions %ld through %ld were previously merged from %s to the reintegrate source, but this is not the case:\n"
@@ -2019,7 +2015,7 @@ msgid "Cannot both exclude and switch a path"
 msgstr "Impossible d'exclure (exclude) et de réaiguiller (switch) en même temps un chemin"
 
 #: ../libsvn_client/switch.c:171 ../libsvn_ra_local/ra_plugin.c:193
-#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4711
+#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4712
 #, c-format
 msgid ""
 "'%s'\n"
@@ -5027,21 +5023,21 @@ msgstr "Impossible d'obtenir l'exclusivité (mutex) du DSO"
 msgid "Can't ungrab DSO mutex"
 msgstr "Impossible de rendre l'exclusivité (mutex) du DSO"
 
-#: ../libsvn_subr/error.c:360
+#: ../libsvn_subr/error.c:378
 msgid "Can't recode error string from APR"
 msgstr "Impossible de recoder le message d'erreur de APR"
 
-#: ../libsvn_subr/error.c:464
+#: ../libsvn_subr/error.c:480
 #, c-format
 msgid "%swarning: %s\n"
 msgstr "%savertissement : %s\n"
 
-#: ../libsvn_subr/error.c:515
+#: ../libsvn_subr/error.c:531
 #, c-format
 msgid "In file '%s' line %d: assertion failed (%s)"
 msgstr "Fichier '%s' ligne %d : échec de la vérification (%s)"
 
-#: ../libsvn_subr/error.c:519
+#: ../libsvn_subr/error.c:535
 #, c-format
 msgid "In file '%s' line %d: internal malfunction"
 msgstr "Fichier '%s' ligne %d : dysfonctionnement interne"
@@ -6103,52 +6099,58 @@ msgstr "L'entrée '%s' a un type de nœud invalide"
 msgid "No WC table entry"
 msgstr "Pas d'entrée pour la copie de travail"
 
-#: ../libsvn_wc/entries.c:2439 ../libsvn_wc/old-and-busted.c:1565
+#: ../libsvn_wc/entries.c:1702 ../libsvn_wc/entries.c:1711
+#: ../libsvn_wc/entries.c:1720
+#, c-format
+msgid "'%s' is not the right kind"
+msgstr "'%s' n'est pas du bon type"
+
+#: ../libsvn_wc/entries.c:2611 ../libsvn_wc/old-and-busted.c:1565
 #, c-format
 msgid "No default entry in directory '%s'"
 msgstr "Aucune entrée par défaut dans le répertoire '%s'"
 
-#: ../libsvn_wc/entries.c:2775
+#: ../libsvn_wc/entries.c:2947
 #, c-format
 msgid "Can't add '%s' to deleted directory; try undeleting its parent directory first"
 msgstr "'%s' ne peut être ajouté à un répertoire supprimé ; essayer d'abord de rétablir le répertoire parent"
 
-#: ../libsvn_wc/entries.c:2781
+#: ../libsvn_wc/entries.c:2953
 #, c-format
 msgid "Can't replace '%s' in deleted directory; try undeleting its parent directory first"
 msgstr "'%s' ne peut être remplacé dans un répertoire supprimé ; essayer d'abord de rétablir le répertoire parent"
 
-#: ../libsvn_wc/entries.c:2790
+#: ../libsvn_wc/entries.c:2962
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr "'%s' est noté comme absent, et ne peut donc être en attente pour ajout"
 
-#: ../libsvn_wc/entries.c:2819
+#: ../libsvn_wc/entries.c:2991
 #, c-format
 msgid "Entry '%s' is already under version control"
 msgstr "L'entrée '%s' est déjà sous contrôle de version"
 
-#: ../libsvn_wc/entries.c:2920
+#: ../libsvn_wc/entries.c:3092
 #, c-format
 msgid "Entry '%s' has illegal schedule"
 msgstr "L'entrée '%s' a une programmation invalide"
 
-#: ../libsvn_wc/entries.c:3057
+#: ../libsvn_wc/entries.c:3229
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "Pas d'entrée : '%s'"
 
-#: ../libsvn_wc/entries.c:3219
+#: ../libsvn_wc/entries.c:3391
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "Le répertoire '%s' n'a pas d'entrée THIS_DIR"
 
-#: ../libsvn_wc/entries.c:3398
+#: ../libsvn_wc/entries.c:3570
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' possède un type de nœud non reconnu"
 
-#: ../libsvn_wc/entries.c:3664
+#: ../libsvn_wc/entries.c:3836
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Découverte inattendue de '%s' : chemin marqué comme manquant"
@@ -6320,36 +6322,36 @@ msgstr "Erreur en modifiant l'entrée de '%s'"
 msgid "Invalid 'format' attribute"
 msgstr "Attribut 'format' invalide"
 
-#: ../libsvn_wc/log.c:1558
+#: ../libsvn_wc/log.c:1555
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr "Entrée du journal sans attribut nom (entrée '%s' pour le répertoire '%s')"
 
-#: ../libsvn_wc/log.c:1632
+#: ../libsvn_wc/log.c:1629
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "Élément de journal non reconnu '%s' dans '%s'"
 
-#: ../libsvn_wc/log.c:1643
+#: ../libsvn_wc/log.c:1640
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "Erreur en exécutant la commande '%s' dans '%s'"
 
-#: ../libsvn_wc/log.c:1837
+#: ../libsvn_wc/log.c:1834
 msgid "Couldn't open log"
 msgstr "Impossible d'ouvrir le journal"
 
-#: ../libsvn_wc/log.c:1870
+#: ../libsvn_wc/log.c:1867
 #, c-format
 msgid "Error recording tree conflicts in '%s'"
 msgstr "Erreur en enregistrant les conflits d'arborescence pour '%s'"
 
-#: ../libsvn_wc/log.c:2458
+#: ../libsvn_wc/log.c:2455
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Erreur à l'écriture dans le journal pour '%s'"
 
-#: ../libsvn_wc/log.c:2659
+#: ../libsvn_wc/log.c:2656
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s' n'est pas un répertoire d'une copie de travail"
@@ -6445,12 +6447,12 @@ msgstr "Erreur d'écriture sur '%s'"
 msgid "Error writing entries file for '%s'"
 msgstr "Erreur à l'écriture du fichier d'entrées pour '%s'"
 
-#: ../libsvn_wc/old-and-busted.c:1772 ../libsvn_wc/old-and-busted.c:1944
+#: ../libsvn_wc/old-and-busted.c:1771 ../libsvn_wc/old-and-busted.c:1943
 #, c-format
 msgid "Unable to return data because the working copy at '%s' needs to be upgraded."
 msgstr "Impossible de retourner des informations parce que la copie de travail à '%s' doit être remise à niveau."
 
-#: ../libsvn_wc/old-and-busted.c:1784
+#: ../libsvn_wc/old-and-busted.c:1783
 #, c-format
 msgid "Entry '%s' in '%s' is not under version control"
 msgstr "L'entrée '%s' dans '%s' n'est pas versionnée"
@@ -6676,131 +6678,131 @@ msgstr "Erreur de syntaxe dans le squelette de conflit d'arborescence"
 msgid "Attempt to add tree conflict that already exists"
 msgstr "Tentative d'ajout d'un conflit déjà existant sur un arbre"
 
-#: ../libsvn_wc/update_editor.c:712
+#: ../libsvn_wc/update_editor.c:713
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "Pas d'entrée '.' dans : '%s'"
 
-#: ../libsvn_wc/update_editor.c:1012
+#: ../libsvn_wc/update_editor.c:1013
 #, c-format
 msgid "Checksum mismatch while updating '%s'; expected: '%s', actual: '%s'"
 msgstr "Sommes de contrôle différentes pour '%s' ; '%s' attendu, '%s' obtenu"
 
-#: ../libsvn_wc/update_editor.c:1241
+#: ../libsvn_wc/update_editor.c:1242
 #, c-format
 msgid "Path '%s' is not in the working copy"
 msgstr "Le chemin '%s' n'est pas dans la copie de travail"
 
-#: ../libsvn_wc/update_editor.c:2277
+#: ../libsvn_wc/update_editor.c:2278
 #, c-format
 msgid "Failed to add directory '%s': a non-directory object of the same name already exists"
 msgstr "Échec de l'ajout du répertoire '%s' : un objet de ce nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:2320
+#: ../libsvn_wc/update_editor.c:2321
 #, c-format
 msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
 msgstr "Échec de l'ajout du répertoire '%s' : un répertoire non versionné de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:2367
+#: ../libsvn_wc/update_editor.c:2368
 #, c-format
 msgid "UUID mismatch: existing directory '%s' was checked out from a different repository"
 msgstr "UUID distincts : le répertoire '%s' concerne un autre dépôt"
 
-#: ../libsvn_wc/update_editor.c:2376
+#: ../libsvn_wc/update_editor.c:2377
 #, c-format
 msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
 msgstr "L'URL '%s' du répertoire '%s' différe de celle attendue '%s'"
 
-#: ../libsvn_wc/update_editor.c:2384
+#: ../libsvn_wc/update_editor.c:2385
 #, c-format
 msgid "Failed to add directory '%s': a versioned directory of the same name already exists"
 msgstr "Échec de l'ajout du répertoire '%s' : un répertoire versionné de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:2430
+#: ../libsvn_wc/update_editor.c:2431
 #, c-format
 msgid "Failed to add directory '%s': object of the same name as the administrative directory"
 msgstr "Échec à l'ajout du répertoire '%s' : objet du même nom que le répertoire d'administration"
 
-#: ../libsvn_wc/update_editor.c:2464
+#: ../libsvn_wc/update_editor.c:2465
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr "Échec à l'ajout du répertoire '%s' : copie en provenance (copyfrom) non encore supportée"
 
-#: ../libsvn_wc/update_editor.c:2904
+#: ../libsvn_wc/update_editor.c:2905
 msgid "Couldn't do property merge"
 msgstr "Fusion de propriété impossible"
 
-#: ../libsvn_wc/update_editor.c:2986
+#: ../libsvn_wc/update_editor.c:2987
 #, c-format
 msgid "Failed to mark '%s' absent: item of the same name is already scheduled for addition"
 msgstr "Échec du marquage de '%s' comme absent : un objet de même nom est déjà en attente pour ajout"
 
-#: ../libsvn_wc/update_editor.c:3076
+#: ../libsvn_wc/update_editor.c:3077
 msgid "Destination directory of add-with-history is missing a URL"
 msgstr "Répertoire destination de 'add-with-history' (ajout avec historique) sans URL"
 
-#: ../libsvn_wc/update_editor.c:3091
+#: ../libsvn_wc/update_editor.c:3092
 msgid "Destination URLs are broken"
 msgstr "Les URLs destination sont incorrectes"
 
-#: ../libsvn_wc/update_editor.c:3351
+#: ../libsvn_wc/update_editor.c:3352
 msgid "No fetch_func supplied to update_editor"
 msgstr "Pas de 'fetch_func' fourni à 'update_editor'"
 
-#: ../libsvn_wc/update_editor.c:3425
+#: ../libsvn_wc/update_editor.c:3426
 msgid "Bad copyfrom arguments received"
 msgstr "Mauvais arguments pour la source d'une copie"
 
-#: ../libsvn_wc/update_editor.c:3480
+#: ../libsvn_wc/update_editor.c:3481
 #, c-format
 msgid "Failed to add file '%s': a non-file object of the same name already exists"
 msgstr "Échec de l'ajout du fichier '%s' : un objet de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:3503
+#: ../libsvn_wc/update_editor.c:3504
 #, c-format
 msgid "Failed to add file '%s': an unversioned file of the same name already exists"
 msgstr "Échec à l'ajout du fichier '%s' : un fichier non versionné de même nom existe déjà"
 
-#: ../libsvn_wc/update_editor.c:3540
+#: ../libsvn_wc/update_editor.c:3541
 #, c-format
 msgid "UUID mismatch: existing file '%s' was checked out from a different repository"
 msgstr "UUID distinct : le fichier '%s' vient d'un autre dépôt"
 
-#: ../libsvn_wc/update_editor.c:3548
+#: ../libsvn_wc/update_editor.c:3549
 #, c-format
 msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
 msgstr "l'URL '%s' du fichier '%s' différe de celle attendue '%s'"
 
-#: ../libsvn_wc/update_editor.c:3644
+#: ../libsvn_wc/update_editor.c:3645
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Le fichier '%s' du répertoire '%s' n'est pas versionné"
 
-#: ../libsvn_wc/update_editor.c:3816
+#: ../libsvn_wc/update_editor.c:3817
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"
 msgstr "Sommes de contrôle différentes pour '%s' ; '%s' attendu, '%s' stocké"
 
-#: ../libsvn_wc/update_editor.c:5177
+#: ../libsvn_wc/update_editor.c:5199
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' n'a pas d'ancêtre"
 
-#: ../libsvn_wc/update_editor.c:5384
+#: ../libsvn_wc/update_editor.c:5410
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "L'URL source '%s' concerne un dépôt différent de '%s'"
 
-#: ../libsvn_wc/util.c:54
+#: ../libsvn_wc/util.c:52
 #, c-format
 msgid "'%s' is not a directory"
 msgstr "'%s' n'est pas un répertoire"
 
-#: ../libsvn_wc/util.c:86
+#: ../libsvn_wc/util.c:83
 msgid "Unable to make any directories"
 msgstr "Impossible de créer des répertoires"
 
-#: ../libsvn_wc/util.c:297
+#: ../libsvn_wc/util.c:289
 #, c-format
 msgid "Cannot find a URL for '%s'"
 msgstr "Impossible de trouver une URL pour '%s'"
@@ -7105,12 +7107,12 @@ msgstr ""
 msgid "Local, non-commit operations do not take a log message or revision properties"
 msgstr "Opération locale sans propagation (commit), pas de message ni de propriété de révision"
 
-#: ../svn/diff-cmd.c:167 ../svn/patch-cmd.c:97 ../svnserve/main.c:598
+#: ../svn/diff-cmd.c:167 ../svn/patch-cmd.c:96 ../svnserve/main.c:598
 #, c-format
 msgid "Can't open stdout"
 msgstr "La sortie standard (stdout) ne peut être ouverte"
 
-#: ../svn/diff-cmd.c:169 ../svn/patch-cmd.c:99
+#: ../svn/diff-cmd.c:169 ../svn/patch-cmd.c:98
 #, c-format
 msgid "Can't open stderr"
 msgstr "La sortie d'erreur (stderr) ne peut être ouverte"
@@ -9212,32 +9214,32 @@ msgstr "Le commentaire du verrou est un chemin de fichier (-F était voulu ?) 
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate et --depth sont mutuellement exclusives"
 
-#: ../svn/main.c:1933
+#: ../svn/main.c:1930
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props et --no-auto-props sont mutuellement exclusives"
 
-#: ../svn/main.c:1947
+#: ../svn/main.c:1944
 msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
 msgstr "--reintegrate ne peut être utilisé avec --ignore-ancestry ou --record-only"
 
-#: ../svn/main.c:1955
+#: ../svn/main.c:1952
 msgid "--reintegrate cannot be used with --ignore-ancestry"
 msgstr "--reintegrate ne peut être utilisé avec --ignore-ancestry"
 
-#: ../svn/main.c:1963
+#: ../svn/main.c:1960
 msgid "--reintegrate cannot be used with --record-only"
 msgstr "--reintegrate ne peut être utilise avec --record-only"
 
-#: ../svn/main.c:2077 ../svn/main.c:2083
+#: ../svn/main.c:2074 ../svn/main.c:2080
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s incompatible avec --non-interactive"
 
-#: ../svn/main.c:2110
+#: ../svn/main.c:2107
 msgid "Try 'svn help' for more info"
 msgstr "Essayer 'svn help' pour plus d'information."
 
-#: ../svn/main.c:2120
+#: ../svn/main.c:2117
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn : lancer 'svn cleanup' pour enlever les verrous (cf 'svn help cleanup')\n"
 
@@ -9562,16 +9564,6 @@ msgstr "Propriété '%s' définie à la révision du dépôt %ld\n"
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "Propriété '%s' supprimée de la révision %ld du dépôt\n"
-
-#: ../svn/patch-cmd.c:116
-msgid ""
-"No 'patch' program was found in your system.  Please try\n"
-"to use --patch-cmd or 'patch-cmd' run-time configuration\n"
-"option or manually use an external tool to apply Unidiffs."
-msgstr ""
-"Aucun programme 'patch' trouvé. Essayez d'utiliser l'option\n"
-"--patch-cmd, ou la directive de configuration 'patch-cmd',\n"
-"ou appliquer manuellement le correctif avec un outil externe."
 
 #: ../svn/propdel-cmd.c:111
 #, c-format
@@ -11699,3 +11691,15 @@ msgstr "exporté%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
+
+#~ msgid "External program is missing"
+#~ msgstr "Programme externe manquant"
+
+#~ msgid ""
+#~ "No 'patch' program was found in your system.  Please try\n"
+#~ "to use --patch-cmd or 'patch-cmd' run-time configuration\n"
+#~ "option or manually use an external tool to apply Unidiffs."
+#~ msgstr ""
+#~ "Aucun programme 'patch' trouvé. Essayez d'utiliser l'option\n"
+#~ "--patch-cmd, ou la directive de configuration 'patch-cmd',\n"
+#~ "ou appliquer manuellement le correctif avec un outil externe."
