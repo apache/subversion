@@ -290,6 +290,12 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   apr_pool_t *scratch_pool);
 
 
+/* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
+ * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
+svn_boolean_t
+svn_wc__entry_is_hidden(const svn_wc_entry_t *entry);
+
+
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
