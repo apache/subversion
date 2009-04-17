@@ -185,6 +185,9 @@ svn_error_wrap_apr(apr_status_t status,
 svn_error_t *
 svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
 {
+  if (child == SVN_NO_ERROR)
+    return SVN_NO_ERROR;
+
   return svn_error_create(child->apr_err,
                           child,
                           new_msg);
