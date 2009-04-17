@@ -4761,7 +4761,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *iterpool;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { get_mergeinfo_walk_cb, get_mergeinfo_error_handler };
   struct get_mergeinfo_walk_baton wb = { 0 };
@@ -4779,9 +4778,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   wb.ra_session = ra_session;
   wb.ctx = merge_cmd_baton->ctx;
 
-  /* Cover cases 1), 2), 6), and 7) by walking the WC to get all paths which
-     have mergeinfo and/or are switched or are absent from disk or is the
-     target of the merge. */
+  /* Cover cases 1), 2), and 6), 7), 8), 9), and 10) by walking the WC to get
+     all paths which have mergeinfo and/or are switched or are absent from
+     disk or is the target of the merge. */
   SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
                                &walk_callbacks, &wb,
                                /* If we are not honoring mergeinfo just
@@ -4807,111 +4806,121 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         children_with_mergeinfo->elt_size,
         compare_merge_path_t_as_paths);
 
-  iterpool = svn_pool_create(pool);
-  for (i = 0; i < children_with_mergeinfo->nelts; i++)
+  if (honor_mergeinfo)
     {
-      svn_client__merge_path_t *child =
-        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      svn_pool_clear(iterpool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
-      /* Case 3) Where merging to a path with a switched child the path gets
-         non-inheritable mergeinfo for the merge range performed and the child
-         gets its own set of mergeinfo.  If the switched child later
-         "returns", e.g. a switched path is unswitched, the child may not have
-         any explicit mergeinfo.  If the initial merge is repeated we don't
-         want to repeat the merge for the path, but we do want to repeat it
-         for the previously switched child.  To ensure this we check if all
-         of CHILD's non-missing children have explicit mergeinfo (they should
-         already be present in CHILDREN_WITH_MERGEINFO if they do).  If not,
-         add the children without mergeinfo to CHILDREN_WITH_MERGEINFO so
-         do_directory_merge() will merge them independently.
-
-         But that's not enough!  Since do_directory_merge() performs
-         the merges on the paths in CHILDREN_WITH_MERGEINFO in a depth first
-         manner it will merge the previously switched path's parent first.  As
-         part of this merge it will update the parent's previously
-         non-inheritable mergeinfo and make it inheritable (since it notices
-         the path has no missing children), then when
-         do_directory_merge() finally merges the previously missing
-         child it needs to get mergeinfo from the child's nearest ancestor,
-         but since do_directory_merge() already tweaked that
-         mergeinfo, removing the non-inheritable flag, it appears that the
-         child already has been merged to.  To prevent this we set override
-         mergeinfo on the child now, before any merging is done, so it has
-         explicit mergeinfo that reflects only CHILD's inheritable
-         mergeinfo. */
-
-      if (child->has_noninheritable)
+      for (i = 0; i < children_with_mergeinfo->nelts; i++)
         {
-          apr_hash_t *entries;
-          apr_hash_index_t *hi;
-          svn_wc_adm_access_t *child_access;
-          SVN_ERR(svn_wc_adm_probe_try3(&child_access, adm_access,
-                                        child->path, TRUE, -1,
-                                        merge_cmd_baton->ctx->cancel_func,
-                                        merge_cmd_baton->ctx->cancel_baton,
-                                        iterpool));
-          SVN_ERR(svn_wc_entries_read(&entries, child_access, FALSE,
-                                      iterpool));
-          for (hi = apr_hash_first(iterpool, entries); hi;
-               hi = apr_hash_next(hi))
+          svn_client__merge_path_t *child =
+            APR_ARRAY_IDX(children_with_mergeinfo, i,
+                          svn_client__merge_path_t *);
+          svn_pool_clear(iterpool);
+
+          /* Case 3) Where merging to a path with a switched child the path
+             gets non-inheritable mergeinfo for the merge range performed and
+             the child gets its own set of mergeinfo.  If the switched child
+             later "returns", e.g. a switched path is unswitched, the child
+             may not have any explicit mergeinfo.  If the initial merge is
+             repeated we don't want to repeat the merge for the path, but we
+             do want to repeat it for the previously switched child.  To
+             ensure this we check if all of CHILD's non-missing children have
+             explicit mergeinfo (they should already be present in
+             CHILDREN_WITH_MERGEINFO if they do).  If not,
+             add the children without mergeinfo to CHILDREN_WITH_MERGEINFO so
+             do_directory_merge() will merge them independently.
+
+             But that's not enough!  Since do_directory_merge() performs
+             the merges on the paths in CHILDREN_WITH_MERGEINFO in a depth
+             first manner it will merge the previously switched path's parent
+             first.  As part of this merge it will update the parent's
+             previously non-inheritable mergeinfo and make it inheritable
+             (since it notices the path has no missing children), then when
+             do_directory_merge() finally merges the previously missing
+             child it needs to get mergeinfo from the child's nearest
+             ancestor, but since do_directory_merge() already tweaked that
+             mergeinfo, removing the non-inheritable flag, it appears that the
+             child already has been merged to.  To prevent this we set
+             override mergeinfo on the child now, before any merging is done,
+             so it has explicit mergeinfo that reflects only CHILD's
+             inheritable mergeinfo. */
+
+          if (child->has_noninheritable)
             {
-              const void *key;
-              svn_client__merge_path_t *child_of_noninheritable;
-              const char *child_path;
-
-              apr_hash_this(hi, &key, NULL, NULL);
-
-              if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-                continue;
-
-              /* Does this child already exist in CHILDREN_WITH_MERGEINFO?  If
-                 not, create it and insert it into CHILDREN_WITH_MERGEINFO and
-                 set override mergeinfo on it. */
-              child_path = svn_path_join(child->path, key, iterpool);
-              child_of_noninheritable =
-                get_child_with_mergeinfo(children_with_mergeinfo, child_path);
-              if (!child_of_noninheritable)
+              apr_hash_t *entries;
+              apr_hash_index_t *hi;
+              svn_wc_adm_access_t *child_access;
+              SVN_ERR(svn_wc_adm_probe_try3(
+                &child_access, adm_access,
+                child->path, TRUE, -1,
+                merge_cmd_baton->ctx->cancel_func,
+                merge_cmd_baton->ctx->cancel_baton,
+                iterpool));
+              SVN_ERR(svn_wc_entries_read(&entries, child_access, FALSE,
+                                          iterpool));
+              for (hi = apr_hash_first(iterpool, entries); hi;
+                   hi = apr_hash_next(hi))
                 {
+                  const void *key;
+                  svn_client__merge_path_t *child_of_noninheritable;
+                  const char *child_path;
+
+                  apr_hash_this(hi, &key, NULL, NULL);
+
+                  if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+                    continue;
+
+                  /* Does this child already exist in CHILDREN_WITH_MERGEINFO?
+                     If not, create it and insert it into
+                     CHILDREN_WITH_MERGEINFO and set override mergeinfo on
+                     it. */
+                  child_path = svn_path_join(child->path, key, iterpool);
                   child_of_noninheritable =
-                    apr_pcalloc(children_with_mergeinfo->pool,
-                                sizeof(*child_of_noninheritable));
-                  child_of_noninheritable->path =
-                    apr_pstrdup(children_with_mergeinfo->pool, child_path);
-                  insert_child_to_merge(children_with_mergeinfo,
-                                        child_of_noninheritable);
-                  if (!merge_cmd_baton->dry_run
-                      && merge_cmd_baton->same_repos)
+                    get_child_with_mergeinfo(children_with_mergeinfo,
+                                             child_path);
+                  if (!child_of_noninheritable)
                     {
-                      svn_boolean_t inherited;
-                      svn_mergeinfo_t mergeinfo;
-                      const svn_wc_entry_t *child_entry;
+                      child_of_noninheritable =
+                        apr_pcalloc(children_with_mergeinfo->pool,
+                                    sizeof(*child_of_noninheritable));
+                      child_of_noninheritable->path =
+                        apr_pstrdup(children_with_mergeinfo->pool,
+                                    child_path);
+                      insert_child_to_merge(children_with_mergeinfo,
+                                            child_of_noninheritable);
+                      if (!merge_cmd_baton->dry_run
+                          && merge_cmd_baton->same_repos)
+                        {
+                          svn_boolean_t inherited;
+                          svn_mergeinfo_t mergeinfo;
+                          const svn_wc_entry_t *child_entry;
 
-                      SVN_ERR(svn_wc__entry_versioned(
-                        &child_entry, child_of_noninheritable->path,
-                        adm_access, FALSE, iterpool));
+                          SVN_ERR(svn_wc__entry_versioned(
+                            &child_entry, child_of_noninheritable->path,
+                            adm_access, FALSE, iterpool));
 
-                      SVN_ERR(svn_client__get_wc_mergeinfo
-                              (&mergeinfo, &inherited, FALSE,
-                               svn_mergeinfo_nearest_ancestor,
-                               child_entry, child_of_noninheritable->path,
-                               merge_cmd_baton->target, NULL, adm_access,
-                               merge_cmd_baton->ctx, iterpool));
+                          SVN_ERR(svn_client__get_wc_mergeinfo
+                                  (&mergeinfo, &inherited, FALSE,
+                                   svn_mergeinfo_nearest_ancestor,
+                                   child_entry, child_of_noninheritable->path,
+                                   merge_cmd_baton->target, NULL, adm_access,
+                                   merge_cmd_baton->ctx, iterpool));
 
-                      SVN_ERR(svn_client__record_wc_mergeinfo(
-                        child_of_noninheritable->path, mergeinfo, adm_access,
-                        iterpool));
+                          SVN_ERR(svn_client__record_wc_mergeinfo(
+                            child_of_noninheritable->path, mergeinfo,
+                            adm_access, iterpool));
+                        }
                     }
                 }
             }
-        }
-      /* Case 4 and 5 are handled by the following function. */
-      SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
-        children_with_mergeinfo, merge_cmd_baton, &i, child,
-        adm_access, iterpool));
-    } /* i < children_with_mergeinfo->nelts */
+          /* Case 4 and 5 are handled by the following function. */
+          SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
+            children_with_mergeinfo, merge_cmd_baton, &i, child,
+            adm_access, iterpool));
+        } /* i < children_with_mergeinfo->nelts */
+      svn_pool_destroy(iterpool);
+    } /* honor_mergeinfo */
 
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
