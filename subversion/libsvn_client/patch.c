@@ -1800,7 +1800,7 @@ svn_client_patch(const char *patch_path,
 
 /* --- Text-diff application routines --- */
 
-typedef struct patch_target_t {
+typedef struct {
   /* The target path, relative to the working copy directory the
    * patch is being applied to. */
   const char *path;
