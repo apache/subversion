@@ -308,6 +308,16 @@ svn_error_clear(svn_error_t *err)
     }
 }
 
+/* Is MESSAGE the message used for the "fake" errors used in tracing? */
+static svn_boolean_t is_trace_message(const char *message)
+{
+#ifdef SVN_ERR__TRACING
+  return (message != NULL && !strcmp(message, SVN_ERR__TRACED));
+#else
+  return FALSE;
+#endif
+}
+
 static void
 print_error(svn_error_t *err, FILE *stream, const char *prefix)
 {
@@ -339,8 +349,13 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
                                       ": (apr_err=%d)\n", err->apr_err));
 #endif /* SVN_DEBUG */
 
+  /* "traced call" */
+  if (is_trace_message(err->message))
+    {
+      /* Skip it.  We already printed the file-line coordinates. */
+    }
   /* Only print the same APR error string once. */
-  if (err->message)
+  else if (err->message)
     {
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool, "%s%s\n",
                                           prefix, err->message));
@@ -453,11 +468,9 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 {
   char buf[256];
 
-#ifdef SVN_ERR__TRACING
   /* Skip over any trace records.  */
-  while (err->message != NULL && strcmp(err->message, SVN_ERR__TRACED) == 0)
+  while (is_trace_message(err->message))
     err = err->child;
-#endif
 
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
