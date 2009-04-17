@@ -40,10 +40,8 @@ svn_wc__ensure_directory(const char *path,
                          apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_error_t *err = svn_io_check_path(path, &kind, pool);
 
-  if (err)
-    return err;
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
 
   if (kind != svn_node_none && kind != svn_node_dir)
     {
@@ -57,8 +55,7 @@ svn_wc__ensure_directory(const char *path,
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
-
-      err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
+      svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
 
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -87,17 +84,12 @@ svn_wc__ensure_directory(const char *path,
             }
           else  /* We have a valid path, so recursively ensure it. */
             {
-              err = svn_wc__ensure_directory(shorter, pool);
-
-              if (err)
-                return (err);
-              else
-                return svn_wc__ensure_directory(path, pool);
+              SVN_ERR(svn_wc__ensure_directory(shorter, pool));
+              return svn_wc__ensure_directory(path, pool);
             }
         }
 
-      if (err)
-        return err;
+      SVN_ERR(err);
     }
   else  /* No problem, the dir already existed, so just leave. */
     SVN_ERR_ASSERT(kind == svn_node_dir);
