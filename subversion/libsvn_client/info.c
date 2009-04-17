@@ -406,15 +406,17 @@ same_resource_in_head(svn_boolean_t *same_p,
       svn_error_clear(err);
       *same_p = FALSE;
     }
-  else 
-    SVN_ERR(err);
-
-  /* ### Currently, the URLs should always be equal, since we can't
-     ### walk forwards in history. */
-  if (strcmp(url, head_url) == 0)
-    *same_p = TRUE;
+  else if (err)
+    return err;
   else
-    *same_p = FALSE;
+    {
+      /* ### Currently, the URLs should always be equal, since we can't
+         ### walk forwards in history. */
+      if (strcmp(url, head_url) == 0)
+        *same_p = TRUE;
+      else
+        *same_p = FALSE;
+    }
 
   return SVN_NO_ERROR;
 }
