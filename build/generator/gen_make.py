@@ -27,6 +27,8 @@ class Generator(gen_base.GeneratorBase):
     ('exe', 'object'): '.lo',
     ('lib', 'target'): '.la',
     ('lib', 'object'): '.lo',
+    ('pyd', 'target'): '.la',
+    ('pyd', 'object'): '.lo',
     }
 
   def __init__(self, fname, verfname, options=None):

@@ -34,6 +34,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
+    ('pyd', 'target'): '.pyd',
+    ('pyd', 'object'): '.obj',
     }
 
   def parse_options(self, options):
