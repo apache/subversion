@@ -3510,7 +3510,15 @@ svn_wc__db_temp_reset_format(int format,
          ### copy to see what format it is in. however, we typically *write*
          ### whatever we *read*. so to break the cycle and write a different
          ### version (during upgrade), then we have to force a new format.  */
-      pdh->wcroot->format = format;
+
+      /* ### since this is a temporary API, I feel I can indulge in a hack
+         ### here.  If we are upgrading *to* wc-ng, we need to blow away the
+         ### pdh->wcroot member.  If we are upgrading to format 11 (pre-wc-ng),
+         ### we just need to store the format number.  */
+      if (format == SVN_WC__VERSION_EXPERIMENTAL)
+        pdh->wcroot = NULL;
+      else
+        pdh->wcroot->format = format;
     }
 
   return SVN_NO_ERROR;
