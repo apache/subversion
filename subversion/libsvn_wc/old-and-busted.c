@@ -1699,8 +1699,8 @@ get_entries(apr_hash_t **entries,
   svn_wc_adm_access_t *adm_access;
 
   /* Is there an existing access baton for this path?  */
-  SVN_ERR(svn_wc__adm_retrieve_internal2(&adm_access, db, wcroot_abspath,
-                                         scratch_pool));
+  adm_access = svn_wc__adm_retrieve_internal2(db, wcroot_abspath,
+                                              scratch_pool);
   if (adm_access == NULL)
     {
       /* No access baton. Read the entries into SCRATCH_POOL, and we'll
@@ -1710,13 +1710,12 @@ get_entries(apr_hash_t **entries,
     }
   else
     {
-      /* If we need to create entries, they'll go into ACCESS_POOL.  */
-      apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
-
       /* Already cached?  */
-      *entries = svn_wc__adm_access_entries(adm_access, access_pool);
+      *entries = svn_wc__adm_access_entries(adm_access);
       if (*entries == NULL)
         {
+          apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
+
           /* Read and cache the entries.  */
           SVN_ERR(svn_wc__read_entries_old(entries, wcroot_abspath,
                                            access_pool, scratch_pool));

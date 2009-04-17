@@ -973,19 +973,18 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 }
 
 
-svn_error_t *
-svn_wc__adm_retrieve_internal2(svn_wc_adm_access_t **adm_access,
-                               svn_wc__db_t *db,
+svn_wc_adm_access_t *
+svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
                                const char *abspath,
                                apr_pool_t *scratch_pool)
 {
-  *adm_access = get_from_shared(abspath, db, scratch_pool);
+  svn_wc_adm_access_t *adm_access = get_from_shared(abspath, db, scratch_pool);
 
   /* If the entry is marked as "missing", then return nothing.  */
-  if (IS_MISSING(*adm_access))
-    *adm_access = NULL;
+  if (IS_MISSING(adm_access))
+    adm_access = NULL;
 
-  return SVN_NO_ERROR;
+  return adm_access;
 }
 
 
@@ -1004,8 +1003,9 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
       const char *abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-      SVN_ERR(svn_wc__adm_retrieve_internal2(adm_access, associated->db,
-                                             abspath, pool));
+
+      *adm_access = svn_wc__adm_retrieve_internal2(associated->db, abspath,
+                                                   pool);
 
       /* Relative paths can play stupid games with the lookup, and we might
          try to return the wrong baton. Look for that case, and zap it.
@@ -1647,8 +1647,7 @@ svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
 
 
 apr_hash_t *
-svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
-                           apr_pool_t *pool)
+svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access)
 {
   return adm_access->entries_all;
 }
