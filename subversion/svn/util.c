@@ -1097,18 +1097,18 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool)
 {
-  svn_error_t *error = svn_client_args_to_target_array(targets, os,
-                                                       known_targets,
-                                                       ctx, pool);
-  if (error)
+  svn_error_t *err = svn_client_args_to_target_array(targets, os,
+                                                     known_targets,
+                                                     ctx, pool);
+  if (err)
     {
-      if (error->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+      if (err->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
         {
-          svn_handle_error2(error, stderr, FALSE, "svn: Skipping argument: ");
-          svn_error_clear(error);
+          svn_handle_error2(err, stderr, FALSE, "svn: Skipping argument: ");
+          svn_error_clear(err);
         }
       else
-        return error;
+        return err;
     }
   return SVN_NO_ERROR;
 }
