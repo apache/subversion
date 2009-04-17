@@ -54,6 +54,7 @@
 #include "tree_conflicts.h"
 
 #include "private/svn_wc_private.h"
+#include "private/svn_debug.h"
 
 
 
@@ -5122,24 +5123,54 @@ check_wc_root(svn_boolean_t *wc_root,
               svn_wc_adm_access_t *adm_access,
               apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *abspath;
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
-  svn_wc_adm_access_t *p_access;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
   *wc_root = TRUE;
 
-  /* Get our ancestry.  In the event that the path is unversioned,
-     treat it as if it were a file so that the anchor will be the
-     parent directory. */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+
+  /* Get our ancestry.  In the event that the path is unversioned (or
+     otherwise hidden), treat it as if it were a file so that the anchor
+     will be the parent directory. If the node is a FILE, then it is
+     definitely not a root.  */
+  err = svn_wc__get_entry(&entry, db, abspath, svn_node_unknown, FALSE,
+                          pool, pool);
+  if (err || entry->kind == svn_node_file || svn_wc__entry_is_hidden(entry))
+    {
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
+              && entry->kind == svn_node_dir && *entry->name != '\0')
+            {
+              /* The (subdir) node is (most likely) not present. We said
+                 we wanted the actual information, but got the stub info
+                 instead. We can pretend this is a file so the parent will
+                 be the anchor.  */
+            }
+          else if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return err;
+          svn_error_clear(err);
+        }
+
+      if (kind)
+        *kind = svn_node_file;
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
   if (kind)
-    *kind = entry ? entry->kind : svn_node_file;
+    *kind = svn_node_dir;
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
+  /* ### not entirely true! we have an abspath.  */
   if (svn_path_is_empty(path))
     return SVN_NO_ERROR;
 
@@ -5148,26 +5179,17 @@ check_wc_root(svn_boolean_t *wc_root,
   if (svn_dirent_is_root(path, strlen(path)))
     return SVN_NO_ERROR;
 
+  svn_dirent_split(abspath, &parent, &base_name, pool);
+
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  p_entry = NULL;
-  svn_dirent_split(path, &parent, &base_name, pool);
-  SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, adm_access, parent,
-                                        pool));
-  err = SVN_NO_ERROR;
-  if (! p_access)
-    /* For historical reasons we cannot rely on the caller having opened
-       the parent, so try it here.  I'd like this bit to go away.  */
-    err = svn_wc_adm_probe_open3(&p_access, NULL, parent, FALSE, 0,
-                                 NULL, NULL, pool);
-
-  if (! err)
-    err = svn_wc_entry(&p_entry, parent, p_access, FALSE, pool);
-
-  if (err || (! p_entry))
+  err = svn_wc__get_entry(&p_entry, db, parent, svn_node_dir, FALSE,
+                          pool, pool);
+  if (err)
     {
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
+  SVN_ERR_ASSERT(!svn_wc__entry_is_hidden(p_entry));
 
   /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
@@ -5186,9 +5208,13 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If PATH's parent in the repository is not its parent in the WC,
      PATH is a WC root. */
-  SVN_ERR(svn_wc_entry(&p_entry, path, p_access, FALSE, pool));
-  if (! p_entry)
+  err = svn_wc__get_entry(&p_entry, db, abspath, svn_node_dir, TRUE,
+                          pool, pool);
+  if (err || svn_wc__entry_is_hidden(p_entry))
+    {
+      svn_error_clear(err);
       return SVN_NO_ERROR;
+    }
 
   /* If we have not determined that PATH is a WC root by now, it must
      not be! */
