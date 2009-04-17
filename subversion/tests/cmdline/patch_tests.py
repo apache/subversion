@@ -25,6 +25,7 @@ import sys
 import tempfile
 import textwrap
 import zlib
+import posixpath
 
 # Our testing module
 import svntest
@@ -377,6 +378,8 @@ def patch_unidiff_absolute_paths(sbox):
   # The second diff does not point inside the working copy so application
   # should fail.
   abs = os.path.abspath('.')
+  if sys.platform == 'win32':
+    abs = abs.replace("\\", "/")
   unidiff_patch = [
     "diff -ur A/B/E/alpha.orig A/B/E/alpha\n"
     "--- %s/A/B/E/alpha.orig\tThu Apr 16 19:49:53 2009\n" % abs,
