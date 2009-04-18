@@ -42,6 +42,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
+#include "private/svn_debug.h"
 
 #include "wc-metadata.h"
 #include "wc-checks.h"
@@ -1568,6 +1569,7 @@ svn_error_t *
 svn_wc__get_entry(const svn_wc_entry_t **entry,
                   svn_wc__db_t *db,
                   const char *local_abspath,
+                  svn_boolean_t allow_unversioned,
                   svn_node_kind_t kind,
                   svn_boolean_t need_parent_stub,
                   apr_pool_t *result_pool,
@@ -1687,10 +1689,14 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
 
   *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
   if (*entry == NULL)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(local_abspath,
-                                                  scratch_pool));
+    {
+      if (allow_unversioned)
+        return SVN_NO_ERROR;
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("'%s' is not under version control"),
+                               svn_path_local_style(local_abspath,
+                                                    scratch_pool));
+    }
 
   /* Give the caller a valid entry.  */
   *entry = svn_wc_entry_dup(*entry, result_pool);

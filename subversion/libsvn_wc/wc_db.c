@@ -3461,8 +3461,11 @@ svn_wc__db_temp_get_format(int *format,
                                 svn_sqlite__mode_readonly,
                                 scratch_pool, scratch_pool);
 
-      /* If we hit an error examining this directory, or if the information
-         returned is not for THIS directory, then bail out.  */
+      /* If we hit an error examining this directory, then declare this
+         directory to not be a working copy.  */
+      /* ### for per-dir layouts, the wcroot should be this directory,
+         ### so bail if the PDH is a parent (and, thus, local_relpath is
+         ### something besides "").  */
       if (err || *local_relpath != '\0')
         {
           if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
@@ -3479,7 +3482,17 @@ svn_wc__db_temp_get_format(int *format,
 
       SVN_ERR_ASSERT(pdh->wcroot != NULL);
     }
-  SVN_ERR_ASSERT(strcmp(local_dir_abspath, pdh->wcroot->abspath) == 0);
+
+  /* ### for per-dir layouts, the wcroot should be this directory.  */
+  if (strcmp(local_dir_abspath, pdh->wcroot->abspath) != 0)
+    {
+      *format = 0;
+      return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                               _("'%s' is not a working copy"),
+                               svn_dirent_local_style(local_dir_abspath,
+                                                      scratch_pool));
+    }
+
   SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
 
   *format = pdh->wcroot->format;

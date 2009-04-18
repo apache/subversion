@@ -1703,9 +1703,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
       /* Use the revertpath as the new propsbase if it exists. */
 
-      baseprops = apr_hash_make(pool);
-      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops,
-                                 adm_access, fullpath, pool));
+      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, entry, fullpath,
+                                 pool, pool));
 
       /* Ensure the revert propfile gets removed. */
       SVN_ERR(svn_wc__loggy_props_delete(&log_accum,

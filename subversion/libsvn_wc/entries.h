@@ -249,7 +249,11 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
 /** Get an ENTRY for the given LOCAL_ABSPATH.
  *
  * This API does not require an access baton, just a wc_db handle (DB).
- * The requested entry MUST be present and version-controlled.
+ * The requested entry MUST be present and version-controlled when
+ * ALLOW_UNVERSIONED is FALSE; otherwise, SVN_ERR_WC_PATH_NOT_FOUND is
+ * returned. When ALLOW_UNVERSIONED is TRUE, and the node is not under
+ * version control, *ENTRY will be set to NULL (this is easier for callers
+ * to handle, than detecting the error and clearing it).
  *
  * If you know the entry is a FILE or DIR, then specify that in KIND. If you
  * are unsure, then specific 'svn_node_unknown' for KIND. This value will be
@@ -284,6 +288,7 @@ svn_error_t *
 svn_wc__get_entry(const svn_wc_entry_t **entry,
                   svn_wc__db_t *db,
                   const char *local_abspath,
+                  svn_boolean_t allow_unversioned,
                   svn_node_kind_t kind,
                   svn_boolean_t need_parent_stub,
                   apr_pool_t *result_pool,
