@@ -621,7 +621,7 @@ proppatch_walker(void *baton,
                                     "V:encoding", binary_prop ? "base64" : NULL,
                                     NULL);
 
-  if (binary_prop == TRUE)
+  if (binary_prop)
     {
       serf_bucket_t *tmp_bkt;
       val = svn_base64_encode_string2(val, TRUE, pool);

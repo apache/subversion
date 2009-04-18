@@ -1298,7 +1298,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
       if (invalid_revnum_param != SVN_RA_SVN_UNSPECIFIED_NUMBER
-            && invalid_revnum_param == TRUE)
+            && invalid_revnum_param)
         rev = SVN_INVALID_REVNUM;
 
       if (cplist->nelts > 0)

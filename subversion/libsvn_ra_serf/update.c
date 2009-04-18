@@ -656,7 +656,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
-  else if (fetch_ctx->conn->using_compression == TRUE)
+  else if (fetch_ctx->conn->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -683,7 +683,7 @@ cancel_fetch(serf_request_t *request,
        * to hold subsequent read() ops until we get back to where we were
        * before the close and we can then resume the textdelta() calls.
        */
-      if (fetch_ctx->read_headers == TRUE)
+      if (fetch_ctx->read_headers)
         {
           if (fetch_ctx->aborted_read == FALSE && fetch_ctx->read_size)
             {
@@ -836,7 +836,7 @@ handle_fetch(serf_request_t *request,
 
       fetch_ctx->read_size += len;
 
-      if (fetch_ctx->aborted_read == TRUE)
+      if (fetch_ctx->aborted_read)
         {
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
@@ -990,7 +990,7 @@ handle_stream(serf_request_t *request,
 
       fetch_ctx->read_size += len;
 
-      if (fetch_ctx->aborted_read == TRUE)
+      if (fetch_ctx->aborted_read)
         {
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
@@ -1149,7 +1149,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   /* If we've been asked to fetch the file or its an add, do so.
    * Otherwise, handle the case where only the properties changed.
    */
-  if (info->fetch_file && ctx->text_deltas == TRUE)
+  if (info->fetch_file && ctx->text_deltas)
     {
       report_fetch_t *fetch_ctx;
 
