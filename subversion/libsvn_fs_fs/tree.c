@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -249,7 +249,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
 
 
   SVN_ERR(svn_cache__iter(NULL, cache, find_descendents_in_cache,
-                         &b, b.pool));
+                          &b, b.pool));
 
   iterpool = svn_pool_create(b.pool);
 
@@ -388,10 +388,10 @@ typedef struct parent_path_t
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
 
-  /* The copy ID inheritence style. */
+  /* The copy ID inheritance style. */
   copy_id_inherit_t copy_inherit;
 
-  /* If copy ID inheritence style is copy_id_inherit_new, this is the
+  /* If copy ID inheritance style is copy_id_inherit_new, this is the
      path which should be implicitly copied; otherwise, this is NULL. */
   const char *copy_src_path;
 
