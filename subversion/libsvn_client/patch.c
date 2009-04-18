@@ -1919,7 +1919,7 @@ resolve_target_path(patch_target_t *target, const char *target_path,
           {
             /* We can't apply the patch, skip this target. */
             report_skipped_target(ctx, target_path,
-                                  svn_wc_notify_state_inapplicable,
+                                  svn_wc_notify_state_missing,
                                   scratch_pool);
             *resolved = FALSE;
             return SVN_NO_ERROR;
