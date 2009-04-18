@@ -2107,7 +2107,7 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
     }
   svn_pool_destroy(iterpool);
 
-  svn_stream_close(s);
+  SVN_ERR(svn_stream_close(s));
 
   return SVN_NO_ERROR;
 }
@@ -2146,7 +2146,7 @@ read_lines_from_target(svn_string_t **lines, svn_filesize_t nlines,
     }
   svn_pool_destroy(iterpool);
 
-  svn_stream_close(s);
+  SVN_ERR(svn_stream_close(s));
 
   target->current_line += i;
   *lines = svn_string_create_from_buf(buf, result_pool);
