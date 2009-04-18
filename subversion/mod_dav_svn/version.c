@@ -1069,7 +1069,7 @@ can_be_activity(const dav_resource *resource)
    * be an activity URL.  Otherwise, it must be a real activity URL that
    * doesn't already exist.
    */
-  return (resource->info->auto_checked_out == TRUE ||
+  return (resource->info->auto_checked_out ||
           (resource->type == DAV_RESOURCE_TYPE_ACTIVITY &&
            !resource->exists));
 }

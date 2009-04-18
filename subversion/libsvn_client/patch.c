@@ -1675,7 +1675,7 @@ extract_svnpatch(const char *original_patch_path,
             }
         }
 
-      if (svnpatch_header_found == TRUE)
+      if (svnpatch_header_found)
         {
           break;
         }

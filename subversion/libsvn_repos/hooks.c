@@ -351,7 +351,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
       svn_error_clear(err);
       if (!(err = svn_io_check_special_path(hook_path, &kind, &is_special,
                                             pool))
-          && is_special == TRUE)
+          && is_special)
         {
           *broken_link = TRUE;
           return hook_path;

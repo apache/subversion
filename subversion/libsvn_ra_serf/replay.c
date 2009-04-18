@@ -499,7 +499,7 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
       prop_info_t *info = parser->state->private;
       const svn_string_t *prop_val;
 
-      if (info->del_prop == TRUE)
+      if (info->del_prop)
         {
           prop_val = NULL;
         }

@@ -423,7 +423,7 @@ setup_propfind_headers(serf_bucket_t *headers,
 {
   svn_ra_serf__propfind_context_t *ctx = setup_baton;
 
-  if (ctx->conn->using_compression == TRUE)
+  if (ctx->conn->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -578,7 +578,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__xml_parser_t *parser_ctx;
 
-      if (cache_props == TRUE)
+      if (cache_props)
         {
           svn_boolean_t cache_satisfy;
 
