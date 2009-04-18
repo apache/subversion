@@ -980,11 +980,10 @@ static svn_error_t *
 transmit_svndiff(const char *path,
                  svn_wc_adm_access_t *adm_access,
                  const svn_delta_editor_t *editor,
-                 void *file_baton,
+                 struct file_baton *file_baton,
                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  struct edit_baton *eb = file_baton->edit_baton;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_stream_t *txdelta_stream;
   svn_stream_t *base_stream;
@@ -993,12 +992,12 @@ transmit_svndiff(const char *path,
 
   /* Initialize window_handler/baton to produce svndiff from txdelta
    * windows. */
-  SVN_ERR(eb->diff_editor->apply_textdelta
-          (fb, NULL, pool, &handler, &wh_baton));
+  SVN_ERR(eb->diff_editor->apply_textdelta(file_baton, NULL, pool,
+                                           &handler, &wh_baton));
 
   base_stream = svn_stream_empty(pool);
 
-  SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
+  SVN_ERR(svn_wc_translated_stream(&local_stream, path, file_baton->path,
                                    adm_access, SVN_WC_TRANSLATE_TO_NF,
                                    pool));
 
