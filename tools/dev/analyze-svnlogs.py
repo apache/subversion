@@ -92,11 +92,26 @@ def write_logdata(authors):
   out.write('}\n')
 
 
-def print_report(authors):
+def get_key(sectionroots, path):
+  key = None
+  for section in sectionroots:
+    if path.startswith(section):
+      # add one path element below top section to the key.
+      elmts = len(section.split('/')) + 1
+      # strip first element (always empty because path starts with '/')
+      key = tuple(path.split('/', elmts)[1:elmts])
+      break
+  if key == None:
+    # strip first element (always empty because path starts with '/')
+    key = tuple(path.split('/', 3)[1:3])
+  return key
+
+
+def print_report(authors, sectionroots=[ ]):
   for author, paths in sorted(authors.items()):
     topdirs = { }
     for path in paths:
-      key = tuple(path.split('/', 3)[1:3])
+      key = get_key(sectionroots, path)
       if key in topdirs:
         topdirs[key] += 1
       else:
@@ -111,9 +126,11 @@ def print_report(authors):
         print '  %s  (ROOT)' % topdir[0]
       else:
         if topdir[0] == 'tags':
-          tags.append(topdir[1])
+          if not topdir[1] in tags:
+            tags.append(topdir[1])
         elif topdir[0] == 'branches':
-          branches.append(topdir[1])
+          if not topdir[1] in branches:
+            branches.append(topdir[1])
         else:
           print '  %s (%d items)' % ('/'.join(topdir), topdirs[topdir])
     if tags:
@@ -132,7 +149,16 @@ def run(logfile):
     authors = parse_file(logfile)
     write_logdata(authors)
 
-  print_report(authors)
+  sectionroots = [
+      '/trunk/subversion/include/private',
+      '/trunk/subversion/include',
+      '/trunk/subversion/tests',
+      '/trunk/subversion',
+      '/trunk/tools',
+      '/trunk/contrib',
+      '/trunk/doc',
+      ];
+  print_report(authors, sectionroots)
 
 
 class ParseError(Exception):
