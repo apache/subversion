@@ -1228,14 +1228,8 @@ check_path_under_root(const char *base_path,
                       apr_pool_t *pool)
 {
   char *full_path;
-  apr_status_t path_status;
 
-  path_status = apr_filepath_merge(
-     &full_path, base_path, add_path,
-     APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
-     pool);
-
-  if (path_status != APR_SUCCESS)
+  if (! svn_dirent_is_under_root(&full_path, base_path, add_path, pool))
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -1244,7 +1238,8 @@ check_path_under_root(const char *base_path,
             undefined, since apr_filepath_merge() returned error.
             (Pity we can't pass NULL for &full_path in the first place,
             but the APR docs don't bless that.) */
-         svn_path_local_style(svn_dirent_join(base_path, add_path, pool), pool));
+         svn_dirent_local_style(svn_dirent_join(base_path, add_path, pool),
+                                pool));
     }
 
   return SVN_NO_ERROR;

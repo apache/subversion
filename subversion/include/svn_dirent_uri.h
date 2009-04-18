@@ -511,6 +511,20 @@ svn_dirent_condense_targets(const char **pcommon,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+/* Check that when @a path is joined to @a base_path, the resulting path
+ * is still under BASE_PATH in the local filesystem. If not, return @c FALSE.
+ * If @c TRUE is returned, @a *full_path will be set to the absolute path
+ * of @a path, allocated in @a pool.
+ *
+ * Note: Use of this function is strongly encouraged. Do not roll your own.
+ * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
+ */
+svn_boolean_t
+svn_dirent_is_under_root(char **full_path,
+                         const char *base_path,
+                         const char *path,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
