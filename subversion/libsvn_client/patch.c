@@ -1806,9 +1806,10 @@ typedef struct {
   const char *path;
 
   /* The absolute path of the target */
-  const char *abs_path;
+  char *abs_path;
 
-  /* The target file, read-only, seekable. */
+  /* The target file, read-only, seekable. Is NULL in case the target
+   * file did not exist prior to patch application. */
   apr_file_t *file;
   
   /* The result stream, write-only, not seekable.
@@ -1864,47 +1865,74 @@ report_skipped_target(svn_client_ctx_t *ctx, const char *path,
  * If TARGET_PATH is absolute, resolve symlinks it might contain,
  * and make sure that it points somewhere inside of the working copy
  * directory WC_PATH. Use client context CTX to send notifiations.
- * Indicate success in *RESOLVED. Use RESULT_POOL for allocations of
- * fields in TARGET.
+ * Indicate success in *RESOLVED, and if successful, indicate in
+ * *EXISTS whether the target file already exists. Use RESULT_POOL
+ * for allocations of fields in TARGET.
  * */
 static svn_error_t *
 resolve_target_path(patch_target_t *target, const char *target_path,
                     const char *wc_path, svn_client_ctx_t *ctx,
-                    svn_boolean_t *resolved, apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+                    svn_boolean_t *resolved, svn_boolean_t *exists,
+                    apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *abs_wc_path;
-  const char *abs_path;
-  const char *check_path;
   const char *child_path;
-  svn_error_t *err;
+  const char *dirname;
   svn_node_kind_t kind;
 
+  /* Get the absolute path of the working copy directory. */
   SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
 
-  /* If the target path is relative, we don't have much to do. */
-  if (! svn_dirent_is_absolute(target_path))
+  /* If the path is a child of the working copy directory,
+   * pass a relative path to svn_dirent_is_under_root() below.
+   * Passing it an absolute path will always fail. */
+  child_path = svn_dirent_is_child(abs_wc_path, target_path, scratch_pool);
+
+  /* Make sure the path is secure to use. We want it to be inside of
+   * the working copy. Also retrieve the target's absolute path. */
+  if (! svn_dirent_is_under_root(&target->abs_path, abs_wc_path,
+                                 child_path ? child_path : target_path,
+                                 result_pool))
     {
-      target->path = apr_pstrdup(result_pool, target_path);
-      target->abs_path = svn_dirent_join(abs_wc_path, target_path, result_pool);
-      *resolved = TRUE;
+      report_skipped_target(ctx, target_path,
+                            svn_wc_notify_state_inapplicable, scratch_pool);
+      *resolved = FALSE;
       return SVN_NO_ERROR;
     }
 
-  /* Absolute paths are tricky, we don't want to modify files outside
-   * of a working copy. First, let's find out if it's likely that the
-   * path can be used at all. */
-  SVN_ERR(svn_io_check_path(target_path, &kind, scratch_pool));
+  /* Find out what is at the path. */
+  SVN_ERR(svn_io_check_path(target->abs_path, &kind, scratch_pool));
   switch (kind)
     {
       case svn_node_file:
-        /* Path can probably be used. Use the target itself in check below. */
-        check_path = target_path;
+        /* That's fine. */
+        *exists = TRUE;
         break;
       case svn_node_none:
-        /* Path can probably be used. Use the containing directory in check
-         * below. */
-        check_path = svn_dirent_dirname(target_path, scratch_pool);
+        *exists = FALSE;
+        /* The file is not there, that's fine. The patch might want to
+         * create it. But make the sure containing directory of the target
+         * exists. Otherwise we won't be able to apply the patch. */
+        dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
+        SVN_ERR(svn_io_check_path(dirname, &kind, scratch_pool));
+        if (kind != svn_node_dir)
+          {
+            svn_error_t *err;
+
+            /* Try to create the directory. */
+            err = svn_io_make_dir_recursively(dirname, scratch_pool);
+            if (err)
+              {
+                svn_error_clear(err);
+
+                /* Something is in the way, skip this target. */
+                report_skipped_target(ctx, target_path,
+                                      svn_wc_notify_state_obstructed,
+                                      scratch_pool);
+                *resolved = FALSE;
+                return SVN_NO_ERROR;
+              }
+          }
         break;
       default:
         /* The target is something other than a text file. Skip it. */
@@ -1914,42 +1942,17 @@ resolve_target_path(patch_target_t *target, const char *target_path,
         return SVN_NO_ERROR;
     }
 
-  /* Get the absolute path of the target itself or its containing
-   * directory, so we can check whether it is a child of the absolute
-   * path of the working copy directory. Even though the path is
-   * already absolute, we must ask the OS to resolve it because it
-   * may contain symlinks. */
-  err = svn_dirent_get_absolute(&abs_path, check_path, result_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_BAD_FILENAME)
-        {
-          svn_error_clear(err);
-
-          /* The absolute path could not be resolved.
-           * Maybe the containing directory does not exist.
-           * Skip this target. */
-          report_skipped_target(ctx, target_path,
-                                svn_wc_notify_state_inapplicable, scratch_pool);
-          *resolved = FALSE;
-          return SVN_NO_ERROR;
-        }
-      else
-        return err;
-    }
-
-  /* Check for parent/child relationship. */
-  child_path = svn_dirent_is_child(abs_wc_path, abs_path, result_pool);
+  /* We'll also want the target path relative to the working copy directory. */
+  child_path = svn_dirent_is_child(abs_wc_path, target->abs_path, result_pool);
   if (child_path)
     {
-      /* The target path is inside the working copy and thus safe to use. */
+      /* All good. */
       target->path = child_path;
-      target->abs_path = abs_path;
       *resolved = TRUE;
     }
   else
     {
-      /* The target path is not inside the working copy. Skip it. */
+      /* We can't use the target path. Skip this target. */
       report_skipped_target(ctx, target_path,
                             svn_wc_notify_state_inapplicable, scratch_pool);
       *resolved = FALSE;
@@ -1973,6 +1976,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
 {
   patch_target_t *new_target;
   svn_boolean_t resolved;
+  svn_boolean_t exists;
   const char *dirname;
   svn_wc_adm_access_t *target_adm_access;
   svn_error_t *err;
@@ -1984,15 +1988,18 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
 
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
                               svn_wc_adm_access_path(adm_access), ctx,
-                              &resolved, result_pool, scratch_pool)); 
+                              &resolved, &exists, result_pool, scratch_pool)); 
   if (! resolved)
     return SVN_NO_ERROR;
 
-  /* Try to open the target file */
-  /* TODO: If a patch just adds lines to a file, the file might not
-   * exist and that is OK. */
-  SVN_ERR(svn_io_file_open(&new_target->file, new_target->path,
-                           APR_READ | APR_BINARY, 0644, result_pool));
+  if (exists)
+    {
+      /* Try to open the target file */
+      SVN_ERR(svn_io_file_open(&new_target->file, new_target->path,
+                               APR_READ | APR_BINARY, 0644, result_pool));
+    }
+  else
+    new_target->file = NULL;
 
   /* Create a temporary file to write the patched result to,
    * in the same directory as the target file.
@@ -2011,17 +2018,38 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
 
   /* Check whether the target file has local modifications. */
   dirname = svn_dirent_dirname(new_target->path, scratch_pool);
-  SVN_ERR(svn_wc_adm_retrieve(&target_adm_access, adm_access, dirname,
-                              scratch_pool));
-  err = svn_wc_text_modified_p(&new_target->local_mods, new_target->path,
-                               FALSE, target_adm_access, scratch_pool);
+  err = svn_wc_adm_retrieve(&target_adm_access, adm_access, dirname,
+                            scratch_pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        /* The target file is unversioned, that's OK. */
-        svn_error_clear(err);
+      if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+        {
+          /* Assuming the adm_access we got passed is holding a write lock for
+           * the working copy we're applying the patch to (as it should be),
+           * the containing directory is not versioned. That's OK.
+           * We can treat the target is as unmodified. */
+          svn_error_clear(err);
+          new_target->local_mods = FALSE;
+        }
       else
         return err;
+    }
+  else
+    {
+      err = svn_wc_text_modified_p(&new_target->local_mods, new_target->path,
+                                   FALSE, target_adm_access, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              /* The target file is not versioned, that's OK.
+               * We can treat it as unmodified. */
+              svn_error_clear(err);
+              new_target->local_mods = FALSE;
+            }
+          else
+            return err;
+        }
     }
 
   *target = new_target;
@@ -2145,19 +2173,27 @@ apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   /* Move forward to the hunk's line, copying data as we go. */
-  if (target->current_line < line)
-    SVN_ERR(copy_lines_to_target(target, line, pool));
-  if (target->eof)
-    /* File is shorter than it should be. */
-    /* TODO: Warn, create reject file? */
-    return SVN_NO_ERROR;
+  if (target->file)
+    {
+      if (target->current_line < line)
+        SVN_ERR(copy_lines_to_target(target, line, pool));
+      if (target->eof)
+        {
+          /* File is shorter than it should be. */
+          /* TODO: Warn, create reject file? */
+          return SVN_NO_ERROR;
+        }
 
-  /* Target file is at the hunk's line.
-   * Read the target's version of the hunk.
-   * We assume the target hunk has the same length as the original hunk.
-   * If that's not the case, we'll get merge conflicts. */
-  SVN_ERR(read_lines_from_target(&latest_text, hunk->original_length,
-                                 target, pool, pool));
+      /* Target file is at the hunk's line.
+       * Read the target's version of the hunk.
+       * We assume the target hunk has the same length as the original hunk.
+       * If that's not the case, we'll get merge conflicts. */
+      SVN_ERR(read_lines_from_target(&latest_text, hunk->original_length,
+                                     target, pool, pool));
+    }
+  else
+    latest_text = svn_string_create("", pool);
+
   /* Diff the hunks. */
   opts = svn_diff_file_options_create(pool);
   SVN_ERR(svn_diff_mem_string_diff3(&diff, hunk->original_text,
@@ -2221,7 +2257,8 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
 
   /* Close both files. */
   SVN_ERR(svn_stream_close(target->result));
-  SVN_ERR(svn_io_file_close(target->file, pool));
+  if (target->file)
+    SVN_ERR(svn_io_file_close(target->file, pool));
 
   if (target->eof && target->modified)
     {
