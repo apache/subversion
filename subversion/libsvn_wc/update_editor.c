@@ -152,6 +152,9 @@ struct edit_baton
   const char *anchor;
   const char *target;
 
+  /* The DB handle for managing the working copy state.  */
+  svn_wc__db_t *db;
+
   /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
   svn_wc_adm_access_t *adm_access;
 
@@ -2805,11 +2808,24 @@ close_directory(void *dir_baton,
      deleted (issue #1672). */
   if (db->was_incomplete)
     {
+      const char *local_abspath;
+      const svn_wc_entry_t *entry;
       int i;
       apr_hash_t *props_to_delete;
 
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                 adm_access, db->path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
+      SVN_ERR(svn_wc__get_entry(&entry, db->edit_baton->db, local_abspath,
+                                TRUE, svn_node_unknown, FALSE, pool, pool));
+      if (entry == NULL)
+        {
+          base_props = apr_hash_make(pool);
+          working_props = apr_hash_make(pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                     entry, db->path, pool, pool));
+        }
 
       /* Calculate which base props weren't also in the incoming
          propchanges. */
@@ -3322,7 +3338,7 @@ add_file_with_history(const char *path,
           SVN_ERR(svn_wc__get_revert_contents(&source_text_base, src_path,
                                               subpool, subpool));
           SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props,
-                                     src_access, src_path, pool));
+                                     src_entry, src_path, pool, subpool));
           /* The old working props are lost, just like the old
              working file text is.  Just use the base props. */
           working_props = base_props;
@@ -3332,7 +3348,7 @@ add_file_with_history(const char *path,
           SVN_ERR(svn_wc_get_pristine_contents(&source_text_base, src_path,
                                                subpool, subpool));
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                     src_access, src_path, pool));
+                                     src_entry, src_path, pool, subpool));
         }
 
       SVN_ERR(svn_stream_copy3(source_text_base, copied_stream,
@@ -4716,6 +4732,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->switch_url               = switch_url;
   eb->repos                    = entry ? entry->repos : NULL;
   eb->uuid                     = entry ? entry->uuid : NULL;
+  eb->db                       = svn_wc__adm_get_db(adm_access);
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;
@@ -5134,9 +5151,10 @@ check_wc_root(svn_boolean_t *wc_root,
      otherwise hidden), treat it as if it were a file so that the anchor
      will be the parent directory. If the node is a FILE, then it is
      definitely not a root.  */
-  err = svn_wc__get_entry(&entry, db, abspath, svn_node_unknown, FALSE,
+  err = svn_wc__get_entry(&entry, db, abspath, TRUE, svn_node_unknown, FALSE,
                           pool, pool);
-  if (err || entry->kind == svn_node_file || svn_wc__entry_is_hidden(entry))
+  if (err || entry == NULL || entry->kind == svn_node_file
+      || svn_wc__entry_is_hidden(entry))
     {
       if (err)
         {
@@ -5148,7 +5166,7 @@ check_wc_root(svn_boolean_t *wc_root,
                  instead. We can pretend this is a file so the parent will
                  be the anchor.  */
             }
-          else if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+          else
             return err;
           svn_error_clear(err);
         }
@@ -5177,7 +5195,7 @@ check_wc_root(svn_boolean_t *wc_root,
   svn_dirent_split(abspath, &parent, &base_name, pool);
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  err = svn_wc__get_entry(&p_entry, db, parent, svn_node_dir, FALSE,
+  err = svn_wc__get_entry(&p_entry, db, parent, FALSE, svn_node_dir, FALSE,
                           pool, pool);
   if (err)
     {
@@ -5203,7 +5221,7 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If PATH's parent in the repository is not its parent in the WC,
      PATH is a WC root. */
-  err = svn_wc__get_entry(&p_entry, db, abspath, svn_node_dir, TRUE,
+  err = svn_wc__get_entry(&p_entry, db, abspath, FALSE, svn_node_dir, TRUE,
                           pool, pool);
   if (err || svn_wc__entry_is_hidden(p_entry))
     {

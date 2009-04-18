@@ -120,10 +120,12 @@ convert_wcprops(svn_stringbuf_t *log_accum,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
+  const char *dir_abspath;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, adm_access->path, pool));
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
   /* Walk over the entries, adding a modify-wcprop command for each wcprop.
@@ -137,11 +139,10 @@ convert_wcprops(svn_stringbuf_t *log_accum,
       apr_hash_t *wcprops;
       apr_hash_index_t *hj;
       const char *full_path;
+      const char *local_abspath;
 
       apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
-
-      full_path = svn_dirent_join(adm_access->path, entry->name, pool);
 
       if (entry->kind != svn_node_file
           && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -149,7 +150,11 @@ convert_wcprops(svn_stringbuf_t *log_accum,
 
       svn_pool_clear(subpool);
 
-      SVN_ERR(svn_wc__wcprop_list(&wcprops, entry->name, adm_access, subpool));
+      full_path = svn_dirent_join(adm_access->path, entry->name, subpool);
+      local_abspath = svn_dirent_join(dir_abspath, entry->name, subpool);
+
+      SVN_ERR(svn_wc__wcprop_list(&wcprops, adm_access->db, local_abspath,
+                                  entry->kind, subpool, subpool));
 
       /* Create a subsubpool for the inner loop...
          No, just kidding.  There are typically just one or two wcprops
