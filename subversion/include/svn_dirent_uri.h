@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -518,6 +518,8 @@ svn_dirent_condense_targets(const char **pcommon,
  *
  * Note: Use of this function is strongly encouraged. Do not roll your own.
  * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
+ *
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_dirent_is_under_root(char **full_path,
