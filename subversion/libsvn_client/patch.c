@@ -1911,27 +1911,18 @@ resolve_target_path(patch_target_t *target, const char *target_path,
       case svn_node_none:
         *exists = FALSE;
         /* The file is not there, that's fine. The patch might want to
-         * create it. But make the sure containing directory of the target
+         * create it. But the containing directory of the target needs to
          * exists. Otherwise we won't be able to apply the patch. */
         dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
         SVN_ERR(svn_io_check_path(dirname, &kind, scratch_pool));
         if (kind != svn_node_dir)
           {
-            svn_error_t *err;
-
-            /* Try to create the directory. */
-            err = svn_io_make_dir_recursively(dirname, scratch_pool);
-            if (err)
-              {
-                svn_error_clear(err);
-
-                /* Something is in the way, skip this target. */
-                report_skipped_target(ctx, target_path,
-                                      svn_wc_notify_state_obstructed,
-                                      scratch_pool);
-                *resolved = FALSE;
-                return SVN_NO_ERROR;
-              }
+            /* We can't apply the patch, skip this target. */
+            report_skipped_target(ctx, target_path,
+                                  svn_wc_notify_state_inapplicable,
+                                  scratch_pool);
+            *resolved = FALSE;
+            return SVN_NO_ERROR;
           }
         break;
       default:
@@ -2027,7 +2018,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
           /* Assuming the adm_access we got passed is holding a write lock for
            * the working copy we're applying the patch to (as it should be),
            * the containing directory is not versioned. That's OK.
-           * We can treat the target is as unmodified. */
+           * We can treat the target as unmodified. */
           svn_error_clear(err);
           new_target->local_mods = FALSE;
         }
