@@ -2089,12 +2089,6 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
 
       len = buf->len;
       SVN_ERR(svn_stream_write(target->result, buf->data, &len));
-      if (len < buf->len)
-        {
-          /* ### Treat this as EOF for now. */
-          target->eof = TRUE;
-          break;
-        }
     }
   svn_pool_destroy(iterpool);
 
