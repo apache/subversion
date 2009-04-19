@@ -3739,9 +3739,10 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
-           _("Base checksum mismatch on '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
+           apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
+                        _("Base checksum mismatch on '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            tb->path,
            svn_checksum_to_cstring_display(tb->base_checksum, trail->pool),
            svn_checksum_to_cstring_display(checksum, trail->pool));
