@@ -462,7 +462,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                && (depth > svn_depth_files
                    || depth == svn_depth_unknown))
         {
-          svn_wc_adm_access_t *subdir_access;
+          const char *subdir_abspath;
+          svn_error_t *err;
           const svn_wc_entry_t *subdir_entry;
           svn_boolean_t start_empty;
 
@@ -480,12 +481,20 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
-          if (svn_wc__adm_missing(adm_access, this_full_path))
-            continue;
-          SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,
-                                      this_full_path, iterpool));
-          SVN_ERR(svn_wc_entry(&subdir_entry, this_full_path, subdir_access,
-                               TRUE, iterpool));
+          subdir_abspath = svn_dirent_join(abspath, key, iterpool);
+          err = svn_wc__get_entry(&subdir_entry, db, subdir_abspath, FALSE,
+                                  svn_node_dir, FALSE, iterpool, iterpool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                return err;
+              svn_error_clear(err);
+
+              /* We found the directory in the parent, but now it is "not
+                 found" in its own subdirectory. This indicates the damned
+                 thing is missing in some way. So... skip the subdir.  */
+              continue;
+            }
 
           start_empty = subdir_entry->incomplete;
           if (depth_compatibility_trick
