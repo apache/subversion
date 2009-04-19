@@ -86,16 +86,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r37156
-   Make default depth of merge infinity, rather than the depth of target.
-   Justification:
-     Is it technically a bug?  Dunno, but there is nothing but confusion
-     regarding the old behavior, see
-     http://svn.haxx.se/dev/archive-2009-04/0328.shtml and
-     http://svn.haxx.se/dev/archive-2009-03/0701.shtml.
-   Votes:
-     +1: pburba, arfrever
-
  * r37169
    Update --set-depth infinity should expand shallow subtrees.
    Justification:
@@ -123,10 +113,20 @@ Candidate changes:
      Segfaults are bad, this one was also reported on the dev list:
      http://svn.haxx.se/dev/archive-2009-04/0476.shtml
    Votes:
-     +1: lgo
+     +1: lgo, rhuijben
 
 Approved changes:
 =================
+
+ * r37156
+   Make default depth of merge infinity, rather than the depth of target.
+   Justification:
+     Is it technically a bug?  Dunno, but there is nothing but confusion
+     regarding the old behavior, see
+     http://svn.haxx.se/dev/archive-2009-04/0328.shtml and
+     http://svn.haxx.se/dev/archive-2009-03/0701.shtml.
+   Votes:
+     +1: pburba, arfrever, rhuijben
 
  * r37160, r37163, r37175
    Fix issue #3396, "status --quiet doesn't show tree conflicts".
