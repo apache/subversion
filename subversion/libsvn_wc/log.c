@@ -1771,6 +1771,7 @@ run_log(svn_wc_adm_access_t *adm_access,
         const char *diff3_cmd,
         apr_pool_t *pool)
 {
+  const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   svn_xml_parser_t *parser;
   struct log_runner *loggy = apr_pcalloc(pool, sizeof(*loggy));
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
@@ -1818,9 +1819,7 @@ run_log(svn_wc_adm_access_t *adm_access,
       logfile_path = compute_logfile_path(log_number, iterpool);
 
       /* Parse the log file's contents. */
-      err = svn_wc__open_adm_stream(&stream,
-                                    svn_wc_adm_access_path(adm_access),
-                                    logfile_path,
+      err = svn_wc__open_adm_stream(&stream, dir_abspath, logfile_path,
                                     iterpool, iterpool);
       if (err)
         {
@@ -1865,7 +1864,7 @@ run_log(svn_wc_adm_access_t *adm_access,
       if (err)
         return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error recording tree conflicts in '%s'"),
-                                 svn_wc_adm_access_path(adm_access));
+                                 dir_abspath);
     }
 
   /* Check for a 'killme' file in the administrative area. */
@@ -1883,7 +1882,8 @@ run_log(svn_wc_adm_access_t *adm_access,
 
           /* No 'killme'?  Remove the logfile; its commands have been
              executed. */
-          SVN_ERR(svn_wc__remove_adm_file(adm_access, logfile_path, iterpool));
+          SVN_ERR(svn_wc__remove_adm_file(dir_abspath, logfile_path,
+                                          iterpool));
         }
     }
 

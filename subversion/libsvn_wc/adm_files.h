@@ -151,8 +151,8 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
                                      apr_pool_t *scratch_pool);
 
 
-/* Remove `PATH/<adminstrative_subdir>/FILENAME'. */
-svn_error_t *svn_wc__remove_adm_file(const svn_wc_adm_access_t *adm_access,
+/* Remove `DIR_PATH/<adminstrative_subdir>/FILENAME'. */
+svn_error_t *svn_wc__remove_adm_file(const char *dir_path,
                                      const char *filename,
                                      apr_pool_t *scratch_pool);
 
