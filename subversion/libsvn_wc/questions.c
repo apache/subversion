@@ -2,7 +2,7 @@
  * questions.c:  routines for asking questions about working copies
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -261,9 +261,10 @@ compare_and_verify(svn_boolean_t *modified_p,
             {
               return svn_error_createf
                 (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                  _("Checksum mismatch indicates corrupt text base: '%s'\n"
-                    "   expected:  %s\n"
-                    "     actual:  %s\n"),
+                 apr_psprintf(pool, "%s\n%s\n%s\n",
+                              _("Checksum mismatch indicates corrupt text base: '%s'"),
+                              _("   expected:  %s"),
+                              _("     actual:  %s")),
                   svn_path_local_style(base_file, pool),
                   entry->checksum,
                   digest);

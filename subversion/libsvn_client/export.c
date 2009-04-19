@@ -2,7 +2,7 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -766,7 +766,10 @@ close_file(void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
+             apr_psprintf(pool, "%s:\n%s\n%s\n",
+                          _("Checksum mismatch for '%s'"),
+                          _("   expected:  %s"),
+                          _("     actual:  %s")),
              svn_path_local_style(fb->path, pool),
              text_checksum, actual_checksum);
         }

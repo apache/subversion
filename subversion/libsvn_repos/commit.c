@@ -1,7 +1,7 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -597,10 +597,10 @@ close_file(void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             _("Checksum mismatch for resulting fulltext\n"
-               "(%s):\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n"),
+             apr_psprintf(pool, "%s:\n%s\n%s\n",
+                          _("Checksum mismatch for resulting fulltext\n(%s)"),
+                          _("   expected:  %s"),
+                          _("     actual:  %s")),
              fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
              svn_checksum_to_cstring_display(checksum, pool));
         }

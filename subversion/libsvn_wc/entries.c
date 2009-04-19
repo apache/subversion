@@ -1750,7 +1750,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
   if ((kind == svn_node_file && (*entry)->kind != svn_node_file)
       || (kind == svn_node_dir && (*entry)->kind != svn_node_dir))
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                             _("'%s' is not the right kind"),
+                             _("'%s' is not of the right kind"),
                              svn_path_local_style(local_abspath,
                                                   scratch_pool));
 
@@ -1759,7 +1759,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
       /* They wanted a (directory) stub, but this isn't a directory.  */
       if (need_parent_stub && (*entry)->kind != svn_node_dir)
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 _("'%s' is not the right kind"),
+                                 _("'%s' is not of the right kind"),
                                  svn_path_local_style(local_abspath,
                                                       scratch_pool));
 
@@ -1768,7 +1768,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           && (*entry)->kind == svn_node_dir
           && *(*entry)->name != '\0')
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 _("'%s' is not the right kind"),
+                                 _("'%s' is not of the right kind"),
                                  svn_path_local_style(local_abspath,
                                                       scratch_pool));
     }
