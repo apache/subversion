@@ -1654,6 +1654,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
   adm_access = svn_wc__adm_retrieve_internal2(db, dir_abspath, scratch_pool);
   if (adm_access == NULL)
     {
+      svn_error_t *err;
+
       /* No access baton. Just read the entries into the scratch pool.
          No place to cache them, so they won't stick around.
 
@@ -1669,8 +1671,51 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
          obstructed on-disk by some other node kind (NONE, FILE, UNKNOWN),
          then this will throw an error.  */
 
-      SVN_ERR(read_entries(&entries, db, dir_abspath,
-                           scratch_pool, scratch_pool));
+      err = read_entries(&entries, db, dir_abspath,
+                         scratch_pool, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_MISSING || kind != svn_node_unknown
+              || *entry_name != '\0')
+            return err;
+          svn_error_clear(err);
+
+          /* The caller didn't know the node type, we saw a directory there,
+             we attempted to read that directory, and then wc_db reports
+             that it is NOT a working copy directory. It is possible that
+             one of two things has happened:
+
+             1) a directory is obstructing a file in the parent
+             2) the (versioned) directory's contents have been removed
+
+             Let's assume situation (1); if that is true, then we can just
+             return the newly-found data.
+
+             If we assumed (2), then a valid result still won't help us
+             since the caller asked for the actual contents, not the stub.
+             However, if we assume (1) and get back a stub, then we have
+             verified a missing, versioned directory, and can return an
+             error describing that.  */
+          err = svn_wc__get_entry(entry, db, local_abspath, allow_unversioned,
+                                  svn_node_file, FALSE,
+                                  result_pool, scratch_pool);
+          if (err == SVN_NO_ERROR)
+            return SVN_NO_ERROR;
+          if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+            return err;
+          svn_error_clear(err);
+
+          /* We asked for a FILE, but the node found is a DIR. Thus, we
+             are looking at a stub. Originally, we tried to read into the
+             subdir because NEED_PARENT_STUB is FALSE. The stub we just
+             read is not going to work for the caller, so inform them of
+             the missing subdirectory.  */
+          SVN_ERR_ASSERT(*entry != NULL && (*entry)->kind == svn_node_dir);
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("Admin area of '%s' is missing"),
+                                 svn_path_local_style(local_abspath,
+                                                      scratch_pool));
+        }
     }
   else
     {
