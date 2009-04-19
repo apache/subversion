@@ -115,6 +115,16 @@ Candidate changes:
    Votes:
      +1: arfrever, rhuijben
 
+ * r37363
+   Fix segfault when during merge, the search for the revision in which a
+   subtree was deleted encounters an unreadable revision. This only happens
+   with server version < 1.6.
+   Justification:
+     Segfaults are bad, this one was also reported on the dev list:
+     http://svn.haxx.se/dev/archive-2009-04/0476.shtml
+   Votes:
+     +1: lgo
+
 Approved changes:
 =================
 
