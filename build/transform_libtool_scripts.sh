@@ -12,8 +12,8 @@ subversion/tests/cmdline/entries-dump
 $(find subversion/tests -name '*-test' ! -path '*/.libs/*')
 "
 
-lib_directories="$(find subversion -name 'libsvn_*.so' -a ! -name 'libsvn_test-1.so' | sed -e "s:^:$(pwd)/:")"
-lib_directories="$(echo $lib_directories)"
+libraries="$(find subversion -name 'libsvn_*.so' -a ! -name 'libsvn_test-1.so' | sed -e "s:^:$(pwd)/:")"
+libraries="$(echo $libraries)"
 
 _sed()
 {
@@ -25,7 +25,7 @@ for libtool_script in $libtool_scripts; do
   if test -f "$libtool_script"; then
     if grep LD_LIBRARY_PATH "$libtool_script" > /dev/null && ! grep LD_PRELOAD "$libtool_script" > /dev/null; then
       echo "Transforming $libtool_script"
-      _sed "/export LD_LIBRARY_PATH/aLD_PRELOAD=\"$lib_directories\""
+      _sed "/export LD_LIBRARY_PATH/aLD_PRELOAD=\"$libraries\""
       _sed "/LD_PRELOAD=/aexport LD_PRELOAD"
       chmod +x "$libtool_script"
     fi
