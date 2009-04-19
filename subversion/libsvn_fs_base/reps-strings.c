@@ -820,9 +820,11 @@ svn_fs_base__rep_contents(svn_string_t *str,
     if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         _("Checksum mismatch on representation '%s':\n"
-           "   expected:  %s\n"
-           "     actual:  %s\n"), rep_key,
+         apr_psprintf(pool, "%s:\n%s\n%s\n",
+                      _("Checksum mismatch on representation '%s'"),
+                      _("   expected:  %s"),
+                      _("     actual:  %s")),
+         rep_key,
          svn_checksum_to_cstring_display(rep_checksum, pool),
          svn_checksum_to_cstring_display(checksum, pool));
   }

@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1012,8 +1012,10 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-         _("Checksum mismatch for '%s'; "
-           "expected: '%s', actual: '%s'"),
+         apr_psprintf(pool, "%s:\n%s\n%s\n",
+                      _("Checksum mismatch for '%s'"),
+                      _("   expected:  %s"),
+                      _("     actual:  %s")),
          svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
                               pool),
          svn_checksum_to_cstring_display(expected_checksum, pool),

@@ -1276,9 +1276,10 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
       if (! svn_checksum_match(checksum, test_checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           _("Checksum mismatch, representation '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
+           apr_psprintf(pool, "%s:\n%s\n%s\n",
+                        _("Checksum mismatch on representation '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            noderev->edit_key,
            svn_checksum_to_cstring_display(checksum, pool),
            svn_checksum_to_cstring_display(test_checksum, pool));
