@@ -32,6 +32,7 @@ SkipUnless = svntest.testcase.SkipUnless
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
+from svntest.main import write_authz_file
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
@@ -7026,6 +7027,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  write_authz_file(sbox, {"/" : "* = rw",
+                          "/unrelated" : ("* =\n" +
+                           svntest.main.wc_author2 + " = rw")})
+
   # Some paths we'll care about
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
@@ -7112,15 +7117,23 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
+  # r6: create an empty (unreadable) commit.
+  # Empty or unreadable revisions used to crash a svn 1.6+ client when
+  # used with a 1.5 server:
+  # http://svn.haxx.se/dev/archive-2009-04/0476.shtml
+  svntest.main.run_svn(None, 'mkdir', sbox.repo_url + '/unrelated',
+                       '--username', svntest.main.wc_author2,
+                       '-m', 'creating a rev with no paths.')
+
   # This merge causes a tree conflict. Since the result of the previous
   # merge of A/D/gamma into A_copy/D has not yet been committed, it is
   # considered a local modification of A_Copy/D/gamma by the following
   # merge. A delete merged ontop of a modified file is a tree conflict.
   # See notes/tree-conflicts/detection.txt
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5], [3,5]],
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[6], [3,6]],
                                      ['D    ' + Acopy_gamma_path + '\n',
                                      'C    ' + Acopy_D_path + '\n']),
-                                     [], 'merge', '-r1:5', '--force',
+                                     [], 'merge', '-r1:6', '--force',
                                      A_url, Acopy_path)
 
   # Test for issue #2976 Subtrees can lose non-inheritable ranges.
