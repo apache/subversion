@@ -49,6 +49,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_debug.h"
 
 #include "svn_private_config.h"
 
@@ -3446,8 +3447,7 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
 
           /* Before we override, make sure this is a versioned path, it
              might be an unversioned obstruction. */
-          SVN_ERR(svn_wc_status2(&status, (const char *) skipped_path,
-                                 adm_access, pool));
+          SVN_ERR(svn_wc_status2(&status, skipped_path, adm_access, pool));
           if (status->text_status == svn_wc_status_none
               || status->text_status == svn_wc_status_unversioned)
             continue;
@@ -3551,12 +3551,14 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
          a fresh copy before using it to update the WC's mergeinfo. */
       err = svn_client__parse_mergeinfo(&mergeinfo, entry, path, FALSE,
                                         adm_access, ctx, subpool);
+
       /* If a directory PATH was skipped because it is missing or was
          obstructed by an unversioned item then there's nothing we can
          do with that, so skip it. */
       if (err)
         {
-          if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+          if (err->apr_err == SVN_ERR_WC_NOT_LOCKED
+              || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             {
               svn_error_clear(err);
               continue;

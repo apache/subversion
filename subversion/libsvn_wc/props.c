@@ -2071,12 +2071,17 @@ svn_wc_prop_get(const svn_string_t **value,
                           FALSE, pool, pool);
   if (err)
     {
-      /* ### holy crap. people pass some really weird shit into this
-         ### function. generally, we get pointed at directories that
-         ### are not working copies. rather than throwing an error,
-         ### we'll ignore it, and pretend an entry was not returned.  */
-      svn_error_clear(err);
-      entry = NULL;
+      if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+        {
+          /* We're trying to fetch a property on a directory, but we ended
+             up with the stub because the directory is missing. Let's map
+             this into a PATH_NOT_FOUND.  */
+          return svn_error_createf(
+            SVN_ERR_WC_PATH_NOT_FOUND, err,
+            _("Directory '%s' is missing or obstructed"),
+            svn_path_local_style(path, pool));
+        }
+      return svn_error_return(err);
     }
   if (entry == NULL || svn_wc__entry_is_hidden(entry))
     {
