@@ -29,19 +29,71 @@
 #include "auth_kerb.h"
 
 /** These functions implements Kerberos authentication, using GSS-API
-    (RFC 2743).
-    The message-exchange is documented in RFC 4559. **/
+ *  (RFC 2743). The message-exchange is documented in RFC 4559. 
+ * 
+ * Note: this implementation uses gssapi and only works on *nix. For 
+ * the Windows Kerberos client check win32_auth_sspi.c.
+ * ### TODO: Windows Kerberos client isn't implemented in ra_serf ATM.
+ **/
 
 /******************************************************/
 /** NOTE: this code is WIP and doesn't work, at all! **/
 /******************************************************/
 /** TODO:
- ** - add comments.
+ ** - send session key directly on new connections where we already know
+ **   the server requires Kerberos authn.
  ** - add better error reporting
  ** - fix authn status, as the COMPLETE/CONTINUE status values
  **   are never used.
  ** - test
  **/
+
+/* Authentication over HTTP using Kerberos
+ *
+ * Kerberos involves three servers:
+ * - Authentication Server (AS): verifies users during login
+ * - Ticket-Granting Server (TGS): issues proof of identity tickets
+ * - HTTP server (S)
+ * 
+ * Steps:
+ * 0. User logs in to the AS and receives a TGS ticket. On workstations
+ * where the login program doesn't support Kerberos, the user can use 
+ * 'kinit'.
+ *
+ * 1. C  --> S:    GET
+ *
+ *    C <--  S:    401 Authentication Required
+ *                 WWW-Authenticate: Negotiate
+ *
+ * -> Svn contacts the TGS to request a session key for the HTTP service
+ *    @ target host. The returned session key is encrypted with the HTTP 
+ *    service's secret key, so we can safely send it to the server.
+ *
+ * 2. C  --> S:    GET
+ *                 Authorization: Negotiate <Base64 encoded session key>
+ *                 gss_api_ctx->state = gss_api_auth_in_progress;
+ *
+ *    C <--  S:    200 OK
+ *                 WWW-Authenticate: Negotiate <Base64 encoded server 
+ *                                              authentication data>
+ *
+ * -> The server returned a key to proof itself to us. We check this key
+ *    with the TGS again.
+ *
+ * Note: It's possible that the server returns 401 again in step 3, if the
+ *       Kerberos context isn't complete yet. Some (simple) tests with
+ *       mod_auth_kerb and MIT Kerberos 5 show this never happens.
+ *
+ * This handshake is required for every new connection. If the handshake is
+ * completed successfully, all other requests on the same connection will
+ * be authenticated without needing to pass the WWW-Authenticate header.
+ *
+ * Note: Step 1 of the handshake will only happen on the first connection, once
+ * we know the server requires Kerberos authentication, the initial requests 
+ * on the other connections will include a session key, so we start  at
+ * step 2 in the handshake.
+ * ### TODO: Not implemented yet!
+ */
 
 typedef enum
 {
@@ -50,7 +102,7 @@ typedef enum
   gss_api_auth_completed,
 } gss_api_auth_state;
 
-/* HTTP Service name, used to get the Server Ticket.  */
+/* HTTP Service name, used to get the session key.  */
 #define KRB_HTTP_SERVICE "HTTP"
 
 /* Stores the context information related to Kerberos authentication. */
@@ -69,9 +121,9 @@ typedef struct
 
 } serf_gss_api_context_t;
 
-/* On the initial 401 response of the server, request a Server Ticket from
+/* On the initial 401 response of the server, request a session key from
    the Kerberos KDC to pass to the server, proving that we are who we
-   claim to be. The Server Ticket can only be used with the HTTP service
+   claim to be. The session key can only be used with the HTTP service
    on the target host. */
 static svn_error_t *
 gss_api_get_credentials(char *token, apr_size_t token_len,
@@ -86,7 +138,7 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
   gss_buffer_desc bufdesc;
   svn_error_t *err = SVN_NO_ERROR;
 
-  /* XXXX */
+  /* Get the name for the HTTP service at the target host. */
   bufdesc.value = apr_psprintf(gss_api_ctx->pool, KRB_HTTP_SERVICE "@%s",
                                hostname);
   bufdesc.length = strlen(bufdesc.value);
@@ -142,7 +194,7 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
         }
     }
 
-  /* Return the Server Ticket to the caller. */
+  /* Return the session key to our caller. */
   *buf = apr_pmemdup(gss_api_ctx->pool, output_buf.value, output_buf.length);
   *buf_len = output_buf.length;
 
@@ -172,7 +224,7 @@ do_auth(serf_gss_api_context_t *gss_api_ctx,
   apr_size_t tmp_len, token_len = 0;
   const char *space = NULL;
 
-  /* The server will return a token  as attribute to the Negotiate key.
+  /* The server will return a token as attribute to the Negotiate key.
      Negotiate YGwGCSqGSIb3EgECAgIAb10wW6ADAgEFoQMCAQ+iTzBNoAMCARCiRgREa6mouM
                BAMFqKVdTGtfpZNXKzyw4Yo1paphJdIA3VOgncaoIlXxZLnkHiIHS2v65pVvrp
                bRIyjF8xve9HxpnNIucCY9c=
@@ -296,11 +348,10 @@ svn_ra_serf__setup_request_kerb_auth(svn_ra_serf__connection_t *conn,
 }
 
 /* Function is called when 2xx responses are received. Normally we don't
-   have to do anything, except for the first response after the
-   authentication handshake. This specific response includes
-   a server ticket (XXXXXX, use correct term) which should be validated
-   by the client (mutual authentication).
-   */
+ * have to do anything, except for the first response after the
+ * authentication handshake. This specific response includes authentication
+ * data which should be validated by the client (mutual authentication).
+ */
 svn_error_t *
 svn_ra_serf__validate_response_kerb_auth(svn_ra_serf__handler_t *ctx,
                                          serf_request_t *request,
