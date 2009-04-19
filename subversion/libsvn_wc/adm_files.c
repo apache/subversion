@@ -499,29 +499,24 @@ svn_wc__close_adm_stream(svn_stream_t *stream,
                          const char *fname,
                          apr_pool_t *scratch_pool)
 {
-  const char *tmp_path = extend_with_adm_name(path, NULL, TRUE, scratch_pool,
-                                              fname, NULL);
   const char *dst_path = extend_with_adm_name(path, NULL, FALSE, scratch_pool,
                                               fname, NULL);
-
-  /* ### eventually, just use the parameter rather than compute tmp_path */
-  SVN_ERR_ASSERT(strcmp(temp_file_path, tmp_path) == 0);
 
   SVN_ERR(svn_stream_close(stream));
 
   /* Put the completed file into its intended location. */
-  SVN_ERR(svn_io_file_rename(tmp_path, dst_path, scratch_pool));
-  return svn_io_set_file_read_only(dst_path, FALSE, scratch_pool);
+  SVN_ERR(svn_io_file_rename(temp_file_path, dst_path, scratch_pool));
+  return svn_error_return(svn_io_set_file_read_only(dst_path, FALSE,
+                                                    scratch_pool));
 }
 
 
 svn_error_t *
-svn_wc__remove_adm_file(const svn_wc_adm_access_t *adm_access,
+svn_wc__remove_adm_file(const char *dir_path,
                         const char *filename,
                         apr_pool_t *scratch_pool)
 {
-  const char *path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                                       filename, scratch_pool);
+  const char *path = svn_wc__adm_child(dir_path, filename, scratch_pool);
 
   return svn_io_remove_file(path, scratch_pool);
 }

@@ -671,7 +671,7 @@ close_single(svn_wc_adm_access_t *adm_access,
              from the working copy.  It is an error for the lock to
              have disappeared if the administrative area still exists. */
 
-          svn_error_t *err = svn_wc__remove_adm_file(adm_access,
+          svn_error_t *err = svn_wc__remove_adm_file(adm_access->path,
                                                      SVN_WC__ADM_LOCK,
                                                      scratch_pool);
           if (err)

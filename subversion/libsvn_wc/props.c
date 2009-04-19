@@ -517,7 +517,7 @@ read_wcprops(apr_hash_t **all_wcprops,
 
 static svn_error_t *
 write_wcprops(apr_hash_t *wcprops,
-              const svn_wc_adm_access_t *adm_access,
+              const char *dir_abspath,
               apr_pool_t *pool)
 {
   svn_stream_t *stream;
@@ -546,7 +546,7 @@ write_wcprops(apr_hash_t *wcprops,
     {
       svn_error_t *err;
 
-      err = svn_wc__remove_adm_file(adm_access, SVN_WC__ADM_ALL_WCPROPS,
+      err = svn_wc__remove_adm_file(dir_abspath, SVN_WC__ADM_ALL_WCPROPS,
                                     subpool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -558,8 +558,8 @@ write_wcprops(apr_hash_t *wcprops,
     }
 
   SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
-                                    svn_wc_adm_access_path(adm_access),
-                                    SVN_WC__ADM_ALL_WCPROPS, pool, subpool));
+                                    dir_abspath, SVN_WC__ADM_ALL_WCPROPS,
+                                    pool, subpool));
 
   /* First, the props for this_dir. */
   proplist = apr_hash_get(wcprops, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
@@ -590,9 +590,11 @@ write_wcprops(apr_hash_t *wcprops,
       SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, subpool));
     }
 
-  return svn_wc__close_adm_stream(stream, temp_file_path,
-                                  svn_wc_adm_access_path(adm_access),
-                                  SVN_WC__ADM_ALL_WCPROPS, pool);
+  SVN_ERR(svn_wc__close_adm_stream(stream, temp_file_path, dir_abspath,
+                                   SVN_WC__ADM_ALL_WCPROPS, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -617,16 +619,16 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
 
 static svn_error_t *
-wcprops_modify_allowed(svn_wc_adm_access_t *adm_access,
+wcprops_modify_allowed(svn_wc__db_t *db,
+                       const char *dir_abspath,
                        apr_pool_t *scratch_pool)
 {
   int wc_format;
 
-  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath,
+                                     scratch_pool));
   if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
-      const char *path = svn_wc_adm_access_path(adm_access);
-
       /* ### the only time we should be attempt to *write* properties in
          ### an out-dated working copy format is when we're running the logs.
          ### we will not support this *for now*. wc-ng will "run" the logs
@@ -636,7 +638,7 @@ wcprops_modify_allowed(svn_wc_adm_access_t *adm_access,
       return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                                _("Cannot write wcprops for '%s'; format %d "
                                  "is too old"),
-                               svn_path_local_style(path, scratch_pool),
+                               svn_path_local_style(dir_abspath, scratch_pool),
                                wc_format);
     }
   return SVN_NO_ERROR;
@@ -644,31 +646,23 @@ wcprops_modify_allowed(svn_wc_adm_access_t *adm_access,
 
 
 static svn_error_t *
-delete_wcprops(const char *path,
-               svn_wc_adm_access_t *adm_access,
+delete_wcprops(svn_wc__db_t *db,
+               const char *dir_abspath,
+               const char *local_abspath,
                apr_pool_t *pool)
 {
   /* We use 1 file for all wcprops in a directory,
      use a helper to remove them from that file */
 
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  svn_wc_adm_access_t *path_access;
-  const char *dir_abspath;
   const char *filename;
   apr_hash_t *all_wcprops;
 
-  SVN_ERR(svn_wc_adm_probe_retrieve(&path_access, adm_access, path, pool));
-  SVN_ERR(wcprops_modify_allowed(path_access, pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
-                                  svn_wc_adm_access_path(path_access),
-                                  pool));
+  SVN_ERR(wcprops_modify_allowed(db, dir_abspath, pool));
   SVN_ERR(read_wcprops(&all_wcprops, db, dir_abspath, pool, pool));
 
   /* If PATH is a directory, then FILENAME will be NULL.
      If PATH is a file, then FILENAME will be the BASE_NAME of PATH. */
-  filename = svn_dirent_is_child(svn_wc_adm_access_path(path_access), path,
-                                 NULL);
+  filename = svn_dirent_is_child(dir_abspath, local_abspath, NULL);
   if (! filename)
     {
       /* There is no point in reading the props just to determine if we
@@ -686,7 +680,7 @@ delete_wcprops(const char *path,
         apr_hash_set(all_wcprops, filename, APR_HASH_KEY_STRING, NULL);
     }
 
-  return write_wcprops(all_wcprops, path_access, pool);
+  return write_wcprops(all_wcprops, dir_abspath, pool);
 }
 
 
@@ -696,11 +690,20 @@ svn_wc__props_delete(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   const char *props_file;
   const svn_wc_entry_t *entry;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   if (props_kind == svn_wc__props_wcprop)
-    return delete_wcprops(path, adm_access, pool);
+    {
+      const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
+
+      return svn_error_return(delete_wcprops(db, dir_abspath, local_abspath,
+                                             pool));
+    }
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
@@ -1970,24 +1973,23 @@ svn_wc__wcprop_set(const char *name,
                    apr_pool_t *pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   const svn_wc_entry_t *entry;
   const char *dir_abspath;
   apr_hash_t *all_wcprops;
   apr_hash_t *prophash;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                            svn_node_unknown, FALSE, pool, pool));
 
   if (entry->kind == svn_node_dir)
-    SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
+    dir_abspath = local_abspath;
   else
-    SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
-                                svn_dirent_dirname(path, pool), pool));
+    dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
-  SVN_ERR(wcprops_modify_allowed(adm_access, pool));
+  SVN_ERR(wcprops_modify_allowed(db, dir_abspath, pool));
 
-  SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  pool));
   SVN_ERR(read_wcprops(&all_wcprops, db, dir_abspath, pool, pool));
   if (all_wcprops == NULL)
     {
@@ -2012,7 +2014,7 @@ svn_wc__wcprop_set(const char *name,
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
 
   /* Store the new-style whole-directory properties.  */
-  return write_wcprops(all_wcprops, adm_access, pool);
+  return write_wcprops(all_wcprops, dir_abspath, pool);
 }
 
 /*------------------------------------------------------------------*/
@@ -2679,14 +2681,17 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   const svn_wc_entry_t *entry;
   apr_hash_t *baseprops, *props;
   const char *entryname;
 
   /*### Maybe assert (entry); calling svn_wc_get_prop_diffs
-    for an unversioned path is bogus */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-
+    ### for an unversioned path is bogus */
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
+                            FALSE, pool, pool));
   if (! entry)
     {
       if (original_props)
@@ -2700,14 +2705,12 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 
   if (entry->kind == svn_node_dir)
     {
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
       entryname = SVN_WC_ENTRY_THIS_DIR;
     }
   else
     {
       const char *dirname;
       svn_dirent_split(path, &dirname, &entryname, pool);
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, dirname, pool));
     }
 
   SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL, NULL,
