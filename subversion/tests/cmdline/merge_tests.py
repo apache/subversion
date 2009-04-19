@@ -7027,7 +7027,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  if sbox.repo_url.startswith("http") or sbox.repo_url.startswith("svn"):
+  if sbox.repo_url.startswith(("http", "svn")):
     write_authz_file(sbox, {"/" : "* = rw",
                             "/unrelated" : ("* =\n" +
                              svntest.main.wc_author2 + " = rw")})
