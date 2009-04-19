@@ -322,6 +322,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                                 svn_wc_adm_access_t *src_access,
                                 apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(src_access);
   const char *parent_path;
   const char *rest;
   const char *abs_src_path;
@@ -334,28 +335,10 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 
   while (! *copyfrom_url)
     {
-      svn_wc_adm_access_t *parent_access;
       const svn_wc_entry_t *entry;
 
-      /* Don't look for parent_path in src_access if it can't be
-         there... */
-      if (svn_dirent_is_ancestor(svn_wc_adm_access_path(src_access),
-                                 parent_path))
-        {
-          SVN_ERR(svn_wc_adm_retrieve(&parent_access, src_access,
-                                      parent_path, pool));
-          SVN_ERR(svn_wc__entry_versioned(&entry, parent_path, parent_access,
-                                         FALSE, pool));
-        }
-      else /* ...get access for parent_path instead. */
-        {
-          SVN_ERR(svn_wc_adm_probe_open3(&parent_access, NULL,
-                                         parent_path, FALSE, -1,
-                                         NULL, NULL, pool));
-          SVN_ERR(svn_wc__entry_versioned(&entry, parent_path, parent_access,
-                                         FALSE, pool));
-          SVN_ERR(svn_wc_adm_close2(parent_access, pool));
-        }
+      SVN_ERR(svn_wc__get_entry(&entry, db, parent_path, FALSE,
+                                svn_node_unknown, FALSE, pool, pool));
 
       if (entry->copyfrom_url)
         {
@@ -378,8 +361,8 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                  strcmp() is pretty cheap, and the result we're trying to
                  prevent is an infinite loop if svn_dirent_dirname() returns
                  its input unchanged. */
-              return svn_error_createf
-                (SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
+              return svn_error_createf(
+                 SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
                  _("no parent with copyfrom information found above '%s'"),
                  svn_path_local_style(src_path, pool));
             }
