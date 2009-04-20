@@ -1521,16 +1521,21 @@ svn_wc__db_init(const char *local_abspath,
   apr_int64_t wc_id;
   insert_base_baton_t ibb;
 
+#ifndef BLAST_FORMAT_11
   SVN_ERR(svn_sqlite__open(&sdb,
                            svn_wc__adm_child(local_abspath, "wc.db",
                                              scratch_pool),
                            svn_sqlite__mode_rwcreate, statements,
-#ifndef BLAST_FORMAT_11
                            SVN_WC__VERSION_EXPERIMENTAL,
-#else
-                           SVN_WC__VERSION,
-#endif
                            upgrade_sql, scratch_pool, scratch_pool));
+#else
+  SVN_ERR(svn_sqlite__open(&sdb,
+                           svn_wc__adm_child(local_abspath, "wc.db",
+                                             scratch_pool),
+                           svn_sqlite__mode_rwcreate, statements,
+                           SVN_WC__VERSION,
+                           upgrade_sql, scratch_pool, scratch_pool));
+#endif
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
