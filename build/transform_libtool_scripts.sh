@@ -1,5 +1,9 @@
 #!/bin/sh
 
+if test "$(uname)" = "Darwin"; then
+  exit
+fi
+
 libtool_scripts="
 subversion/svn/svn
 subversion/svnadmin/svnadmin
