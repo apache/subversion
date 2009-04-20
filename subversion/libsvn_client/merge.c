@@ -7949,6 +7949,13 @@ svn_client_merge_reintegrate(const char *source,
                                             target_wcpath, wc_repos_root,
                                             FALSE, ra_session, NULL, pool));
 
+  /* Can't reintegrate to or from the root of the repository. */
+  if (svn_path_is_empty(source_repos_rel_path)
+      || svn_path_is_empty(target_repos_rel_path))
+    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                             _("Neither the reintegrate source nor target "
+                               "can be the root of the repository"));
+
   /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
   wb.target_path = target_wcpath;
   wb.target_repos_root = wc_repos_root;
