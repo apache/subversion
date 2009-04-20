@@ -33,6 +33,8 @@ SkipUnless = svntest.testcase.SkipUnless
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 from svntest.main import write_authz_file
+from svntest.main import is_ra_type_dav
+from svntest.main import is_ra_type_svn
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
@@ -7027,7 +7029,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  if sbox.repo_url.startswith(("http", "svn")):
+  if is_ra_type_svn() or is_ra_type_dav():
     write_authz_file(sbox, {"/" : "* = rw",
                             "/unrelated" : ("* =\n" +
                              svntest.main.wc_author2 + " = rw")})
