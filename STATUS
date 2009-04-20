@@ -117,8 +117,8 @@ Candidate changes:
      tweaks to the test to get it to work correctly on all platforms and
      across all RA layers.
    Votes:
-     +1: lgo, rhuijben (r37363 only)
-     +1: pburba
+     +1: rhuijben (r37363 only)
+     +1: pburba, lgo
 
  * r37385
    Return an error if attempting to reintegrate from/to the repository root.
