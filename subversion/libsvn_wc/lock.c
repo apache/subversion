@@ -84,6 +84,7 @@ struct svn_wc_adm_access_t
 
 };
 
+#ifndef BLAST_FORMAT_11
 static svn_boolean_t
 should_create_next_gen(void)
 {
@@ -91,6 +92,7 @@ should_create_next_gen(void)
      ### developed. in the future, we will *always* create a next gen wc. */
   return getenv("SVN_ENABLE_NG") != NULL;
 }
+#endif
 
 
 /* This is a placeholder used in the set hash to represent missing
@@ -180,6 +182,7 @@ convert_wcprops(svn_stringbuf_t *log_accum,
 }
 
 
+#ifndef BLAST_FORMAT_11
 /* Helper function so we can still upgrade for format 11, for the time being.
    ### This will go away with before 1.7. */
 static svn_error_t *
@@ -242,6 +245,7 @@ upgrade_format_old(svn_wc_adm_access_t *adm_access,
 
   return svn_wc__run_log(adm_access, NULL, scratch_pool);
 }
+#endif
 
 svn_error_t *
 svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
@@ -259,8 +263,10 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
+#ifndef BLAST_FORMAT_11
   if (!should_create_next_gen())
     return upgrade_format_old(adm_access, scratch_pool);
+#endif
 
   /* Don't try to mess with the WC if there are old log files left. */
   SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
@@ -299,7 +305,12 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                                this_dir->depth, scratch_pool));
 
   /* Do the loggy upgrade thing. */
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION_EXPERIMENTAL,
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum,
+#ifndef BLAST_FORMAT_11
+                                       SVN_WC__VERSION_EXPERIMENTAL,
+#else
+                                       SVN_WC__VERSION,
+#endif
                                        scratch_pool));
   SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                svn_wc__adm_child(adm_access->path,
@@ -558,10 +569,14 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
                                adm_access->path,
                                scratch_pool));
 
+#ifndef BLAST_FORMAT_11
   /* ### we'll need to update this conditional when _EXPERIMENTAL
      ### goes away */
   if (wc_format != SVN_WC__VERSION
       && wc_format != SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  if (wc_format != SVN_WC__VERSION)
+#endif
     {
       return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                                "Working copy format is too old; run "

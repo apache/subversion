@@ -95,10 +95,14 @@ extern "C" {
  * Please document any further format changes here.
  */
 
+#ifndef BLAST_FORMAT_11
 #define SVN_WC__VERSION 11
 
 /* ### only used by devs temporarily during 1.7 development. */
 #define SVN_WC__VERSION_EXPERIMENTAL 12
+#else
+#define SVN_WC__VERSION 12
+#endif
 
 
 /* A version <= this doesn't have property caching in the entries file. */

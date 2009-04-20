@@ -900,8 +900,12 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                              svn_wc__adm_child(local_abspath, "wc.db",
                                                scratch_pool),
                              smode, statements,
-                             SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                             db->state_pool, scratch_pool);
+#ifndef BLAST_FORMAT_11
+                             SVN_WC__VERSION_EXPERIMENTAL,
+#else
+                             SVN_WC__VERSION,
+#endif
+                             upgrade_sql, db->state_pool, scratch_pool);
       if (err == NULL)
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1048,7 +1052,11 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                                                 "wc.db",
                                                                 scratch_pool),
                                               smode, statements,
+#ifndef BLAST_FORMAT_11
                                               SVN_WC__VERSION_EXPERIMENTAL,
+#else
+                                              SVN_WC__VERSION,
+#endif
                                               upgrade_sql,
                                               db->state_pool, scratch_pool);
           if (err)
@@ -1371,7 +1379,11 @@ gather_children(const apr_array_header_t **children,
                               scratch_pool, scratch_pool));
 
   /* If this is an old working copy, then delegate to grab this info.  */
+#ifndef BLAST_FORMAT_11
   if (pdh->wcroot->format < SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  if (pdh->wcroot->format < SVN_WC__VERSION)
+#endif
     return svn_wc__gather_children_old(children, base_only,
                                        db, pdh->wcroot->abspath, local_relpath,
                                        result_pool, scratch_pool);
@@ -1504,8 +1516,12 @@ svn_wc__db_init(const char *local_abspath,
                            svn_wc__adm_child(local_abspath, "wc.db",
                                              scratch_pool),
                            svn_sqlite__mode_rwcreate, statements,
-                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                           scratch_pool, scratch_pool));
+#ifndef BLAST_FORMAT_11
+                           SVN_WC__VERSION_EXPERIMENTAL,
+#else
+                           SVN_WC__VERSION,
+#endif
+                           upgrade_sql, scratch_pool, scratch_pool));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
@@ -2489,7 +2505,11 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
 
   /* If this is an old working copy, then delegate to grab this info.  */
+#ifndef BLAST_FORMAT_11
   if (pdh->wcroot->format < SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  if (pdh->wcroot->format < SVN_WC__VERSION)
+#endif
     return svn_wc__read_info_old(status, kind, revision,
                                  repos_relpath, repos_root_url, repos_uuid,
                                  changed_rev, changed_date, changed_author,
@@ -3538,10 +3558,14 @@ svn_wc__db_temp_reset_format(int format,
          ### here.  If we are upgrading *to* wc-ng, we need to blow away the
          ### pdh->wcroot member.  If we are upgrading to format 11 (pre-wc-ng),
          ### we just need to store the format number.  */
+#ifndef BLAST_FORMAT_11
       if (format == SVN_WC__VERSION_EXPERIMENTAL)
         pdh->wcroot = NULL;
       else
         pdh->wcroot->format = format;
+#else
+      pdh->wcroot = NULL;
+#endif
     }
 
   return SVN_NO_ERROR;
