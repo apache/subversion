@@ -1839,27 +1839,18 @@ svn_wc_entry(const svn_wc_entry_t **entry,
 
 
 svn_error_t *
-svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t show_hidden,
-                                 const char *caller_filename,
-                                 int caller_lineno,
-                                 apr_pool_t *pool)
+svn_wc__entry_versioned(const svn_wc_entry_t **entry,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t show_hidden,
+                        apr_pool_t *pool)
 {
   SVN_ERR(svn_wc_entry(entry, path, adm_access, show_hidden, pool));
 
   if (! *entry)
-    {
-      svn_error_t *err
-        = svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                            _("'%s' is not under version control"),
-                            svn_path_local_style(path, pool));
-
-      err->file = caller_filename;
-      err->line = caller_lineno;
-      return err;
-    }
+    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
