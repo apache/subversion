@@ -3637,8 +3637,12 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
                                || pdh->adm_access == NULL);
       if (pdh->wcroot)
         {
+          /* This assumes a per-dir database. */
           if (pdh->wcroot->sdb)
-            SVN_ERR(svn_sqlite__close(pdh->wcroot->sdb));
+            {
+              SVN_ERR(svn_sqlite__close(pdh->wcroot->sdb));
+              pdh->wcroot->sdb = NULL;
+            }
           pdh->wcroot = NULL;
         }
 
