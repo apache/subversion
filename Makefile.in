@@ -318,7 +318,7 @@ install: external-install local-install revision-install
 local-all: @BUILD_RULES@ transform-libtool-scripts
 
 transform-libtool-scripts: @BUILD_RULES@
-	@./build/transform_libtool_scripts.sh
+	@$(top_srcdir)/build/transform_libtool_scripts.sh
 
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
