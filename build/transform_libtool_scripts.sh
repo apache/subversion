@@ -26,7 +26,7 @@ client="client $delta $diff $ra $subr $wc"
 libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
 
 for library in $libraries; do
-  library_dependencies="$(echo -n $(for x in ${!library}; do echo $x ; done | sort -u))"
+  library_dependencies="$(echo -n $(for x in $(eval echo "\${${library}}"); do echo $x ; done | sort -u))"
   eval "$library=\$library_dependencies"
 done
 
@@ -47,7 +47,7 @@ for executable in $executables; do
   else
     eval "${executable}_path=subversion/tests/cmdline/entries-dump"
   fi
-  executable_dependencies="$(echo -n $(for x in ${!executable}; do echo $x ; done | sort -u))"
+  executable_dependencies="$(echo -n $(for x in $(eval echo "\${${executable}}"); do echo $x ; done | sort -u))"
   eval "$executable=\$executable_dependencies"
 done
 
@@ -56,7 +56,7 @@ for test in $test_paths; do
   test_path="$test"
   test_library="$(echo $test | sed -e 's:^subversion/tests/libsvn_\([^/]*\)/.*:\1:')"
   test="$(echo $test | sed -e 's:^subversion/tests/libsvn_[^/]*/\(.*\):\1:' -e 's/-/_/g')"
-  test_dependencies="${!test_library}"
+  test_dependencies="$(eval echo "\${${test_library}}")"
   eval "$test=\$test_dependencies"
   eval "${test}_path=\$test_path"
   tests="$tests $test"
@@ -73,7 +73,7 @@ for libtool_script in $executables $tests; do
   if [ -f "$libtool_script_path" ]; then
     if grep LD_LIBRARY_PATH "$libtool_script_path" > /dev/null && ! grep LD_PRELOAD "$libtool_script_path" > /dev/null; then
       echo "Transforming $libtool_script_path"
-      libtool_script_dependencies="${!libtool_script}"
+      libtool_script_dependencies="$(eval echo "\${${libtool_script}}")"
       for libtool_script_dependency in $libtool_script_dependencies; do
         libtool_script_library="$(pwd)/subversion/libsvn_$libtool_script_dependency/.libs/libsvn_$libtool_script_dependency-1.so"
         [ -f "$libtool_script_library" ] && libtool_script_libraries="$libtool_script_libraries $libtool_script_library"
