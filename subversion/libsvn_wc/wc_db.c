@@ -896,16 +896,19 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
     {
       svn_error_t *err;
 
+#ifndef BLAST_FORMAT_11
       err = svn_sqlite__open(&sdb,
                              svn_wc__adm_child(local_abspath, "wc.db",
                                                scratch_pool),
-                             smode, statements,
-#ifndef BLAST_FORMAT_11
-                             SVN_WC__VERSION_EXPERIMENTAL,
-#else
-                             SVN_WC__VERSION,
-#endif
+                             smode, statements, SVN_WC__VERSION_EXPERIMENTAL,
                              upgrade_sql, db->state_pool, scratch_pool);
+#else
+      err = svn_sqlite__open(&sdb,
+                             svn_wc__adm_child(local_abspath, "wc.db",
+                                               scratch_pool),
+                             smode, statements, SVN_WC__VERSION,
+                             upgrade_sql, db->state_pool, scratch_pool);
+#endif
       if (err == NULL)
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1047,18 +1050,24 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
       if (parent_pdh == NULL || parent_pdh->wcroot == NULL)
         {
+#ifndef BLAST_FORMAT_11
           svn_error_t *err = svn_sqlite__open(&sdb,
                                               svn_wc__adm_child(parent_dir,
                                                                 "wc.db",
                                                                 scratch_pool),
                                               smode, statements,
-#ifndef BLAST_FORMAT_11
                                               SVN_WC__VERSION_EXPERIMENTAL,
-#else
-                                              SVN_WC__VERSION,
-#endif
                                               upgrade_sql,
                                               db->state_pool, scratch_pool);
+#else
+          svn_error_t *err = svn_sqlite__open(&sdb,
+                                              svn_wc__adm_child(parent_dir,
+                                                                "wc.db",
+                                                                scratch_pool),
+                                              smode, statements,
+                                              SVN_WC__VERSION, upgrade_sql,
+                                              db->state_pool, scratch_pool);
+#endif
           if (err)
             {
               if (err->apr_err != SVN_ERR_SQLITE_ERROR
