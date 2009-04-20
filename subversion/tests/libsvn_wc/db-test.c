@@ -298,8 +298,12 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
   SVN_ERR(svn_sqlite__open(&sdb, dbpath,
                            svn_sqlite__mode_rwcreate, NULL,
-                           SVN_WC__VERSION_EXPERIMENTAL, data_loading_sql,
-                           scratch_pool, scratch_pool));
+#ifndef BLAST_FORMAT_11
+                           SVN_WC__VERSION_EXPERIMENTAL,
+#else
+                           SVN_WC__VERSION,
+#endif
+                           data_loading_sql, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
