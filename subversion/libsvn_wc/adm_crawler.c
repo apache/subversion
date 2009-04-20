@@ -260,8 +260,11 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   /*** Do the real reporting and recursing. ***/
 
   /* First, look at "this dir" to see what its URL is. */
-  SVN_ERR(svn_wc_entry(&dot_entry, full_path, adm_access, TRUE, subpool));
+  SVN_ERR(svn_wc_entry(&dot_entry, full_path, dir_access, TRUE, subpool));
   /* ### need: depth, url  */
+
+  /* Should be the real entry, not a parent stub.  */
+  SVN_ERR_ASSERT(dot_entry != NULL && *dot_entry->name == '\0');
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      and depth in traversal_info. */
