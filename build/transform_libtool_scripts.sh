@@ -39,7 +39,7 @@ svnserve="$delta $fs $ra_svn $repos $subr"
 svnsync="$delta $ra $subr"
 entries_dump="$subr $wc"
 
-executables="svn svnadmin svndumpfilter svnlook svnlook svnserve svnsync entries_dump"
+executables="svn svnadmin svndumpfilter svnlook svnserve svnsync entries_dump"
 
 for executable in $executables; do
   if [ "$executable" != entries_dump ]; then
