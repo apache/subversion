@@ -361,7 +361,7 @@ svn_cl__print_status(const char *path,
                      apr_pool_t *pool)
 {
   if (! status
-      || (skip_unrecognized && ! status->entry)
+      || (skip_unrecognized && !(status->entry || status->tree_conflict))
       || (status->text_status == svn_wc_status_none
           && status->repos_text_status == svn_wc_status_none))
     return SVN_NO_ERROR;
