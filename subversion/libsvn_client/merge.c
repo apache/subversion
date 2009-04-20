@@ -2624,7 +2624,10 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
          line of history, so there is nothing more to adjust in
          CHILD->REMAINING_RANGES. */
       if (segment->range_start == older_rev)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
 
       /* If this is a reverse merge reorder CHILD->REMAINING_RANGES and
          PARENT->REMAINING_RANGES so both will work with the
