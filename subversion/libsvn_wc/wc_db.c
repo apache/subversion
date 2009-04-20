@@ -3488,6 +3488,21 @@ svn_wc__db_temp_get_format(int *format,
       SVN_ERR_ASSERT(pdh->wcroot != NULL);
     }
 
+  /* ### for per-dir layouts, the wcroot should be this directory. under
+     ### wc-ng, the wcroot may have become set for this missing subdir.  */
+  if (strcmp(local_dir_abspath, pdh->wcroot->abspath) != 0)
+    {
+      /* Forget the WCROOT so that this directory will be re-examined later,
+         in case it gets constructed.  */
+      pdh->wcroot = NULL;
+
+      *format = 0;
+      return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                               _("'%s' is not a working copy"),
+                               svn_dirent_local_style(local_dir_abspath,
+                                                      scratch_pool));
+    }
+
   SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
 
   *format = pdh->wcroot->format;
