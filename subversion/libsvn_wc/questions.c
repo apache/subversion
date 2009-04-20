@@ -64,6 +64,10 @@ svn_wc_check_wc(const char *path,
   if (err && err->apr_err != SVN_ERR_WC_MISSING)
     return err;
 
+  /* We don't need the DB any more. (of course, we shouldn't have had to
+     open it in the first place, but that's an API issue)  */
+  svn_error_clear(svn_wc__db_close(db, pool));
+
   if (err)
     {
       svn_error_clear(err);
@@ -84,13 +88,11 @@ svn_wc_check_wc(const char *path,
 
       return SVN_NO_ERROR;
     }
-  else
-    {
-      /* If we managed to read the format we assume that we
-          are dealing with a real wc so we can return a nice
-          error. */
-      return svn_wc__check_format(*wc_format, path, pool);
-    }
+
+  /* If we managed to read the format we assume that we
+     are dealing with a real wc so we can return a nice
+     error. */
+  return svn_wc__check_format(*wc_format, path, pool);
 }
 
 
