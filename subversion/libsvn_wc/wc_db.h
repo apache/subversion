@@ -1477,7 +1477,7 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            svn_wc_adm_access_t *adm_access,
                            apr_pool_t *scratch_pool);
-void
+svn_error_t *
 svn_wc__db_temp_close_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              svn_wc_adm_access_t *adm_access,

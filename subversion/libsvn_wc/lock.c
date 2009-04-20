@@ -109,7 +109,7 @@ static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
          apr_pool_t *scratch_pool);
 
-static void
+static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
 
 
@@ -454,7 +454,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   SVN_ERR(svn_dirent_get_absolute(&lock->abspath, path, result_pool));
 
-  add_to_shared(lock, scratch_pool);
+  SVN_ERR(add_to_shared(lock, scratch_pool));
 
   *adm_access = lock;
 
@@ -486,7 +486,7 @@ alloc_db(svn_wc__db_t **db,
 }
 
 
-static void
+static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 {
   /* ### sometimes we replace &missing with a now-valid lock.  */
@@ -495,14 +495,15 @@ add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
                                                             lock->abspath,
                                                             scratch_pool);
     if (IS_MISSING(prior))
-      svn_wc__db_temp_close_access(lock->db,
-                                   lock->abspath,
-                                   (svn_wc_adm_access_t *)&missing,
-                                   scratch_pool);
+      SVN_ERR(svn_wc__db_temp_close_access(lock->db, lock->abspath,
+                                           (svn_wc_adm_access_t *)&missing,
+                                           scratch_pool));
   }
 
   svn_wc__db_temp_set_access(lock->db, lock->abspath, lock,
                              scratch_pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -704,8 +705,8 @@ close_single(svn_wc_adm_access_t *adm_access,
   adm_access->type = svn_wc__adm_access_closed;
 
   /* Detach from set */
-  svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath, adm_access,
-                               scratch_pool);
+  SVN_ERR(svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath,
+                                       adm_access, scratch_pool));
 
   /* Possibly close the underlying wc_db. */
   if (!adm_access->db_provided)
@@ -1407,7 +1408,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
 
              ### maybe this will be easier in the future. possibly a new
              ### disjoint algorithm?  */
-          svn_wc__db_temp_close_access(db, t_access->abspath, t_access, pool);
+          SVN_ERR(svn_wc__db_temp_close_access(db, t_access->abspath,
+                                               t_access, pool));
 
           err = child_is_disjoint(&disjoint, parent, path, p_access, t_access,
                                   pool);
@@ -1420,7 +1422,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             }
 
           /* Done with the computation. Put the child back into SHARED.  */
-          add_to_shared(t_access, pool);
+          SVN_ERR(add_to_shared(t_access, pool));
 
           if (disjoint)
             {

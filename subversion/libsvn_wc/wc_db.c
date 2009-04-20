@@ -3616,7 +3616,7 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
 
 
 /* ### temporary API. remove before release.  */
-void
+svn_error_t *
 svn_wc__db_temp_close_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              svn_wc_adm_access_t *adm_access,
@@ -3624,7 +3624,7 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
   /* Do not create a PDH. If we don't have one, then we don't have an
@@ -3635,8 +3635,17 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
       /* We should be closing the correct one, *or* it's already closed.  */
       SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == adm_access
                                || pdh->adm_access == NULL);
+      if (pdh->wcroot)
+        {
+          if (pdh->wcroot->sdb)
+            SVN_ERR(svn_sqlite__close(pdh->wcroot->sdb));
+          pdh->wcroot = NULL;
+        }
+
       pdh->adm_access = NULL;
     }
+
+  return SVN_NO_ERROR;
 }
 
 
