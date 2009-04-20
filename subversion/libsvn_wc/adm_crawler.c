@@ -486,8 +486,9 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                   svn_node_dir, FALSE, iterpool, iterpool);
           if (err)
             {
-              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                return err;
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+                  && err->apr_err != SVN_ERR_WC_MISSING)
+                return svn_error_return(err);
               svn_error_clear(err);
 
               /* We found the directory in the parent, but now it is "not
