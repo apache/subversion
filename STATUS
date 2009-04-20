@@ -193,6 +193,14 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
+ * r37385
+   Return an error if attempting to reintegrate from/to the repository root.
+   Justification:
+     A descriptive error is a lot better than a cryptic assertion, see
+     http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
