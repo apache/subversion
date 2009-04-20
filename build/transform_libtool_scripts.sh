@@ -16,7 +16,7 @@ subversion/tests/cmdline/entries-dump
 $(find subversion/tests -name '*-test' ! -path '*/.libs/*')
 "
 
-libraries="$(find subversion -name 'libsvn_*.so' -a ! -name 'libsvn_test-1.so' | sed -e "s:^:$(pwd)/:")"
+libraries="$(find subversion -name 'libsvn_*.so' ! -name 'libsvn_test-1.so' ! -path '*/subversion/bindings/*' | sed -e "s:^:$(pwd)/:")"
 libraries="$(echo $libraries)"
 
 _sed()
