@@ -19,7 +19,13 @@
 #ifndef SVN_LIBSVN_WC_TREE_CONFLICTS_H
 #define SVN_LIBSVN_WC_TREE_CONFLICTS_H
 
-#include "wc.h"
+#include <apr_pools.h>
+#include <apr_tables.h>
+
+#include "svn_string.h"
+#include "svn_wc.h"
+
+#include "wc_db.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -110,10 +116,19 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
+svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
                              const char *victim_basename,
                              apr_pool_t *pool);
 
+
+/* See svn_wc__get_tree_conflict() in svn_wc_private.h. This is a variant
+   that takes a DB and dual-pools. This function is preferred.  */
+svn_error_t *
+svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
+                           const char *victim_path,
+                           svn_wc__db_t *db,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
