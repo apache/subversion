@@ -305,13 +305,14 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                                this_dir->depth, scratch_pool));
 
   /* Do the loggy upgrade thing. */
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum,
 #ifndef BLAST_FORMAT_11
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum,
                                        SVN_WC__VERSION_EXPERIMENTAL,
-#else
-                                       SVN_WC__VERSION,
-#endif
                                        scratch_pool));
+#else
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
+                                       scratch_pool));
+#endif
   SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                svn_wc__adm_child(adm_access->path,
                                                  SVN_WC__ADM_ENTRIES,

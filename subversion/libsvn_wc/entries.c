@@ -865,14 +865,15 @@ read_entries_new(apr_hash_t **result_entries,
   wc_db_path = db_path(local_abspath, scratch_pool);
 
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
-                           statements,
 #ifndef BLAST_FORMAT_11
-                           SVN_WC__VERSION_EXPERIMENTAL,
-#else
-                           SVN_WC__VERSION,
-#endif
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
+                           statements, SVN_WC__VERSION_EXPERIMENTAL,
                            upgrade_sql, scratch_pool, scratch_pool));
+#else
+  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
+                           statements, SVN_WC__VERSION,
+                           upgrade_sql, scratch_pool, scratch_pool));
+#endif
 
   /* ### some of the data is not in the wc_db interface. grab it manually.
      ### trim back the columns fetched?  */
@@ -2672,15 +2673,19 @@ svn_wc__entries_write(apr_hash_t *entries,
                              (svn_wc_adm_access_path(adm_access), pool));
 
   /* Open the wc.db sqlite database. */
+#ifndef BLAST_FORMAT_11
   SVN_ERR(svn_sqlite__open(&wc_db,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
                            svn_sqlite__mode_readwrite, statements,
-#ifndef BLAST_FORMAT_11
                            SVN_WC__VERSION_EXPERIMENTAL,
-#else
-                           SVN_WC__VERSION,
-#endif
                            upgrade_sql, scratch_pool, scratch_pool));
+#else
+  SVN_ERR(svn_sqlite__open(&wc_db,
+                           db_path(svn_wc_adm_access_path(adm_access), pool),
+                           svn_sqlite__mode_readwrite, statements,
+                           SVN_WC__VERSION,
+                           upgrade_sql, scratch_pool, scratch_pool));
+#endif
 
   /* Write the entries. */
   SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, adm_access,
