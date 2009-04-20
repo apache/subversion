@@ -110,6 +110,14 @@ if test "$svn_lib_serf" = "yes"; then
             [Defined if support for Serf is enabled])
 fi
 
+dnl Search for GSSAPI
+SVN_LIB_RA_SERF_GSSAPI
+
+if test "$svn_lib_gssapi" = "yes"; then
+  AC_DEFINE([SVN_RA_SERF_HAVE_GSSAPI], 1,
+            [Defined if support for GSSAPI is enabled])
+fi
+
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
 
@@ -124,7 +132,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.12"
+SQLITE_RECOMMENDED_VER="3.6.13"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})

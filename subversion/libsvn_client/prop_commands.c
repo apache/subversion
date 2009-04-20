@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_client.h"
 #include "client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -124,7 +125,7 @@ propset_walk_cb(const char *path,
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, wb->base_access,
                               (entry->kind == svn_node_dir ? path
-                               : svn_path_dirname(path, pool)),
+                               : svn_dirent_dirname(path, pool)),
                               pool));
   err = svn_wc_prop_set3(wb->propname, wb->propval, path, adm_access,
                          wb->force, wb->notify_func, wb->notify_baton, pool);

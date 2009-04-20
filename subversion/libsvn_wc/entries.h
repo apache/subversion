@@ -21,7 +21,11 @@
 #define SVN_LIBSVN_WC_ENTRIES_H
 
 #include <apr_pools.h>
+
 #include "svn_types.h"
+
+#include "wc_db.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -195,14 +199,11 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   const char *name,
                                   svn_wc_entry_t *entry,
                                   apr_uint64_t modify_flags,
-                                  svn_boolean_t do_sync,
                                   apr_pool_t *pool);
 
 /* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
    the access baton for the directory which contains the .svn administrative
-   directory containing NAME.
-
-   If WRITE_TO_DISK is TRUE, then the modified ENTRIES will we written out
+   directory containing NAME.  The modified ENTRIES will be written out
    to disk.
 
    If ENTRIES is NULL, then the entries will be read from disk, modified,
@@ -213,7 +214,6 @@ svn_error_t *
 svn_wc__entry_remove(apr_hash_t *entries,
                      svn_wc_adm_access_t *adm_access,
                      const char *name,
-                     svn_boolean_t write_to_disk,
                      apr_pool_t *scratch_pool);
 
 
@@ -228,11 +228,10 @@ svn_wc__entry_remove(apr_hash_t *entries,
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
  *
- * If WRITE_TO_DISK is TRUE, then the tweaked ENTRIES will be written
- * out to disk.
+ * The tweaked ENTRIES will be unconditionally written out to disk.
  *
  * If ENTRIES is NULL, then it will be read via ADM_ACCESS, tweaked,
- * and then written to disk (WRITE_TO_DISK should be TRUE).
+ * and then written to disk.
  *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
  */
@@ -244,12 +243,69 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
                     const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
-                    svn_boolean_t write_to_disk,
                     apr_pool_t *scratch_pool);
+
+
+/** Get an ENTRY for the given LOCAL_ABSPATH.
+ *
+ * This API does not require an access baton, just a wc_db handle (DB).
+ * The requested entry MUST be present and version-controlled when
+ * ALLOW_UNVERSIONED is FALSE; otherwise, SVN_ERR_WC_PATH_NOT_FOUND is
+ * returned. When ALLOW_UNVERSIONED is TRUE, and the node is not under
+ * version control, *ENTRY will be set to NULL (this is easier for callers
+ * to handle, than detecting the error and clearing it).
+ *
+ * If you know the entry is a FILE or DIR, then specify that in KIND. If you
+ * are unsure, then specific 'svn_node_unknown' for KIND. This value will be
+ * used to optimize the access to the entry, so it is best to know the kind.
+ * If you specify FILE/DIR, and the entry is *something else*, then
+ * SVN_ERR_NODE_UNEXPECTED_KIND will be returned.
+ *
+ * For directory nodes, sometimes the caller may want the "stub" from the
+ * parent directory. This is usually to examine the DELETED flag. When
+ * this is desired, pass TRUE for NEED_PARENT_STUB. It is illegal to pass
+ * TRUE if KIND == FILE.
+ *
+ * If KIND == UNKNOWN, and you request the parent stub, and the node turns
+ * out to NOT be a directory, then SVN_ERR_NODE_UNEXPECTED_KIND is returned.
+ *
+ * If KIND == UNKNOWN, and you request the actual file/dir data (by setting
+ * NEED_PARENT_STUB to FALSE), and the node turns out to be a DIR (as
+ * specified by the parent), but the subdirectory is NOT present (obstructed
+ * or missing), then SVN_ERR_NODE_UNEXPECTED_KIND is returned.
+ *
+ * NOTE: if SVN_ERR_NODE_UNEXPECTED_KIND is returned, then the ENTRY *IS*
+ * valid and may be examined. For any other error, ENTRY *IS NOT* valid.
+ *
+ * NOTE: if an access baton is available, then it will be examined for
+ * cached entries (and this routine may even cache them for you). It is
+ * not required, however, to do any access baton management for this API.
+ *
+ * ENTRY will be allocated in RESULT_POOL, and all temporary allocations
+ * will be performed in SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__get_entry(const svn_wc_entry_t **entry,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  svn_boolean_t allow_unversioned,
+                  svn_node_kind_t kind,
+                  svn_boolean_t need_parent_stub,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+
+/* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
+ * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
+svn_boolean_t
+svn_wc__entry_is_hidden(const svn_wc_entry_t *entry);
+
 
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
-svn_wc__read_entries_old(svn_wc_adm_access_t *adm_access,
+svn_wc__read_entries_old(apr_hash_t **entries,
+                         const char *path,
+                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 svn_error_t *
@@ -266,6 +322,49 @@ svn_wc__entries_init_old(const char *path,
                          svn_revnum_t initial_rev,
                          svn_depth_t depth,
                          apr_pool_t *pool);
+
+/* Fulfill a svn_wc__db_read_info() invocation by reading an old-style
+   entry structure. Limited fields are available.  */
+svn_error_t *
+svn_wc__read_info_old(svn_wc__db_status_t *status,
+                      svn_wc__db_kind_t *kind,
+                      svn_revnum_t *revision,
+                      const char **repos_relpath,
+                      const char **repos_root_url,
+                      const char **repos_uuid,
+                      svn_revnum_t *changed_rev,
+                      apr_time_t *changed_date,
+                      const char **changed_author,
+                      apr_time_t *last_mod_time,
+                      svn_depth_t *depth,
+                      svn_checksum_t **checksum,
+                      svn_filesize_t *translated_size,
+                      const char **target,
+                      const char **changelist,
+                      const char **original_repos_relpath,
+                      const char **original_root_url,
+                      const char **original_uuid,
+                      svn_revnum_t *original_revision,
+                      svn_boolean_t *text_mod,
+                      svn_boolean_t *props_mod,
+                      svn_boolean_t *base_shadowed,
+                      svn_wc__db_lock_t **lock,
+                      svn_wc__db_t *db,
+                      const char *wcroot_abspath,
+                      const char *local_relpath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__gather_children_old(const apr_array_header_t **children,
+                            svn_boolean_t base_only,
+                            svn_wc__db_t *db,
+                            const char *wcroot_abspath,
+                            const char *local_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 
 /* Parse a file external specification in the NULL terminated STR and
    place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT

@@ -54,6 +54,7 @@
 #include "tree_conflicts.h"
 
 #include "private/svn_wc_private.h"
+#include "private/svn_debug.h"
 
 
 
@@ -150,6 +151,9 @@ struct edit_baton
   /* ### ANCHOR is relative to CWD; TARGET is relative to ANCHOR? */
   const char *anchor;
   const char *target;
+
+  /* The DB handle for managing the working copy state.  */
+  svn_wc__db_t *db;
 
   /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
   svn_wc_adm_access_t *adm_access;
@@ -744,9 +748,7 @@ complete_directory(struct edit_baton *eb,
         {
           if (current_entry->schedule != svn_wc_schedule_add)
             {
-              /* WRITE_TO_DISK is FALSE since we'll write the entries
-                 as a batch later.  */
-              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, FALSE,
+              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
                                            subpool));
             }
           else
@@ -756,7 +758,7 @@ complete_directory(struct edit_baton *eb,
               SVN_ERR(svn_wc__entry_modify(adm_access, current_entry->name,
                                            &tmpentry,
                                            SVN_WC__ENTRY_MODIFY_DELETED,
-                                           FALSE, subpool));
+                                           subpool));
             }
         }
       /* An absent entry might have been reconfirmed as absent, and the way
@@ -767,10 +769,7 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          /* WRITE_TO_DISK is FALSE since we'll write the entries
-             as a batch later.  */
-          SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, FALSE,
-                                       subpool));
+          SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, subpool));
         }
       else if (current_entry->kind == svn_node_dir)
         {
@@ -787,10 +786,8 @@ complete_directory(struct edit_baton *eb,
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
-              /* WRITE_TO_DISK is FALSE since we'll write the entries
-                 as a batch later.  */
               SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
-                                           FALSE, subpool));
+                                           subpool));
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
@@ -1016,8 +1013,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
         {
           err = svn_error_createf(
                     SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
-                    _("Checksum mismatch while updating '%s'; "
-                      "expected: '%s', actual: '%s'"),
+                    apr_psprintf(hb->pool, "%s:\n%s\n%s\n",
+                                 _("Checksum mismatch while updating '%s'"),
+                                 _("   expected:  %s"),
+                                 _("     actual:  %s")),
                     svn_dirent_local_style(fb->path, hb->pool),
                     svn_checksum_to_cstring(hb->expected_source_checksum,
                                             hb->pool),
@@ -1234,14 +1233,8 @@ check_path_under_root(const char *base_path,
                       apr_pool_t *pool)
 {
   char *full_path;
-  apr_status_t path_status;
 
-  path_status = apr_filepath_merge(
-     &full_path, base_path, add_path,
-     APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
-     pool);
-
-  if (path_status != APR_SUCCESS)
+  if (! svn_dirent_is_under_root(&full_path, base_path, add_path, pool))
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -1250,7 +1243,8 @@ check_path_under_root(const char *base_path,
             undefined, since apr_filepath_merge() returned error.
             (Pity we can't pass NULL for &full_path in the first place,
             but the APR docs don't bless that.) */
-         svn_path_local_style(svn_dirent_join(base_path, add_path, pool), pool));
+         svn_dirent_local_style(svn_dirent_join(base_path, add_path, pool),
+                                pool));
     }
 
   return SVN_NO_ERROR;
@@ -1324,7 +1318,6 @@ open_root(void *edit_baton,
                                   d->path, pool));
       SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
                                    &tmp_entry, flags,
-                                   TRUE /* immediate write */,
                                    pool));
     }
 
@@ -1852,8 +1845,7 @@ set_copied_callback(const char *path,
           tmp_entry.copied = TRUE;
           flags |= SVN_WC__ENTRY_MODIFY_COPIED;
           SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
-                                       &tmp_entry, flags, TRUE /* do_sync */,
-                                       pool));
+                                       &tmp_entry, flags, pool));
         }
     }
   return SVN_NO_ERROR;
@@ -1930,7 +1922,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   SVN_ERR(svn_wc__entry_modify(entry_adm_access,
                                (entry->kind == svn_node_dir)
                                ? SVN_WC_ENTRY_THIS_DIR : base_name,
-                               &tmp_entry, flags, TRUE /* do_sync */, pool));
+                               &tmp_entry, flags, pool));
 
   /* If it's a directory, set the 'copied' flag recursively. The rest of the
    * directory tree's state can stay exactly as it was before being
@@ -1960,7 +1952,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
       SVN_ERR(svn_wc__entry_versioned(&parent_entry, parent_path,
                                       parent_adm_access, TRUE, pool));
       SVN_ERR(svn_wc__entry_modify(parent_adm_access, base_name,
-                                   &tmp_entry, flags, TRUE, pool));
+                                   &tmp_entry, flags, pool));
 
       /* ### Need to do something more, such as change 'base' into 'revert-base'? */
     }
@@ -2006,8 +1998,7 @@ do_entry_deletion(struct edit_baton *eb,
     {
       const char *base_name = svn_dirent_basename(full_path, pool);
 
-      SVN_ERR(svn_wc__entry_remove(NULL, parent_adm_access, base_name,
-                                   TRUE, pool));
+      SVN_ERR(svn_wc__entry_remove(NULL, parent_adm_access, base_name, pool));
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
       return SVN_NO_ERROR;
@@ -2314,6 +2305,17 @@ add_directory(const char *path,
             }
           else
             {
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify = 
+                        svn_wc_create_notify(db->path,
+                                             svn_wc_notify_update_obstruction,
+                                             pool);
+
+                  notify->kind = svn_node_dir;
+                  (*eb->notify_func)(eb->notify_baton, notify, pool);
+                }
+
               return svn_error_createf(
                  SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': an unversioned "
@@ -2496,8 +2498,7 @@ add_directory(const char *path,
         }
 
       SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   modify_flags,
-                                   TRUE /* immediate write */, pool));
+                                   modify_flags, pool));
 
       if (db->add_existed)
         {
@@ -2521,8 +2522,7 @@ add_directory(const char *path,
             }
 
           SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry,
-                                       modify_flags,
-                                       TRUE /* immediate write */, pool));
+                                       modify_flags, pool));
         }
     }
 
@@ -2548,15 +2548,13 @@ add_directory(const char *path,
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                                   pb->path, db->pool));
       SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   modify_flags,
-                                   TRUE /* immediate write */, pool));
+                                   modify_flags, pool));
 
       /* Mark PATH's 'this dir' entry as scheduled for deletion. */
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                                   db->path, db->pool));
       SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* This Dir entry */,
-                                   &tmp_entry, modify_flags,
-                                   TRUE /* immediate write */, pool));
+                                   &tmp_entry, modify_flags, pool));
     }
 
   /* If this add was obstructed by dir scheduled for addition without
@@ -2709,7 +2707,6 @@ open_directory(const char *path,
 
   return svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
                               &tmp_entry, flags,
-                              TRUE /* immediate write */,
                               pool);
 }
 
@@ -2813,11 +2810,24 @@ close_directory(void *dir_baton,
      deleted (issue #1672). */
   if (db->was_incomplete)
     {
+      const char *local_abspath;
+      const svn_wc_entry_t *entry;
       int i;
       apr_hash_t *props_to_delete;
 
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                 adm_access, db->path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
+      SVN_ERR(svn_wc__get_entry(&entry, db->edit_baton->db, local_abspath,
+                                TRUE, svn_node_unknown, FALSE, pool, pool));
+      if (entry == NULL)
+        {
+          base_props = apr_hash_make(pool);
+          working_props = apr_hash_make(pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                     entry, db->path, pool, pool));
+        }
 
       /* Calculate which base props weren't also in the incoming
          propchanges. */
@@ -3014,7 +3024,7 @@ absent_file_or_dir(const char *path,
                                SVN_WC__ENTRY_MODIFY_REVISION |
                                SVN_WC__ENTRY_MODIFY_DELETED |
                                SVN_WC__ENTRY_MODIFY_ABSENT),
-                              TRUE /* immediate write */, pool);
+                              pool);
 }
 
 
@@ -3330,7 +3340,7 @@ add_file_with_history(const char *path,
           SVN_ERR(svn_wc__get_revert_contents(&source_text_base, src_path,
                                               subpool, subpool));
           SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props,
-                                     src_access, src_path, pool));
+                                     src_entry, src_path, pool, subpool));
           /* The old working props are lost, just like the old
              working file text is.  Just use the base props. */
           working_props = base_props;
@@ -3340,7 +3350,7 @@ add_file_with_history(const char *path,
           SVN_ERR(svn_wc_get_pristine_contents(&source_text_base, src_path,
                                                subpool, subpool));
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                     src_access, src_path, pool));
+                                     src_entry, src_path, pool, subpool));
         }
 
       SVN_ERR(svn_stream_copy3(source_text_base, copied_stream,
@@ -3491,11 +3501,23 @@ add_file(const char *path,
       if (eb->allow_unver_obstructions)
         fb->existed = TRUE;
       else
-        return svn_error_createf(
-           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Failed to add file '%s': an unversioned "
-             "file of the same name already exists"),
-           svn_path_local_style(full_path, subpool));
+        {
+          if (eb->notify_func)
+            {
+              svn_wc_notify_t *notify = 
+                      svn_wc_create_notify(full_path,
+                                           svn_wc_notify_update_obstruction,
+                                           pool);
+
+              notify->kind = svn_node_file;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+          return svn_error_createf(
+             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+             _("Failed to add file '%s': an unversioned "
+               "file of the same name already exists"),
+             svn_path_local_style(full_path, subpool));
+        }
     }
 
   /* What to do with a versioned or schedule-add file:
@@ -3805,7 +3827,10 @@ apply_textdelta(void *file_baton,
     {
       return svn_error_createf(
         SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-        _("Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"),
+        apr_psprintf(pool, "%s:\n%s\n%s\n",
+                     _("Checksum mismatch for '%s'"),
+                     _("   expected:  %s"),
+                     _("   recorded:  %s")),
         svn_path_local_style(fb->path, pool), base_checksum, checksum);
     }
 
@@ -4505,7 +4530,10 @@ close_file(void *file_baton,
       && !svn_checksum_match(expected_checksum, actual_checksum))
     return svn_error_createf(
        SVN_ERR_CHECKSUM_MISMATCH, NULL,
-       _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
+       apr_psprintf(pool, "%s:\n%s\n%s\n",
+                    _("Checksum mismatch for '%s'"),
+                    _("   expected:  %s"),
+                    _("     actual:  %s")),
        svn_path_local_style(fb->path, pool), expected_hex_digest,
        svn_checksum_to_cstring_display(actual_checksum, pool));
 
@@ -4712,6 +4740,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->switch_url               = switch_url;
   eb->repos                    = entry ? entry->repos : NULL;
   eb->uuid                     = entry ? entry->uuid : NULL;
+  eb->db                       = svn_wc__adm_get_db(adm_access);
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;
@@ -5114,24 +5143,55 @@ check_wc_root(svn_boolean_t *wc_root,
               svn_wc_adm_access_t *adm_access,
               apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *abspath;
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
-  svn_wc_adm_access_t *p_access;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
   *wc_root = TRUE;
 
-  /* Get our ancestry.  In the event that the path is unversioned,
-     treat it as if it were a file so that the anchor will be the
-     parent directory. */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+
+  /* Get our ancestry.  In the event that the path is unversioned (or
+     otherwise hidden), treat it as if it were a file so that the anchor
+     will be the parent directory. If the node is a FILE, then it is
+     definitely not a root.  */
+  err = svn_wc__get_entry(&entry, db, abspath, TRUE, svn_node_unknown, FALSE,
+                          pool, pool);
+  if (err || entry == NULL || entry->kind == svn_node_file
+      || svn_wc__entry_is_hidden(entry))
+    {
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
+              && entry->kind == svn_node_dir && *entry->name != '\0')
+            {
+              /* The (subdir) node is (most likely) not present. We said
+                 we wanted the actual information, but got the stub info
+                 instead. We can pretend this is a file so the parent will
+                 be the anchor.  */
+            }
+          else
+            return err;
+          svn_error_clear(err);
+        }
+
+      if (kind)
+        *kind = svn_node_file;
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
   if (kind)
-    *kind = entry ? entry->kind : svn_node_file;
+    *kind = svn_node_dir;
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
+  /* ### not entirely true! we have an abspath.  */
   if (svn_path_is_empty(path))
     return SVN_NO_ERROR;
 
@@ -5140,26 +5200,17 @@ check_wc_root(svn_boolean_t *wc_root,
   if (svn_dirent_is_root(path, strlen(path)))
     return SVN_NO_ERROR;
 
+  svn_dirent_split(abspath, &parent, &base_name, pool);
+
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  p_entry = NULL;
-  svn_dirent_split(path, &parent, &base_name, pool);
-  SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, adm_access, parent,
-                                        pool));
-  err = SVN_NO_ERROR;
-  if (! p_access)
-    /* For historical reasons we cannot rely on the caller having opened
-       the parent, so try it here.  I'd like this bit to go away.  */
-    err = svn_wc_adm_probe_open3(&p_access, NULL, parent, FALSE, 0,
-                                 NULL, NULL, pool);
-
-  if (! err)
-    err = svn_wc_entry(&p_entry, parent, p_access, FALSE, pool);
-
-  if (err || (! p_entry))
+  err = svn_wc__get_entry(&p_entry, db, parent, FALSE, svn_node_dir, FALSE,
+                          pool, pool);
+  if (err)
     {
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
+  SVN_ERR_ASSERT(!svn_wc__entry_is_hidden(p_entry));
 
   /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
@@ -5178,9 +5229,13 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If PATH's parent in the repository is not its parent in the WC,
      PATH is a WC root. */
-  SVN_ERR(svn_wc_entry(&p_entry, path, p_access, FALSE, pool));
-  if (! p_entry)
+  err = svn_wc__get_entry(&p_entry, db, abspath, FALSE, svn_node_dir, TRUE,
+                          pool, pool);
+  if (err || svn_wc__entry_is_hidden(p_entry))
+    {
+      svn_error_clear(err);
       return SVN_NO_ERROR;
+    }
 
   /* If we have not determined that PATH is a WC root by now, it must
      not be! */

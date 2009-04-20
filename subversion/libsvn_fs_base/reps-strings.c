@@ -820,9 +820,11 @@ svn_fs_base__rep_contents(svn_string_t *str,
     if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         _("Checksum mismatch on representation '%s':\n"
-           "   expected:  %s\n"
-           "     actual:  %s\n"), rep_key,
+         apr_psprintf(pool, "%s:\n%s\n%s\n",
+                      _("Checksum mismatch on representation '%s'"),
+                      _("   expected:  %s"),
+                      _("     actual:  %s")),
+         rep_key,
          svn_checksum_to_cstring_display(rep_checksum, pool),
          svn_checksum_to_cstring_display(checksum, pool));
   }
@@ -914,9 +916,11 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->md5_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("MD5 checksum mismatch on representation '%s':\n"
-                     "   expected:  %s\n"
-                     "     actual:  %s\n"), args->rb->rep_key,
+                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
+                                _("MD5 checksum mismatch on representation '%s'"),
+                                _("   expected:  %s"),
+                                _("     actual:  %s")),
+                   args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->md5_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(args->rb->md5_checksum,
@@ -927,9 +931,11 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->sha1_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("SHA1 checksum mismatch on representation '%s':\n"
-                     "   expected:  %s\n"
-                     "     actual:  %s\n"), args->rb->rep_key,
+                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
+                                _("SHA1 checksum mismatch on representation '%s'"),
+                                _("   expected:  %s"),
+                                _("     actual:  %s")),
+                   args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(args->rb->sha1_checksum,

@@ -1081,7 +1081,7 @@ return svn_error_create(SVN_ERR_FOO, NULL,
         <pre>
         error = some_routine(foo);
         if (error)
-          return (error);
+          return svn_error_return(error);
         </pre>
 
         <p>Actually, a better way to do this would be with the
@@ -1160,6 +1160,26 @@ return svn_error_create(SVN_ERR_FOO, NULL,
         svn_io_file_lock.</p>
     </li>
     </ul>
+</li>
+
+<li><p>The <code>SVN_ERR()</code> macro will create a wrapped error when
+       <code>SVN_ERR__TRACING</code> is defined.  This helps developers
+       determine what caused the error, and can be enabled with the
+       <code>--enable-maintainer-mode</code> option to <code>configure</code>.
+       </p>
+</li>
+
+<li><p>Sometimes, you just want to return whatever a called function
+       returns, usually at the end of your own function.  Avoid the
+       temptation to directly return the result:</p>
+    <pre>
+    /* Don't do this! */
+    return some_routine(foo);</pre>
+
+    <p>Instead, use the svn_error_return meta-function to return the value.
+       This ensures that stack tracing happens correctly when enabled.</p>
+    <pre>
+    return svn_error_return(some_routine(foo));</pre>
 
 </li>
 </ol>

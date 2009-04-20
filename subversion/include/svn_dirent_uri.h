@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -403,6 +403,7 @@ svn_uri_get_longest_ancestor(const char *path1,
 
 /** Convert @a relative canonicalized dirent to an absolute dirent and
  * return the results in @a *pabsolute, allocated in @a pool.
+ * Raise SVN_ERR_BAD_FILENAME if the absolute dirent cannot be determined.
  *
  * @since New in 1.6.
  */
@@ -509,6 +510,22 @@ svn_dirent_condense_targets(const char **pcommon,
                             svn_boolean_t remove_redundancies,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/* Check that when @a path is joined to @a base_path, the resulting path
+ * is still under BASE_PATH in the local filesystem. If not, return @c FALSE.
+ * If @c TRUE is returned, @a *full_path will be set to the absolute path
+ * of @a path, allocated in @a pool.
+ *
+ * Note: Use of this function is strongly encouraged. Do not roll your own.
+ * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_dirent_is_under_root(char **full_path,
+                         const char *base_path,
+                         const char *path,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

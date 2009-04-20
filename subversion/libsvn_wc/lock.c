@@ -84,6 +84,15 @@ struct svn_wc_adm_access_t
 
 };
 
+static svn_boolean_t
+should_create_next_gen(void)
+{
+  /* ### this is temporary. developers will use this while wc-ng is being
+     ### developed. in the future, we will *always* create a next gen wc. */
+  return getenv("SVN_ENABLE_NG") != NULL;
+}
+
+
 /* This is a placeholder used in the set hash to represent missing
    directories.  Only its address is important, it contains no useful
    data. */
@@ -111,10 +120,12 @@ convert_wcprops(svn_stringbuf_t *log_accum,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
+  const char *dir_abspath;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, adm_access->path, pool));
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
   /* Walk over the entries, adding a modify-wcprop command for each wcprop.
@@ -128,11 +139,10 @@ convert_wcprops(svn_stringbuf_t *log_accum,
       apr_hash_t *wcprops;
       apr_hash_index_t *hj;
       const char *full_path;
+      const char *local_abspath;
 
       apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
-
-      full_path = svn_dirent_join(adm_access->path, entry->name, pool);
 
       if (entry->kind != svn_node_file
           && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -140,7 +150,11 @@ convert_wcprops(svn_stringbuf_t *log_accum,
 
       svn_pool_clear(subpool);
 
-      SVN_ERR(svn_wc__wcprop_list(&wcprops, entry->name, adm_access, subpool));
+      full_path = svn_dirent_join(adm_access->path, entry->name, subpool);
+      local_abspath = svn_dirent_join(dir_abspath, entry->name, subpool);
+
+      SVN_ERR(svn_wc__wcprop_list(&wcprops, adm_access->db, local_abspath,
+                                  entry->kind, subpool, subpool));
 
       /* Create a subsubpool for the inner loop...
          No, just kidding.  There are typically just one or two wcprops
@@ -166,21 +180,20 @@ convert_wcprops(svn_stringbuf_t *log_accum,
 }
 
 
-svn_error_t *
-svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *scratch_pool)
+/* Helper function so we can still upgrade for format 11, for the time being.
+   ### This will go away with before 1.7. */
+static svn_error_t *
+upgrade_format_old(svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *scratch_pool)
 {
   int wc_format;
   svn_boolean_t cleanup_required;
   svn_stringbuf_t *log_accum;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format,
-                               adm_access->path,
-                               scratch_pool));
+  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
 
-  /* We can upgrade all formats that are accepted by
-     svn_wc__check_format. */
+  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
@@ -230,6 +243,109 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
   return svn_wc__run_log(adm_access, NULL, scratch_pool);
 }
 
+svn_error_t *
+svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *scratch_pool)
+{
+  int wc_format;
+  svn_boolean_t cleanup_required;
+  svn_stringbuf_t *log_accum;
+  const svn_wc_entry_t *this_dir;
+
+  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
+  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
+
+  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
+  if (wc_format >= SVN_WC__VERSION)
+    return SVN_NO_ERROR;
+
+  if (!should_create_next_gen())
+    return upgrade_format_old(adm_access, scratch_pool);
+
+  /* Don't try to mess with the WC if there are old log files left. */
+  SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
+                                          adm_access, scratch_pool));
+
+  if (cleanup_required)
+    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                            _("Cannot upgrade with existing logs; please "
+                              "run 'svn cleanup' with Subversion 1.6"));
+
+  log_accum = svn_stringbuf_create("", scratch_pool);
+
+  /* What's going on here?
+   *
+   * We're attempting to upgrade an older working copy to the new wc-ng format.
+   * The sematics and storage mechanisms between the two are vastly different,
+   * so it's going to be a bit painful.  Here's a plan for the operation:
+   *
+   * 1) The 'entries' file needs to be moved to the new format.  Ideally, we'd
+   *    read it using svn_wc__entries_read_old(), and then translate the
+   *    current state of the file into a series of wc_db commands to duplicate
+   *    that state in WC-NG.  We're not quite there yet, so we just use
+   *    the same loggy process as we always have, relying on the lower layers
+   *    to take care of the translation, and remembering to remove the old
+   *    entries file when were're done.  ### This isn't a long-term solution.
+   *
+   * ### (fill in other bits as they are implemented)
+   */
+
+  /***** ENTRIES *****/
+  /* Create an empty sqlite database for this directory. */
+  SVN_ERR(svn_wc_entry(&this_dir, adm_access->path, adm_access, FALSE,
+                       scratch_pool));
+  SVN_ERR(svn_wc__entries_init(adm_access->path, this_dir->uuid, this_dir->url,
+                               this_dir->repos, this_dir->revision,
+                               this_dir->depth, scratch_pool));
+
+  /* Do the loggy upgrade thing. */
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION_EXPERIMENTAL,
+                                       scratch_pool));
+  SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                               svn_wc__adm_child(adm_access->path,
+                                                 SVN_WC__ADM_ENTRIES,
+                                                 scratch_pool),
+                               scratch_pool));
+
+  /* ### Note that lots of this content is cribbed from the old format updater.
+     ### The following code will change as the wc-ng format changes and more
+     ### stuff gets migrated to the sqlite format. */
+
+  /***** WC PROPS *****/
+  /* If the WC uses one file per entry for wcprops, give back some inodes
+     to the poor user. */
+  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+    SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
+
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
+
+  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+    {
+      /* Remove wcprops directory, dir-props, README.txt and empty-file
+         files.
+         We just silently ignore errors, because keeping these files is
+         not catastrophic. */
+
+      svn_error_clear(svn_io_remove_dir2(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
+                            scratch_pool),
+          FALSE, NULL, NULL, scratch_pool));
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
+                            scratch_pool),
+          scratch_pool));
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
+                            scratch_pool),
+          scratch_pool));
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
+                            scratch_pool),
+          scratch_pool));
+    }
+
+  return svn_wc__run_log(adm_access, NULL, scratch_pool);
+}
 
 /* Create a physical lock file in the admin directory for ADM_ACCESS.
 
@@ -555,7 +671,7 @@ close_single(svn_wc_adm_access_t *adm_access,
              from the working copy.  It is an error for the lock to
              have disappeared if the administrative area still exists. */
 
-          svn_error_t *err = svn_wc__remove_adm_file(adm_access,
+          svn_error_t *err = svn_wc__remove_adm_file(adm_access->path,
                                                      SVN_WC__ADM_LOCK,
                                                      scratch_pool);
           if (err)
@@ -862,6 +978,21 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 }
 
 
+svn_wc_adm_access_t *
+svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
+                               const char *abspath,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc_adm_access_t *adm_access = get_from_shared(abspath, db, scratch_pool);
+
+  /* If the entry is marked as "missing", then return nothing.  */
+  if (IS_MISSING(adm_access))
+    adm_access = NULL;
+
+  return adm_access;
+}
+
+
 svn_error_t *
 svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
@@ -878,11 +1009,10 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
 
       SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
 
-      *adm_access = get_from_shared(abspath, associated->db, pool);
+      *adm_access = svn_wc__adm_retrieve_internal2(associated->db, abspath,
+                                                   pool);
 
-      /* If the entry is marked as "missing", then return nothing.
-
-         Relative paths can play stupid games with the lookup, and we might
+      /* Relative paths can play stupid games with the lookup, and we might
          try to return the wrong baton. Look for that case, and zap it.
 
          The specific case observed happened during "svn status .. -u -v".
@@ -892,9 +1022,8 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
          is to not find "" in the set of batons.
 
          Sigh.  */
-      if (IS_MISSING(*adm_access)
-          || (*adm_access != NULL
-              && strcmp(path, (*adm_access)->path) != 0))
+      if (*adm_access != NULL
+          && strcmp(path, (*adm_access)->path) != 0)
         *adm_access = NULL;
     }
 
@@ -1523,8 +1652,7 @@ svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
 
 
 apr_hash_t *
-svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
-                           apr_pool_t *pool)
+svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access)
 {
   return adm_access->entries_all;
 }

@@ -1576,14 +1576,14 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
   apr_int32_t flags;
   apr_status_t apr_err;
 
-  if (exclusive == TRUE)
+  if (exclusive)
     locktype = APR_FLOCK_EXCLUSIVE;
 
   flags = APR_READ;
   if (locktype == APR_FLOCK_EXCLUSIVE)
     flags |= APR_WRITE;
 
-  if (nonblocking == TRUE)
+  if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
 
   SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,

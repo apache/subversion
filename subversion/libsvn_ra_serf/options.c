@@ -198,7 +198,7 @@ cdata_options(svn_ra_serf__xml_parser_t *parser,
               apr_size_t len)
 {
   svn_ra_serf__options_context_t *ctx = userData;
-  if (ctx->collect_cdata == TRUE)
+  if (ctx->collect_cdata)
     {
       svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
                                  data, len, ctx->pool);

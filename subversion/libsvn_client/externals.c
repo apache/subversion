@@ -262,7 +262,7 @@ switch_dir_external(const char *path,
     {
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
-      const char *parent = svn_path_dirname(path, pool);
+      const char *parent = svn_dirent_dirname(path, pool);
       SVN_ERR(svn_io_make_dir_recursively(parent, pool));
     }
 

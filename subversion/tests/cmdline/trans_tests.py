@@ -328,7 +328,7 @@ def keywords_from_birth(sbox):
   fp = open(header_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
                         lines[0]))):
     print("Header expansion failed for %s" % header_unexp_path)
     raise svntest.Failure
@@ -338,7 +338,7 @@ def keywords_from_birth(sbox):
   fp = open(header_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
                         lines[0]))):
     print("Header expansion failed for %s" % header_exp_path)
     raise svntest.Failure

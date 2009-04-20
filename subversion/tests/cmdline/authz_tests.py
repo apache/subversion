@@ -405,20 +405,22 @@ def authz_checkout_and_update_test(sbox):
   # 1st part: disable read access on folder A/B, checkout should not
   # download this folder
 
-  # write an authz file with *= on /A/B
+  # write an authz file with *= on /A/B and /A/mu.
   write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* ="})
+                           "/A/B": "* =",
+                           "/A/mu": "* =",
+                           })
 
-  # checkout a working copy, should not dl /A/B
+  # checkout a working copy, should not dl /A/B or /A/mu.
   expected_output = svntest.main.greek_state.copy()
   expected_output.wc_dir = local_dir
   expected_output.tweak(status='A ', contents=None)
   expected_output.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                         'A/B/E/beta', 'A/B/F')
+                         'A/B/E/beta', 'A/B/F', 'A/mu')
 
   expected_wc = svntest.main.greek_state.copy()
   expected_wc.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                     'A/B/E/beta', 'A/B/F')
+                     'A/B/E/beta', 'A/B/F', 'A/mu')
 
   svntest.actions.run_and_verify_checkout(sbox.repo_url, local_dir,
                                           expected_output,
@@ -426,8 +428,10 @@ def authz_checkout_and_update_test(sbox):
 
   # 2nd part: now enable read access
 
-  # write an authz file with *=r on /
-  write_authz_file(sbox, { "/": "* = r"})
+  # write an authz file with *=r on /. continue to exclude mu.
+  write_authz_file(sbox, { "/": "* = r",
+                           "/A/mu": "* =",
+                           })
 
   # update the working copy, should download /A/B because we now have read
   # access
@@ -440,8 +444,10 @@ def authz_checkout_and_update_test(sbox):
     'A/B/F' : Item(status='A '),
     })
 
-  expected_wc = svntest.main.greek_state
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/mu')
   expected_status = svntest.actions.get_virginal_state(local_dir, 1)
+  expected_status.remove('A/mu')
 
   svntest.actions.run_and_verify_update(local_dir,
                                         expected_output,

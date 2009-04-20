@@ -312,7 +312,7 @@ info_error_handler(const char *path,
       svn_wc_conflict_description_t *tree_conflict;
 
       SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
-                                    svn_path_dirname(path, pool),
+                                    svn_dirent_dirname(path, pool),
                                     FALSE, 0, NULL, NULL, pool));
       SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access,
                                         pool));
@@ -405,18 +405,14 @@ same_resource_in_head(svn_boolean_t *same_p,
     {
       svn_error_clear(err);
       *same_p = FALSE;
+      return SVN_NO_ERROR;
     }
-  else if (err)
-    return err;
-  else
-    {
-      /* ### Currently, the URLs should always be equal, since we can't
-         ### walk forwards in history. */
-      if (strcmp(url, head_url) == 0)
-        *same_p = TRUE;
-      else
-        *same_p = FALSE;
-    }
+  else 
+    SVN_ERR(err);
+
+  /* ### Currently, the URLs should always be equal, since we can't
+     ### walk forwards in history. */
+  *same_p = (strcmp(url, head_url) == 0);
 
   return SVN_NO_ERROR;
 }

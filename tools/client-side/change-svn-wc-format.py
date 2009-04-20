@@ -31,6 +31,8 @@ except AttributeError:
 LATEST_FORMATS = { "1.4" : 8,
                    "1.5" : 9,
                    "1.6" : 10,
+                   # Do NOT add format 11 here.  See comment in must_retain_fields
+                   # for why.
                  }
 
 def usage_and_exit(error_msg=None):
@@ -274,7 +276,14 @@ class Entry:
       8  : (30, 31, 33, 34, 35),
       # Not in 1.5: tree-conflicts, file-externals
       9  : (34, 35),
-      10 : ()
+      10 : (),
+      # Downgrading from format 11 (1.7-dev) to format 10 is not possible,
+      # because 11 does not use has-props and cachable-props (but 10 does).
+      # Naively downgrading in that situation causes properties to disappear
+      # from the wc.
+      # 
+      # Downgrading from the 1.7 SQLite-based format to format 10 is not
+      # implemented.
       }
 
   def __init__(self):
@@ -346,7 +355,8 @@ class UnrecognizedWCFormatException(LocalException):
     self.format = format
     self.path = path
   def __str__(self):
-    return "Unrecognized WC format %d in '%s'" % (self.format, self.path)
+    return ("Unrecognized WC format %d in '%s'; "
+            "only formats 8, 9, and 10 can be supported") % (self.format, self.path)
 
 
 def main():
@@ -385,7 +395,8 @@ def main():
   try:
     new_format_nbr = LATEST_FORMATS[svn_version]
   except KeyError:
-    usage_and_exit("Unsupported version number '%s'" % svn_version)
+    usage_and_exit("Unsupported version number '%s'; "
+                   "only 1.4, 1.5, and 1.6 can be supported" % svn_version)
 
   try:
     converter.change_wc_format(new_format_nbr)

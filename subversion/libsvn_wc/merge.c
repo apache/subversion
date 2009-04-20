@@ -29,6 +29,8 @@
 #include "questions.h"
 #include "log.h"
 
+#include "private/svn_debug.h"
+
 #include "svn_private_config.h"
 
 
@@ -115,6 +117,7 @@ detranslate_wc_file(const char **detranslated_file,
                     svn_wc_adm_access_t *adm_access,
                     svn_boolean_t force_copy,
                     const apr_array_header_t *prop_diff,
+                    const char *source_file,
                     apr_pool_t *pool)
 {
   svn_boolean_t is_binary;
@@ -217,7 +220,7 @@ detranslate_wc_file(const char **detranslated_file,
                && style != svn_subst_eol_style_none)
         return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-      SVN_ERR(svn_subst_copy_and_translate3(merge_target,
+      SVN_ERR(svn_subst_copy_and_translate3(source_file,
                                             detranslated,
                                             eol,
                                             TRUE /* repair */,
@@ -229,7 +232,7 @@ detranslate_wc_file(const char **detranslated_file,
       *detranslated_file = detranslated;
     }
   else
-    *detranslated_file = merge_target;
+    *detranslated_file = source_file;
 
   return SVN_NO_ERROR;
 }
@@ -1202,9 +1205,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
     SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
   working_text = copyfrom_text ? copyfrom_text : merge_target;
-  SVN_ERR(detranslate_wc_file(&detranslated_target, working_text, adm_access,
+  SVN_ERR(detranslate_wc_file(&detranslated_target, merge_target, adm_access,
                               (! is_binary) && diff3_cmd != NULL,
-                              prop_diff, pool));
+                              prop_diff, working_text, pool));
 
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
@@ -1217,24 +1220,24 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         /* in dry-run mode, binary files always conflict */
         *merge_outcome = svn_wc_merge_conflict;
       else
-        merge_binary_file(left,
-                          right,
-                          merge_target,
-                          adm_access,
-                          left_label,
-                          right_label,
-                          target_label,
-                          conflict_func,
-                          conflict_baton,
-                          log_accum,
-                          merge_outcome,
-                          left_version,
-                          right_version,
-                          detranslated_target,
-                          mimeprop,
-                          merge_dirpath,
-                          merge_filename,
-                          pool);
+        SVN_ERR(merge_binary_file(left,
+                                  right,
+                                  merge_target,
+                                  adm_access,
+                                  left_label,
+                                  right_label,
+                                  target_label,
+                                  conflict_func,
+                                  conflict_baton,
+                                  log_accum,
+                                  merge_outcome,
+                                  left_version,
+                                  right_version,
+                                  detranslated_target,
+                                  mimeprop,
+                                  merge_dirpath,
+                                  merge_filename,
+                                  pool));
     }
   else
     SVN_ERR(merge_text_file(left,

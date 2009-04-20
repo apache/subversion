@@ -66,9 +66,8 @@ void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *entries);
 
 /* Return the entries hash cached in ADM_ACCESS.  The returned hash may
-   be NULL.  POOL is used for local, short term, memory allocations. */
-apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
-                                       apr_pool_t *pool);
+   be NULL.  */
+apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
 
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
@@ -95,6 +94,13 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
                                            svn_wc_adm_access_t *associated,
                                            const char *path,
                                            apr_pool_t *pool);
+
+/* Same as svn_wc__adm_retrieve_internal, but takes a DB and an absolute
+   directory path.  */
+svn_wc_adm_access_t *
+svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
+                               const char *abspath,
+                               apr_pool_t *scratch_pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
 svn_error_t *

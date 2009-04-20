@@ -326,7 +326,7 @@ set_lock_headers(serf_bucket_t *headers,
 {
   lock_info_t *lock_ctx = baton;
 
-  if (lock_ctx->force == TRUE)
+  if (lock_ctx->force)
     {
       serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
                               SVN_DAV_OPTION_LOCK_STEAL);
@@ -717,7 +717,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       path = key;
       token = val;
 
-      if (force == TRUE && (!token || token[0] == '\0'))
+      if (force && (!token || token[0] == '\0'))
         {
           svn_lock_t *lock;
 

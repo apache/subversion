@@ -25,6 +25,7 @@ import sys
 import tempfile
 import textwrap
 import zlib
+import posixpath
 
 # Our testing module
 import svntest
@@ -35,7 +36,6 @@ from svntest.main import SVN_PROP_MERGEINFO
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 ########################################################################
@@ -56,9 +56,6 @@ def svnpatch_encode(l):
   else:
     # Python <3.0
     return [x + "\n" for x in textwrap.wrap(base64.encodestring(zlib.compress("".join(l))), 76)]
-
-gnupatch_garbage_re =\
- re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
 
 ########################################################################
 #Tests
@@ -155,12 +152,12 @@ def patch_basic(sbox):
                                        expected_disk,
                                        None,
                                        expected_skip,
-                                       gnupatch_garbage_re, # expected err
+                                       None, # expected err
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
 def patch_unidiff(sbox):
-  "apply a unidiff patch -- test external tool"
+  "apply a unidiff patch"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -189,8 +186,8 @@ def patch_unidiff(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'patching file A/D/gamma\n',
-    'patching file iota\n',
+    'U    %s\n' % os.path.join('A', 'D', 'gamma'),
+    'U    iota\n',
   ]
 
   gamma_contents = "It is the file 'gamma'.\n"
@@ -307,11 +304,11 @@ def patch_copy_and_move(sbox):
   svntest.main.file_append(patch_file_path, ''.join(svnpatch))
 
   expected_output = [
-    'A    A/C/gamma\n',
-    'D    A/mu\n',
+    'A    %s\n' % os.path.join('A', 'C', 'gamma'),
+    'D    %s\n' % os.path.join('A', 'mu'),
     'A    mu-ng\n',
-    'patching file A/C/gamma\n',
-    'patching file A/D/gamma\n',
+    'U    %s\n' % os.path.join('A', 'C', 'gamma'),
+    'U    %s\n' % os.path.join('A', 'D', 'gamma'),
   ]
 
   gamma_contents = "This is the file 'gamma'.\nsome more bytes to 'gamma'\n"
@@ -377,17 +374,77 @@ def patch_copy_and_move(sbox):
                                        1, # check-props
                                        0) # dry-run
 
+def patch_unidiff_absolute_paths(sbox):
+  "apply a unidiff patch containing absolute paths"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir = os.path.abspath(svntest.main.temp_dir)
+  patch_file_path = tempfile.mkstemp(dir=dir)[1]
+
+  os.chdir(wc_dir)
+
+  # A patch with absolute paths.
+  # The first diff points inside the working copy and should apply.
+  # The second diff does not point inside the working copy so application
+  # should fail.
+  abs = os.path.abspath('.')
+  if sys.platform == 'win32':
+    abs = abs.replace("\\", "/")
+  unidiff_patch = [
+    "diff -ur A/B/E/alpha.orig A/B/E/alpha\n"
+    "--- %s/A/B/E/alpha.orig\tThu Apr 16 19:49:53 2009\n" % abs,
+    "+++ %s/A/B/E/alpha\tThu Apr 16 19:50:30 2009\n" % abs,
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+Whoooo whooooo whoooooooo!\n",
+    "diff -ur A/B/lambda.orig A/B/lambda\n"
+    "--- /A/B/lambda.orig\tThu Apr 16 19:49:53 2009\n",
+    "+++ /A/B/lambda\tThu Apr 16 19:51:25 2009\n",
+    "@@ -1 +1 @@\n",
+    "-This is the file 'lambda'.\n",
+    "+It's the file 'lambda', who would have thought!\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  
+  lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
+  expected_output = [
+    'U    %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
+    'Skipped \'%s\'\n' % lambda_path
+  ]
+
+  alpha_contents = "This is the file 'alpha'.\nWhoooo whooooo whoooooooo!\n"
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', contents=alpha_contents)
+
+  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status.tweak('A/B/E/alpha', status='M ')
+
+  expected_skip = wc.State('', {
+    lambda_path:  Item(),
+  })
+
+  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0) # dry-run
+
 ########################################################################
 #Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_basic, svntest.main.has_patch)),
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_unidiff, svntest.main.has_patch)),
-              Wimp('Broken on platforms with non-GNU patch or non-\\n newlines',
-                   SkipUnless(patch_copy_and_move, svntest.main.has_patch)),
+              patch_basic,
+              patch_unidiff,
+              patch_copy_and_move,
+              patch_unidiff_absolute_paths,
               ]
 
 if __name__ == '__main__':

@@ -956,9 +956,10 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           _("Checksum mismatch for '%s':\n"
-             "   expected checksum:  %s\n"
-             "   actual checksum:    %s\n"),
+           apr_psprintf(pool, "%s:\n%s\n%s\n",
+                        _("Checksum mismatch for '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            path, expected_checksum, hex_digest);
     }
 
@@ -1298,7 +1299,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
       if (invalid_revnum_param != SVN_RA_SVN_UNSPECIFIED_NUMBER
-            && invalid_revnum_param == TRUE)
+            && invalid_revnum_param)
         rev = SVN_INVALID_REVNUM;
 
       if (cplist->nelts > 0)

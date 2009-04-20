@@ -481,6 +481,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 35,
              "The specified path has an unexpected status")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_UPGRADE_REQUIRED,
+             SVN_ERR_WC_CATEGORY_START + 36,
+             "The working copy needs to be upgraded")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -1266,11 +1271,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA,
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
-             SVN_ERR_MISC_CATEGORY_START + 33,
-             "External program is missing")
 
   /* command-line client errors */
 

@@ -132,6 +132,10 @@ typedef enum {
     /* The information for this directory node is obstructed by something
        in the local filesystem. Full details are not available.
 
+       This is only returned by an unshadowed BASE node. If a WORKING node
+       is present, then obstructed_delete or obstructed_add is returned as
+       appropriate.
+
        ### only used with per-dir .svn subdirectories.  */
     svn_wc__db_status_obstructed,
 
@@ -607,23 +611,23 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *scratch_pool);
 
 
-/** Set the wcprops for LOCAL_ABSPATH to PROPS.  Use SCRATCH_POOL for
+/** Set the dav cache for LOCAL_ABSPATH to PROPS.  Use SCRATCH_POOL for
     temporary allocations. */
 svn_error_t *
-svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const apr_hash_t *props,
-                            apr_pool_t *scratch_pool);
+svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const apr_hash_t *props,
+                              apr_pool_t *scratch_pool);
 
 
-/** Retrieve the wcprops for LOCAL_ABSPATH into *PROPS, allocated in
+/** Retrieve the dav cache for LOCAL_ABSPATH into *PROPS, allocated in
     RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
-svn_wc__db_base_get_wcprops(apr_hash_t **props,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__db_base_get_dav_cache(apr_hash_t **props,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 /* ### how to handle depth? empty != absent. thus, record depth on each

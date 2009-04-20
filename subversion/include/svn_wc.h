@@ -664,7 +664,7 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * and don't care about the parsed result, pass NULL for @a externals_p.
  *
  * The format of @a desc is the same as for values of the directory
- * property @c SVN_PROP_EXTERNALS, which see.
+ * property @c SVN_PROP_EXTERNALS, look there for more details.
  *
  * Allocate the table, keys, and values in @a pool.
  *
@@ -867,7 +867,11 @@ typedef enum svn_wc_notify_action_t
 
   /** The path is a subdirectory referenced in an externals definition
    * which is unable to be operated on.  @since New in 1.6. */
-  svn_wc_notify_failed_external
+  svn_wc_notify_failed_external,
+
+  /** An update tried to add a file or directory at path but an
+   * unversioned obstruction was found.  @since New in 1.7. */
+  svn_wc_notify_update_obstruction
 
 } svn_wc_notify_action_t;
 
@@ -5865,28 +5869,6 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
                       const svn_delta_editor_t *diff_editor,
                       void *diff_edit_baton,
                       apr_pool_t *pool);
-
-/**
- * Run an external patch program against @a patch_path patch file.  @a
- * outfile and @a errfile are respectively connected to the external
- * program's stdout and stderr pipes when executed.  @a config is looked
- * up for the SVN_CONFIG_OPTION_PATCH_CMD entry to use as the patch
- * program.  If missing or @a config is @c NULL, the function tries to
- * execute 'patch' literally, which should work on most *NIX systems at
- * least.  This involves searching into $PATH.  The external program is
- * given the patch file via its stdin pipe.
- *
- * The program is passed the '--force' argument when @a force is set.
- *
- * @since New in 1.7
- */
-svn_error_t *
-svn_wc_apply_unidiff(const char *patch_path,
-                     svn_boolean_t force,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
-                     apr_hash_t *config,
-                     apr_pool_t *pool);
 
 /** @} */
 
