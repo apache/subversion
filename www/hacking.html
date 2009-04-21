@@ -2558,6 +2558,33 @@ configuration/build system:</p>
    -Karl
 </pre>
 
+<p>The build system is a vital tool for all developers working on trunk.
+Sometimes, changes made to the build system work perfectly fine for
+one developer, but inadvertently break the build system for another.</p>
+
+<p>
+To prevent loss of productivity, any committer (full or partial) can
+immediately revert any build system change that breaks their ability to
+effectively do development on their platform of choice, as a matter of
+ordinary routing, without fear of accusations of an over-reaction.
+The log message of the commit reverting the change should contain an
+explanatory note saying why the change is being reverted, containing
+sufficient detail to be suitable to start off a discussion of the
+problem on dev@, should someone chose to reply to the commit mail.</p>
+
+<p>However, care should be taken not go into &quot;default revert mode&quot;.
+If you can quickly fix the problem, then please do so. If not, then stop and
+think about it for a minute. After you've thought about it, and you still have
+no solution, go ahead and revert the change, and bring the discussion to the
+list.</p>
+
+<p>Once the change has been revert, it is up to the original committer of
+the reverted change to either recommit a fixed version of their original
+change, if, based on the reverting committer's rationale, they feel very
+certain that their new version definitely is fixed, or, to submit the
+revised version for testing to the reverting committer before committing
+it again.</p>
+
 </div>
 
 
