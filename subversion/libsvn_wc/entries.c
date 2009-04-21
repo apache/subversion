@@ -1019,7 +1019,9 @@ read_entries_new(apr_hash_t **result_entries,
             {
               svn_wc__db_status_t base_status;
 
-              /* ### mystery: make the rev same as BASE. */
+              /* ENTRY->REVISION is overloaded. When a node is schedule-add
+                 or -replace, then REVISION refers to the BASE node's revision
+                 that is being overwritten. We need to fetch it now.  */
               SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
                                                &entry->revision,
                                                NULL, NULL, NULL,
@@ -1042,21 +1044,53 @@ read_entries_new(apr_hash_t **result_entries,
             }
           else
             {
-              /* ### if this looks like a plain old add, then rev=0.  */
-              if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
-                  && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
-                entry->revision = 0;
+              /* If we are reading child directories, then we need to
+                 correctly populate the DELETED flag. WC_DB normally
+                 wants to provide all of a directory's metadata from
+                 its own area. But this information is stored only in
+                 the parent directory, so we need to call a custom API
+                 to fetch this value.
 
-              if (status == svn_wc__db_status_obstructed_add)
-                entry->revision = SVN_INVALID_REVNUM;
-
-              /* ### when we're reading a directory that is not present,
-                 ### then it must be "normal" rather than "add".  */
-              if (*entry->name == '\0'
-                  && status == svn_wc__db_status_obstructed_add)
-                entry->schedule = svn_wc_schedule_normal;
+                 ### we should start generating BASE_NODE rows for THIS_DIR
+                 ### in the subdir. future step because it is harder.  */
+              if (kind == svn_wc__db_kind_dir && *entry->name != '\0')
+                {
+                  SVN_ERR(svn_wc__db_temp_is_dir_deleted(&entry->deleted,
+                                                         &entry->revision,
+                                                         db, entry_abspath,
+                                                         iterpool));
+                }
+              if (entry->deleted)
+                {
+                  /* There was a DELETED marker in the parent, meaning
+                     that we truly are shadowing a base node. It isn't
+                     called a 'replace' though (the BASE is pretending
+                     not to exist).  */
+                  entry->schedule = svn_wc_schedule_add;
+                }
               else
-                entry->schedule = svn_wc_schedule_add;
+                {
+                  /* There was NOT a 'not-present' BASE_NODE in the parent
+                     directory. And there is no BASE_NODE in this directory.
+                     Therefore, we are looking at some kind of add/copy
+                     rather than a replace.  */
+
+                  /* ### if this looks like a plain old add, then rev=0.  */
+                  if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
+                      && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
+                    entry->revision = 0;
+
+                  if (status == svn_wc__db_status_obstructed_add)
+                    entry->revision = SVN_INVALID_REVNUM;
+
+                  /* ### when we're reading a directory that is not present,
+                     ### then it must be "normal" rather than "add".  */
+                  if (*entry->name == '\0'
+                      && status == svn_wc__db_status_obstructed_add)
+                    entry->schedule = svn_wc_schedule_normal;
+                  else
+                    entry->schedule = svn_wc_schedule_add;
+                }
             }
 
           SVN_ERR(svn_wc__db_scan_addition(&work_status,
@@ -2169,9 +2203,8 @@ write_entry(svn_wc__db_t *db,
             const char *name,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
-            apr_pool_t *pool)
+            apr_pool_t *scratch_pool)
 {
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
   db_actual_node_t *actual_node = NULL;
@@ -2520,8 +2553,6 @@ write_entry(svn_wc__db_t *db,
       SVN_ERR(insert_actual_node(wc_db, actual_node, scratch_pool));
     }
 
-  svn_pool_destroy(scratch_pool);
-
   return SVN_NO_ERROR;
 }
 
@@ -2554,6 +2585,9 @@ entries_write_body(svn_wc__db_t *db,
       if (have_row)
         {
           repos_id = svn_sqlite__column_int(stmt, 0);
+
+          /* Note: keep this out of the iterpool. We need it to survive
+             across iterations.  */
           repos_root = svn_sqlite__column_text(stmt, 1, scratch_pool);
         }
       else
@@ -2599,7 +2633,7 @@ entries_write_body(svn_wc__db_t *db,
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
   SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root, this_dir,
                       SVN_WC_ENTRY_THIS_DIR, local_abspath,
-                      this_dir, scratch_pool));
+                      this_dir, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, entries); hi;
         hi = apr_hash_next(hi))
