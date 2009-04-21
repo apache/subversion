@@ -132,7 +132,7 @@ propset_walk_cb(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
-        return err;
+        return svn_error_return(err);
       svn_error_clear(err);
     }
 
@@ -295,7 +295,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -739,7 +739,7 @@ wc_walker_error_handler(const char *path,
 {
   svn_error_t *root_err = svn_error_root_cause(err);
   if (root_err == SVN_NO_ERROR)
-    return err;
+    return svn_error_return(err);
 
   /* Suppress errors from missing paths. */
   if (root_err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -749,7 +749,7 @@ wc_walker_error_handler(const char *path,
     }
   else
     {
-      return err;
+      return svn_error_return(err);
     }
 }
 

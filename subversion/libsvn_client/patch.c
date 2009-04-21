@@ -149,7 +149,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           return SVN_NO_ERROR;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
     }
 
   svn_pool_destroy(subpool);
@@ -387,7 +387,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                     switch (err->apr_err)
                       {
                       case SVN_ERR_CANCELLED:
-                        return err; /* may be allocated in subpool */
+                        return svn_error_return(err); /* may be allocated in subpool */
 
                       /* XXX: assume the following ENTRY is the source
                        * path.  How reliable is that? */
@@ -1032,7 +1032,7 @@ get_path_access(svn_wc_adm_access_t **path_access,
       if (err)
         {
           if (! lenient)
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
           *path_access = NULL;
         }
@@ -1405,7 +1405,7 @@ close_file(void *file_baton,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   if (b->path_incoming || b->propchanges->nelts > 0)
     {
@@ -1498,7 +1498,7 @@ close_directory(void *dir_baton,
           return SVN_NO_ERROR;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
 
       /* Don't do the props_changed stuff if this is a dry_run and we don't
          have an access baton, since in that case the directory will already
@@ -2023,7 +2023,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
           new_target->local_mods = FALSE;
         }
       else
-        return err;
+        return svn_error_return(err);
     }
   else
     {
@@ -2039,7 +2039,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
               new_target->local_mods = FALSE;
             }
           else
-            return err;
+            return svn_error_return(err);
         }
     }
 

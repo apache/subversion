@@ -272,7 +272,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(path, pool);
-      return err;
+      return svn_error_return(err);
     }
   *use_sleep = TRUE;
 
@@ -349,7 +349,7 @@ svn_client_update3(apr_array_header_t **result_revs,
                                         &sleep, TRUE, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
-          return err;
+          return svn_error_return(err);
         }
       else if (err)
         {
@@ -370,5 +370,5 @@ svn_client_update3(apr_array_header_t **result_revs,
   svn_pool_destroy(subpool);
   svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
-  return err;
+  return svn_error_return(err);
 }

@@ -332,7 +332,7 @@ info_error_handler(const char *path,
         }
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 static const svn_wc_entry_callbacks2_t
@@ -522,7 +522,7 @@ svn_client_info2(const char *path_or_url,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
 
   if (! the_ent)
@@ -552,7 +552,7 @@ svn_client_info2(const char *path_or_url,
           lock = NULL;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
     }
   else
     lock = NULL;
@@ -581,7 +581,7 @@ pre_1_2_recurse:
               locks = apr_hash_make(pool); /* use an empty hash */
             }
           else if (err)
-            return err;
+            return svn_error_return(err);
         }
       else
         locks = apr_hash_make(pool); /* use an empty hash */

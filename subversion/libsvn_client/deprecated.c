@@ -101,7 +101,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
   err = svn_client_mkdir2(&commit_info, paths, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_error_return(err);
 }
 
 /*** From blame.c ***/
@@ -355,7 +355,7 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
                            FALSE, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -387,7 +387,7 @@ svn_client_commit2(svn_client_commit_info_t **commit_info_p,
                            ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -469,7 +469,7 @@ svn_client_copy2(svn_commit_info_t **commit_info_p,
                               ctx, pool);
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -487,7 +487,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
                          ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -533,7 +533,7 @@ svn_client_move3(svn_commit_info_t **commit_info_p,
                               force, ctx, pool);
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -550,7 +550,7 @@ svn_client_move2(svn_client_commit_info_t **commit_info_p,
   err = svn_client_move3(&commit_info, src_path, dst_path, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -606,7 +606,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
   err = svn_client_delete2(&commit_info, paths, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_error_return(err);
 }
 
 /*** From diff.c ***/
@@ -1147,7 +1147,7 @@ svn_client_log(const apr_array_header_t *targets,
                        pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /*** From merge.c ***/

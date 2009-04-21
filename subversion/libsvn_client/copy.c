@@ -366,7 +366,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   svn_io_sleep_for_timestamps(dst_path, pool);
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -742,7 +742,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
              first_pair->src, first_pair->dst);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Make a list in NEW_DIRS of the parent directories of the destination
@@ -991,7 +991,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -2018,7 +2018,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
     }
 
   svn_pool_destroy(subpool);
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -2102,5 +2102,5 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
     }
 
   svn_pool_destroy(subpool);
-  return err;
+  return svn_error_return(err);
 }

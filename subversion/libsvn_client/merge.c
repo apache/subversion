@@ -829,7 +829,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                             }
                           else
                             {
-                              return err;
+                              return svn_error_return(err);
                             }
                          }
                       else
@@ -1050,7 +1050,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           return SVN_NO_ERROR;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
     }
 
   svn_pool_destroy(subpool);
@@ -1110,7 +1110,7 @@ conflict_resolver(svn_wc_conflict_result_t **result,
                    APR_HASH_KEY_STRING, conflicted_path);
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* An svn_wc_diff_callbacks4_t function. */
@@ -2607,7 +2607,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
         }
       else
         {
-          return err;
+          return svn_error_return(err);
         }
     }
   else /* PRIMARY_URL@peg_rev exists. */
@@ -3210,7 +3210,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
               || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
             svn_error_clear(err);
           else
-            return err;
+            return svn_error_return(err);
         }
       else if (strcmp(start_url, entry->url) == 0)
         {
@@ -3568,7 +3568,7 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
             }
           else
             {
-              return err;
+              return svn_error_return(err);
             }
         }
 
@@ -4454,7 +4454,7 @@ get_mergeinfo_walk_cb(const char *path,
                       || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
                     svn_error_clear(err);
                   else
-                    return err;
+                    return svn_error_return(err);
                  }
               else /* PATH does exist in the merge source*/
                 {
@@ -4547,7 +4547,7 @@ get_mergeinfo_error_handler(const char *path,
 {
   svn_error_t *root_err = svn_error_root_cause(err);
   if (root_err == SVN_NO_ERROR)
-    return err;
+    return svn_error_return(err);
 
   switch (root_err->apr_err)
     {
@@ -4557,7 +4557,7 @@ get_mergeinfo_error_handler(const char *path,
       return SVN_NO_ERROR;
 
     default:
-      return err;
+      return svn_error_return(err);
     }
 }
 
@@ -5760,11 +5760,11 @@ do_file_merge(const char *url1,
              Python...) */
           err = svn_io_remove_file(tmpfile1, subpool);
           if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
           err = svn_io_remove_file(tmpfile2, subpool);
           if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
 
           if ((i < (ranges_to_merge->nelts - 1))
@@ -6561,7 +6561,7 @@ do_directory_merge(const char *url1,
 
     } /* (record_mergeinfo) */
 
-  return err;
+  return svn_error_return(err);
 }
 
 /** Ensure that *RA_SESSION is opened to URL, either by reusing
@@ -7148,7 +7148,7 @@ svn_client_merge3(const char *source1,
               if (use_sleep)
                 svn_io_sleep_for_timestamps(target_wcpath, pool);
 
-              return err;
+              return svn_error_return(err);
             }
 
           /* Close our temporary RA sessions (this could've happened
@@ -7183,7 +7183,7 @@ svn_client_merge3(const char *source1,
     svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
-    return err;
+    return svn_error_return(err);
 
   return svn_wc_adm_close2(adm_access, pool);
 }
@@ -7572,7 +7572,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                 }
               else
                 {
-                  return err;
+                  return svn_error_return(err);
                 }
             }
           else
@@ -8028,7 +8028,7 @@ svn_client_merge_reintegrate(const char *source,
             }
           else
             {
-              return err;
+              return svn_error_return(err);
             }
         }
     }
@@ -8056,7 +8056,7 @@ svn_client_merge_reintegrate(const char *source,
     svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* Shutdown the administrative session. */
   return svn_wc_adm_close2(adm_access, pool);
@@ -8157,7 +8157,7 @@ svn_client_merge_peg3(const char *source,
     svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* Shutdown the administrative session. */
   return svn_wc_adm_close2(adm_access, pool);

@@ -229,7 +229,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                   *inherited = FALSE;
                   *mergeinfo = wc_mergeinfo;
                 }
-              return err;
+              return svn_error_return(err);
             }
 
           SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
@@ -316,7 +316,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
           repos_mergeinfo = NULL;
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* If we reparented the session, put it back where our caller had it. */
