@@ -30,7 +30,7 @@ import posixpath
 # Our testing module
 import svntest
 from svntest import wc
-from svntest.main import SVN_PROP_MERGEINFO
+from svntest.main import SVN_PROP_MERGEINFO, is_os_windows
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -144,6 +144,8 @@ def patch_basic(sbox):
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
+# Marked as XFail on Windows, because the newlines in gamma and iota
+# don't match the native eol "\r\n"
 def patch_unidiff(sbox):
   "apply a unidiff patch"
 
@@ -200,6 +202,8 @@ def patch_unidiff(sbox):
                                        1, # check-props
                                        0) # dry-run
 
+# Marked as XFail on Windows, because the newlines in gamma don't match
+# the native eol "\r\n".
 def patch_copy_and_move(sbox):
   "test copy and move operations"
 
@@ -362,6 +366,8 @@ def patch_copy_and_move(sbox):
                                        1, # check-props
                                        0) # dry-run
 
+# Marked as XFail on Windows, because the newlines in alpha and lamba don't
+# match the native eol "\r\n".
 def patch_unidiff_absolute_paths(sbox):
   "apply a unidiff patch containing absolute paths"
 
@@ -430,9 +436,9 @@ def patch_unidiff_absolute_paths(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               patch_basic,
-              patch_unidiff,
-              patch_copy_and_move,
-              patch_unidiff_absolute_paths,
+              XFail(patch_unidiff, is_os_windows),
+              XFail(patch_copy_and_move, is_os_windows),
+              XFail(patch_unidiff_absolute_paths, is_os_windows),
               ]
 
 if __name__ == '__main__':
