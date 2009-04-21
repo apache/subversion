@@ -99,32 +99,33 @@ check_root_url_of_target(const char **root_url,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  svn_error_t *error;
+  svn_error_t *err;
   const char *tmp_root_url;
   const char *truepath;
   svn_opt_revision_t opt_rev;
 
   SVN_ERR(svn_opt_parse_path(&opt_rev, &truepath, target, pool));
 
-  if ((error = svn_client__get_repos_root(&tmp_root_url,
-                                          truepath,
-                                          &opt_rev,
-                                          NULL, ctx, pool)))
+  err =  svn_client__get_repos_root(&tmp_root_url, truepath, &opt_rev,
+                                    NULL, ctx, pool);
+
+  if (err)
     {
       /* It is OK if the given target does not exist, it just means
        * we will not be able to determine the root url from this particular
        * argument.
        */
-      if ((error->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-          || (error->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+      if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          || (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
         {
-          svn_error_clear(error);
+          svn_error_clear(err);
           return SVN_NO_ERROR;
         }
       else
-        return error;
+        return err;
      }
-   else if (*root_url != NULL)
+
+   if (*root_url != NULL)
      {
        if (strcmp(*root_url, tmp_root_url) != 0)
          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
