@@ -152,7 +152,7 @@ relegate_dir_external(const char *path,
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Try to update a directory external at PATH to URL at REVISION.
@@ -229,7 +229,7 @@ switch_dir_external(const char *path,
                       goto relegate;
                     }
                   else if (err)
-                    return err;
+                    return svn_error_return(err);
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url,
@@ -342,7 +342,7 @@ switch_file_external(const char *path,
                url, dest_wc_repos_root_url);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   SVN_ERR(svn_wc_entry(&entry, path, target_adm_access, FALSE, subpool));
@@ -498,7 +498,7 @@ switch_file_external(const char *path,
 
   /* ### should destroy the subpool */
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
@@ -907,7 +907,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
           if (err2)
             {
               svn_error_clear(err2);
-              return err;
+              return svn_error_return(err);
             }
           else
             {
@@ -945,7 +945,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         }
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
-        return err;
+        return svn_error_return(err);
       svn_error_clear(err);
 
       /* ### If there were multiple path components leading down to

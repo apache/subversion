@@ -122,7 +122,7 @@ check_root_url_of_target(const char **root_url,
           return SVN_NO_ERROR;
         }
       else
-        return err;
+        return svn_error_return(err);
      }
 
    if (*root_url != NULL)
@@ -308,5 +308,5 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
   else
     *targets_p = output_targets;
 
-  return err;
+  return svn_error_return(err);
 }

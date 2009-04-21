@@ -52,5 +52,5 @@ svn_client_cleanup2(const char *path,
   err = svn_wc_cleanup3(path, diff3_cmd, upgrade_format, ctx->cancel_func,
                         ctx->cancel_baton, scratch_pool);
   svn_io_sleep_for_timestamps(path, scratch_pool);
-  return err;
+  return svn_error_return(err);
 }

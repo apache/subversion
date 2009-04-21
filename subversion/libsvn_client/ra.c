@@ -375,7 +375,7 @@ svn_client_uuid_from_path(const char **uuid,
 
       svn_error_clear(svn_wc_adm_close2(parent_access, pool));
 
-      return err;
+      return svn_error_return(err);
     }
 
   /* We may have a working copy without uuid */

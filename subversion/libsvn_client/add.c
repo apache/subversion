@@ -355,7 +355,7 @@ add_dir_recursive(const char *dirname,
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, dirname, pool));
 
@@ -440,7 +440,7 @@ add_dir_recursive(const char *dirname,
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else if (err)
-            return err;
+            return svn_error_return(err);
         }
     }
 
@@ -491,7 +491,7 @@ add(const char *path,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -540,7 +540,7 @@ add_parent_dirs(const char *path,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
 
   if (parent_access)
@@ -596,7 +596,7 @@ svn_client_add4(const char *path,
         err = err2;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -798,7 +798,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -839,7 +839,7 @@ svn_client__make_local_parents(const char *path,
       svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
