@@ -62,9 +62,11 @@ for test in $test_paths; do
   tests="$tests $test"
 done
 
-_sed()
+auth_test="auth_gnome_keyring auth_kwallet $auth_test"
+
+sed_append()
 {
-  sed -e "$@" "$libtool_script_path" > "$libtool_script_path.new"
+  sed -e "$1a$2" "$libtool_script_path" > "$libtool_script_path.new"
   mv -f "$libtool_script_path.new" "$libtool_script_path"
 }
 
@@ -79,8 +81,8 @@ for libtool_script in $executables $tests; do
         [ -f "$libtool_script_library" ] && libtool_script_libraries="$libtool_script_libraries $libtool_script_library"
       done
       libtool_script_libraries="${libtool_script_libraries# *}"
-      _sed "/export LD_LIBRARY_PATH/aLD_PRELOAD=\"$libtool_script_libraries\""
-      _sed "/LD_PRELOAD=/aexport LD_PRELOAD"
+      sed_append 1 "LD_PRELOAD=\"$libtool_script_libraries\""
+      sed_append 2 "export LD_PRELOAD"
       chmod +x "$libtool_script_path"
     fi
   fi
