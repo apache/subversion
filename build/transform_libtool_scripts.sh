@@ -43,7 +43,7 @@ executables="svn svnadmin svndumpfilter svnlook svnserve svnsync entries_dump"
 
 for executable in $executables; do
   if [ "$executable" != entries_dump ]; then
-    eval "${executable}_path=subversion/svn/$executable"
+    eval "${executable}_path=subversion/$executable/$executable"
   else
     eval "${executable}_path=subversion/tests/cmdline/entries-dump"
   fi
