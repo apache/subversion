@@ -1063,4 +1063,14 @@ svn_location_segment_dup(svn_location_segment_t *segment,
 #include "svn_error.h"
 
 
+/*
+ * Subversion developers may want to use some additional debugging facilities
+ * while working on the code. We'll pull that in here, so individual source
+ * files don't have to include this header manually.
+ */
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
+#endif
+
+
 #endif /* SVN_TYPES_H */
