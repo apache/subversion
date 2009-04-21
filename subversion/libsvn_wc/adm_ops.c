@@ -1049,10 +1049,8 @@ erase_from_wc(const char *path,
       apr_hash_t *ver, *unver;
       apr_hash_index_t *hi;
       svn_wc_adm_access_t *dir_access;
+      apr_pool_t *iterpool;
       svn_error_t *err;
-
-      /* ### Suspect that an iteration or recursion subpool would be
-         good here. */
 
       /* First handle the versioned items, this is better (probably) than
          simply using svn_io_get_dirents2 for everything as it avoids the
@@ -1078,7 +1076,9 @@ erase_from_wc(const char *path,
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
+
       SVN_ERR(svn_wc_entries_read(&ver, dir_access, FALSE, pool));
+      iterpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, ver); hi; hi = apr_hash_next(hi))
         {
           const void *key;
@@ -1093,9 +1093,10 @@ erase_from_wc(const char *path,
           if (!strcmp(name, SVN_WC_ENTRY_THIS_DIR))
             continue;
 
-          down_path = svn_dirent_join(path, name, pool);
+          svn_pool_clear(iterpool);
+          down_path = svn_dirent_join(path, name, iterpool);
           SVN_ERR(erase_from_wc(down_path, adm_access, entry->kind,
-                                cancel_func, cancel_baton, pool));
+                                cancel_func, cancel_baton, iterpool));
         }
 
       /* Now handle any remaining unversioned items */
@@ -1108,19 +1109,22 @@ erase_from_wc(const char *path,
 
           apr_hash_this(hi, &key, NULL, NULL);
           name = key;
+          svn_pool_clear(iterpool);
 
           /* The admin directory will show up, we don't want to delete it */
-          if (svn_wc_is_adm_dir(name, pool))
+          if (svn_wc_is_adm_dir(name, iterpool))
             continue;
 
           /* Versioned directories will show up, don't delete those either */
           if (apr_hash_get(ver, name, APR_HASH_KEY_STRING))
             continue;
 
-          down_path = svn_dirent_join(path, name, pool);
+          down_path = svn_dirent_join(path, name, iterpool);
           SVN_ERR(erase_unversioned_from_wc
-                  (down_path, cancel_func, cancel_baton, pool));
+                  (down_path, cancel_func, cancel_baton, iterpool));
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
