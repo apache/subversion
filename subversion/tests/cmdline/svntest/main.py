@@ -190,7 +190,7 @@ config_file = None
 
 # Global variable indicating what the minor version of the server
 # tested against is (4 for 1.4.x, for example).
-server_minor_version = 6
+server_minor_version = 7
 
 # Global variable indicating if this is a child process and no cleanup
 # of global directories is needed.
