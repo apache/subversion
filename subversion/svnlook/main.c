@@ -34,6 +34,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
@@ -1123,8 +1124,8 @@ print_tree(svn_fs_root_t *root,
 
   /* Print the node. */
   SVN_ERR(svn_cmdline_printf(pool, "%s%s",
-                             full_paths ? path : svn_path_basename(path,
-                                                                   pool),
+                             full_paths ? path : svn_dirent_basename(path,
+                                                                     pool),
                              is_dir && strcmp(path, "/") ? "/" : ""));
 
   if (show_ids)
