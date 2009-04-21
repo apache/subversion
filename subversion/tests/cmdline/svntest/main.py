@@ -777,6 +777,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
+  os.environ['SVN_DBG_QUIET'] = 'y'
   create_repos(dst_path)
   dump_args = ['dump', src_path]
   load_args = ['load', dst_path]
@@ -810,6 +811,8 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   #load_in is dump_out so it's already closed.
   load_out.close()
   load_err.close()
+
+  del os.environ['SVN_DBG_QUIET']
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
