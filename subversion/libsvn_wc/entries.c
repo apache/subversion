@@ -2220,11 +2220,6 @@ write_entry(svn_wc__db_t *db,
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
-        if (entry->revision > 0
-              && entry->revision != this_dir->revision)
-          {
-            base_node = MAYBE_ALLOC(base_node, scratch_pool);
-          }
         break;
 
       case svn_wc_schedule_delete:
@@ -2396,9 +2391,6 @@ write_entry(svn_wc__db_t *db,
         }
       else
         base_node->kind = entry->kind;
-
-      if (entry->revision > 0 && entry->schedule == svn_wc_schedule_add)
-        base_node->presence = svn_wc__db_status_not_present;
 
       if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
@@ -2960,7 +2952,8 @@ svn_wc__entry_remove(apr_hash_t *entries,
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
-  return svn_wc__entries_write(entries, adm_access, scratch_pool);
+  return svn_error_return(svn_wc__entries_write(entries, adm_access,
+                                                scratch_pool));
 }
 
 
@@ -3240,7 +3233,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
     }
 
   /* Sync changes to disk. */
-  return svn_wc__entries_write(entries, adm_access, pool);
+  return svn_error_return(svn_wc__entries_write(entries, adm_access, pool));
 }
 
 
@@ -3394,7 +3387,8 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
     }
 
-  return svn_wc__entries_write(entries, adm_access, scratch_pool);
+  return svn_error_return(svn_wc__entries_write(entries, adm_access,
+                                                scratch_pool));
 }
 
 
