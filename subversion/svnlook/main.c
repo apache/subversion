@@ -1114,6 +1114,7 @@ print_tree(svn_fs_root_t *root,
   int i;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  const char* name;
 
   SVN_ERR(check_cancel(NULL));
 
@@ -1122,10 +1123,13 @@ print_tree(svn_fs_root_t *root,
     for (i = 0; i < indentation; i++)
       SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
 
+  name = full_paths ? path : svn_uri_basename(path, pool);
+  if (svn_path_is_empty(name))
+    name = "/"; /* basename of '/' is "" */
+
   /* Print the node. */
   SVN_ERR(svn_cmdline_printf(pool, "%s%s",
-                             full_paths ? path : svn_dirent_basename(path,
-                                                                     pool),
+                             name,
                              is_dir && strcmp(path, "/") ? "/" : ""));
 
   if (show_ids)
@@ -1157,7 +1161,7 @@ print_tree(svn_fs_root_t *root,
           svn_pool_clear(subpool);
           apr_hash_this(hi, NULL, NULL, &val);
           entry = val;
-          SVN_ERR(print_tree(root, svn_path_join(path, entry->name, pool),
+          SVN_ERR(print_tree(root, svn_uri_join(path, entry->name, pool),
                              entry->id, (entry->kind == svn_node_dir),
                              indentation + 1, show_ids, full_paths,
                              recurse, subpool));
