@@ -800,11 +800,7 @@ CTYPESGEN = @CTYPESGEN@
 CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 
 ctypes-python: local-all
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(LT_EXECUTE) $(PYTHON) setup.py build --subversion="$(prefix)" \
-	  --apr="$(SVN_APR_PREFIX)" --apr-util="$(SVN_APRUTIL_PREFIX)" \
-	  --ctypesgen="$(CTYPESGEN)" --svn-headers="$(abs_srcdir)/subversion/include" \
-	  --cppflags="$(CPPFLAGS)" --ldflags="$(EXTRA_CTYPES_LDFLAGS)"
+	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(prefix)" "$(SVN_APR_PREFIX)" "$(SVN_APRUTIL_PREFIX)"
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
