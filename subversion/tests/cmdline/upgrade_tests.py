@@ -30,7 +30,7 @@ XFail = svntest.testcase.XFail
 
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
-    shutil.rmtree(sbox.wc_dir)
+    svntest.main.safe_rmtree(sbox.wc_dir)
   except OSError, e:
     pass
 
@@ -40,10 +40,6 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
   for member in t.getmembers():
     t.extract(member, svntest.main.temp_dir)
 
-  # Remove the directory (and the read only files inside) before moving,
-  # to support the Windows semantics of shutil.move
-  svntest.main.safe_rmtree(sbox.wc_dir)
-  
   shutil.move(os.path.join(svntest.main.temp_dir, tar_filename.split('.')[0]),
               sbox.wc_dir)
 
