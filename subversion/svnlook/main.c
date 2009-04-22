@@ -1130,7 +1130,7 @@ print_tree(svn_fs_root_t *root,
   /* Print the node. */
   SVN_ERR(svn_cmdline_printf(pool, "%s%s",
                              name,
-                             is_dir && strcmp(path, "/") ? "/" : ""));
+                             is_dir && strcmp(name, "/") ? "/" : ""));
 
   if (show_ids)
     {
