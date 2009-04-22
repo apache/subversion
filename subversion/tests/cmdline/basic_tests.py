@@ -361,8 +361,8 @@ def basic_corruption(sbox):
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)  # ### What's a more portable way to do this?
-  os.chmod(mu_tb_path, 0666)   # ### Would rather not use hardcoded numbers.
+  os.chmod(tb_dir_path, 0777)  ### What's a more portable way to do this?
+  os.chmod(mu_tb_path, 0666)   ### Would rather not use hardcoded numbers.
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aaagggkkk, corruption!')
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -768,7 +768,7 @@ def basic_revert(sbox):
   # Finally, check that reverted file is not readonly
   os.remove(beta_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', beta_path)
-  if not (open(beta_path, 'rw+')):
+  if not (open(beta_path, 'r+')):
     raise svntest.Failure
 
   # Check that a directory scheduled to be added, but physically
@@ -2405,11 +2405,22 @@ def basic_add_svn_format_file(sbox):
 
   # The .svn directory and the format file should not be added as this
   # breaks the administrative area handling, so we expect some error here
-  svntest.actions.run_and_verify_svn(None, None, 
+  svntest.actions.run_and_verify_svn(None, None,
                                      ".*reserved name.*",
                                      'add', '--parents', entries_path)
 
   svntest.actions.run_and_verify_status(wc_dir, output)
+
+# Issue 2586, Unhelpful error message: Unrecognized URL scheme for ''
+def basic_mkdir_mix_targets(sbox):
+  "mkdir mix url and local path should error"
+
+  sbox.build()
+  Y_url = sbox.repo_url + '/Y'
+  expected_error = ".*Illegal repository URL 'subdir'"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'mkdir', '-m', 'log_msg', Y_url, 'subdir')
 
 #----------------------------------------------------------------------
 
@@ -2465,6 +2476,7 @@ test_list = [ None,
               basic_relative_url_with_peg_revisions,
               basic_auth_test,
               basic_add_svn_format_file,
+              basic_mkdir_mix_targets,
              ]
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 /*
- * crop.c: Cropping the WC 
+ * crop.c: Cropping the WC
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -24,6 +24,7 @@
 #include "svn_error.h"
 #include "svn_client.h"
 #include "svn_error_codes.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "entries.h"
 
@@ -89,7 +90,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
       const char *this_path;
       void *val;
       apr_ssize_t klen;
-      svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *current_entry;
       svn_pool_clear(iterpool);
 
       /* Get the next entry */
@@ -98,7 +99,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
         continue;
 
       current_entry = val;
-      this_path = svn_path_join(dir_path, current_entry->name, iterpool); 
+      this_path = svn_dirent_join(dir_path, current_entry->name, iterpool);
 
       if (current_entry->kind == svn_node_file)
         {
@@ -128,10 +129,8 @@ crop_children(svn_wc_adm_access_t *adm_access,
                  Anyway, don't report on excluded subdir, since they are
                  logically not exist. */
               if (depth < svn_depth_immediates)
-                {
-                  svn_wc__entry_remove(entries, current_entry->name);
-                  SVN_ERR(svn_wc__entries_write(entries, dir_access, iterpool));
-                }
+                SVN_ERR(svn_wc__entry_remove(entries, dir_access,
+                                             current_entry->name, iterpool));
               continue;
             }
           else if (depth < svn_depth_immediates)
@@ -152,12 +151,12 @@ crop_children(svn_wc_adm_access_t *adm_access,
           else
             {
               SVN_ERR(crop_children(dir_access,
-                                    this_path, 
-                                    svn_depth_empty, 
+                                    this_path,
+                                    svn_depth_empty,
                                     notify_func,
                                     notify_baton,
-                                    cancel_func, 
-                                    cancel_baton, 
+                                    cancel_func,
+                                    cancel_baton,
                                     iterpool));
               continue;
             }
@@ -199,14 +198,18 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   svn_wc_adm_access_t *dir_access;
 
   /* Only makes sense when the depth is restrictive. */
+  if (depth == svn_depth_infinity)
+    return SVN_NO_ERROR; /* Nothing to crop */
   if (!(depth >= svn_depth_exclude && depth < svn_depth_infinity))
-    return SVN_NO_ERROR;
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("Can only crop a working copy with a restrictive depth"));
 
   /* Only makes sense to crop a dir target. */
-  full_path = svn_path_join(svn_wc_adm_access_path(anchor), target, pool);
+  full_path = svn_dirent_join(svn_wc_adm_access_path(anchor), target, pool);
   SVN_ERR(svn_wc_entry(&entry, full_path, anchor, FALSE, pool));
   if (!entry || entry->kind != svn_node_dir)
-    return SVN_NO_ERROR;
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("Can only crop directories"));
 
   /* Don't bother to crop if the target is scheduled delete. */
   if (entry->schedule == svn_wc_schedule_delete)
@@ -219,7 +222,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
     {
-      svn_boolean_t switched, entry_in_repos;
+      svn_boolean_t entry_in_repos;
       const svn_wc_entry_t *parent_entry = NULL;
       svn_wc_adm_access_t *p_access;
 
@@ -238,7 +241,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
         {
           const char *bname, *pname;
           svn_error_t *err = NULL;
-          svn_path_split(full_path, &pname, &bname, pool);
+          svn_dirent_split(full_path, &pname, &bname, pool);
           SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, anchor, pname,
                                                 pool));
           if (! p_access)
@@ -251,19 +254,20 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
           if (err)
             svn_error_clear(err);
 
-          switched 
-            = parent_entry && strcmp(entry->url, 
-                                     svn_path_url_add_component
-                                     (parent_entry->url, bname, pool));
-
           /* The server simply do not accept excluded link_path and thus
-             switched path can not be excluede. Just completely prohibit this
-             situation. */
-          if (switched)
-            return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot crop '%s': it is a switched path"),
-               svn_path_local_style(full_path, pool));
+             switched path cannot be excluded. Just completely prohibit
+             this situation. */
+          if (entry->url
+              && parent_entry
+              && (strcmp(entry->url,
+                         svn_path_url_add_component2(parent_entry->url, bname,
+                                                     pool))))
+            {
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                 _("Cannot crop '%s': it is a switched path"),
+                 svn_path_local_style(full_path, pool));
+            }
         }
 
       /* If the target entry is just added without history, it does not exist
@@ -280,11 +284,12 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
         {
           svn_wc_entry_t *target_entry;
           apr_hash_t *parent_entries;
-          SVN_ERR(svn_wc_entries_read(&parent_entries, p_access, 
-                                      FALSE, pool));
 
-          target_entry = apr_hash_get(parent_entries, 
-                                      svn_path_basename(full_path, pool),
+          SVN_ERR(svn_wc_entries_read(&parent_entries, p_access,
+                                      TRUE, pool));
+
+          target_entry = apr_hash_get(parent_entries,
+                                      svn_dirent_basename(full_path, pool),
                                       APR_HASH_KEY_STRING);
 
           target_entry->depth = svn_depth_exclude;

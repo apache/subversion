@@ -211,6 +211,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
+    'D/G'       : Item(status='! ', treeconflict='C'),
     'D/H/chi'   : Item(status=' M', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
     'D/H'       : Item(status=' M', wc_rev=8),

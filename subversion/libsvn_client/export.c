@@ -2,7 +2,7 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,6 +28,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
@@ -106,6 +107,9 @@ copy_one_versioned_file(const char *from,
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
   svn_stream_t *source;
+  svn_stream_t *dst_stream;
+  const char *dst_tmp;
+  svn_error_t *err;
 
   SVN_ERR(svn_wc_entry(&entry, from, adm_access, FALSE, pool));
 
@@ -131,6 +135,8 @@ copy_one_versioned_file(const char *from,
     {
       svn_wc_status2_t *status;
 
+      /* ### hmm. this isn't always a specialfile. this will simply open
+         ### the file readonly if it is a regular file. */
       SVN_ERR(svn_subst_read_specialfile(&source, from, pool, pool));
 
       SVN_ERR(svn_wc_prop_list(&props, from, adm_access, pool));
@@ -139,19 +145,29 @@ copy_one_versioned_file(const char *from,
         local_mod = TRUE;
     }
 
+  /* We can early-exit if we're creating a special file. */
+  special = apr_hash_get(props, SVN_PROP_SPECIAL,
+                         APR_HASH_KEY_STRING);
+  if (special != NULL)
+    {
+      /* Create the destination as a special file, and copy the source
+         details into the destination stream. */
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, to, pool, pool));
+      return svn_stream_copy3(source, dst_stream, NULL, NULL, pool);
+    }
+
+
   eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE,
                            APR_HASH_KEY_STRING);
   keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
                           APR_HASH_KEY_STRING);
   executable = apr_hash_get(props, SVN_PROP_EXECUTABLE,
                             APR_HASH_KEY_STRING);
-  special = apr_hash_get(props, SVN_PROP_SPECIAL,
-                         APR_HASH_KEY_STRING);
 
   if (eol_style)
     SVN_ERR(get_eol_style(&style, &eol, eol_style->data, native_eol));
 
-  if (local_mod && (! special))
+  if (local_mod)
     {
       /* Use the modified time from the working copy of
          the file */
@@ -188,17 +204,36 @@ copy_one_versioned_file(const char *from,
                entry->url, tm, author, pool));
     }
 
-  SVN_ERR(svn_subst_create_translated(source, to, eol, FALSE,
-                                      kw, TRUE,
-                                      special ? TRUE : FALSE,
-                                      pool));
-  if (executable)
-    SVN_ERR(svn_io_set_file_executable(to, TRUE, FALSE, pool));
+  /* For atomicity, we translate to a tmp file and then rename the tmp file
+     over the real destination. */
+  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
+                                 svn_dirent_dirname(to, pool),
+                                 svn_io_file_del_none, pool, pool));
 
-  if (! special)
-    SVN_ERR(svn_io_set_file_affected_time(tm, to, pool));
+  /* If some translation is needed, then wrap the output stream (this is
+     more efficient than wrapping the input). */
+  if (eol || (kw && (apr_hash_count(kw) > 0)))
+    dst_stream = svn_subst_stream_translated(dst_stream,
+                                             eol,
+                                             FALSE /* repair */,
+                                             kw,
+                                             TRUE /* expand */,
+                                             pool);
 
-  return SVN_NO_ERROR;
+  /* ###: use cancel func/baton in place of NULL/NULL below. */
+  err = svn_stream_copy3(source, dst_stream, NULL, NULL, pool);
+
+  if (!err && executable)
+    err = svn_io_set_file_executable(dst_tmp, TRUE, FALSE, pool);
+
+  if (!err)
+    err = svn_io_set_file_affected_time(tm, dst_tmp, pool);
+
+  if (err)
+    return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
+
+  /* Now that dst_tmp contains the translated data, do the atomic rename. */
+  return svn_io_file_rename(dst_tmp, to, pool);
 }
 
 static svn_error_t *
@@ -258,7 +293,7 @@ copy_versioned_files(const char *from,
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
-            return err;
+            return svn_error_return(err);
           if (! force)
             SVN_ERR_W(err, _("Destination directory exists, and will not be "
                              "overwritten unless forced"));
@@ -356,7 +391,7 @@ copy_versioned_files(const char *from,
                       the path leading down to the last component. */
                   if (svn_path_component_count(ext_item->target_dir) > 1)
                     {
-                      const char *parent = svn_path_dirname(new_to, iterpool);
+                      const char *parent = svn_dirent_dirname(new_to, iterpool);
                       SVN_ERR(svn_io_make_dir_recursively(parent, iterpool));
                     }
 
@@ -611,7 +646,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       svn_error_clear(svn_io_remove_file(hb->tmppath, hb->pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -630,7 +665,7 @@ apply_textdelta(void *file_baton,
   /* Create a temporary file in the same directory as the file. We're going
      to rename the thing into place when we're done. */
   SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                 svn_path_dirname(fb->path, pool),
+                                 svn_dirent_dirname(fb->path, pool),
                                  svn_io_file_del_none, fb->pool, fb->pool));
 
   hb->pool = pool;
@@ -731,7 +766,10 @@ close_file(void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
+             apr_psprintf(pool, "%s:\n%s\n%s\n",
+                          _("Checksum mismatch for '%s'"),
+                          _("   expected:  %s"),
+                          _("     actual:  %s")),
              svn_path_local_style(fb->path, pool),
              text_checksum, actual_checksum);
         }
@@ -744,12 +782,16 @@ close_file(void *file_baton,
   else
     {
       svn_subst_eol_style_t style;
-      const char *eol;
-      apr_hash_t *final_kw;
+      const char *eol = NULL;
+      svn_boolean_t repair = FALSE;
+      apr_hash_t *final_kw = NULL;
 
       if (fb->eol_style_val)
-        SVN_ERR(get_eol_style(&style, &eol, fb->eol_style_val->data,
-                              eb->native_eol));
+        {
+          SVN_ERR(get_eol_style(&style, &eol, fb->eol_style_val->data,
+                                eb->native_eol));
+          repair = TRUE;
+        }
 
       if (fb->keywords_val)
         SVN_ERR(svn_subst_build_keywords2(&final_kw, fb->keywords_val->data,
@@ -758,9 +800,7 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_subst_copy_and_translate3
               (fb->tmppath, fb->path,
-               fb->eol_style_val ? eol : NULL,
-               fb->eol_style_val ? TRUE : FALSE, /* repair */
-               fb->keywords_val ? final_kw : NULL,
+               eol, repair, final_kw,
                TRUE, /* expand */
                fb->special,
                pool));
@@ -859,7 +899,7 @@ svn_client_export4(svn_revnum_t *result_rev,
 
           /* Copied from apply_textdelta(). */
           SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                         svn_path_dirname(fb->path, pool),
+                                         svn_dirent_dirname(fb->path, pool),
                                          svn_io_file_del_none,
                                          fb->pool, fb->pool));
 

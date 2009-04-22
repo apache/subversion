@@ -19,26 +19,31 @@
  * @brief Common exception handling for Subversion.
  */
 
-
-
-
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
-#include <apr.h>
-#include <apr_errno.h>     /* APR's error system */
-#include <apr_pools.h>
+#include <apr.h>        /* for apr_size_t */
+#include <apr_errno.h>  /* APR's error system */
+#include <apr_pools.h>  /* for apr_pool_t */
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define APR_WANT_STDIO
 #endif
-#include <apr_want.h>
+#include <apr_want.h>   /* for FILE* */
 
 #include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+/* For the Subversion developers, this #define turns on extended "stack
+   traces" of any errors that get thrown. See the SVN_ERR() macro.  */
+#ifdef SVN_DEBUG
+#define SVN_ERR__TRACING
+#endif
+
 
 /** the best kind of (@c svn_error_t *) ! */
 #define SVN_NO_ERROR   0
@@ -264,7 +269,7 @@ svn_handle_warning(FILE *stream,
  *
  * @code
  *   if (a)
- *     SVN_ERR (some operation);
+ *     SVN_ERR(some operation);
  *   else
  *     foo;
  * @endcode
@@ -275,9 +280,22 @@ svn_handle_warning(FILE *stream,
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
-      return svn_err__temp;                     \
+      return svn_error_return(svn_err__temp);   \
   } while (0)
 
+/**
+ * A statement macro for returning error values.
+ * 
+ * This macro can be used when directly returning an error to ensure
+ * that the call stack is recorded correctly.
+ */
+#ifdef SVN_ERR__TRACING
+#define SVN_ERR__TRACED "traced call"
+
+#define svn_error_return(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
+#else
+#define svn_error_return(expr)  (expr)
+#endif
 
 /** A statement macro, very similar to @c SVN_ERR.
  *
@@ -288,7 +306,8 @@ svn_handle_warning(FILE *stream,
   do {                                                      \
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
-      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
+      return svn_error_return(svn_error_quick_wrap(         \
+                                 svn_err__temp, wrap_msg)); \
   } while (0)
 
 
@@ -351,10 +370,11 @@ svn_handle_warning(FILE *stream,
  */
 #define SVN_ERR_MALFUNCTION()                                      \
   do {                                                             \
-    return svn_error__malfunction(TRUE, __FILE__, __LINE__, NULL); \
+    return svn_error_return(svn_error__malfunction(                \
+                                 TRUE, __FILE__, __LINE__, NULL)); \
   } while (0)
 
-/** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning 
+/** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning
  * an error to the calling function.
  *
  * If possible you should use SVN_ERR_MALFUNCTION() instead.
@@ -392,7 +412,7 @@ svn_handle_warning(FILE *stream,
       SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
   } while (0)
 
-/** Similar to SVN_ERR_ASSERT(), but without the option of returning 
+/** Similar to SVN_ERR_ASSERT(), but without the option of returning
  * an error to the calling function.
  *
  * If possible you should use SVN_ERR_ASSERT() instead.
@@ -417,8 +437,8 @@ svn_handle_warning(FILE *stream,
  * source file @a file at line @a line, and was an assertion failure of the
  * expression @a expr, or, if @a expr is null, an unconditional error.
  *
- * If @a can_return is true, the handler can return an error object 
- * that is returned by the caller. If @a can_return is false the 
+ * If @a can_return is true, the handler can return an error object
+ * that is returned by the caller. If @a can_return is false the
  * method should never return. (The caller will call abort())
  *
  * @since New in 1.6.
@@ -441,7 +461,7 @@ svn_error__malfunction(svn_boolean_t can_return,
  * If @a can_return is true a function of this type must do one of:
  *   - Return an error object describing the error, using an error code in
  *     the category SVN_ERR_MALFUNC_CATEGORY_START.
- *   - Never return. 
+ *   - Never return.
  *
  * The function may alter its behaviour according to compile-time
  * and run-time and even interactive conditions.

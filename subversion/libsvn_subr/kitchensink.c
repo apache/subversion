@@ -170,7 +170,7 @@ svn_node_kind_from_word(const char *word)
     return svn_node_file;
   else if (strcmp(word, "dir") == 0)
     return svn_node_dir;
-  else 
+  else
     /* This also handles word == "unknown" */
     return svn_node_unknown;
 }

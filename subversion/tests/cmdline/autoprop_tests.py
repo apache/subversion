@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -33,7 +33,7 @@ Item = svntest.wc.StateItem
 def check_proplist(path, exp_out):
   """Verify that property list on PATH has a value of EXP_OUT"""
 
-  props = svntest.tree.get_props(path)
+  props = svntest.tree.get_props([path]).get(path, {})
   if props != exp_out:
     print("Expected properties: %s" % exp_out)
     print("Actual properties:   %s" % props)
@@ -50,6 +50,9 @@ def create_config(config_dir, enable_flag):
 
   # contents of the file 'config'
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = %s
 
@@ -59,6 +62,7 @@ enable-auto-props = %s
 fubar* = tarfile=si
 foobar.lha = lhafile=da;lzhfile=niet
 spacetest = abc = def ; ghi = ; = j
+escapetest = myval=;;;;val;myprop=p
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
@@ -122,7 +126,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
                'foo.jpg',
                'fubar.tar',
                'foobar.lha',
-               'spacetest']
+               'spacetest',
+               'escapetest']
   for filename in filenames:
     svntest.main.file_write(os.path.join(files_dir, filename),
                             'foo\nbar\nbaz\n')
@@ -163,6 +168,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     check_proplist(filename, {'auto':'oui', 'lhafile':'da', 'lzhfile':'niet'})
     filename = os.path.join(files_wc_dir, 'spacetest')
     check_proplist(filename, {'auto':'oui', 'abc':'def', 'ghi':''})
+    filename = os.path.join(files_wc_dir, 'escapetest')
+    check_proplist(filename, {'auto':'oui', 'myval':';;val', 'myprop':'p'})
   else:
     for filename in filenames:
       check_proplist(os.path.join(files_wc_dir, filename), {})

@@ -132,9 +132,13 @@ test_svn_opt_args_to_target_array2(const char **msg,
       apr_array_header_t *targets;
       apr_getopt_t *os;
       const int argc = 2;
-      const char *argv[] = { "opt-test", input, NULL };
+      const char *argv[3] = { 0 };
       apr_status_t apr_err;
       svn_error_t *err;
+
+      argv[0] = "opt-test";
+      argv[1] = input;
+      argv[2] = NULL;
 
       apr_err = apr_getopt_init(&os, pool, argc, argv);
       if (apr_err)

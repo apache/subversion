@@ -28,6 +28,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -37,12 +38,12 @@
 /*** Code. ***/
 
 
-/* An svn_wc_status_func3_t callback function for finding
+/* An svn_wc_status_func4_t callback function for finding
    status structures which are not safely deletable. */
 static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  svn_wc_status2_t *status,
+                  const svn_wc_status2_t *status,
                   apr_pool_t *pool)
 {
   /* Check for error-ful states. */
@@ -63,7 +64,8 @@ find_undeletables(void *baton,
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
     return svn_error_createf(SVN_ERR_CLIENT_MODIFIED, NULL,
-                             _("'%s' has local modifications"),
+                             _("'%s' has local modifications -- commit or "
+                               "revert them first"),
                              svn_path_local_style(path, pool));
 
   return SVN_NO_ERROR;
@@ -83,10 +85,9 @@ svn_client__can_delete(const char *path,
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_client_status4
-         (NULL, path, &revision, find_undeletables, NULL,
-          svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, FALSE,
-          ctx, pool);
+  return svn_client_status5(NULL, path, &revision, find_undeletables, NULL,
+                            svn_depth_infinity, FALSE, FALSE, FALSE, FALSE,
+                            FALSE, NULL, ctx, pool);
 }
 
 
@@ -128,7 +129,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_path_split(common, &common, &bname, pool);
+      svn_uri_split(common, &common, &bname, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 
@@ -204,7 +205,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -265,7 +266,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
           const char *parent_path;
 
           svn_pool_clear(subpool);
-          parent_path = svn_path_dirname(path, subpool);
+          parent_path = svn_dirent_dirname(path, subpool);
 
           /* See if the user wants us to stop. */
           if (ctx->cancel_func)

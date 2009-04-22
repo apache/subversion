@@ -29,6 +29,7 @@
 #include "svn_fs.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
@@ -174,7 +175,7 @@ make_child_baton(item_baton_t *parent, const char *path, apr_pool_t *pool)
   baton = apr_pcalloc(pool, sizeof(*baton));
   baton->pool = pool;
   baton->uc = parent->uc;
-  baton->name = svn_path_basename(path, pool);
+  baton->name = svn_uri_basename(path, pool);
   baton->parent = parent;
 
   /* Telescope the path based on uc->anchor.  */
@@ -243,7 +244,7 @@ absent_helper(svn_boolean_t is_dir,
                                      DIR_OR_FILE(is_dir),
                                      apr_xml_quote_string
                                        (pool,
-                                        svn_path_basename(path, pool),
+                                        svn_uri_basename(path, pool),
                                         1));
       SVN_ERR(dav_svn__send_xml(uc->bb, uc->output, "%s", elt));
     }
@@ -584,7 +585,7 @@ upd_delete_entry(const char *path,
 {
   item_baton_t *parent = parent_baton;
   const char *qname = apr_xml_quote_string(pool,
-                                           svn_path_basename(path, pool), 1);
+                                           svn_uri_basename(path, pool), 1);
   return dav_svn__send_xml(parent->uc->bb, parent->uc->output,
                            "<S:delete-entry name=\"%s\"/>" DEBUG_CR, qname);
 }
@@ -937,14 +938,13 @@ dav_svn__update_report(const dav_resource *resource,
   arb.r = resource->info->r;
   arb.repos = repos;
 
-  if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
-    {
-      return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
-                                    "This report can only be run against "
-                                    "a VCC.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
-    }
+  if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
+      && (resource->info->restype != DAV_SVN_RESTYPE_ME))
+    return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
+                                  "This report can only be run against "
+                                  "a VCC or root-stub URI.",
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)

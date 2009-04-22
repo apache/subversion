@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "dag.h"
 #include "err.h"
@@ -251,7 +252,8 @@ txn_body_dag_init_fs(void *baton,
 svn_error_t *
 svn_fs_base__dag_init_fs(svn_fs_t *fs)
 {
-  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL, fs->pool);
+  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL, 
+                                TRUE, fs->pool);
 }
 
 
@@ -560,8 +562,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
                                     noderev->prop_key, trail, pool));
   proplist_skel = svn_skel__parse(raw_proplist.data, raw_proplist.len, pool);
   if (proplist_skel)
-    SVN_ERR(svn_fs_base__parse_proplist_skel(&proplist,
-                                             proplist_skel, pool));
+    SVN_ERR(svn_skel__parse_proplist(&proplist, proplist_skel, pool));
 
   *proplist_p = proplist;
   return SVN_NO_ERROR;
@@ -600,8 +601,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   rep_key = noderev->prop_key;
 
   /* Flatten the proplist into a string. */
-  SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
-                                             proplist, pool));
+  SVN_ERR(svn_skel__unparse_proplist(&proplist_skel, proplist, pool));
   raw_proplist_buf = svn_skel__unparse(proplist_skel, pool);
 
   /* If this repository supports representation sharing, and the
@@ -988,8 +988,7 @@ svn_fs_base__dag_remove_node(svn_fs_t *fs,
 
   /* Delete the node revision itself. */
   return svn_fs_base__delete_node_revision(fs, id,
-                                           noderev->predecessor_id
-                                             ? FALSE : TRUE,
+                                           noderev->predecessor_id == NULL,
                                            trail, pool);
 }
 
@@ -1277,9 +1276,10 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
       if (! svn_checksum_match(checksum, test_checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           _("Checksum mismatch, rep '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
+           apr_psprintf(pool, "%s:\n%s\n%s\n",
+                        _("Checksum mismatch on representation '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            noderev->edit_key,
            svn_checksum_to_cstring_display(checksum, pool),
            svn_checksum_to_cstring_display(test_checksum, pool));

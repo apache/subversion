@@ -19,11 +19,13 @@
  * @brief quoted-printable encoding and decoding functions.
  */
 
-
 #ifndef SVN_QUOPRINT_H
 #define SVN_QUOPRINT_H
 
-#include "svn_io.h"
+#include <apr_pools.h>
+
+#include "svn_string.h"  /* for svn_strinbuf_t */
+#include "svn_io.h"      /* for svn_stream_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,14 +54,14 @@ svn_quoprint_decode(svn_stream_t *output,
  * of it present at once.  The returned string will be allocated from @a pool.
  */
 svn_stringbuf_t *
-svn_quoprint_encode_string(svn_stringbuf_t *str,
+svn_quoprint_encode_string(const svn_stringbuf_t *str,
                            apr_pool_t *pool);
 
 /** Simpler interface for decoding quoted-printable data assuming we have all
  * of it present at once.  The returned string will be allocated from @a pool.
  */
 svn_stringbuf_t *
-svn_quoprint_decode_string(svn_stringbuf_t *str,
+svn_quoprint_decode_string(const svn_stringbuf_t *str,
                            apr_pool_t *pool);
 
 

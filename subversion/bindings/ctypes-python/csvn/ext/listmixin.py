@@ -11,7 +11,7 @@ ListMixin class is useful for different storage schemes, more
 complicated data structures, or other nefarious hackery.
 
 Features:
- - Compatible with Python 2.3, 2.4, and Psyco.
+ - Compatible with Python 2.4, and Psyco.
 
 Example:
 
@@ -370,7 +370,6 @@ def test_list_mixin(list_class=TestList, rand_elem=None):
       return None
 
   import random
-  import sets
   import sys
   for i in [1, 3, 8, 16, 18, 29, 59, 111, 213, 501, 1013,
             2021, 3122, 4039, 5054]:
@@ -530,8 +529,8 @@ def test_list_mixin(list_class=TestList, rand_elem=None):
       assert x * 2 == y * 2
       assert isinstance(x + y, list)
       assert x + y == x + list(y)
-      elems = sets.Set(x)
-      elems2 = sets.Set(y)
+      elems = set(x)
+      elems2 = set(y)
       assert elems == elems2
       def index_or_none(obj, search, *args):
         try:

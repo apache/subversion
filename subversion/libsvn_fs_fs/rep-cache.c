@@ -25,7 +25,7 @@
 
 #include "private/svn_sqlite.h"
 
-#include "rep-cache-db.sql.h"
+#include "rep-cache-db.h"
 
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
@@ -45,35 +45,13 @@ enum statement_keys {
 static const char * const statements[] = {
   "select revision, offset, size, expanded_size "
   "from rep_cache "
-  "where hash = :1", 
+  "where hash = ?1",
 
   "insert into rep_cache (hash, revision, offset, size, expanded_size) "
-  "values (:1, :2, :3, :4, :5);",
+  "values (?1, ?2, ?3, ?4, ?5);",
 
   NULL
   };
-
-
-/* APR cleanup function used to close the database when destroying the FS pool
-   DATA should be the FS to to which this database belongs. */
-static apr_status_t
-cleanup_db_apr(void *data)
-{
-  svn_fs_t *fs = data;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_error_t *err;
-
-  err = svn_sqlite__close(ffd->rep_cache_db, SVN_NO_ERROR);
-  if (err)
-    {
-      fs->warning(fs->warning_baton, err);
-      svn_error_clear(err);
-
-      return SVN_ERR_FS_CLEANUP;
-    }
-
-  return APR_SUCCESS;
-}
 
 
 svn_error_t *
@@ -83,15 +61,13 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *db_path;
 
-  /* Open (or create) the sqlite database */
+  /* Open (or create) the sqlite database.  It will be automatically
+     closed when fs->pool is destoyed. */
   db_path = svn_path_join(fs->path, REP_CACHE_DB_NAME, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            REP_CACHE_SCHEMA_FORMAT,
                            upgrade_sql, fs->pool, pool));
-
-  apr_pool_cleanup_register(fs->pool, fs, cleanup_db_apr,
-                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
@@ -128,9 +104,9 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
       *rep = apr_pcalloc(pool, sizeof(**rep));
       (*rep)->sha1_checksum = svn_checksum_dup(checksum, pool);
       (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->offset = svn_sqlite__column_int(stmt, 1);
-      (*rep)->size = svn_sqlite__column_int(stmt, 2);
-      (*rep)->expanded_size = svn_sqlite__column_int(stmt, 3);
+      (*rep)->offset = svn_sqlite__column_int64(stmt, 1);
+      (*rep)->size = svn_sqlite__column_int64(stmt, 2);
+      (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
   else
     *rep = NULL;
@@ -145,7 +121,6 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t have_row;
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 
@@ -173,9 +148,9 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                  apr_psprintf(pool,
                               _("Representation key for checksum '%%s' exists "
-                                "in filesystem '%%s', with different value "
-                                "(%%ld,%%%s,%%%s,%%%s) than what we were about"
-                                " to store(%%ld,%%%s,%%%s,%%%s)"),
+                                "in filesystem '%%s' with a different value "
+                                "(%%ld,%%%s,%%%s,%%%s) than what we were about "
+                                "to store (%%ld,%%%s,%%%s,%%%s)"),
                               APR_OFF_T_FMT, SVN_FILESIZE_T_FMT,
                               SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
                               SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
@@ -195,6 +170,5 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                             (apr_int64_t) rep->size,
                             (apr_int64_t) rep->expanded_size));
 
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  return svn_sqlite__reset(stmt);
+  return svn_sqlite__insert(NULL, stmt);
 }

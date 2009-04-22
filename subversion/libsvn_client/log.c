@@ -2,7 +2,7 @@
  * log.c:  return log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,19 +16,11 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
 #include <apr_strings.h>
 #include <apr_pools.h>
-
-#include "client.h"
 
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -36,6 +28,9 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
+
+#include "client.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -80,11 +75,11 @@ typedef struct
 {
   svn_boolean_t is_first;
   const char *path;
-  svn_revnum_t rev;  
+  svn_revnum_t rev;
   apr_pool_t *pool;
 } copyfrom_info_t;
 
-/* A location segment callback for obtaining the copy source of 
+/* A location segment callback for obtaining the copy source of
    a node at a path and storing it in *BATON (a struct copyfrom_info_t *).
    Implements svn_location_segment_receiver_t. */
 static svn_error_t *
@@ -113,7 +108,7 @@ copyfrom_info_receiver(svn_location_segment_t *segment,
       copyfrom_info->path = apr_pstrdup(copyfrom_info->pool, segment->path);
       copyfrom_info->rev = segment->range_end;
 
-      /* ### FIXME: We *should* be able to return SVN_ERR_CEASE_INVOCATION 
+      /* ### FIXME: We *should* be able to return SVN_ERR_CEASE_INVOCATION
          ### here so we don't get called anymore. */
     }
 
@@ -129,11 +124,16 @@ svn_client__get_copy_source(const char *path_or_url,
                             apr_pool_t *pool)
 {
   svn_error_t *err;
-  copyfrom_info_t copyfrom_info = { TRUE, NULL, SVN_INVALID_REVNUM, pool };
+  copyfrom_info_t copyfrom_info = { 0 };
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
   svn_revnum_t at_rev;
   const char *at_url;
+
+  copyfrom_info.is_first = TRUE;
+  copyfrom_info.path = NULL;
+  copyfrom_info.rev = SVN_INVALID_REVNUM;
+  copyfrom_info.pool = pool;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
                                            path_or_url, NULL,
@@ -163,7 +163,7 @@ svn_client__get_copy_source(const char *path_or_url,
             *copyfrom_path = NULL;
             *copyfrom_rev = SVN_INVALID_REVNUM;
         }
-      return err;
+      return svn_error_return(err);
     }
 
   *copyfrom_path = copyfrom_info.path;
@@ -180,6 +180,8 @@ typedef struct
   /* ra session for retrieving revprops from old servers */
   svn_ra_session_t *ra_session;
   /* caller's list of requested revprops, receiver, and baton */
+  const char *ra_session_url;
+  apr_pool_t *ra_session_pool;
   const apr_array_header_t *revprops;
   svn_log_entry_receiver_t receiver;
   void *baton;
@@ -225,6 +227,12 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
               want_log = TRUE;
               continue;
             }
+
+          if (rb->ra_session == NULL)
+            SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
+                                                rb->ra_session_url,
+                                               rb->ctx, rb->ra_session_pool));
+
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
@@ -249,6 +257,11 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
     }
   else
     {
+      if (rb->ra_session == NULL)
+        SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
+                                           rb->ra_session_url,
+                                           rb->ctx, rb->ra_session_pool));
+
       SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
                                   &log_entry->revprops, pool));
     }
@@ -282,8 +295,11 @@ svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
                 const apr_array_header_t *revprops,
-                const svn_client_log_args_t *args,
                 svn_log_entry_receiver_t real_receiver,
                 void *real_receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -298,9 +314,8 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
   const char *ra_target;
-  pre_15_receiver_baton_t rb;
+  pre_15_receiver_baton_t rb = {0};
   apr_pool_t *iterpool;
-  int limit = args->limit;
   int i;
 
   if (revision_ranges->nelts == 0)
@@ -505,8 +520,10 @@ svn_client_log5(const apr_array_header_t *targets,
     if (!has_log_revprops) {
       /* See above pre-1.5 notes. */
       rb.ctx = ctx;
-      SVN_ERR(svn_client_open_ra_session(&rb.ra_session, actual_url,
-                                         ctx, pool));
+
+      /* Create ra session on first use */
+      rb.ra_session_pool = pool;
+      rb.ra_session_url = actual_url;
     }
   }
 
@@ -610,9 +627,9 @@ svn_client_log5(const apr_array_header_t *targets,
                               start_revnum,
                               end_revnum,
                               limit,
-                              args->discover_changed_paths,
-                              args->strict_node_history,
-                              args->include_merged_revisions,
+                              discover_changed_paths,
+                              strict_node_history,
+                              include_merged_revisions,
                               passed_receiver_revprops,
                               passed_receiver,
                               passed_receiver_baton,
@@ -627,14 +644,7 @@ svn_client_log5(const apr_array_header_t *targets,
             }
         }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
-}
-
-svn_client_log_args_t *
-svn_client_log_args_create(apr_pool_t *pool)
-{
-  svn_client_log_args_t *log_args = apr_pcalloc(pool, sizeof(*log_args));
-
-  return log_args;
 }

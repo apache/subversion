@@ -20,6 +20,8 @@ path = element path { attlist.path, text }
 attlist.path &=
   ## "action code": A)dd, D)elete, R)eplace or M)odify
   attribute action { "A" | "D" | "R" | "M" },
+  ## kind is "" when repository was < 1.6 when committing
+  attribute kind { "file" | "dir" | "" },
   (
    ## The copyfrom path within repository.
    attribute copyfrom-path { text },

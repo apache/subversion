@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,13 +18,13 @@
 
 import re, sys
 
-import main, tree, wc  # general svntest routines in this module.
-from svntest import Failure
+import svntest
+
 
 ######################################################################
 # Exception types
 
-class SVNUnexpectedOutput(Failure):
+class SVNUnexpectedOutput(svntest.Failure):
   """Exception raised if an invocation of svn results in unexpected
   output of any kind."""
   pass
@@ -63,13 +63,13 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
 ######################################################################
 # Comparison of expected vs. actual output
 
-def createExpectedOutput(expected, match_all=True):
+def createExpectedOutput(expected, output_type, match_all=True):
   """Return EXPECTED, promoted to an ExpectedOutput instance if not
   None.  Raise SVNIncorrectDatatype if the data type of EXPECTED is
   not handled."""
-  if isinstance(expected, type([])):
+  if isinstance(expected, list):
     expected = ExpectedOutput(expected)
-  elif isinstance(expected, type('')):
+  elif isinstance(expected, str):
     expected = RegexOutput(expected, match_all)
   elif expected == AnyOutput:
     expected = AnyOutput()
@@ -107,10 +107,10 @@ class ExpectedOutput:
       actual = other
 
     if isinstance(actual, list):
-      if isinstance(expected, type('')):
+      if isinstance(expected, str):
         expected = [expected]
       is_match = self.is_equivalent_list(expected, actual)
-    elif isinstance(actual, type('')):
+    elif isinstance(actual, str):
       is_match = self.is_equivalent_line(expected, actual)
     else: # unhandled type
       is_match = False
@@ -215,7 +215,7 @@ class RegexOutput(ExpectedOutput):
     display_lines(message, label, self.output, actual, True, False)
 
 class UnorderedOutput(ExpectedOutput):
-  """Marks unordered output, and performs comparisions."""
+  """Marks unordered output, and performs comparisons."""
 
   def __cmp__(self, other):
     "Handle ValueError."
@@ -275,10 +275,10 @@ def display_trees(message, label, expected, actual):
     print(message)
   if expected is not None:
     print('EXPECTED %s:' % label)
-    tree.dump_tree(expected)
+    svntest.tree.dump_tree(expected)
   if actual is not None:
     print('ACTUAL %s:' % label)
-    tree.dump_tree(actual)
+    svntest.tree.dump_tree(actual)
 
 
 def display_lines(message, label, expected, actual, expected_is_regexp=None,
@@ -306,16 +306,22 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
       sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
-                              raisable=main.SVNLineUnequal):
+                              raisable=None):
   """Compare two sets of output lines, and print them if they differ,
   preceded by MESSAGE iff not None.  EXPECTED may be an instance of
   ExpectedOutput (and if not, it is wrapped as such).  RAISABLE is an
   exception class, an instance of which is thrown if ACTUAL doesn't
   match EXPECTED."""
+  if raisable is None:
+    raisable = svntest.main.SVNLineUnequal
   ### It'd be nicer to use createExpectedOutput() here, but its
   ### semantics don't match all current consumers of this function.
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
+
+  if isinstance(actual, str):
+    actual = [actual]
+  actual = [line for line in actual if not line.startswith('DBG:')]
 
   if expected != actual:
     expected.display_differences(message, label, actual)
@@ -332,8 +338,8 @@ def verify_outputs(message, actual_stdout, actual_stderr,
   ACTUAL_STDOUT to match, every line in ACTUAL_STDOUT must match the
   EXPECTED_STDOUT regex, unless ALL_STDOUT is false.  For
   EXPECTED_STDERR regexes only one line in ACTUAL_STDERR need match."""
-  expected_stderr = createExpectedOutput(expected_stderr, False)
-  expected_stdout = createExpectedOutput(expected_stdout, all_stdout)
+  expected_stderr = createExpectedOutput(expected_stderr, 'stderr', False)
+  expected_stdout = createExpectedOutput(expected_stdout, 'stdout', all_stdout)
 
   for (actual, expected, label, raisable) in (
       (actual_stderr, expected_stderr, 'STDERR', SVNExpectedStderr),
@@ -341,11 +347,10 @@ def verify_outputs(message, actual_stdout, actual_stderr,
     if expected is None:
       continue
 
-    expected = createExpectedOutput(expected)
     if isinstance(expected, RegexOutput):
-      raisable = main.SVNUnmatchedError
+      raisable = svntest.main.SVNUnmatchedError
     elif not isinstance(expected, AnyOutput):
-      raisable = main.SVNLineUnequal
+      raisable = svntest.main.SVNLineUnequal
 
     compare_and_display_lines(message, label, expected, actual, raisable)
 
@@ -355,9 +360,7 @@ def verify_exit_code(message, actual, expected,
   if they don't match, print the difference (preceded by MESSAGE iff
   not None) and raise an exception."""
 
-  # main.spawn_process() (by virtue of main.wait_on_pipe()) will return an
-  # exit code of None on platforms not supporting Popen3
-  if actual is not None and expected != actual:
+  if expected != actual:
     display_lines(message, "Exit Code",
                   str(expected) + '\n', str(actual) + '\n')
     raise raisable

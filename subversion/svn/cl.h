@@ -176,6 +176,7 @@ typedef struct svn_cl__opt_state_t
   const char *extensions;        /* subprocess extension args */ /* UTF-8! */
   apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
+  svn_boolean_t svnpatch;        /* enable svnpatch format in diff output */
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
@@ -187,7 +188,8 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
-  const char *editor_cmd;        /* external editor command. */
+  const char *editor_cmd;        /* the external editor command to use */
+  const char *patch_cmd;         /* the external patch command to use */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
@@ -249,6 +251,7 @@ svn_opt_subcommand_t
   svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
+  svn_cl__patch,
   svn_cl__propdel,
   svn_cl__propedit,
   svn_cl__propget,
@@ -485,17 +488,24 @@ svn_cl__edit_file_externally(const char *path,
 
 /* Search for a merge tool command in environment variables,
    and use it to perform the merge of the four given files.
+   WC_PATH is the path of the file that is in conflict, relative
+   to the merge target.
    Use POOL for all allocations.
 
    CONFIG is a hash of svn_config_t * items keyed on a configuration
    category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
+
+   Upon success, set *REMAINS_IN_CONFLICT to indicate whether the
+   merge result contains conflict markers.
    */
 svn_error_t *
 svn_cl__merge_file_externally(const char *base_path,
                               const char *their_path,
                               const char *my_path,
                               const char *merged_path,
+                              const char *wc_path,
                               apr_hash_t *config,
+                              svn_boolean_t *remains_in_conflict,
                               apr_pool_t *pool);
 
 

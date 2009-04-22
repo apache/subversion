@@ -6,9 +6,14 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 
-import commands
 import sys, os
 import getopt
+try:
+  # Python >=3.0
+  from subprocess import getstatusoutput as subprocess_getstatusoutput
+except ImportError:
+  # Python <3.0
+  from commands import getstatusoutput as subprocess_getstatusoutput
 try:
     my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -36,7 +41,7 @@ class Config:
         cursectdict = None
         optname = None
         lineno = 0
-        for line in file.xreadlines():
+        for line in file:
             lineno = lineno + 1
             if line.isspace() or line[0] == '#':
                 continue
@@ -142,7 +147,7 @@ class SVNLook:
 
     def _execcmd(self, *cmd, **kwargs):
         cmdstr = " ".join(cmd)
-        status, output = commands.getstatusoutput(cmdstr)
+        status, output = subprocess_getstatusoutput(cmdstr)
         if status != 0:
             sys.stderr.write(cmdstr)
             sys.stderr.write("\n")

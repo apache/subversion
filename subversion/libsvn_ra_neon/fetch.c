@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,7 @@
 #include "svn_base64.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
@@ -752,9 +753,10 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
           if (strcmp(hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               _("Checksum mismatch for '%s':\n"
-                 "   expected checksum:  %s\n"
-                 "   actual checksum:    %s\n"),
+               apr_psprintf(pool, "%s:\n%s\n%s\n",
+                            _("Checksum mismatch for '%s'"),
+                            _("   expected:  %s"),
+                            _("     actual:  %s")),
                path, expected_checksum->data, hex_digest);
         }
     }
@@ -1057,7 +1059,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
             }
 
           apr_hash_set(*dirents,
-                       svn_path_uri_decode(svn_path_basename(childname, pool),
+                       svn_path_uri_decode(svn_uri_basename(childname, pool),
                                            pool),
                        APR_HASH_KEY_STRING, entry);
         }
@@ -1178,23 +1180,31 @@ svn_error_t *svn_ra_neon__rev_proplist(svn_ra_session_t *session,
                                        apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  svn_ra_neon__resource_t *baseline;
+  svn_ra_neon__resource_t *bln;
 
   *props = apr_hash_make(pool);
 
-  /* Main objective: do a PROPFIND (allprops) on a baseline object */
-  SVN_ERR(svn_ra_neon__get_baseline_props(NULL, &baseline,
-                                          ras,
-                                          ras->url->data,
-                                          rev,
-                                          NULL, /* get ALL properties */
-                                          pool));
+  /* Main objective: do a PROPFIND (allprops) on a baseline object. If we
+     have HTTP v2 support available, we can build the URI of that object.
+     Otherwise, we have to hunt for a bit.  (We pass NULL for 'which_props'
+     in these functions because we want 'em all.)  */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      const char *url = apr_psprintf(pool, "%s/%ld", ras->rev_stub, rev);
+      SVN_ERR(svn_ra_neon__get_props_resource(&bln, ras, url, 
+                                              NULL, NULL, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_ra_neon__get_baseline_props(NULL, &bln, ras, ras->url->data,
+                                              rev, NULL, pool));
+    }
 
   /* Build a new property hash, based on the one in the baseline
      resource.  In particular, convert the xml-property-namespaces
      into ones that the client understands.  Strip away the DAV:
      liveprops as well. */
-  return filter_props(*props, baseline, FALSE, pool);
+  return filter_props(*props, bln, FALSE, pool);
 }
 
 
@@ -2351,7 +2361,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
 {
   report_baton_t *rb = report_baton;
   svn_error_t *err;
-  const char *vcc;
+  const char *report_target;
   apr_hash_t *request_headers = apr_hash_make(pool);
   apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING,
                "svndiff1;q=0.9,svndiff;q=0.8");
@@ -2372,10 +2382,15 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   rb->encoding = MAKE_BUFFER(rb->pool);
   rb->href = MAKE_BUFFER(rb->pool);
 
-  /* get the VCC.  if this doesn't work out for us, don't forget to
-     remove the tmpfile before returning the error. */
-  if ((err = svn_ra_neon__get_vcc(&vcc, rb->ras,
-                                  rb->ras->url->data, pool)))
+  /* Got HTTP v2 support?  We'll report against the "me resource". */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(rb->ras))
+    {
+      report_target = rb->ras->me_resource;
+    }
+  /* Else, get the VCC.  (If this doesn't work out for us, don't
+     forget to remove the tmpfile before returning the error.)  */
+  else if ((err = svn_ra_neon__get_vcc(&report_target, rb->ras,
+                                       rb->ras->url->data, pool)))
     {
       /* We're done with the file.  this should delete it. Note: it
          isn't a big deal if this line is never executed -- the pool
@@ -2385,7 +2400,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
     }
 
   /* dispatch the REPORT. */
-  err = svn_ra_neon__parsed_request(rb->ras, "REPORT", vcc,
+  err = svn_ra_neon__parsed_request(rb->ras, "REPORT", report_target,
                                     NULL, rb->tmpfile, NULL,
                                     start_element,
                                     cdata_handler,
@@ -2490,7 +2505,7 @@ make_reporter(svn_ra_session_t *session,
   svn_stringbuf_t *xml_s;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
-  svn_boolean_t has_target = *target ? TRUE : FALSE;
+  svn_boolean_t has_target = *target != '\0';
   svn_boolean_t server_supports_depth;
 
   SVN_ERR(svn_ra_neon__has_capability(session, &server_supports_depth,
@@ -2522,7 +2537,7 @@ make_reporter(svn_ra_session_t *session,
   rb->fetch_content = fetch_content;
   rb->in_resource = FALSE;
   rb->current_wcprop_path = svn_stringbuf_create("", pool);
-  rb->is_switch = dst_path ? TRUE : FALSE;
+  rb->is_switch = dst_path != NULL;
   rb->target = target;
   rb->receiving_all = FALSE;
   rb->spool_response = spool_response;

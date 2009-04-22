@@ -25,6 +25,7 @@
 #include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_subst.h"
@@ -101,12 +102,20 @@ svn_wc_translated_stream(svn_stream_t **stream,
     {
       if (to_nf)
         {
-          SVN_ERR(svn_subst_stream_translated_to_normal_form(stream,
-                                                             *stream,
-                                                             style, eol,
-                                                             repair_forced,
-                                                             keywords,
-                                                             pool));
+          if (style == svn_subst_eol_style_native)
+            eol = SVN_SUBST_NATIVE_EOL_STR;
+          else if (style == svn_subst_eol_style_fixed)
+            repair_forced = TRUE;
+          else if (style != svn_subst_eol_style_none)
+            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+          /* Wrap the stream to translate to normal form */
+          *stream = svn_subst_stream_translated(*stream,
+                                                eol,
+                                                repair_forced,
+                                                keywords,
+                                                FALSE /* expand */,
+                                                pool);
 
           /* Enforce our contract. TO_NF streams are readonly */
           svn_stream_set_write(*stream, write_handler_unsupported);
@@ -161,7 +170,7 @@ svn_wc_translated_file2(const char **xlated_path,
       if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
         tmp_dir = NULL;
       else
-        tmp_dir = svn_wc__adm_child(svn_path_dirname(versioned_file, pool),
+        tmp_dir = svn_wc__adm_child(svn_dirent_dirname(versioned_file, pool),
                                     SVN_WC__ADM_TMP, pool);
 
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_vfile, tmp_dir,
@@ -186,7 +195,7 @@ svn_wc_translated_file2(const char **xlated_path,
           /* to normal form */
 
           if (style == svn_subst_eol_style_native)
-            eol = "\n"; /* ### SVN_SUBST__DEFAULT_EOL_STR; */
+            eol = SVN_SUBST_NATIVE_EOL_STR;
           else if (style == svn_subst_eol_style_fixed)
             repair_forced = TRUE;
           else if (style != svn_subst_eol_style_none)
@@ -204,21 +213,6 @@ svn_wc_translated_file2(const char **xlated_path,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_translated_file(const char **xlated_p,
-                       const char *vfile,
-                       svn_wc_adm_access_t *adm_access,
-                       svn_boolean_t force_repair,
-                       apr_pool_t *pool)
-{
-  return svn_wc_translated_file2(xlated_p, vfile, vfile, adm_access,
-                                 SVN_WC_TRANSLATE_TO_NF
-                                 | (force_repair ?
-                                    SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
-                                 pool);
 }
 
 

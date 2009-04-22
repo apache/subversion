@@ -50,12 +50,6 @@ except ImportError:
   # Python <3.0
   from urllib import quote as urllib_parse_quote
 
-# Pretend we have true booleans on older python versions
-try:
-  True
-except:
-  True = 1
-  False = 0
 
 # Warnings and errors start with these strings.  They are typically
 # followed by a colon and a space, as in "%s: " ==> "WARNING: ".
@@ -128,7 +122,7 @@ def html_footer():
   return '\n</body>\n</html>\n'
 
 
-class Contributor:
+class Contributor(object):
   # Map contributor names to contributor instances, so that there
   # exists exactly one instance associated with a given name.
   # Fold names with email addresses.  That is, if we see someone
@@ -136,9 +130,6 @@ class Contributor:
   # name and that same email address together, we create only one
   # instance, and store it under both the email and the real name.
   all_contributors = { }
-
-  # See __hash__() for why this is necessary.
-  hash_value = 1
 
   def __init__(self, username, real_name, email):
     """Instantiate a contributor.  Don't use this to generate a
@@ -153,9 +144,6 @@ class Contributor:
     # "Patch" represent all the revisions for which this contributor
     # contributed a patch.
     self.activities = { }
-    # Sigh.
-    self.unique_hash_value = Contributor.hash_value
-    Contributor.hash_value += 1
 
   def add_activity(self, field_name, log):
     """Record that this contributor was active in FIELD_NAME in LOG."""
@@ -166,6 +154,7 @@ class Contributor:
     if not log in logs:
       logs.append(log)
 
+  @staticmethod
   def get(username, real_name, email):
     """If this contributor is already registered, just return it;
     otherwise, register it then return it.  Hint: use parse() to
@@ -194,7 +183,6 @@ class Contributor:
       Contributor.all_contributors[email]     = c
     # This Contributor has never been in better shape; return it.
     return c
-  get = staticmethod(get)
 
   def score(self):
     """Return a contribution score for this contributor."""
@@ -247,10 +235,7 @@ class Contributor:
     else:
       return 0 - result
 
-  def __hash__(self):
-    """See LogMessage.__hash__() for why this exists."""
-    return self.hash_value
-
+  @staticmethod
   def parse(name):
     """Parse NAME, which can be
 
@@ -288,7 +273,6 @@ class Contributor:
       email = email.replace('{_AT_}', '@')
 
     return username, real_name, email
-  parse = staticmethod(parse)
 
   def canonical_name(self):
     """Return a canonical name for this contributor.  The canonical
@@ -369,8 +353,7 @@ class Contributor:
                           self.big_name(html=True), True))
     unique_logs = { }
 
-    sorted_activities = list(self.activities.keys())
-    sorted_activities.sort()
+    sorted_activities = sorted(self.activities.keys())
 
     out.write('<div class="h2" id="activities" title="activities">\n\n')
     out.write('<table border="1">\n')
@@ -394,8 +377,7 @@ class Contributor:
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = list(unique_logs.keys())
-    sorted_logs.sort()
+    sorted_logs = sorted(unique_logs.keys())
     for log in sorted_logs:
       out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
@@ -448,7 +430,7 @@ class Field:
     return s
 
 
-class LogMessage:
+class LogMessage(object):
   # Maps revision strings (e.g., "r12345") onto LogMessage instances,
   # holding all the LogMessage instances ever created.
   all_logs = { }
@@ -486,18 +468,6 @@ class LogMessage:
     if a > b: return -1
     if a < b: return 1
     else:     return 0
-
-  def __hash__(self):
-    """I don't really understand why defining __cmp__() but not
-    __hash__() renders an object type unfit to be a dictionary key,
-    especially in light of the recommendation that if a class defines
-    mutable objects and implements __cmp__() or __eq__(), then it
-    should not implement __hash__().  See these for details:
-    http://mail.python.org/pipermail/python-dev/2004-February/042580.html
-    http://mail.python.org/pipermail/python-bugs-list/2003-December/021314.html
-
-    In the meantime, I think it's safe to use the revision as a hash value."""
-    return int(self.revision[1:])
 
   def __str__(self):
     s = '=' * 15
@@ -663,8 +633,7 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = list(Contributor.all_contributors.values())
-  sorted_contributors.sort()
+  sorted_contributors = sorted(Contributor.all_contributors.values())
   for c in sorted_contributors:
     if c not in seen_contributors:
       if c.score() > 0:

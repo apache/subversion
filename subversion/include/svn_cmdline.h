@@ -25,16 +25,17 @@
 #ifndef SVN_CMDLINE_H
 #define SVN_CMDLINE_H
 
+#include <apr_pools.h>
+#include <apr_getopt.h>
+
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define APR_WANT_STDIO
 #endif
 #include <apr_want.h>
-#include <apr_getopt.h>
 
-#include "svn_utf.h"
+#include "svn_types.h"
 #include "svn_auth.h"
 #include "svn_config.h"
-#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {

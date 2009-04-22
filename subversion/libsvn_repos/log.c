@@ -360,8 +360,7 @@ get_history(struct path_info *info,
     {
       subpool = info->newpool;
 
-      SVN_ERR(svn_fs_history_prev(&info->hist, info->hist,
-                                  strict ? FALSE : TRUE, subpool));
+      SVN_ERR(svn_fs_history_prev(&info->hist, info->hist, ! strict, subpool));
 
       hist = info->hist;
     }
@@ -376,14 +375,12 @@ get_history(struct path_info *info,
       SVN_ERR(svn_fs_node_history(&hist, history_root, info->path->data,
                                   subpool));
 
-      SVN_ERR(svn_fs_history_prev(&hist, hist, strict ? FALSE : TRUE,
-                                  subpool));
+      SVN_ERR(svn_fs_history_prev(&hist, hist, ! strict, subpool));
 
       if (info->first_time)
         info->first_time = FALSE;
       else
-        SVN_ERR(svn_fs_history_prev(&hist, hist, strict ? FALSE : TRUE,
-                                    subpool));
+        SVN_ERR(svn_fs_history_prev(&hist, hist, ! strict, subpool));
     }
 
   if (! hist)

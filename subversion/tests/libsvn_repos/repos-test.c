@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_config.h"
+#include "svn_props.h"
 
 #include "../svn_test_fs.h"
 
@@ -1802,7 +1803,7 @@ node_location_segments(const char **msg,
     return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "bdb") == 0) 
+  if ((strcmp(opts->fs_type, "bdb") == 0)
       && (opts->server_minor_version == 4))
     return SVN_NO_ERROR;
 

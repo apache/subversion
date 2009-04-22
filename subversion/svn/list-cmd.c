@@ -16,24 +16,21 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 #include "svn_cmdline.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_utf.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
+
 
-/*** Code. ***/
 
 /* Baton used when printing directory entries. */
 struct print_baton {
@@ -60,7 +57,7 @@ print_dirent(void *baton,
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_path_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, pool);
       else if (pb->verbose)
         entryname = ".";
       else
@@ -140,7 +137,7 @@ print_dirent_xml(void *baton,
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_path_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, pool);
       else if (pb->verbose)
         entryname = ".";
       else

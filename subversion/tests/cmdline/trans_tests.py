@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -175,7 +175,7 @@ def setup_working_copy(wc_dir, value_len):
 ### Helper functions for setting/removing properties
 
 # Set the property keyword for PATH.  Turn on all possible keywords.
-# ### todo: Later, take list of keywords to set.
+### todo: Later, take list of keywords to set.
 def keywords_on(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      "svn:keywords",
@@ -183,7 +183,7 @@ def keywords_on(path):
                                      path)
 
 # Delete property NAME from versioned PATH in the working copy.
-# ### todo: Later, take list of keywords to remove from the propval?
+### todo: Later, take list of keywords to remove from the propval?
 def keywords_off(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
                                      "svn:keywords", path)
@@ -328,9 +328,9 @@ def keywords_from_birth(sbox):
   fp = open(header_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
                         lines[0]))):
-    print "Header expansion failed for", header_unexp_path
+    print("Header expansion failed for %s" % header_unexp_path)
     raise svntest.Failure
   fp.close()
 
@@ -338,9 +338,9 @@ def keywords_from_birth(sbox):
   fp = open(header_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (http|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
                         lines[0]))):
-    print "Header expansion failed for", header_exp_path
+    print("Header expansion failed for %s" % header_exp_path)
     raise svntest.Failure
   fp.close()
 

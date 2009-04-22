@@ -221,44 +221,28 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
       apr_size_t len = SVN__STREAM_CHUNK_SIZE;
 
       if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      SVN_ERR(svn_stream_read(from, buf, &len));
+        {
+          err = cancel_func(cancel_baton);
+          if (err)
+             break;
+        }
+               
+      err = svn_stream_read(from, buf, &len);
+      if (err)
+      	 break;
+      	 
       if (len > 0)
-        SVN_ERR(svn_stream_write(to, buf, &len));
-      if (len != SVN__STREAM_CHUNK_SIZE)
-        break;
+        err = svn_stream_write(to, buf, &len);
+
+      if (err || (len != SVN__STREAM_CHUNK_SIZE))
+          break;
     }
+    
+  err2 = svn_error_compose_create(svn_stream_close(from),
+                                  svn_stream_close(to));
 
-  err = svn_stream_close(from);
-  err2 = svn_stream_close(to);
-  if (err)
-    {
-      /* ### it would be nice to compose the two errors in some way */
-      svn_error_clear(err2);  /* note: might be NULL */
-      return err;
-    }
-  return err2;
+  return svn_error_compose_create(err, err2);
 }
-
-svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *scratch_pool)
-{
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          cancel_func, cancel_baton, scratch_pool);
-}
-
-svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
-                             apr_pool_t *scratch_pool)
-{
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          NULL, NULL, scratch_pool);
-}
-
 
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
@@ -909,18 +893,14 @@ close_handler_md5(void *baton)
   SVN_ERR(svn_stream_close(btn->proxy));
 
   if (btn->read_digest)
-    {
-      *btn->read_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->read_digest, btn->read_checksum->digest,
-             APR_MD5_DIGESTSIZE);
-    }
+    *btn->read_digest
+      = apr_pmemdup(btn->pool, btn->read_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
 
   if (btn->write_digest)
-    {
-      *btn->write_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->write_digest, btn->write_checksum->digest,
-             APR_MD5_DIGESTSIZE);
-    }
+    *btn->write_digest
+      = apr_pmemdup(btn->pool, btn->write_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }

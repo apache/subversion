@@ -305,8 +305,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       elif len(log_revprops) == 0:
         self.assert_(log_entry.revprops == None or len(log_entry.revprops) == 0)
       else:
-        revprop_names = list(log_entry.revprops.keys())
-        revprop_names.sort()
+        revprop_names = sorted(log_entry.revprops.keys())
         log_revprops.sort()
         self.assertEqual(revprop_names, log_revprops)
         for i in log_revprops:

@@ -3,7 +3,7 @@
  * consumed by only fs_* libs.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,7 +20,14 @@
 #ifndef SVN_FS_UTIL_H
 #define SVN_FS_UTIL_H
 
+#include <apr_pools.h>
+
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_fs.h"
+
 #include "svn_private_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -161,6 +168,17 @@ char *
 svn_fs__next_entry_name(const char **next_p,
                         const char *path,
                         apr_pool_t *pool);
+
+/* Allocate an svn_fs_path_change2_t structure in POOL, initialize and
+   return it.
+
+   Set the node_rev_id field of the created struct to NODE_REV_ID, and
+   change_kind to CHANGE_KIND.  Set all other fields to their _unknown,
+   NULL or invalid value, respectively. */
+svn_fs_path_change2_t *
+svn_fs__path_change2_create(const svn_fs_id_t *node_rev_id,
+                            svn_fs_path_change_kind_t change_kind,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

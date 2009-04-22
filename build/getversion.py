@@ -75,7 +75,7 @@ def usage_and_exit(msg):
     os.path.basename(sys.argv[0]))
   sys.stderr.flush()
   sys.exit(1)
- 
+
 
 if __name__ == '__main__':
   if len(sys.argv) == 3:

@@ -29,6 +29,8 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_pools.h"
+#include "svn_props.h"
+
 #include "private/svn_log.h"
 
 #include "../dav_svn.h"

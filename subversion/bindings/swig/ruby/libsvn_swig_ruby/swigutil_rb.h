@@ -35,6 +35,20 @@
 #  define SVN_RB_SWIG_SWIGUTIL_EXPORT
 #endif
 
+/* Ruby <=1.8.5 compatibility */
+#ifndef RARRAY_LEN
+#define RARRAY_LEN(x) RARRAY(x)->len
+#endif
+#ifndef RARRAY_PTR
+#define RARRAY_PTR(x) RARRAY(x)->ptr
+#endif
+#ifndef RSTRING_LEN
+#define RSTRING_LEN(x) RSTRING(x)->len
+#endif
+#ifndef RSTRING_PTR
+#define RSTRING_PTR(x) RSTRING(x)->ptr
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

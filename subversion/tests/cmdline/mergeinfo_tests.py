@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2007 CollabNet.  All rights reserved.
+# Copyright (c) 2007-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -81,9 +81,7 @@ def explicit_mergeinfo_source(sbox):
 
   # Make a copy, and dummy up some mergeinfo.
   mergeinfo = '/A/B:1\n/A/D/G:1\n'
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-  svntest.actions.set_prop(None, SVN_PROP_MERGEINFO, mergeinfo, H_path,
-                           propval_path)
+  svntest.actions.set_prop(SVN_PROP_MERGEINFO, mergeinfo, H_path)
   svntest.main.run_svn(None, "cp", H_path, H2_path)
   svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)
 
@@ -112,9 +110,7 @@ def mergeinfo_non_source(sbox):
 
   # Make a copy, and dummy up some mergeinfo.
   mergeinfo = '/A/B:1\n/A/D/G:1\n'
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-  svntest.actions.set_prop(None, SVN_PROP_MERGEINFO, mergeinfo, H_path,
-                           propval_path)
+  svntest.actions.set_prop(SVN_PROP_MERGEINFO, mergeinfo, H_path)
   svntest.main.run_svn(None, "cp", H_path, H2_path)
   svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)
 

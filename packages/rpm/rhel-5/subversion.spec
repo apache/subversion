@@ -1,6 +1,7 @@
 %define apache_version 2.2.3
 %define apr_version 1.2.7
 %define neon_version 0.26.1
+%define sqlite_version 3.4
 %define swig_version 1.3.29
 %define apache_dir /usr
 %define pyver 2.4
@@ -27,6 +28,7 @@ Requires: apr >= %{apr_version}
 Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.2.52
 Requires: neon >= %{neon_version}
+Requires: sqlite >= %{sqlite_version}
 BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.2.52
 BuildPreReq: docbook-style-xsl >= 1.58.1
@@ -43,6 +45,7 @@ BuildPreReq: openssl-devel
 BuildPreReq: perl
 BuildPreReq: python
 BuildPreReq: python-devel
+BuildPreReq: sqlite-devel >= %{sqlite_version}
 BuildPreReq: swig >= %{swig_version}
 BuildPreReq: zlib-devel
 Obsoletes: subversion-server
@@ -105,6 +108,14 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Mar 28 2009 David Summers <david@summersoft.fay.ar.us> r36833
+- [RHEL4] Changes to build 1.7 trunk, backported to 1.6.
+- Added patch to build with with new required non-RHEL4 python-2.4.6.
+- Added patch to fix Subversion APACHE APR version checking.
+
+* Sun Mar 01 2009 David Summers <david@summersoft.fay.ar.us> r36231
+- [RHEL5] Changes to build 1.7 trunk, backported to 1.6.
+
 * Tue Dec 23 2008 David Summers <david@summersoft.fay.ar.us> r34901
 - [RHEL3] SPEC file change to build RPM 1.5.x on RHEL3.
 
@@ -503,6 +514,8 @@ sh autogen.sh
 rm -rf apr apr-util neon
 
 
+SED=/bin/sed
+export SED
 %configure \
 	--disable-mod-activation \
 	--with-swig \
@@ -510,7 +523,8 @@ rm -rf apr apr-util neon
 	--with-python=%{_bindir}/python%{pyver} \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-1-config \
-	--with-apr-util=%{apache_dir}/bin/apu-1-config
+	--with-apr-util=%{apache_dir}/bin/apu-1-config \
+	--with-neon
 
 %build
 make clean

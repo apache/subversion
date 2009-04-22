@@ -485,6 +485,41 @@ dav_svn__get_special_uri(request_rec *r)
 }
 
 
+const char *
+dav_svn__get_me_resource_uri(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/me", NULL);
+}
+
+
+const char *
+dav_svn__get_rev_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rev", NULL);
+}
+
+
+const char *
+dav_svn__get_rev_root_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rvr", NULL);
+}
+
+
+const char *
+dav_svn__get_txn_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txn", NULL);
+}
+
+
+const char *
+dav_svn__get_txn_root_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txr", NULL);
+}
+
+
 svn_boolean_t
 dav_svn__get_autoversioning_flag(request_rec *r)
 {
@@ -670,6 +705,23 @@ merge_xml_in_filter(ap_filter_t *f,
   return APR_SUCCESS;
 }
 
+
+/* Response handler for POST requests (protocol-v2 commits).  */
+static int dav_svn__handler(request_rec *r)
+{
+  /* HTTP-defined Methods we handle */
+  r->allowed = 0
+    | (AP_METHOD_BIT << M_POST);
+
+  if (r->method_number == M_POST) {
+    return dav_svn__method_post(r);
+  }
+
+  return DECLINED;
+}
+
+
+
 
 
 /** Module framework stuff **/
@@ -760,6 +812,9 @@ register_hooks(apr_pool_t *pconf)
                            AP_FTYPE_RESOURCE);
   ap_hook_insert_filter(merge_xml_filter_insert, NULL, NULL,
                         APR_HOOK_MIDDLE);
+
+  /* general request handler for methods which mod_dav DECLINEs. */
+  ap_hook_handler(dav_svn__handler, NULL, NULL, APR_HOOK_LAST);
 
   /* live property handling */
   dav_hook_gather_propsets(dav_svn__gather_propsets, NULL, NULL,

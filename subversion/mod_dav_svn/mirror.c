@@ -40,7 +40,7 @@ static void proxy_request_fixup(request_rec *r,
 
     r->proxyreq = PROXYREQ_REVERSE;
     r->uri = r->unparsed_uri;
-    r->filename = apr_pstrcat(r->pool, "proxy:", master_uri, 
+    r->filename = apr_pstrcat(r->pool, "proxy:", master_uri,
                               uri_segment, NULL);
     r->handler = "proxy-server";
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
@@ -76,7 +76,7 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
             r->method_number == M_GET) {
             seg = ap_strstr(r->unparsed_uri, root_dir);
             if (seg && ap_strstr_c(seg,
-                                   apr_pstrcat(r->pool, special_uri, 
+                                   apr_pstrcat(r->pool, special_uri,
                                                "/wrk/", NULL))) {
                 seg += strlen(root_dir);
                 proxy_request_fixup(r, master_uri, seg);
@@ -84,10 +84,13 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
             return OK;
         }
 
-        /* If this is a MERGE request or a request using a "special
-           URI", we have to doctor it a bit for proxying. */
+        /* If this is a write request aimed at a public URI (such as
+           MERGE, LOCK, UNLOCK, etc.) or any as-yet-unhandled request
+           using a "special URI", we have to doctor it a bit for proxying. */
         seg = ap_strstr(r->unparsed_uri, root_dir);
-        if (seg && (r->method_number == M_MERGE || 
+        if (seg && (r->method_number == M_MERGE ||
+                    r->method_number == M_LOCK ||
+                    r->method_number == M_UNLOCK ||
                     ap_strstr_c(seg, special_uri))) {
             seg += strlen(root_dir);
             proxy_request_fixup(r, master_uri, seg);

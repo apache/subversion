@@ -22,4 +22,4 @@ setup (name = "svn-python",
        url = "http://subversion.tigris.org",
        version = "1.4.0",
        packages = ["libsvn", "svn"],
-       package_data = {"libsvn": ["*.dll"]})
+       package_data = {"libsvn": ["*.pyd"]})

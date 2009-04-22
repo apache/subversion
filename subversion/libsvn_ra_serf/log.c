@@ -28,16 +28,17 @@
 #include "svn_ra.h"
 #include "svn_dav.h"
 #include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
+#include "../libsvn_ra/ra_loader.h"
 
 
 /*
@@ -572,11 +573,10 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_rev, NULL,
-                                         pool));
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                         NULL, NULL, peg_rev, NULL, pool));
 
-  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

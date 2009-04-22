@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -37,16 +37,11 @@ def mod_all_files(wc_dir, new_text):
   """Walk over working copy WC_DIR, appending NEW_TEXT to all the
   files in that tree (but not inside the .svn areas of that tree)."""
 
-  def tweak_files(new_text, dirname, names):
-    if os.path.basename(dirname) == ".svn":
-      del names[:]
-    else:
-      for name in names:
-        full_path = os.path.join(dirname, name)
-        if os.path.isfile(full_path):
-          svntest.main.file_append(full_path, new_text)
-
-  os.path.walk(wc_dir, tweak_files, new_text)
+  for dirpath, dirs, files in os.walk(wc_dir):
+    if ".svn" in dirs:
+      dirs.remove(".svn")
+    for name in files:
+      svntest.main.file_append(os.path.join(dirpath, name), new_text)
 
 def changelist_all_files(wc_dir, name_func):
   """Walk over working copy WC_DIR, adding versioned files to
@@ -54,20 +49,16 @@ def changelist_all_files(wc_dir, name_func):
   noting its string return value (or None, if we wish to remove the
   file from a changelist)."""
 
-  def do_changelist(name_func, dirname, names):
-    if os.path.basename(dirname) == ".svn":
-      del names[:]
-    else:
-      for name in names:
-        full_path = os.path.join(dirname, name)
-        if os.path.isfile(full_path):
-          clname = name_func(full_path)
-          if not clname:
-            svntest.main.run_svn(None, "changelist", "--remove", full_path)
-          else:
-            svntest.main.run_svn(None, "changelist", clname, full_path)
-
-  os.path.walk(wc_dir, do_changelist, name_func)
+  for dirpath, dirs, files in os.walk(wc_dir):
+    if ".svn" in dirs:
+      dirs.remove(".svn")
+    for name in files:
+        full_path = os.path.join(dirpath, name)
+        clname = name_func(full_path)
+        if not clname:
+          svntest.main.run_svn(None, "changelist", "--remove", full_path)
+        else:
+          svntest.main.run_svn(None, "changelist", clname, full_path)
 
 def clname_from_lastchar_cb(full_path):
   """Callback for changelist_all_files() that returns a changelist
@@ -508,8 +499,7 @@ def info_with_changelists(sbox):
           expected_paths.append('A/D/G/pi')
           expected_paths.append('A/D/H/chi')
           expected_paths.append('A/D/H/psi')
-      expected_paths = [os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths]
-      expected_paths.sort()
+      expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
 
       # Build the command line.
       args = ['info', wc_dir]
@@ -525,10 +515,7 @@ def info_with_changelists(sbox):
 
       # Filter the output for lines that begin with 'Path:', and
       # reduce even those lines to just the actual path.
-      def startswith_path(line):
-        return line[:6] == 'Path: ' and 1 or 0
-      paths = [x[6:].rstrip() for x in filter(startswith_path, output)]
-      paths.sort()
+      paths = sorted([x[6:].rstrip() for x in output if x[:6] == 'Path: '])
 
       # And, compare!
       if (paths != expected_paths):
@@ -570,8 +557,7 @@ def diff_with_changelists(sbox):
             expected_paths.append('A/D/G/pi')
             expected_paths.append('A/D/H/chi')
             expected_paths.append('A/D/H/psi')
-        expected_paths = [os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths]
-        expected_paths.sort()
+        expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
 
         # Build the command line.
         args = ['diff']
@@ -594,10 +580,7 @@ def diff_with_changelists(sbox):
 
         # Filter the output for lines that begin with 'Index:', and
         # reduce even those lines to just the actual path.
-        def startswith_path(line):
-          return line[:7] == 'Index: ' and 1 or 0
-        paths = [x[7:].rstrip() for x in filter(startswith_path, output)]
-        paths.sort()
+        paths = sorted([x[7:].rstrip() for x in output if x[:7] == 'Index: '])
 
         # Diff output on Win32 uses '/' path separators.
         if sys.platform == 'win32':

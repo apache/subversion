@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -90,7 +91,7 @@ svn_cl__checkout(apr_getopt_t *os,
           if (pegrev.kind != svn_opt_revision_unspecified)
             local_dir = svn_path_canonicalize(local_dir, pool);
 
-          local_dir = svn_path_basename(local_dir, pool);
+          local_dir = svn_uri_basename(local_dir, pool);
           local_dir = svn_path_uri_decode(local_dir, pool);
         }
       else
@@ -142,7 +143,7 @@ svn_cl__checkout(apr_getopt_t *os,
         }
       else
         {
-          target_dir = svn_path_basename(true_url, subpool);
+          target_dir = svn_uri_basename(true_url, subpool);
           target_dir = svn_path_uri_decode(target_dir, subpool);
           target_dir = svn_path_join(local_dir, target_dir, subpool);
         }

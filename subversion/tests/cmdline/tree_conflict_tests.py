@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -170,7 +170,7 @@ def modify(modaction, paths):
     assert os.path.exists(D)
     os.remove(D)
   else:
-    raise "unknown modaction: '" + modaction + "'"
+    raise Exception("unknown modaction: '" + modaction + "'")
 
 #----------------------------------------------------------------------
 
@@ -216,13 +216,14 @@ create_d = ['da','dA']
 # dir-add(D)  = add-new(D)(deep?) or copy(D1,D)(and modify?)
 
 f_adds = [
-  ( absent_f, ['fa','fA'] ),
+  #( absent_f, ['fa','fA'] ), ### local add-without-history: not a tree conflict
   ( absent_f, ['fC'] ),
-  ( absent_f, ['fC','ft'] ),
+  ( absent_f, ['fC','ft'] ), ### Fails because update seems to assume that the
+                             ### local file is unmodified (same as issue 1736?).
   #( absent_f, ['fC','fP'] ),  # don't test all combinations, just because it's slow
 ]
 d_adds = [
-  ( absent_d, ['da','dA'] ),
+  #( absent_d, ['da','dA'] ), ### local add-without-history: not a tree conflict
   ( absent_d, ['dC'] ),
   #( absent_d, ['dC','dP'] ),  # not yet
 ]
@@ -459,7 +460,7 @@ def ensure_tree_conflict(sbox, operation,
                              '-r', str(source_left_rev) + ':' + str(source_right_rev),
                              source_url, target_path)
         else:
-          raise "unknown operation: '" + operation + "'"
+          raise Exception("unknown operation: '" + operation + "'")
 
       if 'commit-c' in test_what:
         verbose_print("--- Trying to commit (expecting 'conflict' error)")
@@ -518,8 +519,9 @@ def ensure_tree_conflict(sbox, operation,
 # Test 'update' and/or 'switch'
 # See test_wc_merge() for arguments.
 def test_tc_up_sw(sbox, incoming_scen, wc_scen):
+  sbox2 = sbox.clone_dependent()
   ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen, False)
-  ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen, False)
+  ensure_tree_conflict(sbox2, 'switch', incoming_scen, wc_scen, False)
 
 # Test 'merge'
 # INCOMING_SCEN is a list of scenarios describing the incoming changes to apply.
@@ -584,6 +586,36 @@ def up_sw_dir_del_onto_del(sbox):
   # WC state: any (D necessarily exists; children may have any state)
   test_tc_up_sw(sbox, d_dels + d_rpls, d_dels + d_rpls)
 
+# This is currently set as XFail over ra_dav because it hits
+# issue #3314 'DAV can overwrite directories during copy'
+#
+#   TRUNK@35827.DBG>svn st -v branch1
+#                   2        2 jrandom      branch1
+#                   2        2 jrandom      branch1\dC
+#   A  +            -        2 jrandom      branch1\dC\D
+#
+#   TRUNK@35827.DBG>svn log -r2:HEAD branch1 -v
+#   ------------------------------------------------------------------------
+#   r2 | jrandom | 2009-02-12 09:26:52 -0500 (Thu, 12 Feb 2009) | 1 line
+#   Changed paths:
+#      A /D1
+#      A /F1
+#      A /branch1
+#      A /branch1/dC
+#
+#   Initial set-up.
+#   ------------------------------------------------------------------------
+#   r3 | jrandom | 2009-02-12 09:26:52 -0500 (Thu, 12 Feb 2009) | 1 line
+#   Changed paths:
+#      A /branch1/dC/D (from /D1:2)
+#
+#   Action.
+#   ------------------------------------------------------------------------
+#
+#   TRUNK@35827.DBG>svn ci -m "Should be ood" branch1
+#   Adding         branch1\dC\D
+#
+#   Committed revision 4.
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
   # WC state: as scheduled (no obstruction)
@@ -596,26 +628,30 @@ def up_sw_dir_add_onto_add(sbox):
 
 def merge_file_mod_onto_not_file(sbox):
   "merge file: modify onto not-file"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_mods, br_scen = f_dels + f_rpl_d)
-  test_tc_merge(sbox, f_mods, wc_scen = f_dels)
+  test_tc_merge(sbox2, f_mods, wc_scen = f_dels)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_same(sbox):
   "merge file: del/rpl/mv onto not-same"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_mods)
-  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_mods)
+  test_tc_merge(sbox2, f_dels + f_rpls, wc_scen = f_mods)
   # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_file(sbox):
   "merge file: del/rpl/mv onto not-file"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_dels + f_rpl_d)
-  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_dels)
+  test_tc_merge(sbox2, f_dels + f_rpls, wc_scen = f_dels)
   # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_add_onto_not_none(sbox):
   "merge file: add onto not-none"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_adds, br_scen = f_adds)  ### + d_adds (at path "F")
-  test_tc_merge(sbox, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
+  test_tc_merge(sbox2, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
 
 #----------------------------------------------------------------------
 
@@ -624,23 +660,27 @@ def merge_file_add_onto_not_none(sbox):
 
 def merge_dir_mod_onto_not_dir(sbox):
   "merge dir: modify onto not-dir"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
-  test_tc_merge(sbox, d_mods, wc_scen = d_dels)
+  test_tc_merge(sbox2, d_mods, wc_scen = d_dels)
 
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_mods)
-  test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_mods)
+  test_tc_merge(sbox2, d_dels + d_rpls, wc_scen = d_mods)
 
 def merge_dir_del_onto_not_dir(sbox):
   "merge dir: del/rpl/mv onto not-dir"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_dels + d_rpl_f)
-  test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_dels)
+  test_tc_merge(sbox2, d_dels + d_rpls, wc_scen = d_dels)
 
 def merge_dir_add_onto_not_none(sbox):
   "merge dir: add onto not-none"
+  sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
-  test_tc_merge(sbox, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
+  test_tc_merge(sbox2, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
 
 
 #######################################################################
@@ -656,7 +696,8 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              XFail(up_sw_dir_add_onto_add),  # not a primary use case
+              XFail(up_sw_dir_add_onto_add,
+                    svntest.main.is_ra_type_dav),
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,

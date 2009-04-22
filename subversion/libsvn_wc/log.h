@@ -41,20 +41,6 @@ extern "C" {
  *    append to the existing stringbuf there."
  */
 
-
-
-/* Return the filename (with no path components) to use for logfile number
-   LOG_NUMBER.  The returned string will be allocated from POOL.
-
-   For log number 0, this will just be SVN_WC__ADM_LOG to maintain
-   compatibility with 1.0.x.  Higher numbers have the digits of the
-   number appended to SVN_WC__ADM_LOG so that they look like "log.1",
-   "log.2", etc. */
-const char *svn_wc__logfile_path(int log_number,
-                                 apr_pool_t *pool);
-
-
-
 /* The svn_wc__loggy_* functions in this section take path arguments
    with the same base as with which the adm_access was opened.
 
@@ -158,7 +144,7 @@ svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *path,
-                           svn_wc_entry_t *entry,
+                           const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool);
 
@@ -229,7 +215,6 @@ svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           svn_wc_adm_access_t *adm_access,
                                           const char *path,
-                                          const char *time_prop,
                                           apr_pool_t *pool);
 
 
@@ -279,7 +264,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
    to be upgraded to FORMAT. */
 svn_error_t *
 svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
-                             svn_wc_adm_access_t *adm_access,
                              int format,
                              apr_pool_t *pool);
 
@@ -303,13 +287,6 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
 svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
                              const char *diff3_cmd,
                              apr_pool_t *pool);
-
-/* Similar to svn_wc__run_log except that it is assumed that the log
-   file has been run before and so some of the log commands may
-   already have been processed. */
-svn_error_t *svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
-                               const char *diff3_cmd,
-                               apr_pool_t *pool);
 
 
 #ifdef __cplusplus

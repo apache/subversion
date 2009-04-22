@@ -8,7 +8,6 @@ Contents
  * Automatic characterset conversion
  * Translations on the client
  * No translations on the server
- * Translating plural forms (ngettext() support)
 
 
 
@@ -60,7 +59,7 @@ the system on which the user has invoked his subversion command (svnadmin,
 svnlook, svndumpfilter, svnversion or svn).
 
 This means that in all layers of the libraries strings have been marked for
-translation, either with _() or N_().
+translation, either with _(), N_() or Q_().
 
 Parameters are sprintf-ed straight into errorstrings at the time they are
 added to the error structure, so most strings are marked with _() and
@@ -167,7 +166,7 @@ underhanded), while use of a context baton more resilient to change
 (e.g. if httpd someday allowed more than one thread to service a
 request).  Here's a sample:
  - No localization:                          "A message to localize"
- - Localization w/ TLS or gloabl preference: _("A message to localize")
+ - Localization w/ TLS or global preference: _("A message to localize")
  - Localization w/ a context baton:          _("A message to localize", pool)
 
 Historical note: Original consensus indicated that messages from the
@@ -192,22 +191,3 @@ when no localization bundle is available).  In addition to the
 complications mentioned previously, this has the downside of crippling
 the localization of server-generated messages when no write access to
 the local disk is available to the client.
-
-
-
-Translating plural forms (ngettext() support)
-=============================================
-
-The code below works in english and can be translated to a number of
-languages.  However in some languages more than 2 forms are required
-to do a correct translation.  The ngettext() function takes care of
-grabbing the right translation for those languages.  Unfortunately,
-the function is a GNU extention and thus non-portable.
-
-  message = (n > 1) ? _("1 File found") :
-                      apr_sprintf (pool, _("%d Files found"), n);
-
-Because of this limitation, some strings in the client have not been
-marked for translation.
-
-*** We're looking for good suggestions to work around this.

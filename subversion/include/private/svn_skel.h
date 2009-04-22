@@ -146,6 +146,23 @@ svn_boolean_t svn_skel__matches_atom(const svn_skel_t *skel, const char *str);
 int svn_skel__list_length(const svn_skel_t *skel);
 
 
+/* Parse a `PROPLIST' SKEL into a regular hash of properties,
+   *PROPLIST_P, which has const char * property names, and
+   svn_string_t * values, or NULL if SKEL contains no properties.  Use
+   POOL for all allocations.  */
+svn_error_t *
+svn_skel__parse_proplist(apr_hash_t **proplist_p,
+                         svn_skel_t *skel,
+                         apr_pool_t *pool);
+
+/* Unparse a PROPLIST hash (which has const char * property names and
+   svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
+   for all allocations.  */
+svn_error_t *
+svn_skel__unparse_proplist(svn_skel_t **skel_p,
+                           apr_hash_t *proplist,
+                           apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

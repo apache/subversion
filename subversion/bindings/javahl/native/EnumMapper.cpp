@@ -461,6 +461,9 @@ jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
     case svn_wc_conflict_reason_unversioned:
       return org_tigris_subversion_javahl_ConflictDescriptor_Reason_unversioned;
+
+    case svn_wc_conflict_reason_added:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_added;
     }
 }
 
@@ -493,6 +496,8 @@ jint EnumMapper::mapOperation(svn_wc_operation_t operation)
 {
   switch (operation)
     {
+    case svn_wc_operation_none:
+      return org_tigris_subversion_javahl_Operation_none;
     case svn_wc_operation_update:
       return org_tigris_subversion_javahl_Operation_update;
     case svn_wc_operation_switch:

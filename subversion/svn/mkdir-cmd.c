@@ -91,7 +91,7 @@ svn_cl__mkdir(apr_getopt_t *os,
         return svn_error_quick_wrap
           (err, _("Try 'svn mkdir --parents' instead?"));
       else
-        return err;
+        return svn_error_return(err);
     }
 
   if (commit_info && ! opt_state->quiet)

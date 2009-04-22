@@ -25,11 +25,7 @@
 #ifndef SVN_POOLS_H
 #define SVN_POOLS_H
 
-#include <apr.h>
-#include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
-
-#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {

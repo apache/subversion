@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,9 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#define APU_WANT_DB
-#include <apu_want.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -40,6 +37,7 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
+#define SVN_WANT_BDB
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -821,12 +819,20 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   const char *version_file_path;
   int old_format_number;
+  svn_error_t *err;
 
   version_file_path = svn_path_join(path, FORMAT_FILE, pool);
 
   /* Read the old number so we've got it on hand later on. */
-  SVN_ERR(svn_io_read_version_file(&old_format_number, version_file_path,
-                                   pool));
+  err = svn_io_read_version_file(&old_format_number, version_file_path, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* Pre-1.2 filesystems do not have a 'format' file. */
+      old_format_number = 0;
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
 
   /* Bump the format file's stored version number. */
   SVN_ERR(svn_io_write_version_file(version_file_path,
@@ -1286,7 +1292,7 @@ base_hotcopy(const char *src_path,
   SVN_ERR(svn_io_write_version_file
           (svn_path_join(dest_path, FORMAT_FILE, pool), format, pool));
 
-  if (clean_logs == TRUE)
+  if (clean_logs)
     SVN_ERR(svn_fs_base__clean_logs(src_path, dest_path, pool));
 
   return SVN_NO_ERROR;

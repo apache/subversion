@@ -106,7 +106,7 @@ svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
 
 /* System-wide and configuration subdirectory names.
    NOTE: Don't use these directly; call svn_config__sys_config_path()
-   or svn_config__user_config_path() instead. */
+   or svn_config_get_user_config_path() instead. */
 #ifdef WIN32
 #  define SVN_CONFIG__SUBDIRECTORY    "Subversion"
 #else  /* ! WIN32 */
@@ -132,21 +132,6 @@ svn_config__sys_config_path(const char **path_p,
                             const char *fname,
                             apr_pool_t *pool);
 
-
-/* Set *PATH_P to the path to config file FNAME in the user's personal
-   configuration area; if FNAME is NULL, set *PATH_P to the directory
-   name of the user's config area.  Allocate *PATH_P in POOL.
-
-   If the user's personal configuration area cannot be located (most
-   likely under Win32), set *PATH_P to NULL regardless of FNAME.
-
-   CONFIG_DIR overrides this and if set *PATH_P is set to it.
-   */
-svn_error_t *
-svn_config__user_config_path(const char *config_dir,
-                             const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

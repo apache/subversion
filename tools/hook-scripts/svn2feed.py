@@ -197,9 +197,9 @@ module from:
                     lastBuildDate = datetime.datetime.now(),
                     items = [])
 
+    @staticmethod
     def get_default_file_extension():
         return ".rss"
-    get_default_file_extension = staticmethod(get_default_file_extension)
 
     def add_revision_item(self, revision):
         rss_item = self._make_rss_item(revision)
@@ -245,9 +245,9 @@ class Svn2Atom(Svn2Feed):
         else:
             self._init_atom_document()
 
+    @staticmethod
     def get_default_file_extension():
         return ".atom"
-    get_default_file_extension = staticmethod(get_default_file_extension)
 
     def add_revision_item(self, revision):
         item = self._make_atom_item(revision)

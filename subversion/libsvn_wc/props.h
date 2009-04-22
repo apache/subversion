@@ -21,10 +21,12 @@
 #define SVN_LIBSVN_WC_PROPS_H
 
 #include <apr_pools.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_props.h"
 
+#include "wc_db.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,31 +84,25 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  svn_stringbuf_t **entry_accum);
 
 
-/* Return a list of wc props for ENTRYNAME in ADM_ACCESS.
-   ENTRYNAME must be the name of a file or SVN_WC_ENTRY_THIS_DIR.
+/* Return a list of wc props for the node at LOCAL_ABSPATH, which is KIND.
 
-   The returned WCPROPS may be allocated in POOL, or may be the props
-   cached in ADM_ACCESS.  */
+   The returned WCPROPS will be allocated in RESULT_POOL, and any temporary
+   allocations will be made in SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__wcprop_list(apr_hash_t **wcprops,
-                    const char *entryname,
-                    svn_wc_adm_access_t *adm_access,
-                    apr_pool_t *pool);
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_node_kind_t kind,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH.
    If VALUE is null, remove property NAME.  ADM_ACCESS is an access
-   baton set that contains PATH.
-
-   If FORCE_WRITE is true, then the change will be written to disk
-   immediately.  Else, only the in-memory cache (if that is used) will
-   be updated and the caller is expected to use
-   svn_wc__wcprops_write() later, on the correct access baton, to store
-   the change persistently. */
+   baton set that contains PATH.  */
 svn_error_t *svn_wc__wcprop_set(const char *name,
                                 const svn_string_t *value,
                                 const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_boolean_t force_write,
                                 apr_pool_t *pool);
 
 /* Returns TRUE if PROPS contains the svn:special property */
@@ -182,26 +178,19 @@ svn_wc__working_props_committed(const char *path,
                                 svn_boolean_t sync_entries,
                                 apr_pool_t *pool);
 
-/* Return in *MOD_TIME the time at which PROPS_KIND props of PATH
-   were last modified, or 0 (zero) if unknown. */
-svn_error_t *
-svn_wc__props_last_modified(apr_time_t *mod_time,
-                            const char *path,
-                            svn_wc__props_kind_t props_kind,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool);
-
-/* Load the base, working and revert props for PATH in ADM_ACCESS returning
+/* Load the base, working and revert props for ENTRY at PATH returning
    them in *BASE_PROPS_P, *PROPS_P and *REVERT_PROPS_P respectively.
-   Any of BASE_PROPS, PROPS and REVERT_PROPS may be null.
-   Do all allocations in POOL.  */
+   Any of BASE_PROPS, PROPS and REVERT_PROPS may be NULL.
+   Returned hashes/values are allocated in RESULT_POOL. All temporary
+   allocations are made in SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
                    apr_hash_t **revert_props_p,
-                   svn_wc_adm_access_t *adm_access,
+                   const svn_wc_entry_t *entry,
                    const char *path,
-                   apr_pool_t *pool);
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

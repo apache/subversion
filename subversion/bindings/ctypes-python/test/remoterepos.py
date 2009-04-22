@@ -107,9 +107,9 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         self.assertEqual(self.repos.revprop_get("svn:log", 4),
             "Another changed log")
 
+    @staticmethod
     def _log_func(commits):
         return [u"test revision", None]
-    _log_func = staticmethod(_log_func)
 
     def test_svnimport(self):
         newfile = os.path.join(tempfile.gettempdir(), "newfile.txt")

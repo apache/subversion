@@ -38,8 +38,33 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_utf.h"
+#include "private/svn_atomic.h"
 
 #include "win32_xlate.h"
+
+static svn_atomic_t com_initialized = 0;
+
+/* Initializes COM and keeps COM available until process exit.
+   Implements svn_atomic__init_once init_func */
+static svn_error_t *
+initialize_com(apr_pool_t* pool)
+{
+  /* Try to initialize for apartment-threaded object concurrency. */
+  HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+
+  if (hr == RPC_E_CHANGED_MODE)
+    {
+      /* COM already initalized for multi-threaded object concurrency. We are
+         neutral to object concurrency so try to initalize it in the same way
+         for us, to keep an handle open. */
+      hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    }
+
+  if (FAILED(hr))
+    return svn_error_create(APR_EGENERAL, NULL, NULL);
+
+  return SVN_NO_ERROR;
+}
 
 typedef struct win32_xlate_t
 {
@@ -54,6 +79,7 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
   HRESULT hr;
   MIMECSETINFO page_info;
   WCHAR ucs2_page_name[128];
+  svn_error_t *err;
 
   if (page_name == SVN_APR_DEFAULT_CHARSET)
     {
@@ -62,20 +88,8 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
     }
   else if (page_name == SVN_APR_LOCALE_CHARSET)
     {
-      OSVERSIONINFO ver_info;
-      ver_info.dwOSVersionInfoSize = sizeof(ver_info);
-
-      /* CP_THREAD_ACP supported only on Windows 2000 and later.*/
-      if (GetVersionEx(&ver_info) && ver_info.dwMajorVersion >= 5
-          && ver_info.dwPlatformId == VER_PLATFORM_WIN32_NT)
-        {
-          *page_id_p = CP_THREAD_ACP;
-          return APR_SUCCESS;
-        }
-
-      /* CP_THREAD_ACP isn't supported on current system, so get locale
-         encoding name from APR. */
-      page_name = apr_os_locale_encoding(pool);
+      *page_id_p = CP_THREAD_ACP; /* Valid on Windows 2000+ */
+      return APR_SUCCESS;
     }
   else if (!strcmp(page_name, "UTF-8"))
     {
@@ -93,6 +107,14 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
     {
       *page_id_p = atoi(page_name + 2);
       return APR_SUCCESS;
+    }
+
+  err = svn_atomic__init_once(&com_initialized, initialize_com, pool);
+
+  if (err)
+    {
+      svn_error_clear(err);
+      return APR_EGENERAL;
     }
 
   hr = CoCreateInstance(&CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER,
@@ -129,21 +151,7 @@ svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
   UINT from_page_id, to_page_id;
   apr_status_t apr_err = APR_SUCCESS;
   win32_xlate_t *xlate;
-  HRESULT hr;
-
-  /* First try to initialize for apartment-threaded object concurrency. */
-  hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-  if (hr == RPC_E_CHANGED_MODE)
-    {
-      /* COM already initalized for multi-threaded object concurrency. We are
-         neutral to object concurrency so try to initalize it in the same way
-         for us. */
-      hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    }
-
-  if (FAILED(hr))
-    return APR_EGENERAL;
-
+  
   apr_err = get_page_id_from_name(&to_page_id, topage, pool);
   if (apr_err == APR_SUCCESS)
     apr_err = get_page_id_from_name(&from_page_id, frompage, pool);
@@ -157,7 +165,6 @@ svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
       *xlate_p = xlate;
     }
 
-  CoUninitialize();
   return apr_err;
 }
 

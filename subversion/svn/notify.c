@@ -154,6 +154,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                 path_local)))
             goto print_error;
         }
+      else if (n->content_state == svn_wc_notify_state_source_missing)
+        {
+          if ((err = svn_cmdline_printf
+               (pool, _("Skipped target: '%s' -- copy-source is missing\n"),
+                path_local)))
+            goto print_error;
+        }
       else
         {
           if ((err = svn_cmdline_printf
@@ -350,7 +357,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           svn_handle_warning2(stderr, n->err, "svn: ");
         }
       break;
-      
+
     case svn_wc_notify_update_completed:
       {
         if (! nb->suppress_final_line)

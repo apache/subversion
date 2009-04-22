@@ -99,7 +99,7 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
   err = svn_repos_deleted_rev(resource->info->repos->fs,
                               abs_path, peg_rev, end_rev,
                               &deleted_rev, resource->pool);
-  if (err)  
+  if (err)
     {
       svn_error_clear(err);
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,

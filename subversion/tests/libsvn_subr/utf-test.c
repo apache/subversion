@@ -2,7 +2,7 @@
  * utf-test.c -- test the utf functions
  *
  * ====================================================================
- * Copyright (c) 2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,9 +17,10 @@
  */
 
 #include "../svn_test.h"
-#include "../../libsvn_subr/utf_impl.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
+
+#include "private/svn_utf_private.h"
 
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
 static apr_uint32_t diff_diff3_seed;

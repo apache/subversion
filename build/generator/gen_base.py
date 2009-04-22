@@ -101,9 +101,8 @@ class GeneratorBase:
     self.target_dirs = []    # Directories in which files are built
     self.manpages = []       # Manpages
 
-    # Collect the build targets
-    parser_sections = parser.sections()
-    parser_sections.sort() # Have a reproducible ordering
+    # Collect the build targets and have a reproducible ordering
+    parser_sections = sorted(parser.sections())
     for section_name in parser_sections:
       if section_name in self.skip_sections:
         continue
@@ -373,8 +372,7 @@ class TargetLinked(Target):
     # the specified install area depends upon this target
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.c' or '*.cpp', self.path)
-    sources.sort()
+    sources = sorted(_collect_paths(self.sources or '*.c' or '*.cpp', self.path))
 
     for srcs, reldir in sources:
       for src in srcs.split(" "):
@@ -494,8 +492,7 @@ class TargetI18N(Target):
   def add_dependencies(self):
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.po', self.path)
-    sources.sort()
+    sources = sorted(_collect_paths(self.sources or '*.po', self.path))
 
     for src, reldir in sources:
       if src[-3:] == '.po':
@@ -537,12 +534,12 @@ class TargetSWIG(TargetLib):
 
     assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
+    oname = iname[:-2] + self.gen_obj._extension_map['pyd', 'object']
 
     # Extract SWIG module name from .i file name
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
-    lib_extension = self.gen_obj._extension_map['lib', 'target']
+    lib_extension = self.gen_obj._extension_map['pyd', 'target']
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
@@ -923,7 +920,9 @@ class IncludeDependencyInfo:
                  self._domain["apr.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
-          if _is_public_include(h):
+          if (_is_public_include(h) 
+              or h == os.path.join('subversion', 'include', 'private',
+                                    'svn_debug.h')):
             hdrs[_swig_include_wrapper(h)] = '%'
           else:
             raise RuntimeError("Public include '%s' depends on '%s', " \
@@ -935,7 +934,7 @@ class IncludeDependencyInfo:
       self._deps[fname] = {}
 
     # Keep recomputing closures until we see no more changes
-    while 1:
+    while True:
       changes = 0
       for fname in self._deps.keys():
         changes = self._include_closure(self._deps[fname]) or changes

@@ -23,13 +23,14 @@
 #ifndef SVN_HASH_H
 #define SVN_HASH_H
 
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_file_io.h>
+#include <apr_tables.h>
+#include <apr_file_io.h>  /* for apr_file_t */
 
 #include "svn_types.h"
-#include "svn_io.h"
-#include "svn_error.h"
+#include "svn_io.h"       /* for svn_stream_t */
 
 
 #ifdef __cplusplus

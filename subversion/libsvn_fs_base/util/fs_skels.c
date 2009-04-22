@@ -1,7 +1,7 @@
 /* fs_skels.c --- conversion between fs native types and skeletons
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include <apr_md5.h>
+#include <apr_sha1.h>
 
 #include "svn_error.h"
 #include "svn_string.h"
@@ -57,26 +58,6 @@ is_valid_checksum_skel(svn_skel_t *skel)
   if (svn_skel__matches_atom(skel->children, "sha1")
       && skel->children->next->is_atom)
     return TRUE;
-
-  return FALSE;
-}
-
-
-static svn_boolean_t
-is_valid_proplist_skel(svn_skel_t *skel)
-{
-  int len = svn_skel__list_length(skel);
-
-  if ((len >= 0) && (len & 1) == 0)
-    {
-      svn_skel_t *elt;
-
-      for (elt = skel->children; elt; elt = elt->next)
-        if (! elt->is_atom)
-          return FALSE;
-
-      return TRUE;
-    }
 
   return FALSE;
 }
@@ -316,12 +297,12 @@ is_valid_node_revision_skel(svn_skel_t *skel)
 static svn_boolean_t
 is_valid_copy_skel(svn_skel_t *skel)
 {
-  return (((svn_skel__list_length(skel) == 4)
-           && (svn_skel__matches_atom(skel->children, "copy")
-               || svn_skel__matches_atom(skel->children, "soft-copy"))
-           && skel->children->next->is_atom
-           && skel->children->next->next->is_atom
-           && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
+  return ((svn_skel__list_length(skel) == 4)
+          && (svn_skel__matches_atom(skel->children, "copy")
+              || svn_skel__matches_atom(skel->children, "soft-copy"))
+          && skel->children->next->is_atom
+          && skel->children->next->next->is_atom
+          && skel->children->next->next->next->is_atom);
 }
 
 
@@ -396,37 +377,6 @@ is_valid_lock_skel(svn_skel_t *skel)
 /*** Parsing (conversion from skeleton to native FS type) ***/
 
 svn_error_t *
-svn_fs_base__parse_proplist_skel(apr_hash_t **proplist_p,
-                                 svn_skel_t *skel,
-                                 apr_pool_t *pool)
-{
-  apr_hash_t *proplist = NULL;
-  svn_skel_t *elt;
-
-  /* Validate the skel. */
-  if (! is_valid_proplist_skel(skel))
-    return skel_err("proplist");
-
-  /* Create the returned structure */
-  if (skel->children)
-    proplist = apr_hash_make(pool);
-  for (elt = skel->children; elt; elt = elt->next->next)
-    {
-      svn_string_t *value = svn_string_ncreate(elt->next->data,
-                                               elt->next->len, pool);
-      apr_hash_set(proplist,
-                   apr_pstrmemdup(pool, elt->data, elt->len),
-                   elt->len,
-                   value);
-    }
-
-  /* Return the structure. */
-  *proplist_p = proplist;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_fs_base__parse_revision_skel(revision_t **revision_p,
                                  svn_skel_t *skel,
                                  apr_pool_t *pool)
@@ -497,8 +447,8 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
                                                root_id->len, pool);
 
   /* PROPLIST */
-  SVN_ERR(svn_fs_base__parse_proplist_skel(&(transaction->proplist),
-                                           proplist, pool));
+  SVN_ERR(svn_skel__parse_proplist(&(transaction->proplist),
+                                   proplist, pool));
 
   /* COPIES */
   if ((len = svn_skel__list_length(copies)))
@@ -690,7 +640,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
               noderev->has_mergeinfo = atoi(apr_pstrmemdup(pool,
                                                            cur_skel->data,
                                                            cur_skel->len))
-                                         ? TRUE : FALSE;
+                                         != 0;
               noderev->mergeinfo_count =
                 apr_atoi64(apr_pstrmemdup(pool,
                                           cur_skel->next->data,
@@ -941,45 +891,6 @@ svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
 /*** Unparsing (conversion from native FS type to skeleton) ***/
 
 svn_error_t *
-svn_fs_base__unparse_proplist_skel(svn_skel_t **skel_p,
-                                   apr_hash_t *proplist,
-                                   apr_pool_t *pool)
-{
-  svn_skel_t *skel = svn_skel__make_empty_list(pool);
-  apr_hash_index_t *hi;
-
-  /* Create the skel. */
-  if (proplist)
-    {
-      /* Loop over hash entries */
-      for (hi = apr_hash_first(pool, proplist); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_ssize_t klen;
-          svn_string_t *value;
-
-          apr_hash_this(hi, &key, &klen, &val);
-          value = val;
-
-          /* VALUE */
-          svn_skel__prepend(svn_skel__mem_atom(value->data, value->len, pool),
-                            skel);
-
-          /* NAME */
-          svn_skel__prepend(svn_skel__mem_atom(key, klen, pool), skel);
-        }
-    }
-
-  /* Validate and return the skel. */
-  if (! is_valid_proplist_skel(skel))
-    return skel_err("proplist");
-  *skel_p = skel;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_fs_base__unparse_revision_skel(svn_skel_t **skel_p,
                                    const revision_t *revision,
                                    apr_pool_t *pool)
@@ -1058,8 +969,8 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
   svn_skel__prepend(copies_skel, skel);
 
   /* PROPLIST */
-  SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
-                                             transaction->proplist, pool));
+  SVN_ERR(svn_skel__unparse_proplist(&proplist_skel,
+                                     transaction->proplist, pool));
   svn_skel__prepend(proplist_skel, skel);
 
   /* REVISION or BASE-ID */
@@ -1095,6 +1006,8 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
 }
 
 
+/* Construct a skel representing CHECKSUM, allocated in POOL, and prepend
+ * it onto the existing skel SKEL. */
 static svn_error_t *
 prepend_checksum(svn_skel_t *skel,
                  svn_checksum_t *checksum,
@@ -1147,10 +1060,7 @@ svn_fs_base__unparse_representation_skel(svn_skel_t **skel_p,
   {
     svn_checksum_t *md5_checksum = rep->md5_checksum;
     if (! md5_checksum)
-      {
-        md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
-        SVN_ERR(svn_checksum_clear(md5_checksum));
-      }
+      md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
     prepend_checksum(header_skel, md5_checksum, pool);
   }
 

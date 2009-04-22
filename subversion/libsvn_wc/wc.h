@@ -56,6 +56,11 @@ extern "C" {
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
  *
+ * == 1.0.x shipped with format 4
+ * == 1.1.x shipped with format 4
+ * == 1.2.x shipped with format 4
+ * == 1.3.x shipped with format 4
+ *
  * The change from 4 to 5 was the addition of support for replacing files
  * with history.
  *
@@ -66,15 +71,39 @@ extern "C" {
  *
  * The change from 7 to 8 was putting wcprops in one file per directory.
  *
+ * == 1.4.x shipped with format 8
+ *
  * The change from 8 to 9 was the addition of changelists, keep-local,
  * and sticky depth (for selective/sparse checkouts).
+ *
+ * == 1.5.x shipped with format 9
  *
  * The change from 9 to 10 was the addition of tree-conflicts, file
  * externals and a different canonicalization of urls.
  *
+ * == 1.6.x shipped with format 10
+ *
+ * The change from 10 to 11 was clearing the has_props, has_prop_mods,
+ * cachable_props, and present_props values in the entries file. Older
+ * client expect proper values for these fields. Note: this change
+ * occurred during 1.7 development, and is not expected to be released.
+ *
+ * The change from 11 to 12 was a complete rewrite of the wc datastore,
+ * which resulted in centralization and migration of data to an sqlite
+ * datebase. Shipped in 1.7.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       10
+
+#ifndef BLAST_FORMAT_11
+#define SVN_WC__VERSION 11
+
+/* ### only used by devs temporarily during 1.7 development. */
+#define SVN_WC__VERSION_EXPERIMENTAL 12
+#else
+#define SVN_WC__VERSION 12
+#endif
+
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
@@ -88,6 +117,9 @@ extern "C" {
 /* A version < this can have urls that aren't canonical according to the new
    rules. See issue #2475. */
 #define SVN_WC__CHANGED_CANONICAL_URLS 10
+
+/* A version < this is pre-wc-ng. */
+#define SVN_WC__WC_NG_VERSION 12
 
 /*** Update traversals. ***/
 
@@ -168,15 +200,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__KILL_ADM_ONLY           "adm-only"
 
 
-/* A space separated list of properties that we cache presence/absence of.
- *
- * Note that each entry contains information about which properties are cached
- * in that particular entry.  This constant is only used when writing entries.
- */
-#define SVN_WC__CACHABLE_PROPS                                         \
-SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK
-
-
 /* A few declarations for stuff in util.c.
  * If this section gets big, move it all out into a new util.h file. */
 
@@ -255,7 +278,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    conflict is encountered, giving the callback a chance to resolve
    the conflict (before marking the file 'conflicted').
 
-   When LEFT_VERSION and RIGHT_VERSION are non-NULL, pass them to the 
+   When LEFT_VERSION and RIGHT_VERSION are non-NULL, pass them to the
    conflict resolver as older_version and their_version.
 
    ## TODO: We should store the information in LEFT_VERSION and RIGHT_VERSION

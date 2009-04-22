@@ -221,7 +221,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(path, pool);
-      return err;
+      return svn_error_return(err);
     }
   *use_sleep = TRUE;
 
@@ -247,41 +247,4 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                                        revision, NULL, depth, ignore_externals,
                                        allow_unver_obstructions, NULL, ctx,
                                        pool);
-}
-
-svn_error_t *
-svn_client_checkout2(svn_revnum_t *result_rev,
-                     const char *URL,
-                     const char *path,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_externals,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, NULL,
-                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                       ignore_externals, FALSE, NULL, ctx,
-                                       pool);
-}
-
-svn_error_t *
-svn_client_checkout(svn_revnum_t *result_rev,
-                    const char *URL,
-                    const char *path,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  svn_opt_revision_t peg_revision;
-
-  peg_revision.kind = svn_opt_revision_unspecified;
-
-  return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
-                                       revision, NULL,
-                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                       FALSE, FALSE, NULL, ctx, pool);
 }

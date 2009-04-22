@@ -24,11 +24,11 @@
 #ifndef SVN_CONFIG_H
 #define SVN_CONFIG_H
 
-#include <apr_pools.h>
+#include <apr.h>        /* for apr_int64_t */
+#include <apr_pools.h>  /* for apr_pool_t */
+#include <apr_hash.h>   /* for apr_hash_t */
 
 #include "svn_types.h"
-#include "svn_error.h"
-
 
 #ifdef __cplusplus
 extern "C" {

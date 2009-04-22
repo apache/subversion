@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -30,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -94,7 +93,7 @@ reset_log_item(struct log_baton *lb)
 {
   lb->log_entry->revision       = SVN_INVALID_REVNUM;
   lb->log_entry->revprops       = NULL;
-  lb->log_entry->changed_paths  = NULL;  
+  lb->log_entry->changed_paths  = NULL;
   lb->log_entry->has_children   = FALSE;
   lb->log_entry->changed_paths2 = NULL;
 

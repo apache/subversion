@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2001, 2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2001, 2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -25,22 +25,17 @@ else:
   # Python <3.0
   from StringIO import StringIO
 
-import main  # the general svntest routines in this module.
-from svntest import Failure
+import svntest
 
 # Tree Exceptions.
 
 # All tree exceptions should inherit from SVNTreeError
-class SVNTreeError(Failure):
+class SVNTreeError(svntest.Failure):
   "Exception raised if you screw up in the tree module."
   pass
 
 class SVNTreeUnequal(SVNTreeError):
   "Exception raised if two trees are unequal."
-  pass
-
-class SVNTreeIsNotDirectory(SVNTreeError):
-  "Exception raised if get_child is passed a file."
   pass
 
 class SVNTypeMismatch(SVNTreeError):
@@ -178,7 +173,7 @@ class SVNTreeNode:
         a.contents = newchild.contents
         a.props = newchild.props
         a.atts = newchild.atts
-        a.path = os.path.join (self.path, newchild.name)
+        a.path = os.path.join(self.path, newchild.name)
       else:
         # try to add dangling children to your matching node
         for i in newchild.children:
@@ -287,6 +282,61 @@ class SVNTreeNode:
     children within a directory."""
     return cmp(self.name, other.name)
 
+  def as_state(self, prefix=None):
+    root = self
+    if self.path == root_node_name:
+      assert prefix is None
+      wc_dir = ''
+      while True:
+        if root is not self:  # don't prepend ROOT_NODE_NAME
+          wc_dir = os.path.join(wc_dir, root.name)
+        if root.contents or root.props or root.atts:
+          break
+        if not root.children or len(root.children) != 1:
+          break
+        root = root.children[0]
+      state = svntest.wc.State(wc_dir, { })
+      if root.contents or root.props or root.atts:
+        state.add({'': root.as_item()})
+      prefix = wc_dir
+    else:
+      assert prefix is not None
+
+      path = self.path
+      if path.startswith(root_node_name):
+        path = path[len(root_node_name)+1:]
+      # prefix should only be set on a recursion, which means a child,
+      # which means this path better not be the same as the prefix.
+      assert path != prefix, 'not processing a child of the root'
+      l = len(prefix)
+      if l > 0:
+        assert path[:l] == prefix, \
+            '"%s" is not a prefix of "%s"' % (prefix, path)
+        # return the portion after the separator
+        path = path[l+1:].replace(os.sep, '/')
+
+      state = svntest.wc.State('', {
+          path: self.as_item()
+          })
+
+    if root.children:
+      for child in root.children:
+        state.add_state('', child.as_state(prefix))
+
+    return state
+
+  def as_item(self):
+    return svntest.wc.StateItem(self.contents,
+                                self.props,
+                                self.atts.get('status'),
+                                self.atts.get('verb'),
+                                self.atts.get('wc_rev'),
+                                self.atts.get('locked'),
+                                self.atts.get('copied'),
+                                self.atts.get('switched'),
+                                self.atts.get('writelocked'),
+                                self.atts.get('treeconflict'))
+
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -379,7 +429,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
   # deposit contents in the very last node.
   node = root_node
-  while 1:
+  while True:
     if node.children is None:
       node.contents = contents
       node.props = props
@@ -390,46 +440,60 @@ def create_from_path(path, contents=None, props={}, atts={}):
   return root_node
 
 
-# helper for handle_dir(), which is a helper for build_tree_from_wc()
-def get_props(path):
-  """Return a hash of props for PATH, using the svn client. Convert each
-     embedded end-of-line to a single LF character."""
+
+# helper for build_tree_from_wc()
+def get_props(paths):
+  """Return a hash of hashes of props for PATHS, using the svn client. Convert
+     each embedded end-of-line to a single LF character."""
 
   # It's not kosher to look inside .svn/ and try to read the internal
   # property storage format.  Instead, we use 'svn proplist'.  After
   # all, this is the only way the user can retrieve them, so we're
   # respecting the black-box paradigm.
 
-  props = {}
-  exit_code, output, errput = main.run_svn(1, "proplist", path, "--verbose")
+  files = {}
+  filename = None
+  exit_code, output, errput = svntest.main.run_svn(1,
+                                                   "proplist",
+                                                   "--verbose",
+                                                   *paths)
+
+  properties_on_re = re.compile("^Properties on '(.+)':$")
 
   # Parse the output
   for line in output:
+    if line.startswith('DBG:'):
+      continue
     line = line.rstrip('\r\n')  # ignore stdout's EOL sequence
 
-    if line.startswith('Properties on '):
-      continue
+    match = properties_on_re.match(line)
+    if match:
+      filename = match.group(1)
 
     elif line.startswith('    '):
-      # It's (part of) the value
-      props[name] += line[4:] + '\n'  # strip the indentation
+      # It's (part of) the value (strip the indentation)
+      if filename is None:
+        raise Exception("Missing 'Properties on' line: '"+line+"'")
+      files.setdefault(filename, {})[name] += line[4:] + '\n'
 
     elif line.startswith('  '):
       # It's the name
       name = line[2:]  # strip the indentation
-      props[name] = ''
+      if filename is None:
+        raise Exception("Missing 'Properties on' line: '"+line+"'")
+      files.setdefault(filename, {})[name] = ''
 
     else:
-      raise "Malformed line from proplist: '"+line+"'"
+      raise Exception("Malformed line from proplist: '"+line+"'")
 
   # Strip, from each property value, the final new-line that we added
-  for name in props:
-    props[name] = props[name][:-1]
+  for filename in files:
+    for name in files[filename]:
+      files[filename][name] = files[filename][name][:-1]
 
-  return props
+  return files
 
-
-# helper for handle_dir(), which helps build_tree_from_wc()
+### ridiculous function. callers should do this one line themselves.
 def get_text(path):
   "Return a string with the textual contents of a file at PATH."
 
@@ -437,56 +501,17 @@ def get_text(path):
   if not os.path.isfile(path):
     return None
 
-  fp = open(path, 'r')
-  contents = fp.read()
-  fp.close()
-  return contents
+  return open(path, 'r').read()
 
-
-# main recursive helper for build_tree_from_wc()
-def handle_dir(path, current_parent, load_props, ignore_svn):
-
-  # get a list of all the files
-  all_files = os.listdir(path)
-  files = []
-  dirs = []
-
-  # put dirs and files in their own lists, and remove SVN dirs
-  for f in all_files:
-    f = os.path.join(path, f)
-    if (os.path.isdir(f) and os.path.basename(f) != main.get_admin_name()):
-      dirs.append(f)
-    elif os.path.isfile(f):
-      files.append(f)
-
-  # add each file as a child of CURRENT_PARENT
-  for f in files:
-    fcontents = get_text(f)
-    if load_props:
-      fprops = get_props(f)
-    else:
-      fprops = {}
-    current_parent.add_child(SVNTreeNode(os.path.basename(f), None,
-                                         fcontents, fprops))
-
-  # for each subdir, create a node, walk its tree, add it as a child
-  for d in dirs:
-    if load_props:
-      dprops = get_props(d)
-    else:
-      dprops = {}
-    new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
-    current_parent.add_child(new_dir_node)
-    handle_dir(d, new_dir_node, load_props, ignore_svn)
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
-  else, return None. If SVNTreeNode is not a directory, raise a
-  SVNTreeIsNotDirectory exception"""
+  else, return None. If SVNTreeNode is not a directory, exit completely."""
   if node.children == None:
-    raise SVNTreeIsNotDirectory
+    print("Error: Foolish call to get_child.")
+    sys.exit(1)
   for n in node.children:
-    if (name == n.name):
+    if name == n.name:
       return n
   return None
 
@@ -561,16 +586,16 @@ def compare_trees(label,
     a.pprint()
 
   # Setup singleton handlers
-  if (singleton_handler_a is None):
+  if singleton_handler_a is None:
     singleton_handler_a = default_singleton_handler
     a_baton = "expected " + label
-  if (singleton_handler_b is None):
+  if singleton_handler_b is None:
     singleton_handler_b = default_singleton_handler
     b_baton = "actual " + label
 
   try:
     # A and B are both files.
-    if ((a.children is None) and (b.children is None)):
+    if (a.children is None) and (b.children is None):
       if compare_file_nodes(a, b):
         display_nodes(a, b)
         raise SVNTreeUnequal
@@ -602,14 +627,11 @@ def compare_trees(label,
         else:
           singleton_handler_a(a_child, a_baton)
       for b_child in b.children:
-        if (b_child not in accounted_for):
+        if b_child not in accounted_for:
           singleton_handler_b(b_child, b_baton)
   except SVNTypeMismatch:
     print('Unequal Types: one Node is a file, the other is a directory')
     raise SVNTreeUnequal
-  except SVNTreeIsNotDirectory:
-    print("Error: Foolish call to get_child.")
-    sys.exit(1)
   except IndexError:
     print("Error: unequal number of children")
     raise SVNTreeUnequal
@@ -627,8 +649,7 @@ def dump_tree(n,indent=""):
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  tmp_children = n.children or []
-  tmp_children.sort()
+  tmp_children = sorted(n.children or [])
 
   if n.name == root_node_name:
     print("%s%s" % (indent, "ROOT"))
@@ -706,32 +727,10 @@ def build_generic_tree(nodelist):
 #   Tree nodes will contain no contents, a 'status' att, and a
 #   'treeconflict' att.
 
-def build_tree_from_checkout(lines, include_skipped=1):
+def build_tree_from_checkout(lines, include_skipped=True):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
-  root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])([C ])\s+(.+)')
-  if include_skipped:
-    rm2 = re.compile ('^(Restored|Skipped)\s+\'(.+)\'')
-  else:
-    rm2 = re.compile ('^(Restored)\s+\'(.+)\'')
-
-  for line in lines:
-    match = rm1.search(line)
-    if match and match.groups():
-      atts = {'status' : match.group(1)}
-      if match.group(3) == 'C':
-        atts['treeconflict'] = 'C'
-      new_branch = create_from_path(match.group(4), None, {}, atts)
-      root.add_child(new_branch)
-    else:
-      match = rm2.search(line)
-      if match and match.groups():
-        new_branch = create_from_path(match.group(2), None, {},
-                                      {'verb' : match.group(1)})
-        root.add_child(new_branch)
-
-  return root
+  return svntest.wc.State.from_checkout(lines, include_skipped).old_tree()
 
 
 # Parse ci/im output into a tree.
@@ -741,21 +740,7 @@ def build_tree_from_checkout(lines, include_skipped=1):
 def build_tree_from_commit(lines):
   "Return a tree derived by parsing the output LINES from 'ci' or 'im'."
 
-  # Lines typically have a verb followed by whitespace then a path.
-  root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^(\w+(  \(bin\))?)\s+(.+)')
-  rm2 = re.compile ('^Transmitting')
-
-  for line in lines:
-    match = rm2.search(line)
-    if not match:
-      match = rm1.search(line)
-      if match and match.groups():
-        new_branch = create_from_path(match.group(3), None, {},
-                                      {'verb' : match.group(1)})
-        root.add_child(new_branch)
-
-  return root
+  return svntest.wc.State.from_commit(lines).old_tree()
 
 
 # Parse status output into a tree.
@@ -771,110 +756,21 @@ def build_tree_from_commit(lines):
 def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st -vuq'."
 
-  root = SVNTreeNode(root_node_name)
-
-  # 'status -v' output looks like this:
-  #
-  #      "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
-  #
-  # (Taken from 'print_status' in subversion/svn/status.c.)
-  #
-  # Here are the parameters.  The middle number or string in parens is the
-  # match.group(), followed by a brief description of the field:
-  #
-  #    - text status           (1)  (single letter)
-  #    - prop status           (1)  (single letter)
-  #    - wc-lockedness flag    (2)  (single letter: "L" or " ")
-  #    - copied flag           (3)  (single letter: "+" or " ")
-  #    - switched flag         (4)  (single letter: "S" or " ")
-  #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
-  #    - tree conflict flag    (6)  (single letter: "C" or " ")
-  #
-  #    [one space]
-  #
-  #    - out-of-date flag      (7)  (single letter: "*" or " ")
-  #
-  #    [three spaces]
-  #
-  #    - working revision ('wc_rev') (either digits or "-" or " ")
-  #
-  #    [one space]
-  #
-  #    - last-changed revision      (either digits or "?" or " ")
-  #
-  #    [one space]
-  #
-  #    - last author                (optional string of non-whitespace
-  #                                  characters)
-  #
-  #    [spaces]
-  #
-  #    - path              ('path') (string of characters until newline)
-  #
-  # Working revision, last-changed revision, and last author are whitespace
-  # only if the item is missing.
-
-  # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
-  for line in lines:
-
-    # Quit when we hit an externals status announcement (### someday we can fix
-    # the externals tests to expect the additional flood of externals status
-    # data).
-    if re.match(r'^Performing', line):
-      break
-
-    match = rm.search(line)
-    if match and match.groups():
-      if match.group(10) != '-': # ignore items that only exist on repos
-        atthash = {'status' : match.group(1)}
-        if match.group(2) != ' ':
-          atthash['locked'] = match.group(2)
-        if match.group(3) != ' ':
-          atthash['copied'] = match.group(3)
-        if match.group(4) != ' ':
-          atthash['switched'] = match.group(4)
-        if match.group(5) != ' ':
-          atthash['writelocked'] = match.group(5)
-        if match.group(6) != ' ':
-          atthash['treeconflict'] = match.group(6)
-        if match.group('wc_rev'):
-          atthash['wc_rev'] = match.group('wc_rev')
-        new_branch = create_from_path(match.group('path'), None, {}, atthash)
-
-      root.add_child(new_branch)
-
-  return root
+  return svntest.wc.State.from_status(lines).old_tree()
 
 
 # Parse merge "skipped" output
 
 def build_tree_from_skipped(lines):
 
-  root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^Skipped.* '(.+)'\n")
+  return svntest.wc.State.from_skipped(lines).old_tree()
 
-  for line in lines:
-    match = rm.search(line)
-    if match and match.groups():
-      new_branch = create_from_path(match.group(1))
-      root.add_child(new_branch)
-
-  return root
 
 def build_tree_from_diff_summarize(lines):
   "Build a tree from output of diff --summarize"
-  root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^([MAD ][M ])      (.+)\n")
 
-  for line in lines:
-    match = rm.search(line)
-    if match and match.groups():
-      new_branch = create_from_path(match.group(2),
-                                    atts={'status': match.group(1)})
-      root.add_child(new_branch)
+  return svntest.wc.State.from_summarize(lines).old_tree()
 
-  return root
 
 ####################################################################
 # Build trees by looking at the working copy
@@ -891,18 +787,4 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
     files.  If IGNORE_SVN is true, then exclude SVN admin dirs from the tree.
     If LOAD_PROPS is true, the props will be added to the tree."""
 
-    root = SVNTreeNode(root_node_name, None)
-
-    # if necessary, store the root dir's props in a new child node '.'.
-    if load_props:
-      props = get_props(wc_path)
-      if props:
-        root_dir_node = SVNTreeNode(os.path.basename('.'), None, None, props)
-        root.add_child(root_dir_node)
-
-    # Walk the tree recursively
-    handle_dir(os.path.normpath(wc_path), root, load_props, ignore_svn)
-
-    return root
-
-### End of file.
+    return svntest.wc.State.from_wc(wc_path, load_props, ignore_svn).old_tree()

@@ -5,7 +5,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -73,7 +73,7 @@ class SVNShell(Cmd):
       return
     ### be nice to get some paging in here.
     stream = fs.file_contents(self.root, catpath)
-    while 1:
+    while True:
       data = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
       sys.stdout.write(data)
       if len(data) < core.SVN_STREAM_CHUNK_SIZE:
@@ -117,8 +117,7 @@ class SVNShell(Cmd):
         print("Path '%s' not found." % newpath)
         return
 
-    keys = list(entries.keys())
-    keys.sort()
+    keys = sorted(entries.keys())
 
     print("   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME")
     print("----------------------------------------------------------------------------")
@@ -150,8 +149,7 @@ class SVNShell(Cmd):
 
   def do_lstxns(self, arg):
     """list the transactions available for browsing"""
-    txns = fs.list_transactions(self.fs_ptr)
-    txns.sort()
+    txns = sorted(fs.list_transactions(self.fs_ptr))
     counter = 0
     for txn in txns:
       counter = counter + 1

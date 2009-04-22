@@ -40,14 +40,15 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_nls.h"
+#include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_version.h"
-#include "utf_impl.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_utf_private.h"
 
 #include "svn_private_config.h"
 
@@ -558,26 +559,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *auth_username,
-                             const char *auth_password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
-{
-  return svn_cmdline_create_auth_baton(ab, non_interactive,
-                                       auth_username, auth_password,
-                                       config_dir, no_auth_cache, FALSE,
-                                       cfg, cancel_func, cancel_baton, pool);
-}
-
-
 svn_error_t *
 svn_cmdline__getopt_init(apr_getopt_t **os,
                          int argc,
@@ -633,4 +614,73 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   return;
 }
 
+svn_error_t *
+svn_cmdline__parse_config_option(apr_array_header_t *config_options,
+                                 const char *opt_arg,
+                                 apr_pool_t *pool)
+{
+  svn_cmdline__config_argument_t *config_option;
+  const char *first_colon, *second_colon, *equals_sign;
+  apr_size_t len = strlen(opt_arg);
+  if ((first_colon = strchr(opt_arg, ':')) && (first_colon != opt_arg))
+    {
+      if ((second_colon = strchr(first_colon + 1, ':')) &&
+          (second_colon != first_colon + 1))
+        {
+          if ((equals_sign = strchr(second_colon + 1, '=')) &&
+              (equals_sign != second_colon + 1))
+            {
+              config_option = apr_pcalloc(pool, sizeof(*config_option));
+              config_option->file = apr_pstrndup(pool, opt_arg,
+                                                 first_colon - opt_arg);
+              config_option->section = apr_pstrndup(pool, first_colon + 1,
+                                                    second_colon - first_colon - 1);
+              config_option->option = apr_pstrndup(pool, second_colon + 1,
+                                                   equals_sign - second_colon - 1);
 
+              if (! (strchr(config_option->option, ':')))
+                {
+                  config_option->value = apr_pstrndup(pool, equals_sign + 1,
+                                                      opt_arg + len - equals_sign - 1);
+                  APR_ARRAY_PUSH(config_options, svn_cmdline__config_argument_t *) 
+                                       = config_option;
+                  return SVN_NO_ERROR;
+                }
+            }
+        }
+    }
+  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          _("Invalid syntax of argument of --config-option"));
+}
+
+svn_error_t *
+svn_cmdline__apply_config_options(apr_hash_t *config,
+                                  apr_array_header_t *config_options,
+                                  const char *prefix,
+                                  const char *argument_name)
+{
+  int i;
+
+  for (i = 0; i < config_options->nelts; i++)
+   {
+     svn_config_t *cfg;
+     svn_cmdline__config_argument_t *arg = 
+                          APR_ARRAY_IDX(config_options, i,
+                                        svn_cmdline__config_argument_t *);
+
+     cfg = apr_hash_get(config, arg->file, APR_HASH_KEY_STRING);
+
+     if (!cfg)
+       {
+         svn_error_t *err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+             _("Unrecognized file in argument of %s"), argument_name);
+
+         svn_handle_warning2(stderr, err, prefix);
+         svn_error_clear(err);
+       }
+
+     svn_config_set(cfg, arg->section, arg->option, arg->value);
+    }
+
+  return SVN_NO_ERROR;
+}

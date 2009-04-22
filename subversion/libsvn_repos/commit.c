@@ -1,7 +1,7 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,6 +24,7 @@
 #include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
@@ -596,10 +597,10 @@ close_file(void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             _("Checksum mismatch for resulting fulltext\n"
-               "(%s):\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n"),
+             apr_psprintf(pool, "%s:\n%s\n%s\n",
+                          _("Checksum mismatch for resulting fulltext\n(%s)"),
+                          _("   expected:  %s"),
+                          _("     actual:  %s")),
              fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
              svn_checksum_to_cstring_display(checksum, pool));
         }
@@ -670,7 +671,16 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           if (err->child && err->child->message)
-            post_commit_err = apr_pstrdup(pool, err->child->message);
+            {
+              svn_error_t *warning_err = err->child;
+#ifdef SVN_ERR__TRACING
+              /* Skip over any trace records.  */
+              while (warning_err->message != NULL
+                     && strcmp(warning_err->message, SVN_ERR__TRACED) == 0)
+                warning_err = warning_err->child;
+#endif
+              post_commit_err = apr_pstrdup(pool, warning_err->message);
+            }
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -837,11 +847,11 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->base_path = apr_pstrdup(subpool, base_path);
   eb->repos = repos;
   eb->repos_url = repos_url;
-  eb->repos_name = svn_path_basename(svn_repos_path(repos, subpool),
-                                     subpool);
+  eb->repos_name = svn_uri_basename(svn_repos_path(repos, subpool),
+                                    subpool);
   eb->fs = svn_repos_fs(repos);
   eb->txn = txn;
-  eb->txn_owner = txn ? FALSE : TRUE;
+  eb->txn_owner = txn == NULL;
 
   *edit_baton = eb;
   *editor = e;

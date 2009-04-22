@@ -23,6 +23,10 @@
 #define SVN_OPT_PRIVATE_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
+#include <apr_getopt.h>
+
+#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {

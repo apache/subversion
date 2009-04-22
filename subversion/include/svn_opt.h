@@ -25,9 +25,15 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_getopt.h>
+#include <apr_tables.h>
+#include <apr_hash.h>
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+#define APR_WANT_STDIO
+#endif
+#include <apr_want.h>   /* for FILE* */
 
 #include "svn_types.h"
-#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {

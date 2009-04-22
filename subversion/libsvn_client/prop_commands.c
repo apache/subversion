@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_client.h"
 #include "client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -124,14 +125,14 @@ propset_walk_cb(const char *path,
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, wb->base_access,
                               (entry->kind == svn_node_dir ? path
-                               : svn_path_dirname(path, pool)),
+                               : svn_dirent_dirname(path, pool)),
                               pool));
   err = svn_wc_prop_set3(wb->propname, wb->propval, path, adm_access,
                          wb->force, wb->notify_func, wb->notify_baton, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
-        return err;
+        return svn_error_return(err);
       svn_error_clear(err);
     }
 
@@ -294,7 +295,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -486,8 +487,8 @@ svn_client_revprop_set2(const char *propname,
     {
       svn_wc_notify_t *notify = svn_wc_create_notify_url(URL,
                                              propval == NULL
-                                               ? svn_wc_notify_revprop_set
-                                               : svn_wc_notify_revprop_deleted,
+                                               ? svn_wc_notify_revprop_deleted
+                                               : svn_wc_notify_revprop_set,
                                              pool);
       notify->prop_name = propname;
       notify->revision = *set_rev;
@@ -738,7 +739,7 @@ wc_walker_error_handler(const char *path,
 {
   svn_error_t *root_err = svn_error_root_cause(err);
   if (root_err == SVN_NO_ERROR)
-    return err;
+    return svn_error_return(err);
 
   /* Suppress errors from missing paths. */
   if (root_err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -748,7 +749,7 @@ wc_walker_error_handler(const char *path,
     }
   else
     {
-      return err;
+      return svn_error_return(err);
     }
 }
 

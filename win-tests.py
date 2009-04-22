@@ -524,8 +524,9 @@ class Httpd:
     try:
       import win32process
       import win32con
+      args = ' '.join([self._quote(x) for x in self.httpd_args])
       self.proc_handle = (
-        win32process.CreateProcess(self._quote(self.path), self.httpd_args,
+        win32process.CreateProcess(self._quote(self.path), args,
                                    None, None, 0,
                                    win32con.CREATE_NEW_CONSOLE,
                                    None, None, win32process.STARTUPINFO()))[0]
@@ -551,7 +552,8 @@ if create_dirs:
   try:
     os.chdir(abs_objdir)
     baton = copied_execs
-    os.path.walk('subversion', copy_execs, baton)
+    for dirpath, dirs, files in os.walk('subversion'):
+      copy_execs(baton, dirpath, dirs + files)
   except:
     os.chdir(old_cwd)
     raise

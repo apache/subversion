@@ -32,6 +32,7 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
@@ -544,6 +545,10 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
         case 404:
           return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                                   apr_psprintf(pool, _("'%s' path not found"),
+                                               req->url));
+        case 403:
+          return svn_error_create(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                  apr_psprintf(pool, _("access to '%s' forbidden"),
                                                req->url));
 
         case 301:

@@ -25,12 +25,13 @@
 /* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
 
-#include <apr.h>        /* for apr_size_t */
-#include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_tables.h>
-#include <apr_time.h>
-#include <apr_sha1.h>
+#include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
+#include <apr_errno.h>   /* for apr_status_t */
+#include <apr_pools.h>   /* for apr_pool_t */
+#include <apr_hash.h>    /* for apr_hash_t */
+#include <apr_tables.h>  /* for apr_array_push() */
+#include <apr_time.h>    /* for apr_time_t */
+#include <apr_strings.h> /* for apr_atoi64() */
 
 #ifdef __cplusplus
 extern "C" {
@@ -601,7 +602,7 @@ typedef struct svn_log_changed_path2_t
   svn_node_kind_t node_kind;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
-     Also, if you add fields here, you have to update 
+     Also, if you add fields here, you have to update
      svn_log_changed_path2_dup(). */
 } svn_log_changed_path2_t;
 
@@ -610,7 +611,7 @@ typedef struct svn_log_changed_path2_t
  * initialized to NULL, None or empty values.
  *
  * @note To allow for extending the @c svn_log_changed_path2_t structure in
- * future releases, this function should always be used to allocate the 
+ * future releases, this function should always be used to allocate the
  * structure.
  *
  * @since New in 1.6.
@@ -671,7 +672,7 @@ typedef struct svn_log_entry_t
   /** A hash containing as keys every path committed in @a revision; the
    * values are (@c svn_log_changed_path_t *) stuctures.
    *
-   * The subversion core libraries will always set this field to the same 
+   * The subversion core libraries will always set this field to the same
    * value as changed_paths2 for compatibity reasons.
    *
    * @deprecated Provided for backward compatibility with the 1.5 API.
@@ -706,10 +707,10 @@ typedef struct svn_log_entry_t
   /** A hash containing as keys every path committed in @a revision; the
    * values are (@c svn_log_changed_path2_t *) stuctures.
    *
-   * If this value is not @c NULL, it MUST have the same value as 
+   * If this value is not @c NULL, it MUST have the same value as
    * changed_paths or svn_log_entry_dup() will not create an identical copy.
    *
-   * The subversion core libraries will always set this field to the same 
+   * The subversion core libraries will always set this field to the same
    * value as changed_paths for compatibity with users assuming an older
    * version.
    *
@@ -718,7 +719,7 @@ typedef struct svn_log_entry_t
   apr_hash_t *changed_paths2;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
-     Also, if you add fields here, you have to update 
+     Also, if you add fields here, you have to update
      svn_log_entry_dup(). */
 } svn_log_entry_t;
 
@@ -1046,5 +1047,30 @@ svn_location_segment_dup(svn_location_segment_t *segment,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+
+/*
+ * Everybody and their brother needs to deal with svn_error_t, the error
+ * codes, and whatever else. While they *should* go and include svn_error.h
+ * in order to do that... bah. Let's just help everybody out and include
+ * that header whenever somebody grabs svn_types.h.
+ *
+ * Note that we do this at the END of this header so that its contents
+ * are available to svn_error.h (our guards will prevent the circular
+ * include). We also need to do the include *outside* of the cplusplus
+ * guard.
+ */
+#include "svn_error.h"
+
+
+/*
+ * Subversion developers may want to use some additional debugging facilities
+ * while working on the code. We'll pull that in here, so individual source
+ * files don't have to include this header manually.
+ */
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
+#endif
+
 
 #endif /* SVN_TYPES_H */

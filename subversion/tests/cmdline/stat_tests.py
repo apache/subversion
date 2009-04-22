@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,10 @@
 ######################################################################
 
 # General modules
-import os, re, time
+import os
+import re
+import time
+import datetime
 
 # Our testing module
 import svntest
@@ -257,13 +260,9 @@ def status_with_new_files_pending(sbox):
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'status', '-u')
 
-  # The bug fixed in revision 3686 was a seg fault.  We don't have a
-  # reliable way to detect a seg fault here, since we haven't dealt
-  # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
-  # are classes within the first, which is a module, and the Popen3
-  # class is not the same as os.popen3().  Got that?)  See the Python
-  # docs for details; in the meantime, no output means there was a
-  # problem.
+  # The bug fixed in revision 3686 was a segmentation fault.
+  # TODO: Check exit code.
+  # In the meantime, no output means there was a problem.
   for line in output:
     if line.find('newfile') != -1:
       break
@@ -657,7 +656,52 @@ use-commit-times = yes
       iota_text_timestamp[17:] != iota_last_changed[17:]):
     raise svntest.Failure
 
-  ### FIXME: check the working file's timestamp as well
+  # remove iota, run an update to restore it, and check the times
+  os.remove(other_iota_path)
+  expected_output = svntest.wc.State(other_wc, {
+    'iota': Item(verb='Restored'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(other_wc, 1)
+  svntest.actions.run_and_verify_update(other_wc, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, False,
+                                        other_wc, '--config-dir', config_dir)
+  iota_text_timestamp = get_text_timestamp(other_iota_path)
+  if (iota_text_timestamp[17] != ':' or
+      iota_text_timestamp[17:] != iota_last_changed[17:]):
+    raise svntest.Failure
+
+  iota_ts = iota_text_timestamp[19:44]
+
+  class TZ(datetime.tzinfo):
+    "A tzinfo to convert a time to iota's timezone."
+    def utcoffset(self, dt):
+      offset = (int(iota_ts[21:23]) * 60 + int(iota_ts[23:25]))
+      if iota_ts[20] == '-':
+        return datetime.timedelta(minutes=-offset)
+      return datetime.timedelta(minutes=offset)
+    def dst(self, dt):
+      return datetime.timedelta(0)
+
+  # get the timestamp on the file. whack any microseconds value, as svn
+  # doesn't record to that precision. we also use the TZ class to shift
+  # the timestamp into the same timezone as the expected timestamp.
+  mtime = datetime.datetime.fromtimestamp(os.path.getmtime(other_iota_path),
+                                          TZ()).replace(microsecond=0)
+  fmt = mtime.isoformat(' ')
+
+  # iota_ts looks like: 2009-04-13 14:30:57 +0200
+  #     fmt looks like: 2009-04-13 14:30:57+02:00
+  if (fmt[:19] != iota_ts[:19]
+      or fmt[19:22] != iota_ts[20:23]
+      or fmt[23:25] != iota_ts[23:25]):
+    # NOTE: the two strings below won't *exactly* match (see just above),
+    #   but the *numeric* portions of them should.
+    print("File timestamp on 'iota' does not match.")
+    print("  EXPECTED: %s" % iota_ts)
+    print("    ACTUAL: %s" % fmt)
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -1568,13 +1612,12 @@ def status_with_tree_conflicts(sbox):
   tau = os.path.join(G, 'tau')
 
   # check status of G
-  # The expectation on 'rho' reflects partial progress on issue #3334.
   expected = svntest.verify.UnorderedOutput(
          ["D     C %s\n" % pi,
           "      >   local delete, incoming edit upon update\n",
           "A  +  C %s\n" % rho,
           "      >   local edit, incoming delete upon update\n",
-          "D     C %s\n" % tau,
+          "!     C %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
           ])
 
@@ -1584,14 +1627,13 @@ def status_with_tree_conflicts(sbox):
                                      "status", G)
 
   # check status of G, with -v
-  # The expectation on 'rho' reflects partial progress on issue #3334.
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
-          "D     C          1        1 jrandom      %s\n" % pi,
+          "D     C          2        2 jrandom      %s\n" % pi,
           "      >   local delete, incoming edit upon update\n",
           "A  +  C          -        1 jrandom      %s\n" % rho,
           "      >   local edit, incoming delete upon update\n",
-          "D     C          1        1 jrandom      %s\n" % tau,
+          "!     C                                  %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
           ])
 

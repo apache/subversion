@@ -17,13 +17,7 @@
  *
  * @file svn_client.h
  * @brief Subversion's client library
- */
-
-
-
-/*** Includes ***/
-
-/*
+ *
  * Requires:  The working copy library and repository access library.
  * Provides:  Broad wrappers around working copy library functionality.
  * Used By:   Client programs.
@@ -32,17 +26,22 @@
 #ifndef SVN_CLIENT_H
 #define SVN_CLIENT_H
 
+#include <apr.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_getopt.h>
+#include <apr_file_io.h>
+#include <apr_time.h>
 
 #include "svn_types.h"
-#include "svn_wc.h"
 #include "svn_string.h"
-#include "svn_error.h"
+#include "svn_wc.h"
 #include "svn_opt.h"
 #include "svn_version.h"
 #include "svn_ra.h"
 #include "svn_diff.h"
-
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -663,21 +662,42 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  * @{
  */
 
-/** Callback type used by svn_client_blame4() to notify the caller
+/** Callback type used by svn_client_blame5() to notify the caller
  * that line @a line_no of the blamed file was last changed in
  * @a revision by @a author on @a date, and that the contents were
  * @a line.
  *
  * If svn_client_blame4() was called with @a include_merged_revisions set to
- * TRUE, @a merged_revision, @a merged_author, @a merged_date, and
- * @a merged_path will be set, otherwise they will be NULL.  @a merged_path
- * will be set to the absolute repository path.
+ * TRUE, @a merged_revision, @a merged_rev_props and @a merged_path will be
+ * set, otherwise they will be NULL. @a merged_path will be set to the 
+ * absolute repository path.
  *
  * All allocations should be performed in @a pool.
  *
  * @note If there is no blame information for this line, @a revision will be
- * invalid and @a author and @a date will be NULL.
+ * invalid and @a rev_props will be NULL. In this case @a local_change
+ * will be true if the reason there is no blame information is that the line
+ * was modified locally, In all other cases @a local_change will be false.
  *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_client_blame_receiver3_t)
+  (void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   apr_hash_t *rev_props,
+   svn_revnum_t merged_revision,
+   apr_hash_t *merged_rev_props,
+   const char *merged_path,
+   const char *line,
+   svn_boolean_t local_change,
+   apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_client_blame_receiver3_t, but with separate revision
+ * properties and without information about local_only changes
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -1817,8 +1837,35 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_mergeinfo is set, don't include any changes to
  * svn:mergeinfo.
  *
- * @since New in 1.6.
+ * All temporary allocations are performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_status5(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func4_t status_func,
+                   void *status_baton,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t ignore_mergeinfo,
+                   const apr_array_header_t *changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_client_status5(), but using @c svn_wc_status_func3_t
+ * instead of @c svn_wc_status_func4_t, and passing @c FALSE for
+ * @a ignore_mergeinfo.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status4(svn_revnum_t *result_rev,
                    const char *path,
@@ -1831,7 +1878,6 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
-                   svn_boolean_t ignore_mergeinfo,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
@@ -1916,48 +1962,6 @@ svn_client_status(svn_revnum_t *result_rev,
  */
 
 /**
- * A structure to optional arguments for svn_client_log5().  It can grow
- * as needed to avoid rev'ing the API.  Never allocate this structure directly,
- * as its size may change in future versions of Subversion.  Use
- * svn_client_log_args_create() instead.
- *
- * @since New in 1.6.
- */
-typedef struct svn_client_log_args_t
-{
-  /** If non-zero only invoke the reciever on the first @a limit logs. */
-  int limit;
-
-  /** If set, then the `@a changed_paths' argument to the receiver will be
-   * passed on each invocation. */
-  svn_boolean_t discover_changed_paths;
-
-  /** If set, copy history (if any exists) will not be traversed while
-   * harvesting revision logs for each target. */
-  svn_boolean_t strict_node_history;
-
-
-  /** If set, log information for revisions which have been merged to the
-   * log targets will also be returned. */
-  svn_boolean_t include_merged_revisions;
-
-  /* Add new members here, and update svn_client_log_args_create(). */
-} svn_client_log_args_t;
-
-/**
- * Create a @c svn_client_log_args_t structure, for use with svn_client_log5().
- * Values of structure members are as follows:
- *   @c limit: 0
- *   @c discover_changed_paths: FALSE
- *   @c strict_node_history: FALSE
- *   @c include_merged_revisions: FALSE
- *
- * @since New in 1.6.
- */
-svn_client_log_args_t *
-svn_client_log_args_create(apr_pool_t *pool);
-
-/**
  * Invoke @a receiver with @a receiver_baton on each log message from
  * each start/end revision pair in the @a revision_ranges in turn,
  * inclusive (but never invoke @a receiver on a given log message more
@@ -1971,7 +1975,17 @@ svn_client_log_args_create(apr_pool_t *pool);
  * @c svn_opt_revision_unspecified, it defaults to @c svn_opt_revision_head
  * for URLs or @c svn_opt_revision_working for WC paths.
  *
- * Use additional argument values as defined in @a args.
+ * If @a limit is non-zero only invoke @a receiver on the first @a limit
+ * logs.
+ *
+ * If @a discover_changed_paths is set, then the `@a changed_paths' argument
+ * to @a receiver will be passed on each invocation.
+ *
+ * If @a strict_node_history is set, copy history (if any exists) will
+ * not be traversed while harvesting revision logs for each target.
+ *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -1997,8 +2011,11 @@ svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
                 const apr_array_header_t *revprops,
-                const svn_client_log_args_t *args,
                 svn_log_entry_receiver_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -2138,8 +2155,31 @@ svn_client_log(const apr_array_header_t *targets,
  *
  * Use @a pool for any temporary allocation.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_blame5(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver3_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_blame5(), but with @c svn_client_blame_receiver3_t 
+ * as the receiver.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame4(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -2285,10 +2325,12 @@ svn_client_blame(const char *path_or_url,
  * @note @a header_encoding doesn't affect headers generated by external
  * diff programs.
  *
+ * @a svnpatch_format set to @c TRUE enables the svnpatch format diff.
+ *
  * @note @a relative_to_dir doesn't affect the path index generated by
  * external diff programs.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_client_diff5(const apr_array_header_t *diff_options,
@@ -2301,6 +2343,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t svnpatch_format,
                  svn_boolean_t ignore_mergeinfo,
                  const char *header_encoding,
                  apr_file_t *outfile,
@@ -2309,11 +2352,12 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
+
 /**
- * Similar to svn_client_diff5(), but with @a ignore_mergeinfo passed as
- * @a FALSE.
+ * Similar to svn_client_diff5(), but with @a svnpatch_format set to FALSE
+ * and @a ignore_mergeinfo passed as @a FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -2417,12 +2461,12 @@ svn_client_diff(const apr_array_header_t *diff_options,
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is @c svn_opt_revision_unspecified, behave
- * identically to svn_client_diff4(), using @a path for both of that
+ * identically to svn_client_diff5(), using @a path for both of that
  * function's @a path1 and @a path2 argments.
  *
  * All other options are handled identically to svn_client_diff5().
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_client_diff_peg5(const apr_array_header_t *diff_options,
@@ -2435,6 +2479,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t svnpatch_format,
                      svn_boolean_t ignore_mergeinfo,
                      const char *header_encoding,
                      apr_file_t *outfile,
@@ -2443,11 +2488,12 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
+
 /**
- * Similar to svn_client_diff_peg5(), but with @a ignore_mergeinfo passed as
- * @a FALSE.
+ * Similar to svn_client_diff_peg5(), but with @a svnpatch_format set to
+ * FALSE and @a ignore_mergeinfo passed as @a FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -2557,7 +2603,7 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
  *
  * See svn_client_diff5() for a description of the other parameters.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_client_diff_summarize3(const char *path1,
@@ -2577,7 +2623,7 @@ svn_client_diff_summarize3(const char *path1,
  * Similar to svn_client_diff_summarize3(), but with @a ignore_mergeinfo
  * always @c FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -3042,7 +3088,24 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically SVN_ERR_CANCELLED), return that error
  * immediately.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_cleanup2(const char *dir,
+                    svn_boolean_t upgrade_format,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_client_cleanup2(), but with @a upgrade_format set to @c FALSE.
+ *
+ * @since New in 1.0.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,
@@ -3272,6 +3335,9 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -3286,8 +3352,27 @@ typedef struct svn_client_copy_source_t
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_client_copy5(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy5(), with @a ignore_externals set to @c FALSE.
+ *
+ * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *sources,
@@ -4502,7 +4587,7 @@ typedef struct svn_info_t
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   apr_time_t text_time;
-  apr_time_t prop_time;
+  apr_time_t prop_time;  /* will always be 0 for svn 1.4 and later */
   const char *checksum;
   const char *conflict_old;
   const char *conflict_new;
@@ -4656,6 +4741,41 @@ svn_client_info(const char *path_or_url,
                 svn_boolean_t recurse,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
+
+/** @} */
+
+
+/**
+ * @defgroup Patch
+ *
+ * @{
+ */
+
+/**
+ * Apply a patch that's located at @a patch_path against a working copy
+ * pointed to by @a wc_path.
+ *
+ * The patch might carry Unified diffs, svnpatch diffs, or both.
+ * However, 'svn patch' doesn't yet support Unidiff application
+ * internally: we rather delegate this task to an external program.
+ * See svn_wc_apply_unidiff() or notes/svnpatch.
+ * Note: hopefuly this is temporary and we'll have our own
+ * implementation one day to cut off the messy dependency.
+ *
+ * If @a force is not set and the patch involves deleting locally modified or
+ * unversioned items the operation will fail.  If @a force is set such items
+ * will be deleted.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_patch(const char *patch_path,
+                 const char *wc_path,
+                 svn_boolean_t force,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /** @} */
 

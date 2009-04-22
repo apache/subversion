@@ -1,156 +1,425 @@
+*******************************************************
+* FUNCTIONAL SPECIFICATION FOR ISSUE #516: OBLITERATE *
+*******************************************************
 
+0. TABLE OF CONTENTS
 
-            * Functional specification for issue #516: Obliterate *
+     0. TABLE OF CONTENTS
 
+     1. INTRODUCTION
+        1.1. Use Case Overview
+        1.2. Current Solution
 
-#TODO
-+ add the missing functional requirements
-+ add more details and examples - where needed - on the functional requirements
-+ add the missing non-functional requirements
-+ probably need to split up some of the requirements to make them smaller
-  (and SMARTer).
-+ add a clear description of the cascading effect:
-  revisions contain directories, directory contains files and property
-  changes, files contains content changes and property changes, content and
-  property changes can be merged.
-+ verify that with the documented requirements (functional and non-functional)
-  the use cases and examples can be 'solved'.
-+ fill in use case vs requirements table.
-+ let a native English speaker review for clarity and propose better keywords
-+ review on mailing list(s).
-+ finalize
-#END-TODO
+     2. DEFINITION OF THE OBLITERATION OPERATION
+        2.1. Supporting Definitions
+        2.2. Main Definition  
+        2.3. Notes  
 
+     3. DIFFERENT TYPES OF (CORE) OBLITERATION
+        3.1. ABSOLUTE vs. VIRTUAL obliteration
+        3.2. ONLINE vs. OFFLINE vs. REPO-INVALIDATING
 
+     4. LIMITATIONS ON THE OBLITERATION SET
+        4.1. Obliteration of Deletions (is forbidden)
+        4.2. Obliteration of the HEAD revision (is forbidden)
+     
+     5. USE-CASES IN DETAIL
 
-I. Overview
+1. INTRODUCTION
 
-This document serves as the functional specification for what's commonly
-called the 'svn obliterate' feature.
+  This document serves as the functional specification for what's 
+  commonly called the 'svn obliterate' feature.
 
-II. Use Cases
+  1.1. Use Case Overview
 
-    1. Disable all access to confidential information in a repository.
-       [security]
+    A. Disable all remote access to confidential information in 
+       a repository. [client security]
 
-       A. Description
-          This is the case where a user has added information to the repository
-          that should not have been made public. The distribution of this
-          information must be halted, and where it has been distributed, it must
-          be removed.
+       a. Description
+       
+          A user has added information to the repository that should
+          not have been made public. The distribution of this
+          information must be halted, and where it has been
+          distributed, it must be removed.
 
-          This use case typically requires removal of any trace of that
-          information from the whole history of the repository. In short, if a
-          confidential file was copied, also obliterate the copy.
+       b. Examples
+       
+          User adding documents with confidential information to the
+          repository. Distribution to working copies and mirrors needs
+          to be stopped ASAP.
+            
+       c. Primary actor triggering this use case
+       
+          A key user of the repository that knows what confidential 
+          information should be removed, and who can estimate the 
+          impact of obliteration (which paths, which revision range(s) 
+          etc.
+            
+          Normal users should not be able to obliterate. For those 
+          users we already have 'svn rm'.
 
-       B. Examples
-          + User adding documents with confidential information to the repository.
-            Needs to stop distribution to working copies and mirrors ASAP.
-          + User adding source code to the repository, finds out later that it's
-            infringing certain intellectual rights. Need to remove all traces of
-            the infringing source code, including all derivatives, from the
-            repository.
+    B. Information must be completely removed, both from client access 
+       and from access on the server side. [server security]
 
-       C. Primary actor triggering this use case
-          A key user of the repository that knows what confidential information
-          should be removed, and who can estimate the impact of obliteration
-          (which paths, which revision range(s) etc.
+       a. Description
+       
+          A user has added information to the repository that should
+          not have been made public. The distribution of this
+          information must be halted. Additionally, the information
+          must be purged from the repository data files themselves,
+          either because of the threat of a security breach or because
+          the repository itself (or dumps) is publicly distributed.
+          
+       b. Examples
+       
+          User adding source code to the repository, finds out later
+          that it's infringing certain intellectual rights. All traces
+          of the infringing source code, including all derivatives,
+          need to be removed from both distribution and from the
+          repository itself.
 
-          Normal users should not be able to obliterate. For those users we
-          already have 'svn rm'.
+       c. Primary actor triggering this use case
 
-    2. Remove obsolete information from a repository and free the associated
-       disc space.
-       [disc space]
+          A key user of the repository that knows what confidential 
+          information should be removed, and who can estimate the 
+          impact of obliteration (which paths, which revision 
+          range(s) etc.
 
-       A. Description
-          This is the case where unneeded or obsolete information is stored in the
-          repository, taking up lots of disc space. In order to free up disc
-          space, this information may be obliterated.
+          Normal users should not be able to obliterate. 
 
-          This use case typically requires removal of certain subsets of the
-          repository while leaving later revisions intact. In short, if an
-          obsolete file was copied, leave the copy intact.
+    C. Remove obsolete information from a repository and free the 
+       associated disc space. [disc space]
 
-          This use case is often combined with archiving of the obsolete
-          information: archive first, then obliterate.
+       a. Description
 
-       B. Examples
-          + User adding a whole set of development tools, huge binaries or
-            external libraries to the product by mistake.
-          + Users managing huge files (MB/GB's) as part of their normal workflow.
-            These files can be removed when work on newer versions has started.
-          + Users adding source code, assets and build deliverables in the same
-            repository. Certain assets or build deliverables can be removed
-
-          + When a project is moved to its own repository, the project's files may
-            be obliterated from the original repository. This includes moving old
-            projects to an archive repository.
-          + Repositories setup to store product deliverables. Those deliverables
-            for old unmaintained versions, like everything older than a revision
-            or date, may be obliterated from the repository.
-          + Removal of dead branches which changes have and will not be included
-            in the main development line.
-
-       C. Primary actor triggering this use case
-          A repository administrator that's concerned about disc space usage.
-          However, only a key user can decide which information may be
+          This is the case where unneeded or obsolete information is 
+          stored in the repository, taking up lots of disc space. In 
+          order to free up disc space, this information may be 
           obliterated.
 
-III. Current solution
+          This use case typically requires removal of certain subsets
+          of the revision history of the repository, while leaving
+          later revisions intact. Furthermore, any copies made from an
+          obliterated part of the repository to an unobliterated part
+          should still be intact.
 
-    1. Dump -> Filter -> Load
-       Subversion already has a solution in place to completely remove
-       information from a repository. It's a combination of dumping a
-       repository to text format (svnadmin dump), using filters to remove some
-       nodes or revisions from the text (svndumpfilter) and then loading it
-       back into a new repository (svnadmin load).
+          This use case is often combined with archiving of the 
+          obsolete information: archive first, then obliterate.
 
-       Where svndumpfilter is used to remove information from a repository,
-       obliterate should cover at least all of its features.
+       b. Examples
+       
+          User adding large development tools, binaries or
+          external libraries to the product by mistake.
 
-    2. Advantages of current solution
+          Users managing huge files (MB/GB's) as part of their 
+          normal workflow. These files can be removed when work on 
+          newer versions has started.
+
+          Users adding source code, assets and build deliverables 
+          in the same repository. Certain assets or build 
+          deliverables can be removed
+
+          When a project is moved to its own repository, the 
+          project's files may be obliterated from the original 
+          repository. This includes moving old projects to an 
+          archive repository.
+          
+          Repositories setup to store product deliverables. Those 
+          deliverables for old unmaintained versions, like 
+          everything older than a revision or date, may be 
+          obliterated from the repository.
+
+          Removal of dead branches which changes have and will not 
+          be included in the main development line.
+
+       C. Primary actor triggering this use case
+
+          A repository administrator that's concerned about disc space 
+          usage. However, only a key user can decide which information 
+          may be obliterated.
+          
+          Normal users should not be able to obliterate. 
+
+  1.2. Current Solution
+
+    A. Dump -> Filter -> Load
+    
+       Subversion already has a solution in place to completely remove 
+       information from a repository. It's a combination of dumping a 
+       repository to text format (svnadmin dump), using filters to 
+       remove some nodes or revisions from the text (svndumpfilter) 
+       and then loading it back into a new repository (svnadmin load).
+       
+       Where svndumpfilter is used to remove information from a 
+       repository, obliterate should cover at least all of its 
+       features.
+
+    B. Advantages of current solution
 
        + svndumpfilter exists today.
        + It has the most basic include and exclude filters built-in.
        + Its functionality is reasonably well understood.
 
-    3. Disadvantages of current solution
+    C. Disadvantages of current solution
 
-       + svndumpfilter has a series of issues (8 right now, see the issue
-         tracker).
-       + Its filtering options are limited to include or exclude paths, no
-         wildcard support...
+       + svndumpfilter has a number of issues (see issue tracker).
+       + Filtering options are limited to include or exclude paths
+       + No wildcard support...
        + Filtering is based on pathnames, not node based
-       + Due to its streamy way of working it has no random access to the
-         source nor target repository, hence it can't rewrite copies or later
-         modifications on filtered files.
-       + Uses an intermediate text format and requires filtering the whole
-         repository, not only the relevant revisions -> Slow.
+       + Due to its streamy way of working it has no random access 
+         to the source nor target repository, hence it can't rewrite 
+         copies or later modifications on filtered files.
+       + Uses an intermediate text format and requires filtering the
+         whole repository, not only the relevant revisions -> Slow.
        + Requires the extra disc space for the output repository.
        + The svndumpfiler code is not actively maintained.
        + Slow.
-       + Requires shell access on repository server or at least access to
-         dump files.
+       + Requires shell access on repository server or at least access 
+         to dump files.
 
-IV. Detailed functional requirements
+2. DEFINITION OF THE CORE OBLITERATION OPERATION
 
-    0. Overview
+  This section defines the "core" functionality of the obliteration
+  operation in a minimal way. The core functionality defined here 
+  can then be used to implement more complicated operations.
 
-       The workflow of the obliterate solution can be defined in six steps:
+  2.1. Supporting Definitions
 
-       1. SELECT the lines of history to obliterate.
-       2. LIMIT the range of obliteration to a revision or revision range.
-       3. DEFINE how to handle the consequences of obliteration on derivative
-          modifications. [#TODO: this needs a clearer keyword]
+    An OBLITERATION SET is defined by a list of PATH@REVISON 
+    elements (that is, each element is a pair, consisting of a PATH 
+    and REVISION). The same PATH can be paired with multiple 
+    REVISIONS to form multiple elements and vice versa.
+    (Some restrictions are needed for this set, see notes below)
 
-       4. HIDE the selected modifications.
-       5. If needed, UNHIDE selected modifications.
-       6. OBLITERATE the selected modifications from the repository.
+    An ORIGINAL repository is a repository to which an OBLITERATION 
+    operation could be applied, but has not (this includes any 
+    subversion repository without obliterations).
 
-       While in the final solution step 4 HIDE and step 5 OBLITERATE may be
-       combined into one - as it's probably much easier to implement, there are
-       some clear advantages to keeping the HIDE step separate:
+    A MODIFIED repository is a repository which is identical to the
+    ORIGINAL but for which an OBLITERATION SET has been defined and
+    an OBLITERATION operation has been applied.
+
+    A REFERENCE repository is a repository for which any checkout
+    operation yields the same data as for the MODIFIED repository, but
+    no OBLITERATION operation has been applied to it (it has been
+    constructed using regular commits).
+
+  2.2. Main Definition  
+
+    The OBLITERATION operation is defined by the following 
+    three properties:
+
+    1. If a PATH@REVISION is checked out of the MODIFIED repository,  
+       and the PATH@REVISION is NOT in the OBLITERATION SET, the 
+       checkout data is identical to what would have been returned 
+       if PATH@REVISION had been checked out of the ORIGINAL.
+       
+    2. If a PATH@REVISION is checked out of the MODIFIED repository,  
+       and the PATH@REVISION IS in the OBLITERATION SET, the 
+       checkout data is identical to what would have been returned 
+       if PATH@REVPRIOR had been checked out of the ORIGINAL, where 
+       REVPRIOR is the last revision prior to REVISION for which
+       PATH@REVPRIOR is not in the OBLITERATION SET.
+       
+    3. Any other mechanism through which a user can interact with 
+       the repository (diff/merge/copy/commit/svnsync/etc) should work
+       consistently. That is, every remote interaction with MODIFIED
+       must yield a result indistinguishable from what would happen if
+       the same operation were applied to the REFERENCE repository.
+
+  2.3. Notes  
+
+    a. In the text above, "data" refers to the reported existence of 
+       the path, the versioned properties that apply to the path, and
+       for files, the actual contents of the file.
+     
+    b. The definition does not state what happens to revision 
+       properties (several options are available), and it does not
+       state what happens to the reported history of the path (again,
+       several options are available).
+     
+    c. This definition does not state how an obliteration set is 
+       constructed to map out each use case. This is intentional, and
+       intended to minimize the complexity of the core OBLITERATION
+       operation, and break down the assignment into manageable tasks.
+       Mappings between use cases and obliteration sets are discussed
+       in individual sections below.
+     
+    d. Implicit in the above is the fact that the core OBLITERATION 
+       functionality would not drop empty revisions. This is
+       intentional, and intended to minimize the complexity of the
+       core OBLITERATION operation, and break down the assignment
+       into manageable tasks. The removal of empty revisions can 
+       be implemented through a separate pass (and is actually
+       implemented already through svndumpfilter).
+
+    e. The hierarchical nature of the path structure of a project 
+       unavoidably leads to certain restrictions on the OBLITERATION
+       SET. A repository in consistent state has the property that
+       whenever a path of the form [PATH/RELATIVEPATH] exists in the
+       repository, the parent directory  must also exist.
+       
+       Thus, a minimal restriction on the OBLITERATION SET is that 
+         1) A change that adds [PATH]@REVISION must never be 
+            obliterated unless every sub-path change, adding 
+            [PATH/RELATIVEPATH]@REVISION, 
+            is obliterated at the same time.
+         2) A change that deletes [PATH/RELATIVEPATH]@REVISION
+            must never be obliterated unless every parent-path 
+            change, deleting [PATH]@REVISION, 
+            is obliterated at the same time.
+    
+       The restrictions implied by note (e) are discussed in more 
+       detail in section 4.1 of this document.
+
+3. DIFFERENT TYPES OF (CORE) OBLITERATION
+  
+    At a high level, obliteration can be classified along two
+    dimensions. The ABSOLUTE vs. VIRTUAL distinction refers to whether
+    obliterated data is removed from disk or merely hidden. The
+    OFFLINE vs. ONLINE distinction refers to whether working copies
+    can continue to be used after an obliteration operation. The
+    dimensions are independent, so "ABSOLUTE ONLINE", "ABSOLUTE
+    OFFLINE", "VIRTUAL ONLINE" and "VIRTUAL OFFLINE" are all possible
+    (although "VIRTUAL OFFLINE" has little use).
+
+  3.1. ABSOLUTE vs. VIRTUAL obliteration
+
+    a. For an ABSOLUTE obliteration, the repository must be traversed, 
+       and all obliterated data expunged totally, recapturing disk
+       space and preventing a person with access to the repository
+       from retrieving the information.
+
+       ABSOLUTE obliteration is very time-consuming and require a
+       complete copy of the repository (in all currently proposed
+       implementation methods). However, after a (modified) copy is
+       created, it can replace the original relatively quickly.
+
+    b. For a VIRTUAL obliteration, it is enough to mark the
+       obliteratied revisions. The server layer will then dynamically
+       determine what to return over the RA layer, presenting only the
+       modified version to the client.
+
+       Given a repository with VIRTUAL obliterations, ABSOLUTE
+       obliteration can be obtained through a svnsync of the
+       repository (since svnsync sees the repository only through the
+       RA layer). Thus, the obliteration logic would only need to be
+       implemented once.
+
+  3.2. ONLINE vs. OFFLINE vs. REPO-INVALIDATING
+
+    a. An ONLINE implementation of obliteration operates in-place on 
+       the repository (as seen from clients' point of wiew), and
+       allows clients to continue working on the repository while the
+       operation takes place. An ONLINE implementation must be save to
+       use without disabling repository access (by shutting down
+       servers), and will lock the repository for writing only for
+       periods comparable to a commit operation.
+     
+    b. An OFFLINE implementation of obliteration leaves a valid 
+       repository intact at the same location as the original one,
+       and attempts to allow most clients to continue working with
+       the obliterated repository after obliteration. However, the
+       repository is taken offline for some period of time, and all
+       unrelated repository access must be blocked by shutting down
+       server processes.
+    
+    c. A REPO-INVALIDATING implementation performs obliteration only 
+       as it copies the repository to a completely new location. No
+       special effort is made to ensure that clients can continue to
+       work without a fresh checkout, and any attempts to do so are
+       at the users' risk.
+     
+4. LIMITATIONS ON THE OBLITERATION SET
+
+  4.1. Obliteration of Deletions (is forbidden)
+  
+    As section 2.3, note e, mentions, consistency requirements for 
+    the repository tree place limitations on the OBLITERATION SET
+    is to lead to a valid tree layout. These restrictions stem from
+    the requirement that any path in the repository be contained
+    within a parent directory structure (i.e. ^/path/subpath cannot
+    exist in the repo unless ^/path exists as well). 
+    
+    A MINIMAL restriction on the OBLITERATION SET is that 
+    
+    1) A change that adds [PATH]@REVISION must never be obliterated 
+       unless every sub-path change, adding 
+       [PATH/RELATIVEPATH]@REVISION, is obliterated at the same time.
+       
+    2) A change that deletes [PATH/RELATIVEPATH]@REVISION must never 
+       be obliterated unless every parent-path change, deleting 
+       [PATH]@REVISION, is obliterated at the same time.
+
+    However, the minimal restriction is not very intuitive, and can
+    lead to unexpected results. Thus a wider restriction should be
+    placed on obliteration set so that:
+    
+    1) Deletion operations can NEVER enter an obliteration set.
+    
+    2) Apart from the restriction described in 1, the inclusion of 
+       [PATH]@REVISION in an obliteration set ALWAYS implies the
+        inclusion of all [PATH/RELATIVEPATH]@REVISION as well.
+
+  4.2. Obliteration of the HEAD revision  (is forbidden)
+  
+    The VIRTUAL approach to obliteration is performed by marking
+    all revisions in the obliteration set. The server layer then
+    filters the repository to reflect the marks when nodes from
+    within the obliteration set are requested, but returning original
+    data when other notes are requested.
+    
+    This works well when obliterating older revisions, but not for
+    obliterating from HEAD. This can be seen through an example:
+    
+    svn add foo.txt
+    svn commit              [at r1]
+    edit foo.txt
+    svn ci                  [at r2]
+    svn obl foo.txt@0:HEAD  [OBL-SET: foo.txt@1:2]
+    svn up                  [at r2, repo empty (foo.txt obliterated)]
+    svn add bar.txt
+    svn ci                  [at r3]
+    svn up                  [at r3, foo.txt and bar.txt both exist]
+    
+    At this point, foo.txt magically reappears in the repository,
+    since all the data still exists, foo.txt has never been deleted,
+    and foo.txt@3 is not in the obliteration set. Hence, by the 
+    specification, it should not be affected by the obliteration.
+    
+    Note that extending the obliteration set does not solve the issue:
+    
+    svn obl foo.txt@0:HEAD [OBL-SET: foo.txt@1:99999999] 
+    
+    This would imply that foo.txt can never be added again. This is
+    not acceptable either.
+    
+    This issue does not arise with absolute obliteration, since the
+    data is really erased, and a fresh addition can be performed.
+    However, as this example shows, obliterating from HEAD can 
+    lead to confusion, and increases the number of clients that
+    find themselves with working copies that seem up-to-date, but
+    have been rendered (partially) invalidated.
+    
+    Therefore, use-cases requiring obliteration from HEAD should
+    be converted to a commit transaction, which increments the
+    revision number of the HEAD revision, and brings the repository
+    into the desired state, coupled with an obliterate action
+    working on the set up to OLD-HEAD.
+    
+    This conversion could either be implemented by the software, or by 
+    the user.
+    
+
+5. USE-CASES IN DETAIL
+
+  The workflow of the obliterate solution is defined as follows:
+  
+    1. SELECT the lines of history to obliterate.
+    2. DEFINE the obliteration set consistently with the goals.
+    3. OBLITERATE all node@rev elements in the obliteration set.
+
+
 
        + In the security use case, hiding confidential information is much more
          time-critical than the final obliteration.
@@ -180,9 +449,10 @@ IV. Detailed functional requirements
        A. Description
 
           Allow the user to obliterate a single modification from the
-          repository. The lowest level of modification we should consider is
-          the change to a file or directory committed in a specific revision.
-          (Read: no need to support obliterating a single line in a document)
+          repository. The lowest level of modification we should
+          consider is the change to a file or directory committed in a
+          specific revision. (Read: no need to support obliterating a
+          single line in a document)
 
           A modification can be selected by:
 
@@ -314,7 +584,8 @@ IV. Detailed functional requirements
           revision can be specified.
 
           Depending on which SELECT option was chosen, the default LIMITs will
-          be different, as detailed in this table:
+          be different, as detailed in this table, which defines an
+          OBLITERATION SET:
 
           +--------------+---------------------------+---------------+
           | SELECT       | LIMIT FROM rev            | LIMIT TO rev  |
@@ -442,6 +713,34 @@ IV. Detailed functional requirements
           Note: only the first change after the obliterated revision of the
           file should be handled, except for copies of the now obliterated
           revision.
+          
+          Note: When a file change is obliterated, any file modification are 
+          pushed to the next unobliterated revision, to ensure that 
+          obliteration has no effect on elements outside the 
+          OBLITERATION SET
+
+          Note: When handling a copy from an ancestor (path@PEGREV) which has
+          been obliterated, the revision will be changed so that it becomes
+          a copy from the most recent unobliterated ancestor.
+          
+          Example:
+            r1: A  iota   "original content\n"
+            r2: M  iota   "original content\nextra line\n"
+            r3: M  iota   "original content\nextra line\nthird\n"
+            r4: D  iota
+            r5: A  cp-iota (copy from iota@2)  "original content\nextra line\n"
+          
+            Here we obliterate iota, range -r 2:2, exclude descendants.
+            
+            Result:
+            r1: A  iota   "original content\n"
+            r2: [obliterated]
+            r3: M  iota   "original content\nextra line\nthird\n"
+            r4: D  iota
+            r5: A  cp-iota (copy from iota@1)  "original content\nextra line\n"
+
+          Note: If no unobliterated ancestors exist, the revision will be
+          changed so that it becomes a new addition.
 
           Example:
             r1: A  iota   "original content\n"
@@ -553,7 +852,11 @@ IV. Detailed functional requirements
           should be checked in the selected revision range in the repository.
           Depending on the type of modification, actions should be taken.
 
-          + Deleted: Can be ignored.
+          + Deleted: The inclusion of deletions in an OBLITERATION SET results
+            in a number of special issues that need to be handled to ensure 
+            that the internal consistency of the reposotory is maintained.
+            These issues are covered in detail in the section on 
+            "Obliterating Deletions"
           + Replaced by TARGET: Can be ignored.
           + Copied to TARGET:
           + Moved to TARGET:
@@ -604,7 +907,7 @@ IV. Detailed functional requirements
           key user
 
        D. Priority
-          M - MUST have this.
+          S - SHOULD have this if at all possible.
 
 
     15. HIDE selected files, directories and revisions
@@ -635,21 +938,7 @@ IV. Detailed functional requirements
        D. Priority
           S - SHOULD have this if at all possible.
 
-    17. OBLITERATE selected modifications, files, directories and revisions
-
-       A. Description
-          #TODO
-
-       B. Main use case
-          all
-
-       C. Primary actor
-          administrator
-
-       D. Priority
-          M - MUST have this.
-
-    18. Keep audit trail of obliterated information
+    17. Keep audit trail of obliterated information
 
        A. Description
           #TODO
@@ -661,9 +950,9 @@ IV. Detailed functional requirements
           administrator
 
        D. Priority
-          M - MUST have this.
+          C - COULD have this if it does not affect anything else.
 
-    19. Propagating obliteration info to working copies
+    18. Propagating obliteration info to working copies
 
        A. Description
           #TODO
@@ -679,7 +968,7 @@ IV. Detailed functional requirements
 
        E. Workaround
 
-    20. Propagating obliteration info to mirrors
+    19. Propagating obliteration info to mirrors
 
        A. Description
           #TODO

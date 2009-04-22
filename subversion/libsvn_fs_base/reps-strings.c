@@ -1,7 +1,7 @@
 /* reps-strings.c : intepreting representations with respect to strings
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,9 +17,6 @@
 
 #include <assert.h>
 
-#define APU_WANT_DB
-#include <apu_want.h>
-
 #include "svn_fs.h"
 #include "svn_pools.h"
 
@@ -32,6 +29,7 @@
 #include "bdb/strings-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#define SVN_WANT_BDB
 #include "svn_private_config.h"
 
 
@@ -807,7 +805,7 @@ svn_fs_base__rep_contents(svn_string_t *str,
   if (len != str->len)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       _("Failure reading rep '%s'"), rep_key);
+       _("Failure reading representation '%s'"), rep_key);
 
   /* Just the standard paranoia. */
   {
@@ -822,9 +820,11 @@ svn_fs_base__rep_contents(svn_string_t *str,
     if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         _("Checksum mismatch on rep '%s':\n"
-           "   expected:  %s\n"
-           "     actual:  %s\n"), rep_key,
+         apr_psprintf(pool, "%s:\n%s\n%s\n",
+                      _("Checksum mismatch on representation '%s'"),
+                      _("   expected:  %s"),
+                      _("     actual:  %s")),
+         rep_key,
          svn_checksum_to_cstring_display(rep_checksum, pool),
          svn_checksum_to_cstring_display(checksum, pool));
   }
@@ -916,9 +916,11 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->md5_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("MD5 checksum mismatch on rep '%s':\n"
-                     "   expected:  %s\n"
-                     "     actual:  %s\n"), args->rb->rep_key,
+                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
+                                _("MD5 checksum mismatch on representation '%s'"),
+                                _("   expected:  %s"),
+                                _("     actual:  %s")),
+                   args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->md5_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(args->rb->md5_checksum,
@@ -929,9 +931,11 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->sha1_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   _("SHA1 checksum mismatch on rep '%s':\n"
-                     "   expected:  %s\n"
-                     "     actual:  %s\n"), args->rb->rep_key,
+                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
+                                _("SHA1 checksum mismatch on representation '%s'"),
+                                _("   expected:  %s"),
+                                _("     actual:  %s")),
+                   args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(args->rb->sha1_checksum,
@@ -968,18 +972,16 @@ rep_read_contents(void *baton, char *buf, apr_size_t *len)
     SVN_ERR(txn_body_read_rep(&args, rb->trail));
   else
     {
-      /* Hey, guess what?  trails don't clear their own subpools.  In
-         the case of reading from the db, any returned data should
+      /* In the case of reading from the db, any returned data should
          live in our pre-allocated buffer, so the whole operation can
          happen within a single malloc/free cycle.  This prevents us
          from creating millions of unnecessary trail subpools when
-         reading a big file. */
-      apr_pool_t *subpool = svn_pool_create(rb->pool);
+         reading a big file.  */
       SVN_ERR(svn_fs_base__retry_txn(rb->fs,
                                      txn_body_read_rep,
                                      &args,
-                                     subpool));
-      svn_pool_destroy(subpool);
+                                     TRUE,
+                                     rb->pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1138,19 +1140,17 @@ rep_write_contents(void *baton,
     SVN_ERR(txn_body_write_rep(&args, wb->trail));
   else
     {
-      /* Hey, guess what?  trails don't clear their own subpools.  In
-         the case of simply writing the rep to the db, we're *certain*
-         that there's no data coming back to us that needs to be
-         preserved... so the whole operation can happen within a
+      /* In the case of simply writing the rep to the db, we're
+         *certain* that there's no data coming back to us that needs
+         to be preserved... so the whole operation can happen within a
          single malloc/free cycle.  This prevents us from creating
          millions of unnecessary trail subpools when writing a big
          file. */
-      apr_pool_t *subpool = svn_pool_create(wb->pool);
       SVN_ERR(svn_fs_base__retry_txn(wb->fs,
                                      txn_body_write_rep,
                                      &args,
-                                     subpool));
-      svn_pool_destroy(subpool);
+                                     TRUE,
+                                     wb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1205,8 +1205,10 @@ rep_write_close_contents(void *baton)
   if (wb->trail)
     return txn_body_write_close_rep(wb, wb->trail);
   else
+    /* We need to keep our trail pool around this time so the
+       checksums we've calculated survive. */
     return svn_fs_base__retry_txn(wb->fs, txn_body_write_close_rep,
-                                  wb, wb->pool);
+                                  wb, FALSE, wb->pool);
 }
 
 

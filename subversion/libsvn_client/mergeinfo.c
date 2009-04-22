@@ -2,7 +2,7 @@
  * mergeinfo.c :  merge history functions for the libsvn_client library
  *
  * ====================================================================
- * Copyright (c) 2006-2009 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -214,9 +214,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
           /* No explicit mergeinfo on this path.  Look higher up the
              directory tree while keeping track of what we've walked. */
-          walk_path = svn_path_join(svn_path_basename(wcpath, pool),
+          walk_path = svn_path_join(svn_dirent_basename(wcpath, pool),
                                     walk_path, pool);
-          wcpath = svn_path_dirname(wcpath, pool);
+          wcpath = svn_dirent_dirname(wcpath, pool);
 
           err = svn_wc_adm_open3(&adm_access, NULL, wcpath,
                                  FALSE, 0, NULL, NULL, pool);
@@ -229,7 +229,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                   *inherited = FALSE;
                   *mergeinfo = wc_mergeinfo;
                 }
-              return err;
+              return svn_error_return(err);
             }
 
           SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
@@ -316,7 +316,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
           repos_mergeinfo = NULL;
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* If we reparented the session, put it back where our caller had it. */
@@ -691,10 +691,10 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                                         iterpool));
           if (!switched)
             {
-              const char *path_prefix = svn_path_dirname(child->path,
-                                                         iterpool);
-              const char *path_suffix = svn_path_basename(child->path,
-                                                          iterpool);
+              const char *path_prefix = svn_dirent_dirname(child->path,
+                                                           iterpool);
+              const char *path_suffix = svn_dirent_basename(child->path,
+                                                            iterpool);
 
               SVN_ERR(svn_client__parse_mergeinfo(&child_mergeinfo, entry,
                                                   child->path, FALSE,
@@ -702,10 +702,10 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
 
               while (strcmp(path_prefix, target_wcpath) != 0)
                 {
-                  path_suffix = svn_path_join(svn_path_basename(path_prefix,
-                                                                iterpool),
+                  path_suffix = svn_path_join(svn_dirent_basename(path_prefix,
+                                                                  iterpool),
                                               path_suffix, iterpool);
-                  path_prefix = svn_path_dirname(path_prefix, iterpool);
+                  path_prefix = svn_dirent_dirname(path_prefix, iterpool);
                 }
 
               SVN_ERR(elide_mergeinfo(target_mergeinfo, child_mergeinfo,
@@ -1008,10 +1008,12 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   apr_array_header_t *elidable_paths = apr_array_make(pool, 1,
                                                       sizeof(const char *));
   svn_delta_editor_t *editor = svn_delta_default_editor(pool);
-  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths,
-                                                mergeinfo_catalog,
-                                                pool};
+  struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
   int i;
+
+  cb.elidable_paths = elidable_paths;
+  cb.mergeinfo_catalog = mergeinfo_catalog;
+  cb.result_pool = pool;
 
   editor->open_root = elide_mergeinfo_catalog_open_root;
   editor->open_directory = elide_mergeinfo_catalog_open_directory;
@@ -1089,7 +1091,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   apr_array_header_t *revision_ranges;
   svn_opt_revision_t oldest_rev, youngest_rev;
   svn_opt_revision_range_t *range;
-  svn_client_log_args_t *log_args;
   struct filter_log_entry_baton_t fleb;
 
   if (! rangelist->nelts)
@@ -1118,19 +1119,15 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   fleb.log_receiver_baton = log_receiver_baton;
   fleb.ctx = ctx;
 
-  /* Build log API arguments. */
+  /* Drive the log. */
   revision_ranges = apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
   range = apr_pcalloc(pool, sizeof(*range));
   range->end = youngest_rev;
   range->start = oldest_rev;
   APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
-  log_args = svn_client_log_args_create(pool);
-  log_args->discover_changed_paths = discover_changed_paths;
-
-  /* Drive the log. */
-  SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges, revprops,
-                          log_args, filter_log_entry_with_rangelist, &fleb, ctx,
-                          pool));
+  SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
+                          0, discover_changed_paths, FALSE, FALSE, revprops,
+                          filter_log_entry_with_rangelist, &fleb, ctx, pool));
 
   /* Check for cancellation. */
   if (ctx->cancel_func)
@@ -1279,7 +1276,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
   /* Step 4: Finally, we run 'svn log' to drive our log receiver, but
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
-  log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
+  log_target = svn_path_url_add_component2(repos_root, log_target + 1, pool);
   return logs_for_mergeinfo_rangelist(log_target, rangelist,
                                       discover_changed_paths, revprops,
                                       log_receiver, log_receiver_baton,
@@ -1425,7 +1422,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   /* Step 5: Finally, we run 'svn log' to drive our log receiver, but
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
-  log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
+  log_target = svn_path_url_add_component2(repos_root, log_target + 1, pool);
   return logs_for_mergeinfo_rangelist(log_target, rangelist,
                                       discover_changed_paths, revprops,
                                       log_receiver, log_receiver_baton,
@@ -1474,7 +1471,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   if (copyfrom_path)
     {
       APR_ARRAY_PUSH(list, const char *) =
-        svn_path_url_add_component(repos_root, copyfrom_path + 1, pool);
+        svn_path_url_add_component2(repos_root, copyfrom_path, pool);
     }
 
   if (mergeinfo)
@@ -1488,7 +1485,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
           rel_path = key;
           if (copyfrom_path == NULL || strcmp(rel_path, copyfrom_path) != 0)
             APR_ARRAY_PUSH(list, const char *) = \
-              svn_path_url_add_component(repos_root, rel_path + 1, pool);
+              svn_path_url_add_component2(repos_root, rel_path + 1, pool);
         }
     }
 

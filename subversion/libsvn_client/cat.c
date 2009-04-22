@@ -28,6 +28,7 @@
 #include "svn_subst.h"
 #include "svn_io.h"
 #include "svn_time.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "client.h"
@@ -109,7 +110,7 @@ cat_local_file(const char *path,
 
   if (keywords)
     {
-      const char *fmt;
+      const char *rev_str;
       const char *author;
 
       if (local_mod)
@@ -118,19 +119,17 @@ cat_local_file(const char *path,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          fmt = "%ldM";
+          rev_str = apr_psprintf(pool, "%ldM", entry->cmt_rev);
           author = _("(local)");
         }
       else
         {
-          fmt = "%ld";
+          rev_str = apr_psprintf(pool, "%ld", entry->cmt_rev);
           author = entry->cmt_author;
         }
 
       SVN_ERR(svn_subst_build_keywords2
-              (&kw, keywords->data,
-               apr_psprintf(pool, fmt, entry->cmt_rev),
-               entry->url, tm, author, pool));
+              (&kw, keywords->data, rev_str, entry->url, tm, author, pool));
     }
 
   /* Our API contract says that OUTPUT will not be closed. The two paths
@@ -183,8 +182,8 @@ svn_client_cat2(svn_stream_t *out,
       svn_wc_adm_access_t *adm_access;
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
-                               svn_path_dirname(path_or_url, pool), FALSE,
-                               0, ctx->cancel_func, ctx->cancel_baton,
+                               svn_dirent_dirname(path_or_url, pool),
+                               FALSE, 0, ctx->cancel_func, ctx->cancel_baton,
                                pool));
 
       SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision,
@@ -265,15 +264,4 @@ svn_client_cat2(svn_stream_t *out,
     SVN_ERR(svn_stream_close(output));
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_cat(svn_stream_t *out,
-               const char *path_or_url,
-               const svn_opt_revision_t *revision,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
-{
-  return svn_client_cat2(out, path_or_url, revision, revision,
-                         ctx, pool);
 }

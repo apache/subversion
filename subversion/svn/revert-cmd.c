@@ -71,5 +71,5 @@ svn_cl__revert(apr_getopt_t *os,
         (err, _("Try 'svn revert --depth infinity' instead?"));
     }
 
-  return err;
+  return svn_error_return(err);
 }

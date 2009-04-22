@@ -22,6 +22,7 @@
 #include <apr_buckets.h>
 
 #include <mod_dav.h>
+#include <http_protocol.h>
 
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -501,13 +502,13 @@ dav_svn__final_flush_or_error(request_rec *r,
   dav_error *derr = preferred_err;
   svn_boolean_t do_flush;
 
-  do_flush = r->sent_bodyct > 0 ? TRUE : FALSE;
+  do_flush = r->sent_bodyct > 0;
   if (! do_flush)
     {
       /* Ask about the length of the bucket brigade, ignoring errors. */
       apr_off_t len;
       (void)apr_brigade_length(bb, FALSE, &len);
-      do_flush = (len != 0) ? TRUE : FALSE;
+      do_flush = (len != 0);
     }
 
   /* If there's something in the bucket brigade to flush, or we've
@@ -522,4 +523,41 @@ dav_svn__final_flush_or_error(request_rec *r,
                              "Error flushing brigade.");
     }
   return derr;
+}
+
+
+int
+dav_svn__error_response_tag(request_rec *r,
+                            dav_error *err)
+{
+  r->status = err->status;
+
+  /* ### I really don't think this is needed; gotta test */
+  r->status_line = ap_get_status_line(err->status);
+
+  ap_set_content_type(r, DAV_XML_CONTENT_TYPE);
+  ap_rputs(DAV_XML_HEADER DEBUG_CR "<D:error xmlns:D=\"DAV:\"", r);
+
+  if (err->desc != NULL)
+    ap_rputs(" xmlns:m=\"http://apache.org/dav/xmlns\"", r);
+
+  if (err->namespace != NULL)
+    ap_rprintf(r, " xmlns:C=\"%s\">" DEBUG_CR "<C:%s/>" DEBUG_CR,
+               err->namespace, err->tagname);
+  else
+    ap_rprintf(r, ">" DEBUG_CR "<D:%s/>" DEBUG_CR, err->tagname);
+
+  /* here's our mod_dav specific tag: */
+  if (err->desc != NULL)
+    ap_rprintf(r, "<m:human-readable errcode=\"%d\">" DEBUG_CR "%s" DEBUG_CR
+               "</m:human-readable>" DEBUG_CR, err->error_id,
+               apr_xml_quote_string(r->pool, err->desc, 0));
+
+  ap_rputs("</D:error>" DEBUG_CR, r);
+  
+  /* the response has been sent. */
+  /*
+   * ### Use of DONE obviates logging..!
+   */
+  return DONE;
 }

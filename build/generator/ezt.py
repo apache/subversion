@@ -167,7 +167,6 @@ Directives
 
 import string
 import re
-from types import StringType, IntType, FloatType
 import os
 
 #
@@ -347,7 +346,7 @@ class Template:
     to the file object 'fp' and functions are called.
     """
     for step in program:
-      if isinstance(step, StringType):
+      if isinstance(step, str):
         fp.write(step)
       else:
         step[0](step[1], fp, ctx)
@@ -357,7 +356,7 @@ class Template:
 
     # if the value has a 'read' attribute, then it is a stream: copy it
     if hasattr(value, 'read'):
-      while 1:
+      while True:
         chunk = value.read(16384)
         if not chunk:
           break
@@ -365,7 +364,8 @@ class Template:
     else:
       fp.write(value)
 
-  def _cmd_format(self, (valref, args), fp, ctx):
+  def _cmd_format(self, valref_args, fp, ctx):
+    (valref, args) = valref_args
     fmt = _get_value(valref, ctx)
     parts = _re_subst.split(fmt)
     for i in range(len(parts)):
@@ -378,7 +378,8 @@ class Template:
           piece = '<undef>'
       fp.write(piece)
 
-  def _cmd_include(self, (valref, reader), fp, ctx):
+  def _cmd_include(self, valref_reader, fp, ctx):
+    (valref, reader) = valref_reader
     fname = _get_value(valref, ctx)
     ### note: we don't have the set of for_names to pass into this parse.
     ### I don't think there is anything to do but document it.
@@ -429,7 +430,7 @@ class Template:
   def _cmd_for(self, args, fp, ctx):
     ((valref,), unused, section) = args
     list = _get_value(valref, ctx)
-    if isinstance(list, StringType):
+    if isinstance(list, str):
       raise NeedSequenceError()
     refname = valref[0]
     ctx.for_index[refname] = idx = [ list, 0 ]
@@ -479,7 +480,7 @@ def _prepare_ref(refname, for_names, file_args):
       break
   return refname, start, rest
 
-def _get_value((refname, start, rest), ctx):
+def _get_value(refname_start_rest, ctx):
   """(refname, start, rest) -> a prepared `value reference' (see above).
   ctx -> an execution context instance.
 
@@ -487,6 +488,7 @@ def _get_value((refname, start, rest), ctx):
   for blocks take precedence over data dictionary members with the
   same name.
   """
+  (refname, start, rest) = refname_start_rest
   if rest is None:
     # it was a string constant
     return start
@@ -506,7 +508,7 @@ def _get_value((refname, start, rest), ctx):
       raise UnknownReference(refname)
 
   # make sure we return a string instead of some various Python types
-  if isinstance(ob, IntType) or isinstance(ob, FloatType):
+  if isinstance(ob, int) or isinstance(ob, float):
     return str(ob)
   if ob is None:
     return ''

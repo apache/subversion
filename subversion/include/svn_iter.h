@@ -20,11 +20,19 @@
  *
  */
 
-#include <apr_hash.h>
+#ifndef SVN_ITER_H
+#define SVN_ITER_H
+
+#include <apr.h>         /* for apr_ssize_t */
+#include <apr_pools.h>   /* for apr_pool_t */
+#include <apr_hash.h>    /* for apr_hash_t */
+#include <apr_tables.h>  /* for apr_array_header_t */
 
 #include "svn_types.h"
-#include "svn_error.h"
-#include "svn_pools.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /** Callback function for use with svn_iter_apr_hash().
@@ -106,6 +114,7 @@ svn_iter_apr_array(svn_boolean_t *completed,
 svn_error_t *
 svn_iter__break(void);
 
+
 /** Helper macro to break looping in svn_iter_apr_array() and
  * svn_iter_apr_hash() driven loops.
  *
@@ -116,3 +125,10 @@ svn_iter__break(void);
  * @since New in 1.5.
  */
 #define svn_iter_break(pool) return svn_iter__break()
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_ITER_H */

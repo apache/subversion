@@ -82,10 +82,9 @@ dnl
 dnl Look for sqlite in PATH using pkg-config.
 AC_DEFUN(SVN_SQLITE_PKG_CONFIG,
 [
-    AC_PATH_PROG(pkg_config,pkg-config)
-    if test -x "$pkg_config"; then
+    if test -n "$PKG_CONFIG"; then
       AC_MSG_CHECKING([sqlite library version (via pkg-config)])
-      sqlite_version=`$pkg_config $SQLITE_PKGNAME --modversion --silence-errors`
+      sqlite_version=`$PKG_CONFIG $SQLITE_PKGNAME --modversion --silence-errors`
 
       if test -n "$sqlite_version"; then
         SVN_SQLITE_VERNUM_PARSE
@@ -93,8 +92,8 @@ AC_DEFUN(SVN_SQLITE_PKG_CONFIG,
         if test "$sqlite_ver_num" -ge "$sqlite_min_ver_num"; then
           AC_MSG_RESULT([$sqlite_version])
           svn_lib_sqlite="yes"
-          SVN_SQLITE_INCLUDES="`$pkg_config $SQLITE_PKGNAME --cflags`"
-          SVN_SQLITE_LIBS="`$pkg_config $SQLITE_PKGNAME --libs`"
+          SVN_SQLITE_INCLUDES="`$PKG_CONFIG $SQLITE_PKGNAME --cflags`"
+          SVN_SQLITE_LIBS="`$PKG_CONFIG $SQLITE_PKGNAME --libs`"
         else
           AC_MSG_RESULT([none or unsupported $sqlite_version])
         fi

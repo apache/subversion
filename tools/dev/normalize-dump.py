@@ -12,8 +12,7 @@ class NodePath:
 
     def dump(self):
         print((' ' * 3) + self.path)
-        headers = list(self.headers.keys())
-        headers.sort()
+        headers = sorted(self.headers.keys())
         for header in headers:
             print((' ' * 6) + header + ': ' + self.headers[header])
 
@@ -21,8 +20,7 @@ class NodePath:
 def dump_revision(rev, nodepaths):
     sys.stderr.write('* Normalizing revision ' + rev + '...')
     print('Revision ' + rev)
-    paths = list(nodepaths.keys())
-    paths.sort()
+    paths = sorted(nodepaths.keys())
     for path in paths:
         nodepath = nodepaths[path]
         nodepath.dump()
@@ -32,7 +30,7 @@ def dump_revision(rev, nodepaths):
 
 def parse_header_block(fp):
     headers = {}
-    while 1:
+    while True:
         line = fp.readline()
         if line == '':
             return headers, 1
@@ -49,7 +47,7 @@ def parse_file(fp):
     nodepaths = {}
     current_rev = None
 
-    while 1:
+    while True:
         # Parse a block of headers
         headers, eof = parse_header_block(fp)
 

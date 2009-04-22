@@ -172,7 +172,7 @@ pack_filesystem(const char **msg,
     return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -240,7 +240,7 @@ pack_filesystem(const char **msg,
 /* Pack a filesystem.  */
 #define REPO_NAME "test-repo-fsfs-pack-even"
 #define SHARD_SIZE 4
-#define MAX_REV 10 
+#define MAX_REV 10
 static svn_error_t *
 pack_even_filesystem(const char **msg,
                      svn_boolean_t msg_only,
@@ -256,7 +256,7 @@ pack_even_filesystem(const char **msg,
     return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -294,7 +294,7 @@ read_packed_fs(const char **msg,
     return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -344,7 +344,7 @@ commit_packed_fs(const char **msg,
     return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0) 
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 

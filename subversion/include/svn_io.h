@@ -27,11 +27,14 @@
 
 #include <apr.h>
 #include <apr_pools.h>
+#include <apr_time.h>
+#include <apr_hash.h>
+#include <apr_tables.h>
 #include <apr_file_io.h>
-#include <apr_thread_proc.h>
+#include <apr_file_info.h>
+#include <apr_thread_proc.h>  /* for apr_proc_t, apr_exit_why_e */
 
 #include "svn_types.h"
-#include "svn_error.h"
 #include "svn_string.h"
 #include "svn_checksum.h"
 
@@ -185,7 +188,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
@@ -739,7 +742,7 @@ svn_stream_open_readonly(svn_stream_t **stream,
                          apr_pool_t *scratch_pool);
 
 
-/** Create a stream to write a file at @a path. The fille will be *created*
+/** Create a stream to write a file at @a path. The file will be *created*
  * using the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the
  * perms. The file will be created "exclusively", so if it already exists,
  * then an error will be thrown. If you'd like to use different values, or
@@ -765,7 +768,7 @@ svn_stream_open_writable(svn_stream_t **stream,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
@@ -965,7 +968,6 @@ svn_stream_readline(svn_stream_t *stream,
  * the two streams). If the closure is not desired, then you can use
  * svn_stream_disown() to protect either or both of the streams from
  * being closed.
- * ### TODO: should close the streams ALWAYS, even on error exit
  *
  * @since New in 1.6.
  */
@@ -1219,11 +1221,14 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
  * its exit code.  @a cmd is used only in error messages.
  *
- * If @a exitcode is not NULL, @a *exitcode will contain the exit code
- * of the process upon return, and if @a exitwhy is not NULL, @a
- * *exitwhy will indicate why the process terminated.  If @a exitwhy is
- * NULL, and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if
- * @a exitcode is NULL and the exit code is non-zero, then an
+ * If @a exitcode is not NULL, and SVN_NO_ERROR is returned, @a *exitcode
+ * will contain the exit code of the process.  If @a exitcode is NULL and
+ * the exit code is non-zero, then an @c SVN_ERR_EXTERNAL_PROGRAM error
+ * will be returned.
+ *
+ * If @a exitwhy is not NULL, and SVN_NO_ERROR is returned, @a *exitwhy
+ * will indicate why the process terminated.  If @a exitwhy is NULL,
+ * and the exit reason is not @c APR_PROC_CHECK_EXIT(), then an
  * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
  *
  * @since New in 1.3.
@@ -1251,7 +1256,7 @@ svn_io_run_cmd(const char *path,
                apr_file_t *errfile,
                apr_pool_t *pool);
 
-/** Invoke @c the configured diff program, with @a user_args (an array
+/** Invoke the configured @c diff program, with @a user_args (an array
  * of utf8-encoded @a num_user_args arguments) if they are specified
  * (that is, if @a user_args is non-NULL), or "-u" if they are not.
  * If @a user_args is NULL, the value of @a num_user_args is ignored.
@@ -1269,7 +1274,27 @@ svn_io_run_cmd(const char *path,
  * @a diff_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
+ * @since New in 1.6.0.
  */
+svn_error_t *
+svn_io_run_diff2(const char *dir,
+                 const char *const *user_args,
+                 int num_user_args,
+                 const char *label1,
+                 const char *label2,
+                 const char *from,
+                 const char *to,
+                 int *exitcode,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const char *diff_cmd,
+                 apr_pool_t *pool);
+
+/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal
+ * encoding used by APR.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff(const char *dir,
                 const char *const *user_args,
@@ -1283,6 +1308,7 @@ svn_io_run_diff(const char *dir,
                 apr_file_t *errfile,
                 const char *diff_cmd,
                 apr_pool_t *pool);
+
 
 
 /** Invoke the configured @c diff3 program, in utf8-encoded @a dir
@@ -1319,6 +1345,27 @@ svn_io_run_diff(const char *dir,
  *
  * @since New in 1.4.
  */
+svn_error_t *
+svn_io_run_diff3_3(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool);
+
+/** Similar to svn_io_run_diff3_3(), but with @a diff3_cmd encoded in
+ * internal encoding used by APR.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
+ * @since New in 1.4.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff3_2(int *exitcode,
                    const char *dir,
@@ -1475,7 +1522,7 @@ svn_io_file_write_full(apr_file_t *file,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.

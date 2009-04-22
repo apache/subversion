@@ -82,6 +82,50 @@ trim_string(char **pstr)
   str[i] = '\0';
 }
 
+/* Split PROPERTY and store each individual value in PROPS.
+   Allocates from POOL. */
+static void
+split_props(apr_array_header_t **props,
+            const char *property,
+            apr_pool_t *pool)
+{
+  apr_array_header_t *temp_props;
+  char *new_prop;
+  int i = 0;
+  int j = 0;
+
+  temp_props = apr_array_make(pool, 4, sizeof(char *));
+  new_prop = apr_palloc(pool, strlen(property)+1);
+
+  for (i = 0; property[i] != '\0'; i++)
+    {
+      if (property[i] != ';')
+        {
+          new_prop[j] = property[i];
+          j++;
+        }
+      else if (property[i] == ';')
+        {
+          if (property[i+1] == ';')
+            {
+              new_prop[j] = ';';
+              j++;
+              i++;
+            }
+          else
+            {
+              new_prop[j] = '\0';
+              APR_ARRAY_PUSH(temp_props, char *) = new_prop;
+              new_prop += j + 1;
+              j = 0;
+            }
+        }
+    }
+  new_prop[j] = '\0';
+  APR_ARRAY_PUSH(temp_props, char *) = new_prop;
+  *props = temp_props;
+}
+
 /* For one auto-props config entry (NAME, VALUE), if the filename pattern
    NAME matches BATON->filename case insensitively then add the properties
    listed in VALUE into BATON->properties.
@@ -93,9 +137,9 @@ auto_props_enumerator(const char *name,
                       void *baton,
                       apr_pool_t *pool)
 {
+  int i;
   auto_props_baton_t *autoprops = baton;
-  char *property;
-  char *last_token;
+  apr_array_header_t *props;
 
   /* nothing to do here without a value */
   if (strlen(value) == 0)
@@ -105,14 +149,13 @@ auto_props_enumerator(const char *name,
   if (apr_fnmatch(name, autoprops->filename, APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
     return TRUE;
 
-  /* parse the value (we dup it first to effectively lose the
-     'const', and to avoid messing up the original value) */
-  property = apr_pstrdup(autoprops->pool, value);
-  property = apr_strtok(property, ";", &last_token);
-  while (property)
+  split_props(&props, value, autoprops->pool);
+
+  for (i = 0; i < props->nelts; i++)
     {
       int len;
       const char *this_value;
+      char *property = APR_ARRAY_IDX(props, i, char *);
       char *equal_sign = strchr(property, '=');
 
       if (equal_sign)
@@ -128,10 +171,13 @@ auto_props_enumerator(const char *name,
         }
       trim_string(&property);
       len = strlen(property);
+
       if (len > 0)
         {
-          svn_string_t *propval = svn_string_create(this_value,
-                                                    autoprops->pool);
+          svn_string_t *propval = apr_palloc(autoprops->pool,
+                                             sizeof(*propval));
+          propval->data = this_value;
+          propval->len = strlen(this_value);
 
           apr_hash_set(autoprops->properties, property, len, propval);
           if (strcmp(property, SVN_PROP_MIME_TYPE) == 0)
@@ -139,7 +185,6 @@ auto_props_enumerator(const char *name,
           else if (strcmp(property, SVN_PROP_EXECUTABLE) == 0)
             autoprops->have_executable = TRUE;
         }
-      property = apr_strtok(NULL, ";", &last_token);
     }
   return TRUE;
 }
@@ -157,7 +202,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
 
   /* initialisation */
   autoprops.properties = apr_hash_make(pool);
-  autoprops.filename = svn_path_basename(path, pool);
+  autoprops.filename = svn_dirent_basename(path, pool);
   autoprops.pool = pool;
   autoprops.mimetype = NULL;
   autoprops.have_executable = FALSE;
@@ -310,7 +355,7 @@ add_dir_recursive(const char *dirname,
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, dirname, pool));
 
@@ -343,7 +388,7 @@ add_dir_recursive(const char *dirname,
               if (apr_err)
                 return svn_error_wrap_apr
                   (apr_err, _("Can't close directory '%s'"),
-                   svn_path_local_style(dirname, subpool));
+                   svn_dirent_local_style(dirname, subpool));
               break;
             }
           else
@@ -351,7 +396,7 @@ add_dir_recursive(const char *dirname,
               return svn_error_createf
                 (err->apr_err, err,
                  _("Error during add of '%s'"),
-                 svn_path_local_style(dirname, subpool));
+                 svn_dirent_local_style(dirname, subpool));
             }
         }
 
@@ -375,7 +420,7 @@ add_dir_recursive(const char *dirname,
         continue;
 
       /* Construct the full path of the entry. */
-      fullpath = svn_path_join(dirname, this_entry.name, subpool);
+      fullpath = svn_dirent_join(dirname, this_entry.name, subpool);
 
       /* Recurse on directories; add files; ignore the rest. */
       if (this_entry.filetype == APR_DIR && depth >= svn_depth_immediates)
@@ -395,7 +440,7 @@ add_dir_recursive(const char *dirname,
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else if (err)
-            return err;
+            return svn_error_return(err);
         }
     }
 
@@ -446,7 +491,7 @@ add(const char *path,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -477,12 +522,12 @@ add_parent_dirs(const char *path,
         {
           return svn_error_createf
             (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
-             _("'%s' ends in a reserved name"), 
-             svn_path_local_style(path, pool));
+             _("'%s' ends in a reserved name"),
+             svn_dirent_local_style(path, pool));
         }
       else
         {
-          const char *parent_path = svn_path_dirname(path, pool);
+          const char *parent_path = svn_dirent_dirname(path, pool);
 
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
@@ -495,7 +540,7 @@ add_parent_dirs(const char *path,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
 
   if (parent_access)
@@ -523,8 +568,8 @@ svn_client_add4(const char *path,
     {
       apr_pool_t *subpool;
 
-      SVN_ERR(svn_path_get_absolute(&path, path, pool));
-      parent_dir = svn_path_dirname(path, pool);
+      SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
+      parent_dir = svn_dirent_dirname(path, pool);
 
       subpool = svn_pool_create(pool);
       SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
@@ -533,7 +578,7 @@ svn_client_add4(const char *path,
     }
   else
     {
-      parent_dir = svn_path_dirname(path, pool);
+      parent_dir = svn_dirent_dirname(path, pool);
     }
 
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
@@ -551,7 +596,7 @@ svn_client_add4(const char *path,
         err = err2;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -579,9 +624,8 @@ add_url_parents(svn_ra_session_t *ra_session,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *parent_url;
+  const char *parent_url = svn_uri_dirname(url, pool);
 
-  svn_path_split(url, &parent_url, NULL, pool);
 
   SVN_ERR(svn_ra_reparent(ra_session, parent_url, temppool));
   SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -614,6 +658,16 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   svn_error_t *err;
   const char *common;
   int i;
+
+  /* Early exit when there is a mix of URLs and local paths. */
+  for (i = 0; i < urls->nelts; i++)
+    {
+      const char *url = APR_ARRAY_IDX(urls, i, const char *);
+      if (! svn_path_is_url(url))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Illegal repository URL '%s'"),
+                                 url);
+    }
 
   /* Find any non-existent parent directories */
   if (make_parents)
@@ -648,7 +702,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_path_split(common, &common, &bname, pool);
+      svn_uri_split(common, &common, &bname, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
   else
@@ -670,11 +724,11 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
       if (resplit)
         {
           const char *bname;
-          svn_path_split(common, &common, &bname, pool);
+          svn_uri_split(common, &common, &bname, pool);
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
-              path = svn_path_join(bname, path, pool);
+              path = svn_uri_join(bname, path, pool);
               APR_ARRAY_IDX(targets, i, const char *) = path;
             }
         }
@@ -695,7 +749,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_join(common, path, pool);
+          item->url = svn_uri_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -744,7 +798,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -785,7 +839,7 @@ svn_client__make_local_parents(const char *path,
       svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 

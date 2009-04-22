@@ -37,6 +37,7 @@
 #include "svn_ra.h"              /* for SVN_RA_CAPABILITY_* */
 #include "svn_ra_svn.h"
 #include "svn_repos.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_config.h"
@@ -1194,7 +1195,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      violates authz. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
                            NULL,
-                           (lock_tokens && lock_tokens->nelts) ? TRUE : FALSE));
+                           (lock_tokens && lock_tokens->nelts)));
 
   /* Authorize the lock tokens and give them to the FS if we got
      any. */
@@ -1458,8 +1459,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
               /* has_props */
               SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
                                                subpool));
-              entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE
-                                                                  : FALSE;
+              entry->has_props = (apr_hash_count(file_props) > 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)
@@ -2860,7 +2860,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   b->repos_url = url_buf->data;
   b->authz_repos_name = svn_path_is_child(root, repos_root, pool);
   if (b->authz_repos_name == NULL)
-    b->repos_name = svn_path_basename(repos_root, pool);
+    b->repos_name = svn_uri_basename(repos_root, pool);
   else
     b->repos_name = b->authz_repos_name;
   b->repos_name = svn_path_uri_encode(b->repos_name, pool);

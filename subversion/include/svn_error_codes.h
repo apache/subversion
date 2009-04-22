@@ -42,10 +42,7 @@
 #if defined(SVN_ERROR_BUILD_ARRAY) || !defined(SVN_ERROR_ENUM_DEFINED)
 
 
-#include <apr.h>
 #include <apr_errno.h>     /* APR's error system */
-
-#include "svn_props.h"     /* For SVN_PROP_EXTERNALS. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -353,9 +350,12 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
-  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
+  SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
+
+  /** @deprecated This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY. */
+#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
@@ -460,6 +460,31 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
              SVN_ERR_WC_CATEGORY_START + 31,
              "Cannot move a file external")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_DB_ERROR,
+             SVN_ERR_WC_CATEGORY_START + 32,
+             "Something's amiss with the wc sqlite database")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_MISSING,
+             SVN_ERR_WC_CATEGORY_START + 33,
+             "The working copy is missing")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_NOT_SYMLINK,
+             SVN_ERR_WC_CATEGORY_START + 34,
+             "The specified node is not a symlink")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+             SVN_ERR_WC_CATEGORY_START + 35,
+             "The specified path has an unexpected status")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_UPGRADE_REQUIRED,
+             SVN_ERR_WC_CATEGORY_START + 36,
+             "The working copy needs to be upgraded")
 
   /* fs errors */
 
@@ -845,6 +870,16 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
 
+  /** @since New in 1.7 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+             SVN_ERR_RA_DAV_CATEGORY_START + 12,
+             "Connection timed out")
+
+  /** @since New in 1.6 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
+             SVN_ERR_RA_DAV_CATEGORY_START + 13,
+             "URL access forbidden for unknown reason")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
@@ -898,6 +933,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
              SVN_ERR_RA_SERF_CATEGORY_START + 1,
              "Server SSL certificate untrusted")
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED,
+             SVN_ERR_RA_SERF_CATEGORY_START + 2,
+             "Initialization of the GSSAPI context failed")
 
   /* libsvn_auth errors */
 

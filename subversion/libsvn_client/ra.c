@@ -26,6 +26,7 @@
 #include "svn_sorts.h"
 #include "svn_ra.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
@@ -196,7 +197,7 @@ invalidate_wcprop_for_entry(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&entry_access, wb->base_access,
                               ((entry->kind == svn_node_dir)
                                ? path
-                               : svn_path_dirname(path, pool)),
+                               : svn_dirent_dirname(path, pool)),
                               pool));
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
@@ -356,12 +357,12 @@ svn_client_uuid_from_path(const char **uuid,
 
   if (!is_root)
     {
-      /* Workingcopies have a single uuid, as all contents is from a single
+      /* Working copies have a single uuid, as all contents is from a single
          repository */
 
       svn_error_t *err;
       svn_wc_adm_access_t *parent_access;
-      const char *parent = svn_path_dirname(path, pool);
+      const char *parent = svn_dirent_dirname(path, pool);
 
       /* Open the parents administrative area to fetch the uuid.
          Subversion 1.0 and later have the uuid in every checkout root */
@@ -369,15 +370,15 @@ svn_client_uuid_from_path(const char **uuid,
       SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
                                ctx->cancel_func, ctx->cancel_baton, pool));
 
-      err = svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
+      err = svn_client_uuid_from_path(uuid, svn_dirent_dirname(path, pool),
                                       parent_access, ctx, pool);
 
       svn_error_clear(svn_wc_adm_close2(parent_access, pool));
 
-      return err;
+      return svn_error_return(err);
     }
 
-  /* We may have a workingcopy without uuid */
+  /* We may have a working copy without uuid */
   if (entry->url)
     {
       /* You can enter this case by copying a new subdirectory with 1.0-1.5
@@ -444,7 +445,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
                                                base_dir, base_access, NULL,
-                                               base_access ? TRUE : FALSE,
+                                               base_access != NULL,
                                                FALSE, ctx, pool));
 
   dead_end_rev.kind = svn_opt_revision_unspecified;
@@ -703,7 +704,7 @@ svn_client__repos_locations(const char **start_url,
     return svn_error_createf
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
-       path, start_revnum);
+       svn_path_local_style(path, pool), start_revnum);
 
   end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(svn_revnum_t));
   if (! end_path)
@@ -711,7 +712,7 @@ svn_client__repos_locations(const char **start_url,
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
-       path, end_revnum);
+       svn_path_local_style(path, pool), end_revnum);
 
   /* Repository paths might be absolute, but we want to treat them as
      relative.

@@ -3,7 +3,7 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,18 +17,14 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
 #include "svn_wc.h"
 #include "svn_subst.h"
+#include "svn_pools.h"
+#include "svn_props.h"
 
 #include "wc.h"
 
@@ -37,8 +33,6 @@
 
 
 
-/*** Code. ***/
-
 /*** From adm_crawler.c ***/
 
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
@@ -114,6 +108,34 @@ static const svn_ra_reporter3_t wrap_3to2_reporter = {
   wrap_3to2_finish_report,
   wrap_3to2_abort_report
 };
+
+svn_error_t *
+svn_wc_crawl_revisions3(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+{
+  return svn_wc_crawl_revisions4(path,
+                                 adm_access,
+                                 reporter, report_baton,
+                                 restore_files,
+                                 depth,
+                                 FALSE,
+                                 depth_compatibility_trick,
+                                 use_commit_times,
+                                 notify_func,
+                                 notify_baton,
+                                 traversal_info,
+                                 pool);
+}
 
 svn_error_t *
 svn_wc_crawl_revisions2(const char *path,
@@ -270,6 +292,20 @@ svn_wc_ensure_adm(const char *path,
 {
   return svn_wc_ensure_adm2(path, uuid, url, NULL, revision, pool);
 }
+
+svn_error_t *
+svn_wc_create_tmp_file(apr_file_t **fp,
+                       const char *path,
+                       svn_boolean_t delete_on_close,
+                       apr_pool_t *pool)
+{
+  return svn_wc_create_tmp_file2(fp, NULL, path,
+                                 delete_on_close
+                                 ? svn_io_file_del_on_close
+                                 : svn_io_file_del_none,
+                                 pool);
+}
+
 
 /*** From adm_ops.c ***/
 svn_error_t *
@@ -496,7 +532,7 @@ struct callbacks_wrapper_baton {
   void *baton;
 };
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 file_changed(svn_wc_adm_access_t *adm_access,
              svn_wc_notify_state_t *contentstate,
@@ -564,7 +600,7 @@ file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 file_deleted(svn_wc_adm_access_t *adm_access,
              svn_wc_notify_state_t *state,
@@ -606,7 +642,7 @@ dir_added(svn_wc_adm_access_t *adm_access,
   return b->callbacks->dir_added(adm_access, state, path, rev, b->baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 dir_deleted(svn_wc_adm_access_t *adm_access,
             svn_wc_notify_state_t *state,
@@ -622,7 +658,7 @@ dir_deleted(svn_wc_adm_access_t *adm_access,
   return b->callbacks->dir_deleted(adm_access, state, path, b->baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 dir_props_changed(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -641,8 +677,8 @@ dir_props_changed(svn_wc_adm_access_t *adm_access,
                                      originalprops, b->baton);
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
-   and svn_wc_diff_callbacks2_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t,
+   svn_wc_diff_callbacks2_t and svn_wc_diff_callbacks3_t. */
 static svn_error_t *
 dir_opened(svn_wc_adm_access_t *adm_access,
            svn_boolean_t *tree_conflicted,
@@ -656,8 +692,8 @@ dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
-   and svn_wc_diff_callbacks2_t. */
+/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t,
+   svn_wc_diff_callbacks2_t and svn_wc_diff_callbacks3_t. */
 static svn_error_t *
 dir_closed(svn_wc_adm_access_t *adm_access,
            svn_wc_notify_state_t *propstate,
@@ -846,6 +882,106 @@ static struct svn_wc_diff_callbacks3_t callbacks2_wrapper = {
 };
 
 
+
+/* Used to wrap svn_wc_diff_callbacks3_t. */
+struct callbacks3_wrapper_baton {
+  const svn_wc_diff_callbacks3_t *callbacks3;
+  void *baton;
+};
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+file_added3(svn_wc_adm_access_t *adm_access,
+            svn_wc_notify_state_t *contentstate,
+            svn_wc_notify_state_t *propstate,
+            svn_boolean_t *tree_conflicted,
+            const char *path,
+            const char *tmpfile1,
+            const char *tmpfile2,
+            svn_revnum_t rev1,
+            svn_revnum_t rev2,
+            const char *mimetype1,
+            const char *mimetype2,
+            const char *copyfrom_path,
+            svn_revnum_t copyfrom_revision,
+            const apr_array_header_t *propchanges,
+            apr_hash_t *originalprops,
+            void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->file_added(adm_access, contentstate, propstate,
+                                   tree_conflicted, path, tmpfile1, tmpfile2,
+                                   rev1, rev2, mimetype1, mimetype2,
+                                   propchanges, originalprops, b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+dir_added3(svn_wc_adm_access_t *adm_access,
+           svn_wc_notify_state_t *state,
+           svn_boolean_t *tree_conflicted,
+           const char *path,
+           svn_revnum_t rev,
+           const char *copyfrom_path,
+           svn_revnum_t copyfrom_revision,
+           void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->dir_added(adm_access, state, tree_conflicted, path, rev, b->baton);
+}
+
+/* Used to wrap svn_diff_callbacks3_t as an svn_wc_diff_callbacks4_t. */
+static struct svn_wc_diff_callbacks4_t callbacks3_wrapper = {
+  file_changed2,
+  file_added3,
+  file_deleted2,
+  dir_added3,
+  dir_deleted2,
+  dir_props_changed2,
+  dir_opened,
+  dir_closed
+};
+
+svn_error_t *
+svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks3_t *callbacks,
+                        void *callback_baton,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const apr_array_header_t *changelists,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool)
+{
+  struct callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
+  b->callbacks3 = callbacks;
+  b->baton = callback_baton;
+  return svn_wc_get_diff_editor6(anchor,
+                                 target,
+                                 &callbacks3_wrapper,
+                                 b,
+                                 depth,
+                                 ignore_ancestry,
+                                 use_text_base,
+                                 reverse_order,
+                                 cancel_func,
+                                 cancel_baton,
+                                 changelists,
+                                 editor,
+                                 edit_baton,
+                                 NULL,
+                                 pool);
+}
+
 svn_error_t *
 svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -958,6 +1094,24 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 }
 
 svn_error_t *
+svn_wc_diff5(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks3_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
+             apr_pool_t *pool)
+{
+  struct callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
+  b->callbacks3 = callbacks;
+  b->baton = callback_baton;
+
+  return svn_wc_diff6(anchor, target, &callbacks3_wrapper, b,
+                      depth, ignore_ancestry, changelists, NULL, pool);
+}
+
+svn_error_t *
 svn_wc_diff4(svn_wc_adm_access_t *anchor,
              const char *target,
              const svn_wc_diff_callbacks2_t *callbacks,
@@ -1029,8 +1183,9 @@ svn_wc_walk_entries2(const char *path,
                      void *cancel_baton,
                      apr_pool_t *pool)
 {
-  svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
-                                         svn_wc__walker_default_error_handler };
+  svn_wc_entry_callbacks2_t walk_cb2 = { 0 };
+  walk_cb2.found_entry = walk_callbacks->found_entry;
+  walk_cb2.handle_error = svn_wc__walker_default_error_handler;
   return svn_wc_walk_entries3(path, adm_access,
                               &walk_cb2, walk_baton, svn_depth_infinity,
                               show_hidden, cancel_func, cancel_baton, pool);
@@ -1141,6 +1296,60 @@ svn_wc_prop_set(const char *name,
 }
 
 /*** From status.c ***/
+
+struct status4_wrapper_baton
+{
+  svn_wc_status_func3_t old_func;
+  void *old_baton;
+};
+
+static svn_error_t *
+status4_wrapper_func(void *baton,
+                     const char *path,
+                     const svn_wc_status2_t *status,
+                     apr_pool_t *scratch_pool)
+{
+  struct status4_wrapper_baton *swb = baton;
+  svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+
+  return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
+}
+
+svn_error_t *
+svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          const apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func3_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  struct status4_wrapper_baton *swb = apr_palloc(pool, sizeof(*swb));
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_error_t *err;
+
+  swb->old_func = status_func;
+  swb->old_baton = status_baton;
+
+  err = svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
+                                  edit_revision, anchor, target, depth,
+                                  get_all, no_ignore, ignore_patterns,
+                                  status4_wrapper_func, swb,
+                                  cancel_func, cancel_baton, traversal_info,
+                                  pool, scratch_pool);
+  svn_pool_destroy(scratch_pool);
+  return err;
+}
+
 struct status_editor3_compat_baton
 {
   svn_wc_status_func2_t old_func;
@@ -1277,6 +1486,37 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
                                    traversal_info, pool);
 }
 
+svn_error_t *
+svn_wc_status(svn_wc_status_t **status,
+              const char *path,
+              svn_wc_adm_access_t *adm_access,
+              apr_pool_t *pool)
+{
+  svn_wc_status2_t *stat2;
+
+  SVN_ERR(svn_wc_status2(&stat2, path, adm_access, pool));
+  *status = (svn_wc_status_t *) stat2;
+  return SVN_NO_ERROR;
+}
+
+svn_wc_status_t *
+svn_wc_dup_status(const svn_wc_status_t *orig_stat,
+                  apr_pool_t *pool)
+{
+  svn_wc_status_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
+
+  /* Shallow copy all members. */
+  *new_stat = *orig_stat;
+
+  /* Now go back and dup the deep item into this pool. */
+  if (orig_stat->entry)
+    new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
+
+  /* Return the new hotness. */
+  return new_stat;
+}
+
+
 /*** From update_editor.c ***/
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
@@ -1388,4 +1628,200 @@ svn_wc_add_repos_file(const char *dst_path,
                                 new_props, NULL,
                                 copyfrom_url, copyfrom_rev,
                                 pool);
+}
+
+/*** From lock.c ***/
+
+/* To preserve API compatibility with Subversion 1.0.0 */
+svn_error_t *
+svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
+                svn_wc_adm_access_t *associated,
+                const char *path,
+                svn_boolean_t write_lock,
+                svn_boolean_t tree_lock,
+                apr_pool_t *pool)
+{
+  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
+                          (tree_lock ? -1 : 0), NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
+                 svn_wc_adm_access_t *associated,
+                 const char *path,
+                 svn_boolean_t write_lock,
+                 int levels_to_lock,
+                 apr_pool_t *pool)
+{
+  return svn_wc_adm_open3(adm_access, associated, path, write_lock,
+                          levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      svn_boolean_t tree_lock,
+                      apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_open3(adm_access, associated, path,
+                                write_lock, (tree_lock ? -1 : 0),
+                                NULL, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int levels_to_lock,
+                       apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_open3(adm_access, associated, path, write_lock,
+                                levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
+                     svn_wc_adm_access_t *associated,
+                     const char *path,
+                     svn_boolean_t write_lock,
+                     svn_boolean_t tree_lock,
+                     apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
+                               (tree_lock ? -1 : 0), NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
+{
+  /* This is the only pool we have access to. */
+  apr_pool_t *scratch_pool = svn_wc_adm_access_pool(adm_access);
+
+  return svn_wc_adm_close2(adm_access, scratch_pool);
+}
+
+
+/*** From translate.c ***/
+
+svn_error_t *
+svn_wc_translated_file(const char **xlated_p,
+                       const char *vfile,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t force_repair,
+                       apr_pool_t *pool)
+{
+  return svn_wc_translated_file2(xlated_p, vfile, vfile, adm_access,
+                                 SVN_WC_TRANSLATE_TO_NF
+                                 | (force_repair ?
+                                    SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
+                                 pool);
+}
+
+/*** From relocate.c ***/
+
+/* Compatibility baton and wrapper. */
+struct compat2_baton {
+  svn_wc_relocation_validator2_t validator;
+  void *baton;
+};
+
+/* Compatibility baton and wrapper. */
+struct compat_baton {
+  svn_wc_relocation_validator_t validator;
+  void *baton;
+};
+
+/* This implements svn_wc_relocate_validator3_t. */
+static svn_error_t *
+compat2_validator(void *baton,
+                  const char *uuid,
+                  const char *url,
+                  const char *root_url,
+                  apr_pool_t *pool)
+{
+  struct compat2_baton *cb = baton;
+  /* The old callback type doesn't set root_url. */
+  return cb->validator(cb->baton, uuid,
+                       (root_url ? root_url : url), (root_url != NULL),
+                       pool);
+}
+
+/* This implements svn_wc_relocate_validator3_t. */
+static svn_error_t *
+compat_validator(void *baton,
+                 const char *uuid,
+                 const char *url,
+                 const char *root_url,
+                 apr_pool_t *pool)
+{
+  struct compat_baton *cb = baton;
+  /* The old callback type doesn't allow uuid to be NULL. */
+  if (uuid)
+    return cb->validator(cb->baton, uuid, url);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_relocate2(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator2_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool)
+{
+  struct compat2_baton cb;
+
+  cb.validator = validator;
+  cb.baton = validator_baton;
+
+  return svn_wc_relocate3(path, adm_access, from, to, recurse,
+                          compat2_validator, &cb, pool);
+}
+
+svn_error_t *
+svn_wc_relocate(const char *path,
+                svn_wc_adm_access_t *adm_access,
+                const char *from,
+                const char *to,
+                svn_boolean_t recurse,
+                svn_wc_relocation_validator_t validator,
+                void *validator_baton,
+                apr_pool_t *pool)
+{
+  struct compat_baton cb;
+
+  cb.validator = validator;
+  cb.baton = validator_baton;
+
+  return svn_wc_relocate3(path, adm_access, from, to, recurse,
+                          compat_validator, &cb, pool);
+}
+
+/*** From log.c ***/
+svn_error_t *
+svn_wc_cleanup(const char *path,
+               svn_wc_adm_access_t *optional_adm_access,
+               const char *diff3_cmd,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool)
+{
+  return svn_wc_cleanup2(path, diff3_cmd, cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_cleanup2(const char *path,
+                const char *diff3_cmd,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  return svn_wc_cleanup3(path, diff3_cmd, FALSE, cancel_func, cancel_baton,
+                         pool);
 }

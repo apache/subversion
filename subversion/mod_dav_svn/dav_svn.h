@@ -38,6 +38,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
 
 /* what the one VCC is called */
 #define DAV_SVN__DEFAULT_VCC_NAME        "default"
@@ -153,7 +154,14 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../!svn/bln/ */
   DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../!svn/wbl/ */
   DAV_SVN_RESTYPE_VCC,                  /* .../!svn/vcc/NAME */
-  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION /* see SVNParentPath directive */
+  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION,/* see SVNParentPath directive */
+
+  /* new types in HTTP protocol v2: */
+  DAV_SVN_RESTYPE_ME,                   /* .../!svn/me   */
+  DAV_SVN_RESTYPE_REV_COLLECTION,       /* .../!svn/rev/ */
+  DAV_SVN_RESTYPE_REVROOT_COLLECTION,   /* .../!svn/rvr/ */
+  DAV_SVN_RESTYPE_TXN_COLLECTION,       /* .../!svn/txn/ */
+  DAV_SVN_RESTYPE_TXNROOT_COLLECTION    /* .../!svn/txr/ */
 };
 
 
@@ -180,7 +188,8 @@ typedef struct {
      name. It may be NULL if this root corresponds to a specific revision.
      It may also be NULL if we have not opened the root yet.
 
-     WORKING and ACTIVITY resources use this field.
+     WORKING and ACTIVITY resources use this field, as well as PRIVATE
+     resources that directly represent either a txn or txn-root.
   */
   const char *txn_name;
 
@@ -331,10 +340,44 @@ const char * dav_svn__get_activities_db(request_rec *r);
 /* Return the root directory */
 const char * dav_svn__get_root_dir(request_rec *r);
 
+
+/** For HTTP protocol v2, these are the new URIs and URI stubs
+    returned to the client in our OPTIONS response.  They all depend
+    on the 'special uri', which is configurable in httpd.conf.  **/
+
+/* Where REPORT requests are sent (typically "!svn/me") */
+const char *dav_svn__get_me_resource_uri(request_rec *r);
+
+/* For accessing revision resources (typically "!svn/rev") */
+const char *dav_svn__get_rev_stub(request_rec *r);
+
+/* For accessing REV/PATH pairs (typically "!svn/bc") */
+const char *dav_svn__get_rev_root_stub(request_rec *r);
+
+/* For accessing transaction resources (typically "!svn/txn") */
+const char *dav_svn__get_txn_stub(request_rec *r);
+
+/* For accessing transaction properties (typically "!svn/txr") */
+const char *dav_svn__get_txn_root_stub(request_rec *r);
+
+
 /*** activity.c ***/
 
-/* activity functions for looking up, storing, and deleting
-   ACTIVITY->TXN mappings */
+/* Create a new transaction based on HEAD in REPOS, setting *PTXN_NAME
+   to the name of that transaction.  Use POOL for allocations. */
+dav_error *
+dav_svn__create_txn(const dav_svn_repos *repos, 
+                    const char **ptxn_name,
+                    apr_pool_t *pool);
+
+/* If it exists, abort the transaction named TXN_NAME from REPOS.  Use
+   POOL for allocations. */
+dav_error *
+dav_svn__abort_txn(const dav_svn_repos *repos, 
+                   const char *txn_name,
+                   apr_pool_t *pool);
+
+/* Functions for looking up, storing, and deleting ACTIVITY->TXN mappings.  */
 const char *
 dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);
 
@@ -346,10 +389,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *activity_id,
                         const char *txn_name);
 
-dav_error *
-dav_svn__create_activity(const dav_svn_repos *repos,
-                         const char **ptxn_name,
-                         apr_pool_t *pool);
+
+/* HTTP protocol v2:  client does POST against 'me' resource. */
+int dav_svn__method_post(request_rec *r);
 
 
 /*** repos.c ***/
@@ -768,7 +810,7 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line);
  *   return dav_svn__final_flush_or_error(r, bb, output, derr, resource->pool);
  *
  * SOME BACKGROUND INFO:
- * 
+ *
  * We don't flush the brigade unless there's something in it to
  * flush; that way, we have the opportunity to package a dav_error up
  * for transmission back to the client.
@@ -795,6 +837,14 @@ dav_error *
 dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
                               ap_filter_t *output, dav_error *preferred_err,
                               apr_pool_t *pool);
+
+/* Send a "standardized" DAV error response based on the ERR's
+ * namespace and tag.
+ * 
+ * NOTE:  This was copied pretty much directory from mod_dav's
+ * dav_error_response_tag() function which is, sadly, not public.
+ */
+int dav_svn__error_response_tag(request_rec *r, dav_error *err);
 
 /*** mirror.c ***/
 

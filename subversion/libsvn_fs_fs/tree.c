@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,6 +42,8 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
+#include "svn_props.h"
+
 #include "fs.h"
 #include "err.h"
 #include "key-gen.h"
@@ -247,7 +249,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
 
 
   SVN_ERR(svn_cache__iter(NULL, cache, find_descendents_in_cache,
-                         &b, b.pool));
+                          &b, b.pool));
 
   iterpool = svn_pool_create(b.pool);
 
@@ -386,10 +388,10 @@ typedef struct parent_path_t
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
 
-  /* The copy ID inheritence style. */
+  /* The copy ID inheritance style. */
   copy_id_inherit_t copy_inherit;
 
-  /* If copy ID inheritence style is copy_id_inherit_new, this is the
+  /* If copy ID inheritance style is copy_id_inherit_new, this is the
      path which should be implicitly copied; otherwise, this is NULL. */
   const char *copy_src_path;
 
@@ -1606,7 +1608,7 @@ merge_changes(dag_node_t *ancestor_node,
 
 svn_error_t *
 svn_fs_fs__commit_txn(const char **conflict_p,
-                      svn_revnum_t *new_rev_p,
+                      svn_revnum_t *new_rev,
                       svn_fs_txn_t *txn,
                       apr_pool_t *pool)
 {
@@ -1651,7 +1653,6 @@ svn_fs_fs__commit_txn(const char **conflict_p,
    */
 
   svn_error_t *err = SVN_NO_ERROR;
-  svn_revnum_t new_rev;
   svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
   svn_fs_t *fs = txn->fs;
 
@@ -1662,7 +1663,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Initialize output params. */
-  new_rev = SVN_INVALID_REVNUM;
+  *new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
 
@@ -1707,7 +1708,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       txn->base_rev = youngish_rev;
 
       /* Try to commit. */
-      err = svn_fs_fs__commit(&new_rev, fs, txn, iterpool);
+      err = svn_fs_fs__commit(new_rev, fs, txn, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
@@ -1728,8 +1729,6 @@ svn_fs_fs__commit_txn(const char **conflict_p,
         }
       else
         {
-          /* Set the return value -- our brand spankin' new revision! */
-          *new_rev_p = new_rev;
           err = SVN_NO_ERROR;
           goto cleanup;
         }
@@ -2444,9 +2443,10 @@ apply_textdelta(void *baton, apr_pool_t *pool)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
-           _("Base checksum mismatch on '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
+           apr_psprintf(pool, "%s:\n%s\n%s\n",
+                        _("Base checksum mismatch on '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            tb->path,
            svn_checksum_to_cstring_display(tb->base_checksum, pool),
            svn_checksum_to_cstring_display(checksum, pool));
@@ -3244,7 +3244,7 @@ history_prev(void *baton, apr_pool_t *pool)
         retry = TRUE;
 
       *prev_history = assemble_history(fs, apr_pstrdup(retpool, path),
-                                       dst_rev, retry ? FALSE : TRUE,
+                                       dst_rev, ! retry,
                                        src_path, src_rev, retpool);
     }
   else
