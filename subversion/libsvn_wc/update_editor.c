@@ -705,8 +705,16 @@ complete_directory(struct edit_baton *eb,
                 }
               else
                 {
-                  entry->depth = svn_depth_infinity;
-                  SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+                  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+                  const char *local_dir_abspath;
+                  const char *local_abspath;
+
+                  SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path,
+                                                  pool));
+                  local_abspath = svn_dirent_join(local_dir_abspath,
+                                                  eb->target, pool);
+                  SVN_ERR(svn_wc__set_depth(db, local_abspath,
+                                            svn_depth_infinity, pool));
                 }
             }
         }
