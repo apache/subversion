@@ -705,7 +705,7 @@ close_edit(void *edit_baton,
              We ignore the possible error result from svn_fs_abort_txn();
              it's more important to return the original error. */
           svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-          return err;
+          return svn_error_return(err);
         }
     }
 
@@ -743,7 +743,7 @@ close_edit(void *edit_baton,
       }
   }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
