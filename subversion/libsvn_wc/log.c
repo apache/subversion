@@ -41,7 +41,6 @@
 #include "entries.h"
 #include "lock.h"
 #include "translate.h"
-#include "questions.h"
 #include "tree_conflicts.h"
 
 #include "private/svn_wc_private.h"

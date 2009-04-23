@@ -52,7 +52,6 @@
 #include "entries.h"
 #include "props.h"
 #include "translate.h"
-#include "questions.h"
 #include "lock.h"
 
 #include "svn_private_config.h"

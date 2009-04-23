@@ -1386,8 +1386,8 @@ svn_wc_add3(const char *path,
   if (orig_entry)
     {
       if (((! copyfrom_url)
-          && (orig_entry->schedule != svn_wc_schedule_delete)
-          && (! orig_entry->deleted))
+           && (orig_entry->schedule != svn_wc_schedule_delete)
+           && (! orig_entry->deleted))
           || (orig_entry->depth == svn_depth_exclude))
         {
           return svn_error_createf
