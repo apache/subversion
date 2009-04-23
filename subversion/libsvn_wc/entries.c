@@ -2014,24 +2014,44 @@ svn_wc__set_depth(svn_wc__db_t *db,
   apr_hash_t *entries;
   svn_wc_entry_t *entry;
 
-  /* Excluded directories are marked in the parent.  */
-  if (depth == svn_depth_exclude)
-    {
-      svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
-                       scratch_pool);
-    }
-  else
-    {
-      parent_abspath = local_dir_abspath;
-      base_name = "";
-    }
+  svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
+                   scratch_pool);
 
   adm_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
+                                              scratch_pool);
+
+  /* Ensure we aren't looking at the wcroot. */
+  if (adm_access != NULL)
+    {
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+      entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
+
+      /* If the parent says we are excluded, but we are now not, mark the
+         parent as 'infinite'.  The new depth state will be recorded in the
+         child. */
+      if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
+        {
+          entry->depth = svn_depth_infinity;
+          SVN_ERR(svn_wc__entries_write(entries, adm_access, scratch_pool));
+        }
+
+      /* Excluded directories are marked in the parent.  */
+      if (depth == svn_depth_exclude)
+        {
+          entry->depth = depth;
+          return svn_error_return(svn_wc__entries_write(entries, adm_access,
+                                                        scratch_pool));
+        }
+    }
+
+  /* We aren't excluded, so fetch the entries for the directory, and write
+     our depth there. */
+  adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
                                               scratch_pool);
   SVN_ERR_ASSERT(adm_access != NULL);
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
 
-  entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
+  entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   entry->depth = depth;
 
   return svn_error_return(svn_wc__entries_write(entries, adm_access,
