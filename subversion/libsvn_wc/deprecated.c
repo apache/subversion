@@ -25,8 +25,11 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_dirent_uri.h"
 
 #include "wc.h"
+#include "lock.h"
+#include "props.h"
 
 #include "svn_private_config.h"
 
@@ -1803,7 +1806,9 @@ svn_wc_relocate(const char *path,
                           compat_validator, &cb, pool);
 }
 
+
 /*** From log.c ***/
+
 svn_error_t *
 svn_wc_cleanup(const char *path,
                svn_wc_adm_access_t *optional_adm_access,
@@ -1824,4 +1829,22 @@ svn_wc_cleanup2(const char *path,
 {
   return svn_wc_cleanup3(path, diff3_cmd, FALSE, cancel_func, cancel_baton,
                          pool);
+}
+
+
+/*** From questions.c ***/
+
+svn_error_t *
+svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool)
+{
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return svn_error_return(svn_wc__marked_as_binary(has_binary_prop,
+                                                   local_abspath, db, pool));
 }

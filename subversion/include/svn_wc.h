@@ -2041,10 +2041,16 @@ svn_wc_check_wc(const char *path,
                 apr_pool_t *pool);
 
 
-/** Set @a *has_binary_prop to @c TRUE iff @a path has been marked
+/** As a replacement for this functionality, @see svn_mime_type_is_binary
+ * and @c SVN_PROP_MIME_TYPE.
+ *
+ * Set @a *has_binary_prop to @c TRUE iff @a path has been marked
  * with a property indicating that it is non-text (in other words, binary).
  * @a adm_access is an access baton set that contains @a path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
                        const char *path,

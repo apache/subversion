@@ -19,10 +19,12 @@
 
 
 #include <string.h>
+
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
 #include <apr_time.h>
+
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_string.h"
@@ -40,6 +42,7 @@
 #include "props.h"
 #include "translate.h"
 #include "wc_db.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -597,25 +600,22 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
   return SVN_NO_ERROR;
 }
 
-
 
 svn_error_t *
-svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
-                       const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *pool)
+svn_wc__marked_as_binary(svn_boolean_t *marked,
+                         const char *local_abspath,
+                         svn_wc__db_t *db,
+                         apr_pool_t *scratch_pool)
 {
   const svn_string_t *value;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_wc_prop_get(&value, SVN_PROP_MIME_TYPE, path, adm_access,
-                          subpool));
+  SVN_ERR(svn_wc__internal_propget(&value, SVN_PROP_MIME_TYPE, local_abspath,
+                                   db, scratch_pool, scratch_pool));
 
   if (value && (svn_mime_type_is_binary(value->data)))
-    *has_binary_prop = TRUE;
+    *marked = TRUE;
   else
-    *has_binary_prop = FALSE;
+    *marked = FALSE;
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

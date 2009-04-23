@@ -28,8 +28,7 @@
 #include "translate.h"
 #include "questions.h"
 #include "log.h"
-
-#include "private/svn_debug.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -120,6 +119,8 @@ detranslate_wc_file(const char **detranslated_file,
                     const char *source_file,
                     apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *merge_abspath;
   svn_boolean_t is_binary;
   const svn_prop_t *prop;
   svn_subst_eol_style_t style;
@@ -127,10 +128,10 @@ detranslate_wc_file(const char **detranslated_file,
   apr_hash_t *keywords;
   svn_boolean_t special;
 
-  /* Decide if the merge target currently is a text or binary file. */
-  SVN_ERR(svn_wc_has_binary_prop(&is_binary,
-                                 merge_target, adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
 
+  /* Decide if the merge target currently is a text or binary file. */
+  SVN_ERR(svn_wc__marked_as_binary(&is_binary, merge_abspath, db, pool));
 
   /* See if we need to do a straight copy:
      - old and new mime-types are binary, or
@@ -1178,8 +1179,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        void *conflict_baton,
                        apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *merge_dirpath;
   const char *merge_filename;
+  const char *merge_abspath;
   const char *detranslated_target, *working_text;
   svn_boolean_t is_binary = FALSE;
   const svn_wc_entry_t *entry;
@@ -1197,12 +1200,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
   svn_dirent_split(merge_target, &merge_dirpath, &merge_filename, pool);
 
+  SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
+
   /* Decide if the merge target is a text or binary file. */
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && mimeprop->value)
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
   else if (! copyfrom_text)
-    SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
+    SVN_ERR(svn_wc__marked_as_binary(&is_binary, merge_abspath, db, pool));
 
   working_text = copyfrom_text ? copyfrom_text : merge_target;
   SVN_ERR(detranslate_wc_file(&detranslated_target, merge_target, adm_access,

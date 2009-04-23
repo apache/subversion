@@ -56,6 +56,7 @@
 #include "wc.h"
 #include "props.h"
 #include "adm_files.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -1608,6 +1609,8 @@ path_driver_cb_func(void **dir_baton,
   svn_boolean_t file_modified; /* text modifications */
   svn_boolean_t file_is_binary;
   svn_boolean_t file_need_close = FALSE;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   *dir_baton = NULL;
   if (entry->copyfrom_url)
@@ -1617,6 +1620,8 @@ path_driver_cb_func(void **dir_baton,
    * directory @c join_dir_baton holds. */
   if (cb_baton->join_dir_baton)
     path = svn_path_join(cb_baton->join_dir_baton->path, path, pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   switch (entry->schedule)
     {
@@ -1695,8 +1700,8 @@ path_driver_cb_func(void **dir_baton,
           file_need_close = TRUE;
 
         /* Process binary changes. */
-        SVN_ERR(svn_wc_has_binary_prop(&file_is_binary, path,
-                                       adm_access, pool));
+        SVN_ERR(svn_wc__marked_as_binary(&file_is_binary, local_abspath, db,
+                                         pool));
         if (file_is_binary)
           {
             SVN_ERR(svn_wc_text_modified_p(&file_modified, path,
@@ -1719,6 +1724,7 @@ path_driver_cb_func(void **dir_baton,
       default:
         break;
     }
+
   return SVN_NO_ERROR;
 }
 
