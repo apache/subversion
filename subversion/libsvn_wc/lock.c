@@ -217,45 +217,41 @@ check_format(int wc_format, const char *path, apr_pool_t *pool)
 }
 
 
-/* ### todo: make this compare repository too?  Or do so in parallel
-   code.  */
 svn_error_t *
-svn_wc_check_wc(const char *path,
-                int *wc_format,
-                apr_pool_t *pool)
+svn_wc__internal_check_wc(int *wc_format,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
 {
-  const char *abspath;
-  svn_wc__db_t *db;
   svn_error_t *err;
-  svn_node_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL /* ### config */, pool, pool));
-  err = svn_wc__db_temp_get_format(wc_format, db, abspath, pool);
-  if (err && err->apr_err != SVN_ERR_WC_MISSING)
-    return err;
-
-  /* We don't need the DB any more. (of course, we shouldn't have had to
-     open it in the first place, but that's an API issue)  */
-  svn_error_clear(svn_wc__db_close(db, pool));
-
+  err = svn_wc__db_temp_get_format(wc_format, db, local_abspath, scratch_pool);
   if (err)
     {
+      svn_node_kind_t kind;
+
+      if (err->apr_err != SVN_ERR_WC_MISSING)
+        return svn_error_return(err);
       svn_error_clear(err);
+
+      /* ### the stuff below seems to be redundant. get_format() probably
+         ### does all this.
+         ###
+         ### investigate all callers. DEFINITELY keep in mind the
+         ### svn_wc_check_wc() entrypoint.
+      */
 
       /* If the format file does not exist or path not directory, then for
          our purposes this is not a working copy, so return 0. */
       *wc_format = 0;
 
       /* Check path itself exists. */
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
       if (kind == svn_node_none)
         {
-          return svn_error_createf
-            (APR_ENOENT, NULL, _("'%s' does not exist"),
-            svn_path_local_style(path, pool));
+          return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
+                                   svn_path_local_style(local_abspath,
+                                                        scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -264,7 +260,28 @@ svn_wc_check_wc(const char *path,
   /* If we managed to read the format we assume that we
      are dealing with a real wc so we can return a nice
      error. */
-  return check_format(*wc_format, path, pool);
+  return check_format(*wc_format, local_abspath, scratch_pool);
+}
+
+
+svn_error_t *
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc__db_t *db;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* Ugh. Too bad about having to open a DB.  */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          NULL /* ### config */, pool, pool));
+  err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
+  svn_error_clear(svn_wc__db_close(db, pool));
+
+  return svn_error_return(err);
 }
 
 
@@ -607,7 +624,8 @@ get_from_shared(const char *abspath,
 
 
 static svn_error_t *
-probe(const char **dir,
+probe(svn_wc__db_t *db,
+      const char **dir,
       const char *path,
       apr_pool_t *pool)
 {
@@ -616,7 +634,12 @@ probe(const char **dir,
 
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
+    {
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_wc__internal_check_wc(&wc_format, db, local_abspath, pool));
+    }
 
   /* a "version" of 0 means a non-wc directory */
   if (kind != svn_node_dir || wc_format == 0)
@@ -715,11 +738,13 @@ open_single(svn_wc_adm_access_t **adm_access,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
+  const char *local_abspath;
   int wc_format = 0;
   svn_error_t *err;
   svn_wc_adm_access_t *lock;
 
-  err = svn_wc_check_wc(path, &wc_format, scratch_pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
       return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
@@ -1035,7 +1060,21 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   const char *dir;
 
-  SVN_ERR(probe(&dir, path, pool));
+  if (associated == NULL)
+    {
+      svn_wc__db_t *db;
+
+      /* Ugh. Too bad about having to open a DB.  */
+      SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                              NULL /* ### config */, pool, pool));
+      err = probe(db, &dir, path, pool);
+      svn_error_clear(svn_wc__db_close(db, pool));
+      SVN_ERR(err);
+    }
+  else
+    {
+      SVN_ERR(probe(associated->db, &dir, path, pool));
+    }
 
   /* If we moved up a directory, then the path is not a directory, or it
      is not under version control. In either case, the notion of
@@ -1252,11 +1291,13 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(associated != NULL);
+
   SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
   if (! entry)
     /* Not a versioned item, probe it */
-    SVN_ERR(probe(&dir, path, pool));
+    SVN_ERR(probe(associated->db, &dir, path, pool));
   else if (entry->kind != svn_node_dir)
     dir = svn_dirent_dirname(path, pool);
   else
@@ -1271,7 +1312,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
          we want its parent's adm_access (which holds minimal data
          on the child) */
       svn_error_clear(err);
-      SVN_ERR(probe(&dir, path, pool));
+      SVN_ERR(probe(associated->db, &dir, path, pool));
       SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
     }
   else

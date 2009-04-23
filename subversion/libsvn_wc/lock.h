@@ -102,6 +102,15 @@ svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
                                const char *abspath,
                                apr_pool_t *scratch_pool);
 
+/* ### this is probably bunk. but I dunna want to trace backwards-compat
+   ### users of svn_wc_check_wc(). probably gonna be rewritten for wc-ng
+   ### in any case.  */
+svn_error_t *
+svn_wc__internal_check_wc(int *wc_format,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
 /* Return the working copy format version number for ADM_ACCESS. */
 svn_error_t *
 svn_wc__adm_wc_format(int *wc_format,
