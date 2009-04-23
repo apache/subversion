@@ -1,0 +1,369 @@
+THE PERFORMANCE HIT
+-------------------
+
+Looking at use case B, we have a serious performance problem that can get
+worse over time if we don't set mergeinfo on subtrees untouched by a merge.
+
+Start with this simple repository at revision 1:
+
+trunk/
+trunk/code/
+trunk/code/README
+trunk/code/inc/
+trunk/code/inc/subr.h
+trunk/code/src/
+trunk/code/src/client/
+trunk/code/src/client/main.c
+trunk/code/src/client/cmd.c
+trunk/code/src/server/
+trunk/code/src/server/main.c
+trunk/code/src/server/serve.c
+trunk/code/src/subr/
+trunk/code/src/subr/subr.c
+branches
+
+In r2 we copy trunk to branches/b1.0
+
+In r3-r15 we make various changes under trunk.
+
+Now we start merging (assume a commit and update after each of these merges)
+in such a way as to create subtree mergeinfo (in this example we do it the
+simple way, with subtree merges, but it's largely irrelevant *how* the
+subtree mergeinfo comes into being):
+
+
+===== r16 =====
+
+  >svn merge %url%/trunk/code/src branches\b1.0\code\src -c5
+  --- Merging r5 into 'branches\b1.0\code\src':
+  U    branches\b1.0\code\src\server\main.c
+  U    branches\b1.0\code\src\server\serve.c
+  U    branches\b1.0\code\src\subr\subr.c
+  U    branches\b1.0\code\src\client\cmd.c
+  U    branches\b1.0\code\src\client\main.c
+
+  TPH>svn pg svn:mergeinfo -vR
+  Properties on 'branches\b1.0\code\src':
+    svn:mergeinfo
+      /trunk/code/src:5
+
+Nothing unusual or different from our current trunk behavior here.
+
+
+===== r17 =====
+
+  TPH>svn merge %url%/trunk/code/README  branches\b1.0\code\README -c3
+  --- Merging r3 into 'branches\b1.0\code\README':
+  U    branches\b1.0\code\README
+
+  TPH>svn pg svn:mergeinfo -vR
+  Properties on 'branches\b1.0\code\src':
+    svn:mergeinfo
+      /trunk/code/src:5
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:3
+
+Again, nothing different from trunk here either.
+
+
+===== r18 =====
+
+  TPH>svn merge %url%/trunk branches\b1.0 -c10
+  --- Merging r10 into 'branches\b1.0\code\src':
+  A    branches\b1.0\code\src\client\cmd2.c
+
+  TPH>svn pg svn:mergeinfo -vR
+  Properties on 'branches\b1.0':
+    svn:mergeinfo
+      /trunk:10
+  Properties on 'branches\b1.0\code\src':
+    svn:mergeinfo
+      /trunk/code/src:5,10
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:3
+
+  TPH>svn st
+   M      branches\b1.0
+   M      branches\b1.0\code\src
+  A  +    branches\b1.0\code\src\client\cmd2.c
+
+Here is some new behavior, 'branches\b1.0\code\README' was untouched by 
+the merge, so its mergeinfo remains unmodified.  No problem yet.
+
+
+===== r19 =====
+
+Now let's merge every available revision directly to
+'branches\b1.0\code\src\client\main.c', but instead of not specifying a
+revision range we use the mergeinfo subcommand to find the operative
+revisions and specify those (the only difference is in the recorded
+mergeinfo describing the merge):
+
+  TPH>svn mergeinfo %url%/trunk/code/src/client/main.c
+  branches\b1.0\code\src\client\main.c --show-revs eligible
+  r9
+  r12
+  r13
+  r14
+
+  TPH>svn merge %url%/trunk/code/src/client/main.c
+  branches\b1.0\code\src\client\main.c -c9,12,13,14
+  --- Merging r9 into 'branches\b1.0\code\src\client\main.c':
+  U    branches\b1.0\code\src\client\main.c
+  --- Merging r12 into 'branches\b1.0\code\src\client\main.c':
+  G    branches\b1.0\code\src\client\main.c
+  --- Merging r13 into 'branches\b1.0\code\src\client\main.c':
+  G    branches\b1.0\code\src\client\main.c
+  --- Merging r14 into 'branches\b1.0\code\src\client\main.c':
+  G    branches\b1.0\code\src\client\main.c
+
+  TPH>svn st
+  MM      branches\b1.0\code\src\client\main.c
+
+  TPH>svn pg svn:mergeinfo -vR
+  Properties on 'branches\b1.0':
+    svn:mergeinfo
+      /trunk:10
+  Properties on 'branches\b1.0\code\src':
+    svn:mergeinfo
+      /trunk/code/src:5,10
+  Properties on 'branches\b1.0\code\src\client\main.c':
+    svn:mergeinfo
+      /trunk/code/src/client/main.c:5,9-10,12-14
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:3
+
+===== r20 =====
+ELISION BREAKS
+===============
+
+Now we merge every available revision to 'branches\b1.0\code\src\client',
+this time the more "traditional" way by not specifying a revision range:
+
+  TPH>svn merge %url%/trunk/code/src/client branches\b1.0\code\src\client
+  --- Merging r6 through r8 into 'branches\b1.0\code\src\client':
+  U    branches\b1.0\code\src\client\cmd.c
+  --- Merging r9 into 'branches\b1.0\code\src\client':
+  G    branches\b1.0\code\src\client\cmd.c
+  --- Merging r11 into 'branches\b1.0\code\src\client':
+  U    branches\b1.0\code\src\client\cmd2.c
+  --- Merging r12 through r19 into 'branches\b1.0\code\src\client':
+  G    branches\b1.0\code\src\client\cmd.c
+  G    branches\b1.0\code\src\client\cmd2.c
+
+  TPH>svn st
+   M      branches\b1.0\code\src\client
+  M       branches\b1.0\code\src\client\cmd.c
+  M       branches\b1.0\code\src\client\cmd2.c
+
+  TPH>svn pl -vR
+  Properties on 'branches\b1.0':
+    svn:mergeinfo
+      /trunk:10
+  Properties on 'branches\b1.0\code\src':
+    svn:mergeinfo
+     /trunk/code/src:5,10
+  Properties on 'branches\b1.0\code\src\client':
+    svn:mergeinfo
+      /trunk/code/src/client:2-19
+  Properties on 'branches\b1.0\code\src\client\main.c':
+    svn:mergeinfo
+      /trunk/code/src/client/main.c:5,9-10,12-14
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:3
+
+Again we see the new behavior, the two subtrees under
+'branches\b1.0\code\src\client' with explicit mergeinfo,
+'branches\b1.0\code\src\client\main.c' and 'branches\b1.0\code\README',
+are untouched by the merge so don't have their mergeinfo updated.
+Previously the mergeinfo on both would have been updated to:
+
+  Properties on 'branches\b1.0\code\src\client\main.c':
+    svn:mergeinfo
+      /trunk/code/src/client/main.c:2-19
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:2-19
+
+This would of course have elided to 'branches\b1.0\code\src\client' at the
+end of the merge, leaving mergeinfo only on 'branches\b1.0\code\src\client'.
+But since the subtree mergeinfo is never set, elision as it works today
+does not happen.
+
+===== r21 =====
+THE PROBLEM
+===============
+
+Now we decide to merge all available revisions to 'branches\b1.0\code':
+
+  TPH>svn merge %url%/trunk/code branches\b1.0\code
+  --- Merging r3 through r4 into 'branches\b1.0\code\src':
+  U    branches\b1.0\code\src\subr\subr.c
+  --- Merging r3 through r4 into 'branches\b1.0\code':
+  U    branches\b1.0\code\inc\subr.h
+  --- Merging r6 through r8 into 'branches\b1.0\code\src':
+  U    branches\b1.0\code\src\server\serve.c
+  G    branches\b1.0\code\src\subr\subr.c
+  --- Merging r12 through r20 into 'branches\b1.0\code\src':
+  U    branches\b1.0\code\src\server\main.c
+  G    branches\b1.0\code\src\server\serve.c
+  G    branches\b1.0\code\src\subr\subr.c
+
+None of the incoming changes are to or under available changes are to
+'branches\b1.0\code\src\client\main.c' or 'branches\b1.0\code\README' so
+the mergeinfo on those subtrees of the target remains untouched:
+
+  TPH>svn st
+   M      branches\b1.0\code
+   M      branches\b1.0\code\src
+  M       branches\b1.0\code\src\server\main.c
+  M       branches\b1.0\code\src\server\serve.c
+  M       branches\b1.0\code\src\subr\subr.c
+  M       branches\b1.0\code\inc\subr.h
+
+  TPH>svn pl -vR
+  Properties on 'branches\b1.0':
+    svn:mergeinfo
+      /trunk:10
+  Properties on 'branches\b1.0\code':
+    svn:mergeinfo
+      /trunk/code:2-20
+  Properties on 'branches\b1.0\code\src\client':
+    svn:mergeinfo
+      /trunk/code/src/client:2-19
+  Properties on 'branches\b1.0\code\src\client\main.c':
+    svn:mergeinfo
+      /trunk/code/src/client/main.c:5,9-10,12-14
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:3
+
+Now for the performance hit. We commit this merge then try to repeat it
+(we'll sepcify -r1:20 so as not to dela with HEAD now being r21):
+
+  TPH>svn merge %url%/trunk/code branches\b1.0\code -r1:20
+
+  TPH>svn st
+
+  TPH>
+
+A noop, that's expected, so what?  The problem is that based on the
+mergeinfo it *appears* that r1:20 is *not* fully merged to the tree rooted
+at 'branches\b1.0\code'.  Specifically it looks like the following subtrees
+are missing these revisions from trunk:
+
+  'branches\b1.0\code\src\client':        r20 
+  'branches\b1.0\code\src\client\main.c': r2-4, r6-8, r11, r15-20
+  'branches\b1.0\code\README':            r2, r4-20
+
+It doesn't matter that all of these revisions are noops on the paths in
+question on trunk -- the diff editor still gets driven becauase of this.
+If we drop this following code snippet at the start of libsvn_client/merge.c:
+drive_merge_report_editor() and rerun the merge we see that this is
+happening.
+
+[[[
+  printf("\n==========================================================\n");
+  printf("===== DRIVE EDITOR\n");
+  printf("===== %s@%d:\n", url1, revision1);
+  printf("===== %s@%d\n", url2, revision2);
+  printf("==========================================================\n\n");
+]]]
+
+TPH>svn merge %url%/trunk/code branches\b1.0\code -r1:20
+
+  ==========================================================
+  ===== DRIVE EDITOR
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@1:
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@2
+  ==========================================================
+
+
+  ==========================================================
+  ===== DRIVE EDITOR
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@2:
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@4
+  ==========================================================
+
+
+  ==========================================================
+  ===== DRIVE EDITOR
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@4:
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@8
+  ==========================================================
+
+
+  ==========================================================
+  ===== DRIVE EDITOR
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@8:
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@11
+  ==========================================================
+
+
+  ==========================================================
+  ===== DRIVE EDITOR
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@11:
+  ===== http://localhost/svn-test-work/repositories/TPH/trunk/code@20
+  ==========================================================
+
+  TPH>
+  
+  Note: How the editor drives get cut up is described in
+        drive_merge_report_editor's doc string and comments.
+  
+Five editor drives with their requisite network round trips for a noop
+merge!  If we had been setting mergeinfo on all subtrees regardless of
+whether they were touched by the merge there would be *NO* noop editor
+drives.  You can see this if you manually set the mergeinfo on the three
+subtrees to reflect the fact that all of r2-20 has been merged from trunk
+(and yes if an actual merge had performed resulted in this then elision
+would have consolidated all the mergeinfo on 'branches\b1.0\code' but that
+doesn't impact this example either way):
+
+  TPH>svn ps svn:mergeinfo "/trunk/code/src/client:2-20"
+      branches\b1.0\code\src\client
+  property 'svn:mergeinfo' set on 'branches\b1.0\code\src\client'
+
+  TPH>svn ps svn:mergeinfo "/trunk/code/src/client/main.c:2-20"
+      branches\b1.0\code\src\client\main.c
+  property 'svn:mergeinfo' set on 'branches\b1.0\code\src\client\main.c'
+
+  TPH>svn ps svn:mergeinfo "/trunk/code/README:2-20"
+      branches\b1.0\code\README
+  property 'svn:mergeinfo' set on 'branches\b1.0\code\README'
+
+  TPH>svn pl -vR
+  Properties on 'branches\b1.0':
+    svn:mergeinfo
+      /trunk:10
+  Properties on 'branches\b1.0\code':
+    svn:mergeinfo
+      /trunk/code:2-20
+  Properties on 'branches\b1.0\code\src\client':
+    svn:mergeinfo
+      /trunk/code/src/client:2-20
+  Properties on 'branches\b1.0\code\src\client\main.c':
+    svn:mergeinfo
+      /trunk/code/src/client/main.c:2-20
+  Properties on 'branches\b1.0\code\README':
+    svn:mergeinfo
+      /trunk/code/README:2-20
+
+  TPH>svn merge %url%/trunk/code branches\b1.0\code -r1:20
+
+  TPH>
+ 
+
+SO HOW BAD CAN IT GET?
+----------------------
+
+In this example the network roundtrips incurred are not that serious.  But
+what happens if a branch has hundreds or thousands of subtrees with
+mergeinfo?  It happens: 
+
+### TODO: Write up analysis from Subversion repos mirror.
+
