@@ -149,7 +149,7 @@ set_wc_prop(void *baton,
   svn_client__callback_baton_t *cb = baton;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  const char *full_path = svn_path_join(cb->base_dir, path, pool);
+  const char *full_path = svn_dirent_join(cb->base_dir, path, pool);
 
   SVN_ERR(svn_wc__entry_versioned(&entry, full_path, cb->base_access, FALSE,
                                  pool));
@@ -157,7 +157,7 @@ set_wc_prop(void *baton,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, cb->base_access,
                               (entry->kind == svn_node_dir
                                ? full_path
-                               : svn_path_dirname(full_path, pool)),
+                               : svn_dirent_dirname(full_path, pool)),
                               pool));
 
   /* We pass 1 for the 'force' parameter here.  Since the property is
