@@ -1506,11 +1506,14 @@ read_entries_new(apr_hash_t **result_entries,
              ### be usable.  */
           entry->revision = SVN_INVALID_REVNUM;
         }
+      else if (status == svn_wc__db_status_absent)
+        {
+          entry->absent = TRUE;
+        }
       else
         {
           /* One of the not-present varieties. Skip this node.  */
-          SVN_ERR_ASSERT(status == svn_wc__db_status_absent
-                         || status == svn_wc__db_status_excluded
+          SVN_ERR_ASSERT(status == svn_wc__db_status_excluded
                          || status == svn_wc__db_status_incomplete);
           continue;
         }
@@ -2084,6 +2087,8 @@ insert_base_node(svn_sqlite__db_t *wc_db,
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "not-present"));
   else if (base_node->presence == svn_wc__db_status_normal)
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal"));
+  else if (base_node->presence == svn_wc__db_status_absent)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "absent"));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
@@ -2136,7 +2141,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 17, base_node->incomplete_children));
 
   /* Execute and reset the insert clause. */
-  return svn_sqlite__insert(NULL, stmt);
+  return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
 static svn_error_t *
@@ -2412,7 +2417,9 @@ write_entry(svn_wc__db_t *db,
 
   if (entry->absent)
     {
-      /* TODO: Adjust kinds to absent kinds. */
+      SVN_ERR_ASSERT(working_node == NULL);
+      SVN_ERR_ASSERT(base_node != NULL);
+      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->incomplete)
