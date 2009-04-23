@@ -66,7 +66,7 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
   if (err)
     {
       svn_error_clear(err2);
-      return err;
+      return svn_error_return(err);
     }
 
   if (APR_PROC_CHECK_EXIT(exitwhy) && exitcode == 0)
@@ -287,7 +287,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr(apr_err, _("Error closing null file"));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 

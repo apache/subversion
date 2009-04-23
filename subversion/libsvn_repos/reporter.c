@@ -1254,7 +1254,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
     if (err == SVN_NO_ERROR)
       return b->editor->close_edit(b->edit_baton, pool);
     svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return err;
+    return svn_error_return(err);
   }
 }
 
