@@ -740,7 +740,14 @@ complete_directory(struct edit_baton *eb,
       (eb->requested_depth == svn_depth_infinity
        || (strcmp(path, svn_dirent_join(eb->anchor, eb->target, pool)) == 0
            && eb->requested_depth > entry->depth)))
-    entry->depth = eb->requested_depth;
+    {
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+      const char *local_dir_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path, pool));
+      SVN_ERR(svn_wc__set_depth(db, local_dir_abspath, eb->requested_depth,
+                                pool));
+    }
 
   /* Remove any deleted or missing entries. */
   subpool = svn_pool_create(pool);
