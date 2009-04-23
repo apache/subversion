@@ -26,7 +26,6 @@
 #include "entries.h"
 #include "adm_files.h"
 #include "translate.h"
-#include "questions.h"
 #include "log.h"
 #include "lock.h"
 

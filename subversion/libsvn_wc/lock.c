@@ -28,7 +28,6 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "lock.h"
-#include "questions.h"
 #include "props.h"
 #include "log.h"
 #include "entries.h"
@@ -182,6 +181,93 @@ convert_wcprops(svn_stringbuf_t *log_accum,
 }
 
 
+static svn_error_t *
+check_format(int wc_format, const char *path, apr_pool_t *pool)
+{
+  if (wc_format < 2)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("Working copy format of '%s' is too old (%d); "
+           "please check out your working copy again"),
+         svn_path_local_style(path, pool), wc_format);
+    }
+#ifndef BLAST_FORMAT_11
+  else if (wc_format > SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  else if (wc_format > SVN_WC__VERSION)
+#endif
+    {
+      /* This won't do us much good for the 1.4<->1.5 crossgrade,
+         since 1.4.x clients don't refer to this FAQ entry, but at
+         least post-1.5 crossgrades will be somewhat less painful. */
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("This client is too old to work with working copy '%s'.  You need\n"
+           "to get a newer Subversion client, or to downgrade this working "
+           "copy.\n"
+           "See "
+           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+           "for details."
+           ),
+         svn_path_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ### todo: make this compare repository too?  Or do so in parallel
+   code.  */
+svn_error_t *
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool)
+{
+  const char *abspath;
+  svn_wc__db_t *db;
+  svn_error_t *err;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          NULL /* ### config */, pool, pool));
+  err = svn_wc__db_temp_get_format(wc_format, db, abspath, pool);
+  if (err && err->apr_err != SVN_ERR_WC_MISSING)
+    return err;
+
+  /* We don't need the DB any more. (of course, we shouldn't have had to
+     open it in the first place, but that's an API issue)  */
+  svn_error_clear(svn_wc__db_close(db, pool));
+
+  if (err)
+    {
+      svn_error_clear(err);
+
+      /* If the format file does not exist or path not directory, then for
+         our purposes this is not a working copy, so return 0. */
+      *wc_format = 0;
+
+      /* Check path itself exists. */
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+
+      if (kind == svn_node_none)
+        {
+          return svn_error_createf
+            (APR_ENOENT, NULL, _("'%s' does not exist"),
+            svn_path_local_style(path, pool));
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* If we managed to read the format we assume that we
+     are dealing with a real wc so we can return a nice
+     error. */
+  return check_format(*wc_format, path, pool);
+}
+
+
 #ifndef BLAST_FORMAT_11
 /* Helper function so we can still upgrade for format 11, for the time being.
    ### This will go away with before 1.7. */
@@ -194,9 +280,9 @@ upgrade_format_old(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
-  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
+  /* We can upgrade all formats that are accepted by check_format(). */
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
@@ -257,9 +343,9 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
   const svn_wc_entry_t *this_dir;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
-  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
+  /* We can upgrade all formats that are accepted by check_format(). */
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
@@ -567,9 +653,7 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
                      int wc_format,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__check_format(wc_format,
-                               adm_access->path,
-                               scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
 #ifndef BLAST_FORMAT_11
   /* ### we'll need to update this conditional when _EXPERIMENTAL
