@@ -2002,6 +2002,43 @@ svn_wc_entries_read(apr_hash_t **entries,
 }
 
 
+svn_error_t *
+svn_wc__set_depth(svn_wc__db_t *db,
+                  const char *local_dir_abspath,
+                  svn_depth_t depth,
+                  apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  const char *base_name;
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+  svn_wc_entry_t *entry;
+
+  /* Excluded directories are marked in the parent.  */
+  if (depth == svn_depth_exclude)
+    {
+      svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
+                       scratch_pool);
+    }
+  else
+    {
+      parent_abspath = local_dir_abspath;
+      base_name = "";
+    }
+
+  adm_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
+                                              scratch_pool);
+  SVN_ERR_ASSERT(adm_access != NULL);
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+
+  entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
+  entry->depth = depth;
+
+  return svn_error_return(svn_wc__entries_write(entries, adm_access,
+                                                scratch_pool));
+}
+
+
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *wc_db,
                  const db_base_node_t *base_node,

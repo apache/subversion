@@ -301,6 +301,14 @@ svn_boolean_t
 svn_wc__entry_is_hidden(const svn_wc_entry_t *entry);
 
 
+/* Set the depth of a directory.  */
+svn_error_t *
+svn_wc__set_depth(svn_wc__db_t *db,
+                  const char *local_dir_abspath,
+                  svn_depth_t depth,
+                  apr_pool_t *scratch_pool);
+
+
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
