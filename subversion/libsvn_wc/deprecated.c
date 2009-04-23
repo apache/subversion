@@ -1848,3 +1848,26 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
   return svn_error_return(svn_wc__marked_as_binary(has_binary_prop,
                                                    local_abspath, db, pool));
 }
+
+
+/*** From copy.c ***/
+
+svn_error_t *
+svn_wc_copy(const char *src_path,
+            svn_wc_adm_access_t *dst_parent,
+            const char *dst_basename,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb;
+
+  nb.func = notify_func;
+  nb.baton = notify_baton;
+
+  return svn_wc_copy2(src_path, dst_parent, dst_basename, cancel_func,
+                      cancel_baton, svn_wc__compat_call_notify_func,
+                      &nb, pool);
+}
