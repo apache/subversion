@@ -114,6 +114,17 @@ Candidate changes:
    Votes:
      +1: arfrever, rhuijben
 
+ * r37385
+   Return an error if attempting to reintegrate from/to the repository root.
+   Justification:
+     A descriptive error is a lot better than a cryptic assertion, see
+     http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
+   Votes:
+     +1: pburba
+
+Approved changes:
+=================
+
  * r37363, r37367, r37368, r37379
    Fix segfault when during merge, the search for the revision in which a
    subtree was deleted encounters an unreadable revision. This only happens
@@ -126,16 +137,4 @@ Candidate changes:
      tweaks to the test to get it to work correctly on all platforms and
      across all RA layers.
    Votes:
-     +1: rhuijben (r37363 only)
-     +1: pburba, lgo
-
- * r37385
-   Return an error if attempting to reintegrate from/to the repository root.
-   Justification:
-     A descriptive error is a lot better than a cryptic assertion, see
-     http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
-   Votes:
-     +1: pburba
-
-Approved changes:
-=================
+     +1: pburba, lgo, rhuijben
