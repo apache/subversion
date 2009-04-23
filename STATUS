@@ -47,6 +47,15 @@ Candidate changes:
                the feature is currently so buggy that you can't use it.)
      +1: arfrever
 
+ * r36527
+   Yet another merge performance improvement: Potentially reduce server
+   queries about subtree mergeinfo during reverse merges.
+   Justification:
+     Large numbers of subtrees with mergeinfo can significantly slow merge
+     performance, this alleviates that somewhat in a common use case.
+   Votes:
+     +1: pburba
+
  * r36509
    Don't contact the server asking about implicit mergeinfo when the
    explicit mergeinfo tells us all we need to know about what to merge
