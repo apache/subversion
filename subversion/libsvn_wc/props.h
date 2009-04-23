@@ -48,6 +48,17 @@ svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
+
+/* Internal function for fetching a property.  */
+svn_error_t *
+svn_wc__internal_propget(const svn_string_t **value,
+                         const char *name,
+                         const char *local_abspath,
+                         svn_wc__db_t *db,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
 /* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Append all necessary log entries to ENTRY_ACCUM.
