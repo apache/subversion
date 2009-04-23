@@ -203,6 +203,14 @@ svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__marked_as_binary(svn_boolean_t *marked,
+                         const char *local_abspath,
+                         svn_wc__db_t *db,
+                         apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
