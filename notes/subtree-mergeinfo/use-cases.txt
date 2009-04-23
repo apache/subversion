@@ -1,0 +1,57 @@
+USE CASES
+
+A) MERGE TARGET HAS NO SUBTREE MERGEINFO
+----------------------------------------
+
+Given a 'branch' copied from 'trunk', if all of the following hold, 
+
+  1) The branch is created via copy from a source that has no subtree
+     mergeinfo, so initially the branch has not subtree mergeinfo either.
+
+  2) The branch WC is of infinite depth.
+
+  3) The branch has no switched subtrees.
+
+  4) The branch has no subtrees missing due to auth restrictions.
+
+  5) All merges to the branch are to the root of the branch (i.e. no
+     subtree merges).
+
+  6) None of the merges from the source bring in subtree mergeinfo as a
+     property diff.
+
+  7) All WC-to-WC copies/moves are done with a 1.5.5+ client so mergeinfo
+     is not created on the destination.
+  
+Then whether or not we set subtree mergeinfo while merging from 'trunk'
+to 'branch' is a moot point since there are no subtrees to start with.
+Lovely, but all these conditions are unlikely to hold true for long in all
+but the simplest cases.
+
+
+B) MERGE TARGET HAS SUBTREE MERGEINFO
+-------------------------------------
+
+Same as use case A, but one or more of the conditions don't hold, so
+there is initial subtree mergeinfo on the branch when it is created and/or
+subtree mergeinfo comes into being during the branch's existence.
+
+B.1) FEATURE BRANCHES
+
+Branch is created as a copy of 'trunk' and commits are made to the branch
+while periodically "synching" all available changes from 'trunk' using a
+merge with no revision range specified. 
+
+B.2) RELEASE BRANCHES
+
+Branch is created as a copy of 'trunk', changes are typically not made on
+the branch, but individual revisions are cherry picked from 'trunk' to the
+root of the branch or to a subtree of the branch (subtree merges).
+
+C) REINTEGRATE SUBTREE WITH MERGEINFO
+-------------------------------------
+
+The 'branch' in use case B.1 is reintegrated back to 'trunk'.
+
+### TODO: What else do we need to consider? 
+

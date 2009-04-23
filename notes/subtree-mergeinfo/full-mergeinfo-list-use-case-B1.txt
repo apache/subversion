@@ -1,0 +1,5241 @@
+Properties on '.':
+  svn:mergeinfo
+    /branches/1.5.x-r30215:30238
+    /branches/bdb-reverse-deltas:31976-32455
+    /branches/diff-callbacks3:29985-30687
+    /branches/dont-save-plaintext-passwords-by-default:30654-31044
+    /branches/double-delete:30437-32896
+    /branches/explore-wc:35412,35419,35423,35433,35437,35440,35485,35506-35507,35510,35513,35537,35553,35573,35593-35594,35637-35638,35659-35660,35662,35670-35674,35677,35684,35708
+,35721-35722,35756,35762,35764,35768,35778,35781,35790,35796,35799,35806,35811-35814,35816,35823-35824,35831,35833-35835,35861,35869-35870,35872,35905,35908-35909,35911-35912,35916
+,35923
+    /branches/file-externals:31705-33228
+    /branches/fs-rep-sharing:28962-33729
+    /branches/fsfs-pack:33643-34501
+    /branches/gnome-keyring:30484-31336
+    /branches/http-protocol-v2:34321-35967
+    /branches/in-memory-cache:29755-31378
+    /branches/issue-2843-dev:31358-34105
+    /branches/issue-3000:31639,31642-31645,31647-31652,31654,31660
+    /branches/issue-3067-deleted-subtrees:33301-34010
+    /branches/issue-3148-dev:35119-35130
+    /branches/issue-3220-dev:32136-32152
+    /branches/issue-3334-dirs:35082-35793
+    /branches/kwallet:30711-31240
+    /branches/log-g-performance:30867-30958
+    /branches/merge-skips-obstructions:34451-34541
+    /branches/ra_serf-digest-authn:35619-36330
+    /branches/reintegrate-improvements:33779-34090
+    /branches/svn-mergeinfo-enhancements:30045-30121,30123-30214
+    /branches/svnpatch-diff:25664-36403
+    /branches/svnserve-logging:29754-30819
+    /branches/tc-issue-3334:34623-34699
+    /branches/tc-merge-notify:33943-33988
+    /branches/tc-resolve:34117-34165
+    /branches/tc_url_rev:34277-34409
+    /branches/tree-conflicts:28217-33080
+    /branches/tree-conflicts-notify:33852-33934
+    /trunk:36001-36500
+Properties on 'subversion\libsvn_repos\rev_hunt.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\main.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\__init__.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\util.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\diff.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/diff.c:36404,36426
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\deprecated.c':
+  svn:mergeinfo
+
+Properties on 'packages\freebsd\README':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\libsvn_swig_ruby\swigutil_rb.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\get_locks.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\id.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\libsvn_swig_ruby\swigutil_rb.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\id.h':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\README':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\examples':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\CommonSASLFiles.wxi':
+  svn:mergeinfo
+
+Properties on 'notes\logo\grayscale':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\svn_bck.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\properties.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/properties.c:36158,36160
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ConflictDescriptor.java':
+  svn:mergeinfo
+
+Properties on 'tools\backup':
+  svn:mergeinfo
+
+Properties on 'doc':
+  svn:mergeinfo
+    /trunk/doc:36386
+Properties on 'subversion\svn\propget-cmd.c':
+  svn:mergeinfo
+
+Properties on 'doc\user\lj_article.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\status-cmd.c':
+  svn:mergeinfo
+
+Properties on 'build\install-sh':
+  svn:mergeinfo
+
+Properties on 'packages':
+  svn:mergeinfo
+    /trunk/packages:36238
+Properties on 'build\generator\gen_msvc_dsp.py':
+  svn:mergeinfo
+
+Properties on 'www\images\redhat.png':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\xp-vc60-ia32\config.bat.tmpl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\cmdline.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/cmdline.c:36236
+Properties on 'doc\tools\dtd\docbook41\docbookx.dtd':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\readme.txt':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\exclamic.ico':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\SVNAdmin.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\tree.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\key-gen.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\W32notes.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\diff-cmd.c':
+  svn:mergeinfo
+    /trunk/subversion/svn/diff-cmd.c:36404
+Properties on 'subversion\svn\copy-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\tree.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\key-gen.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Licenses22x.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\StatusCallback.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\relocate.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/relocate.c:36235,36352,36358,36362,36369,36372
+Properties on 'build\buildcheck.sh':
+  svn:mergeinfo
+    /trunk/build/buildcheck.sh:36153
+Properties on 'subversion\tests\cmdline\svnadmin_tests_data':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ChangelistCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\exec_svnserve.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svndumpfilter_tests_data\with_merges.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_client.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_client.h:36158,36404
+Properties on 'subversion\libsvn_client\prop_commands.c':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-grk1.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\StatusCallback.h':
+  svn:mergeinfo
+
+Properties on 'tools\examples\get-location-segments.py':
+  svn:mergeinfo
+
+Properties on 'tools\po':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\get-locations.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\svnsync-trunk-A-changes.expected.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\EnumMapper.h':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\subversion.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\log.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/log.c:36041,36219,36235,36302,36319,36358,36362,36369,36372
+Properties on 'subversion\libsvn_client':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client:36049-36051,36103-36104,36106,36131,36158,36170,36229,36236,36253,36256,36265,36269,36272,36279-36280,36296-36297,36404,36420,36424-36426,36444,
+36459,36477
+Properties on 'contrib\hook-scripts\enforcer\enforcer':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\log.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/log.h:36041
+Properties on 'www\images\debian.png':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\hashdump-test.c':
+  svn:mergeinfo
+
+Properties on 'www\merge-tracking\summit.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help_stdout':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/getopt_tests_data/svn_help_stdout:36404
+Properties on 'subversion\tests\libsvn_subr\compat-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\lock-cmd.c':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64\svncheck.sh':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\LicensesFeature22x.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\InfoCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'doc\programmer':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_load_dirs\svn_load_dirs_property_table.example':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\README':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_atomic.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\ssl_client_cert_pw_providers.c':
+  svn:mergeinfo
+
+Properties on 'notes':
+  svn:mergeinfo
+    /trunk/notes:36008,36029,36073,36166,36314,36356,36404,36489-36490
+Properties on 'notes\commit-access-templates\full-committer.tmpl':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-amsa.ent':
+  svn:mergeinfo
+
+Properties on 'www\images\netbsd.png':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent':
+  svn:mergeinfo
+
+Properties on 'subversion\svnadmin\svnadmin.1':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\2fs.t':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\export.c':
+  svn:mergeinfo
+
+Properties on 'www\project_status.html':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\templates\mk_htmlhelp.bat':
+  svn:mergeinfo
+
+Properties on 'doc\tools\Makefile.base-vars':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\time.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\lock.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\osx10.4-gcc4.0.1-ia32\svnclean.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\wc.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ConflictResolverCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\README':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\repos.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\Pre.rtf':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\diff_file.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_user.h':
+  svn:mergeinfo
+
+Properties on 'tools\bdb\svnfs.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\commit-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\auth.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/auth.c:36331,36333,36363,36370,36373
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\PostDlg.wxs':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\default_editor.c':
+  svn:mergeinfo
+
+Properties on 'tools\bdb\svn-bdb-view.py':
+  svn:mergeinfo
+
+Properties on 'notes\obliterate':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\cat.c':
+  svn:mergeinfo
+
+Properties on 'www\release-process.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\svn_ra.i':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\pre-lock-require-needs-lock.py':
+  svn:mergeinfo
+
+Properties on 'tools\diff\diff3.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svnmerge\svnmerge.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\davautocheck.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\test.py':
+  svn:mergeinfo
+
+Properties on 'notes\logo':
+  svn:mergeinfo
+
+Properties on 'www\images\solaris.png':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\Up.ico':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\svn_fs.i':
+  svn:mergeinfo
+
+Properties on 'tools\dev\scramble-tree.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\mk_distro.bat':
+  svn:mergeinfo
+
+Properties on 'build\generator\swig\checkout_swig_header.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\blame.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/blame.c:36158,36170,36279-36280
+Properties on 'doc\tools\dtd\docbook41\ent\iso-tech.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ListCallback.java':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\include\svnstsw\exec_svnserve.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_opt.h':
+  svn:mergeinfo
+
+Properties on 'www\_template.html':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\fso_is_changeable.c':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005\svnlog.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\add.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/add.c:36265
+Properties on 'packages\rpm\rhel-5\filter-requires.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta\svndiff-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\__init__.py':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\find-osrel':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\opt.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/opt.c:36228,36236
+Properties on 'subversion\libsvn_delta\cancel.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\node-rev.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\opt.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Wc.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SubversionException.java':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\svnpath\main.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\node-rev.h':
+  svn:mergeinfo
+
+Properties on 'build\generator\vcnet_vcproj.ezt':
+  svn:mergeinfo
+    /trunk/build/generator/vcnet_vcproj.ezt:36207,36212
+Properties on 'www\test-redirects.html':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\subversion-0.31.0-rpath.patch':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\LICENSE_FOR_PYTHON_BINDINGS':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\config_auth.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/config_auth.c:36294
+Properties on 'tools\dist\post-to-tigris.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\ProgramMenu.wxi':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\info.ico':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\xbannrbmp.bmp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ScheduleKind.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\core\__init__.py':
+  svn:mergeinfo
+
+Properties on 'notes\svnsync.txt':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\xp-vc60-ia32\svncheck.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\svn_delta.i':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\version.c':
+  svn:mergeinfo
+
+Properties on 'www\tasks.html':
+  svn:mergeinfo
+    /trunk/www/tasks.html:36458,36461,36463-36464
+Properties on 'subversion\include\private\svn_cmdline_private.h':
+  svn:mergeinfo
+    /trunk/subversion/include/private/svn_cmdline_private.h:36360
+Properties on 'tools\client-side\change-svn-wc-format.py':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-grk2.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Prompter.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\__init__.py':
+  svn:mergeinfo
+
+Properties on 'www\svn-dav-securityspace-survey.html':
+  svn:mergeinfo
+    /trunk/www/svn-dav-securityspace-survey.html:36163
+Properties on 'subversion\bindings\swig\ruby\test\util.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\my-assertions.rb':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\require-mergeinfo.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\ra.py':
+  svn:mergeinfo
+
+Properties on 'notes\commit-access-templates\contrib-committer.tmpl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include':
+  svn:mergeinfo
+    /trunk/subversion/bindings/swig/include:36171
+Properties on 'subversion\tests\libsvn_subr':
+  svn:mergeinfo
+    /trunk/subversion/tests/libsvn_subr:36037,36045,36060-36063,36177,36230,36309-36310,36312,36327,36368,36383,36393-36395
+Properties on 'notes\logo\256-colour\subversion_logo-200x173.png':
+  svn:mergeinfo
+
+Properties on 'www\svn_1.5_releasenotes.html':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-5\.rpmmacros':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\DiffSummary.java':
+  svn:mergeinfo
+
+Properties on 'www\merge-tracking\index.html':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-pub.ent':
+  svn:mergeinfo
+
+Properties on 'www\merge-tracking\summit-survey.html':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_utf_private.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\special_tests_data\symlink.dump':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnmirror.sh':
+  svn:mergeinfo
+
+Properties on 'www\testing-goals.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\deprecated.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/deprecated.c:36228
+Properties on 'subversion\bindings\javahl\native\SVNBase.cpp':
+  svn:mergeinfo
+
+Properties on 'build\win32\svn_locale.dsp':
+  svn:mergeinfo
+
+Properties on 'autogen.sh':
+  svn:mergeinfo
+    /trunk/autogen.sh:36153
+Properties on 'tools\examples\headrev.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\cleanup-cmd.c':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\svnperms.conf.example':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\ssl_client_cert_providers.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta\vdelta-test.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\templates\svn-doc.css':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-amsb.ent':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_load_dirs\svn_load_dirs.pl.in':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_base\fs-base-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_delta.rb':
+  svn:mergeinfo
+    /trunk/subversion/bindings/swig/ruby/test/test_delta.rb:36171
+Properties on 'subversion\libsvn_fs_base\bdb\bdb-err.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_repos:36032-36033,36046,36072,36325,36338-36340
+Properties on 'subversion\tests\cmdline\basic_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\server.h':
+  svn:mergeinfo
+
+Properties on 'notes\repos_upgrade_HOWTO':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\bdb-err.h':
+  svn:mergeinfo
+
+Properties on 'tools\examples\getlocks_test.c':
+  svn:mergeinfo
+
+Properties on 'www\roadmap.html':
+  svn:mergeinfo
+    /trunk/www/roadmap.html:36165
+Properties on 'subversion\libsvn_wc\wc-metadata.sql':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/wc-metadata.sql:36021,36025,36054,36080-36081,36083-36084,36105,36130,36175,36206,36245,36249,36262,36367
+Properties on 'doc\tools\dtd\docbook41\ent\iso-amsr.ent':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\emacs\psvn.el':
+  svn:mergeinfo
+
+Properties on 'tools\examples\revplist.py':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc\Doxyfile-html.in':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\win32_crashrpt.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/win32_crashrpt.c:36030
+Properties on 'contrib\client-side\svncopy\svncopy.pl.in':
+  svn:mergeinfo
+
+Properties on 'notes\commit-access-templates\partial-committer.tmpl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\reps-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\date.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\win32_crashrpt.h':
+  svn:mergeinfo
+
+Properties on 'www\links.zh.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\SVNAdmin.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\reps-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\svnsync-move-and-modify.dump':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\filter-requires.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\list.rnc':
+  svn:mergeinfo
+
+Properties on 'tools\bdb\whatis-rep.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Notify2.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\cleanup.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\proplist-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn--version--quiet_stdout':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn--help_stdout':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/getopt_tests_data/svn--help_stdout:36404
+Properties on 'subversion\po\pl.po':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\apr.m4':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\find_apu.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\replay.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnversion':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Revision.h':
+  svn:mergeinfo
+
+Properties on 'subversion\po':
+  svn:mergeinfo
+    /trunk/subversion/po:36068-36069,36076,36085,36092,36115,36125,36127,36135,36173,36449,36497
+Properties on 'subversion\libsvn_diff\diff.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnadmin':
+  svn:mergeinfo
+
+Properties on 'www\subversion-linus.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\authz.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_stderr':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\diff.h':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour\subversion_logo_hor-237x32.png':
+  svn:mergeinfo
+
+Properties on 'COMMITTERS':
+  svn:mergeinfo
+    /trunk/COMMITTERS:36491
+Properties on 'contrib\server-side\svnstsw\doc\man\svnstsw_exec_svnserve.3.in':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\genctype.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\NOTES':
+  svn:mergeinfo
+
+Properties on 'www\project_links.html':
+  svn:mergeinfo
+
+Properties on 'tools\dev\iz\defect.dem':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion\javahl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Delta.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\copy-parent-modify-prop.dump':
+  svn:mergeinfo
+
+Properties on 'doc\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\config_impl.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_dav_protocol.h':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\pre-commit-check.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\uuids-table.c':
+  svn:mergeinfo
+
+Properties on 'www\features.html':
+  svn:mergeinfo
+
+Properties on 'tools\server-side\fsfs-reshard.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\uuids-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\libsvn_swig_ruby':
+  svn:mergeinfo
+
+Properties on 'notes\sparse-directories.txt':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-grk3.ent':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\use-cases.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\main.py':
+  svn:mergeinfo
+
+Properties on 'www\httpd-win32.patch.txt':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\tests\mailer-init.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\checksum-reps-table.c':
+  svn:mergeinfo
+
+Properties on 'doc\misc-docs':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\checksum-reps-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\po\zh_CN.po':
+  svn:mergeinfo
+    /trunk/subversion/po/zh_CN.po:36092,36127,36173,36497
+Properties on 'tools\buildbot\slaves\xp-vc60-ia32':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\osx10.4-gcc4.0.1-ia32\svncheck.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ChangelistCallback.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Outputer.h':
+  svn:mergeinfo
+
+Properties on 'packages\solaris\buildpkg.sh':
+  svn:mergeinfo
+
+Properties on 'tools\dev\iz\ff2csv.command':
+  svn:mergeinfo
+
+Properties on 'build\PrintPath':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\StatusCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'CHANGES':
+  svn:mergeinfo
+    /trunk/CHANGES:36096-36097,36138
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\NotifyAction.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\client.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\switch.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\iz\ff2csv.py':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\README':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\BlameCallback2.java':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-amsc.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\checkout-cmd.c':
+  svn:mergeinfo
+
+Properties on 'www\security\CAN-2004-0749-advisory.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_core.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\tests\svn_fs.py':
+  svn:mergeinfo
+
+Properties on 'www\project_development.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\stat_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_iter.h':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\svn-keyword-check.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\fs-wrap.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_skel.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\com\README':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Notify2.h':
+  svn:mergeinfo
+
+Properties on 'notes\sasl.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\RevisionKind.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\cyrus_auth.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\commit.c':
+  svn:mergeinfo
+
+Properties on 'tools\examples\putfile.py':
+  svn:mergeinfo
+
+Properties on 'aclocal.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\DiffSummaryReceiver.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Base.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\greek_tree.rb':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn-resolve':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\Makefile':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\wc_db.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/wc_db.c:36018,36043,36080-36082,36088,36132,36134,36143,36152,36154-36155,36164,36206,36215-36216,36244-36245,36262,36264,36276,36278,36308,36320,36
+353,36434,36436,36454,36485,36487
+Properties on 'subversion\libsvn_client\list.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\TODO':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\props.rnc':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\depth_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\wc_db.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/wc_db.h:36018,36043,36080,36132,36134,36152,36154,36206,36245,36262,36308,36434,36437,36454,36485,36487,36499-36500
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\copy-from-previous-version-and-modify.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\fs.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\wc.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\vim':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_utf.h':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\README':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc\man\svnstsw.8.in':
+  svn:mergeinfo
+
+Properties on 'tools\dist\download-release.sh':
+  svn:mergeinfo
+
+Properties on 'notes\logo\subversion_logo.icns':
+  svn:mergeinfo
+
+Properties on 'notes\changeset-signing.txt':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour\subversion_logo-384x332.png':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnadmin_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svnadmin_tests.py:36460
+Properties on 'subversion\bindings\javahl\native\CommitMessage.cpp':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-5\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\utf.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/utf.c:36334,36336
+Properties on 'subversion\tests\cmdline\special_tests_data':
+  svn:mergeinfo
+
+Properties on 'notes\fs_dumprestore.txt':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\berkeley-db.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\old-and-busted.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/old-and-busted.c:36218
+Properties on 'subversion\libsvn_delta\compat.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\zlib.dsp.ezt':
+  svn:mergeinfo
+
+Properties on 'build\generator\__init__.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\svn_global.swg':
+  svn:mergeinfo
+
+Properties on 'notes\locking':
+  svn:mergeinfo
+
+Properties on 'notes\compatibility.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest\wc.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/wc.py:36462,36465,36474,36476,36478,36494
+Properties on 'subversion\bindings\swig\ruby\test\test-unit-ext\priority.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\sorts.c':
+  svn:mergeinfo
+
+Properties on 'www\images\hp.png':
+  svn:mergeinfo
+
+Properties on 'tools\po\po-update.sh':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\mk_svndoc.pl':
+  svn:mergeinfo
+
+Properties on 'notes\test-writing':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\Makefile.am':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\CommitItemStateFlags.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\id.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\move-cmd.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\mlpatch.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_export_empty_files.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test-unit-ext':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\id.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn--version_stdout':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64\svnbuild.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\strings-table.c':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\uuid.c':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\notes\structure':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\resolve-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Revision.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\delta.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_load_dirs\svn_load_dirs.README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\strings-table.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\wiz-55x55x24.bmp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\uuid.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\svn.1':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\miscellaneous-table.c':
+  svn:mergeinfo
+
+Properties on 'notes\alternate-bdb-version':
+  svn:mergeinfo
+
+Properties on 'notes\webdav-proxy':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-grk4.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_base':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac':
+  svn:mergeinfo
+
+Properties on 'notes\autoversioning-strategy.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\miscellaneous-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test\svntypes.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion\javahl\BasicTests.java':
+  svn:mergeinfo
+
+Properties on 'doc\tools\Makefile.base-rules':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\repos_diff_summarize.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion\javahl\WC.java':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\missing_shfolderdll.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\checkout_tests.py':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\tests\mailer-t1.output':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\svn_test_main.c':
+  svn:mergeinfo
+    /trunk/subversion/tests/svn_test_main.c:36396,36475
+Properties on 'notes\autoversion-compatibility.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\util.c':
+  svn:mergeinfo
+    /trunk/subversion/mod_dav_svn/util.c:36371,36384
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Notify2.java':
+  svn:mergeinfo
+
+Properties on 'tools\examples\check-modified.py':
+  svn:mergeinfo
+
+Properties on 'www\webdav-usage.html':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\include':
+  svn:mergeinfo
+
+Properties on 'build\generator\build_zlib.ezt':
+  svn:mergeinfo
+
+Properties on 'tools\examples\geturl.py':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_dav.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_sorts.h':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\commit-access-control.pl.in':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta\window-test.c':
+  svn:mergeinfo
+
+Properties on 'www\project_tools.html':
+  svn:mergeinfo
+    /trunk/www/project_tools.html:36455
+Properties on 'subversion\mod_authz_svn':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\io.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/io.c:36111,36228,36233,36442-36443
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svneditor.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svneditor.py:36178
+Properties on 'subversion\tests\libsvn_repos\dir-delta-editor.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Notify.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs\fs-loader.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ProgressListener.cpp':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_all_diffs.pl':
+  svn:mergeinfo
+
+Properties on 'notes\txdelta_sanity':
+  svn:mergeinfo
+
+Properties on 'subversion\svnlook\svnlook.1':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_repos\dir-delta-editor.h':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour\subversion_logo_notxt-32.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs\fs-loader.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_log.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\node_tree.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\subversion.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\util':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\client.py':
+  svn:mergeinfo
+
+Properties on 'www\toctool.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn-log.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ListCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\questions.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/questions.c:36219,36235,36252,36358,36362,36369,36372,36482
+Properties on 'contrib\client-side\emacs\vc-svn.el':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\questions.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/questions.h:36482
+Properties on 'www\images\windows.png':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_wc.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_wc.h:36404,36411,36420,36424-36425,36440-36441
+Properties on 'contrib\client-side\svn-viewdiff':
+  svn:mergeinfo
+
+Properties on 'tools\dev\find-bad-style.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\log_tests_data':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\dbhierx.mod':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\authz_svn_group.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\url.c':
+  svn:mergeinfo
+
+Properties on 'notes\dump-load-format.txt':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1\svnclean.sh':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\use-cases-resolution.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_hash.h':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_update.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\txn-table.c':
+  svn:mergeinfo
+
+Properties on 'www':
+  svn:mergeinfo
+    /trunk/www:36034,36074,36091,36124,36163,36165,36172,36181,36209,36231-36232,36234,36266,36274,36342,36357,36364-36365,36455,36458,36461,36463-36464
+Properties on 'subversion\libsvn_auth_kwallet\kwallet.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Client.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\txn-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\svn_fs.py':
+  svn:mergeinfo
+
+Properties on 'tools\dev\random-commits.py':
+  svn:mergeinfo
+
+Properties on 'www\security\mod_authz_svn-copy-advisory.txt':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\dbnotnx.mod':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_auth_kwallet':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\5delta-compat.t':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\java.m4':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\osx10.4-gcc4.0.1-ia32\svnlog.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\changelist_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_diff.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\rev-table.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\warn-ignored-err.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\LogMessageCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\rev-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\SVNClient.cpp':
+  svn:mergeinfo
+
+Properties on 'packages\python-windows\setup.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\serve.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\ext\__init__.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta\vdelta_1.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\OutputInterface.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\org_tigris_subversion_javahl_NativeResources.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\core.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\run-test.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_local':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\PromptUserPassword2.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\mergeinfo.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\compat_providers.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\diff_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/diff_tests.py:36404,36439,36480,36492,36498
+Properties on 'subversion\include\svn_types.h':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\filter-requires.sh':
+  svn:mergeinfo
+
+Properties on 'HACKING':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ProplistCallback.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\update_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/update_tests.py:36178,36431
+Properties on 'notes\logo\16-colour':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\Makefile.am':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_ra_local\ra-local-test.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\NEWS':
+  svn:mergeinfo
+
+Properties on 'build\generator\swig\__init__.py':
+  svn:mergeinfo
+
+Properties on 'tools\examples\blame.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\core\functions.py.in':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\templates':
+  svn:mergeinfo
+
+Properties on 'tools\examples\testwrite.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_nls.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\README':
+  svn:mergeinfo
+
+Properties on 'tools\dist\nightly.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\tree.c':
+  svn:mergeinfo
+
+Properties on 'doc\user\cvs-crossover-guide.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\commit_util.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/commit_util.c:36269,36272,36297
+Properties on 'subversion\libsvn_fs_base\tree.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\nls.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\protocol':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\tree_conflict_tests.py':
+  svn:mergeinfo
+
+Properties on 'tools\server-side\svn_server_log_parse.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\fetch.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\wiz-164x314x24.bmp':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\log-cmd.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Post.rtf':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\images\wiz-164x314x24.bmp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\RevpropTable.cpp':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\dbgenent.ent':
+  svn:mergeinfo
+
+Properties on 'notes\copies-during-updates.txt':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\templates\svn_dynamics.iss':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\macos_keychain.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\lock.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_fs_fs/lock.c:36223-36224
+Properties on 'contrib\client-side\svn-merge-vendor.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\user.c':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-cyr1.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\6ra.t':
+  svn:mergeinfo
+
+Properties on 'www\subversion-diagram.graffle':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\lock.h':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\include\svnstsw\fso_is_changeable.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest\main.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/main.py:36298,36446-36448,36465,36475,36483
+Properties on 'notes\locking\locking-ui.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\build\build.xml':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Inputer.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_auth_gnome_keyring\version.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_props.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_props.h:36158
+Properties on 'packages\windows-innosetup\svn.url':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\Readme.txt':
+  svn:mergeinfo
+
+Properties on 'www\mailing-list-guidelines.html':
+  svn:mergeinfo
+
+Properties on 'tools\server-side\svn-populate-node-origins-index.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\conf\stsw_prog_doxygen.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_ra.rb':
+  svn:mergeinfo
+
+Properties on 'www\build-farm.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\crop.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/crop.c:36219,36235
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\svnsync-trunk-only.dump':
+  svn:mergeinfo
+
+Properties on 'packages\solaris\README':
+  svn:mergeinfo
+
+Properties on 'www\svn_1.4_releasenotes.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\setup_path.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\txn.py':
+  svn:mergeinfo
+
+Properties on 'www\security':
+  svn:mergeinfo
+
+Properties on 'www\images\suse.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\getlocationsegments.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/getlocationsegments.c:36202
+Properties on 'contrib\server-side\svn-fast-backup':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\resolved.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_checksum.h':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svncopy':
+  svn:mergeinfo
+
+Properties on 'tools\dist\sample-rc-warning-index.html':
+  svn:mergeinfo
+
+Properties on 'www\project_tasks.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\version.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Revision.java':
+  svn:mergeinfo
+
+Properties on 'doc\user\svn-best-practices.html':
+  svn:mergeinfo
+
+Properties on 'www\images\merge-tracking\calculate-ranges-already-merged.png':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\tree-conflicts.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\lock-check.py':
+  svn:mergeinfo
+
+Properties on 'www\merge-tracking\requirements.html':
+  svn:mergeinfo
+
+Properties on 'notes\locking\ra_dav_strategy.txt':
+  svn:mergeinfo
+
+Properties on 'tools\client-side\wcfind':
+  svn:mergeinfo
+
+Properties on 'build\getversion.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\tree-conflicts.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test-unit-ext\long-display-for-emacs.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_mergeinfo_private.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\delete.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\svn2cl.1':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\dir_prop_change.dump':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\osx10.4-gcc4.0.1-ia32\svnbuild.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_client.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\Makefile':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour\subversion_logo_notxt-16.png':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\ApacheFeature20x.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_local\ra_local.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_client':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\svn_test.h':
+  svn:mergeinfo
+    /trunk/subversion/tests/svn_test.h:36396,36475
+Properties on 'contrib\cgi\tweak-log.cgi':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\revert-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\client.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/client.h:36404
+Properties on 'tools\dev\which-error.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t':
+  svn:mergeinfo
+
+Properties on 'contrib':
+  svn:mergeinfo
+    /trunk/contrib:36016,36086,36413
+Properties on 'packages\windows-WiX\BuildSubversion\CommonShareFiles.wxi':
+  svn:mergeinfo
+
+Properties on 'build\win32':
+  svn:mergeinfo
+    /trunk/build/win32:36209
+Properties on 'packages\windows-innosetup\tools\svnpath\svnpath.rc':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\AUTHORS':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\fs.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\blame.rnc':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNInputStream.java':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\log.rnc':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ProgressEvent.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\fs.h':
+  svn:mergeinfo
+
+Properties on 'build\generator\msvc_dsw.ezt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\target-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\winservice.h':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\include\svnstsw\get_tunnel_user_name.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\NotifyInformation.java':
+  svn:mergeinfo
+
+Properties on 'tools\server-side\svnauthz-validate.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\svn_config.vcproj.ezt':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\dav_svn.h':
+  svn:mergeinfo
+    /trunk/subversion/mod_dav_svn/dav_svn.h:36371
+Properties on 'www\images\merge-tracking\handle-merge-conflicts.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\svndiff.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Status.java':
+  svn:mergeinfo
+
+Properties on 'tools\po\l10n-report.py':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\include\svnstsw':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\PromptUserPassword3.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\update.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\diff.rnc':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\cat-cmd.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\mod_dontdothat':
+  svn:mergeinfo
+
+Properties on 'www\design.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ListCallback.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\BlameCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\log_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/log_tests.py:36433
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Depth.java':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1\svncheck.sh':
+  svn:mergeinfo
+
+Properties on 'tools\dev\min-includes.sh':
+  svn:mergeinfo
+
+Properties on 'tools\dev\po-merge.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra\compat.c':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\zlib.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_dso.h':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn-push':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\libsvn_swig_py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\rep-cache-db.sql':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\osx10.4-gcc4.0.1-ia32':
+  svn:mergeinfo
+
+Properties on 'doc\HOWTO.DocBook':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_doxygen.h':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\detect-merge-conflicts.sh':
+  svn:mergeinfo
+
+Properties on 'tools\dev\svn-merge-revs.py':
+  svn:mergeinfo
+
+Properties on 'notes\logo\subversion_logo_notxt.png':
+  svn:mergeinfo
+
+Properties on 'www\images\merge-tracking\retrieve-merge-info.png':
+  svn:mergeinfo
+
+Properties on 'www\tools_contrib.zh.html':
+  svn:mergeinfo
+    /trunk/www/tools_contrib.zh.html:36209
+Properties on 'doc\tools\dtd\docbook41\ent\iso-cyr2.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\checksum-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\config-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\dso.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\README':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\copy_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/copy_tests.py:36348
+Properties on 'contrib\hook-scripts\syntax-check.sh':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnlog2html.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\mergeinfo-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn':
+  svn:mergeinfo
+    /trunk/subversion/svn:36117,36126,36147,36158,36178-36179,36213,36292,36296,36359-36360,36404
+Properties on 'tools\client-side\bash_completion':
+  svn:mergeinfo
+    /trunk/tools/client-side/bash_completion:36450-36452
+Properties on 'www\cvs-changelog.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\utf8_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\INSTALL':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_wc_private.h':
+  svn:mergeinfo
+    /trunk/subversion/include/private/svn_wc_private.h:36420,36424
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\tag-with-modified-file.dump':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\scripts\compile_all.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\cache-inprocess.c':
+  svn:mergeinfo
+
+Properties on 'notes\interactive-conflict-resolution.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\libsvn_swig_py\swigutil_py.c':
+  svn:mergeinfo
+
+Properties on 'build\get-py-info.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\skel-test.c':
+  svn:mergeinfo
+
+Properties on 'www\bugs.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\wc.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\libsvn_swig_py\swigutil_py.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\status.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/status.c:36219,36235,36241,36319,36429,36467
+Properties on 'doc\tools\dtd\docbook41\dbpoolx.mod':
+  svn:mergeinfo
+
+Properties on 'www\logo\subversion_logo.ai':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\authors.xml':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\log.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\simple_providers.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\mk_distro.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_fs\fs-pack-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_info.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\3client.t':
+  svn:mergeinfo
+
+Properties on 'build\generator\build_locale.ezt':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\AdminExitDialog.wxs':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\lock.c':
+  svn:mergeinfo
+
+Properties on 'www\images\merge-tracking\revisions-to-merge.png':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Path.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIByteArray.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\deprecated.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/deprecated.c:36158,36229,36404
+Properties on 'subversion\libsvn_fs_base':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_fs_base:36406
+Properties on 'tools\dev\datecheck.py':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\configure.ac':
+  svn:mergeinfo
+
+Properties on 'subversion\svnadmin\main.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\DiffSummaryReceiver.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\LogDate.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\mailer.conf.example':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnserveautocheck.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIUtil.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\revisions.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\LicensesCommonFeature.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\JNIError.java':
+  svn:mergeinfo
+
+Properties on 'doc\misc-docs\styles.css':
+  svn:mergeinfo
+
+Properties on 'subversion\tests':
+  svn:mergeinfo
+    /trunk/subversion/tests:36017,36037,36043,36045,36059-36063,36080-36082,36132,36134,36152,36155,36164,36169,36176-36178,36206,36215,36230,36264,36271,36292,36298,36309-36310,36
+312,36318,36327,36348,36368,36383,36393-36396,36404,36416-36417,36430-36431,36433-36434,36439,36446-36448,36454,36456,36460,36462,36465,36474-36476,36478-36481,36483-36488,36492,36
+494,36498
+Properties on 'www\logo\subversion_logo.svg':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\list-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\property.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/property.c:36202,36248,36366
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\DirEntry.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Path.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\tag-empty-trunk.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\log.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\asvn':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\find-osrel':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\svn2html.css':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\backup-recipe.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_base\strings-reps-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_fs.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ProplistCallbackImpl.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIThreadData.h':
+  svn:mergeinfo
+
+Properties on 'build\win32\svn_config.dsp':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\serf.m4':
+  svn:mergeinfo
+    /trunk/build/ac-macros/serf.m4:36457
+Properties on 'subversion\bindings\javahl\native\org_tigris_subversion_javahl_SVNAdmin.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_dep_compat.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\merge_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/merge_tests.py:36460,36498
+Properties on 'subversion\bindings\javahl\native\CopySources.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\auth-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\DiffSummaryReceiver.h':
+  svn:mergeinfo
+
+Properties on 'notes\logo\grayscale\subversion_logo_notxt-32g.png':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\string-test.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\subversion-0.31.0-rpath.patch':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\LockStatus.java':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\ApacheFiles20x.wxi':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\tests\mailer-t1.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\client_errors.h':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\detection.txt':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\revision_status.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\resolved_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\notes\TODO':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\iter.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\CreateIcons.wxs':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\trans_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\propedit-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\mod_dav_svn.c':
+  svn:mergeinfo
+    /trunk/subversion/mod_dav_svn/mod_dav_svn.c:36354
+Properties on 'subversion\svn\add-cmd.c':
+  svn:mergeinfo
+
+Properties on 'www\images\merge-tracking\record-merge-info.png':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\core.i':
+  svn:mergeinfo
+
+Properties on 'www\getting.html':
+  svn:mergeinfo
+    /trunk/www/getting.html:36165,36357
+Properties on 'contrib\server-side':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\.rpmmacros':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\log.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_path.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_path.h:36219,36221,36228,36247
+Properties on 'www\project_packages.html':
+  svn:mergeinfo
+
+Properties on 'contrib\cgi\mirror_dir_through_svn.cgi':
+  svn:mergeinfo
+
+Properties on 'tools\diff\diff.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\lock-tokens-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\depth_filter_editor.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\find-osrel':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\repos.c':
+  svn:mergeinfo
+    /trunk/subversion/mod_dav_svn/repos.c:36168,36371,36490
+Properties on 'subversion\libsvn_fs_base\revs-txns.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\hooks.c':
+  svn:mergeinfo
+
+Properties on 'tools\diff':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\lock-tokens-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\win32_crypto.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/win32_crypto.c:36211
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ErrorCodes.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\revs-txns.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\SVNBase.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\delta.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_repos/delta.c:36072
+Properties on 'subversion\bindings\ctypes-python\README':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnmirror-test.sh':
+  svn:mergeinfo
+
+Properties on 'notes\EuroOSCON-2005-vc-bof.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\win32_crashrpt_dll.h':
+  svn:mergeinfo
+
+Properties on 'Makefile.in':
+  svn:mergeinfo
+    /trunk/Makefile.in:36141,36208,36222
+Properties on 'subversion\tests\libsvn_subr\path-test.c':
+  svn:mergeinfo
+    /trunk/subversion/tests/libsvn_subr/path-test.c:36368,36393-36394
+Properties on 'subversion\libsvn_wc\util.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/util.c:36219,36404,36425,36441
+Properties on 'www\project_faq.html':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\sasl.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_authz_svn\INSTALL':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\adm_crawler.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/adm_crawler.c:36219,36235,36358,36362,36369,36372
+Properties on 'tools\bdb':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\subversion-0.31.0-rpath.patch':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\iconvFiles20x.wxi':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005\svncheck.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\dag.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_ra.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ConflictResolverCallback.java':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\commit-email.rb':
+  svn:mergeinfo
+
+Properties on 'www\release-history.html':
+  svn:mergeinfo
+    /trunk/www/release-history.html:36165
+Properties on 'subversion\libsvn_subr\skel.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_fs.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_fs_private.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\1repos.t':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\structure':
+  svn:mergeinfo
+
+Properties on 'build\win32\svn.ico':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\copy.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/copy.c:36219,36235,36240,36358,36362,36369,36372,36404
+Properties on 'tools\client-side\server-version.py':
+  svn:mergeinfo
+
+Properties on 'www\favicon.ico':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\PropertyData.java':
+  svn:mergeinfo
+
+Properties on 'www\logo':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\doc\status1.png':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn':
+  svn:mergeinfo
+    /trunk/subversion/mod_dav_svn:36159,36168,36354,36371,36384,36490
+Properties on 'notes\logo\256-colour\subversion_logo_txt.pal':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\status.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/status.c:36296
+Properties on 'subversion\libsvn_diff\diff3.c':
+  svn:mergeinfo
+
+Properties on 'tools\client-side':
+  svn:mergeinfo
+    /trunk/tools/client-side:36209,36450-36452
+Properties on 'subversion\po\ko.po':
+  svn:mergeinfo
+    /trunk/subversion/po/ko.po:36069
+Properties on 'subversion\bindings\swig\python\tests\core.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\setup.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn-hgmerge.py':
+  svn:mergeinfo
+
+Properties on 'build\generator\swig\external_runtime.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIMutex.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\libsvn_swig_perl':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\cyrus_auth.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\SVNClient.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include':
+  svn:mergeinfo
+    /trunk/subversion/include:36001,36018,36027,36037,36060-36061,36077-36078,36087,36126,36147,36158,36178,36204,36219,36221,36228,36230,36242,36247,36290,36310,36327,36360,36404,
+36411,36420,36424-36425,36440-36441
+Properties on 'subversion\libsvn_subr\username_providers.c':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005\do_all.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\revision-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_diff\diff-diff3-test.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-5\Makefile':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\locks-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\merge-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\repos.rb':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\wcgrep':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\info.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\caching.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\locks-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings':
+  svn:mergeinfo
+    /trunk/subversion/bindings:36101,36171
+Properties on 'contrib\server-side\svn-tweak-author.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\ReadyDlg.wxs':
+  svn:mergeinfo
+
+Properties on 'notes\logo\grayscale\subversion_logo_notxt-48g.png':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\filter-requires.sh':
+  svn:mergeinfo
+
+Properties on 'contrib\cgi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Inputer.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_opt_private.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\WixUI_Subversion.wixlib':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\export-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\examples\log.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\org_tigris_subversion_javahl_SVNClient.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\tree_conflicts.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/tree_conflicts.c:36219,36235
+Properties on 'subversion\libsvn_ra_neon\replay.c':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64\svncheck-bindings.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\scripts\fast_svnbase.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\tree_conflicts.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\5delta.t':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\scratch-pad.txt':
+  svn:mergeinfo
+
+Properties on 'notes\ssh-tricks':
+  svn:mergeinfo
+
+Properties on 'www\bitmover-svn.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\time-test.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn-push\svn-push.c':
+  svn:mergeinfo
+
+Properties on 'www\images\merge-tracking':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\diff-wrap.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\cache-test.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\subversion.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\synchronizer.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test\localrepos.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\hash.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\iz\find-fix.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\ApacheFeature22x.wxi':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64\unmount-ramdrive.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\util':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnshell.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\svn_string.c':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\find_apr.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\info.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\diffwrap.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\status.rnc':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\com':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\svn_repos.i':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\checksum.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\images\wiz-55x55x24.bmp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\internal_auth.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\RevpropTable.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNAdmin.java':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\NativeResources.java':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\INSTALL':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\mergeinfo.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_load_dirs':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc\man\svnstsw_fso_is_changeable.3.in':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\build.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help--version_stderr':
+  svn:mergeinfo
+
+Properties on 'notes\assurance.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\mergeinfo.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\wc.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\mkdir-cmd.c':
+  svn:mergeinfo
+
+Properties on 'www\repro-template.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_repos.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\import_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs\locks-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\NodeKind.java':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_auth.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\tag-trunk-with-file.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\mergeinfo_tests.py':
+  svn:mergeinfo
+
+Properties on 'BUGS':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_stdout':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_dirent_uri.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_dirent_uri.h:36037,36060-36061,36204,36230,36242,36310,36327
+Properties on 'subversion\libsvn_fs\access.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svndumpfilter_tests_data\greek_tree.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\get_dated_rev.c':
+  svn:mergeinfo
+
+Properties on 'www\logo\subversion_logo.pdf':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\marshal.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\examples\mucc.py':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnshell.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\auth.py':
+  svn:mergeinfo
+
+Properties on 'build\win32\empty.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\propset-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\BlameCallbackImpl.java':
+  svn:mergeinfo
+
+Properties on 'build.conf':
+  svn:mergeinfo
+    /trunk/build.conf:36044,36048,36142,36205,36404,36428
+Properties on 'win-tests.py':
+  svn:mergeinfo
+    /trunk/win-tests.py:36149-36151,36156
+Properties on 'contrib\client-side\svnmerge\svnmerge-migrate-history.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\externals_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\svn_swigcompat.swg':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNClientInterface.java':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\all-tests.sh':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1\svnbuild.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\copy-and-modify.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\StatusKind.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf:36087,36168,36174,36202-36203,36226,36248,36271,36293,36317,36321,36331,36333,36343-36344,36350,36363,36366,36370,36373,36406,36422
+Properties on 'subversion\bindings\javahl\native\Outputer.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\lock.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\templates\svn_version.iss':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\ra_neon.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\doc':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\proxy.swg':
+  svn:mergeinfo
+
+Properties on 'build\win32\make_gem.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\delta.py':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\README':
+  svn:mergeinfo
+
+Properties on 'www\images\subversion_logo-200x173.png':
+  svn:mergeinfo
+
+Properties on 'tools\dev':
+  svn:mergeinfo
+    /trunk/tools/dev:36163
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\RevisionRange.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\LogMessageCallback.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\revert.c':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\commit-block-joke.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_util.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\types.py':
+  svn:mergeinfo
+
+Properties on 'www\svn_1.3_releasenotes.html':
+  svn:mergeinfo
+
+Properties on 'build\generator\util\__init__.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNICriticalSection.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\props.c':
+  svn:mergeinfo
+
+Properties on 'notes\logo\subversion_logo.png':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\ext':
+  svn:mergeinfo
+
+Properties on 'notes\logo\grayscale\subversion_logo_notxt-16g.png':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\xp-vc60-ia32\svnbuild.bat':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\docbook.cat':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\copies-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\fs_fs.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_fs_fs/fs_fs.c:36182,36195,36223,36406
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\New.ico':
+  svn:mergeinfo
+
+Properties on 'notes\changelist-design.txt':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnserve-sgid.c':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour\subversion_logo.pal':
+  svn:mergeinfo
+
+Properties on 'subversion':
+  svn:mergeinfo
+    /trunk/subversion:36001,36017-36018,36020-36025,36027-36028,36030,36032-36033,36035,36037,36040-36043,36045-36046,36049-36051,36054,36059-36063,36066,36068-36072,36076-36085,36
+087-36090,36092-36093,36101,36103-36106,36111,36115,36117,36125-36127,36130-36132,36134-36136,36141,36143,36146-36147,36152,36154-36155,36158-36160,36164,36167-36171,36173-36179,36
+182,36195,36201-36204,36206,36210-36211,36213,36215-36221,36223-36226,36228-36230,36233,36235-36236,36240-36249,36252-36253,36256,36262-36265,36267-36269,36271-36273,36276-36282,36
+284-36285,36288,36290-36298,36302,36307-36313,36315-36321,36325,36327,36331,36333-36334,36336-36340,36343-36344,36348,36350-36355,36358-36363,36366-36374,36380-36385,36389-36390,36
+393-36396,36401,36404,36406,36409,36411-36412,36414,36416-36418,36420-36426,36429-36449,36454,36456,36459-36460,36462,36465-36467,36474-36488,36490,36492,36494,36496-36500
+Properties on 'tools\dev\svn-dev.el':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Repos.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\copies-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\fs_fs.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\notes':
+  svn:mergeinfo
+
+Properties on 'INSTALL':
+  svn:mergeinfo
+    /trunk/INSTALL:36055,36058,36064
+Properties on 'subversion\libsvn_fs_base\fs.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\fs.h':
+  svn:mergeinfo
+
+Properties on 'www\security\CVE-2007-3846-advisory.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\lock_tests.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Files.wxs':
+  svn:mergeinfo
+
+Properties on 'www\user-classifications.html':
+  svn:mergeinfo
+
+Properties on 'subversion\po\de.po':
+  svn:mergeinfo
+    /trunk/subversion/po/de.po:36076,36085,36115,36125
+Properties on 'subversion\libsvn_fs_base\bdb\changes-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_util\fs-util.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\libsvnjavahl.la.c':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\soextblx.dtd':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\changes-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\dated-rev.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIStackElement.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\mergeinfo.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/mergeinfo.c:36202
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help_bogus-cmd_stderr':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\verify-po.py':
+  svn:mergeinfo
+
+Properties on 'doc\misc-docs\directory_versioning.xml':
+  svn:mergeinfo
+
+Properties on 'www\images\ubuntu.png':
+  svn:mergeinfo
+
+Properties on 'build\win32\make_dist.conf.template':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\CommitMessage.java':
+  svn:mergeinfo
+
+Properties on 'tools\dev\trails.py':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\fsfsverify.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\tests':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\getlocations.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/getlocations.c:36202
+Properties on 'notes\logo\subversion_logo.eps.gz':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Setup.wxs':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\xp-vc60-ia32\svnclean.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_quoprint.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svnversion\main.c':
+  svn:mergeinfo
+
+Properties on 'doc\user':
+  svn:mergeinfo
+
+Properties on 'tools\dist\roll.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_diff':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs':
+  svn:mergeinfo
+    /trunk/subversion/tests/libsvn_fs:36475
+Properties on 'www\validate.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\lock.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\serf.vcproj.ezt':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\svn2html.xsl':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\CommonSASLFeature.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\config_win.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\vim\svn.vim':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\lock.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\ra_svn_sasl.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\commit-mailer.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\log.c':
+  svn:mergeinfo
+
+Properties on 'www\security.html':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svncopy\svncopy.README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\win32_auth_sspi.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/win32_auth_sspi.c:36331,36370
+Properties on 'subversion\bindings\ctypes-python\test\wc.py':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\mergeinfo-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\ext\callback_receiver.py':
+  svn:mergeinfo
+
+Properties on 'tools\dev\check-license.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\ApacheFiles22x.wxi':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\load_repo_with_mergesensitive_copy.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\win32_auth_sspi.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/win32_auth_sspi.h:36370
+Properties on 'subversion\svndumpfilter\main.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\images\svn_bck.png':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\TODO':
+  svn:mergeinfo
+
+Properties on 'notes\anchors_and_targets.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra:36385
+Properties on 'subversion\libsvn_wc\diff.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/diff.c:36219,36235,36404,36425,36480
+Properties on 'subversion\libsvn_ra\wrapper_template.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Pool.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\token.c':
+  svn:mergeinfo
+
+Properties on 'doc\tools\svnbook.el':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_delta.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\locks.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/locks.c:36202
+Properties on 'subversion\libsvn_repos\dump.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\NEWS':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\version.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\CopySource.java':
+  svn:mergeinfo
+
+Properties on 'www\merge-tracking\design.html':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnlook.py':
+  svn:mergeinfo
+
+Properties on 'www\testimonials.html':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros':
+  svn:mergeinfo
+    /trunk/build/ac-macros:36237,36457
+Properties on 'subversion\include\svn_string.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\compose_delta.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-4\README':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\WixUI_en-us-subversion.wxl':
+  svn:mergeinfo
+
+Properties on 'www\license-for-python-bindings.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\ctx.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\gcov.patch':
+  svn:mergeinfo
+
+Properties on 'www\variance-adjusted-patching.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\cache-memcache.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Notify.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra\util.c':
+  svn:mergeinfo
+
+Properties on 'tools\dist\dist.sh':
+  svn:mergeinfo
+    /trunk/tools/dist/dist.sh:36323
+Properties on 'www\security\CAN-2004-0413-advisory.txt':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\conf\stsw_func_snprintf_broken.m4':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\svnstsw_compat.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\svn_string.swg':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\util\fs_skels.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\utf-test.c':
+  svn:mergeinfo
+
+Properties on 'build\generator':
+  svn:mergeinfo
+    /trunk/build/generator:36141,36207,36212,36275
+Properties on 'tools\diff\diff4.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\svnstsw_compat.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\switch-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\util\fs_skels.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\notify.c':
+  svn:mergeinfo
+    /trunk/subversion/svn/notify.c:36404
+Properties on 'subversion\tests\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\lock.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/lock.c:36041,36079,36219,36235,36320,36409,36414
+Properties on 'packages\windows-WiX\BuildSubversion\iconvFiles22x.wxi':
+  svn:mergeinfo
+
+Properties on 'www\images\merge-tracking\perform-a-merge.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\streams.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\lock.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/lock.h:36041,36079
+Properties on 'doc\tools\fo-stylesheet.xsl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\commit.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/commit.c:36168,36202-36203,36226,36293,36317,36343-36344,36350
+Properties on 'doc\tools\dtd\docbook41\ent\iso-num.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIThreadData.cpp':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\svn-macros.m4':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnlook.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\__init__.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\StringArray.cpp':
+  svn:mergeinfo
+
+Properties on 'tools\client-side\svnmucc\svnmucc.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_fs':
+  svn:mergeinfo
+
+Properties on 'build\generator\vc2005_sln.ezt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion\javahl\SVNAdminTests.java':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\unlock-cmd.c':
+  svn:mergeinfo
+
+Properties on 'notes\obliterate\obliterate-functional-spec.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\kitchensink.c':
+  svn:mergeinfo
+
+Properties on 'notes\l10n-problems':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\sqlite.m4':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\case-insensitive.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svnmerge\svnmerge-migrate-test.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Version.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\rep-cache.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_auth_gnome_keyring':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_auth_gnome_keyring:36040
+Properties on 'subversion\bindings\swig\ruby\svn':
+  svn:mergeinfo
+    /trunk/subversion/bindings/swig/ruby/svn:36171
+Properties on 'packages\solaris\pkginfo.in':
+  svn:mergeinfo
+
+Properties on 'tools\dev\contribulyze.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\merge_authz_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\client.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\session.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\ext\listmixin.py':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\stream.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/stream.c:36066,36070
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNClientLogLevel.java':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_config.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_config.h:36404
+Properties on 'subversion\libsvn_ra_svn':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\get-locks.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion\javahl\RunTests.java':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\log-police.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest\tree.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/tree.py:36417,36433,36462,36465,36474,36476
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\wiz-55x55x24.bmp':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\file-revs.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\trail.c':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\requirements.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\util.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\CommitItem.java':
+  svn:mergeinfo
+
+Properties on 'www\images\fedora.png':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\InfoCallback.java':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Pre.rtf':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIStringHolder.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\ra.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/ra.c:36477
+Properties on 'build\generator\ezt.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\trail.h':
+  svn:mergeinfo
+
+Properties on 'tools\xslt\svnindex.css':
+  svn:mergeinfo
+
+Properties on 'doc\misc-docs\quick_walkthrough.xml':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\neon.m4':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\delta.h':
+  svn:mergeinfo
+
+Properties on 'notes\diff-encodings.txt':
+  svn:mergeinfo
+
+Properties on 'www\faq.ja.html':
+  svn:mergeinfo
+    /trunk/www/faq.ja.html:36209
+Properties on 'www\images\subversion_logo-384x332.png':
+  svn:mergeinfo
+
+Properties on 'tools\dev\iz\run-queries.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_ra_local':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\diff.py':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\update.c':
+  svn:mergeinfo
+
+Properties on 'www\poole-response.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test\setup_path.py':
+  svn:mergeinfo
+
+Properties on 'notes\locking\locking-implementation.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\main.c':
+  svn:mergeinfo
+    /trunk/subversion/svn/main.c:36213,36292,36359-36360,36404
+Properties on 'subversion\libsvn_subr\cache.c':
+  svn:mergeinfo
+
+Properties on 'packages\README':
+  svn:mergeinfo
+
+Properties on 'notes\logo\subversion_logo.ico':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\cache.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\tag-trunk-with-file2.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_version.h':
+  svn:mergeinfo
+
+Properties on 'www\images\subversion_logo_hor-468x64.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\ambient_depth_filter_editor.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/ambient_depth_filter_editor.c:36235
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\InfoDlg.wxs':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\proxy':
+  svn:mergeinfo
+
+Properties on 'notes\svndiff':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\apr_memcache.m4':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\WixUI_Subversion.wxs':
+  svn:mergeinfo
+
+Properties on 'build\generator\zlib.vcproj.ezt':
+  svn:mergeinfo
+
+Properties on 'tools\dist\gen_nightly_ann.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\log.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/log.c:36202
+Properties on 'contrib\server-side\svnstsw\doc\man':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\ra.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\validate.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\examples\trunkify.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\cram.c':
+  svn:mergeinfo
+
+Properties on 'www\tools_contrib.html':
+  svn:mergeinfo
+    /trunk/www/tools_contrib.html:36209
+Properties on 'subversion\libsvn_subr\subst.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/subst.c:36228
+Properties on 'contrib\client-side\svnmerge\svnmerge.README':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\tests\mailer-tweak.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\no-author.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\CommitMessage.h':
+  svn:mergeinfo
+
+Properties on 'notes\logo\16-colour\subversion_logo_notxt-32m.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\dirent_uri.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/dirent_uri.c:36037,36060-36061,36063,36204,36230,36310,36327,36383
+Properties on 'tools\bdb\skel.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ProgressListener.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIByteArray.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\checkout.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/checkout.c:36229
+Properties on 'tools\hook-scripts\commit-access-control.cfg.example':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\nodes-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test\test.dumpfile':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\wc.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/wc.h:36264
+Properties on 'subversion\bindings\javahl\native\InfoCallback.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc:36001,36018,36020-36021,36025,36028,36041-36043,36054,36079-36084,36088-36090,36105,36130,36132,36134,36136,36141,36143,36146,36152,36154-36155,3616
+4,36167,36175,36206,36215-36220,36225,36235,36240-36241,36243-36246,36249,36252,36262-36264,36267-36268,36273,36276,36278,36284-36285,36288,36291,36295,36302,36307-36308,36319-3632
+0,36352-36353,36358,36361-36362,36367,36369,36372,36374,36381,36389-36390,36401,36404,36409,36412,36414,36418,36420-36421,36423-36425,36429,36432,36434-36438,36441,36445,36454,3646
+6-36467,36480,36482,36485,36487,36496,36499-36500
+Properties on 'subversion\bindings\javahl\native\Pool.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\err.c':
+  svn:mergeinfo
+
+Properties on 'notes\wc-improvements':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1\mount-ramdrive.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\nodes-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\err.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Path.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ClientException.java':
+  svn:mergeinfo
+
+Properties on 'www\tigris-permissions.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\path.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/path.c:36201,36228,36315-36316,36382,36393
+Properties on 'contrib\server-side\svnstsw\include\svnstsw\svnstsw.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta\delta-window-test.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Ra.pm':
+  svn:mergeinfo
+
+Properties on 'build\generator\serf.dsp.ezt':
+  svn:mergeinfo
+
+Properties on 'notes\locking\locking-functional-spec.txt':
+  svn:mergeinfo
+
+Properties on 'notes\wc-ng-design':
+  svn:mergeinfo
+    /trunk/notes/wc-ng-design:36073,36166
+Properties on 'subversion\mod_dav_svn\activity.c':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1\svnlog.sh':
+  svn:mergeinfo
+
+Properties on 'build\generator\gen_base.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\NotifyStatus.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\externals.c':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\check-mime-type.pl':
+  svn:mergeinfo
+
+Properties on 'notes\schema-tradeoffs.txt':
+  svn:mergeinfo
+
+Properties on 'www\merge-tracking':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn-clean':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\enforcer':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help_stderr':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_subst.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnversion_tests.py':
+  svn:mergeinfo
+
+Properties on 'www\images\jolt-2005.jpg':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\set_version.pl':
+  svn:mergeinfo
+
+Properties on 'notes\asp-dot-net-hack.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\copy-from-previous-version.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\README':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/README:36169
+Properties on 'doc\tools\dtd\docbook41\ent\iso-lat1.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve':
+  svn:mergeinfo
+    /trunk/subversion/svnserve:36210
+Properties on 'doc\tools\dtd\docbook41\dbcentx.mod':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\env.c':
+  svn:mergeinfo
+
+Properties on 'www\faq.zh.html':
+  svn:mergeinfo
+    /trunk/www/faq.zh.html:36209
+Properties on 'subversion\svn\help-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\utf_validate.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\update_tests_data\checkout_broken_eol.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\env.h':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\get-location-segments.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\search-svnlog.pl':
+  svn:mergeinfo
+
+Properties on 'tools\examples\SvnCLBrowse':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\MergeinfoLogKind.java':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion.sln':
+  svn:mergeinfo
+
+Properties on 'notes\entries-caching':
+  svn:mergeinfo
+
+Properties on 'notes\logo\256-colour\subversion_logo_notxt-48.png':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\tag-trunk-with-dir.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\get_deleted_rev.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/get_deleted_rev.c:36202,36406
+Properties on 'doc\tools\dtd\docbook41\ent\iso-box.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ProplistCallback.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\sha1.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_ra_private.h':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\conf\find_apr.m4':
+  svn:mergeinfo
+
+Properties on 'build\win32\vc6-build.bat.in':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\win32_xlate.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/win32_xlate.c:36337
+Properties on 'contrib\client-side\incremental-update.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\update_tests_data':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\sha1.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\Post.rtf':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\include\Makefile.am':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\win32_xlate.h':
+  svn:mergeinfo
+
+Properties on 'tools\bdb\erase-all-text-data.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest\verify.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/verify.py:36417,36430,36465
+Properties on 'subversion\libsvn_ra_serf\merge.c':
+  svn:mergeinfo
+
+Properties on 'doc\svn-doc.el':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn_apply_autoprops.py':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_compat.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\info-cmd.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\gen_make.py':
+  svn:mergeinfo
+    /trunk/build/generator/gen_make.py:36275
+Properties on 'tools\buildbot\slaves\ubuntu-x64\svnlog.sh':
+  svn:mergeinfo
+
+Properties on 'notes\cli-repo-root-relative-support.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Prompter.h':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svnmerge\svnmerge-migrate-history-remotely.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\theta.bin':
+  svn:mergeinfo
+
+Properties on 'www\project_issues.html':
+  svn:mergeinfo
+
+Properties on 'subversion\include\mod_authz_svn.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\dag.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\adm_files.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/adm_files.c:36042,36219,36235
+Properties on 'subversion\bindings\javahl\tests\org\tigris':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\dag.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\special_tests_data\bad-special-type.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\adm_files.h':
+  svn:mergeinfo
+
+Properties on 'tools\examples\svnput.c':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\deadprops.c':
+  svn:mergeinfo
+
+Properties on 'tools\client-side\showchange.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\BlameCallback.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\PromptUserPassword.java':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\resolved-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\proxy_apr.swg':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\core.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\0use.t':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_wc.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\entries.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/entries.c:36001,36020-36021,36025,36028,36080-36081,36089-36090,36105,36132,36134,36136,36141,36146,36152,36167,36206,36217,36219-36220,36225,36235,
+36245-36246,36249,36262-36264,36267,36273,36276,36284-36285,36288,36291,36295,36307,36319,36358,36361-36362,36367,36369,36372,36374,36381,36401,36418,36432,36434-36435,36438,36454,
+36466,36485,36487
+Properties on 'tools\client-side\svn-graph.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_authz_svn\mod_authz_svn.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\doc\index.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\ra_svn.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest:36176,36298,36404,36416-36417,36430,36433,36446-36448,36462,36465,36474-36476,36478,36481,36483-36484,36486,36494,36498
+Properties on 'notes\logo\16-colour\subversion_logo_notxt-48m.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\entries.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/entries.h:36358,36362,36369,36372
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\svnsync-trunk-A-changes.dump':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\get_tunnel_user_name.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnlook':
+  svn:mergeinfo
+    /trunk/subversion/svnlook:36071
+Properties on 'subversion\include\private':
+  svn:mergeinfo
+    /trunk/subversion/include/private:36001,36027,36078,36290,36360,36420,36424-36425
+Properties on 'subversion\libsvn_delta\path_driver.c':
+  svn:mergeinfo
+
+Properties on 'notes\windows-service.txt':
+  svn:mergeinfo
+
+Properties on 'tools\examples\dumpprops.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\version.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\iz':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\data':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Operation.java':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\authz.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\BuildSubversion.wixproj':
+  svn:mergeinfo
+
+Properties on 'www\images\subversion-diagram.png':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc\man\svnstsw_get_tunnel_user_name.3.in':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Mergeinfo.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\data\mergeinfo.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIMutex.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Targets.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_util':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\quoprint.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\repos_diff.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/repos_diff.c:36404,36420,36424-36425
+Properties on 'packages\rpm\rhel-5\subversion.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\tests\svnrepos.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test\remoterepos.py':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64\mount-ramdrive.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_neon:36406
+Properties on 'subversion\include\svn_xml.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\images':
+  svn:mergeinfo
+
+Properties on 'subversion\svndumpfilter':
+  svn:mergeinfo
+
+Properties on 'packages\python-windows\README.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\fs.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\xml.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\auth.c':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-lat2.ent':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-5\find-osrel':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\config_file.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/config_file.c:36023,36294,36311,36404
+Properties on 'tools\dist\write-announcement.py':
+  svn:mergeinfo
+    /trunk/tools/dist/write-announcement.py:36251
+Properties on 'subversion\bindings\javahl\src\org':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\MessageReceiver.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\examples\example.py':
+  svn:mergeinfo
+
+Properties on 'tools\examples\minimal_client.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\scripts':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005':
+  svn:mergeinfo
+
+Properties on 'www\svn_1.2_releasenotes.html':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\.rpmmacros':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1\unmount-ramdrive.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\getdate.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\revert_tests.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion':
+  svn:mergeinfo
+
+Properties on 'tools\dist\getsigs.py':
+  svn:mergeinfo
+
+Properties on 'configure.ac':
+  svn:mergeinfo
+    /trunk/configure.ac:36009,36153,36222,36387-36388
+Properties on 'subversion\libsvn_fs_base\reps-strings.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ConflictResult.java':
+  svn:mergeinfo
+
+Properties on 'tools\client-side\bash_completion_test':
+  svn:mergeinfo
+
+Properties on 'notes\webdav-general-summary':
+  svn:mergeinfo
+
+Properties on 'doc\misc-docs\misc-docs.xml':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\blame-cmd.c':
+  svn:mergeinfo
+    /trunk/subversion/svn/blame-cmd.c:36158,36179
+Properties on 'subversion\tests\cmdline\svntest\__init__.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/__init__.py:36465,36483
+Properties on 'www\security\CVE-2007-2448-advisory.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\relocate.c':
+  svn:mergeinfo
+
+Properties on 'build\win32\svn.rc':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\merge.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnlook_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Fs.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\8lock.t':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\mergeinfo.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\text_delta.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn--version--quiet_stderr':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn--help_stderr':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\iconvFeature20x.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Makefile.PL.in':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\mergeinfo.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\add-needs-lock.py':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\autogen.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\update_editor.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/update_editor.c:36219,36235,36241,36243,36319,36358,36362,36369,36372,36389-36390,36412,36421,36423,36441,36445
+Properties on 'notes\logo\256-colour\subversion_logo_hor-468x64.png':
+  svn:mergeinfo
+
+Properties on 'subversion\svndumpfilter\svndumpfilter.1':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\liveprops.c':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\version.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\diff_memory.c':
+  svn:mergeinfo
+
+Properties on 'www\dst-2007.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest\actions.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/actions.py:36404,36416,36465,36481,36498
+Properties on 'doc\tools\chunk-stylesheet.xsl':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\commit_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/commit_tests.py:36318
+Properties on 'notes\logo\16-colour\subversion_logo_notxt-16m.png':
+  svn:mergeinfo
+
+Properties on 'tools\dev\gnuify-changelog.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\7editor.t':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\.rpmmacros':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts':
+  svn:mergeinfo
+
+Properties on 'build\generator\neon.vcproj.ezt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ProgressListener.h':
+  svn:mergeinfo
+
+Properties on 'packages\freebsd':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\opt-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\CreateJ.h':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\diff3wrap.bat':
+  svn:mergeinfo
+
+Properties on 'tools\dist\test.sh':
+  svn:mergeinfo
+
+Properties on 'tools\dev\gen-javahl-errors.py':
+  svn:mergeinfo
+
+Properties on 'tools\xslt\svnindex.xsl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\repository.py':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_error_codes.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_error_codes.h:36018,36077,36087,36404
+Properties on 'contrib\server-side\svnstsw\conf':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_cache.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps\dlgbmp.bmp':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\dlgbmp.bmp':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svncopy\testsvncopy.pl.in':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svntest\testcase.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/svntest/testcase.py:36446,36448,36475,36483
+Properties on 'subversion\tests\cmdline\history_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/getopt_tests_data:36292,36404
+Properties on 'subversion\libsvn_subr\prompt.c':
+  svn:mergeinfo
+
+Properties on 'tools\xslt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\tree_conflict_tests.txt':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\swig.m4':
+  svn:mergeinfo
+
+Properties on 'README':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\dblite.dtd':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\t\4pool.t':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test-unit-ext.rb':
+  svn:mergeinfo
+
+Properties on 'notes\locking\TODO.txt':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\remove-zombie-locks.py':
+  svn:mergeinfo
+
+Properties on 'www\license-1.html':
+  svn:mergeinfo
+
+Properties on 'subversion\include\mod_dav_svn.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\apr.swg':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\BlameCallback.h':
+  svn:mergeinfo
+
+Properties on 'doc\tools\base-html-stylesheet.xsl':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\redhat-8+\Makefile':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\schedule_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\StringArray.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\CommonBinaryFiles.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\README':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\test\run_all.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta\random-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnversion\svnversion.1':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Targets.h':
+  svn:mergeinfo
+
+Properties on 'notes\line-endings-and-keywords.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\delete-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_time.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\changelist.c':
+  svn:mergeinfo
+
+Properties on 'www\images\aix.png':
+  svn:mergeinfo
+
+Properties on 'www\images\mandrake.png':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\native\Core.pm':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\client.c':
+  svn:mergeinfo
+
+Properties on 'www\mailing-lists.html':
+  svn:mergeinfo
+    /trunk/www/mailing-lists.html:36455
+Properties on 'notes\unicode-composition-for-filenames':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\file-dir-file.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\commit.c':
+  svn:mergeinfo
+
+Properties on 'notes\skip-deltas':
+  svn:mergeinfo
+
+Properties on 'tools\dev\normalize-dump.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\props.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/props.c:36219,36235,36319,36496
+Properties on 'notes\object-model.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\log-escape.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\config.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_fs_util.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\props.h':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/props.h:36496
+Properties on 'build\transform_sql.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIStringHolder.h':
+  svn:mergeinfo
+
+Properties on 'tools\dist\extract-for-examination.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\CreateJ.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\MessageReceiver.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_wc':
+  svn:mergeinfo
+    /trunk/subversion/tests/libsvn_wc:36043,36059,36080-36082,36132,36134,36152,36155,36164,36206,36215,36264,36396,36434,36454,36485,36487
+Properties on 'subversion\bindings\swig\python\tests\pool.py':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\resolution.txt':
+  svn:mergeinfo
+
+Properties on 'tools\dev\svn-dev.vim':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test-unit-ext\always-show-result.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\CopySources.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\svnserve.8':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnadmin_tests_data\mergeinfo_included.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Lock.java':
+  svn:mergeinfo
+
+Properties on 'contrib\cgi\mirror_dir_through_svn.README':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\mod_dontdothat\README':
+  svn:mergeinfo
+
+Properties on 'build':
+  svn:mergeinfo
+    /trunk/build:36039,36141,36153,36207,36209,36212,36237,36275,36300,36457,36475
+Properties on 'subversion\bindings\swig\svn_client.i':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svnmerge\svnmerge_test.py':
+  svn:mergeinfo
+
+Properties on 'www\propaganda.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\translate.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/translate.c:36219
+Properties on 'contrib\client-side\vim\diff-to-logmsg.vim':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts\design-overview.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\special_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\merge.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/merge.c:36219,36268,36319
+Properties on 'subversion\libsvn_wc\translate.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\status.c':
+  svn:mergeinfo
+    /trunk/subversion/svn/status.c:36296
+Properties on 'subversion\svn\update-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\merge.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/merge.c:36253,36256,36404,36444
+Properties on 'subversion\tests\libsvn_delta\range-index-test.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_fs_fs:36035,36093,36182,36195,36223-36224,36406
+Properties on 'subversion\libsvn_fs_base\notes\fs-history':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\repos.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_repos/repos.c:36325,36338-36340
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\revprops.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\info_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/info_tests.py:36488
+Properties on 'doc\tools\dtd':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\replay.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn--version_stderr':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\repos.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\Notify.h':
+  svn:mergeinfo
+
+Properties on 'notes\propmerging_sanity.txt':
+  svn:mergeinfo
+
+Properties on 'www\images\freebsd.png':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\COPYING':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ProplistCallback.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\error.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svnsync':
+  svn:mergeinfo
+    /trunk/subversion/svnsync:36351,36355,36380
+Properties on 'www\merge-tracking\func-spec.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\NativeException.java':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_mergeinfo.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svnserve\svnserve.conf.5':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\constructors.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\cmn.pl':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\core':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_local\split_url.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\extractor.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr:36001,36022-36024,36027,36030,36037,36060-36061,36063,36066,36070,36078,36111,36158,36160,36201,36204,36211,36228,36230,36233,36236,36277,36281-36
+282,36290,36294,36310-36311,36313,36315-36316,36320,36327,36334,36336-36337,36360,36382-36383,36393,36404,36425,36442-36443
+Properties on 'subversion\libsvn_wc\adm_ops.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/adm_ops.c:36219,36235,36319,36358,36362,36369,36372
+Properties on 'subversion\libsvn_client\util.c':
+  svn:mergeinfo
+
+Properties on 'www\logo\subversion_logo.eps':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\svn_wc.i':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\is_main.pas':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\adm_ops.h':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\i686-debian-sarge1':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\log_tests_data\xml-invalid-chars.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\log.c':
+  svn:mergeinfo
+
+Properties on 'subversion\svn_private_config.hw':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Licenses20x.wxi':
+  svn:mergeinfo
+
+Properties on 'build\transform_sql.sh':
+  svn:mergeinfo
+    /trunk/build/transform_sql.sh:36300
+Properties on 'doc\misc-docs\Makefile':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\export_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/export_tests.py:36498
+Properties on 'doc\tools\dtd\docbook41\ent\iso-amsn.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_client\client-test.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\verify-history.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help--version_stdout':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNClientSynchronized.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\version.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\util\executable.py':
+  svn:mergeinfo
+
+Properties on 'tools\dev\stress.pl':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\xp-vc60-ia32\svnlog.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\svn_test_fs.c':
+  svn:mergeinfo
+
+Properties on 'build\generator\vcnet_sln.ezt':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Info2.java':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\stream-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\package.html':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\locking_commands.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\cmdline.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_subr/cmdline.c:36360
+Properties on 'subversion\include\svn_md5.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\svn_test_fs.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_client\copy.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_client/copy.c:36103-36104,36106,36459
+Properties on 'subversion\tests\cmdline\getopt_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\svn\error.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_error.h':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\mergeinfo.c':
+  svn:mergeinfo
+
+Properties on 'www\svn_1.6_releasenotes.html':
+  svn:mergeinfo
+    /trunk/www/svn_1.6_releasenotes.html:36172,36181,36231-36232,36234,36274,36342,36364-36365
+Properties on 'subversion\include\svn_pools.h':
+  svn:mergeinfo
+
+Properties on 'packages\solaris':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\propdel-cmd.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_repos\repos-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\md5.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\ssl_server_trust_providers.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc\Makefile.am':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\key-gen.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\build':
+  svn:mergeinfo
+
+Properties on 'tools':
+  svn:mergeinfo
+    /trunk/tools:36009,36163,36209,36251,36323,36388,36415,36419,36450-36452
+Properties on 'subversion\libsvn_subr\md5.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\key-gen.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_repos\load.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_repos':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_auth_kwallet\version.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\xdelta.c':
+  svn:mergeinfo
+
+Properties on 'COPYING':
+  svn:mergeinfo
+
+Properties on 'www\development.html':
+  svn:mergeinfo
+
+Properties on 'build\generator\neon.dsp.ezt':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\conf\stsw_lib_apr.m4':
+  svn:mergeinfo
+
+Properties on 'gen-make.py':
+  svn:mergeinfo
+
+Properties on 'build\generator\svn_locale.vcproj.ezt':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\LicensesFeature20x.wxi':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005\svnbuild.bat':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\missing_msvcp60dll.html':
+  svn:mergeinfo
+
+Properties on 'www\svn-sscanf-advisory.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\svn_base64.c':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\doc\man\libsvnstsw.3.in':
+  svn:mergeinfo
+
+Properties on 'notes\fsfs':
+  svn:mergeinfo
+
+Properties on 'www\images':
+  svn:mergeinfo
+    /trunk/www/images:36163
+Properties on 'subversion\libsvn_ra_serf\getlocks.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/getlocks.c:36202
+Properties on 'packages\windows-WiX\BuildSubversion\CommonShareFeature.wxi':
+  svn:mergeinfo
+
+Properties on 'build\strip-po-charset.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\util.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\ctype.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNICriticalSection.h':
+  svn:mergeinfo
+
+Properties on 'www\faq.html':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005\config.bat':
+  svn:mergeinfo
+
+Properties on 'build\generator\swig\header_wrappers.py':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\tests':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test-unit-ext\backtrace-filter.rb':
+  svn:mergeinfo
+
+Properties on 'build\generator\msvc_dsp.ezt':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\prop_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/prop_tests.py:36433
+Properties on 'subversion\libsvn_ra_serf\options.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/options.c:36202
+Properties on 'doc\tools\bin\run-fop.sh':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\enforcer\enforcer.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\props.c':
+  svn:mergeinfo
+
+Properties on 'notes\locking\svn-needs-lock-impl.txt':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\ctypesgen.m4':
+  svn:mergeinfo
+
+Properties on 'tools\examples\getfile.py':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_base\changes-test.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\svn2cl.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svndumpfilter_tests_data':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\svnperms.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\compat.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra\ra_loader.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIStackElement.h':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\tests\mailer.conf':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\mailer\mailer.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\ruby\test\test_error.rb':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\tests\__init__.py':
+  svn:mergeinfo
+
+Properties on 'www\project_license.html':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\win32-xp-VS2005\svnclean.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema':
+  svn:mergeinfo
+
+Properties on 'www\links.html':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help_bogus-cmd_stdout':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\svn\repos.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\run_all.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ConflictResolverCallback.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_neon\merge.c':
+  svn:mergeinfo
+
+Properties on 'doc\misc-docs\best_practices.xml':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\error-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\svnsync-trunk-only.expected.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_ctype.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\debug_editor.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\ctypes-python\csvn\auth.py':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\svn2cl.xsl':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\translate-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\err.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\lcs.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_ra_svn.h':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_delta\debug_editor.h':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\mod_dontdothat\mod_dontdothat.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\iconvFeature22x.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\LogMessage.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_fs\err.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\Bitmaps':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol\__init__.py':
+  svn:mergeinfo
+
+Properties on 'contrib\README':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\blame.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_ra_serf/blame.c:36202
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\url-encoding-bug.dump':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\org_tigris_subversion_javahl_Path.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svnsync_tests_data\modified-in-place.dump':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-amso.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\changelist-cmd.c':
+  svn:mergeinfo
+
+Properties on 'www\issue-tracker.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNClient.java':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_cmdline.h':
+  svn:mergeinfo
+
+Properties on 'contrib\server-side\svnstsw\src\main.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\CommonBinaryFeature.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\getopt_tests_data\svn_help_log_switch_stderr':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\tools\svnpath':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\authz_tests.py':
+  svn:mergeinfo
+    /trunk/subversion/tests/cmdline/authz_tests.py:36456
+Properties on 'subversion\svn\schema\info.rnc':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\pool.c':
+  svn:mergeinfo
+
+Properties on 'subversion\LICENSE':
+  svn:mergeinfo
+
+Properties on 'contrib\hook-scripts\commit-email.pl.in':
+  svn:mergeinfo
+
+Properties on 'notes\webdav-acl-notes':
+  svn:mergeinfo
+
+Properties on 'tools\buildbot\slaves\ubuntu-x64\svnclean.sh':
+  svn:mergeinfo
+
+Properties on 'TRANSLATING':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\tests.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\org_tigris_subversion_javahl_Version.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_wc\tree-conflict-data-test.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_svn\editorp.c':
+  svn:mergeinfo
+
+Properties on 'www\hacking.html':
+  svn:mergeinfo
+    /trunk/www/hacking.html:36091,36124
+Properties on 'subversion\tests\cmdline\cat_tests.py':
+  svn:mergeinfo
+
+Properties on 'packages\windows-innosetup\svn.iss':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\Info.java':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\import-cmd.c':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\aprutil.m4':
+  svn:mergeinfo
+
+Properties on 'subversion\include\private\svn_auth_private.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_delta':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\trac\versioncontrol':
+  svn:mergeinfo
+
+Properties on 'build\generator\gen_vcnet_vcproj.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\SVNOutputStream.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\node-origins-table.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\tests\org\tigris\subversion\javahl\SVNTests.java':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\greek-tree.txt':
+  svn:mergeinfo
+
+Properties on 'notes\tree-conflicts':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\ChangelistCallback.h':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\ApacheSelectDlg.wxs':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\node-origins-table.h':
+  svn:mergeinfo
+
+Properties on 'subversion\mod_dav_svn\reports\deleted-rev.c':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\LicensesCommon.wxi':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\EnumMapper.cpp':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\RevisionRange.cpp':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\emacs':
+  svn:mergeinfo
+
+Properties on 'tools\hook-scripts\svn2feed.py':
+  svn:mergeinfo
+
+Properties on 'build\find_python.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_local\ra_plugin.c':
+  svn:mergeinfo
+
+Properties on 'tools\dev\svn-entries.el':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\calstblx.dtd':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\autoprop_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\deprecated.c':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_io.h':
+  svn:mergeinfo
+    /trunk/subversion/include/svn_io.h:36126,36147,36178
+Properties on 'tools\server-side\test_svn_server_log_parse.py':
+  svn:mergeinfo
+
+Properties on 'doc\tools\dtd\docbook41\ent\iso-dia.ent':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_fs_base\key-test.c':
+  svn:mergeinfo
+
+Properties on 'www\images\openbsd.png':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\libsvn_subr\config-test.cfg':
+  svn:mergeinfo
+
+Properties on 'notes\commit-access-templates':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra_serf\xml.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\bdb_compat.c':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\python\tests\ra.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\include\svn_containers.swg':
+  svn:mergeinfo
+
+Properties on 'tools\dev\prebuild-cleanup.sh':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\InputInterface.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\atomic.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\bdb_compat.h':
+  svn:mergeinfo
+
+Properties on 'www\svn_1.1_releasenotes.html':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\JNIUtil.cpp':
+  svn:mergeinfo
+
+Properties on 'packages\python-windows':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\native\RevisionRange.h':
+  svn:mergeinfo
+
+Properties on 'tools\server-side':
+  svn:mergeinfo
+    /trunk/tools/server-side:36415,36419
+Properties on 'subversion\bindings\swig\svn_diff.i':
+  svn:mergeinfo
+
+Properties on 'tools\README':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svneditor.bat':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_subr\target.c':
+  svn:mergeinfo
+
+Properties on 'tools\backup\hot-backup.py.in':
+  svn:mergeinfo
+
+Properties on 'notes\webdav-protocol':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\libsvn_swig_perl\swigutil_pl.c':
+  svn:mergeinfo
+
+Properties on 'packages\rpm\rhel-3\README':
+  svn:mergeinfo
+
+Properties on 'notes\fs-improvements.txt':
+  svn:mergeinfo
+
+Properties on 'build\ac-macros\apache.m4':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\svn2cl\README':
+  svn:mergeinfo
+
+Properties on 'doc\tools\html-stylesheet.xsl':
+  svn:mergeinfo
+
+Properties on 'doc\tools\readme-dblite.html':
+  svn:mergeinfo
+
+Properties on 'doc\doxygen.conf':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\swig\perl\libsvn_swig_perl\swigutil_pl.h':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\LogMessageCallback.java':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ConflictVersion.java':
+  svn:mergeinfo
+
+Properties on 'www\commercial-support.html':
+  svn:mergeinfo
+
+Properties on 'subversion\svn\schema\common.rnc':
+  svn:mergeinfo
+
+Properties on 'tools\examples':
+  svn:mergeinfo
+
+Properties on 'notes\authz_policy.txt':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_base64.h':
+  svn:mergeinfo
+
+Properties on 'subversion\include\svn_repos.h':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\svndumpfilter_tests.py':
+  svn:mergeinfo
+
+Properties on 'build\generator\swig':
+  svn:mergeinfo
+
+Properties on 'packages\windows-WiX\BuildSubversion\WixDialog\WelcomeDlgSv.wxs':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\dbt.c':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_ra\deprecated.c':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\log_tests_data\merge_history_repo.png':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_diff\diff4.c':
+  svn:mergeinfo
+
+Properties on 'contrib\client-side\emacs\dsvn.el':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_fs_base\bdb\dbt.h':
+  svn:mergeinfo
+
+Properties on 'subversion\svnsync\svnsync.1':
+  svn:mergeinfo
+
+Properties on 'subversion\tests\cmdline\blame_tests.py':
+  svn:mergeinfo
+
+Properties on 'subversion\bindings\javahl\src\org\tigris\subversion\javahl\ChangePath.java':
+  svn:mergeinfo
+
+Properties on 'subversion\libsvn_wc\deprecated.c':
+  svn:mergeinfo
+    /trunk/subversion/libsvn_wc/deprecated.c:36352,36404
+Properties on 'subversion\bindings\swig\perl':
+  svn:mergeinfo
+
+Properties on 'www\images\mac.png':
+  svn:mergeinfo
+
+Properties on 'notes\sql-backend':
+  svn:mergeinfo
+
+Properties on 'doc\programmer\WritingChangeLogs.txt':
+  svn:mergeinfo

@@ -67,6 +67,8 @@ a subtree's natural history on subsequent merges?
 This is really the primary question for this branch.  If performance is not
 adversely affected then everything the follows are just minor details.
 
+See notes/subtree-mergeinfo/the-performance-problem.txt.
+
 2) ELISION.
 
 Mergeinfo elision is currently quite simplistic.  If a child path has
