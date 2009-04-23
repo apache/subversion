@@ -249,18 +249,15 @@ svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
   apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
 
   SVN_ERR_ASSERT(entry != NULL);
-
-  kind = entry->kind;
 
   /* We will need the base props if the user requested them, or we need
      them if no (working) prop mods have occurred. */
   if (base_props_p != NULL || props_p != NULL)
     {
-      SVN_ERR(load_props(&base_props, path, kind, svn_wc__props_base,
+      SVN_ERR(load_props(&base_props, path, entry->kind, svn_wc__props_base,
                          result_pool));
 
       if (base_props_p)
@@ -269,7 +266,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (props_p)
     {
-      SVN_ERR(load_props(props_p, path, kind, svn_wc__props_working,
+      SVN_ERR(load_props(props_p, path, entry->kind, svn_wc__props_working,
                          result_pool));
 
       /* If the WORKING props are not present, then no modifications have
@@ -284,8 +281,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
   if (revert_props_p)
     {
       if (entry->schedule == svn_wc_schedule_replace)
-        SVN_ERR(load_props(revert_props_p, path, kind, svn_wc__props_revert,
-                           result_pool));
+        SVN_ERR(load_props(revert_props_p, path, entry->kind,
+                           svn_wc__props_revert, result_pool));
       else
         *revert_props_p = apr_hash_make(result_pool);
     }
@@ -2056,10 +2053,7 @@ svn_wc_prop_get(const svn_string_t **value,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
-  svn_error_t *err;
-  apr_hash_t *prophash;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
-  const svn_wc_entry_t *entry;
 
   if (kind == svn_prop_entry_kind)
     {
@@ -2069,8 +2063,29 @@ svn_wc_prop_get(const svn_string_t **value,
     }
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return svn_error_return(svn_wc__internal_propget(value, name, local_abspath,
+                                                   db, pool, pool));
+}
+
+svn_error_t *
+svn_wc__internal_propget(const svn_string_t **value,
+                         const char *name,
+                         const char *local_abspath,
+                         svn_wc__db_t *db,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  apr_hash_t *prophash;
+  enum svn_prop_kind kind = svn_property_kind(NULL, name);
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
+
   err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                          FALSE, pool, pool);
+                          FALSE, result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
@@ -2081,7 +2096,7 @@ svn_wc_prop_get(const svn_string_t **value,
           return svn_error_createf(
             SVN_ERR_WC_PATH_NOT_FOUND, err,
             _("Directory '%s' is missing or obstructed"),
-            svn_path_local_style(path, pool));
+            svn_path_local_style(local_abspath, scratch_pool));
         }
       return svn_error_return(err);
     }
@@ -2096,14 +2111,14 @@ svn_wc_prop_get(const svn_string_t **value,
   if (kind == svn_prop_wc_kind)
     {
       SVN_ERR_W(svn_wc__wcprop_list(&prophash, db, local_abspath, entry->kind,
-                                    pool, pool),
+                                    result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
   else
     {
       /* regular prop */
-      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, NULL, entry, path,
-                                   pool, pool),
+      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, NULL, entry, local_abspath,
+                                   result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
 
