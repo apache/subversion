@@ -660,7 +660,7 @@ complete_directory(struct edit_baton *eb,
 {
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
   const char *name;
@@ -677,47 +677,48 @@ complete_directory(struct edit_baton *eb,
       /* Before we can finish, we may need to clear the exclude flag for
          target. Also give a chance to the target that is explicitly pulled
          in. */
-      if (eb->depth_is_sticky || *eb->target)
+
+      const char *full_target;
+
+      full_target = svn_dirent_join(eb->anchor, eb->target, pool);
+
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, path, pool));
+      SVN_ERR(svn_wc_entry(&entry, adm_access, TRUE, pool));
+      if (entry && entry->depth == svn_depth_exclude)
         {
           svn_wc_adm_access_t *target_access;
-          SVN_ERR(svn_wc_adm_retrieve(&adm_access,
-                                      eb->adm_access, path, pool));
-          SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-          entry = apr_hash_get(entries, eb->target, APR_HASH_KEY_STRING);
-          if (entry && entry->depth == svn_depth_exclude)
-            {
-              char * full_target;
-              /* There is a small chance that the target is gone in the
-                 repository.  If so, we should get rid of the entry
-                 (and thus get rid of the exclude flag) now. */
-              full_target = svn_dirent_join(eb->anchor, eb->target, pool);
-              SVN_ERR(svn_wc__adm_retrieve_internal(
-                       &target_access, eb->adm_access, full_target, pool));
-              if (!target_access && entry->kind == svn_node_dir)
-                {
-                  int log_number = 0;
-                  /* Still passing NULL for THEIR_URL. A case where THEIR_URL
-                   * is needed in this call is rare or even non-existant.
-                   * ### TODO: Construct a proper THEIR_URL anyway. See also
-                   * NULL handling code in do_entry_deletion(). */
-                  SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
-                                            &log_number, pool));
-                }
-              else
-                {
-                  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-                  const char *local_dir_abspath;
-                  const char *local_abspath;
 
-                  SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path,
-                                                  pool));
-                  local_abspath = svn_dirent_join(local_dir_abspath,
-                                                  eb->target, pool);
-                  SVN_ERR(svn_wc__set_depth(db, local_abspath,
-                                            svn_depth_infinity, pool));
-                }
+          /* There is a small chance that the target is gone in the
+             repository.  If so, we should get rid of the entry
+             (and thus get rid of the exclude flag) now. */
+
+          SVN_ERR(svn_wc__adm_retrieve_internal(
+                    &target_access, eb->adm_access, full_target, pool));
+          if (!target_access && entry->kind == svn_node_dir)
+            {
+              int log_number = 0;
+              /* Still passing NULL for THEIR_URL. A case where THEIR_URL
+               * is needed in this call is rare or even non-existant.
+               * ### TODO: Construct a proper THEIR_URL anyway. See also
+               * NULL handling code in do_entry_deletion(). */
+              SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
+                                        &log_number, pool));
+            }
+          else
+            {
+              svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+              const char *local_dir_abspath;
+              const char *local_abspath;
+
+              SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path,
+                                              pool));
+              local_abspath = svn_dirent_join(local_dir_abspath,
+                                              eb->target, pool);
+              SVN_ERR(svn_wc__set_depth(db, local_abspath,
+                                        svn_depth_infinity, pool));
             }
         }
+
       return SVN_NO_ERROR;
     }
 
