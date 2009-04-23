@@ -541,7 +541,6 @@ def depth_immediates_fill_in_dir(sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_immediates, 1)
-  #sys.exit(1)
   svntest.actions.run_and_verify_update(wc_immediates,
                                         expected_output,
                                         expected_disk,
