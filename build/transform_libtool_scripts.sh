@@ -39,10 +39,11 @@ svndumpfilter="$delta $fs $repos $subr"
 svnlook="$delta $diff $fs $repos $subr"
 svnserve="$delta $fs $ra_svn $repos $subr"
 svnsync="$auth_gnome_keyring $auth_kwallet $delta $ra $subr"
+svnversion="$subr $wc"
 entries_dump="$subr $wc"
 
 # Variable 'executables' containing names of variables corresponding to executables
-executables="svn svnadmin svndumpfilter svnlook svnserve svnsync entries_dump"
+executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump"
 
 for executable in $executables; do
   # Set variables containing paths of executables
