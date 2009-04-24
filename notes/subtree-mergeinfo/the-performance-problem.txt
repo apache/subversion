@@ -213,9 +213,9 @@ Now we decide to merge all available revisions to 'branches\b1.0\code':
   G    branches\b1.0\code\src\server\serve.c
   G    branches\b1.0\code\src\subr\subr.c
 
-None of the incoming changes are to or under available changes are to
-'branches\b1.0\code\src\client\main.c' or 'branches\b1.0\code\README' so
-the mergeinfo on those subtrees of the target remains untouched:
+None of the incoming changes are to 'branches\b1.0\code\src\client\main.c'
+or 'branches\b1.0\code\README' so the mergeinfo on those subtrees of the
+target remains untouched:
 
   TPH>svn st
    M      branches\b1.0\code
