@@ -631,7 +631,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       else if (err)
         {
           if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
-            return err;
+            return svn_error_return(err);
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -1554,7 +1554,7 @@ maybe_store_checksum_rep(const char *rep,
           err = SVN_NO_ERROR;
         }
     }
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *

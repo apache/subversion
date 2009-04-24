@@ -508,7 +508,7 @@ with_txnlist_lock(svn_fs_t *fs,
     return svn_error_wrap_apr(apr_err, _("Can't ungrab FSFS txn list mutex"));
 #endif
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -530,7 +530,7 @@ get_lock_on_filesystem(const char *lock_filename,
       SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Obtain a write lock on the file LOCK_FILENAME (protecting with
@@ -577,7 +577,7 @@ with_some_lock(svn_error_t *(*body)(void *baton,
                               lock_filename);
 #endif
 
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -801,7 +801,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
       *lockcookie = NULL;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Get a handle to the prototype revision file for transaction TXN_ID in
@@ -1203,7 +1203,7 @@ create_file_ignore_eexist(const char *file,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  return err;
+  return svn_error_return(err);
 }
 
 static svn_error_t *
@@ -1316,7 +1316,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
             (void)apr_file_close(filehandle);                   \
           continue;                                             \
         }                                                       \
-        return err;                                             \
+        return svn_error_return(err);                           \
       }                                                         \
   }
 #define IGNORE_RECOVERABLE(err, expr)                           \
@@ -1327,7 +1327,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
       {                                                         \
         apr_status_t _e = APR_TO_OS_ERROR(err->apr_err);        \
         if ((_e != ESTALE) && (_e != EIO))                      \
-          return err;                                           \
+          return svn_error_return(err);                         \
       }                                                         \
   }
 #else
@@ -1376,7 +1376,7 @@ read_current(const char *fname, char **buf, apr_pool_t *pool)
     }
   svn_pool_destroy(iterpool);
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Find the youngest revision in a repository at path FS_PATH and
@@ -1702,7 +1702,7 @@ open_pack_or_rev_file(apr_file_t **file,
                                _("No such revision %ld"), rev);
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
@@ -1961,7 +1961,7 @@ get_node_revision_body(node_revision_t **noderev_p,
           return svn_fs_fs__err_dangling_id(fs, id);
         }
 
-      return err;
+      return svn_error_return(err);
     }
 
   return svn_fs_fs__read_noderev(noderev_p,
@@ -2122,7 +2122,7 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                                "Corrupt node-revision '%s'",
                                id_string->data);
     }
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -2510,7 +2510,7 @@ move_into_place(const char *old_filename,
       SVN_ERR(svn_io_file_close(file, pool));
     }
   if (err)
-    return err;
+    return svn_error_return(err);
 
 #ifdef __linux__
   {
@@ -2639,7 +2639,7 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
                    || APR_TO_OS_ERROR(err->apr_err) == ENOENT)
             continue;
 #endif
-          return err;
+          return svn_error_return(err);
         }
 
       SVN_ERR(svn_hash__clear(proplist));
@@ -2655,7 +2655,7 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
       break;
     }
   if (err)
-    return err;
+    return svn_error_return(err);
   svn_pool_destroy(iterpool);
 
   *proplist_p = proplist;
@@ -2740,7 +2740,7 @@ create_rep_state(struct rep_state **rep_state,
                                representation_string(rep, ffd->format, TRUE,
                                                      pool));
     }
-  return err;
+  return svn_error_return(err);
 }
 
 /* Build an array of rep_state structures in *LIST giving the delta
@@ -3851,7 +3851,7 @@ read_change(change_t **change_p,
         }
       if ((len == 0) && (! err))
         return SVN_NO_ERROR;
-      return err;
+      return svn_error_return(err);
     }
 
   change = apr_pcalloc(pool, sizeof(*change));
@@ -4281,7 +4281,7 @@ create_txn_dir_pre_1_5(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
           return SVN_NO_ERROR;
         }
       if (! APR_STATUS_IS_EEXIST(err->apr_err))
-        return err;
+        return svn_error_return(err);
       svn_error_clear(err);
     }
 
@@ -4392,7 +4392,7 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)))
     svn_error_clear(err);
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   for (i = 0; i < props->nelts; i++)
     {
@@ -4592,7 +4592,7 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
           err = NULL;
         }
       if (err)
-        return err;
+        return svn_error_return(err);
 
       err = svn_io_remove_file(path_txn_proto_rev_lock(fs, txn_id, pool),
                                pool);
@@ -4602,7 +4602,7 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
           err = NULL;
         }
       if (err)
-        return err;
+        return svn_error_return(err);
     }
   return SVN_NO_ERROR;
 }
@@ -6588,7 +6588,7 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
       svn_error_clear(err);
       err = NULL;
     }
-  return err;
+  return svn_error_return(err);
 }
 
 

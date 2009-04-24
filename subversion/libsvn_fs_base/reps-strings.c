@@ -528,7 +528,7 @@ rep_read_range(svn_fs_t *fs,
                    _("Corruption detected whilst reading delta chain from "
                      "representation '%s' to '%s'"), first_rep_key, rep_key);
               else
-                return err;
+                return svn_error_return(err);
             }
         }
     }

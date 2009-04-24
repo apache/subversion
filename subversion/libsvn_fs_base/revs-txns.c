@@ -802,7 +802,7 @@ txn_body_cleanup_txn_copy(void *baton, trail_t *trail)
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  return err;
+  return svn_error_return(err);
 }
 
 

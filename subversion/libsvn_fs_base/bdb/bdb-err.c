@@ -77,7 +77,7 @@ svn_fs_bdb__dberrf(bdb_env_baton_t *bdb_baton,
   msg = apr_pvsprintf(err->pool, fmt, ap);
   va_end(ap);
   err->message = apr_psprintf(err->pool, "%s%s", msg, db_strerror(db_err));
-  return err;
+  return svn_error_return(err);
 }
 
 
