@@ -660,7 +660,7 @@ complete_directory(struct edit_baton *eb,
 {
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
-  svn_wc_entry_t *entry;  /* non-const to set INCOMPLETE.  */
+  const svn_wc_entry_t *entry;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
   svn_wc_entry_t tmp_entry;
