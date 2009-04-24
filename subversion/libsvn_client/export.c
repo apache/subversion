@@ -293,7 +293,7 @@ copy_versioned_files(const char *from,
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
-            return err;
+            return svn_error_return(err);
           if (! force)
             SVN_ERR_W(err, _("Destination directory exists, and will not be "
                              "overwritten unless forced"));
@@ -646,7 +646,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       svn_error_clear(svn_io_remove_file(hb->tmppath, hb->pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 

@@ -41,7 +41,6 @@
 #include "entries.h"
 #include "lock.h"
 #include "translate.h"
-#include "questions.h"
 #include "tree_conflicts.h"
 
 #include "private/svn_wc_private.h"
@@ -1478,7 +1477,6 @@ log_do_upgrade_format(struct log_runner *loggy,
 {
   const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
   int fmt;
-  apr_hash_t *entries;
   const char *path
     = svn_wc__adm_child(svn_wc_adm_access_path(loggy->adm_access),
                         SVN_WC__ADM_FORMAT, loggy->pool);
@@ -1490,11 +1488,8 @@ log_do_upgrade_format(struct log_runner *loggy,
   /* Remove the .svn/format file, if it exists. */
   svn_error_clear(svn_io_remove_file(path, loggy->pool));
 
-  SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, loggy->pool));
-  SVN_ERR(svn_wc__adm_set_wc_format(fmt, loggy->adm_access, loggy->pool));
-  SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, loggy->pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__entries_upgrade(loggy->adm_access, fmt,
+                                                  loggy->pool));
 }
 
 
@@ -2632,6 +2627,7 @@ cleanup_internal(svn_wc__db_t *db,
   return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
+
 svn_error_t *
 svn_wc_cleanup3(const char *path,
                 const char *diff3_cmd,
@@ -2641,20 +2637,22 @@ svn_wc_cleanup3(const char *path,
                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
+  const char *local_abspath;
   int wc_format_version;
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
                           NULL /* ### config */, scratch_pool, scratch_pool));
 
-  /* ### should pass DB into this function.  */
-  SVN_ERR(svn_wc_check_wc(path, &wc_format_version, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, local_abspath,
+                                    scratch_pool));
 
   /* a "version" of 0 means a non-wc directory */
   if (wc_format_version == 0)
-    return svn_error_createf
-      (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       _("'%s' is not a working copy directory"),
-       svn_path_local_style(path, scratch_pool));
+    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                             _("'%s' is not a working copy directory"),
+                             svn_path_local_style(path, scratch_pool));
 
   /* First step, run any existing logs. */
   SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,

@@ -948,6 +948,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
 
 
 
+#ifndef BLAST_FORMAT_11
 /* *******************
  *
  * Below is code to write the old-format 'entries' file. This code will
@@ -1634,7 +1635,6 @@ svn_wc__entries_write_old(apr_hash_t *entries,
 }
 
 
-
 svn_error_t *
 svn_wc__entries_init_old(const char *path,
                          const char *uuid,
@@ -1688,6 +1688,7 @@ svn_wc__entries_init_old(const char *path,
   return svn_wc__close_adm_stream(stream, temp_file_path, path,
                                   SVN_WC__ADM_ENTRIES, pool);
 }
+#endif
 
 
 static svn_error_t *

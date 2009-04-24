@@ -28,7 +28,6 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "lock.h"
-#include "questions.h"
 #include "props.h"
 #include "log.h"
 #include "entries.h"
@@ -84,6 +83,7 @@ struct svn_wc_adm_access_t
 
 };
 
+#ifndef BLAST_FORMAT_11
 static svn_boolean_t
 should_create_next_gen(void)
 {
@@ -91,6 +91,7 @@ should_create_next_gen(void)
      ### developed. in the future, we will *always* create a next gen wc. */
   return getenv("SVN_ENABLE_NG") != NULL;
 }
+#endif
 
 
 /* This is a placeholder used in the set hash to represent missing
@@ -107,7 +108,7 @@ static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
          apr_pool_t *scratch_pool);
 
-static void
+static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
 
 
@@ -180,6 +181,111 @@ convert_wcprops(svn_stringbuf_t *log_accum,
 }
 
 
+static svn_error_t *
+check_format(int wc_format, const char *path, apr_pool_t *pool)
+{
+  if (wc_format < 2)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("Working copy format of '%s' is too old (%d); "
+           "please check out your working copy again"),
+         svn_path_local_style(path, pool), wc_format);
+    }
+#ifndef BLAST_FORMAT_11
+  else if (wc_format > SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  else if (wc_format > SVN_WC__VERSION)
+#endif
+    {
+      /* This won't do us much good for the 1.4<->1.5 crossgrade,
+         since 1.4.x clients don't refer to this FAQ entry, but at
+         least post-1.5 crossgrades will be somewhat less painful. */
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("This client is too old to work with working copy '%s'.  You need\n"
+           "to get a newer Subversion client, or to downgrade this working "
+           "copy.\n"
+           "See "
+           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+           "for details."
+           ),
+         svn_path_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__internal_check_wc(int *wc_format,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = svn_wc__db_temp_get_format(wc_format, db, local_abspath, scratch_pool);
+  if (err)
+    {
+      svn_node_kind_t kind;
+
+      if (err->apr_err != SVN_ERR_WC_MISSING)
+        return svn_error_return(err);
+      svn_error_clear(err);
+
+      /* ### the stuff below seems to be redundant. get_format() probably
+         ### does all this.
+         ###
+         ### investigate all callers. DEFINITELY keep in mind the
+         ### svn_wc_check_wc() entrypoint.
+      */
+
+      /* If the format file does not exist or path not directory, then for
+         our purposes this is not a working copy, so return 0. */
+      *wc_format = 0;
+
+      /* Check path itself exists. */
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+      if (kind == svn_node_none)
+        {
+          return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
+                                   svn_path_local_style(local_abspath,
+                                                        scratch_pool));
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* If we managed to read the format we assume that we
+     are dealing with a real wc so we can return a nice
+     error. */
+  return check_format(*wc_format, local_abspath, scratch_pool);
+}
+
+
+svn_error_t *
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc__db_t *db;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* Ugh. Too bad about having to open a DB.  */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          NULL /* ### config */, pool, pool));
+  err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
+  svn_error_clear(svn_wc__db_close(db, pool));
+
+  return svn_error_return(err);
+}
+
+
+#ifndef BLAST_FORMAT_11
 /* Helper function so we can still upgrade for format 11, for the time being.
    ### This will go away with before 1.7. */
 static svn_error_t *
@@ -191,9 +297,9 @@ upgrade_format_old(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
-  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
+  /* We can upgrade all formats that are accepted by check_format(). */
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
@@ -242,6 +348,7 @@ upgrade_format_old(svn_wc_adm_access_t *adm_access,
 
   return svn_wc__run_log(adm_access, NULL, scratch_pool);
 }
+#endif
 
 svn_error_t *
 svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
@@ -253,14 +360,16 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
   const svn_wc_entry_t *this_dir;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
-  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
+  /* We can upgrade all formats that are accepted by check_format(). */
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
+#ifndef BLAST_FORMAT_11
   if (!should_create_next_gen())
     return upgrade_format_old(adm_access, scratch_pool);
+#endif
 
   /* Don't try to mess with the WC if there are old log files left. */
   SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
@@ -299,8 +408,14 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                                this_dir->depth, scratch_pool));
 
   /* Do the loggy upgrade thing. */
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION_EXPERIMENTAL,
+#ifndef BLAST_FORMAT_11
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum,
+                                       SVN_WC__VERSION_EXPERIMENTAL,
                                        scratch_pool));
+#else
+  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
+                                       scratch_pool));
+#endif
   SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                svn_wc__adm_child(adm_access->path,
                                                  SVN_WC__ADM_ENTRIES,
@@ -443,7 +558,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   SVN_ERR(svn_dirent_get_absolute(&lock->abspath, path, result_pool));
 
-  add_to_shared(lock, scratch_pool);
+  SVN_ERR(add_to_shared(lock, scratch_pool));
 
   *adm_access = lock;
 
@@ -475,7 +590,7 @@ alloc_db(svn_wc__db_t **db,
 }
 
 
-static void
+static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 {
   /* ### sometimes we replace &missing with a now-valid lock.  */
@@ -484,14 +599,15 @@ add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
                                                             lock->abspath,
                                                             scratch_pool);
     if (IS_MISSING(prior))
-      svn_wc__db_temp_close_access(lock->db,
-                                   lock->abspath,
-                                   (svn_wc_adm_access_t *)&missing,
-                                   scratch_pool);
+      SVN_ERR(svn_wc__db_temp_close_access(lock->db, lock->abspath,
+                                           (svn_wc_adm_access_t *)&missing,
+                                           scratch_pool));
   }
 
   svn_wc__db_temp_set_access(lock->db, lock->abspath, lock,
                              scratch_pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -508,7 +624,8 @@ get_from_shared(const char *abspath,
 
 
 static svn_error_t *
-probe(const char **dir,
+probe(svn_wc__db_t *db,
+      const char **dir,
       const char *path,
       apr_pool_t *pool)
 {
@@ -517,7 +634,12 @@ probe(const char **dir,
 
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
+    {
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_wc__internal_check_wc(&wc_format, db, local_abspath, pool));
+    }
 
   /* a "version" of 0 means a non-wc directory */
   if (kind != svn_node_dir || wc_format == 0)
@@ -554,14 +676,16 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
                      int wc_format,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__check_format(wc_format,
-                               adm_access->path,
-                               scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
+#ifndef BLAST_FORMAT_11
   /* ### we'll need to update this conditional when _EXPERIMENTAL
      ### goes away */
   if (wc_format != SVN_WC__VERSION
       && wc_format != SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  if (wc_format != SVN_WC__VERSION)
+#endif
     {
       return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                                "Working copy format is too old; run "
@@ -614,11 +738,13 @@ open_single(svn_wc_adm_access_t **adm_access,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
+  const char *local_abspath;
   int wc_format = 0;
   svn_error_t *err;
   svn_wc_adm_access_t *lock;
 
-  err = svn_wc_check_wc(path, &wc_format, scratch_pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
       return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
@@ -689,8 +815,8 @@ close_single(svn_wc_adm_access_t *adm_access,
   adm_access->type = svn_wc__adm_access_closed;
 
   /* Detach from set */
-  svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath, adm_access,
-                               scratch_pool);
+  SVN_ERR(svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath,
+                                       adm_access, scratch_pool));
 
   /* Possibly close the underlying wc_db. */
   if (!adm_access->db_provided)
@@ -934,7 +1060,21 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   const char *dir;
 
-  SVN_ERR(probe(&dir, path, pool));
+  if (associated == NULL)
+    {
+      svn_wc__db_t *db;
+
+      /* Ugh. Too bad about having to open a DB.  */
+      SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                              NULL /* ### config */, pool, pool));
+      err = probe(db, &dir, path, pool);
+      svn_error_clear(svn_wc__db_close(db, pool));
+      SVN_ERR(err);
+    }
+  else
+    {
+      SVN_ERR(probe(associated->db, &dir, path, pool));
+    }
 
   /* If we moved up a directory, then the path is not a directory, or it
      is not under version control. In either case, the notion of
@@ -1151,11 +1291,13 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(associated != NULL);
+
   SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
   if (! entry)
     /* Not a versioned item, probe it */
-    SVN_ERR(probe(&dir, path, pool));
+    SVN_ERR(probe(associated->db, &dir, path, pool));
   else if (entry->kind != svn_node_dir)
     dir = svn_dirent_dirname(path, pool);
   else
@@ -1170,7 +1312,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
          we want its parent's adm_access (which holds minimal data
          on the child) */
       svn_error_clear(err);
-      SVN_ERR(probe(&dir, path, pool));
+      SVN_ERR(probe(associated->db, &dir, path, pool));
       SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
     }
   else
@@ -1392,7 +1534,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
 
              ### maybe this will be easier in the future. possibly a new
              ### disjoint algorithm?  */
-          svn_wc__db_temp_close_access(db, t_access->abspath, t_access, pool);
+          SVN_ERR(svn_wc__db_temp_close_access(db, t_access->abspath,
+                                               t_access, pool));
 
           err = child_is_disjoint(&disjoint, parent, path, p_access, t_access,
                                   pool);
@@ -1405,7 +1548,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             }
 
           /* Done with the computation. Put the child back into SHARED.  */
-          add_to_shared(t_access, pool);
+          SVN_ERR(add_to_shared(t_access, pool));
 
           if (disjoint)
             {

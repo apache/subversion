@@ -2137,7 +2137,7 @@ def diff_repos_wc_add_with_props(sbox):
 
   sbox.build()
 
-  expected_output_r1_r3 = make_diff_header("foo", "revision 0",
+  diff_foo_r1_r3 = make_diff_header("foo", "revision 0",
                                                 "revision 3") + [
     "@@ -0,0 +1 @@\n",
     "+content\n",
@@ -2147,13 +2147,16 @@ def diff_repos_wc_add_with_props(sbox):
     "Added: propname\n",
     "   + propvalue\n",
     "\n",
+    ]
+  diff_X_r1_r3 = [
     "\n",
     "Property changes on: X\n",
     "___________________________________________________________________\n",
     "Added: propname\n",
     "   + propvalue\n",
     "\n",
-  ] + make_diff_header("X/bar", "revision 0", "revision 3") + [
+  ]
+  diff_bar_r1_r3 = make_diff_header("X/bar", "revision 0", "revision 3") + [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2161,11 +2164,17 @@ def diff_repos_wc_add_with_props(sbox):
     "___________________________________________________________________\n",
     "Added: propname\n",
     "   + propvalue\n",
-    "\n" ]
+    "\n",
+    ]
+
   # The output from the BASE->repos diff is the same content, but in a
-  # different order.
-  expected_output_r1_r3_a = expected_output_r1_r3[:12] + \
-    expected_output_r1_r3[18:] + expected_output_r1_r3[12:18]
+  # different order. WC-NG also present a slightly different ordering.
+  if sbox.using_wc_ng():
+    expected_output_r1_r3 = diff_X_r1_r3 + diff_bar_r1_r3 + diff_foo_r1_r3
+    expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
+  else:
+    expected_output_r1_r3 = diff_foo_r1_r3 + diff_X_r1_r3 + diff_bar_r1_r3
+    expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
 
   os.chdir(sbox.wc_dir)
 

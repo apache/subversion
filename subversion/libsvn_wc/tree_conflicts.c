@@ -24,6 +24,7 @@
 #include "tree_conflicts.h"
 #include "log.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
@@ -295,6 +296,11 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   return SVN_NO_ERROR;
 }
 
+
+/* ### this is BAD. the CONFLICTS structure should not be dependent upon
+   ### DIR_PATH. each conflict should be labeled with an entry name, not
+   ### a whole path. (and a path which happens to vary based upon invocation
+   ### of the user client and these APIs)  */
 svn_error_t *
 svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
                             const char *conflict_data,
@@ -464,7 +470,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
  * in a unit test in tests/libsvn_wc/, so it isn't.
  */
 svn_boolean_t
-svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
+svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
                              const char *victim_basename,
                              apr_pool_t *pool)
 {
@@ -474,8 +480,9 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
   for (i = 0; i < conflicts->nelts; i++)
     {
       conflict = APR_ARRAY_IDX(conflicts, i,
-                               svn_wc_conflict_description_t *);
-      if (strcmp(svn_dirent_basename(conflict->path, pool), victim_basename) == 0)
+                               const svn_wc_conflict_description_t *);
+      if (strcmp(svn_dirent_basename(conflict->path, pool),
+                 victim_basename) == 0)
         return TRUE;
     }
 
@@ -612,44 +619,50 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                           svn_wc_adm_access_t *adm_access,
                           apr_pool_t *pool)
 {
-  const char *parent_path = svn_dirent_dirname(victim_path, pool);
-  svn_wc_adm_access_t *parent_adm_access;
-  svn_boolean_t parent_adm_access_is_temporary = FALSE;
+  return svn_error_return(svn_wc__get_tree_conflict2(
+                            tree_conflict,
+                            victim_path,
+                            svn_wc__adm_get_db(adm_access),
+                            pool,
+                            pool));
+}
+
+
+svn_error_t *
+svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
+                           const char *victim_path,
+                           svn_wc__db_t *db,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  const char *victim_abspath;
+  const char *parent_abspath;
+  const char *victim_name;
   svn_error_t *err;
   apr_array_header_t *conflicts;
   const svn_wc_entry_t *entry;
   int i;
 
-  /* Try to get the parent's admin access baton from the baton set. */
-  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path,
-                            pool);
-  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+  SVN_ERR(svn_dirent_get_absolute(&victim_abspath, victim_path, scratch_pool));
+  svn_dirent_split(victim_abspath, &parent_abspath, &victim_name,
+                   scratch_pool);
+  err = svn_wc__get_entry(&entry, db, parent_abspath, FALSE,
+                          svn_node_dir, FALSE, scratch_pool, scratch_pool);
+  if (err)
     {
+      if (err->apr_err != SVN_ERR_WC_MISSING)
+        return svn_error_return(err);
       svn_error_clear(err);
 
-      /* Try to access the parent dir independently. We can't add
-         a parent's access baton to the existing access baton set
-         of its child, because the lifetimes would be wrong
-         according to doc string of svn_wc_adm_open3(), so we get
-         open it temporarily and close it after use. */
-      err = svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
-                             FALSE, 0, NULL, NULL, pool);
-      parent_adm_access_is_temporary = TRUE;
-
-      /* If the parent isn't a WC dir, the child can't be
-         tree-conflicted. */
-      if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
-        {
-          svn_error_clear(err);
-          *tree_conflict = NULL;
-          return SVN_NO_ERROR;
-        }
+      /* We walked off the top of a working copy.  */
+      *tree_conflict = NULL;
+      return SVN_NO_ERROR;
     }
-  SVN_ERR(err);
 
-  SVN_ERR(svn_wc_entry(&entry, parent_path, parent_adm_access, TRUE, pool));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      parent_path, pool));
+                                      svn_dirent_dirname(victim_path,
+                                                         scratch_pool),
+                                      result_pool));
 
   *tree_conflict = NULL;
   for (i = 0; i < conflicts->nelts; i++)
@@ -658,17 +671,13 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
       conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
-      if (strcmp(svn_dirent_basename(conflict->path, pool),
-                 svn_dirent_basename(victim_path, pool)) == 0)
+      if (strcmp(svn_dirent_basename(conflict->path, scratch_pool),
+                 victim_name) == 0)
         {
           *tree_conflict = conflict;
           break;
         }
     }
-
-  /* If we opened a temporary admin access baton, close it. */
-  if (parent_adm_access_is_temporary)
-    SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   return SVN_NO_ERROR;
 }

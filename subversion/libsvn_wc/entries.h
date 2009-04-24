@@ -105,13 +105,6 @@ svn_error_t *svn_wc__entries_init(const char *path,
                                   apr_pool_t *pool);
 
 
-/* Create or overwrite an `entries' file for ADM_ACCESS using the contents
-   of ENTRIES.  See also svn_wc_entries_read() in the public api. */
-svn_error_t *svn_wc__entries_write(apr_hash_t *entries,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
-
-
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
    keys and values are both char *.  Allocate the entry and copy
    attributes into POOL as needed.
@@ -301,6 +294,19 @@ svn_boolean_t
 svn_wc__entry_is_hidden(const svn_wc_entry_t *entry);
 
 
+/* Set the depth of a directory.  */
+svn_error_t *
+svn_wc__set_depth(svn_wc__db_t *db,
+                  const char *local_dir_abspath,
+                  svn_depth_t depth,
+                  apr_pool_t *scratch_pool);
+
+/* Read the current entries, and write them out for WC_FORMAT. */
+svn_error_t *
+svn_wc__entries_upgrade(svn_wc_adm_access_t *adm_access,
+                        int wc_format,
+                        apr_pool_t *scratch_pool);
+
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
@@ -308,6 +314,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+#ifndef BLAST_FORMAT_11
 svn_error_t *
 svn_wc__entries_write_old(apr_hash_t *entries,
                           svn_wc_adm_access_t *adm_access,
@@ -322,6 +329,7 @@ svn_wc__entries_init_old(const char *path,
                          svn_revnum_t initial_rev,
                          svn_depth_t depth,
                          apr_pool_t *pool);
+#endif
 
 /* Fulfill a svn_wc__db_read_info() invocation by reading an old-style
    entry structure. Limited fields are available.  */

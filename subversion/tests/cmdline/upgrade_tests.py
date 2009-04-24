@@ -30,7 +30,7 @@ XFail = svntest.testcase.XFail
 
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
-    shutil.rmtree(sbox.wc_dir)
+    svntest.main.safe_rmtree(sbox.wc_dir)
   except OSError, e:
     pass
 

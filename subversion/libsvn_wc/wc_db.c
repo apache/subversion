@@ -185,7 +185,8 @@ enum statement_keys {
   STMT_INSERT_WCROOT,
   STMT_UPDATE_BASE_DAV_CACHE,
   STMT_SELECT_BASE_DAV_CACHE,
-  STMT_SELECT_DELETION_INFO
+  STMT_SELECT_DELETION_INFO,
+  STMT_SELECT_PARENT_STUB_INFO
 };
 
 static const char * const statements[] = {
@@ -291,6 +292,9 @@ static const char * const statements[] = {
   "left outer join base_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
   "where working_node.wc_id = ?1 and working_node.local_relpath = ?2;",
+
+  "select presence = 'not-present', revnum from base_node "
+  "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
 };
@@ -896,12 +900,19 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
     {
       svn_error_t *err;
 
+#ifndef BLAST_FORMAT_11
       err = svn_sqlite__open(&sdb,
                              svn_wc__adm_child(local_abspath, "wc.db",
                                                scratch_pool),
-                             smode, statements,
-                             SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                             db->state_pool, scratch_pool);
+                             smode, statements, SVN_WC__VERSION_EXPERIMENTAL,
+                             upgrade_sql, db->state_pool, scratch_pool);
+#else
+      err = svn_sqlite__open(&sdb,
+                             svn_wc__adm_child(local_abspath, "wc.db",
+                                               scratch_pool),
+                             smode, statements, SVN_WC__VERSION,
+                             upgrade_sql, db->state_pool, scratch_pool);
+#endif
       if (err == NULL)
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1043,6 +1054,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
       if (parent_pdh == NULL || parent_pdh->wcroot == NULL)
         {
+#ifndef BLAST_FORMAT_11
           svn_error_t *err = svn_sqlite__open(&sdb,
                                               svn_wc__adm_child(parent_dir,
                                                                 "wc.db",
@@ -1051,6 +1063,15 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                               SVN_WC__VERSION_EXPERIMENTAL,
                                               upgrade_sql,
                                               db->state_pool, scratch_pool);
+#else
+          svn_error_t *err = svn_sqlite__open(&sdb,
+                                              svn_wc__adm_child(parent_dir,
+                                                                "wc.db",
+                                                                scratch_pool),
+                                              smode, statements,
+                                              SVN_WC__VERSION, upgrade_sql,
+                                              db->state_pool, scratch_pool);
+#endif
           if (err)
             {
               if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1371,7 +1392,11 @@ gather_children(const apr_array_header_t **children,
                               scratch_pool, scratch_pool));
 
   /* If this is an old working copy, then delegate to grab this info.  */
+#ifndef BLAST_FORMAT_11
   if (pdh->wcroot->format < SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  if (pdh->wcroot->format < SVN_WC__VERSION)
+#endif
     return svn_wc__gather_children_old(children, base_only,
                                        db, pdh->wcroot->abspath, local_relpath,
                                        result_pool, scratch_pool);
@@ -1500,12 +1525,21 @@ svn_wc__db_init(const char *local_abspath,
   apr_int64_t wc_id;
   insert_base_baton_t ibb;
 
+#ifndef BLAST_FORMAT_11
   SVN_ERR(svn_sqlite__open(&sdb,
                            svn_wc__adm_child(local_abspath, "wc.db",
                                              scratch_pool),
                            svn_sqlite__mode_rwcreate, statements,
-                           SVN_WC__VERSION_EXPERIMENTAL, upgrade_sql,
-                           scratch_pool, scratch_pool));
+                           SVN_WC__VERSION_EXPERIMENTAL,
+                           upgrade_sql, scratch_pool, scratch_pool));
+#else
+  SVN_ERR(svn_sqlite__open(&sdb,
+                           svn_wc__adm_child(local_abspath, "wc.db",
+                                             scratch_pool),
+                           svn_sqlite__mode_rwcreate, statements,
+                           SVN_WC__VERSION,
+                           upgrade_sql, scratch_pool, scratch_pool));
+#endif
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
@@ -2489,7 +2523,11 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
 
   /* If this is an old working copy, then delegate to grab this info.  */
+#ifndef BLAST_FORMAT_11
   if (pdh->wcroot->format < SVN_WC__VERSION_EXPERIMENTAL)
+#else
+  if (pdh->wcroot->format < SVN_WC__VERSION)
+#endif
     return svn_wc__read_info_old(status, kind, revision,
                                  repos_relpath, repos_root_url, repos_uuid,
                                  changed_rev, changed_date, changed_author,
@@ -3449,9 +3487,20 @@ svn_wc__db_temp_get_format(int *format,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  /* Grab a PDH for this directory. If it isn't present, or have wcroot
-     information, then do a full upward traversal to find the wcroot.  */
   pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+
+  /* ### for per-dir layouts, the wcroot should be this directory. under
+     ### wc-ng, the wcroot may have become set for this missing subdir.  */
+  if (pdh != NULL && pdh->wcroot != NULL
+      && strcmp(local_dir_abspath, pdh->wcroot->abspath) != 0)
+    {
+      /* Forget the WCROOT. The subdir may have been missing when this
+         got set, but has since been constructed.  */
+      pdh->wcroot = NULL;
+    }
+
+  /* If the PDH isn't present, or have wcroot information, then do a full
+     upward traversal to find the wcroot.  */
   if (pdh == NULL || pdh->wcroot == NULL)
     {
       const char *local_relpath;
@@ -3472,6 +3521,11 @@ svn_wc__db_temp_get_format(int *format,
             return err;
           svn_error_clear(err);
 
+          /* We might turn this directory into a wcroot later, so let's
+             just forget what we (didn't) find. The wcroot is still
+             hanging off a parent though.  */
+          pdh->wcroot = NULL;
+
           /* Remap the returned error.  */
           *format = 0;
           return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
@@ -3481,16 +3535,6 @@ svn_wc__db_temp_get_format(int *format,
         }
 
       SVN_ERR_ASSERT(pdh->wcroot != NULL);
-    }
-
-  /* ### for per-dir layouts, the wcroot should be this directory.  */
-  if (strcmp(local_dir_abspath, pdh->wcroot->abspath) != 0)
-    {
-      *format = 0;
-      return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
-                               _("'%s' is not a working copy"),
-                               svn_dirent_local_style(local_dir_abspath,
-                                                      scratch_pool));
     }
 
   SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
@@ -3528,10 +3572,14 @@ svn_wc__db_temp_reset_format(int format,
          ### here.  If we are upgrading *to* wc-ng, we need to blow away the
          ### pdh->wcroot member.  If we are upgrading to format 11 (pre-wc-ng),
          ### we just need to store the format number.  */
+#ifndef BLAST_FORMAT_11
       if (format == SVN_WC__VERSION_EXPERIMENTAL)
         pdh->wcroot = NULL;
       else
         pdh->wcroot->format = format;
+#else
+      pdh->wcroot = NULL;
+#endif
     }
 
   return SVN_NO_ERROR;
@@ -3582,7 +3630,7 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
 
 
 /* ### temporary API. remove before release.  */
-void
+svn_error_t *
 svn_wc__db_temp_close_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              svn_wc_adm_access_t *adm_access,
@@ -3590,7 +3638,7 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
   /* Do not create a PDH. If we don't have one, then we don't have an
@@ -3601,8 +3649,21 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
       /* We should be closing the correct one, *or* it's already closed.  */
       SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == adm_access
                                || pdh->adm_access == NULL);
+      if (pdh->wcroot)
+        {
+          /* This assumes a per-dir database. */
+          if (pdh->wcroot->sdb)
+            {
+              SVN_ERR(svn_sqlite__close(pdh->wcroot->sdb));
+              pdh->wcroot->sdb = NULL;
+            }
+          pdh->wcroot = NULL;
+        }
+
       pdh->adm_access = NULL;
     }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3650,3 +3711,53 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
   return result;
 }
 
+
+svn_error_t *
+svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
+                               svn_revnum_t *base_revision,
+                               svn_wc__db_t *db,
+                               const char *local_dir_abspath,
+                               apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  const char *base_name;
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  SVN_ERR_ASSERT(not_present != NULL);
+  SVN_ERR_ASSERT(base_revision != NULL);
+
+  svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
+                   scratch_pool);
+
+  /* The parent should be a working copy if this function is called.
+     Basically, the child is in an "added" state, which is not possible
+     for a working copy root.  */
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* Build the local_relpath for the requested directory.  */
+  local_relpath = svn_dirent_join(local_relpath, base_name, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_PARENT_STUB_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  /* There MAY be a BASE_NODE row in the parent directory. It is entirely
+     possible the parent only has WORKING_NODE rows. If there is no BASE_NODE,
+     then we certainly aren't looking at a 'not-present' row.  */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  *not_present = have_row && svn_sqlite__column_int(stmt, 0);
+  if (*not_present)
+    {
+      *base_revision = svn_sqlite__column_revnum(stmt, 1);
+    }
+  /* else don't touch *BASE_REVISION.  */
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}

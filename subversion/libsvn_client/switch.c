@@ -234,7 +234,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(path, pool);
-      return err;
+      return svn_error_return(err);
     }
   *use_sleep = TRUE;
 
@@ -253,7 +253,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Return errors we might have sustained. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(adm_access, pool));

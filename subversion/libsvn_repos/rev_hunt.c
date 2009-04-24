@@ -272,7 +272,7 @@ svn_repos_history2(svn_fs_t *fs,
             }
           else
             {
-              return err;
+              return svn_error_return(err);
             }
         }
 
@@ -337,7 +337,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      return err;
+      return svn_error_return(err);
     }
 
   /* Ensure path was deleted at or before end revision. */
@@ -349,7 +349,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
   else
     {
@@ -454,7 +454,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
               mid_rev = (start + mid_rev) / 2;
             }
           else
-            return err;
+            return svn_error_return(err);
         }
       else
         {

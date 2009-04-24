@@ -290,7 +290,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
                                                      subpool)))
         {
           svn_bdb_dbc_close(cursor);
-          return err;
+          return svn_error_return(err);
         }
 
       /* If this is an immutable "committed" transaction, ignore it. */

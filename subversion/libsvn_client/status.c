@@ -267,7 +267,7 @@ svn_client_status5(svn_revnum_t *result_rev,
       target_access = anchor_access;
     }
   else
-    return err;
+    return svn_error_return(err);
 
   anchor = svn_wc_adm_access_path(anchor_access);
 

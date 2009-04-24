@@ -179,7 +179,7 @@ create_repos_dir(const char *path, apr_pool_t *pool)
                                 svn_dirent_local_style(path, pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 static const char * bdb_lock_file_contents =
@@ -1174,7 +1174,7 @@ lock_repos(svn_repos_t *repos,
 
       err = svn_io_file_lock2(lockfile_path, exclusive, nonblocking, pool);
       if (err != NULL && APR_STATUS_IS_EAGAIN(err->apr_err))
-        return err;
+        return svn_error_return(err);
       SVN_ERR_W(err, _("Error opening db lockfile"));
     }
   return SVN_NO_ERROR;
@@ -1233,7 +1233,7 @@ svn_repos_create(svn_repos_t **repos_p,
        * create_repos_structure will fail if the path existed before we started
        * so we can't accidentally remove a directory that previously existed. */
       svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* This repository is ready.  Stamp it with a format number. */
@@ -1506,7 +1506,7 @@ svn_repos_has_capability(svn_repos_t *repos,
             }
           else
             {
-              return err;
+              return svn_error_return(err);
             }
         }
       else

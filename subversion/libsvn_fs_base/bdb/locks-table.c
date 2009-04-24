@@ -179,7 +179,7 @@ get_lock(svn_lock_t **lock_p,
          matching path-key. */
       err = svn_fs_bdb__lock_token_delete(fs, path, trail, pool);
     }
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -211,7 +211,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
   else
     {
@@ -260,7 +260,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
       if (err)
         {
           svn_bdb_dbc_close(cursor);
-          return err;
+          return svn_error_return(err);
         }
 
       /* Lock is verified, hand it off to our callback. */
@@ -270,7 +270,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
           if (err)
             {
               svn_bdb_dbc_close(cursor);
-              return err;
+              return svn_error_return(err);
             }
         }
 

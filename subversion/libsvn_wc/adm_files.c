@@ -653,11 +653,21 @@ svn_wc_ensure_adm3(const char *path,
                    svn_depth_t depth,
                    apr_pool_t *pool)
 {
+  svn_wc__db_t *db;
+  const char *local_abspath;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   int format;
 
-  SVN_ERR(svn_wc_check_wc(path, &format, pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, pool, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, pool));
+
+  /* ### we just created a DB. we should pass that into the other
+     ### functions below.  */
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */

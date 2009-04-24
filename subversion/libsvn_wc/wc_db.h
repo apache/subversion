@@ -1451,6 +1451,13 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
                                 svn_depth_t depth,
                                 apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
+                               svn_revnum_t *base_revision,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
 
 /* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *
@@ -1477,7 +1484,7 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            svn_wc_adm_access_t *adm_access,
                            apr_pool_t *scratch_pool);
-void
+svn_error_t *
 svn_wc__db_temp_close_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              svn_wc_adm_access_t *adm_access,

@@ -205,7 +205,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */

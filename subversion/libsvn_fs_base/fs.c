@@ -1265,7 +1265,7 @@ base_hotcopy(const char *src_path,
                    "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
-              return err;
+              return svn_error_return(err);
           }
       }
     svn_pool_destroy(subpool);
@@ -1284,7 +1284,7 @@ base_hotcopy(const char *src_path,
              "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Only now that the hotcopied filesystem is complete,

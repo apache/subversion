@@ -80,7 +80,7 @@ svn_dirent_local_style(const char *dirent,
 
 /** Convert @a uri from the local style to the canonical internal style.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_internal_style(const char *uri,
@@ -88,7 +88,7 @@ svn_uri_internal_style(const char *uri,
 
 /** Convert @a uri from the canonical internal style to the local style.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_local_style(const char *uri,
@@ -265,7 +265,7 @@ svn_uri_basename(const char *uri,
  *
  * The returned dirname will be allocated in @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_dirname(const char *dirent,
@@ -283,7 +283,7 @@ svn_dirent_is_absolute(const char *dirent);
 
 /** Return TRUE if @a uri is considered absolute or is a URL.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_absolute(const char *uri);
@@ -307,7 +307,7 @@ svn_dirent_is_root(const char *dirent,
  *
  * Do not use this function with URLs.
  *
- * @since New in 1.6
+ * @since New in 1.7
  */
 svn_boolean_t
 svn_uri_is_root(const char *uri,
@@ -345,7 +345,7 @@ svn_dirent_canonicalize(const char *dirent,
  *
  * The returned uri may be statically allocated or allocated from @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_canonicalize(const char *uri,
@@ -367,7 +367,7 @@ svn_dirent_is_canonical(const char *dirent,
 /** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
  * allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_canonical(const char *uri,
@@ -394,7 +394,7 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * different resources), and (b) share a common ancestor in their path
  * component, i.e. 'protocol://' is not a sufficient ancestor.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_get_longest_ancestor(const char *path1,
@@ -432,7 +432,7 @@ svn_dirent_get_absolute(const char **pabsolute,
  * trivial: if the uri is "../foo", how do you know whether or not
  * the current directory is named "foo" in its parent?
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_is_child(const char *uri1,
@@ -464,7 +464,7 @@ svn_dirent_is_ancestor(const char *path1,
  *
  * This function supports URLs.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_ancestor(const char *path1,
