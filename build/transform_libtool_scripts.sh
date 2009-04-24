@@ -95,8 +95,8 @@ for libtool_script in $executables $tests; do
       done
       libtool_script_libraries="${libtool_script_libraries# *}"
       # Append definitions of LD_PRELOAD to libtool scripts
-      sed_append 1 "LD_PRELOAD=\"$libtool_script_libraries\"" "$libtool_script_path"
-      sed_append 2 "export LD_PRELOAD" "$libtool_script_path"
+      sed_append 4 "LD_PRELOAD=\"$libtool_script_libraries\"" "$libtool_script_path"
+      sed_append 5 "export LD_PRELOAD" "$libtool_script_path"
       chmod +x "$libtool_script_path"
     fi
   fi
