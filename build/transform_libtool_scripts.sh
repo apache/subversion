@@ -77,7 +77,8 @@ auth_test="auth_gnome_keyring auth_kwallet $auth_test"
 # Usage: sed_append LINE_NUMBER TEXT FILE
 sed_append()
 {
-  sed -e "$1a$2" "$3" > "$3.new"
+  sed -e "$1a\
+$2" "$3" > "$3.new"
   mv -f "$3.new" "$3"
 }
 
