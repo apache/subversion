@@ -552,14 +552,14 @@ make_dir_baton(struct dir_baton **d_p,
   d = apr_pcalloc(pool, sizeof(*d));
 
   /* Construct the PATH and baseNAME of this directory. */
-  d->path = apr_pstrdup(pool, eb->anchor);
   if (path)
     {
-      d->path = svn_dirent_join(d->path, path, pool);
+      d->path = svn_dirent_join(eb->anchor, path, pool);
       d->name = svn_dirent_basename(path, pool);
     }
   else
     {
+      d->path = apr_pstrdup(pool, eb->anchor);
       d->name = NULL;
     }
 
@@ -660,7 +660,7 @@ complete_directory(struct edit_baton *eb,
 {
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
-  const svn_wc_entry_t *entry;
+  svn_wc_entry_t *entry;  /* non-const to set INCOMPLETE.  */
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
   const char *name;
@@ -679,12 +679,27 @@ complete_directory(struct edit_baton *eb,
          in. */
 
       const char *full_target;
+      const char *target_abspath;
+      svn_error_t *err;
+      const svn_wc_entry_t *target_entry;
+
+      SVN_ERR_ASSERT(strcmp(path, eb->anchor) == 0);
 
       full_target = svn_dirent_join(eb->anchor, eb->target, pool);
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, full_target, pool));
 
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, path, pool));
-      SVN_ERR(svn_wc_entry(&entry, adm_access, TRUE, pool));
-      if (entry && entry->depth == svn_depth_exclude)
+      err = svn_wc__get_entry(&target_entry, eb->db, target_abspath, TRUE,
+                              svn_node_dir, TRUE, pool, pool);
+      if (err)
+        {
+          if (err != SVN_ERR_NODE_UNEXPECTED_KIND)
+            return svn_error_return(err);
+          svn_error_clear(err);
+
+          /* No problem if it is actually a file. The depth won't be
+             svn_depth_exclude, so we'll do nothing.  */
+        }
+      if (target_entry && target_entry->depth == svn_depth_exclude)
         {
           svn_wc_adm_access_t *target_access;
 
@@ -692,9 +707,10 @@ complete_directory(struct edit_baton *eb,
              repository.  If so, we should get rid of the entry
              (and thus get rid of the exclude flag) now. */
 
-          SVN_ERR(svn_wc__adm_retrieve_internal(
-                    &target_access, eb->adm_access, full_target, pool));
-          if (!target_access && entry->kind == svn_node_dir)
+          target_access = svn_wc__adm_retrieve_internal2(eb->db,
+                                                         target_abspath,
+                                                         pool);
+          if (!target_access && target_entry->kind == svn_node_dir)
             {
               int log_number = 0;
               /* Still passing NULL for THEIR_URL. A case where THEIR_URL
@@ -706,15 +722,7 @@ complete_directory(struct edit_baton *eb,
             }
           else
             {
-              svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-              const char *local_dir_abspath;
-              const char *local_abspath;
-
-              SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path,
-                                              pool));
-              local_abspath = svn_dirent_join(local_dir_abspath,
-                                              eb->target, pool);
-              SVN_ERR(svn_wc__set_depth(db, local_abspath,
+              SVN_ERR(svn_wc__set_depth(eb->db, target_abspath,
                                         svn_depth_infinity, pool));
             }
         }
@@ -742,11 +750,10 @@ complete_directory(struct edit_baton *eb,
        || (strcmp(path, svn_dirent_join(eb->anchor, eb->target, pool)) == 0
            && eb->requested_depth > entry->depth)))
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
       const char *local_dir_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path, pool));
-      SVN_ERR(svn_wc__set_depth(db, local_dir_abspath, eb->requested_depth,
+      SVN_ERR(svn_wc__set_depth(eb->db, local_dir_abspath, eb->requested_depth,
                                 pool));
     }
 
@@ -756,7 +763,7 @@ complete_directory(struct edit_baton *eb,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *current_entry;
+      svn_wc_entry_t *current_entry;  /* non-const to set DEPTH.  */
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
