@@ -114,11 +114,9 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
-           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
-           @SVN_GSSAPI_INCLUDES@ \
-           @SVN_KWALLET_INCLUDES@ \
-           @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ \
-           @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
+           @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ \
+           @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -315,7 +313,10 @@ install: external-install local-install revision-install
 
 @INCLUDE_OUTPUTS@
 
-local-all: @BUILD_RULES@
+local-all: @BUILD_RULES@ transform-libtool-scripts
+
+transform-libtool-scripts: @BUILD_RULES@
+	@$(top_srcdir)/build/transform_libtool_scripts.sh
 
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
