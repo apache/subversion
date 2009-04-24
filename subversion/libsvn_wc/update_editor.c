@@ -663,6 +663,7 @@ complete_directory(struct edit_baton *eb,
   svn_wc_entry_t *entry;  /* non-const to set INCOMPLETE.  */
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
+  svn_wc_entry_t tmp_entry;
   const char *name;
 
   /* If inside a tree conflict, do nothing. */
@@ -740,7 +741,10 @@ complete_directory(struct edit_baton *eb,
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No '.' entry in: '%s'"),
                              svn_path_local_style(path, pool));
-  entry->incomplete = FALSE;
+  tmp_entry.incomplete = FALSE;
+  SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
+                               &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                               pool));
 
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
@@ -840,9 +844,7 @@ complete_directory(struct edit_baton *eb,
     }
 
   svn_pool_destroy(subpool);
-
-  /* An atomic write of the whole entries file. */
-  return svn_wc__entries_write(entries, adm_access, pool);
+  return SVN_NO_ERROR;
 }
 
 
