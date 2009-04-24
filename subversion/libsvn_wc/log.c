@@ -1477,7 +1477,6 @@ log_do_upgrade_format(struct log_runner *loggy,
 {
   const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
   int fmt;
-  apr_hash_t *entries;
   const char *path
     = svn_wc__adm_child(svn_wc_adm_access_path(loggy->adm_access),
                         SVN_WC__ADM_FORMAT, loggy->pool);
@@ -1489,11 +1488,8 @@ log_do_upgrade_format(struct log_runner *loggy,
   /* Remove the .svn/format file, if it exists. */
   svn_error_clear(svn_io_remove_file(path, loggy->pool));
 
-  SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, loggy->pool));
-  SVN_ERR(svn_wc__adm_set_wc_format(fmt, loggy->adm_access, loggy->pool));
-  SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, loggy->pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__entries_upgrade(loggy->adm_access, fmt,
+                                                  loggy->pool));
 }
 
 
