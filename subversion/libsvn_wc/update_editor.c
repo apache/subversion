@@ -811,7 +811,14 @@ complete_directory(struct edit_baton *eb,
               /* Clear the exclude flag if it is pulled in again. */
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
-                current_entry->depth = svn_depth_infinity;
+                {
+                  const char *child_abspath;
+
+                  SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path,
+                                                  pool));
+                  SVN_ERR(svn_wc__set_depth(eb->db, child_abspath,
+                                            svn_depth_infinity, pool));
+                }
             }
           else if ((svn_wc__adm_missing(adm_access, child_path))
                    && (! current_entry->absent)
