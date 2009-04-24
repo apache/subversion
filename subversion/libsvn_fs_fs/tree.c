@@ -964,7 +964,7 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
       *kind_p = svn_node_none;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
@@ -1736,7 +1736,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
 
  cleanup:
   svn_pool_destroy(iterpool);
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -1799,7 +1799,7 @@ fs_merge(const char **conflict_p,
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
         *conflict_p = conflict->data;
-      return err;
+      return svn_error_return(err);
     }
 
   return SVN_NO_ERROR;

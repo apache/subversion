@@ -346,7 +346,7 @@ svn_fs_base__get_lock_helper(svn_lock_t **lock_p,
   else
     SVN_ERR(err);
 
-  return err;
+  return svn_error_return(err);
 }
 
 
