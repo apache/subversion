@@ -261,7 +261,7 @@ class Entries:
     format_string = '%0' + str(self.format_nbr_bytes) + 'd'
 
     os.chmod(self.path, 0o600)
-    output = open(self.path, "r+", 0)
+    output = open(self.path, "r+")
     output.write(format_string % format_nbr)
     output.close()
     os.chmod(self.path, 0o400)
@@ -329,14 +329,14 @@ class Format:
     if os.path.exists(self.path):
       if verbosity >= 1:
         print("%s will be updated." % self.path)
-      os.chmod(self.path,0600)
+      os.chmod(self.path,0o600)
     else:
       if verbosity >= 1:
         print("%s does not exist, creating it." % self.path)
     format = open(self.path, "w")
     format.write(format_string % format_nbr)
     format.close()
-    os.chmod(self.path, 0400)
+    os.chmod(self.path, 0o400)
 
 class LocalException(Exception):
   """Root of local exception class hierarchy."""
