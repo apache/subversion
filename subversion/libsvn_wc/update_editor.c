@@ -692,7 +692,7 @@ complete_directory(struct edit_baton *eb,
                               svn_node_dir, TRUE, pool, pool);
       if (err)
         {
-          if (err != SVN_ERR_NODE_UNEXPECTED_KIND)
+          if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
             return svn_error_return(err);
           svn_error_clear(err);
 
