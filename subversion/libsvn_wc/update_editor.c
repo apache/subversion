@@ -2364,6 +2364,9 @@ add_directory(const char *path,
           SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
           SVN_ERR_ASSERT(entry);
 
+          /* Only needed for this entry */
+          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
           SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                                       pb->path, pool));
           SVN_ERR(svn_wc_entry(&parent_entry, pb->path, parent_adm_access,
@@ -3162,7 +3165,7 @@ locate_copyfrom(const char *copyfrom_path,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   SVN_ERR(svn_wc_entry(&ancestor_entry, cwd->data, ancestor_access,
                        FALSE, subpool));
@@ -3221,7 +3224,7 @@ locate_copyfrom(const char *copyfrom_path,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   /* The candidate file is under version control;  but is it
      really the file we're looking for?  <wave hand in circle> */
