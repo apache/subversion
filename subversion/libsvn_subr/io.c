@@ -1788,8 +1788,9 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 #ifdef WIN32
   if (apr_err)
     {
+      apr_status_t os_err = APR_TO_OS_ERROR(apr_err);
       /* Check to make sure we aren't trying to delete a directory */
-      if (APR_TO_OS_ERROR(apr_err) == ERROR_ACCESS_DENIED)
+      if (os_err == ERROR_ACCESS_DENIED || os_err == ERROR_SHARING_VIOLATION)
         {
           apr_finfo_t finfo;
 
@@ -1797,7 +1798,7 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
               && finfo.filetype == APR_REG)
             {
               WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, pool));
-            }		  
+            }
         }
 
       /* Just return the delete error */
