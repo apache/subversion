@@ -202,6 +202,10 @@ typedef struct {
 
 
 
+static svn_error_t *
+entries_write(apr_hash_t *entries,
+              svn_wc_adm_access_t *adm_access,
+              apr_pool_t *pool);
 
 /* Return the location of the sqlite database containing the entry information
    for PATH in the filesystem.  Allocate in RESULT_POOL. ***/
@@ -2035,15 +2039,15 @@ svn_wc__set_depth(svn_wc__db_t *db,
       if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
         {
           entry->depth = svn_depth_infinity;
-          SVN_ERR(svn_wc__entries_write(entries, adm_access, scratch_pool));
+          SVN_ERR(entries_write(entries, adm_access, scratch_pool));
         }
 
       /* Excluded directories are marked in the parent.  */
       if (depth == svn_depth_exclude)
         {
           entry->depth = depth;
-          return svn_error_return(svn_wc__entries_write(entries, adm_access,
-                                                        scratch_pool));
+          return svn_error_return(entries_write(entries, adm_access,
+                                                scratch_pool));
         }
     }
 
@@ -2057,8 +2061,20 @@ svn_wc__set_depth(svn_wc__db_t *db,
   entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   entry->depth = depth;
 
-  return svn_error_return(svn_wc__entries_write(entries, adm_access,
-                                                scratch_pool));
+  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__entries_upgrade(svn_wc_adm_access_t *adm_access,
+                        int wc_format,
+                        apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+  SVN_ERR(svn_wc__adm_set_wc_format(wc_format, adm_access, scratch_pool));
+  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
 }
 
 
@@ -2749,10 +2765,10 @@ entries_write_body(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__entries_write(apr_hash_t *entries,
-                      svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *pool)
+static svn_error_t *
+entries_write(apr_hash_t *entries,
+              svn_wc_adm_access_t *adm_access,
+              apr_pool_t *pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
@@ -3044,8 +3060,7 @@ svn_wc__entry_remove(apr_hash_t *entries,
 
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
-  return svn_error_return(svn_wc__entries_write(entries, adm_access,
-                                                scratch_pool));
+  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
 }
 
 
@@ -3325,7 +3340,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
     }
 
   /* Sync changes to disk. */
-  return svn_error_return(svn_wc__entries_write(entries, adm_access, pool));
+  return svn_error_return(entries_write(entries, adm_access, pool));
 }
 
 
@@ -3479,8 +3494,7 @@ svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
       apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
     }
 
-  return svn_error_return(svn_wc__entries_write(entries, adm_access,
-                                                scratch_pool));
+  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
 }
 
 
