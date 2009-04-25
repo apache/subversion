@@ -1219,7 +1219,7 @@ svn_wc_delete3(const char *path,
                                            pool));
             }
         }
-      else
+      else if (was_schedule != svn_wc_schedule_add)
         {
           /* if adm_probe_retrieve returned the parent access baton,
              (which is the same access baton that we came in here
@@ -1239,6 +1239,12 @@ svn_wc_delete3(const char *path,
                                 pool));
             }
         }
+      /* else
+         ### Handle added directory that is deleted in parent_access
+             (was_deleted=TRUE). The current behavior is to just delete the 
+             directory with its administrative area inside, which is OK for WC-1.0,
+             but when we move to a single database per working copy something
+             must unversion the directory. */
     }
 
   if (!(was_kind == svn_node_dir && was_schedule == svn_wc_schedule_add
