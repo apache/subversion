@@ -4695,14 +4695,9 @@ svn_client_info(const char *path_or_url,
 
 /**
  * Apply a patch that's located at @a patch_path against a working copy
- * pointed to by @a wc_path.
+ * pointed to by @a target.
  *
  * The patch might carry Unified diffs, svnpatch diffs, or both.
- * However, 'svn patch' doesn't yet support Unidiff application
- * internally: we rather delegate this task to an external program.
- * See svn_wc_apply_unidiff() or notes/svnpatch.
- * Note: hopefuly this is temporary and we'll have our own
- * implementation one day to cut off the messy dependency.
  *
  * If @a force is not set and the patch involves deleting locally modified or
  * unversioned items the operation will fail.  If @a force is set such items
@@ -4712,10 +4707,8 @@ svn_client_info(const char *path_or_url,
  */
 svn_error_t *
 svn_client_patch(const char *patch_path,
-                 const char *wc_path,
+                 const char *target,
                  svn_boolean_t force,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 

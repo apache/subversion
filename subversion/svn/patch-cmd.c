@@ -44,8 +44,6 @@ svn_cl__patch(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *args, *targets;
   const char *patch_path = NULL, *target_path = NULL;
-  apr_file_t *outfile, *errfile;
-  apr_status_t status;
 
   /* Sanity checks */
 
@@ -79,17 +77,9 @@ svn_cl__patch(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
-  
-  /* stdout and stderr pipes we'll link upon call to the external program
-   * (e.g. GNU patch) used to apply the unidiff. */
-  if ((status = apr_file_open_stdout(&outfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stdout"));
-  if ((status = apr_file_open_stderr(&errfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stderr"));
-
   /* OK we're good. */
-  SVN_ERR(svn_client_patch(patch_path, target_path, opt_state->force, outfile,
-                           errfile, ctx, pool));
+  SVN_ERR(svn_client_patch(patch_path, target_path, opt_state->force, ctx,
+                           pool));
 
   return SVN_NO_ERROR;
 }
