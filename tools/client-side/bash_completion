@@ -1,10 +1,10 @@
 # Programmable completion for the Subversion svn command under bash. Source
 # this file (or on some systems add it to ~/.bash_completion and start a new
 # shell) and bash's completion mechanism will know all about svn's options!
-# Provides completion for the svnadmin and svnlook commands as well.  Who wants
-# to read man pages/help text...
+# Provides completion for the svnadmin, svndumpfilter and svnlook commands
+# as well.  Who wants to read man pages/help text...
 
-# Known to work with bash 2.05a with programmable completion and extended
+# Known to work with bash 3.* with programmable completion and extended
 # pattern matching enabled (use 'shopt -s extglob progcomp' to enable
 # these if they are not already enabled).
 
@@ -231,7 +231,7 @@ _svn()
 		continue ;
 	    fi
 
-	    # Argh...  This looks like a bashbug...
+	    # Argh...  This looks like a bash bug...
 	    # Redirections are passed to the completion function
 	    # although it is managed by the shell directly...
 	    # It matters because we want to tell the user when no more
@@ -1050,6 +1050,80 @@ _svnadmin ()
 	return 0
 }
 complete -F _svnadmin -o default svnadmin
+
+_svndumpfilter ()
+{
+	local cur cmds cmdOpts optsParam opt helpCmds optBase i
+
+	COMPREPLY=()
+	cur=${COMP_WORDS[COMP_CWORD]}
+
+	# Possible expansions, without pure-prefix abbreviations such as "h".
+	cmds='exclude help include --version'
+
+	if [[ $COMP_CWORD -eq 1 ]] ; then
+		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+		return 0
+	fi
+
+	# options that require a parameter
+	# note: continued lines must end '|' continuing lines must start '|'
+	optsParam="--targets"
+
+	# if not typing an option, or if the previous option required a
+	# parameter, then fallback on ordinary filename expansion
+	helpCmds='help|--help|h|\?'
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
+	   [[ "$cur" != -* ]] || \
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
+		return 0
+	fi
+
+	cmdOpts=
+	case ${COMP_WORDS[1]} in
+	exclude|include)
+		cmdOpts="--drop-empty-revs --renumber-revs
+		         --skip-missing-merge-sources --targets
+		         --preserve-revprops --quiet"
+		;;
+	help|h|\?)
+		cmdOpts="$cmds"
+		;;
+	*)
+		;;
+	esac
+
+	cmdOpts="$cmdOpts --help -h"
+
+	# take out options already given
+	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
+		opt=${COMP_WORDS[$i]}
+
+		case $opt in
+		--*)    optBase=${opt/=*/} ;;
+		-*)     optBase=${opt:0:2} ;;
+		esac
+
+		cmdOpts=" $cmdOpts "
+		cmdOpts=${cmdOpts/ ${optBase} / }
+
+		# take out alternatives
+		case $optBase in
+		-h)              cmdOpts=${cmdOpts/ --help / } ;;
+		--help)          cmdOpts=${cmdOpts/ -h / } ;;
+		esac
+
+		# skip next option if this one requires a parameter
+		if [[ $opt == @($optsParam) ]] ; then
+			((++i))
+		fi
+	done
+
+	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
+
+	return 0
+}
+complete -F _svndumpfilter -o default svndumpfilter
 
 _svnlook ()
 {
