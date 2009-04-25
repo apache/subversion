@@ -137,7 +137,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                       patch_b->ctx->cancel_baton, subpool));
 
       err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
-                               FALSE, patch_b->dry_run, NULL, NULL, subpool);
+                                FALSE, patch_b->dry_run, NULL, NULL, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
@@ -1718,10 +1718,8 @@ apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
 
 svn_error_t *
 svn_client_patch(const char *patch_path,
-                 const char *wc_path,
+                 const char *target,
                  svn_boolean_t force,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1732,7 +1730,7 @@ svn_client_patch(const char *patch_path,
   struct edit_baton *eb;
   svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
 
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path,
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, target,
                            TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
                            pool));
 
@@ -1746,16 +1744,15 @@ svn_client_patch(const char *patch_path,
       patch_cmd_baton.force = force;
       patch_cmd_baton.dry_run = dry_run;
       patch_cmd_baton.added_path = NULL;
-      patch_cmd_baton.target = wc_path;
+      patch_cmd_baton.target = target;
       patch_cmd_baton.ctx = ctx;
       patch_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool)
                                             : NULL);
       patch_cmd_baton.pool = pool;
 
-      eb = make_editor_baton(wc_path, adm_access, dry_run,
-                             &patch_callbacks, &patch_cmd_baton,
-                             ctx->notify_func2, ctx->notify_baton2,
-                             &diff_editor, pool);
+      eb = make_editor_baton(target, adm_access, dry_run, &patch_callbacks,
+                             &patch_cmd_baton, ctx->notify_func2,
+                             ctx->notify_baton2, &diff_editor, pool);
 
       /* Apply the svnpatch part of the patch file against the WC. */
       SVN_ERR(svn_wc_apply_svnpatch(decoded_patch, diff_editor, eb, pool));
