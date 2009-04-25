@@ -690,7 +690,7 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  * svn_stream_reset().
  *
  * @since New in 1.7. */
-typedef svn_error_t *(*svn_io_reset_fn_t)(void * baton);
+typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
 
 /** Create a generic stream.  @see svn_stream_t. */
