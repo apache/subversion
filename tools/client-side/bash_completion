@@ -415,8 +415,11 @@ _svn()
 		values="--unified --ignore-space-change \
    		        --ignore-all-space --ignore-eol-style"
 
-	    [[ $previous = '--depth' || $previous = '--set-depth' ]] && \
+	    [[ $previous = '--depth' ]] && \
 		values='empty files immediates infinity'
+
+	    [[ $previous = '--set-depth' ]] && \
+		values='empty exclude files immediates infinity'
 
 	    [[ $previous = '--accept' ]] && \
 	    {
