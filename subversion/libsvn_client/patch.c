@@ -34,6 +34,7 @@
 #include "svn_base64.h"
 #include "svn_props.h"
 #include "svn_string.h"
+#include "svn_subst.h"
 #include "svn_hash.h"
 #include <assert.h>
 
@@ -46,7 +47,7 @@
 #ifdef SVN_DEBUG_SVNPATCH
 #define SVNPATCH_DELETE_WHEN svn_io_file_del_none
 #else
-#define SVNPATCH_DELETE_WHEN svn_io_file_del_on_close
+#define SVNPATCH_DELETE_WHEN svn_io_file_del_on_pool_cleanup
 #endif
 
 static const char equal_string[] = "=========================";
@@ -135,8 +136,8 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                       TRUE, -1, patch_b->ctx->cancel_func,
                                       patch_b->ctx->cancel_baton, subpool));
 
-      err = svn_wc_merge_props(state, path, adm_access, original_props, props,
-                               FALSE, patch_b->dry_run, subpool);
+      err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
+                               FALSE, patch_b->dry_run, NULL, NULL, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
@@ -594,7 +595,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(patch_b->pool);
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  const char *copyfrom_url, *child;
+  const char *child;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -653,7 +654,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           if (!patch_b->dry_run)
             SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
-                                copyfrom_url, rev,
+                                NULL, rev,
                                 patch_b->ctx->cancel_func,
                                 patch_b->ctx->cancel_baton,
                                 NULL, NULL, /* no notification func! */
@@ -1624,117 +1625,88 @@ make_editor_baton(const char *target,
  * format. */
 static svn_error_t *
 extract_svnpatch(const char *original_patch_path,
-                 apr_file_t **patch_file,
-                 svn_wc_adm_access_t *adm_access,
+                 svn_stream_t **svnpatch_stream,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
   svn_stream_t *original_patch_stream;
-  apr_file_t *compressed_file; /* base64-decoded, gzip-compressed */
-  svn_stream_t *svnpatch_stream; /* clear-text, attached to @a patch_file */
-  svn_string_t *svnpatch_header;
-  int i;
-  svn_boolean_t svnpatch_header_found = FALSE;
+  svn_stream_t *compressed_stream; /* base64-decoded, gzip-compressed */  
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* We assume both clients have the same version for now. */
-  svnpatch_header = svn_string_createf(pool,
-                                       "%s SVNPATCH%d BLOCK %s",
-                                       equal_string,
-                                       SVN_CLIENT_SVNPATCH_VERSION,
-                                       equal_string);
+  SVN_ERR(svn_stream_open_readonly(&original_patch_stream,
+                                   original_patch_path, pool, subpool));
 
-  for (i = 0; i <= 1; i++)
-    {
-      SVN_ERR(svn_stream_open_readonly(&original_patch_stream,
-                                       original_patch_path, pool, subpool));
+  original_patch_stream = svn_subst_stream_translated(original_patch_stream,
+                                                      "\n", TRUE, NULL, FALSE,
+                                                      pool);
 
-      while (1)
-        {
-          svn_stringbuf_t *patch_line;
-          svn_boolean_t eof;
-          svn_pool_clear(subpool);
-          SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line,
-                                      i == 0 ? "\n" : "\r\n", &eof, subpool));
-          /* No need to go deeper down the stack when the first char isn't
-           * even '='. */
-          if (*patch_line->data == '='
-              && svn_string_compare_stringbuf(svnpatch_header, patch_line))
-            {
-              svnpatch_header_found = TRUE;
-              break;
-            }
+  {
+    svn_boolean_t eof = FALSE;
+    svn_string_t *svnpatch_header;
+    svn_boolean_t svnpatch_header_found = FALSE;
 
-          /* @a original_patch_path doesn't contain the svnpatch block
-           * we're looking for. */
-          if (eof)
-            {
-              *patch_file = NULL;
-              break;
-            }
-        }
+    /* We assume both clients have the same version for now. */
+    svnpatch_header = svn_string_createf(pool,
+                                         "%s SVNPATCH%d BLOCK %s",
+                                         equal_string,
+                                         SVN_CLIENT_SVNPATCH_VERSION,
+                                         equal_string);
+      
+    while (!eof)
+      {
+        svn_stringbuf_t *patch_line;
+        svn_pool_clear(subpool);
 
-      if (svnpatch_header_found)
-        {
-          break;
-        }
-    }
-  svn_pool_destroy(subpool);
+        SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line,
+                                    "\n", &eof, subpool));
 
-  if (! svnpatch_header_found)
-    {
-      return SVN_NO_ERROR;
-    }
+        if (svn_string_compare_stringbuf(svnpatch_header, patch_line))
+          {
+            svnpatch_header_found = TRUE;
+            break;
+          }
+      }
+
+    if (! svnpatch_header_found)
+      {
+        svn_pool_destroy(subpool);
+        *svnpatch_stream = NULL;
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* At this point, original_patch_stream's cursor points right after the
    * svnpatch header, that is, the bytes we're interested in,
    * gzip-base64'ed.  So create the temp file that will carry clear-text
    * Editor commands for later work, decode the svnpatch chunk we have
    * in hand, and write to it. */
-  SVN_ERR(svn_wc_create_tmp_file2(patch_file, NULL,
-                                  svn_wc_adm_access_path(adm_access),
-                                  SVNPATCH_DELETE_WHEN, pool));
-  svnpatch_stream = svn_stream_from_aprfile2(*patch_file, TRUE, pool);
+  SVN_ERR(svn_stream_open_unique(svnpatch_stream, NULL, NULL,
+                                 SVNPATCH_DELETE_WHEN, pool, subpool));
 
-  /* Oh, and we can't gzip-base64 decode in one step since
+  /* ### We can't gzip-base64 decode and uncompress in one step since
    * svn_base64_decode wraps a write-decode handler and
-   * svn_stream_compressed wraps a write-compress handler.  We split the
-   * pipe out in two here, with an intermediate temp-file.  If someone
-   * feels like hacking libsvn_subr, we could either add a read-decode
-   * handler to svn_base64_decode or have a new svn_stream_decompressed
-   * (as opposed to svn_stream_compressed) to skip this
-   * {time,IO}-consuming workaround. */
-  SVN_ERR(svn_wc_create_tmp_file2(&compressed_file, NULL,
-                                  svn_wc_adm_access_path(adm_access),
-                                  SVNPATCH_DELETE_WHEN, pool));
-  SVN_ERR(svn_stream_copy3(svn_stream_disown(original_patch_stream, pool),
+   * svn_stream_compressed wraps a write-compress handler. So we use an
+   * intermediate temp-file. If both would support decode/decompress on
+   * read we could perform the operation without a tempfile. */
+  SVN_ERR(svn_stream_open_unique(&compressed_stream, NULL, NULL,
+                                 SVNPATCH_DELETE_WHEN, subpool, subpool));
+
+  SVN_ERR(svn_stream_copy3(svn_stream_disown(original_patch_stream, subpool),
                            svn_base64_decode(
-                             svn_stream_from_aprfile2(compressed_file, TRUE,
-                                                      pool), pool),
-                           cancel_func, cancel_baton, pool));
+                               svn_stream_disown(compressed_stream, subpool),
+                               subpool),
+                           cancel_func, cancel_baton, subpool));
 
-  {
-    /* Rewind. */
-    apr_off_t offset = 0;
-    SVN_ERR(svn_io_file_seek(compressed_file,
-                             APR_SET, &offset, pool));
-  }
+  SVN_ERR(svn_stream_reset(compressed_stream));
 
-  SVN_ERR(svn_stream_copy3(svn_stream_compressed(
-                            svn_stream_from_aprfile2(compressed_file, FALSE,
-                                                     pool),
-                            pool),
-                           svnpatch_stream, cancel_func, cancel_baton, pool));
+  SVN_ERR(svn_stream_copy3(svn_stream_compressed(compressed_stream, subpool), 
+                           svn_stream_disown(*svnpatch_stream, subpool),
+                           cancel_func, cancel_baton, subpool));
 
-  /* TODO: wrap errors? */
+  SVN_ERR(svn_stream_reset(*svnpatch_stream));
 
-  {
-    /* Rewind so that next reads don't get it wrong. */
-    apr_off_t offset = 0;
-    SVN_ERR(svn_io_file_seek(*patch_file,
-                             APR_SET, &offset, pool));
-  }
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1753,7 +1725,7 @@ svn_client_patch(const char *patch_path,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  apr_file_t *decoded_patch_file;
+  svn_stream_t *decoded_patch;
   struct patch_cmd_baton patch_cmd_baton;
   const svn_delta_editor_t *diff_editor;
   svn_wc_adm_access_t *adm_access;
@@ -1761,13 +1733,14 @@ svn_client_patch(const char *patch_path,
   svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
 
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path,
-                           TRUE, -1, NULL, NULL, pool));
+                           TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
+                           pool));
 
   /* Pull out the svnpatch block. */
-  SVN_ERR(extract_svnpatch(patch_path, &decoded_patch_file, adm_access,
+  SVN_ERR(extract_svnpatch(patch_path, &decoded_patch,
                            ctx->cancel_func, ctx->cancel_baton, pool));
 
-  if (decoded_patch_file)
+  if (decoded_patch)
     {
       /* Get ready with the editor baton. */
       patch_cmd_baton.force = force;
@@ -1785,9 +1758,7 @@ svn_client_patch(const char *patch_path,
                              &diff_editor, pool);
 
       /* Apply the svnpatch part of the patch file against the WC. */
-      SVN_ERR(svn_wc_apply_svnpatch(decoded_patch_file, diff_editor,
-                                    eb, pool));
-
+      SVN_ERR(svn_wc_apply_svnpatch(decoded_patch, diff_editor, eb, pool));
     }
 
   /* Now proceed with the text-diff bytes. */
