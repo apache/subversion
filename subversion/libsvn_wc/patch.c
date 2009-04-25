@@ -390,20 +390,17 @@ static const struct {
 
 
 svn_error_t *
-svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
+svn_wc_apply_svnpatch(svn_stream_t *patch_stream,
                       const svn_delta_editor_t *diff_editor,
                       void *diff_edit_baton,
                       apr_pool_t *pool)
 {
-  svn_stream_t *patch_stream;
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmd;
   int i;
   svn_error_t *err;
   apr_array_header_t *params;
-
-  patch_stream = svn_stream_from_aprfile2(decoded_patch_file, FALSE, pool);
 
   state.editor = diff_editor;
   state.edit_baton = diff_edit_baton;

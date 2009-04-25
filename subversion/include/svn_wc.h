@@ -5865,13 +5865,12 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
 
 /**
- * Drive @a diff_editor against @a decoded_patch_file's clear-text
- * Editor Commands.
+ * Drive @a diff_editor against @a patch_file's clear-text Editor Commands.
  *
  * @since New in 1.7
  */
 svn_error_t *
-svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
+svn_wc_apply_svnpatch(svn_stream_t *patch_file,
                       const svn_delta_editor_t *diff_editor,
                       void *diff_edit_baton,
                       apr_pool_t *pool);

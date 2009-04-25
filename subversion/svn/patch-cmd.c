@@ -64,26 +64,16 @@ svn_cl__patch(apr_getopt_t *os,
   }
 
   /* Against the WCPATH argument */
-  {
-    int wcformat;
+  SVN_ERR(svn_client_args_to_target_array(&targets, os, opt_state->targets,
+                                          ctx, pool));
 
-    SVN_ERR(svn_client_args_to_target_array(&targets, os, opt_state->targets,
-                                            ctx, pool));
+  /* Error on extra arguments to allow future extension. */
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-    /* Should we ignore extra arguments?  Let's consider it as a misuse
-     * for now, the user might miss something. */
-    if (targets->nelts > 1)
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+  svn_opt_push_implicit_dot_target(targets, pool);
 
-    svn_opt_push_implicit_dot_target(targets, pool);
-
-    target_path = APR_ARRAY_IDX(targets, 0, const char *);
-
-    /* Ensure we're given a working copy path. */
-    SVN_ERR(svn_wc_check_wc(target_path, &wcformat, pool));
-    if (! wcformat)
-      return svn_error_create(SVN_ERR_WC_NOT_DIRECTORY, 0, NULL);
-  }
+  target_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
