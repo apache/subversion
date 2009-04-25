@@ -634,7 +634,7 @@ svn_io_temp_dir(const char **dir,
 
   SVN_ERR(cstring_to_utf8(dir, *dir, pool));
 
-  *dir = svn_dirent_canonicalize(*dir, pool);
+  *dir = svn_dirent_internal_style(*dir, pool);
 
   return SVN_NO_ERROR;
 }
