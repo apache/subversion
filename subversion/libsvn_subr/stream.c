@@ -118,7 +118,7 @@ svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream)
 {
-  if (stream->write_fn == NULL)
+  if (stream->reset_fn == NULL)
     return svn_error_create(SVN_ERR_STREAM_RESET_NOT_SUPPORTED, NULL, NULL);
 
   return stream->reset_fn(stream->baton);
@@ -335,19 +335,19 @@ svn_stream_empty(apr_pool_t *pool)
 static svn_error_t *
 read_handler_disown(void *baton, char *buffer, apr_size_t *len)
 {
-  return svn_stream_read((svn_stream_t *)baton, buffer, len);
+  return svn_stream_read(baton, buffer, len);
 }
 
 static svn_error_t *
 write_handler_disown(void *baton, const char *buffer, apr_size_t *len)
 {
-  return svn_stream_write((svn_stream_t *)baton, buffer, len);
+  return svn_stream_write(baton, buffer, len);
 }
 
 static svn_error_t *
 reset_handler_disown(void *baton)
 {
-  return svn_stream_reset((svn_stream_t *)baton);
+  return svn_stream_reset(baton);
 }
 
 
