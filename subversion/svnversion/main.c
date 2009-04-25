@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -225,7 +225,7 @@ main(int argc, const char *argv[])
           svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
-      else
+      else if (kind != svn_node_file)
         {
           svn_error_clear
             (svn_cmdline_fprintf(stderr, pool,
@@ -239,6 +239,14 @@ main(int argc, const char *argv[])
 
   SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
                                      NULL, NULL, pool));
+
+  if (res->min_rev == -1)
+    {
+      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
+                                      _("'%s' not versioned\n"), wc_path));
+      svn_pool_destroy(pool);
+      return EXIT_SUCCESS;
+    }
 
   /* Build compact '123[:456]M?S?' string. */
   SVN_INT_ERR(svn_cmdline_printf(pool, "%ld", res->min_rev));
