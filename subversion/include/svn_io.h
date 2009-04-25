@@ -664,6 +664,10 @@ svn_io_dir_file_copy(const char *src_path,
  * to the maximum extent possible; thus, a short read with no
  * associated error implies the end of the input stream, and a short
  * write should never occur without an associated error.
+ *
+ * In Subversion 1.7 reset support was added as an optional feature of
+ * streams. If a stream implements resetting it allows reading the data
+ * again after a successfull call to svn_stream_reset().
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -681,6 +685,12 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
+
+/** Reset handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_reset().
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_io_reset_fn_t)(void * baton);
 
 
 /** Create a generic stream.  @see svn_stream_t. */
@@ -707,6 +717,12 @@ svn_stream_set_write(svn_stream_t *stream,
 void
 svn_stream_set_close(svn_stream_t *stream,
                      svn_close_fn_t close_fn);
+
+/** Set @a stream's reset function to @a reset_fn
+ * @since New in 1.7. */
+void
+svn_stream_set_reset(svn_stream_t *stream,
+                     svn_io_reset_fn_t reset_fn);
 
 
 /** Create a stream that is empty for reading and infinite for writing. */
@@ -912,6 +928,15 @@ svn_stream_write(svn_stream_t *stream,
 /** Close a generic stream. @see svn_stream_t. */
 svn_error_t *
 svn_stream_close(svn_stream_t *stream);
+
+/** Reset a generic stream back to its origin. E.g. On a file this would be
+ * implemented as a seek to position 0).  This function returns a 
+ * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * implement resetting.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_stream_reset(svn_stream_t *stream);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
