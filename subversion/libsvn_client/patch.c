@@ -1788,7 +1788,7 @@ typedef struct {
   const char *result_path;
 
   /* The line last read from the target file. */
-  svn_filesize_t current_line;
+  svn_linenum_t current_line;
 
   /* EOL-marker used by target file. */
   const char *eol_str;
@@ -2019,7 +2019,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
  * If no correct line can be determined, fall back to the original
  * line offset specified in HUNK -- the user will have to resolve
  * conflicts in this case. */
-static svn_filesize_t
+static svn_linenum_t
 determine_hunk_line(svn_hunk_t *hunk, patch_target_t *target)
 {
   /* TODO: For now, just apply the hunk wherever it thinks it should go.
@@ -2033,7 +2033,7 @@ determine_hunk_line(svn_hunk_t *hunk, patch_target_t *target)
  * If LINE is zero, copy lines until end-of-file has been reached.
  * Do all allocations in POOL. */
 static svn_error_t *
-copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
+copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
                      apr_pool_t *pool)
 {
   svn_stream_t *s;
@@ -2070,14 +2070,14 @@ copy_lines_to_target(patch_target_t *target, svn_filesize_t line,
  * Allocate *LINES in RESULT_POOL.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-read_lines_from_target(svn_string_t **lines, svn_filesize_t nlines,
+read_lines_from_target(svn_string_t **lines, svn_linenum_t nlines,
                        patch_target_t *target, apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *buf;
   svn_stream_t *s;
   apr_pool_t *iterpool;
-  svn_filesize_t i;
+  svn_linenum_t i;
 
   buf = svn_stringbuf_create_ensure(1024, scratch_pool);
   s = svn_stream_from_aprfile2(target->file, TRUE, scratch_pool);
@@ -2111,7 +2111,7 @@ read_lines_from_target(svn_string_t **lines, svn_filesize_t nlines,
 static svn_error_t *
 apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 {
-  svn_filesize_t line;
+  svn_linenum_t line;
   svn_string_t *latest_text;
   svn_diff_t *diff;
   svn_diff_file_options_t *opts;
