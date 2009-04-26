@@ -778,6 +778,103 @@ Metadata Schemas
 
 see libsvn_wc/wc-metatdata.sql3
 
+The table below describes, in English, the various combinations of
+"presence" values as the occur in the BASE_NODE and WORKING_NODE
+tables.
+
+BASE_NODE      WORKING_NODE   DESCRIPTION
+
+normal         <none>         Node has been checked out from the
+                              repository normally.
+absent         <none>         Server has marked the node as "absent",
+                              meaning the user does not have
+                              authorization to view the content.
+excluded       <none>         The node has been (locally) marked as
+                              excluded from the working copy.
+not-present    <none>         The node is not present at its current
+                              revision. The parent directory has a
+                              different revision which states the node
+                              *is* present. This state is usually
+                              reached by locally deleting a file and
+                              committing it. Later, when an update is
+                              run, the directory will be bumped to a
+                              revision that does not contain the file,
+                              and this not-present node will be cleared.
+incomplete     <none>         The node is known, but the node's
+                              information has not been downloaded
+                              (yet) from the server. This typically
+                              occurs from an interrupted checkout. The
+                              parent directory was added, specifying
+                              all the children, but the checkout was
+                              stopped before fetching the child.
+base-deleted   *              Not allowed. This presence is only valid
+                              for the WORKING_NODE table.
+absent         <any>          Not allowed. The name exists on the
+                              server and cannot be modified in any way.
+incomplete     <any>          An update "under" some local changes was
+                              terminated before fetching information
+                              on this node.
+<none>         normal         This node has been locally-added through
+                              a simple add, a copy, or a move (other
+                              data needs to be examined to determine
+                              what operation brought the node here).
+normal         normal         The underlying BASE node has been
+                              deleted, and a new node has been added
+                              in its place (this is a "Replace").
+excluded       normal         A node was excluded from the checkout or
+                              update, and we have locally-added a new
+                              node to *replace* it.
+not-present    normal         A node is no longer present in the BASE
+                              tree due to mixed-revision working copy
+                              concerns. This is an addition (not a
+                              replace) of a new node, in the same
+                              location as a node that deleted (and
+                              committed) at some point in history.
+*              absent         Not allowed. This would imply that the
+                              server has prevented our access, but
+                              this is a local, uncommitted change. The
+                              server cannot block the node.
+                              (see Note 1)
+*              excluded       An add-with-history or a move has been
+                              performed, and this node has been
+                              excluded from the working copy. Note:
+                              plain adds cannot have an excluded
+                              node -- we'd just not add the node.
+*              not-present    This node has been locally-deleted. This
+                              can only occur for a child of a copied
+                              or moved subtree (for a plain add, we
+                              simply revert the add; and must be a
+                              child, or we'd just revert the whole
+                              copy or move operation).
+*              incomplete     This node is known, but the information
+                              is missing. A copy or move has been
+                              interrupted, leaving a directory with
+                              known children, but lacking their state.
+                              (see Note 2)
+normal         base-deleted   The BASE node has been locally-deleted.
+excluded       base-deleted   The node was excluded from the working
+                              copy, but has been locally-deleted.
+                              (see Note 3)
+not-present    base-deleted   Not allowed. There is nothing to
+                              delete. The not-present is a tool to
+                              represent mixed-rev working copies;
+                              there is (logically) no node to delete.
+
+
+"<none>" means there is no row in the given table (so no presence value)
+"<any>" means "any value" 
+"*" means "<none> or <any>"
+
+Note 1: this implies you cannot copy/move a working copy tree that has
+  absent nodes in it. If that were made possible, then we may
+  (instead) want to model this as a copy/move followed by a
+  local-delete of the absent node(s).
+Note 2: this will probably only apply to a repository-to-wc copy. For
+  wc-to-wc copies/moves, we will probably transact the entire operation
+  so that a child will never be incomplete.
+Note 3: this may be possible, though we may need more state to pull
+  it off (eg. what revision of the node is "not there" is will be
+  deleted? need the rev for out-of-date checks)
 
 
 Random Notes
