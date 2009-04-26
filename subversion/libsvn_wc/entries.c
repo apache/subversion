@@ -2656,17 +2656,15 @@ write_entry(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Actually do the sqlite work within a transaction.
-   This implements svn_sqlite__transaction_callback_t */
+
 static svn_error_t *
 entries_write_body(svn_wc__db_t *db,
                    const char *local_abspath,
                    svn_sqlite__db_t *wc_db,
                    apr_hash_t *entries,
-                   svn_wc_adm_access_t *adm_access,
-                   const svn_wc_entry_t *this_dir,
                    apr_pool_t *scratch_pool)
 {
+  const svn_wc_entry_t *this_dir;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_hash_index_t *hi;
@@ -2674,6 +2672,17 @@ entries_write_body(svn_wc__db_t *db,
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
+
+  /* Get a copy of the "this dir" entry for comparison purposes. */
+  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+                          APR_HASH_KEY_STRING);
+
+  /* If there is no "this dir" entry, something is wrong. */
+  if (! this_dir)
+    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                             _("No default entry in directory '%s'"),
+                             svn_path_local_style(local_abspath,
+                                                  scratch_pool));
 
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
@@ -2755,8 +2764,7 @@ entries_write_body(svn_wc__db_t *db,
       /* Write the entry. */
       SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root,
                           this_entry, key,
-                          svn_dirent_join(local_abspath, this_entry->name,
-                                          iterpool),
+                          svn_dirent_join(local_abspath, key, iterpool),
                           this_dir, iterpool));
     }
 
@@ -2773,7 +2781,6 @@ entries_write(apr_hash_t *entries,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
   svn_sqlite__db_t *wc_db;
-  const svn_wc_entry_t *this_dir;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
 #ifndef BLAST_FORMAT_11
@@ -2785,17 +2792,6 @@ entries_write(apr_hash_t *entries,
 #endif
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  /* Get a copy of the "this dir" entry for comparison purposes. */
-  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                          APR_HASH_KEY_STRING);
-
-  /* If there is no "this dir" entry, something is wrong. */
-  if (! this_dir)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("No default entry in directory '%s'"),
-                             svn_path_local_style
-                             (svn_wc_adm_access_path(adm_access), pool));
 
   /* Open the wc.db sqlite database. */
 #ifndef BLAST_FORMAT_11
@@ -2813,8 +2809,7 @@ entries_write(apr_hash_t *entries,
 #endif
 
   /* Write the entries. */
-  SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, adm_access,
-                             this_dir, scratch_pool));
+  SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, scratch_pool));
 
   svn_wc__adm_access_set_entries(adm_access, entries);
 
