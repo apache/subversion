@@ -2654,20 +2654,12 @@ svn_wc_cleanup3(const char *path,
                              _("'%s' is not a working copy directory"),
                              svn_path_local_style(path, scratch_pool));
 
-  /* First step, run any existing logs. */
-  SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
-                           scratch_pool));
-
   if (upgrade_wc && wc_format_version < SVN_WC__VERSION)
-    {
-      /* Second, do the upgrade. */
-      SVN_ERR(upgrade_working_copy(db, path, diff3_cmd, cancel_func,
-                                   cancel_baton, scratch_pool));
-
-      /* Third, run logs again. */
-      SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
-                               scratch_pool));
-    }
+    SVN_ERR(upgrade_working_copy(db, path, diff3_cmd, cancel_func,
+                                 cancel_baton, scratch_pool));
+  else
+    SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
