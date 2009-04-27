@@ -27,6 +27,7 @@ import svntest
 
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
+SkipUnless = svntest.testcase.SkipUnless
 
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
@@ -118,10 +119,17 @@ def logs_left_1_5(sbox):
 ########################################################################
 # Run the tests
 
+def has_sqlite():
+  try:
+    import sqlite3
+    return True
+  except ImportError:
+    return False
+
 # list all tests here, starting with None:
 test_list = [ None,
-              basic_upgrade,
-              upgrade_1_5,
+              SkipUnless(basic_upgrade, has_sqlite),
+              SkipUnless(upgrade_1_5, has_sqlite),
               logs_left_1_5,
              ]
 
