@@ -122,7 +122,7 @@ def logs_left_1_5(sbox):
 test_list = [ None,
               basic_upgrade,
               upgrade_1_5,
-              XFail(logs_left_1_5),
+              logs_left_1_5,
              ]
 
 
