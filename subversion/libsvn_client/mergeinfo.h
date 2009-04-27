@@ -45,6 +45,11 @@ typedef struct svn_client__merge_path_t
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
 
+  svn_boolean_t child_of_noninheritable; /* PATH has no explict mergeinfo
+                                            itself but is the child of a
+                                            path with noniheritable
+                                            mergeinfo. */
+
   /* The remaining ranges to be merged to PATH.  When describing a forward
      merge this rangelist adheres to the rules for rangelists described in
      svn_mergeinfo.h.  However, when describing reverse merges this
@@ -279,5 +284,15 @@ svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
                                     apr_pool_t *pool);
 
+/* For each source path : rangelist pair in MERGEINFO, append REL_PATH to
+   the source path and add the new source path : rangelist pair to
+   ADJUSTED_MERGEINFO.  The new source path and rangelist are both deep
+   copies allocated in POOL.  Neither ADJUSTED_MERGEINFO
+   nor MERGEINFO should be NULL. */
+svn_error_t *
+svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
+                                          const char *rel_path,
+                                          svn_mergeinfo_t mergeinfo,
+                                          apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */
