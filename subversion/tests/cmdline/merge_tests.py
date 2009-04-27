@@ -447,9 +447,6 @@ def add_with_history(sbox):
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     'foo2'   : Item(status='A ', wc_rev='-', copied='+'),
     })
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, these look like separate adds.
-    expected_status.tweak('Q/bar', 'Q/bar2', status='A ')
 
   expected_skip = wc.State(C_path, { })
 
@@ -468,13 +465,6 @@ def add_with_history(sbox):
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, these look like separate adds
-    # from their parent, so they get committed separately.
-    expected_output.add({
-      'A/C/Q/bar' : Item(verb='Adding'),
-      'A/C/Q/bar2': Item(verb='Adding'),
-      })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C'         : Item(status='  ', wc_rev=3),
@@ -1734,9 +1724,6 @@ def merge_skips_obstructions(sbox):
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
     })
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, this looks like a separate add.
-    expected_status.tweak('Q/bar', status='A ')
   expected_skip = wc.State(C_path, {
     'foo' : Item(),
     })
@@ -2378,11 +2365,6 @@ def merge_funny_chars_on_path(sbox):
     for target in targets:
       key = '%s' % target[1]
       expected_output_dic[key] = Item(verb='Adding')
-      if target[2] and not sbox.using_wc_ng():
-        # see notes/api-errata/wc003.txt. these children appear like separate
-        # adds/commits, instead of a single copy of the parent.
-        key = '%s/%s' % (target[1], target[2])
-        expected_output_dic[key] = Item(verb='Adding')
 
   expected_output = wc.State(F_path, expected_output_dic)
   expected_output.add({

@@ -314,23 +314,6 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-#ifndef BLAST_FORMAT_11
-svn_error_t *
-svn_wc__entries_write_old(apr_hash_t *entries,
-                          svn_wc_adm_access_t *adm_access,
-                          int wc_format,
-                          apr_pool_t *pool);
-
-svn_error_t *
-svn_wc__entries_init_old(const char *path,
-                         const char *uuid,
-                         const char *url,
-                         const char *repos,
-                         svn_revnum_t initial_rev,
-                         svn_depth_t depth,
-                         apr_pool_t *pool);
-#endif
-
 /* Fulfill a svn_wc__db_read_info() invocation by reading an old-style
    entry structure. Limited fields are available.  */
 svn_error_t *
