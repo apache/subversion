@@ -615,33 +615,6 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
 
 static svn_error_t *
-wcprops_modify_allowed(svn_wc__db_t *db,
-                       const char *dir_abspath,
-                       apr_pool_t *scratch_pool)
-{
-  int wc_format;
-
-  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath,
-                                     scratch_pool));
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    {
-      /* ### the only time we should be attempt to *write* properties in
-         ### an out-dated working copy format is when we're running the logs.
-         ### we will not support this *for now*. wc-ng will "run" the logs
-         ### against upgraded metadata. iow, this old wc is toast because
-         ### of its stale logs. later in 1.7, the logs will be runnable,
-         ### and the wc will be upgraded.  */
-      return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                               _("Cannot write wcprops for '%s'; format %d "
-                                 "is too old"),
-                               svn_path_local_style(dir_abspath, scratch_pool),
-                               wc_format);
-    }
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 delete_wcprops(svn_wc__db_t *db,
                const char *dir_abspath,
                const char *local_abspath,
@@ -653,7 +626,6 @@ delete_wcprops(svn_wc__db_t *db,
   const char *filename;
   apr_hash_t *all_wcprops;
 
-  SVN_ERR(wcprops_modify_allowed(db, dir_abspath, pool));
   SVN_ERR(read_wcprops(&all_wcprops, db, dir_abspath, pool, pool));
 
   /* If PATH is a directory, then FILENAME will be NULL.
@@ -1983,8 +1955,6 @@ svn_wc__wcprop_set(const char *name,
     dir_abspath = local_abspath;
   else
     dir_abspath = svn_dirent_dirname(local_abspath, pool);
-
-  SVN_ERR(wcprops_modify_allowed(db, dir_abspath, pool));
 
   SVN_ERR(read_wcprops(&all_wcprops, db, dir_abspath, pool, pool));
   if (all_wcprops == NULL)
