@@ -5934,32 +5934,36 @@ svn_fs_fs__create(svn_fs_t *fs,
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
 
+  /* Create the revision data directories. */
   if (ffd->max_files_per_dir)
-    {
-      SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(fs, 0, pool),
-                                          pool));
-      SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
-                                          pool));
-    }
+    SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(fs, 0, pool), pool));
   else
-    {
-      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
+    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
                                                         pool),
-                                          pool));
-      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path,
-                                                        PATH_REVPROPS_DIR,
-                                                        pool),
-                                          pool));
-    }
+                                        pool));
+
+  /* Create the revprops directory. */
+  if (ffd->max_files_per_dir)
+    SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
+                                        pool));
+  else
+    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path,
+                                                      PATH_REVPROPS_DIR,
+                                                      pool),
+                                        pool));
+
+  /* Create the transaction directory. */
   SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXNS_DIR,
                                                     pool),
                                       pool));
 
+  /* Create the protorevs directory. */
   if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXN_PROTOS_DIR,
                                                       pool),
                                         pool));
 
+  /* Create the 'current' file. */
   SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                               ? "0\n" : "0 1 1\n"),
