@@ -2405,20 +2405,7 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_disk = disk_after_leaf_edit.copy()
 
   expected_status = deep_trees_status_local_leaf_edit.copy()
-  # These 'switched' statuses are bogus, because of do_entry_deletion not
-  # updating the URLs (issue #3334).  For example, after the switch, D/D1
-  # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
-  # copy from local/D/D1.  But D/D1/delta, which was an add without history
-  # prior to the switch, still has a URL pointing to local/D/D1/delta, so it
-  # looks like it is switched relative to its parent.
-  # NOTE: wc-ng fixes the bug. see notes/api-errata/wc001.txt
-  if not sbox.using_wc_ng():
-    expected_status.tweak('D/D1/delta',
-                          'DD/D1/D2',
-                          'DF/D1/beta',
-                          'DDD/D1/D2',
-                          'DDF/D1/D2',
-                          switched='S')
+
   # The expectation on 'alpha' reflects partial progress on issue #3334.
   expected_status.tweak('D/D1',
                         'F/alpha',

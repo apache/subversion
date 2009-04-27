@@ -2690,25 +2690,24 @@ def update_with_obstructing_additions(sbox):
   # Resolve the tree conflict.
   svntest.main.run_svn(None, 'resolve', '--accept', 'working', omicron_path)
 
-  if sbox.using_wc_ng():
-    ### in wc-1, I believe we see the local-copy as a different revision
-    ### than the parent directory (entry->revision is overloaded; normally,
-    ### it is supposed to represent the BASE revision; we drop a copyfrom
-    ### rev in there, making it appear different from the parent), so we
-    ### send the mixed-rev in the update report (UNVERIFIED; this is
-    ### speculation on cause; the effect is known, as follows). given the
-    ### mixed-rev report, the server will send down another add, reporting
-    ### another conflict.
-    ###
-    ### in wc-ng, a local-copy does not have a revision (it hasn't been
-    ### committed yet!). further, all BASE information has been lost, so
-    ### there is no knowledge of a BASE 'omicron', which is not-present or
-    ### at an old revision, or whatever. thus, wc-ng sees "r4" for the
-    ### directory and thinks there are no sub-items to report as different.
-    ### the server returns with "you're up to date" rather than sending
-    ### another add. thus, no conflict occurs on 'omicron'.
-    expected_output = wc.State(wc_dir, { })
-    expected_status.tweak('omicron', treeconflict=None)
+  ### in wc-1, I believe we see the local-copy as a different revision
+  ### than the parent directory (entry->revision is overloaded; normally,
+  ### it is supposed to represent the BASE revision; we drop a copyfrom
+  ### rev in there, making it appear different from the parent), so we
+  ### send the mixed-rev in the update report (UNVERIFIED; this is
+  ### speculation on cause; the effect is known, as follows). given the
+  ### mixed-rev report, the server will send down another add, reporting
+  ### another conflict.
+  ###
+  ### in wc-ng, a local-copy does not have a revision (it hasn't been
+  ### committed yet!). further, all BASE information has been lost, so
+  ### there is no knowledge of a BASE 'omicron', which is not-present or
+  ### at an old revision, or whatever. thus, wc-ng sees "r4" for the
+  ### directory and thinks there are no sub-items to report as different.
+  ### the server returns with "you're up to date" rather than sending
+  ### another add. thus, no conflict occurs on 'omicron'.
+  expected_output = wc.State(wc_dir, { })
+  expected_status.tweak('omicron', treeconflict=None)
 
   # Again, --force shouldn't matter.
   svntest.actions.run_and_verify_update(wc_dir, expected_output,

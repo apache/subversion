@@ -216,16 +216,6 @@ db_path(const char *path,
   return svn_wc__adm_child(path, "wc.db", result_pool);
 }
 
-#ifndef BLAST_FORMAT_11
-static svn_boolean_t
-should_create_next_gen(void)
-{
-  /* ### this is temporary. developers will use this while wc-ng is being
-     ### developed. in the future, we will *always* create a next gen wc. */
-  return getenv("SVN_ENABLE_NG") != NULL;
-}
-#endif
-
 
 
 /*** reading and writing the entries file ***/
@@ -1130,15 +1120,9 @@ read_entries_new(apr_hash_t **result_entries,
   wc_db_path = db_path(local_abspath, scratch_pool);
 
   /* Open the wc.db sqlite database. */
-#ifndef BLAST_FORMAT_11
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
-                           statements, SVN_WC__VERSION_EXPERIMENTAL,
-                           upgrade_sql, scratch_pool, scratch_pool));
-#else
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
                            statements, SVN_WC__VERSION,
                            upgrade_sql, scratch_pool, scratch_pool));
-#endif
 
   /* ### some of the data is not in the wc_db interface. grab it manually.
      ### trim back the columns fetched?  */
@@ -2783,30 +2767,14 @@ entries_write(apr_hash_t *entries,
   svn_sqlite__db_t *wc_db;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-#ifndef BLAST_FORMAT_11
-  int wc_format;
-  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, local_abspath,
-                                     scratch_pool));
-  if (wc_format < SVN_WC__WC_NG_VERSION)
-    return svn_wc__entries_write_old(entries, adm_access, wc_format, pool);
-#endif
-
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Open the wc.db sqlite database. */
-#ifndef BLAST_FORMAT_11
-  SVN_ERR(svn_sqlite__open(&wc_db,
-                           db_path(svn_wc_adm_access_path(adm_access), pool),
-                           svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION_EXPERIMENTAL,
-                           upgrade_sql, scratch_pool, scratch_pool));
-#else
   SVN_ERR(svn_sqlite__open(&wc_db,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
                            svn_sqlite__mode_readwrite, statements,
                            SVN_WC__VERSION,
                            upgrade_sql, scratch_pool, scratch_pool));
-#endif
 
   /* Write the entries. */
   SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, scratch_pool));
@@ -3507,12 +3475,6 @@ svn_wc__entries_init(const char *path,
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   const char *abspath;
   const char *repos_relpath;
-
-#ifndef BLAST_FORMAT_11
-  if (!should_create_next_gen())
-    return svn_wc__entries_init_old(path, uuid, url, repos_root, initial_rev,
-                                    depth, pool);
-#endif
 
   SVN_ERR_ASSERT(! repos_root || svn_path_is_ancestor(repos_root, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty

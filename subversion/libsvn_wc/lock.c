@@ -83,16 +83,6 @@ struct svn_wc_adm_access_t
 
 };
 
-#ifndef BLAST_FORMAT_11
-static svn_boolean_t
-should_create_next_gen(void)
-{
-  /* ### this is temporary. developers will use this while wc-ng is being
-     ### developed. in the future, we will *always* create a next gen wc. */
-  return getenv("SVN_ENABLE_NG") != NULL;
-}
-#endif
-
 
 /* This is a placeholder used in the set hash to represent missing
    directories.  Only its address is important, it contains no useful
@@ -192,11 +182,7 @@ check_format(int wc_format, const char *path, apr_pool_t *pool)
            "please check out your working copy again"),
          svn_path_local_style(path, pool), wc_format);
     }
-#ifndef BLAST_FORMAT_11
-  else if (wc_format > SVN_WC__VERSION_EXPERIMENTAL)
-#else
   else if (wc_format > SVN_WC__VERSION)
-#endif
     {
       /* This won't do us much good for the 1.4<->1.5 crossgrade,
          since 1.4.x clients don't refer to this FAQ entry, but at
@@ -285,71 +271,6 @@ svn_wc_check_wc(const char *path,
 }
 
 
-#ifndef BLAST_FORMAT_11
-/* Helper function so we can still upgrade for format 11, for the time being.
-   ### This will go away with before 1.7. */
-static svn_error_t *
-upgrade_format_old(svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *scratch_pool)
-{
-  int wc_format;
-  svn_boolean_t cleanup_required;
-  svn_stringbuf_t *log_accum;
-
-  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
-
-  /* We can upgrade all formats that are accepted by check_format(). */
-  if (wc_format >= SVN_WC__VERSION)
-    return SVN_NO_ERROR;
-
-  log_accum = svn_stringbuf_create("", scratch_pool);
-
-  /* Don't try to mess with the WC if there are old log files left. */
-  SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                          adm_access, scratch_pool));
-  SVN_ERR_ASSERT(cleanup_required == FALSE);
-
-  /* First, loggily upgrade the format file. */
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
-                                       scratch_pool));
-
-  /* If the WC uses one file per entry for wcprops, give back some inodes
-     to the poor user. */
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
-
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
-
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    {
-      /* Remove wcprops directory, dir-props, README.txt and empty-file
-         files.
-         We just silently ignore errors, because keeping these files is
-         not catastrophic. */
-
-      svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
-                            scratch_pool),
-          FALSE, NULL, NULL, scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
-                            scratch_pool),
-          scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
-                            scratch_pool),
-          scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
-                            scratch_pool),
-          scratch_pool));
-    }
-
-  return svn_wc__run_log(adm_access, NULL, scratch_pool);
-}
-#endif
-
 svn_error_t *
 svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                        apr_pool_t *scratch_pool)
@@ -365,11 +286,6 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
   /* We can upgrade all formats that are accepted by check_format(). */
   if (wc_format >= SVN_WC__VERSION)
     return SVN_NO_ERROR;
-
-#ifndef BLAST_FORMAT_11
-  if (!should_create_next_gen())
-    return upgrade_format_old(adm_access, scratch_pool);
-#endif
 
   /* Don't try to mess with the WC if there are old log files left. */
   SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
@@ -408,14 +324,8 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                                this_dir->depth, scratch_pool));
 
   /* Do the loggy upgrade thing. */
-#ifndef BLAST_FORMAT_11
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum,
-                                       SVN_WC__VERSION_EXPERIMENTAL,
-                                       scratch_pool));
-#else
   SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
                                        scratch_pool));
-#endif
   SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                svn_wc__adm_child(adm_access->path,
                                                  SVN_WC__ADM_ENTRIES,
@@ -678,14 +588,7 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
 {
   SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
-#ifndef BLAST_FORMAT_11
-  /* ### we'll need to update this conditional when _EXPERIMENTAL
-     ### goes away */
-  if (wc_format != SVN_WC__VERSION
-      && wc_format != SVN_WC__VERSION_EXPERIMENTAL)
-#else
   if (wc_format != SVN_WC__VERSION)
-#endif
     {
       return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                                "Working copy format is too old; run "
