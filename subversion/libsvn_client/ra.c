@@ -43,9 +43,9 @@ open_tmp_file(apr_file_t **fp,
               void *callback_baton,
               apr_pool_t *pool)
 {
-  return svn_io_open_unique_file3(fp, NULL, NULL,
+  return svn_error_return(svn_io_open_unique_file3(fp, NULL, NULL,
                                   svn_io_file_del_on_pool_cleanup,
-                                  pool, pool);
+                                  pool, pool));
 }
 
 
@@ -73,8 +73,8 @@ get_wc_prop(void *baton,
                             svn_client_commit_item3_t *);
           if (! strcmp(relpath,
                        svn_path_uri_decode(item->url, pool)))
-            return svn_wc_prop_get(value, name, item->path, cb->base_access,
-                                   pool);
+            return svn_error_return(svn_wc_prop_get(value, name, item->path,
+                                        cb->base_access, pool));
         }
 
       return SVN_NO_ERROR;
@@ -84,9 +84,9 @@ get_wc_prop(void *baton,
   else if (cb->base_dir == NULL)
     return SVN_NO_ERROR;
 
-  return svn_wc_prop_get(value, name,
-                         svn_path_join(cb->base_dir, relpath, pool),
-                         cb->base_access, pool);
+  return svn_error_return(svn_wc_prop_get(value, name,
+                               svn_path_join(cb->base_dir, relpath, pool),
+                               cb->base_access, pool));
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
@@ -168,8 +168,8 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_wc_prop_set3(name, value, full_path, adm_access, TRUE, NULL, NULL,
-                          pool);
+  return svn_error_return(svn_wc_prop_set3(name, value, full_path, adm_access,
+                                           TRUE, NULL, NULL, pool));
 }
 
 
@@ -201,8 +201,8 @@ invalidate_wcprop_for_entry(const char *path,
                               pool));
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
-  return svn_wc_prop_set3(wb->prop_name, NULL, path, entry_access,
-                          FALSE, NULL, NULL, pool);
+  return svn_error_return(svn_wc_prop_set3(wb->prop_name, NULL, path,
+                                      entry_access, FALSE, NULL, NULL, pool));
 }
 
 
@@ -225,10 +225,11 @@ invalidate_wc_props(void *baton,
   path = svn_path_join(cb->base_dir, path, pool);
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
                                     pool));
-  return svn_wc_walk_entries3(path, adm_access, &walk_callbacks, &wb,
+  return svn_error_return(svn_wc_walk_entries3(path, adm_access,
+                              &walk_callbacks, &wb,
                               svn_depth_infinity, FALSE,
                               cb->ctx->cancel_func, cb->ctx->cancel_baton,
-                              pool);
+                              pool));
 }
 
 
@@ -236,7 +237,7 @@ static svn_error_t *
 cancel_callback(void *baton)
 {
   svn_client__callback_baton_t *b = baton;
-  return (b->ctx->cancel_func)(b->ctx->cancel_baton);
+  return svn_error_return((b->ctx->cancel_func)(b->ctx->cancel_baton));
 }
 
 
@@ -293,8 +294,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
         uuid = entry->uuid;
     }
 
-  return svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
-                      ctx->config, pool);
+  return svn_error_return(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
+                                       ctx->config, pool));
 }
 
 svn_error_t *
@@ -303,8 +304,9 @@ svn_client_open_ra_session(svn_ra_session_t **session,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  return svn_client__open_ra_session_internal(session, url, NULL, NULL, NULL,
-                                              FALSE, TRUE, ctx, pool);
+  return svn_error_return(svn_client__open_ra_session_internal(session, url,
+                                              NULL, NULL, NULL,
+                                              FALSE, TRUE, ctx, pool));
 }
 
 
