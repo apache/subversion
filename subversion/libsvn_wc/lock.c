@@ -296,8 +296,6 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                             _("Cannot upgrade with existing logs; please "
                               "run 'svn cleanup' with Subversion 1.6"));
 
-  log_accum = svn_stringbuf_create("", scratch_pool);
-
   /* What's going on here?
    *
    * We're attempting to upgrade an older working copy to the new wc-ng format.
@@ -323,18 +321,23 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                                this_dir->repos, this_dir->revision,
                                this_dir->depth, scratch_pool));
 
-  /* Do the loggy upgrade thing. */
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
-                                       scratch_pool));
-  SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                               svn_wc__adm_child(adm_access->path,
-                                                 SVN_WC__ADM_ENTRIES,
-                                                 scratch_pool),
-                               scratch_pool));
+  /* Migrate the entries over to the new database.
+     ### We need to thing about atomicity here. */
+  SVN_ERR(svn_wc__entries_upgrade(adm_access, SVN_WC__VERSION, scratch_pool));
+  svn_error_clear(svn_io_remove_file(svn_wc__adm_child(adm_access->path,
+                                                       SVN_WC__ADM_FORMAT,
+                                                       scratch_pool),
+                                     scratch_pool));
+  SVN_ERR(svn_io_remove_file(svn_wc__adm_child(adm_access->path,
+                                               SVN_WC__ADM_ENTRIES,
+                                               scratch_pool),
+                             scratch_pool));
 
   /* ### Note that lots of this content is cribbed from the old format updater.
      ### The following code will change as the wc-ng format changes and more
      ### stuff gets migrated to the sqlite format. */
+
+  log_accum = svn_stringbuf_create("", scratch_pool);
 
   /***** WC PROPS *****/
   /* If the WC uses one file per entry for wcprops, give back some inodes

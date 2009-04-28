@@ -260,14 +260,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      const char *path,
                      apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with instructions to cause the working copy of ADM_ACCESS
-   to be upgraded to FORMAT. */
-svn_error_t *
-svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
-                             int format,
-                             apr_pool_t *pool);
-
-
 /* Create a log file with LOG_NUMBER. Write LOG_CONTENT to it and close-
    and-sync afterwards. ADM_ACCESS must point to a locked working copy.
 */

@@ -124,10 +124,6 @@
 #define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
 
 
-/* Upgrade the WC format, both .svn/format and the format number in the
-   entries file to SVN_WC__LOG_ATTR_FORMAT. */
-#define SVN_WC__LOG_UPGRADE_FORMAT "upgrade-format"
-
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
@@ -1472,28 +1468,6 @@ log_do_modify_wcprop(struct log_runner *loggy,
 }
 
 static svn_error_t *
-log_do_upgrade_format(struct log_runner *loggy,
-                      const char **atts)
-{
-  const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
-  int fmt;
-  const char *path
-    = svn_wc__adm_child(svn_wc_adm_access_path(loggy->adm_access),
-                        SVN_WC__ADM_FORMAT, loggy->pool);
-
-  if (! fmtstr || (fmt = atoi(fmtstr)) == 0)
-    return svn_error_create(pick_error_code(loggy), NULL,
-                            _("Invalid 'format' attribute"));
-
-  /* Remove the .svn/format file, if it exists. */
-  svn_error_clear(svn_io_remove_file(path, loggy->pool));
-
-  return svn_error_return(svn_wc__entries_upgrade(loggy->adm_access, fmt,
-                                                  loggy->pool));
-}
-
-
-static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char **atts)
 {
@@ -1542,7 +1516,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
 
   if (strcmp(eltname, "wc-log") == 0)   /* ignore expat pacifier */
     return;
-  else if (! name && strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) != 0)
+  else if (! name)
     {
       SIGNAL_ERROR
         (loggy, svn_error_createf
@@ -1609,9 +1583,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) == 0) {
-    err = log_do_upgrade_format(loggy, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_ADD_TREE_CONFLICT) == 0) {
     err = log_do_add_tree_conflict(loggy, atts);
@@ -2381,21 +2352,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_RM,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path(path, adm_access),
-                        NULL);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
-                             int format,
-                             apr_pool_t *pool)
-{
-  svn_xml_make_open_tag(log_accum, pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_UPGRADE_FORMAT,
-                        SVN_WC__LOG_ATTR_FORMAT,
-                        apr_itoa(pool, format),
                         NULL);
 
   return SVN_NO_ERROR;
