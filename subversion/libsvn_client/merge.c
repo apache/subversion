@@ -4715,20 +4715,32 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
   svn_sort__array_insert(&new_element, children_with_mergeinfo, insert_index);
 }
 
-/* Helper for get_mergeinfo_paths().  If CHILD->PATH is switched or
-   absent then make sure its parent is marked as missing a child.
-   Create the parent and insert it into
-   CHILDREN_WITH_MERGEINFO if necessary (and increment *CURR_INDEX
-   so that caller don't process the inserted element).  Also ensure
-   that CHILD->PATH's siblings which are not already present in
-   CHILDREN_WITH_MERGEINFO are also added to the array. Use POOL for
-   all temporary allocations. */
+/* Helper for get_mergeinfo_paths().
+
+   CHILDREN_WITH_MERGEINFO, MERGE_CMD_BATON, DEPTH, ADM_ACCESS, and POOL are
+   all cascaded from the arguments of the same name to get_mergeinfo_paths().
+
+   *CHILD is the element in in CHILDREN_WITH_MERGEINFO that
+   get_mergeinfo_paths() is iterating over and *CURR_INDEX is index for
+   *CHILD.
+
+   If CHILD->PATH is equal to MERGE_CMD_BATON->TARGET do nothing.  Else if
+   CHILD->PATH is switched or absent then make sure its immediate (as opposed
+   to nearest) parent in CHILDREN_WITH_MERGEINFO is marked as missing a
+   child.  If the immediate parent does not exist in CHILDREN_WITH_MERGEINFO
+   then create it (and increment *CURR_INDEX so that caller don't process the
+   inserted element).  Also ensure that CHILD->PATH's siblings which are not
+   already present in CHILDREN_WITH_MERGEINFO are also added to the array,
+   limited by DEPTH (e.g. don't add directory siblings of a switched file).
+   Use POOL for temporary allocations only, any new CHILDREN_WITH_MERGEINFO
+   elements are allocated in CHILDREN_WITH_MERGEINFO->POOL. */
 static svn_error_t *
 insert_parent_and_sibs_of_sw_absent_del_entry(
                                    apr_array_header_t *children_with_mergeinfo,
                                    merge_cmd_baton_t *merge_cmd_baton,
                                    int *curr_index,
                                    svn_client__merge_path_t *child,
+                                   svn_depth_t depth,
                                    svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
@@ -4783,6 +4795,16 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
       if (!sibling_of_missing)
         {
+          /* Don't add directory children if DEPTH is svn_depth_files. */
+          if (depth == svn_depth_files)
+            {
+              const svn_wc_entry_t *child_entry;
+              SVN_ERR(svn_wc_entry(&child_entry, child_path,
+                                   adm_access, FALSE, pool));
+              if (child_entry->kind != svn_node_file)
+                continue;
+            }
+
           sibling_of_missing = apr_pcalloc(children_with_mergeinfo->pool,
                                            sizeof(*sibling_of_missing));
           sibling_of_missing->path = apr_pstrdup(children_with_mergeinfo->pool,
@@ -4911,7 +4933,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         children_with_mergeinfo->elt_size,
         compare_merge_path_t_as_paths);
 
-  if (honor_mergeinfo)
+  /* If DEPTH isn't empty then cover cases 3), 4), and 5), possibly adding
+     elements to CHILDREN_WITH_MERGEINFO. */
+  if (honor_mergeinfo && depth > svn_depth_empty)
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -4985,6 +5009,19 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                              child_path);
                   if (!child_of_noninheritable)
                     {
+                      /* Don't add directory children if DEPTH
+                         is svn_depth_files. */
+                      if (depth == svn_depth_files)
+                        {
+                          const svn_wc_entry_t *child_entry;
+                          SVN_ERR(svn_wc_entry(&child_entry, child_path,
+                                               adm_access, FALSE, iterpool));
+                          if (child_entry->kind != svn_node_file)
+                            continue;
+                        }
+                      /* else DEPTH is infinity or immediates so we want both
+                         directory and file children. */
+
                       child_of_noninheritable =
                         apr_pcalloc(children_with_mergeinfo->pool,
                                     sizeof(*child_of_noninheritable));
@@ -5022,7 +5059,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           /* Case 4 and 5 are handled by the following function. */
           SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
             children_with_mergeinfo, merge_cmd_baton, &i, child,
-            adm_access, iterpool));
+            depth, adm_access, iterpool));
         } /* i < children_with_mergeinfo->nelts */
       svn_pool_destroy(iterpool);
     } /* honor_mergeinfo */
