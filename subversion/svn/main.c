@@ -106,7 +106,6 @@ typedef enum {
   opt_parents,
   opt_accept,
   opt_svnpatch_format,
-  opt_patch_cmd,
   opt_from_source,
   opt_show_revs,
   opt_reintegrate,
@@ -226,8 +225,6 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
-  {"patch-cmd",     opt_patch_cmd, 1,
-                    N_("use ARG as external patch command")},
   {"record-only",   opt_record_only, 0,
                     N_("mark revisions as merged (use with -r)")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
@@ -689,12 +686,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  copy WCPATH into a modified tree that reflects all the changes the\n"
      "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
      "\n"
-     "  The format of bytes embedded in the patch can be of two types: Unified\n"
-     "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "  The content embedded in the patch file can be of two types:\n"
+     "  Unified diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "  Any other content of the patch file is ignored.\n"
      "\n"
      "  This command allows some amount of fuzzing as Unidiff is contextual\n"
-     "  and svnpatch revisionless.\n"),
-    {'q', opt_force, opt_patch_cmd, opt_config_dir} },
+     "  and an svnpatch is revisionless.\n"),
+    {'q', opt_force, opt_config_dir} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1447,9 +1445,6 @@ main(int argc, const char *argv[])
         break;
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
-        break;
-      case opt_patch_cmd:
-        opt_state.patch_cmd = apr_pstrdup(pool, opt_arg);
         break;
       case opt_old_cmd:
         if (opt_state.used_change_arg)
