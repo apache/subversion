@@ -70,7 +70,6 @@ enum statement_keys {
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
   STMT_DELETE_ALL_LOCK,
-  STMT_SELECT_INCOMPLETE_FLAG,
   STMT_SELECT_KEEP_LOCAL_FLAG,
   STMT_SELECT_NOT_PRESENT,
   STMT_SELECT_FILE_EXTERNAL,
@@ -85,9 +84,9 @@ static const char * const statements[] = {
     "(wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
      "presence, "
      "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
-     "changed_author, depth, last_mod_time, properties, incomplete_children)"
+     "changed_author, depth, last_mod_time, properties)"
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16, ?17);",
+          "?15, ?16);",
 
   "insert or replace into working_node "
     "(wc_id, local_relpath, parent_relpath, presence, kind, "
@@ -123,9 +122,6 @@ static const char * const statements[] = {
 
   "delete from lock;",
 
-  "select incomplete_children from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
   "select keep_local from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -160,7 +156,6 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
-  svn_boolean_t incomplete_children;
 } db_base_node_t;
 
 typedef struct {
@@ -778,30 +773,6 @@ determine_keep_local(svn_boolean_t *keep_local,
 }
 
 
-static svn_error_t *
-determine_incomplete(svn_boolean_t *incomplete,
-                     svn_sqlite__db_t *sdb,
-                     apr_int64_t wc_id,
-                     const char *local_relpath)
-{
-  svn_sqlite__stmt_t *stmt;
-
-  /* ### very soon, we need to figure out an algorithm to determine
-     ### this value, rather than use a recorded value. the wc should be
-     ### able to *know* when it is incomplete rather than try to maintain
-     ### a flag (which could be wrong).  */
-
-  /* Check to see if a base_node exists for the directory. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_INCOMPLETE_FLAG));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_row(stmt));
-
-  *incomplete = svn_sqlite__column_boolean(stmt, 0);
-
-  return svn_sqlite__reset(stmt);
-}
-
-
 /* Hit the database to check the file external information for the given
    entry.  The entry will be modified in place. */
 static svn_error_t *
@@ -1113,6 +1084,7 @@ read_entries_new(apr_hash_t **result_entries,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   const svn_wc_entry_t *parent_entry = NULL;
+  apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
 
   entries = apr_hash_make(result_pool);
 
@@ -1190,7 +1162,8 @@ read_entries_new(apr_hash_t **result_entries,
                 result_pool,
                 iterpool));
 
-      if (status == svn_wc__db_status_normal)
+      if (status == svn_wc__db_status_normal
+          || status == svn_wc__db_status_incomplete)
         {
           svn_boolean_t have_row = FALSE;
 
@@ -1205,9 +1178,7 @@ read_entries_new(apr_hash_t **result_entries,
 
                 SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
                                                   STMT_SELECT_NOT_PRESENT));
-                SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                          (apr_uint64_t)1 /* wc_id */,
-                                          entry->name));
+                SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
                 SVN_ERR(svn_sqlite__step(&have_row, stmt));
                 SVN_ERR(svn_sqlite__reset(stmt));
             }
@@ -1236,9 +1207,7 @@ read_entries_new(apr_hash_t **result_entries,
                                                      iterpool));
                 }
 
-              /* ### hacky hacky  */
-              SVN_ERR(determine_incomplete(&entry->incomplete, wc_db,
-                                           1 /* wc_id */, entry->name));
+              entry->incomplete = (status == svn_wc__db_status_incomplete);
             }
         }
       else if (status == svn_wc__db_status_deleted
@@ -1247,9 +1216,9 @@ read_entries_new(apr_hash_t **result_entries,
           /* ### we don't have to worry about moves, so this is a delete. */
           entry->schedule = svn_wc_schedule_delete;
 
-          /* ### keep_local (same hack as determine_incomplete) */
+          /* ### keep_local ... ugh. hacky.  */
           SVN_ERR(determine_keep_local(&entry->keep_local, wc_db,
-                                       1 /* wc_id */, entry->name));
+                                       wc_id, entry->name));
         }
       else if (status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
@@ -1500,9 +1469,8 @@ read_entries_new(apr_hash_t **result_entries,
         }
       else
         {
-          /* One of the not-present varieties. Skip this node.  */
-          SVN_ERR_ASSERT(status == svn_wc__db_status_excluded
-                         || status == svn_wc__db_status_incomplete);
+          /* ### We aren't using this status. Yet.  */
+          SVN_ERR_ASSERT(status == svn_wc__db_status_excluded);
           continue;
         }
 
@@ -2089,6 +2057,8 @@ insert_base_node(svn_sqlite__db_t *wc_db,
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "normal"));
   else if (base_node->presence == svn_wc__db_status_absent)
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "absent"));
+  else if (base_node->presence == svn_wc__db_status_incomplete)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "incomplete"));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
@@ -2138,8 +2108,6 @@ insert_base_node(svn_sqlite__db_t *wc_db,
                                     properties->len));
     }
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 17, base_node->incomplete_children));
-
   /* Execute and reset the insert clause. */
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
@@ -2166,6 +2134,8 @@ insert_working_node(svn_sqlite__db_t *wc_db,
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "not-present"));
   else if (working_node->presence == svn_wc__db_status_base_deleted)
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "base-deleted"));
+  else if (working_node->presence == svn_wc__db_status_incomplete)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "incomplete"));
 
   /* ### in per-subdir operation, if we're about to write a directory and
      ### it is *not* "this dir", then we're writing a row in the parent
@@ -2422,12 +2392,6 @@ write_entry(svn_wc__db_t *db,
       base_node->presence = svn_wc__db_status_absent;
     }
 
-  if (entry->incomplete)
-    {
-      base_node = MAYBE_ALLOC(base_node, scratch_pool);
-      base_node->incomplete_children = TRUE;
-    }
-
   if (entry->conflict_old)
     {
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
@@ -2477,12 +2441,23 @@ write_entry(svn_wc__db_t *db,
 
       if (entry->deleted)
         {
+          SVN_ERR_ASSERT(!entry->incomplete);
+
           base_node->presence = svn_wc__db_status_not_present;
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
         }
       else
-        base_node->kind = entry->kind;
+        {
+          base_node->kind = entry->kind;
+
+          if (entry->incomplete)
+            {
+              /* ### nobody should have set the presence.  */
+              SVN_ERR_ASSERT(base_node->presence == svn_wc__db_status_normal);
+              base_node->presence = svn_wc__db_status_incomplete;
+            }
+        }
 
       if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
@@ -2595,20 +2570,40 @@ write_entry(svn_wc__db_t *db,
 
       if (entry->schedule == svn_wc_schedule_delete)
         {
-          /* If we are part of a COPIED subtree, then the deletion is
-             referring to the WORKING tree, not the BASE tree.  */
-          if (entry->copied || this_dir->copied)
-            working_node->presence = svn_wc__db_status_not_present;
+          if (entry->incomplete)
+            {
+              /* A transition from a schedule-delete state to incomplete
+                 is most likely caused by svn_wc_remove_from_revision_control.
+                 By setting this node's presence to 'incomplete', we will
+                 lose the scheduling information, but this directory is
+                 being deleted (by the logs) ... we won't need the state.  */
+              working_node->presence = svn_wc__db_status_incomplete;
+            }
           else
-            working_node->presence = svn_wc__db_status_base_deleted;
+            {
+              /* If we are part of a COPIED subtree, then the deletion is
+                 referring to the WORKING tree, not the BASE tree.  */
+              if (entry->copied || this_dir->copied)
+                working_node->presence = svn_wc__db_status_not_present;
+              else
+                working_node->presence = svn_wc__db_status_base_deleted;
+            }
 
           /* ### should be svn_node_unknown, but let's store what we have. */
           working_node->kind = entry->kind;
         }
       else
         {
-          working_node->presence = svn_wc__db_status_normal;
+          /* presence == normal  */
           working_node->kind = entry->kind;
+
+          if (entry->incomplete)
+            {
+              /* We shouldn't be overwriting another status.  */
+              SVN_ERR_ASSERT(working_node->presence
+                             == svn_wc__db_status_normal);
+              working_node->presence = svn_wc__db_status_incomplete;
+            }
         }
 
       /* These should generally be unset for added and deleted files,
