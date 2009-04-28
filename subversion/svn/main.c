@@ -692,7 +692,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  This command allows some amount of fuzzing as Unidiff is contextual\n"
      "  and an svnpatch is revisionless.\n"),
-    {'q', opt_force, opt_config_dir} },
+    {'q', opt_force} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
