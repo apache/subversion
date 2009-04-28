@@ -45,23 +45,13 @@ svn_cl__patch(apr_getopt_t *os,
   apr_array_header_t *args, *targets;
   const char *patch_path = NULL, *target_path = NULL;
 
-  /* Sanity checks */
+  /* Get patch file argument. */
+  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
+  SVN_ERR(svn_path_get_absolute(&patch_path,
+                                APR_ARRAY_IDX(args, 0, const char *),
+                                pool));
 
-  /* Against the patch argument */
-  {
-    svn_node_kind_t patch_path_kind;
-
-    SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-    SVN_ERR(svn_path_get_absolute(&patch_path,
-                                  APR_ARRAY_IDX(args, 0, const char *),
-                                  pool));
-    SVN_ERR(svn_io_check_path(patch_path, &patch_path_kind, pool));
-    if (patch_path_kind == svn_node_none)
-      return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
-                               svn_path_local_style(patch_path, pool));
-  }
-
-  /* Against the WCPATH argument */
+  /* Get WCPATH argument */
   SVN_ERR(svn_client_args_to_target_array(&targets, os, opt_state->targets,
                                           ctx, pool));
 
