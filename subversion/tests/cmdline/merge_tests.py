@@ -7130,6 +7130,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   #
   # Test for issue #3392 'Parsing error with reverse merges and
   # non-inheritable mergeinfo.
+  #
+  # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
+  # Setting test as XFail until this issue is resolved.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -7146,6 +7149,8 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   mu_2_path   = os.path.join(wc_dir, "A_COPY_2", "mu")
   D_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D")
   H_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D", "H")
+  mu_COPY_path  = os.path.join(wc_dir, "A_COPY", "mu")
+  nu_COPY_path  = os.path.join(wc_dir, "A_COPY", "nu")
 
   # Make a change to directory A/D/H and commit as r8.
   svntest.actions.run_and_verify_svn(None, ['At revision 7.\n'], [],
@@ -7458,6 +7463,39 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
+
+  # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
+  #
+  # Revert all local mods.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # Merge all available changes from A to A_COPY at --depth empty. Only the
+  # mergeinfo on A_COPY should be affected.
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '--depth', 'empty',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_path + ' - /A:2-13*\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+
+  # Merge all available changes from A to A_COPY at --depth files. Only the
+  # mergeinfo on A_COPY and its file children should be affected.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  expected_output = expected_merge_output([[2,13],[9,13]],
+                                          ['UU   %s\n' % (mu_COPY_path),
+                                           'A    %s\n' % (nu_COPY_path)])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '--depth', 'files',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  expected_output = svntest.verify.UnorderedOutput(
+      [A_COPY_path  + ' - /A:2-13*\n',
+       mu_COPY_path + ' - /A/mu:2-13\n',
+       nu_COPY_path + ' - /A/nu:2-13\n',])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_output,
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+
   # Test for issue #2827
   # Handle merge info for sparsely-populated directories
 def merge_to_sparse_directories(sbox):
@@ -15671,8 +15709,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
                          server_has_mergeinfo),
-              SkipUnless(merge_away_subtrees_noninheritable_ranges,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_away_subtrees_noninheritable_ranges,
+                               server_has_mergeinfo)),
               SkipUnless(merge_to_sparse_directories,
                          server_has_mergeinfo),
               SkipUnless(merge_old_and_new_revs_from_renamed_dir,
