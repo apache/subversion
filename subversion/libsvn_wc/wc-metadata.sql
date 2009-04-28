@@ -133,10 +133,7 @@ CREATE TABLE BASE_NODE (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* this node is a directory, and all of its child nodes have not (yet)
-     been created [for this revision number]. Note: boolean value. */
-  /* ### this will probably disappear in favor of incomplete child
-     ### nodes */
+  /* ### this column is obsolete, and should be removed.  */
   incomplete_children  INTEGER,
 
   /* The serialized file external information. */
