@@ -7132,7 +7132,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # non-inheritable mergeinfo.
   #
   # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
-  # Setting test as XFail until this issue is resolved.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -15709,8 +15708,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_away_subtrees_noninheritable_ranges,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_away_subtrees_noninheritable_ranges,
+                         server_has_mergeinfo),
               SkipUnless(merge_to_sparse_directories,
                          server_has_mergeinfo),
               SkipUnless(merge_old_and_new_revs_from_renamed_dir,
