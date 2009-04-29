@@ -657,6 +657,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
              error than the close error at this point. */
           sqlite3_close(*db3);
 
+          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", NULL);
           return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
         }
     }
