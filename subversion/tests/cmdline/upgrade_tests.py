@@ -115,6 +115,17 @@ def logs_left_1_5(sbox):
                                      'cleanup', sbox.wc_dir)
 
 
+def upgrade_wcprops(sbox):
+  "test upgrading a working copy with wcprops"
+
+  replace_sbox_with_tarfile(sbox, 'upgrade_wcprops.tar.bz2')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cleanup', sbox.wc_dir)
+
+  # Make sure that .svn/all-wcprops has disappeared
+  if os.path.exists(os.path.join(sbox.wc_dir, '.svn', 'all-wcprops')):
+    raise svntest.Failure("all-wcprops file still exists")
+
 
 ########################################################################
 # Run the tests
@@ -131,6 +142,7 @@ test_list = [ None,
               SkipUnless(basic_upgrade, has_sqlite),
               SkipUnless(upgrade_1_5, has_sqlite),
               logs_left_1_5,
+              upgrade_wcprops,
              ]
 
 

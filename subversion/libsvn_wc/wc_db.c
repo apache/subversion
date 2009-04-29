@@ -2127,7 +2127,7 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
                                  STMT_UPDATE_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
-  return svn_sqlite__step_done(stmt);
+  return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
 
@@ -2145,14 +2145,17 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                                  STMT_SELECT_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
 
   SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                         scratch_pool));
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
