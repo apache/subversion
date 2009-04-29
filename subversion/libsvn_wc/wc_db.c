@@ -1366,11 +1366,8 @@ gather_children(const apr_array_header_t **children,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
-  /* If this is an old working copy, then delegate to grab this info.  */
-  if (pdh->wcroot->format < SVN_WC__VERSION)
-    return svn_wc__gather_children_old(children, base_only,
-                                       db, pdh->wcroot->abspath, local_relpath,
-                                       result_pool, scratch_pool);
+  /* We should not have been called, if the wc has an improper version.  */
+  SVN_ERR_ASSERT(pdh->wcroot->format == SVN_WC__VERSION);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     base_only
@@ -2484,18 +2481,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
-  /* If this is an old working copy, then delegate to grab this info.  */
-  if (pdh->wcroot->format < SVN_WC__VERSION)
-    return svn_wc__read_info_old(status, kind, revision,
-                                 repos_relpath, repos_root_url, repos_uuid,
-                                 changed_rev, changed_date, changed_author,
-                                 last_mod_time, depth, checksum,
-                                 translated_size, target, changelist,
-                                 original_repos_relpath, original_root_url,
-                                 original_uuid, original_revision,
-                                 text_mod, props_mod, base_shadowed, lock,
-                                 db, pdh->wcroot->abspath, local_relpath,
-                                 result_pool, scratch_pool);
+  /* We should not have been called, if the wc has an improper version.  */
+  SVN_ERR_ASSERT(pdh->wcroot->format == SVN_WC__VERSION);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
