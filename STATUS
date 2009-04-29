@@ -114,11 +114,35 @@ Candidate changes:
    Votes:
      +1: arfrever, rhuijben
 
+ * r37333
+   Don't worry about the merge tracking complexities of non-inheritable
+   mereginfo and missing subtrees if we are *not* honoring mergeinfo.
+   Justification:
+     Without this change some edge cases where mergeinfo is not being
+     honored (e.g. --ignore-ancestry, foreign repos merges) can record
+     mergeinfo.
+   Votes:
+     +1: pburba
+
  * r37385
    Return an error if attempting to reintegrate from/to the repository root.
    Justification:
      A descriptive error is a lot better than a cryptic assertion, see
      http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
+   Votes:
+     +1: pburba
+
+ * r37494, r37499
+   Fix issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
+   Justification:
+     Without this change shallow merges targeting a path with non-inheritable
+     mergeinfo can record mergeinfo on subtrees which should be excluded by
+     the requested depth -- see http://subversion.open.collab.net/ds/
+     viewMessage.do?dsForumId=4&dsMessageId=313877.
+   Notes:
+     While merging r37494 accept theirs-conflict.  r37499 will conflict if
+     r37333 is not merged first.  If this group is approved and r37333 is
+     not I will create a backport branch - pburba.
    Votes:
      +1: pburba
 
