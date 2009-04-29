@@ -94,19 +94,6 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  apr_pool_t *pool,
                                  svn_stringbuf_t **entry_accum);
 
-
-/* Return a list of wc props for the node at LOCAL_ABSPATH, which is KIND.
-
-   The returned WCPROPS will be allocated in RESULT_POOL, and any temporary
-   allocations will be made in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__wcprop_list(apr_hash_t **wcprops,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_node_kind_t kind,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
-
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH.
    If VALUE is null, remove property NAME.  ADM_ACCESS is an access
    baton set that contains PATH.  */

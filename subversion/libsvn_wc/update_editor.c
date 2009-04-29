@@ -1229,33 +1229,6 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 }
 
 
-/* Accumulate tags in LOG_ACCUM to set WCPROPS for PATH.  WCPROPS is
-   an array of svn_prop_t* wc props. */
-static svn_error_t *
-accumulate_wcprops(svn_stringbuf_t *log_accum,
-                   svn_wc_adm_access_t *adm_access,
-                   const char *path,
-                   apr_array_header_t *wcprops,
-                   apr_pool_t *pool)
-{
-  int i;
-
-  /* ### The log file will rewrite the props file for each property :( It
-     ### would be better if all the changes could be combined into one
-     ### write. */
-  for (i = 0; i < wcprops->nelts; ++i)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(wcprops, i, svn_prop_t);
-
-      SVN_ERR(svn_wc__loggy_modify_wcprop(
-               &log_accum, adm_access, path,
-               prop->name, prop->value ? prop->value->data : NULL, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Check that when ADD_PATH is joined to BASE_PATH, the resulting path
  * is still under BASE_PATH in the local filesystem.  If not, return
  * SVN_ERR_WC_OBSTRUCTED_UPDATE; else return success.
@@ -2817,6 +2790,23 @@ add_prop_deletion(void *baton, const void *key,
   return SVN_NO_ERROR;
 }
 
+/* Create in POOL a name->value hash from PROP_LIST, and return it. */
+static apr_hash_t *
+prop_hash_from_array(apr_array_header_t *prop_list,
+                     apr_pool_t *pool)
+{
+  int i;
+  apr_hash_t *prop_hash = apr_hash_make(pool);
+
+  for (i = 0; i < prop_list->nelts; i++)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(prop_list, i, svn_prop_t);
+      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
+
+  return prop_hash;
+}
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
@@ -2962,8 +2952,18 @@ close_directory(void *dir_baton,
                                      adm_access, db->path,
                                      entry_props, pool));
 
-      SVN_ERR(accumulate_wcprops(dirprop_log, adm_access,
-                                 db->path, wc_props, pool));
+      /* Handle the wcprops. */
+      if (wc_props && wc_props->nelts > 0)
+        {
+          svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
+          const char *local_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
+          SVN_ERR(svn_wc__db_base_set_dav_cache(wc_db, local_abspath,
+                                                prop_hash_from_array(wc_props,
+                                                                     pool),
+                                                pool));
+        }
 
       /* Add the dirprop loggy entries to the baton's log
          accumulator. */
@@ -4050,8 +4050,16 @@ merge_props(svn_stringbuf_t *log_accum,
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   if (wc_props)
-    SVN_ERR(accumulate_wcprops(log_accum, adm_access,
-                               file_path, wc_props, pool));
+    {
+      const char *local_abspath;
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
+      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath,
+                                            prop_hash_from_array(wc_props,
+                                                                 pool),
+                                            pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5389,6 +5397,8 @@ install_added_props(svn_stringbuf_t *log_accum,
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   /* Categorize the base properties. */
   {
@@ -5425,9 +5435,10 @@ install_added_props(svn_stringbuf_t *log_accum,
                                  adm_access, dst_path,
                                  entry_props, pool));
 
-  /* This writes a whole bunch of log commands to install wcprops.  */
-  return accumulate_wcprops(log_accum, adm_access,
-                            dst_path, wc_props, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, dst_path, pool));
+  return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
+                                        prop_hash_from_array(wc_props, pool),
+                                        pool));
 }
 
 svn_error_t *

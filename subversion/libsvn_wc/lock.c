@@ -23,6 +23,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_hash.h"
 #include "svn_types.h"
 
 #include "wc.h"
@@ -102,69 +103,185 @@ static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
 
 
-/* Write, to LOG_ACCUM, commands to convert a WC that has wcprops in individual
-   files to use one wcprops file per directory.
+/* For wcprops stored in a single file in this working copy, read that
+   file and return it in *ALL_WCPROPS, allocated in RESULT_POOL.   Use
+   SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+read_wcprops(apr_hash_t **all_wcprops,
+             svn_wc__db_t *db,
+             const char *dir_abspath,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  apr_hash_t *proplist;
+  svn_stream_t *stream;
+  svn_error_t *err;
+
+  *all_wcprops = apr_hash_make(result_pool);
+
+  err = svn_wc__open_adm_stream(&stream, dir_abspath,
+                                SVN_WC__ADM_ALL_WCPROPS,
+                                scratch_pool, scratch_pool);
+
+  /* A non-existent file means there are no props. */
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  /* Read the proplist for THIS_DIR. */
+  proplist = apr_hash_make(result_pool);
+  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, result_pool));
+  apr_hash_set(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING,
+               proplist);
+
+  /* And now, the children. */
+  while (1729)
+    {
+      svn_stringbuf_t *line;
+      svn_boolean_t eof;
+
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+      if (eof)
+        {
+          if (line->len > 0)
+            return svn_error_createf
+              (SVN_ERR_WC_CORRUPT, NULL,
+               _("Missing end of line in wcprops file for '%s'"),
+               svn_path_local_style(dir_abspath, scratch_pool));
+          break;
+        }
+      proplist = apr_hash_make(result_pool);
+      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                             result_pool));
+      apr_hash_set(*all_wcprops, line->data, APR_HASH_KEY_STRING, proplist);
+    }
+
+  return svn_stream_close(stream);
+}
+
+/* Helper for converting wcprops from the one-file-per-file model.
+   This implements svn_io_walk_func_t(). */
+static svn_error_t *
+convert_props_walker(void *baton,
+                     const char *path,
+                     const apr_finfo_t *finfo,
+                     apr_pool_t *pool)
+{
+  svn_wc__db_t *db = baton;
+  apr_hash_t *proplist;
+  apr_file_t *file;
+  svn_stream_t *stream;
+  const char *local_abspath;
+  int len;
+
+  /* Skip the directory. */
+  if (finfo->filetype == APR_DIR)
+    return SVN_NO_ERROR;
+
+  proplist = apr_hash_make(pool);
+  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  stream = svn_stream_from_aprfile2(file, FALSE, pool);
+  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* The filename will be something like foo.c.svn-work.  From it, determine
+     the local_abspath of the node.  The magic number of 9 below is basically
+     strlen(".svn-work"). */
+  len = strlen(path);
+  local_abspath = apr_pstrndup(pool, local_abspath, len - 9);
+
+  return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
+                                                        proplist, pool));
+}
+
+/* Convert a WC that has wcprops in files to use the wc-ng database.
    Do this for ADM_ACCESS and its file children, using POOL for temporary
    allocations. */
 static svn_error_t *
-convert_wcprops(svn_stringbuf_t *log_accum,
-                svn_wc_adm_access_t *adm_access,
-                apr_pool_t *pool)
+convert_wcprops(svn_wc_adm_access_t *adm_access,
+                int old_format,
+                apr_pool_t *scratch_pool)
 {
-  const char *dir_abspath;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, adm_access->path, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-
-  /* Walk over the entries, adding a modify-wcprop command for each wcprop.
-     Note that the modifications happen in memory and are just written once
-     at the end of the log execution, so this isn't as inefficient as it
-     might sound. */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
-      void *val;
-      const svn_wc_entry_t *entry;
-      apr_hash_t *wcprops;
-      apr_hash_index_t *hj;
-      const char *full_path;
-      const char *local_abspath;
+      svn_stream_t *stream;
+      svn_error_t *err;
+      const char *dir_abspath;
+      apr_hash_t *proplist;
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      entry = val;
-
-      if (entry->kind != svn_node_file
-          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
-        continue;
-
-      svn_pool_clear(subpool);
-
-      full_path = svn_dirent_join(adm_access->path, entry->name, subpool);
-      local_abspath = svn_dirent_join(dir_abspath, entry->name, subpool);
-
-      SVN_ERR(svn_wc__wcprop_list(&wcprops, adm_access->db, local_abspath,
-                                  entry->kind, subpool, subpool));
-
-      /* Create a subsubpool for the inner loop...
-         No, just kidding.  There are typically just one or two wcprops
-         per entry... */
-      for (hj = apr_hash_first(subpool, wcprops); hj; hj = apr_hash_next(hj))
+      /* First, look at dir-wcprops. */
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
+                                      svn_wc_adm_access_path(adm_access),
+                                      scratch_pool));
+      err = svn_wc__open_adm_stream(&stream, dir_abspath,
+                                    SVN_WC__ADM_DIR_WCPROPS,
+                                    scratch_pool, scratch_pool);
+      if (err)
         {
-          const void *key2;
-          void *val2;
-          const char *propname;
-          svn_string_t *propval;
-
-          apr_hash_this(hj, &key2, NULL, &val2);
-          propname = key2;
-          propval = val2;
-          SVN_ERR(svn_wc__loggy_modify_wcprop(&log_accum, adm_access,
-                                              full_path, propname,
-                                              propval->data,
-                                              subpool));
+          /* If the file doesn't exist, it means no wcprops. */
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            svn_error_clear(err);
+          else
+            return svn_error_return(err);
         }
+      else
+        {
+          proplist = apr_hash_make(scratch_pool);
+          SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                                 scratch_pool));
+          SVN_ERR(svn_wc__db_base_set_dav_cache(db, dir_abspath, proplist,
+                                                scratch_pool));
+        }
+
+      /* Now walk the wcprops directory. */
+      SVN_ERR(svn_io_dir_walk(svn_wc__adm_child(adm_access->path,
+                                                SVN_WC__ADM_WCPROPS,
+                                                scratch_pool),
+                              0 /* wanted */,
+                              convert_props_walker,
+                              db, scratch_pool));
+    }
+  else
+    {
+      apr_hash_t *allprops;
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool;
+
+      /* Read the all-wcprops file. */
+      SVN_ERR(read_wcprops(&allprops, db, adm_access->path,
+                           scratch_pool, scratch_pool));
+
+      /* Iterate over all the wcprops, writing each one to the wc_db. */
+      iterpool = svn_pool_create(scratch_pool);
+      for (hi = apr_hash_first(scratch_pool, allprops); hi;
+            hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          const char *name;
+          apr_hash_t *proplist;
+          const char *local_abspath;
+
+          svn_pool_clear(iterpool);
+
+          apr_hash_this(hi, &key, NULL, &val);
+          name = key;
+          proplist = val;
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                          svn_wc_adm_access_path(adm_access),
+                                          iterpool));
+          local_abspath = svn_dirent_join(local_abspath, name, iterpool);
+          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
+                                                iterpool));
+        }
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
@@ -310,6 +427,8 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
    *    to take care of the translation, and remembering to remove the old
    *    entries file when were're done.  ### This isn't a long-term solution.
    *
+   * 2) Convert wcprop to the wc-ng format
+   *
    * ### (fill in other bits as they are implemented)
    */
 
@@ -340,10 +459,7 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
   log_accum = svn_stringbuf_create("", scratch_pool);
 
   /***** WC PROPS *****/
-  /* If the WC uses one file per entry for wcprops, give back some inodes
-     to the poor user. */
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
+  SVN_ERR(convert_wcprops(adm_access, wc_format, scratch_pool));
 
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
 
@@ -368,6 +484,13 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
           scratch_pool));
       svn_error_clear(svn_io_remove_file(
           svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
+                            scratch_pool),
+          scratch_pool));
+    }
+  else
+    {
+      svn_error_clear(svn_io_remove_file(
+          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_ALL_WCPROPS,
                             scratch_pool),
           scratch_pool));
     }

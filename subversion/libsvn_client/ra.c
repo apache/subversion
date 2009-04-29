@@ -193,6 +193,7 @@ invalidate_wcprop_for_entry(const char *path,
 {
   struct invalidate_wcprop_walk_baton *wb = walk_baton;
   svn_wc_adm_access_t *entry_access;
+  svn_error_t *err;
 
   SVN_ERR(svn_wc_adm_retrieve(&entry_access, wb->base_access,
                               ((entry->kind == svn_node_dir)
@@ -201,8 +202,17 @@ invalidate_wcprop_for_entry(const char *path,
                               pool));
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
-  return svn_error_return(svn_wc_prop_set3(wb->prop_name, NULL, path,
-                                      entry_access, FALSE, NULL, NULL, pool));
+  err = svn_wc_prop_set3(wb->prop_name, NULL, path, entry_access, FALSE,
+                         NULL, NULL, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_return(err);
+
+  return SVN_NO_ERROR;
 }
 
 
