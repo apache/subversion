@@ -54,7 +54,7 @@ Candidate changes:
      Large numbers of subtrees with mergeinfo can significantly slow merge
      performance, this alleviates that somewhat in a common use case.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r36509
    Don't contact the server asking about implicit mergeinfo when the
@@ -65,18 +65,7 @@ Candidate changes:
      users with lots of subtree mergeinfo and slow network connections
      the performance improvement should be quite significant.
    Votes:
-     +1: pburba
-
- * r37072, r37083
-   Fix issue #3392 'Parsing error with reverse merges and non-inheritable
-   mergeinfo'
-   Justification:
-     Can cause repeat merges to break in the presence of non-inheritable
-     mergeinfo.
-   Notes:
-     r37072 is a test for the issue, r37083 is the fix.
-   Votes:
-     +1: pburba, arfrever
+     +1: pburba, rhuijben
 
  * r37121
    Fix test_dirent_get_absolute for the case where the current directory
@@ -148,3 +137,14 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r37072, r37083
+   Fix issue #3392 'Parsing error with reverse merges and non-inheritable
+   mergeinfo'
+   Justification:
+     Can cause repeat merges to break in the presence of non-inheritable
+     mergeinfo.
+   Notes:
+     r37072 is a test for the issue, r37083 is the fix.
+   Votes:
+     +1: pburba, arfrever, rhuijben
