@@ -93,6 +93,7 @@ svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
                                 svn_mergeinfo_t mergeinfo,
                                 svn_wc_adm_access_t *adm_access,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
   svn_string_t *mergeinfo_str;
@@ -112,8 +113,20 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
      ### svn_client__get_prop_from_wc(). */
-  return svn_wc_prop_set3(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
-                          adm_access, TRUE /* skip checks */, NULL, NULL, pool);
+  SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
+                           adm_access, TRUE /* skip checks */, NULL, NULL,
+                           pool));
+
+  if (ctx->notify_func2)
+    {
+      ctx->notify_func2(ctx->notify_baton2,
+                        svn_wc_create_notify(wcpath,
+                                             svn_wc_notify_merge_record_info,
+                                             pool),
+                        pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -613,6 +626,7 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                 const char *path,
                 const char *path_suffix,
                 svn_wc_adm_access_t *adm_access,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_boolean_t elides;
@@ -621,8 +635,20 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                                  path_suffix, pool));
 
   if (elides)
-    SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
-                             TRUE, NULL, NULL, pool));
+    {
+      SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
+                               TRUE, NULL, NULL, pool));
+
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify =
+                svn_wc_create_notify(
+                              svn_dirent_join_many(pool, path, path_suffix),
+                              svn_wc_notify_merge_record_info, pool);
+
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -718,7 +744,7 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
 
               SVN_ERR(elide_mergeinfo(target_mergeinfo, child_mergeinfo,
                                       child->path, path_suffix, adm_access,
-                                      iterpool));
+                                      ctx, iterpool));
             }
         }
     svn_pool_destroy(iterpool);
@@ -787,7 +813,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
         return SVN_NO_ERROR;
 
       SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_wcpath,
-                              NULL, adm_access, pool));
+                              NULL, adm_access, ctx, pool));
     }
   return SVN_NO_ERROR;
 }

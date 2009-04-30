@@ -871,7 +871,10 @@ typedef enum svn_wc_notify_action_t
 
   /** An update tried to add a file or directory at path but an
    * unversioned obstruction was found.  @since New in 1.7. */
-  svn_wc_notify_update_obstruction
+  svn_wc_notify_update_obstruction,
+
+  /* The mergeinfo on path was updated.  @since New in 1.7. */
+  svn_wc_notify_merge_record_info
 
 } svn_wc_notify_action_t;
 
