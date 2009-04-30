@@ -243,21 +243,26 @@ svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
                    apr_hash_t **revert_props_p,
-                   const svn_wc_entry_t *entry,
-                   const char *path,
+                   svn_wc__db_t *db,
+                   const char *local_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR_ASSERT(entry != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                            svn_node_unknown, FALSE, scratch_pool,
+                            scratch_pool));
 
   /* We will need the base props if the user requested them, or we need
      them if no (working) prop mods have occurred. */
   if (base_props_p != NULL || props_p != NULL)
     {
-      SVN_ERR(load_props(&base_props, path, entry->kind, svn_wc__props_base,
-                         result_pool));
+      SVN_ERR(load_props(&base_props, local_abspath, entry->kind,
+                         svn_wc__props_base, result_pool));
 
       if (base_props_p)
         *base_props_p = base_props;
@@ -265,8 +270,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (props_p)
     {
-      SVN_ERR(load_props(props_p, path, entry->kind, svn_wc__props_working,
-                         result_pool));
+      SVN_ERR(load_props(props_p, local_abspath, entry->kind,
+                         svn_wc__props_working, result_pool));
 
       /* If the WORKING props are not present, then no modifications have
          occurred. Simply return a copy of the BASE props.
@@ -280,7 +285,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
   if (revert_props_p)
     {
       if (entry->schedule == svn_wc_schedule_replace)
-        SVN_ERR(load_props(revert_props_p, path, entry->kind,
+        SVN_ERR(load_props(revert_props_p, local_abspath, entry->kind,
                            svn_wc__props_revert, result_pool));
       else
         *revert_props_p = apr_hash_make(result_pool);
@@ -1501,7 +1506,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         {
           SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props,
                                      working_props ? NULL : &working_props,
-                                     NULL, entry, path, pool, pool));
+                                     NULL, db, local_abspath, pool, pool));
         }
     }
   if (!server_baseprops)
@@ -1743,7 +1748,7 @@ svn_wc_prop_list(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-  return svn_wc__load_props(NULL, props, NULL, entry, path, pool, pool);
+  return svn_wc__load_props(NULL, props, NULL, db, local_abspath, pool, pool);
 }
 
 svn_error_t *
@@ -1819,7 +1824,7 @@ svn_wc__internal_propget(const svn_string_t **value,
   else
     {
       /* regular prop */
-      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, NULL, entry, local_abspath,
+      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, NULL, db, local_abspath,
                                    result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
@@ -1982,6 +1987,8 @@ svn_wc_prop_set3(const char *name,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const svn_wc_entry_t *entry;
   svn_wc_notify_action_t notify_action;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set(name, value, path, adm_access, pool);
@@ -2042,8 +2049,9 @@ svn_wc_prop_set3(const char *name,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, entry, path,
-                               pool, pool),
+  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, db,
+                               local_abspath, pool, pool),
             _("Failed to load properties from disk"));
 
   /* If we're changing this file's list of expanded keywords, then
@@ -2434,7 +2442,7 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
     }
 
   SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL, NULL,
-                             entry, path, pool, pool));
+                             db, local_abspath, pool, pool));
 
   if (original_props != NULL)
     *original_props = baseprops;

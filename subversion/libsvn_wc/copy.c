@@ -491,6 +491,8 @@ copy_file_administratively(const char *src_path,
     apr_hash_t *props, *base_props;
     svn_stream_t *base_contents;
     svn_stream_t *contents;
+    svn_wc__db_t *db;
+    const char *src_local_abspath;
 
     /* Are we moving or copying a file that is already moved or copied
        but not committed? */
@@ -512,8 +514,10 @@ copy_file_administratively(const char *src_path,
       }
 
     /* Load source base and working props. */
-    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, src_entry, src_path,
-                               pool, pool));
+    db = svn_wc__adm_get_db(src_access);
+    SVN_ERR(svn_path_get_absolute(&src_local_abspath, src_path, pool));
+    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, db,
+                               src_local_abspath, pool, pool));
 
     /* Copy working copy file to temporary location */
     {

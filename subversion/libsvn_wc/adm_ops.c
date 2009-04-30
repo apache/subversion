@@ -1719,12 +1719,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+      const char *local_abspath;
+
       /* Refer to the original base, before replacement. */
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-
-      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, entry, fullpath,
+      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, pool));
+      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
       /* Ensure the revert propfile gets removed. */

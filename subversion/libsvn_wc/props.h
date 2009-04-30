@@ -185,8 +185,8 @@ svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
                    apr_hash_t **revert_props_p,
-                   const svn_wc_entry_t *entry,
-                   const char *path,
+                   svn_wc__db_t *db,
+                   const char *local_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
