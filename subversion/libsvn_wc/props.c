@@ -97,8 +97,8 @@
    PATH should be of kind NODE_KIND. */
 static svn_error_t *
 load_props(apr_hash_t **hash,
-           const char *path,
-           svn_node_kind_t node_kind,
+           svn_wc__db_t *db,
+           const char *local_abspath,
            svn_wc__props_kind_t props_kind,
            apr_pool_t *pool)
 {
@@ -106,8 +106,21 @@ load_props(apr_hash_t **hash,
   svn_stream_t *stream;
   apr_finfo_t finfo;
   const char *prop_path;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               db, local_abspath, pool, pool));
+
+  SVN_ERR(svn_wc__prop_path(&prop_path, local_abspath,
+                            kind == svn_wc__db_kind_dir
+                                ? svn_node_dir
+                                : svn_node_file,
+                            props_kind, pool));
 
   /* We shouldn't be calling load_prop_file() with an empty file, but
      we do.  This check makes sure that we don't call svn_hash_read2()
@@ -261,8 +274,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
      them if no (working) prop mods have occurred. */
   if (base_props_p != NULL || props_p != NULL)
     {
-      SVN_ERR(load_props(&base_props, local_abspath, entry->kind,
-                         svn_wc__props_base, result_pool));
+      SVN_ERR(load_props(&base_props, db, local_abspath, svn_wc__props_base,
+                         result_pool));
 
       if (base_props_p)
         *base_props_p = base_props;
@@ -270,8 +283,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (props_p)
     {
-      SVN_ERR(load_props(props_p, local_abspath, entry->kind,
-                         svn_wc__props_working, result_pool));
+      SVN_ERR(load_props(props_p, db, local_abspath, svn_wc__props_working,
+                         result_pool));
 
       /* If the WORKING props are not present, then no modifications have
          occurred. Simply return a copy of the BASE props.
@@ -285,7 +298,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
   if (revert_props_p)
     {
       if (entry->schedule == svn_wc_schedule_replace)
-        SVN_ERR(load_props(revert_props_p, local_abspath, entry->kind,
+        SVN_ERR(load_props(revert_props_p, db, local_abspath,
                            svn_wc__props_revert, result_pool));
       else
         *revert_props_p = apr_hash_make(result_pool);
@@ -2347,10 +2360,12 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const svn_wc_entry_t *entry;
   apr_array_header_t *local_propchanges;
   apr_hash_t *localprops;
   apr_hash_t *baseprops;
+  const char *local_abspath;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
@@ -2361,7 +2376,8 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(load_props(&localprops, path, entry->kind, svn_wc__props_working,
+  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(load_props(&localprops, db, local_abspath, svn_wc__props_working,
                      pool));
 
   /* If the WORKING props are not present, then no modifications have
@@ -2388,8 +2404,7 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   /* The WORKING props are present, so let's dig in and see what the
      differences are. On really old WCs, they might be the same. On
      newer WCs, the file would have been removed if there was no delta. */
-  SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
-                     pool));
+  SVN_ERR(load_props(&baseprops, db, local_abspath, svn_wc__props_base, pool));
 
   SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, pool));
 
