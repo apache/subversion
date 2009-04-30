@@ -92,12 +92,6 @@ Candidate changes:
    Votes:
      +1: pburba, arfrever
 
- * r37185, r37187
-   Fix Issue #3387: SQLite configuration fails since client application has
-   already configured SQLite.
-   Votes:
-     +1: arfrever, rhuijben
-
  * r37245
    Recommend SQLite 3.6.13.
    Votes:
@@ -137,3 +131,9 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r37185, r37187
+   Fix Issue #3387: SQLite configuration fails since client application has
+   already configured SQLite.
+   Votes:
+     +1: arfrever, rhuijben, stylesen
