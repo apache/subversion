@@ -152,21 +152,6 @@ svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
 const char *
 svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access);
 
-
-/* Upgrade the working copy directory represented by ADM_ACCESS
-   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
-   lock.  Use SCRATCH_POOL for all temporary allocation.
-
-   Not all upgrade paths are necessarily supported.  For example,
-   upgrading a version 1 working copy results in an error.
-
-   Sometimes the format file can contain "0" while the administrative
-   directory is being constructed; calling this on a format 0 working
-   copy has no effect and returns no error. */
-svn_error_t *
-svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
