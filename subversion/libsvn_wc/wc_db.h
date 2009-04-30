@@ -1143,6 +1143,15 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *scratch_pool);
 
 
+/* Return the kind of the node in DB at LOCAL_ABSPATH.  If it doesn't exist,
+   return svn_wc__db_unknown.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_check_node(svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+
 /* ### changelists. return an array, or an iterator interface? how big
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.

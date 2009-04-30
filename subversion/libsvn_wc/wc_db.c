@@ -3699,3 +3699,31 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
 
   return svn_error_return(svn_sqlite__reset(stmt));
 }
+
+
+svn_error_t *
+svn_wc__db_check_node(svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (!err)
+    return SVN_NO_ERROR;
+
+  if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *kind = svn_wc__db_kind_unknown;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_return(err);
+}

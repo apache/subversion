@@ -110,12 +110,7 @@ load_props(apr_hash_t **hash,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
-                               db, local_abspath, pool, pool));
-
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
   SVN_ERR(svn_wc__prop_path(&prop_path, local_abspath,
                             kind == svn_wc__db_kind_dir
                                 ? svn_node_dir
@@ -1502,12 +1497,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   if (! base_props || ! working_props)
     {
       const char *local_abspath;
-      const svn_wc_entry_t *entry;
+      svn_wc__db_kind_t kind;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE,
-                                svn_node_unknown, FALSE, pool, pool));
-      if (entry == NULL)
+      SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+      if (kind == svn_wc__db_kind_unknown)
         {
           /* No entry... no props.  */
           if (base_props == NULL)
@@ -1748,14 +1742,13 @@ svn_wc_prop_list(apr_hash_t **props,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
 
   /* if there is no entry, 'path' is not under version control and
      therefore has no props. */
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                            FALSE, pool, pool));
-  if (entry == NULL)
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  if (kind == svn_wc__db_kind_unknown)
     {
       *props = apr_hash_make(pool);
       return SVN_NO_ERROR;
@@ -2423,27 +2416,16 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
   apr_hash_t *baseprops, *props;
   const char *entryname;
 
-  /*### Maybe assert (entry); calling svn_wc_get_prop_diffs
-    ### for an unversioned path is bogus */
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                            FALSE, pool, pool));
-  if (! entry)
-    {
-      if (original_props)
-        *original_props = apr_hash_make(pool);
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
 
-      if (propchanges)
-        *propchanges = apr_array_make(pool, 0, sizeof(svn_prop_t));
+  SVN_ERR_ASSERT(kind != svn_wc__db_kind_unknown);
 
-      return SVN_NO_ERROR;
-    }
-
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     {
       entryname = SVN_WC_ENTRY_THIS_DIR;
     }
