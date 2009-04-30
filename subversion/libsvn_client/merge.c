@@ -131,10 +131,17 @@
  * merge target and any of its subtrees which have explicit mergeinfo
  * or otherwise need special attention during a merge.
  *
- * CHILDREN_WITH_MERGEINFO is initially created by get_mergeinfo_paths()
- * and outside of that function and its helpers should always meet the
- * criteria dictated in get_mergeinfo_paths()'s doc string.  The elements
- * of CHILDREN_WITH_MERGINFO should never be NULL.
+ * During mergeinfo unaware merges, CHILDREN_WITH_MERGEINFO is created by
+ * do_mergeinfo_unaware_dir_merge and contains only one element describing
+ * a contiguous range to be merged to the WC merge target.
+ *
+ * During mergeinfo aware merges CHILDREN_WITH_MERGEINFO is created
+ * by get_mergeinfo_paths() and outside of that function and its helpers
+ * should always meet the criteria dictated in get_mergeinfo_paths()'s doc
+ * string.  The elements of CHILDREN_WITH_MERGINFO should never be NULL.
+ *
+ * For clarification on mergeinfo aware vs. mergeinfo unaware merges, see
+ * the doc string for honor_mergeinfo().
  */
 
 /*-----------------------------------------------------------------------*/
@@ -506,7 +513,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
    set it to false.
 
    If *HONOR_MERGEINFO is set to TRUE and the merge is not a dry run then set
-   *RECORD_MERGEINFO  to true, otherwise set it to false.
+   *RECORD_MERGEINFO to true, otherwise set it to false.
    **/
 static APR_INLINE void
 mergeinfo_behavior(svn_boolean_t *honor_mergeinfo_p,
@@ -6123,6 +6130,54 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* Helper for do_directory_merge() when performing mergeinfo unaware merges.
+
+   Merge the diff of URL1@REVISION1:URL2@REVISION2 to TARGET_DIR_WCPATH.
+
+   URL1, REVISION1, URL2, REVISION2, ADM_ACCESS, DEPTH, NOTIFY_B, and MERGE_B
+   are all cascaded from do_directory_merge's arguments of the same names.
+
+   NOTE: This is a very thin wrapper around drive_merge_report_editor() and
+   exists only to populate NOTIFY_B->CHILREN_WITH_MERGEINFO with the single
+   element expected during mergeinfo unaware merges..
+*/
+static svn_error_t *
+do_mergeinfo_unaware_dir_merge(const char *url1,
+                               svn_revnum_t revision1,
+                               const char *url2,
+                               svn_revnum_t revision2,
+                               const char *target_dir_wcpath,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_depth_t depth,
+                               notification_receiver_baton_t *notify_b,
+                               merge_cmd_baton_t *merge_b,
+                               apr_pool_t *pool)
+{
+  /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO and populate it with
+     one element describing the merge of REVISION1:REVISION2 to
+     TARGET_DIR_WCPATH. */
+  svn_client__merge_path_t *item = apr_pcalloc(pool, sizeof(*item));
+  svn_merge_range_t *itemrange = apr_pcalloc(pool, sizeof(*itemrange));
+  apr_array_header_t *remaining_ranges = apr_array_make(
+    pool, 1, sizeof(svn_merge_range_t *));
+
+  itemrange->start = revision1;
+  itemrange->end = revision2;
+  itemrange->inheritable = TRUE;
+
+  APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = itemrange;
+
+  item->path = apr_pstrdup(pool, target_dir_wcpath);
+  item->remaining_ranges = remaining_ranges;
+  APR_ARRAY_PUSH(notify_b->children_with_mergeinfo,
+                 svn_client__merge_path_t *) = item;
+  return drive_merge_report_editor(target_dir_wcpath,
+                                   url1, revision1, url2, revision2,
+                                   NULL, depth, notify_b,
+                                   adm_access, &merge_callbacks,
+                                   merge_b, pool);
+}
+
 /* Helper for do_merge() when the merge target is a directory.
 
    Perform a merge of changes between URL1@REVISION1 and URL2@REVISION2
@@ -6178,36 +6233,12 @@ do_directory_merge(const char *url1,
   notify_b->children_with_mergeinfo =
     apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
 
-  /* If our merge sources aren't related to each other, or don't come
-     from the same repository as our target, mergeinfo is meaningless
-     and we can skip right to the business of merging changes!  We'll
-     just drop a dummy item into NOTIFY_B->CHILDREN_WITH_MERGEINFO if
-     the merge sources are related.  */
-  if (! (merge_b->sources_ancestral && merge_b->same_repos))
-    {
-      if (merge_b->sources_ancestral)
-        {
-          svn_client__merge_path_t *item = apr_pcalloc(pool, sizeof(*item));
-          svn_merge_range_t *itemrange = apr_pcalloc(pool, sizeof(*itemrange));
-          apr_array_header_t *remaining_ranges =
-            apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-
-          itemrange->start = revision1;
-          itemrange->end = revision2;
-          itemrange->inheritable = TRUE;
-          APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = itemrange;
-
-          item->path = apr_pstrdup(pool, target_wcpath);
-          item->remaining_ranges = remaining_ranges;
-          APR_ARRAY_PUSH(notify_b->children_with_mergeinfo,
-                         svn_client__merge_path_t *) = item;
-        }
-      return drive_merge_report_editor(target_wcpath,
-                                       url1, revision1, url2, revision2,
-                                       NULL, depth, notify_b,
-                                       adm_access, &merge_callbacks,
-                                       merge_b, pool);
-    }
+  /* If we are not honoring mergeinfo we can skip right to the
+     business of merging changes! */
+  if (!honor_mergeinfo)
+    return do_mergeinfo_unaware_dir_merge(url1, revision1, url2, revision2,
+                                          target_wcpath, adm_access, depth,
+                                          notify_b, merge_b, pool);
 
   /*** If we get here, we're dealing with related sources from the
        same repository as the target -- merge tracking might be
