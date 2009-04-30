@@ -31,6 +31,8 @@
 #ifndef SVN_WC_DB_H
 #define SVN_WC_DB_H
 
+#include "svn_wc.h"
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_config.h"
