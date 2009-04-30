@@ -1823,8 +1823,11 @@ svn_wc__internal_propget(const svn_string_t **value,
                                    result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
+
   if (prophash)
     *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
+  else
+    *value = NULL;
 
   return SVN_NO_ERROR;
 }
