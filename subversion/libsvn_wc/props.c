@@ -1779,7 +1779,7 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  apr_hash_t *prophash;
+  apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   const svn_wc_entry_t *entry;
 
@@ -1823,8 +1823,8 @@ svn_wc__internal_propget(const svn_string_t **value,
                                    result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
-
-  *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
+  if (prophash)
+    *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }
