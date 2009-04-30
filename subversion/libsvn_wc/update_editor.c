@@ -2856,7 +2856,8 @@ close_directory(void *dir_baton,
       else
         {
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                     entry, db->path, pool, pool));
+                                     db->edit_baton->db, local_abspath,
+                                     pool, pool));
         }
 
       /* Calculate which base props weren't also in the incoming
@@ -3373,14 +3374,18 @@ add_file_with_history(const char *path,
          revert place, depending on scheduling. */
 
       svn_stream_t *source_text_base;
+      const char *src_local_abspath;
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+      SVN_ERR(svn_path_get_absolute(&src_local_abspath, src_path, subpool));
 
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
         {
           SVN_ERR(svn_wc__get_revert_contents(&source_text_base, src_path,
                                               subpool, subpool));
-          SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props,
-                                     src_entry, src_path, pool, subpool));
+          SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props, db,
+                                     src_local_abspath, pool, subpool));
           /* The old working props are lost, just like the old
              working file text is.  Just use the base props. */
           working_props = base_props;
@@ -3389,8 +3394,8 @@ add_file_with_history(const char *path,
         {
           SVN_ERR(svn_wc_get_pristine_contents(&source_text_base, src_path,
                                                subpool, subpool));
-          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                     src_entry, src_path, pool, subpool));
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL, db,
+                                     src_local_abspath, pool, subpool));
         }
 
       SVN_ERR(svn_stream_copy3(source_text_base, copied_stream,
