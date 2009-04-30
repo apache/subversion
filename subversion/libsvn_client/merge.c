@@ -4002,12 +4002,12 @@ drive_merge_report_editor(const char *target_wcpath,
         }
     }
 
-  /* Temporarily point our second RA session to URL1, too.  We use
-     this to request individual file contents. */
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
-                                            merge_b->ra_session2,
-                                            url1, pool));
-
+      /* Temporarily point our second RA session to URL1, too.  We use
+         this to request individual file contents. */
+      SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
+                                                merge_b->ra_session2,
+                                                url1, pool));
+    
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
   SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
@@ -7114,6 +7114,7 @@ svn_client_merge3(const char *source1,
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
+  const char *source_repos_uuid1, *source_repos_uuid2;
 
   /* Sanity check our input -- we require specified revisions. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -7174,24 +7175,29 @@ svn_client_merge3(const char *source1,
   SVN_ERR(svn_client__get_revision_number(&rev2, &youngest_rev, ra_session2,
                                           revision2, NULL, sesspool));
 
-  /* Get the repository root URL from one of our sessions (the other
-     doesn't matter -- if it ain't the same, other stuff would fall
-     over later).  */
+  SVN_ERR(svn_ra_get_uuid2(ra_session1, &source_repos_uuid1, pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session2, &source_repos_uuid2, pool));
+
+  /* We can't do a diff between different repositories. */
+  if (strcmp(source_repos_uuid1, source_repos_uuid2) != 0)
+    return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
+                             _("'%s' isn't in the same repository as '%s'"),
+                             URL1, URL2);
+
+  /* Get the repository root URL from one of our sessions. */
   SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root, sesspool));
 
   /* Do our working copy and sources come from the same repository? */
   if (strcmp(wc_repos_root, source_repos_root) != 0)
     {
-      const char *source_repos_uuid;
       const char *wc_repos_uuid;
 
-      SVN_ERR(svn_ra_get_uuid2(ra_session1, &source_repos_uuid, pool));
       if (entry)
         wc_repos_uuid = entry->uuid;
       else
         SVN_ERR(svn_client_uuid_from_url(&wc_repos_uuid, wc_repos_root,
                                          ctx, pool));
-      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid1) == 0);
     }
   else
     same_repos = TRUE;
