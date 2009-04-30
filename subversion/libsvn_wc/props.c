@@ -2348,6 +2348,9 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  apr_array_header_t *local_propchanges;
+  apr_hash_t *localprops;
+  apr_hash_t *baseprops;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
 
@@ -2358,45 +2361,39 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  {
-    apr_array_header_t *local_propchanges;
-    apr_hash_t *localprops;
-    apr_hash_t *baseprops;
+  SVN_ERR(load_props(&localprops, path, entry->kind, svn_wc__props_working,
+                     pool));
 
-    SVN_ERR(load_props(&localprops, path, entry->kind, svn_wc__props_working,
-                       pool));
+  /* If the WORKING props are not present, then no modifications have
+     occurred. */
+  if (localprops == NULL)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }
 
-    /* If the WORKING props are not present, then no modifications have
-       occurred. */
-    if (localprops == NULL)
-      {
-        *modified_p = FALSE;
-        return SVN_NO_ERROR;
-      }
+  /* If something is scheduled for replacement, we do *not* want to
+     pay attention to any base-props;  they might be residual from the
+     old deleted file. */
+  /* ### in modern WC formats, they should be the replaced file's
+     ### base props. hard to know on old WCs tho? (given the above
+     ### comment). just declare propmods if the node has any working
+     ### properties. */
+  if (entry->schedule == svn_wc_schedule_replace)
+    {
+      *modified_p = apr_hash_count(localprops) > 0;
+      return SVN_NO_ERROR;
+    }
 
-    /* If something is scheduled for replacement, we do *not* want to
-       pay attention to any base-props;  they might be residual from the
-       old deleted file. */
-    /* ### in modern WC formats, they should be the replaced file's
-       ### base props. hard to know on old WCs tho? (given the above
-       ### comment). just declare propmods if the node has any working
-       ### properties. */
-    if (entry->schedule == svn_wc_schedule_replace)
-      {
-        *modified_p = apr_hash_count(localprops) > 0;
-        return SVN_NO_ERROR;
-      }
+  /* The WORKING props are present, so let's dig in and see what the
+     differences are. On really old WCs, they might be the same. On
+     newer WCs, the file would have been removed if there was no delta. */
+  SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
+                     pool));
 
-    /* The WORKING props are present, so let's dig in and see what the
-       differences are. On really old WCs, they might be the same. On
-       newer WCs, the file would have been removed if there was no delta. */
-    SVN_ERR(load_props(&baseprops, path, entry->kind, svn_wc__props_base,
-                       pool));
+  SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, pool));
 
-    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, pool));
-
-    *modified_p = (local_propchanges->nelts > 0);
-  }
+  *modified_p = (local_propchanges->nelts > 0);
 
   return SVN_NO_ERROR;
 }
