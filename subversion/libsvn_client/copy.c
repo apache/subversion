@@ -159,7 +159,7 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
     wc_mergeinfo = mergeinfo;
 
   return svn_client__record_wc_mergeinfo(target_wcpath, wc_mergeinfo,
-                                         adm_access, pool);
+                                         adm_access, ctx, pool);
 }
 
 /* Find the longest common ancestor of paths in COPY_PAIRS.  If

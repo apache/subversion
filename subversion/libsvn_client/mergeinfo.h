@@ -212,11 +212,14 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
 /* Write MERGEINFO into the WC for WCPATH.  If MERGEINFO is NULL,
    remove any SVN_PROP_MERGEINFO for WCPATH.  If MERGEINFO is empty,
-   record an empty property value (e.g. ""). */
+   record an empty property value (e.g. "").  If CTX->NOTIFY_FUNC2 is
+   not null call it with notification type
+   svn_wc_notify_merge_record_info. */
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
                                 svn_mergeinfo_t mergeinfo,
                                 svn_wc_adm_access_t *adm_access,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
 /* Elide any svn:mergeinfo set on TARGET_PATH to its nearest working

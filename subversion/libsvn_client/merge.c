@@ -3722,7 +3722,7 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
       svn_mergeinfo__remove_empty_rangelists(mergeinfo, pool);
 
       err = svn_client__record_wc_mergeinfo(path, mergeinfo,
-                                            adm_access, subpool);
+                                            adm_access, ctx, subpool);
 
       if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
         {
@@ -5051,7 +5051,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
                           SVN_ERR(svn_client__record_wc_mergeinfo(
                             child_of_noninheritable->path, mergeinfo,
-                            adm_access, iterpool));
+                            adm_access, merge_cmd_baton->ctx, iterpool));
                         }
                     }
                 }
@@ -5945,7 +5945,7 @@ do_file_merge(const char *url1,
           if (indirect)
             SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
                                                     target_mergeinfo,
-                                                    adm_access, subpool));
+                                                    adm_access, ctx, subpool));
 
           SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, mergeinfo_path,
                                       merges, is_rollback, adm_access,
@@ -6065,9 +6065,11 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                   SVN_ERR(svn_mergeinfo_merge(path_explicit_mergeinfo,
                                               path_inherited_mergeinfo,
                                               iterpool));
-                  SVN_ERR(svn_client__record_wc_mergeinfo(path_with_new_mergeinfo,
-                                                          path_explicit_mergeinfo,
-                                                          adm_access, iterpool));
+                  SVN_ERR(svn_client__record_wc_mergeinfo(
+                                              path_with_new_mergeinfo,
+                                              path_explicit_mergeinfo,
+                                              adm_access, merge_b->ctx,
+                                              iterpool));
                 }
 
               /* If the path is not in NOTIFY_B->CHILDREN_WITH_MERGEINFO
@@ -6536,6 +6538,7 @@ do_directory_merge(const char *url1,
                                                child->path,
                                                child->pre_merge_mergeinfo,
                                                adm_access,
+                                               merge_b->ctx,
                                                iterpool));
             }
           SVN_ERR(update_wc_mergeinfo(child->path, child_entry,
@@ -6690,6 +6693,7 @@ do_directory_merge(const char *url1,
                   SVN_ERR(svn_client__record_wc_mergeinfo(added_path,
                                                           merge_mergeinfo,
                                                           adm_access,
+                                                          merge_b->ctx,
                                                           iterpool));
                 }
             }
