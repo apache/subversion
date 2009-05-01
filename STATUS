@@ -115,6 +115,28 @@ Candidate changes:
    Votes:
      +1: pburba, stylesen
 
+ * r37398
+   Fix a memory leak when performing mergeinfo aware merges.
+   Justification:
+     Not always destroying a subpool when processing subtrees wtih mergeinfo.
+   Votes:
+     +1: pburba
+     
+ * r37491
+     Another merge performance improvement: Reduce contacts with server when
+     a subtree with mergeinfo has non-inheritable mergeinfo and the subtree's
+     immediate children have no explicit mergeinfo.
+   Justification:
+     If you hit this use case and the and the subtree in question has a *lot*
+     of immediate children without mergeinfo then this change will avoid
+     needless round trips for *each* of those children.
+   Notes:
+     Will conflict if r36509 and r37333 are not backported first.  If this
+     group is approved and those prereqs are not, then I will create a
+     backport branch - pburba.
+   Votes:
+     +1: pburba
+
  * r37494, r37499
    Fix issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
    Justification:
@@ -126,6 +148,16 @@ Candidate changes:
      While merging r37494 accept theirs-conflict.  r37499 will conflict if
      r37333 is not merged first.  If this group is approved and r37333 is
      not I will create a backport branch - pburba.
+   Votes:
+     +1: pburba
+
+ * r37519
+     Stop merge of difference between two different repositories from
+     occasionally "working".
+   Justification:
+     Previously, given URL_X and URL_Y which point to two completely
+     different repositories, the merge 'svn merge URL_X@M URL_Y@N TARGET_WC'
+     might actually succeed and merge URL_X@M:URL_X@N to TARGET_WC.
    Votes:
      +1: pburba
 
