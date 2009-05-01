@@ -6,6 +6,7 @@ import os
 import sys
 import fnmatch
 import re
+import subprocess
 import glob
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
@@ -1220,8 +1221,13 @@ class WinGeneratorBase(GeneratorBase):
     else:
       self.swig_exe = 'swig'
 
-    infp, outfp = os.popen4(self.swig_exe + ' -version')
-    infp.close()
+    try:
+      outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
+    except OSError:
+      sys.stderr.write('Could not find installed SWIG,'
+                       ' assuming version %s\n' % default_version)
+      self.swig_libdir = ''
+
     try:
       txt = outfp.read()
       if txt:
