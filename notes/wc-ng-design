@@ -963,6 +963,7 @@ Near-Term Plan
          a minimum format level. the user field in the database
          contains the schema version which is our further format-level
          descriptor value.
+   [ this has been largely done. ]
 
 2. convert entries.c to use wc_db. shift the sqlite code into wc_db.
    note: this is a separate step from 1. there is a paradigm shift
@@ -970,11 +971,16 @@ Near-Term Plan
          ignore that in Step 1, and then handle it in this Step.
    note: put wc_db handle into lock->shared and share the handle
          across all directories/batons.
+   [ because of the borken way the upper layers use the entries API, using
+     the wc_db APIs to write entries proves difficult, since we violate
+     all kinds of constraints. ]
 
 3. convert props.c to use wc_db. migrate props to db simultaneously.
+   [ this is currently in-process. ]
 
 4. implement 'svn cleanup' as an upgrade path from old-style working
    copies to wc-ng
+   [ done, but work will continue as the wc-ng format continues to evolve. ]
 
 5. incremental shift of pristines from N files into pristine db.
    note: we could continue to leave .revert-base while we migrate the
@@ -986,6 +992,8 @@ Near-Term Plan
          wherever it is easy/possible.
    goal: all libsvn_wc code uses wc_db.h, and entries.h exists solely
          to support old backwards-compat code.
+   [ this isn't quite a discreet task, but is happening gradually as we work
+     through the libsvn_wc API. ]
 
 7. centralize the metadata and pristines
    note: this will also involve merging datastores
