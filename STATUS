@@ -136,7 +136,7 @@ Candidate changes:
      svnserve, which gives a compiletime error. This patch removes the
      dependency on a local patch for those users that found this issue.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, hwright
 
 Approved changes:
 =================
