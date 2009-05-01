@@ -1979,8 +1979,8 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *stat(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                         apr_array_header_t *params, void *baton)
+static svn_error_t *stat_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -2736,7 +2736,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-mergeinfo",   get_mergeinfo },
   { "log",             log_cmd },
   { "check-path",      check_path },
-  { "stat",            stat },
+  { "stat",            stat_cmd },
   { "get-locations",   get_locations },
   { "get-location-segments",   get_location_segments },
   { "get-file-revs",   get_file_revs },
