@@ -767,7 +767,7 @@ complete_directory(struct edit_baton *eb,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *current_entry;  /* non-const to set DEPTH.  */
+      const svn_wc_entry_t *current_entry;
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
