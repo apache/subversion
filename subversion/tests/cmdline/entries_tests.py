@@ -168,7 +168,6 @@ def obstructed_entries(sbox):
   # blast a directory. its revision should become SVN_INVALID_REVNUM.
   entries = svntest.main.run_entriesdump(D_path)
   check_names(entries, 'H')
-  # wc-ng properly reports the revision from within parent dir
   validate(entries['H'], revision=1)
 
   svntest.main.safe_rmtree(H_path)

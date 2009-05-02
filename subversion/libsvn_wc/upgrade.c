@@ -288,7 +288,7 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                                this_dir->depth, scratch_pool));
 
   /* Migrate the entries over to the new database.
-     ### We need to thing about atomicity here. */
+     ### We need to think about atomicity here. */
   SVN_ERR(svn_wc__entries_upgrade(adm_access, SVN_WC__VERSION, scratch_pool));
   svn_error_clear(svn_io_remove_file(svn_wc__adm_child(svn_wc_adm_access_path(
                                                                 adm_access),
