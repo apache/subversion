@@ -1488,6 +1488,34 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
 }
 
 
+svn_error_t *
+svn_wc__node_is_deleted(svn_boolean_t *deleted,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_error_t *err;
+
+  /* ### rewrite this in terms of wc_db.  */
+
+  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                          svn_node_unknown, TRUE, scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+        return svn_error_return(err);
+
+      /* We asked for the parent stub, but got a file. No big deal. We have
+         what we wanted for a file.  */
+      svn_error_clear(err);
+    }
+
+  *deleted = entry->deleted;
+  return SVN_NO_ERROR;
+}
+
+
 /* Prune the deleted entries from the cached entries in ADM_ACCESS, and
    return that collection.  SCRATCH_POOL is used for local, short
    term, memory allocation, RESULT_POOL for permanent stuff.  */
@@ -3236,6 +3264,8 @@ svn_wc__walker_default_error_handler(const char *path,
                                      void *walk_baton,
                                      apr_pool_t *pool)
 {
+  /* Note: don't trace this. We don't want to insert a false "stack frame"
+     onto an error generated elsewhere.  */
   return err;
 }
 
@@ -3331,14 +3361,13 @@ svn_wc_walk_entries3(const char *path,
 
 
 /* A baton for use with visit_tc_too_callbacks. */
-typedef struct visit_tc_too_baton_t
-  {
-    svn_wc_adm_access_t *adm_access;
-    const svn_wc_entry_callbacks2_t *callbacks;
-    void *baton;
-    const char *target;
-    svn_depth_t depth;
-  } visit_tc_too_baton_t;
+typedef struct visit_tc_too_baton_t {
+  svn_wc__db_t *db;
+  const svn_wc_entry_callbacks2_t *callbacks;
+  void *baton;
+  const char *target;
+  svn_depth_t depth;
+} visit_tc_too_baton_t;
 
 /* An svn_wc_entry_callbacks2_t callback function.
  *
@@ -3393,7 +3422,6 @@ visit_tc_too_found_entry(const char *path,
       /* We're supposed to check the children of this directory. However,
        * in case of svn_depth_files, don't visit directories. */
 
-      svn_wc_adm_access_t *adm_access = NULL;
       apr_array_header_t *conflicts;
       int i;
 
@@ -3402,24 +3430,40 @@ visit_tc_too_found_entry(const char *path,
                                           entry->tree_conflict_data, path,
                                           pool));
 
-      if (conflicts->nelts > 0)
-        SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, path,
-                                    pool));
-
       for (i = 0; i < conflicts->nelts; i++)
         {
-          svn_wc_conflict_description_t *conflict
+          const svn_wc_conflict_description_t *conflict
             = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
-          const svn_wc_entry_t *child_entry;
+          const char *child_abspath;
+          svn_boolean_t visit_child = FALSE;
+          svn_wc__db_kind_t kind;
 
           if ((conflict->node_kind == svn_node_dir)
               && (baton->depth == svn_depth_files))
             continue;
 
-          /* If this victim is not in this dir's entries ... */
-          SVN_ERR(svn_wc_entry(&child_entry, conflict->path, adm_access,
-                               TRUE, pool));
-          if (!child_entry || child_entry->deleted)
+          SVN_ERR(svn_dirent_get_absolute(&child_abspath, conflict->path,
+                                          pool));
+          SVN_ERR(svn_wc__db_check_node(&kind, baton->db, child_abspath,
+                                        pool));
+
+          /* If the kind is UNKNOWN, then this node is unversioned, or
+             it is absent/excluded/etc. The regular walk will not visit
+             the thing, so we should visit it.  */
+          visit_child = (kind == svn_wc__db_kind_unknown);
+
+          if (!visit_child)
+            {
+              /* DELETED nodes will be visited as a child node. However,
+                 we want to visit them as an entry=NULL node. So if this
+                 entry is DELETED, then visit it.  */
+              /* ### this is pretty bogus. the callback should accept
+                 ### the child node. a bit harder to change right now.  */
+              SVN_ERR(svn_wc__node_is_deleted(&visit_child, baton->db,
+                                              child_abspath, pool));
+            }
+
+          if (visit_child)
             {
               /* Found an unversioned tree conflict victim. Call the "found
                * entry" callback with a null "entry" parameter. */
@@ -3454,14 +3498,11 @@ visit_tc_too_error_handler(const char *path,
    * to reach such a node by recursion. */
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
-      svn_wc_adm_access_t *adm_access;
       svn_wc_conflict_description_t *conflict;
-      char *parent_path = svn_dirent_dirname(path, pool);
 
       /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, baton->adm_access, parent_path,
-                                  pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, adm_access, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, baton->db,
+                                         pool, pool));
 
       /* If so, don't regard it as an error but call the "found entry"
        * callback with a null "entry" parameter. */
@@ -3497,14 +3538,10 @@ svn_wc__walk_entries_and_tc(const char *path,
                             void *cancel_baton,
                             apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_error_t *err;
   svn_wc_adm_access_t *path_adm_access;
   const svn_wc_entry_t *entry;
-
-  /* If there is no adm_access, there are no nodes to visit, not even 'path'
-   * because it can't be in conflict. */
-  if (adm_access == NULL)
-    return SVN_NO_ERROR;
 
   /* Is 'path' versioned? Set path_adm_access accordingly. */
   /* First: Get item's adm access (meaning parent's if it's a file). */
@@ -3535,7 +3572,7 @@ svn_wc__walk_entries_and_tc(const char *path,
        * make it also visit unversioned tree conflict victims. */
       visit_tc_too_baton_t visit_tc_too_baton;
 
-      visit_tc_too_baton.adm_access = adm_access;
+      visit_tc_too_baton.db = db;
       visit_tc_too_baton.callbacks = walk_callbacks;
       visit_tc_too_baton.baton = walk_baton;
       visit_tc_too_baton.target = path;
@@ -3552,7 +3589,7 @@ svn_wc__walk_entries_and_tc(const char *path,
        * call the "found entry" callback with a null "entry" parameter. */
       svn_wc_conflict_description_t *conflict;
 
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, adm_access, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, db, pool, pool));
       if (conflict)
         SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
     }

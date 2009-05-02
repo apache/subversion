@@ -1461,14 +1461,6 @@ modcheck_found_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-modcheck_handle_error(const char *path,
-                      svn_error_t *err,
-                      void *walk_baton,
-                      apr_pool_t *pool)
-{
-  return err;
-}
 
 /* Set *MODIFIED to true iff there are any local modifications within the
  * tree rooted at PATH whose admin access baton is ADM_ACCESS. If *MODIFIED
@@ -1485,7 +1477,7 @@ tree_has_local_mods(svn_boolean_t *modified,
                     apr_pool_t *pool)
 {
   static const svn_wc_entry_callbacks2_t modcheck_callbacks =
-    { modcheck_found_entry, modcheck_handle_error };
+    { modcheck_found_entry, svn_wc__walker_default_error_handler };
   modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
 
   modcheck_baton.adm_access = adm_access;
@@ -1866,15 +1858,6 @@ set_copied_callback(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_entry_callbacks2_t found_entry callback function. */
-static svn_error_t *
-set_copied_handle_error(const char *path,
-                        svn_error_t *err,
-                        void *walk_baton,
-                        apr_pool_t *pool)
-{
-  return err;
-}
 
 /* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
  * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
@@ -1944,8 +1927,8 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
    * scheduled for re-add. */
   if (entry->kind == svn_node_dir)
     {
-      svn_wc_entry_callbacks2_t set_copied_callbacks
-        = { set_copied_callback, set_copied_handle_error };
+      static const svn_wc_entry_callbacks2_t set_copied_callbacks
+        = { set_copied_callback, svn_wc__walker_default_error_handler };
       struct set_copied_baton_t set_copied_baton;
       svn_wc_adm_access_t *parent_adm_access;
       const svn_wc_entry_t *parent_entry;

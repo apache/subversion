@@ -315,6 +315,14 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *scratch_pool);
 
 
+/* ### return a flag corresponding to the classic "DELETED" concept.  */
+svn_error_t *
+svn_wc__node_is_deleted(svn_boolean_t *deleted,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
+
+
 /* Parse a file external specification in the NULL terminated STR and
    place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
    and revision number in REV_RESULT.  STR may be NULL, in which case
