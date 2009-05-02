@@ -71,17 +71,6 @@ svn_editor_setcb_add_directory(svn_editor_t *editor,
 
 
 svn_error_t *
-svn_editor_setcb_add_directory_streamy(
-  svn_editor_t *editor,
-  svn_editor_cb_add_directory_streamy_t callback,
-  apr_pool_t *scratch_pool)
-{
-  editor->funcs.cb_add_directory_streamy = callback;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_editor_setcb_add_file(svn_editor_t *editor,
                           svn_editor_cb_add_file_t callback,
                           apr_pool_t *scratch_pool)
@@ -199,7 +188,6 @@ svn_editor_setcb_many(svn_editor_t *editor,
 #define COPY_CALLBACK(NAME) if (many->NAME) editor->funcs.NAME = many->NAME
 
   COPY_CALLBACK(cb_add_directory);
-  COPY_CALLBACK(cb_add_directory_streamy);
   COPY_CALLBACK(cb_add_file);
   COPY_CALLBACK(cb_add_symlink);
   COPY_CALLBACK(cb_add_absent);
@@ -226,8 +214,6 @@ svn_editor_add_directory(svn_editor_t *editor,
 {
   svn_error_t *err;
 
-  /* ### we should be able to map into add_directory_streamy if this
-     ### callback is NULL.  */
   SVN_ERR_ASSERT(editor->funcs.cb_add_directory != NULL);
 
   if (editor->cancel_func)
@@ -235,34 +221,6 @@ svn_editor_add_directory(svn_editor_t *editor,
 
   err = (*editor->funcs.cb_add_directory)(editor->baton, relpath, children,
                                           props, editor->scratch_pool);
-  svn_pool_clear(editor->scratch_pool);
-  return err;
-}
-
-
-svn_error_t *
-svn_editor_add_directory_streamy(svn_editor_t *editor,
-                                 const char *relpath,
-                                 svn_error_t *(*child_cb)(
-                                   const char **child,
-                                   void *baton,
-                                   apr_pool_t *scratch_pool),
-                                 void *child_baton,
-                                 apr_hash_t *props)
-{
-  svn_error_t *err;
-
-  /* ### we should be able to map into add_directory if this
-     ### callback is NULL.  */
-  SVN_ERR_ASSERT(editor->funcs.cb_add_directory_streamy != NULL);
-
-  if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
-
-  err = (*editor->funcs.cb_add_directory_streamy)(editor->baton, relpath,
-                                                  child_cb, child_baton,
-                                                  props,
-                                                  editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
