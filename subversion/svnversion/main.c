@@ -15,10 +15,10 @@
  */
 
 #include "svn_cmdline.h"
+#include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_utf.h"
-#include "svn_path.h"
 #include "svn_opt.h"
 
 #include "svn_private_config.h"
@@ -118,6 +118,7 @@ main(int argc, const char *argv[])
   svn_boolean_t no_newline = FALSE, committed = FALSE;
   svn_error_t *err;
   apr_getopt_t *os;
+  svn_node_kind_t kind;
   const apr_getopt_option_t options[] =
     {
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
@@ -205,7 +206,7 @@ main(int argc, const char *argv[])
   SVN_INT_ERR(svn_utf_cstring_to_utf8
               (&wc_path, (os->ind < argc) ? os->argv[os->ind] : ".",
                pool));
-  wc_path = svn_path_internal_style(wc_path, pool);
+  wc_path = svn_dirent_internal_style(wc_path, pool);
 
   if (os->ind+1 < argc)
     SVN_INT_ERR(svn_utf_cstring_to_utf8
@@ -213,39 +214,56 @@ main(int argc, const char *argv[])
   else
     trail_url = NULL;
 
-  SVN_INT_ERR(svn_wc_check_wc(wc_path, &wc_format, pool));
-  if (! wc_format)
+  SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
+  if (kind == svn_node_dir)
     {
-      svn_node_kind_t kind;
-      SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
-      if (kind == svn_node_dir)
+      SVN_INT_ERR(svn_wc_check_wc(wc_path, &wc_format, pool));
+      if (wc_format == 0)
         {
-          SVN_INT_ERR(svn_cmdline_printf(pool, _("exported%s"),
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned directory%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
-      else if (kind != svn_node_file)
+      SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
+                                         NULL, NULL, pool));
+    }
+  else if (kind == svn_node_file)
+    {
+      SVN_INT_ERR(svn_wc_check_wc(svn_dirent_dirname(wc_path, pool),
+                                  &wc_format, pool));
+      if (wc_format == 0)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf(stderr, pool,
-                                 _("'%s' not versioned, and not exported\n"),
-                                 wc_path));
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
+                                         no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          return EXIT_SUCCESS;
+        }
+      SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
+                                         NULL, NULL, pool));
+      if (res->min_rev == -1)
+        {
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
+                                         no_newline ? "" : "\n"));
+          svn_pool_destroy(pool);
+          return EXIT_SUCCESS;
         }
     }
-
-
-  SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
-                                     NULL, NULL, pool));
-
-  if (res->min_rev == -1)
+  else if (kind == svn_node_none)
     {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("'%s' not versioned\n"), wc_path));
+      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                          _("'%s' doesn't exist\n"),
+                                          wc_path));
       svn_pool_destroy(pool);
-      return EXIT_SUCCESS;
+      return EXIT_FAILURE;
+    }
+  else
+    {
+      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                          _("'%s' is of undefined type\n"),
+                                          wc_path));
+      svn_pool_destroy(pool);
+      return EXIT_FAILURE;
     }
 
   /* Build compact '123[:456]M?S?' string. */
