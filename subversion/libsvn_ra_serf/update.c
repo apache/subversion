@@ -1764,6 +1764,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        * grab one full-text and a diff from the server against that
        * other file.
        */
+#ifdef DUMBASS_CODE_THAT_DOESNT_WORK
       if (! info->delta_base)
         {
           const char *c;
@@ -1842,6 +1843,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           info->delta_base = svn_string_create_from_buf(path, info->pool);
         }
+#endif
 
       SVN_ERR(fetch_file(ctx, info));
       svn_ra_serf__xml_pop_state(parser);
