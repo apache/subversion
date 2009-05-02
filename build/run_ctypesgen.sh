@@ -20,9 +20,11 @@ apu_prefix="${10}"
 cp_relpath="subversion/bindings/ctypes-python"
 output="$cp_relpath/svn_all.py"
 
+# Avoid build path in csvn/core/functions.py
 if test "$abs_builddir" = "$abs_srcdir"; then
   svn_includes="subversion/include"
 else
+  mkdir -p "$cp_relpath/csvn/core"
   svn_includes="$abs_srcdir/subversion/include"
 fi
 
@@ -57,6 +59,7 @@ if test "$apr_include_dir" != "$apu_include_dir" ; then
   includes="$includes $apu_include_dir/ap[ru]_*.h"
 fi
 
+# Remove some whitespace in csvn/core/functions.py
 CPPFLAGS="`echo $CPPFLAGS`"
 cppflags="`echo $cppflags`"
 
