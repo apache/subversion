@@ -2182,7 +2182,8 @@ revert_entry(svn_depth_t *depth,
    array of said names.  See svn_wc_revert3() for additional
    documentation. */
 static svn_error_t *
-revert_internal(const char *path,
+revert_internal(svn_wc__db_t *db,
+                const char *path,
                 svn_wc_adm_access_t *parent_access,
                 svn_depth_t depth,
                 svn_boolean_t use_commit_times,
@@ -2208,7 +2209,7 @@ revert_internal(const char *path,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, dir_access, pool));
+  SVN_ERR(svn_wc__get_tree_conflict2(&tree_conflict, path, db, pool, pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2260,7 +2261,7 @@ revert_internal(const char *path,
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_access, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, db, pool, pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
@@ -2321,7 +2322,7 @@ revert_internal(const char *path,
           full_entry_path = svn_dirent_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(revert_internal(full_entry_path, dir_access,
+          SVN_ERR(revert_internal(db, full_entry_path, dir_access,
                                   depth_under_here, use_commit_times,
                                   changelist_hash, cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
@@ -2349,9 +2350,10 @@ revert_internal(const char *path,
               {
                 /* Found an unversioned tree conflict victim */
                 /* Revert the entry. */
-                SVN_ERR(revert_internal(conflict->path, dir_access,
+                SVN_ERR(revert_internal(db, conflict->path, dir_access,
                                         svn_depth_empty, use_commit_times,
-                                        changelist_hash, cancel_func, cancel_baton,
+                                        changelist_hash,
+                                        cancel_func, cancel_baton,
                                         notify_func, notify_baton, subpool));
               }
           }
@@ -2377,9 +2379,12 @@ svn_wc_revert3(const char *path,
                apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
+
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
-  return revert_internal(path, parent_access, depth, use_commit_times,
+
+  return revert_internal(svn_wc__adm_get_db(parent_access),
+                         path, parent_access, depth, use_commit_times,
                          changelist_hash, cancel_func, cancel_baton,
                          notify_func, notify_baton, pool);
 }
@@ -2862,6 +2867,8 @@ resolve_conflict_on_entry(const char *path,
 
 struct resolve_callback_baton
 {
+  svn_wc__db_t *db;
+
   /* TRUE if text conflicts are to be resolved. */
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
@@ -2946,8 +2953,8 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_adm_access,
-                                        pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, baton->db,
+                                         pool, pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
@@ -3038,19 +3045,20 @@ svn_wc_resolved_conflict4(const char *path,
                           void *cancel_baton,
                           apr_pool_t *pool)
 {
-  struct resolve_callback_baton *baton = apr_pcalloc(pool, sizeof(*baton));
+  struct resolve_callback_baton rcb;
 
-  baton->resolve_text = resolve_text;
-  baton->resolve_props = resolve_props;
-  baton->resolve_tree = resolve_tree;
-  baton->adm_access = adm_access;
-  baton->notify_func = notify_func;
-  baton->notify_baton = notify_baton;
-  baton->conflict_choice = conflict_choice;
+  rcb.db = svn_wc__adm_get_db(adm_access);
+  rcb.resolve_text = resolve_text;
+  rcb.resolve_props = resolve_props;
+  rcb.resolve_tree = resolve_tree;
+  rcb.conflict_choice = conflict_choice;
+  rcb.adm_access = adm_access;
+  rcb.notify_func = notify_func;
+  rcb.notify_baton = notify_baton;
 
   return svn_wc__walk_entries_and_tc(path, adm_access,
-                              &resolve_walk_callbacks, baton, depth,
-                              cancel_func, cancel_baton, pool);
+                                     &resolve_walk_callbacks, &rcb, depth,
+                                     cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
