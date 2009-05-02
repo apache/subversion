@@ -160,7 +160,7 @@ _svn()
 	optsParam="$optsParam|--old|--new|--config-dir|--config-option"
 	optsParam="$optsParam|--native-eol|-l|--limit|-c|--change"
 	optsParam="$optsParam|--depth|--set-depth|--with-revprop"
-	optsParam="$optsParam|--changelist|--accept|--show-revs|--patch-cmd"
+	optsParam="$optsParam|--changelist|--accept|--show-revs"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -813,7 +813,7 @@ _svn()
                          --parents"
 		;;
 	patch)
-		cmdOpts="$qOpts --force --patch-cmd --config-dir"
+		cmdOpts="$qOpts --force"
 		;;
 	propdel|pdel|pd)
 		cmdOpts="$qOpts -R --recursive $rOpts $pOpts --changelist \
