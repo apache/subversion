@@ -234,6 +234,7 @@ main(int argc, const char *argv[])
                                   &wc_format, pool));
       if (wc_format == 0)
         {
+	  /* Unversioned file in unversioned directory */
           SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
@@ -243,6 +244,7 @@ main(int argc, const char *argv[])
                                          NULL, NULL, pool));
       if (res->min_rev == -1)
         {
+	  /* Unversioned file in versioned directory */
           SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
@@ -260,7 +262,7 @@ main(int argc, const char *argv[])
   else
     {
       svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("'%s' is of undefined type\n"),
+                                          _("'%s' is of unknown type\n"),
                                           wc_path));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
