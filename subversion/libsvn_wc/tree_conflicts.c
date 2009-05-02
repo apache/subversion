@@ -176,8 +176,8 @@ read_enum_field(int *result,
 static svn_error_t *
 read_node_version_info(svn_wc_conflict_version_t *version_info,
                        const svn_skel_t *skel,
-                       apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   int n;
 
@@ -222,8 +222,8 @@ static svn_error_t *
 read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                        const svn_skel_t *skel,
                        const char *dir_path,
-                       apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   const char *victim_basename;
   svn_node_kind_t node_kind;
@@ -287,11 +287,11 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 
   /* src_left_version */
   SVN_ERR(read_node_version_info((*conflict)->src_left_version, skel,
-                                 scratch_pool, result_pool));
+                                 result_pool, scratch_pool));
 
   /* src_right_version */
   SVN_ERR(read_node_version_info((*conflict)->src_right_version, skel->next,
-                                 scratch_pool, result_pool));
+                                 result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -327,8 +327,8 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
       svn_wc_conflict_description_t *conflict;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(read_one_tree_conflict(&conflict, skel, dir_path, iterpool,
-                                     pool));
+      SVN_ERR(read_one_tree_conflict(&conflict, skel, dir_path,
+                                     pool, iterpool));
       if (conflict != NULL)
         APR_ARRAY_PUSH(*conflicts, svn_wc_conflict_description_t *) = conflict;
     }
