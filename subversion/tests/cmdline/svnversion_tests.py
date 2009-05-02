@@ -103,20 +103,32 @@ def svnversion_test(sbox):
   os.mkdir(Q_path)
   svntest.actions.run_and_verify_svnversion("Exported subdirectory",
                                             Q_path, repo_url,
-                                            [ "exported\n" ], [])
+                                            [ "Unversioned directory\n" ], [])
 
   # Plain (exported) directory that is not a direct subdir of a versioned dir
   R_path = os.path.join(Q_path, 'Q')
   os.mkdir(R_path)
   svntest.actions.run_and_verify_svnversion("Exported directory",
                                             R_path, repo_url,
-                                            [ "exported\n" ], [])
+                                            [ "Unversioned directory\n" ], [])
 
-  # No directory generates an error
-  svntest.actions.run_and_verify_svnversion("None existent directory",
-                                            os.path.join(wc_dir, 'Q', 'X'),
-                                            repo_url,
-                                            None, svntest.verify.AnyOutput)
+  # Versioned file
+  svntest.actions.run_and_verify_svnversion("Versioned, switched file",
+                                            iota_path, repo_url,
+                                            [ "2S\n" ], [])
+
+  # Unversioned file
+  kappa_path = os.path.join(wc_dir, 'kappa')
+  open(kappa_path, 'w').write("This is the file 'kappa'.")
+  svntest.actions.run_and_verify_svnversion("Unversioned file",
+                                            kappa_path, repo_url,
+                                            [ "Unversioned file\n" ], [])
+
+  # Nonexistent file or directory
+  X_path = os.path.join(wc_dir, 'Q', 'X')
+  svntest.actions.run_and_verify_svnversion("Nonexistent file or directory",
+                                            X_path, repo_url,
+                                            None, [ "'%s' doesn't exist\n" % X_path ])
 
   # Perform a sparse checkout of under the existing WC, and confirm that
   # svnversion detects it as a "partial" WC.
