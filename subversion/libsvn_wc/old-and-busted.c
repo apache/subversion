@@ -26,26 +26,11 @@
 #include "svn_pools.h"
 
 #include "wc.h"
-#include "lock.h"
 #include "adm_files.h"
-#include "adm_ops.h"
 #include "entries.h"
 
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
-
-/* Some old defines which this file might need. */
-#define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
-#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
-#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
-#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
-#define SVN_WC__ENTRY_MODIFY_HAS_PROPS          APR_INT64_C(0x0000000004000000)
-#define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      APR_INT64_C(0x0000000008000000)
-#define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     APR_INT64_C(0x0000000010000000)
-#define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x0000000020000000)
-
-
-
 
 
 static svn_wc_entry_t *
@@ -704,6 +689,28 @@ do_bool_attr(svn_boolean_t *entry_flag,
 }
 
 
+static const char *
+extract_string(apr_uint64_t *result_flags,
+               apr_hash_t *atts,
+               const char *att_name,
+               apr_uint64_t flag,
+               svn_boolean_t normalize,
+               apr_pool_t *result_pool)
+{
+  const char *value = apr_hash_get(atts, att_name, APR_HASH_KEY_STRING);
+
+  if (value == NULL)
+    return NULL;
+
+  *result_flags |= flag;
+
+  if (normalize && *value == '\0')
+    return NULL;
+
+  return apr_pstrdup(result_pool, value);
+}
+
+
 /* NOTE: this is used for running old logs, and for upgrading old XML-based
    entries file. Be wary of removing items.  */
 svn_error_t *
@@ -736,32 +743,22 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Attempt to set up url path (again, see resolve_to_defaults). */
-  {
-    entry->url
-      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING);
-
-    if (entry->url)
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-        entry->url = apr_pstrdup(pool, entry->url);
-      }
-  }
+  entry->url = extract_string(modify_flags, atts,
+                              SVN_WC__ENTRY_ATTR_URL,
+                              SVN_WC__ENTRY_MODIFY_URL,
+                              FALSE, pool);
 
   /* Set up repository root.  Make sure it is a prefix of url. */
-  {
-    entry->repos = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_REPOS,
-                                APR_HASH_KEY_STRING);
-    if (entry->repos)
-      {
-        if (entry->url && ! svn_path_is_ancestor(entry->repos, entry->url))
-          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                   _("Entry for '%s' has invalid repository "
-                                     "root"),
-                                   name ? name : SVN_WC_ENTRY_THIS_DIR);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_REPOS;
-        entry->repos = apr_pstrdup(pool, entry->repos);
-      }
-  }
+  entry->repos = extract_string(modify_flags, atts,
+                                SVN_WC__ENTRY_ATTR_REPOS,
+                                SVN_WC__ENTRY_MODIFY_REPOS,
+                                FALSE, pool);
+  if (entry->url && entry->repos
+      && !svn_path_is_ancestor(entry->repos, entry->url))
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Entry for '%s' has invalid repository "
+                               "root"),
+                             name ? name : SVN_WC_ENTRY_THIS_DIR);
 
   /* Set up kind. */
   {
@@ -812,76 +809,40 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry in a state of mental torment (conflict)? */
-  {
-    if ((entry->prejfile
-         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_PREJFILE,
-                        APR_HASH_KEY_STRING)))
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
-        /* Normalize "" (used by the log runner) to NULL */
-        entry->prejfile = *(entry->prejfile)
-          ? apr_pstrdup(pool, entry->prejfile) : NULL;
-      }
-
-    if ((entry->conflict_old
-         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                        APR_HASH_KEY_STRING)))
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
-        /* Normalize "" (used by the log runner) to NULL */
-        entry->conflict_old =
-          *(entry->conflict_old)
-          ? apr_pstrdup(pool, entry->conflict_old) : NULL;
-      }
-
-    if ((entry->conflict_new
-         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                        APR_HASH_KEY_STRING)))
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
-        /* Normalize "" (used by the log runner) to NULL */
-        entry->conflict_new =
-          *(entry->conflict_new)
-          ? apr_pstrdup(pool, entry->conflict_new) : NULL;
-      }
-
-    if ((entry->conflict_wrk
-         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                        APR_HASH_KEY_STRING)))
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
-        /* Normalize "" (used by the log runner) to NULL */
-        entry->conflict_wrk =
-          *(entry->conflict_wrk)
-          ? apr_pstrdup(pool, entry->conflict_wrk) : NULL;
-      }
-
-    if ((entry->tree_conflict_data
-         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
-                        APR_HASH_KEY_STRING)))
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
-        /* Normalize "" (used by the log runner) to NULL */
-        entry->tree_conflict_data =
-          *(entry->tree_conflict_data)
-          ? apr_pstrdup(pool, entry->tree_conflict_data) : NULL;
-      }
-  }
+  entry->prejfile = extract_string(modify_flags, atts,
+                                   SVN_WC__ENTRY_ATTR_PREJFILE,
+                                   SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                   TRUE, pool);
+  entry->conflict_old = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
+                                       SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
+                                       TRUE, pool);
+  entry->conflict_new = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
+                                       SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
+                                       TRUE, pool);
+  entry->conflict_wrk = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
+                                       SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+                                       TRUE, pool);
+  entry->tree_conflict_data = extract_string(
+    modify_flags, atts,
+    SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+    SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
+    TRUE, pool);
 
   /* Is this entry copied? */
   SVN_ERR(do_bool_attr(&entry->copied,
                        modify_flags, SVN_WC__ENTRY_MODIFY_COPIED,
                        atts, SVN_WC__ENTRY_ATTR_COPIED, name));
+
+  entry->copyfrom_url = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_COPYFROM_URL,
+                                       SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
+                                       FALSE, pool);
+
   {
     const char *revstr;
-
-    entry->copyfrom_url = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                                       APR_HASH_KEY_STRING);
-    if (entry->copyfrom_url)
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-        entry->copyfrom_url = apr_pstrdup(pool, entry->copyfrom_url);
-      }
 
     revstr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV,
                           APR_HASH_KEY_STRING);
@@ -941,26 +902,16 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Checksum. */
-  {
-    entry->checksum = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHECKSUM,
-                                   APR_HASH_KEY_STRING);
-    if (entry->checksum)
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-        entry->checksum = apr_pstrdup(pool, entry->checksum);
-      }
-  }
+  entry->checksum = extract_string(modify_flags, atts,
+                                   SVN_WC__ENTRY_ATTR_CHECKSUM,
+                                   SVN_WC__ENTRY_MODIFY_CHECKSUM,
+                                   FALSE, pool);
 
   /* UUID. */
-  {
-    entry->uuid = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_UUID,
-                               APR_HASH_KEY_STRING);
-    if (entry->uuid)
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_UUID;
-        entry->uuid = apr_pstrdup(pool, entry->uuid);
-      }
-  }
+  entry->uuid = extract_string(modify_flags, atts,
+                               SVN_WC__ENTRY_ATTR_UUID,
+                               SVN_WC__ENTRY_MODIFY_UUID,
+                               FALSE, pool);
 
   /* Setup last-committed values. */
   {
@@ -986,43 +937,27 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     else
       entry->cmt_rev = SVN_INVALID_REVNUM;
 
-    entry->cmt_author = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
-                                     APR_HASH_KEY_STRING);
-    if (entry->cmt_author)
-      {
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
-        entry->cmt_author = apr_pstrdup(pool, entry->cmt_author);
-      }
+    entry->cmt_author = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
+                                       SVN_WC__ENTRY_MODIFY_CMT_AUTHOR,
+                                       FALSE, pool);
   }
 
-  /* Lock token. */
-  entry->lock_token = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
-                                   APR_HASH_KEY_STRING);
-  if (entry->lock_token)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_TOKEN;
-      entry->lock_token = apr_pstrdup(pool, entry->lock_token);
-    }
-
-  /* lock owner. */
-  entry->lock_owner = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER,
-                                   APR_HASH_KEY_STRING);
-  if (entry->lock_owner)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
-      entry->lock_owner = apr_pstrdup(pool, entry->lock_owner);
-    }
-
-  /* lock comment. */
-  entry->lock_comment = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
-                                     APR_HASH_KEY_STRING);
-  if (entry->lock_comment)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_COMMENT;
-      entry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
-    }
-
-  /* lock creation date. */
+  /* NOTE: for the lock values, we do not bother to set MODIFY values. Those
+     are only used by the loggy process, and it no longer recognizes changes
+     to the lock data. Since loggy does not create entries with lock mods,
+     this could only occur with stale log data. Since our lock data is merely
+     a cache, it is "deemed acceptable" to forget lock data from old logs.
+     We *DO* want these values from old XML entries files, however.  */
+  entry->lock_token = extract_string(modify_flags, atts,
+                                     SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
+                                     0, FALSE, pool);
+  entry->lock_owner = extract_string(modify_flags, atts,
+                                     SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                                     0, FALSE, pool);
+  entry->lock_comment = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                                       0, FALSE, pool);
   {
     const char *cdate_str =
       apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
@@ -1031,9 +966,9 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       {
         SVN_ERR(svn_time_from_cstring(&entry->lock_creation_date,
                                       cdate_str, pool));
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE;
       }
   }
+  /* ----- end of lock handling.  */
 
   /* Note: if there are attributes for the (deprecated) has_props,
      has_prop_mods, cachable_props, or present_props, then we're just
