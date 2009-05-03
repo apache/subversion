@@ -408,6 +408,56 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 }
 
 
+static svn_error_t *
+immediate_install_props(const char *path,
+                        svn_node_kind_t kind,
+                        apr_hash_t *base_props,
+                        apr_hash_t *working_props,
+                        apr_pool_t *scratch_pool)
+{
+  const char *propfile_path;
+  apr_array_header_t *prop_diffs;
+
+  SVN_ERR(svn_wc__prop_path(&propfile_path, path, kind,
+                            svn_wc__props_working, scratch_pool));
+
+  /* Check if the props are modified. */
+  SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
+                         scratch_pool));
+
+  /* Save the working properties file if it differs from base. */
+  if (prop_diffs->nelts > 0)
+    {
+      const char *propfile_tmp_path;
+
+      /* Write the property hash into a temporary file. */
+      SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, working_props,
+                                 svn_dirent_dirname(propfile_path,
+                                                    scratch_pool),
+                                 FALSE, scratch_pool));
+
+      /* And move the sucker into place as a read-only file.  */
+      SVN_ERR(svn_io_file_rename(propfile_tmp_path, propfile_path,
+                                 scratch_pool));
+      SVN_ERR(svn_io_set_file_read_only(propfile_path, FALSE, scratch_pool));
+    }
+  else
+    {
+      /* No property modifications, remove the file instead. */
+      svn_error_t *err;
+
+      err = svn_io_remove_file(propfile_path, scratch_pool);
+      if (err)
+        {
+          if (!APR_STATUS_IS_ENOENT(err->apr_err))
+            return svn_error_return(err);
+          svn_error_clear(err);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__working_props_committed(const char *path,
@@ -1954,7 +2004,6 @@ svn_wc_prop_set3(const char *name,
 {
   apr_hash_t *prophash, *base_prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const svn_wc_entry_t *entry;
   svn_wc_notify_action_t notify_action;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
@@ -1962,10 +2011,11 @@ svn_wc_prop_set3(const char *name,
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set(name, value, path, adm_access, pool);
-  else if (prop_kind == svn_prop_entry_kind)
-    return svn_error_createf   /* we don't do entry properties here */
-      (SVN_ERR_BAD_PROP_KIND, NULL,
-       _("Property '%s' is an entry property"), name);
+
+  /* we don't do entry properties here */
+  if (prop_kind == svn_prop_entry_kind)
+    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                             _("Property '%s' is an entry property"), name);
 
   /* Else, handle a regular property: */
 
@@ -2045,17 +2095,18 @@ svn_wc_prop_set3(const char *name,
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE, pool))
         {
+          const char *entryname = svn_dirent_basename(path, pool);
           svn_wc_entry_t tmp_entry;
+
+          /* NOTE: this change is immediate. If the overall propset fails,
+             then we end up with an un-cached text_time. Big whoop.  */
 
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
-          SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                             path, &tmp_entry,
-                                             SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                                             pool));
+          SVN_ERR(svn_wc__entry_modify(adm_access, entryname, &tmp_entry,
+                                       SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
         }
     }
 
@@ -2084,10 +2135,10 @@ svn_wc_prop_set3(const char *name,
      property into it. */
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
 
-  SVN_ERR(svn_wc__install_props(&log_accum, adm_access, path,
-                                base_prophash, prophash, FALSE, pool));
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+  /* Drop it right onto the disk. We don't need loggy since we aren't
+     coordinating this change with anything else.  */
+  SVN_ERR(immediate_install_props(path, entry->kind,
+                                  base_prophash, prophash, pool));
 
   if (notify_func)
     {
