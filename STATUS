@@ -122,7 +122,9 @@ Candidate changes:
    Notes:
      Will conflict if r36509 and r37333 are not backported first.  If this
      group is approved and those prereqs are not, then I will create a
-     backport branch - pburba.
+     backport branch - pburba.  There is a call to svn_uri_basename() in
+     inherit_implicit_mereginfo_form_parent() that must be changed to
+     svn_path_basename() since the former is new for 1.7.
    Votes:
      +1: pburba
 
