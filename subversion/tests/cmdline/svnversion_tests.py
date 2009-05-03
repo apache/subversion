@@ -32,7 +32,7 @@ Item = svntest.wc.StateItem
 #----------------------------------------------------------------------
 
 def svnversion_test(sbox):
-  "test 'svnversion' on wc and other dirs"
+  "test 'svnversion' on files and directories"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
@@ -49,6 +49,11 @@ def svnversion_test(sbox):
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'appended mu text')
+
+  # Modified file
+  svntest.actions.run_and_verify_svnversion("Modified file",
+                                            mu_path, repo_url + '/A/mu',
+                                            [ "1M\n" ], [])
 
   # Text modified
   svntest.actions.run_and_verify_svnversion("Modified text", wc_dir, repo_url,
@@ -112,14 +117,14 @@ def svnversion_test(sbox):
                                             R_path, repo_url,
                                             [ "Unversioned directory\n" ], [])
 
-  # Versioned file
-  svntest.actions.run_and_verify_svnversion("Versioned, switched file",
-                                            iota_path, repo_url,
+  # Switched file
+  svntest.actions.run_and_verify_svnversion("Switched file",
+                                            iota_path, repo_url + '/iota',
                                             [ "2S\n" ], [])
 
   # Unversioned file
   kappa_path = os.path.join(wc_dir, 'kappa')
-  open(kappa_path, 'w').write("This is the file 'kappa'.")
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'.")
   svntest.actions.run_and_verify_svnversion("Unversioned file",
                                             kappa_path, repo_url,
                                             [ "Unversioned file\n" ], [])

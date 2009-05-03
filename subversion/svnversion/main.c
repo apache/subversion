@@ -255,7 +255,7 @@ main(int argc, const char *argv[])
     {
       svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                           _("'%s' doesn't exist\n"),
-                                          wc_path));
+                                          svn_dirent_local_style(wc_path, pool)));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
@@ -263,7 +263,7 @@ main(int argc, const char *argv[])
     {
       svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                           _("'%s' is of unknown type\n"),
-                                          wc_path));
+                                          svn_dirent_local_style(wc_path, pool)));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
