@@ -662,21 +662,6 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
 
 
 svn_error_t *
-svn_wc_merge_props(svn_wc_notify_state_t *state,
-                   const char *path,
-                   svn_wc_adm_access_t *adm_access,
-                   apr_hash_t *baseprops,
-                   const apr_array_header_t *propchanges,
-                   svn_boolean_t base_merge,
-                   svn_boolean_t dry_run,
-                   apr_pool_t *pool)
-{
-  return svn_wc_merge_props2(state, path, adm_access, baseprops, propchanges,
-                             base_merge, dry_run, NULL, NULL, pool);
-}
-
-
-svn_error_t *
 svn_wc_merge_props2(svn_wc_notify_state_t *state,
                     const char *path,
                     svn_wc_adm_access_t *adm_access,
@@ -725,7 +710,6 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
 
   return SVN_NO_ERROR;
 }
-
 
 
 /* Set the value of *STATE to NEW_VALUE if STATE is not NULL
@@ -1681,26 +1665,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 }
 
 
-/* This is DEPRECATED, use svn_wc_merge_props2() instead. */
-svn_error_t *
-svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        const apr_array_header_t *propchanges,
-                        svn_boolean_t base_merge,
-                        svn_boolean_t dry_run,
-                        apr_pool_t *pool)
-{
-  /* NOTE: Here, we use implementation knowledge.  The public
-     svn_wc_merge_props2 doesn't allow NULL as baseprops argument, but we know
-     that it works. */
-  return svn_wc_merge_props2(state, path, adm_access, NULL, propchanges,
-                             base_merge, dry_run, NULL, NULL, pool);
-}
-
-
-
-/*------------------------------------------------------------------*/
 
 /*** Private 'wc prop' functions ***/
 
