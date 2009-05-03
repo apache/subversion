@@ -1204,12 +1204,19 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
  * @{
  */
 
-/** Add LOCK for LOCAL_ABSPATH to DB */
+/** Add or replace LOCK for LOCAL_ABSPATH to DB.  */
 svn_error_t *
 svn_wc__db_lock_add(svn_wc__db_t *db,
                     const char *local_abspath,
                     const svn_wc__db_lock_t *lock,
                     apr_pool_t *scratch_pool);
+
+
+/** Remove any lock for LOCAL_ABSPATH in DB.  */
+svn_error_t *
+svn_wc__db_lock_remove(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /** @} */

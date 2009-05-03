@@ -2542,27 +2542,7 @@ fold_entry(apr_hash_t *entries,
       ? apr_pstrdup(pool, entry->uuid)
                             : NULL;
 
-  /* Lock token */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_TOKEN)
-    cur_entry->lock_token = (entry->lock_token
-                             ? apr_pstrdup(pool, entry->lock_token)
-                             : NULL);
-
-  /* Lock owner */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_OWNER)
-    cur_entry->lock_owner = (entry->lock_owner
-                             ? apr_pstrdup(pool, entry->lock_owner)
-                             : NULL);
-
-  /* Lock comment */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_COMMENT)
-    cur_entry->lock_comment = (entry->lock_comment
-                               ? apr_pstrdup(pool, entry->lock_comment)
-                               : NULL);
-
-  /* Lock creation date */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
-    cur_entry->lock_creation_date = entry->lock_creation_date;
+  /* LOCK flags are no longer passed to entry_modify().  */
 
   /* Changelist */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CHANGELIST)

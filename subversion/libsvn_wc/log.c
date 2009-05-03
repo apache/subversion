@@ -180,6 +180,9 @@
 /*** Userdata for the callbacks. ***/
 struct log_runner
 {
+  svn_wc__db_t *db;
+  const char *dir_abspath;
+
   apr_pool_t *pool; /* cleared before processing each log element */
   apr_pool_t *result_pool;
   svn_xml_parser_t *parser;
@@ -197,6 +200,12 @@ struct log_runner
      incremented every time start_handler() is called. */
   int count;
 };
+
+
+/* The log body needs to be wrapped in a single, root element to satisfy
+   the Expat parser. These two macros provide the start/end wrapprs.  */
+#define LOG_START "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n"
+#define LOG_END "</wc-log>\n"
 
 
 
@@ -866,20 +875,12 @@ static svn_error_t *
 log_do_delete_lock(struct log_runner *loggy,
                    const char *name)
 {
+  const char *local_abspath;
   svn_error_t *err;
-  svn_wc_entry_t entry;
 
-  entry.lock_token = entry.lock_comment = entry.lock_owner = NULL;
-  entry.lock_creation_date = 0;
+  local_abspath = svn_dirent_join(loggy->dir_abspath, name, loggy->pool);
 
-  /* Now write the new entry out */
-  err = svn_wc__entry_modify(loggy->adm_access, name,
-                             &entry,
-                             SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
-                             | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
-                             | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                             | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                             loggy->pool);
+  err = svn_wc__db_lock_remove(loggy->db, local_abspath, loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing lock from entry for '%s'"),
@@ -1660,33 +1661,31 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
 {
   struct log_runner *loggy;
   svn_xml_parser_t *parser;
-  /* kff todo: use the tag-making functions here, now. */
-  const char *log_start
-    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
-  const char *log_end
-    = "</wc-log>\n";
 
   loggy = apr_pcalloc(pool, sizeof(*loggy));
+
+  parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
+
+  loggy->db = svn_wc__adm_get_db(adm_access);
+  loggy->dir_abspath = svn_wc__adm_access_abspath(adm_access);
   loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(pool);
   loggy->result_pool = svn_pool_create(pool);
-  loggy->parser = svn_xml_make_parser(loggy, start_handler,
-                                      NULL, NULL, pool);
+  loggy->parser = parser;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
   loggy->tree_conflicts_added = FALSE;
   loggy->tree_conflicts = NULL;
 
-  parser = loggy->parser;
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
-  SVN_ERR(svn_xml_parse(parser, log_start, strlen(log_start), 0));
+  SVN_ERR(svn_xml_parse(parser, LOG_START, strlen(LOG_START), 0));
 
   SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
 
   /* Pacify Expat with a pointless closing element tag. */
-  return svn_xml_parse(parser, log_end, strlen(log_end), 1);
+  return svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1);
 }
 
 
@@ -1699,7 +1698,7 @@ run_log(svn_wc_adm_access_t *adm_access,
 {
   const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   svn_xml_parser_t *parser;
-  struct log_runner *loggy = apr_pcalloc(pool, sizeof(*loggy));
+  struct log_runner *loggy;
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   const char *logfile_path;
   int log_number;
@@ -1707,13 +1706,12 @@ run_log(svn_wc_adm_access_t *adm_access,
   svn_boolean_t killme, kill_adm_only;
   const svn_wc_entry_t *entry;
 
-  /* kff todo: use the tag-making functions here, now. */
-  const char *log_start
-    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
-  const char *log_end
-    = "</wc-log>\n";
+  loggy = apr_pcalloc(pool, sizeof(*loggy));
 
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
+
+  loggy->db = svn_wc__adm_get_db(adm_access);
+  loggy->dir_abspath = svn_wc__adm_access_abspath(adm_access);
   loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(pool);
   loggy->result_pool = svn_pool_create(pool);
@@ -1733,7 +1731,7 @@ run_log(svn_wc_adm_access_t *adm_access,
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
-  SVN_ERR(svn_xml_parse(parser, log_start, strlen(log_start), 0));
+  SVN_ERR(svn_xml_parse(parser, LOG_START, strlen(LOG_START), 0));
 
   for (log_number = 0; ; log_number++)
     {
@@ -1770,7 +1768,7 @@ run_log(svn_wc_adm_access_t *adm_access,
     }
 
   /* Pacify Expat with a pointless closing element tag. */
-  SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
+  SVN_ERR(svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1));
 
   svn_xml_free_parser(parser);
 
@@ -2109,21 +2107,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
                  entry->cmt_author);
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_TOKEN,
-                 SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
-                 entry->lock_token);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_OWNER,
-                 SVN_WC__ENTRY_ATTR_LOCK_OWNER,
-                 entry->lock_owner);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_COMMENT,
-                 SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
-                 entry->lock_comment);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                 SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
-                 svn_time_to_cstring(entry->lock_creation_date, pool));
+  /* Note: LOCK flags are no longer passed to this function.  */
 
   /* Note: ignoring the (deprecated) has_props, has_prop_mods,
      cachable_props, and present_props fields. */

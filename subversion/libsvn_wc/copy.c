@@ -608,40 +608,44 @@ copy_file_administratively(const char *src_path,
 
 /* Recursively crawl over a directory PATH and do a number of things:
      - Remove lock tokens
-     - Remove WC props
+     - Remove the DAV cache
      - Convert deleted items to schedule-delete items
      - Set .svn directories to be hidden
 */
 static svn_error_t *
-post_copy_cleanup(svn_wc_adm_access_t *adm_access,
+post_copy_cleanup(svn_wc__db_t *db,
+                  const char *local_abspath,
                   apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  const char *path = svn_wc_adm_access_path(adm_access);
+  svn_wc_adm_access_t *adm_access;
 
-  /* Remove wcprops. */
-  SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
+  /* Clear the DAV cache.  */
+  SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL, subpool));
 
   /* Because svn_io_copy_dir_recursively() doesn't copy directory
      permissions, we'll patch up our tree's .svn subdirs to be
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_wc__adm_child(path, NULL, pool);
+    const char *adm_dir = svn_wc__adm_child(local_abspath, NULL, subpool);
     const char *path_apr;
     apr_status_t status;
-    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, pool));
+
+    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, subpool));
     status = apr_file_attrs_set(path_apr,
                                 APR_FILE_ATTR_HIDDEN,
                                 APR_FILE_ATTR_HIDDEN,
-                                pool);
+                                subpool);
     if (status)
       return svn_error_wrap_apr(status, _("Can't hide directory '%s'"),
-                                svn_path_local_style(adm_dir, pool));
+                                svn_path_local_style(adm_dir, subpool));
   }
 #endif
+
+  adm_access = svn_wc__adm_retrieve_internal2(db, local_abspath, subpool);
 
   /* Loop over all children, removing lock tokens and recursing into
      directories. */
@@ -650,17 +654,12 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *entry;
-      svn_node_kind_t kind;
-      svn_boolean_t deleted = FALSE;
-      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
+      const svn_wc_entry_t *entry;
 
       svn_pool_clear(subpool);
 
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
-      kind = entry->kind;
-      deleted = entry->deleted;
 
       if (entry->depth == svn_depth_exclude)
         continue;
@@ -680,11 +679,13 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
          with creating a directory.  See Issue #2101 for details. */
       if (entry->deleted)
         {
-          entry->schedule = svn_wc_schedule_delete;
-          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          apr_uint64_t flags = (SVN_WC__ENTRY_MODIFY_FORCE
+                                | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                | SVN_WC__ENTRY_MODIFY_DELETED);
+          svn_wc_entry_t tmp_entry;
 
-          entry->deleted = FALSE;
-          flags |= SVN_WC__ENTRY_MODIFY_DELETED;
+          tmp_entry.schedule = svn_wc_schedule_delete;
+          tmp_entry.deleted = FALSE;
 
           if (entry->kind == svn_node_dir)
             {
@@ -705,42 +706,27 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
               effectively means that the schedule deletes have to remain
               schedule delete until the copy is committed, when they become
               state deleted and everything works! */
-              entry->kind = svn_node_file;
+              tmp_entry.kind = svn_node_file;
               flags |= SVN_WC__ENTRY_MODIFY_KIND;
             }
+
+          SVN_ERR(svn_wc__entry_modify(adm_access, key, &tmp_entry,
+                                       flags, subpool));
         }
 
       /* Remove lock stuffs. */
       if (entry->lock_token)
-        {
-          entry->lock_token = NULL;
-          entry->lock_owner = NULL;
-          entry->lock_comment = NULL;
-          entry->lock_creation_date = 0;
-          flags |= (SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
-                    | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
-                    | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                    | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE);
-        }
-
-      /* If we meaningfully modified the flags, we must be wanting to
-         change the entry. */
-      if (flags != SVN_WC__ENTRY_MODIFY_FORCE)
-        SVN_ERR(svn_wc__entry_modify(adm_access, key, entry,
-                                     flags, subpool));
+        SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, subpool));
 
       /* If a dir, not deleted, and not "this dir", recurse. */
-      if ((! deleted)
-          && (kind == svn_node_dir)
-          && (strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0))
+      if (!entry->deleted
+          && entry->kind == svn_node_dir
+          && strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0)
         {
-          svn_wc_adm_access_t *child_access;
-          const char *child_path;
-          child_path = svn_dirent_join
-            (svn_wc_adm_access_path(adm_access), key, subpool);
-          SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
-                                      child_path, subpool));
-          SVN_ERR(post_copy_cleanup(child_access, subpool));
+          const char *child_abspath;
+
+          child_abspath = svn_dirent_join(local_abspath, key, subpool);
+          SVN_ERR(post_copy_cleanup(db, child_abspath, subpool));
         }
     }
 
@@ -815,9 +801,12 @@ copy_dir_administratively(const char *src_path,
                           pool));
 
   /* We've got some post-copy cleanup to do now. */
+  /* ### we should do this open using our existing DB.  */
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_path, TRUE, -1,
                            cancel_func, cancel_baton, pool));
-  SVN_ERR(post_copy_cleanup(adm_access, pool));
+  SVN_ERR(post_copy_cleanup(svn_wc__adm_get_db(adm_access),
+                            svn_wc__adm_access_abspath(adm_access),
+                            pool));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the

@@ -704,6 +704,8 @@ do_bool_attr(svn_boolean_t *entry_flag,
 }
 
 
+/* NOTE: this is used for running old logs, and for upgrading old XML-based
+   entries file. Be wary of removing items.  */
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                       apr_uint64_t *modify_flags,
