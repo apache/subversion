@@ -1298,6 +1298,39 @@ svn_wc_prop_set(const char *name,
   return svn_wc_prop_set2(name, value, path, adm_access, FALSE, pool);
 }
 
+
+svn_error_t *
+svn_wc_merge_props(svn_wc_notify_state_t *state,
+                   const char *path,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_hash_t *baseprops,
+                   const apr_array_header_t *propchanges,
+                   svn_boolean_t base_merge,
+                   svn_boolean_t dry_run,
+                   apr_pool_t *pool)
+{
+  return svn_wc_merge_props2(state, path, adm_access, baseprops, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const apr_array_header_t *propchanges,
+                        svn_boolean_t base_merge,
+                        svn_boolean_t dry_run,
+                        apr_pool_t *pool)
+{
+  /* NOTE: Here, we use implementation knowledge.  The public
+     svn_wc_merge_props2 doesn't allow NULL as baseprops argument, but we know
+     that it works. */
+  return svn_wc_merge_props2(state, path, adm_access, NULL, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
+}
+
+
 /*** From status.c ***/
 
 struct status4_wrapper_baton
