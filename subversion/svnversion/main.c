@@ -232,19 +232,22 @@ main(int argc, const char *argv[])
     {
       SVN_INT_ERR(svn_wc_check_wc(svn_dirent_dirname(wc_path, pool),
                                   &wc_format, pool));
+
+      /* Unversioned file in unversioned directory */
       if (wc_format == 0)
         {
-	  /* Unversioned file in unversioned directory */
           SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
+
       SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
                                          NULL, NULL, pool));
+
+      /* Unversioned file in versioned directory */
       if (res->min_rev == -1)
         {
-	  /* Unversioned file in versioned directory */
           SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
