@@ -1,9 +1,5 @@
 #!/bin/sh
 
-if test "$(uname)" = "Darwin"; then
-  exit
-fi
-
 # Dependencies of libraries
 subr="subr"
 auth_gnome_keyring="auth_gnome_keyring $subr"
