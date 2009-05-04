@@ -123,15 +123,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r37494, r37499
-   Fix issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
-   Justification:
-     Without this change shallow merges targeting a path with non-inheritable
-     mergeinfo can record mergeinfo on subtrees which should be excluded by
-     the requested depth -- see http://subversion.open.collab.net/ds/
-     viewMessage.do?dsForumId=4&dsMessageId=313877.
-   Notes:
-     While merging r37494 accept theirs-conflict.
-   Votes:
-     +1: pburba, arfrever, rhuijben
