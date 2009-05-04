@@ -144,13 +144,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r37519
-   Stop merge of difference between two different repositories from
-   occasionally "working".
-   Justification:
-     Previously, given URL_X and URL_Y which point to two completely
-     different repositories, the merge 'svn merge URL_X@M URL_Y@N TARGET_WC'
-     might actually succeed and merge URL_X@M:URL_X@N to TARGET_WC.
-   Votes:
-     +1: pburba, arfrever, rhuijben
