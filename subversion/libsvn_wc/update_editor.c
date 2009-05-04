@@ -665,6 +665,8 @@ complete_directory(struct edit_baton *eb,
   apr_pool_t *subpool;
   svn_wc_entry_t tmp_entry;
   const char *name;
+  const char *local_dir_abspath;
+
 
   /* If inside a tree conflict, do nothing. */
   if (in_skipped_tree(eb, path, pool)
@@ -746,6 +748,8 @@ complete_directory(struct edit_baton *eb,
                                &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                pool));
 
+  SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path, pool));
+
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
@@ -754,9 +758,6 @@ complete_directory(struct edit_baton *eb,
        || (strcmp(path, svn_dirent_join(eb->anchor, eb->target, pool)) == 0
            && eb->requested_depth > entry->depth)))
     {
-      const char *local_dir_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path, pool));
       SVN_ERR(svn_wc__set_depth(eb->db, local_dir_abspath, eb->requested_depth,
                                 pool));
     }
@@ -783,8 +784,10 @@ complete_directory(struct edit_baton *eb,
         {
           if (current_entry->schedule != svn_wc_schedule_add)
             {
-              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
-                                           subpool));
+              const char *local_abspath = svn_dirent_join(
+                    local_dir_abspath, name, subpool);
+              SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
+              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
             }
           else
             {
@@ -804,7 +807,10 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          SVN_ERR(svn_wc__entry_remove(entries, adm_access, name, subpool));
+          const char *local_abspath = svn_dirent_join(
+                local_dir_abspath, name, subpool);
+          SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
+          apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
         }
       else if (current_entry->kind == svn_node_dir)
         {
@@ -828,8 +834,11 @@ complete_directory(struct edit_baton *eb,
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
-              SVN_ERR(svn_wc__entry_remove(entries, adm_access, name,
-                                           subpool));
+              const char *local_abspath = svn_dirent_join(
+                    local_dir_abspath, name, subpool);
+              SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
+              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
@@ -1994,9 +2003,11 @@ do_entry_deletion(struct edit_baton *eb,
   /* Receive the remote removal of excluded entry. Do not notify. */
   if (entry->depth == svn_depth_exclude)
     {
-      const char *base_name = svn_dirent_basename(full_path, pool);
+      const char *local_abspath;
 
-      SVN_ERR(svn_wc__entry_remove(NULL, parent_adm_access, base_name, pool));
+      SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
+      SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, pool));
+
       if (strcmp(path, eb->target) == 0)
         eb->target_deleted = TRUE;
       return SVN_NO_ERROR;
