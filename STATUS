@@ -148,13 +148,6 @@ Approved changes:
    Votes:
      +1: pburba, arfrever, rhuijben
 
- * r37398
-   Fix a memory leak when performing mergeinfo aware merges.
-   Justification:
-     Not always destroying a subpool when processing subtrees with mergeinfo.
-   Votes:
-     +1: pburba, arfrever, rhuijben
-
  * r37527
    Resolve naming collision on static stat() function in svnserve.
    Justification:
