@@ -137,12 +137,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r37527
-   Resolve naming collision on static stat() function in svnserve.
-   Justification:
-     Under some specific circumstances stat() could be defined twice in
-     svnserve, which gives a compiletime error. This patch removes the
-     dependency on a local patch for those users that found this issue.
-   Votes:
-     +1: rhuijben, hwright, arfrever
