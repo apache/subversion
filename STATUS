@@ -119,6 +119,8 @@ Candidate changes:
      NUMBER
      $ svnversion /nonexistent
      '/nonexistent' doesn't exist
+   Votes:
+     -0: rhuijben (Introduces new features and changes output)
 
  * r37491
    Another merge performance improvement: Reduce contacts with server when
@@ -129,9 +131,9 @@ Candidate changes:
      of immediate children without mergeinfo then this change will avoid
      needless round trips for *each* of those children.
    Notes:
-     Will conflict if r36509 and r37333 are not backported first.  If this
-     group is approved and those prereqs are not, then I will create a
-     backport branch - pburba.  There is a call to svn_uri_basename() in
+     Will conflict if r36509 is not backported first.  If this group is
+     approved and r36509 is not, then I will create a backport branch - pburba.
+     There is a call to svn_uri_basename() in
      inherit_implicit_mereginfo_form_parent() that must be changed to
      svn_path_basename() since the former is new for 1.7.
    Votes:
@@ -145,11 +147,12 @@ Candidate changes:
      the requested depth -- see http://subversion.open.collab.net/ds/
      viewMessage.do?dsForumId=4&dsMessageId=313877.
    Notes:
-     While merging r37494 accept theirs-conflict.  r37499 will conflict if
-     r37333 is not merged first.  If this group is approved and r37333 is
-     not I will create a backport branch - pburba.
+     While merging r37494 accept theirs-conflict.
    Votes:
      +1: pburba, arfrever
+
+Approved changes:
+=================
 
  * r37519
    Stop merge of difference between two different repositories from
@@ -159,7 +162,4 @@ Candidate changes:
      different repositories, the merge 'svn merge URL_X@M URL_Y@N TARGET_WC'
      might actually succeed and merge URL_X@M:URL_X@N to TARGET_WC.
    Votes:
-     +1: pburba, arfrever
-
-Approved changes:
-=================
+     +1: pburba, arfrever, rhuijben
