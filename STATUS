@@ -154,12 +154,3 @@ Approved changes:
      might actually succeed and merge URL_X@M:URL_X@N to TARGET_WC.
    Votes:
      +1: pburba, arfrever, rhuijben
-
- * r37121
-   Fix test_dirent_get_absolute for the case where the current directory
-   on C: is C:/.
-   Justification:
-     The dirent code should not rely on svn_path rules, especially when the
-     dirent functions were added to resolve these issues.
-   Votes:
-      +1: rhuijben, lgo, pburba
